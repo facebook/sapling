@@ -29,13 +29,12 @@ extern crate itertools;
 #[allow(unused_imports)]// workaround for macro_use
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate maplit;
 #[cfg(not(test))]
 extern crate quickcheck;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
+extern crate pushrebase;
 extern crate reachabilityindex;
 extern crate revset;
 extern crate scuba_ext;
@@ -61,15 +60,14 @@ extern crate mercurial_types_mocks;
 extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
+extern crate wirepack;
 
 mod changegroup;
 pub mod errors;
 mod getbundle_response;
-mod pushrebase;
 mod resolver;
 mod stats;
 mod upload_blobs;
-mod wirepackparser;
 
 pub use getbundle_response::create_getbundle_response;
 pub use resolver::resolve;

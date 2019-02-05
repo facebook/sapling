@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![cfg_attr(test, type_length_limit = "2097152")]
+
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
 /// Commits that client pushed are rebased on top of `onto_bookmark` on the server
 ///
@@ -42,11 +44,14 @@
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
+use cloned::cloned;
 use context::CoreContext;
-use errors::*;
+use failure::{Error, Fail};
+use failure_ext::{FutureFailureErrorExt, Result};
 use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures::{Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use maplit::hashmap;
 use mercurial_types::{Changeset, HgChangesetId, MPath};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange};
@@ -55,6 +60,21 @@ use revset::RangeNodeStream;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
+
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]
+    BonsaiNotFoundForHgChangeset(HgChangesetId),
+    #[fail(display = "Pushrebase onto bookmark not found: {:?}", _0)]
+    PushrebaseBookmarkNotFound(Bookmark),
+    #[fail(display = "Only one head is allowed in pushed set")]
+    PushrebaseTooManyHeads,
+    #[fail(
+        display = "Error while uploading data for changesets, hashes: {:?}",
+        _0
+    )]
+    PushrebaseNoCommonRoot(Bookmark, HashSet<ChangesetId>),
+}
 
 #[derive(Debug)]
 pub enum PushrebaseError {
@@ -658,6 +678,7 @@ mod tests {
     use fixtures::{linear, many_files_dirs};
     use futures::future::join_all;
     use futures_ext::spawn_future;
+    use maplit::{btreemap, hashset};
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files, store_rename};
 

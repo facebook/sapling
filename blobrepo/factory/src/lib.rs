@@ -26,7 +26,6 @@ use blobstore::{
 };
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
-use bookmarks;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangests, SqlChangesets};
 use filenodes::CachingFilenodes;

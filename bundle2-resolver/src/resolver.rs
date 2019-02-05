@@ -43,7 +43,7 @@ use errors::*;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use phases::{Phase, Phases};
 use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
-use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
+use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;

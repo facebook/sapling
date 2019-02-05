@@ -8,20 +8,20 @@ use std::fmt::Debug;
 use std::mem;
 
 use bytes::Bytes;
-use context::CoreContext;
-use failure::Compat;
-use futures::{Future, Poll, Stream};
-use futures::future::Shared;
-use futures_ext::{BoxFuture, FutureExt};
+use failure::{Error, Fail};
+use failure_ext::Result;
+use futures::{Poll, Stream};
 
-use blobrepo::{BlobRepo, HgBlobEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial::manifest::ManifestContent;
-use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
+use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_types::{delta, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
 
-use errors::*;
-use upload_blobs::UploadableHgBlob;
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "Malformed treemanifest part: {}", _0)]
+    MalformedTreemanifestPart(String),
+}
 
 /// Parser for wirepack tree part. It returns a stream of TreemanifestEntry, that can be used by
 /// Mononoke's Commit Api.
@@ -75,52 +75,6 @@ impl TreemanifestEntry {
             p1: p1.into_option(),
             p2: p2.into_option(),
             manifest_content,
-        })
-    }
-}
-
-impl UploadableHgBlob for TreemanifestEntry {
-    // * Shared is required here because a single tree manifest can be referred to by more than
-    //   one changeset, and all of those will want to refer to the corresponding future.
-    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
-    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
-    //   implements Error.
-    type Value = (
-        ManifestContent,
-        Option<HgNodeHash>,
-        Option<HgNodeHash>,
-        Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
-    );
-
-    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
-        let node_key = self.node_key;
-        let manifest_content = self.manifest_content;
-        let p1 = self.p1;
-        let p2 = self.p2;
-        // The root tree manifest is expected to have the wrong hash in hybrid mode.
-        // XXX possibly remove this once hybrid mode is gone
-        let upload_node_id = if node_key.path.is_root() {
-            UploadHgNodeHash::Supplied(node_key.hash)
-        } else {
-            UploadHgNodeHash::Checked(node_key.hash)
-        };
-        let upload = UploadHgTreeEntry {
-            upload_node_id,
-            contents: self.data,
-            p1: self.p1,
-            p2: self.p2,
-            path: node_key.path.clone(),
-        };
-        upload.upload(ctx, repo).map(move |(_node, value)| {
-            (
-                node_key,
-                (
-                    manifest_content,
-                    p1,
-                    p2,
-                    value.map_err(Error::compat).boxify().shared(),
-                ),
-            )
         })
     }
 }
@@ -218,9 +172,10 @@ mod test {
     use super::*;
     use futures::{stream, Future};
 
+    use maplit::btreemap;
     use mercurial::manifest::Details;
-    use mercurial_types::{FileType, HgEntryId, MPath};
     use mercurial_types::manifest::Type;
+    use mercurial_types::{FileType, HgEntryId, MPath};
     use mercurial_types_mocks::nodehash::*;
 
     #[test]
@@ -309,7 +264,7 @@ mod test {
 
     fn get_revlog_manifest_content() -> ManifestContent {
         ManifestContent {
-            files: btreemap!{
+            files: btreemap! {
                 MPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
                     HgEntryId::new(ONES_HASH),
