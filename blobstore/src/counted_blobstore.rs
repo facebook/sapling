@@ -10,9 +10,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use stats::DynamicTimeseries;
 
 use context::CoreContext;
-use mononoke_types::BlobstoreBytes;
 
-use crate::Blobstore;
+use crate::{Blobstore, BlobstoreBytes};
 
 define_stats! {
     prefix = "mononoke.blobstore";

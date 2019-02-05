@@ -15,11 +15,12 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::failure::Error;
+use asyncmemo::Weight;
+use bytes::Bytes;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
 use context::CoreContext;
-use mononoke_types::BlobstoreBytes;
 
 mod counted_blobstore;
 pub use crate::counted_blobstore::CountedBlobstore;
@@ -32,6 +33,44 @@ pub use crate::prefix::PrefixBlobstore;
 
 mod errors;
 pub use crate::errors::ErrorKind;
+
+/// A type representing bytes written to or read from a blobstore. The goal here is to ensure
+/// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
+/// stored in the blob store.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BlobstoreBytes(Bytes);
+
+impl BlobstoreBytes {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn from_bytes<B: Into<Bytes>>(bytes: B) -> Self {
+        BlobstoreBytes(bytes.into())
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn into_bytes(self) -> Bytes {
+        self.0
+    }
+
+    /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.
+    #[inline]
+    pub fn as_bytes(&self) -> &Bytes {
+        &self.0
+    }
+}
+
+impl Weight for BlobstoreBytes {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        self.len()
+    }
+}
 
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:

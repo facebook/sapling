@@ -10,9 +10,8 @@ use inlinable_string::InlinableString;
 use futures_ext::BoxFuture;
 
 use context::CoreContext;
-use mononoke_types::BlobstoreBytes;
 
-use crate::Blobstore;
+use crate::{Blobstore, BlobstoreBytes};
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone, Debug)]

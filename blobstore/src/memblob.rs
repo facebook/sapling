@@ -12,10 +12,8 @@ use crate::failure::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
+use crate::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
-use mononoke_types::BlobstoreBytes;
-
-use crate::Blobstore;
 
 /// In-memory "blob store"
 ///
