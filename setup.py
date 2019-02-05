@@ -2148,7 +2148,7 @@ rustextbinaries = [
 
 if havefb:
     rustextbinaries.append(
-        RustBinary("dotslash", manifest="exec/fb/dotslash/Cargo.toml")
+        RustBinary("dotslash", manifest="../dotslash/Cargo.toml")
     )
 
 
