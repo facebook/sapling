@@ -99,6 +99,30 @@ function setup_common_config {
     setup_common_hg_configs
 }
 
+function create_pushrebaserecording_sqlite3_db {
+  cat >> "$TESTTMP"/pushrebaserecording.sql <<SQL
+  CREATE TABLE pushrebaserecording (
+     id bigint(20) NOT NULL,
+     repo_id int(10) NOT NULL,
+     ontorev binary(40) NOT NULL,
+     onto varchar(512) NOT NULL,
+     onto_rebased_rev binary(40),
+     conflicts longtext,
+     pushrebase_errmsg varchar(1024) DEFAULT NULL,
+     upload_errmsg varchar(1024) DEFAULT NULL,
+     bundlehandle varchar(1024) DEFAULT NULL,
+     timestamps longtext NOT NULL,
+     recorded_manifest_hashes longtext NOT NULL,
+     real_manifest_hashes longtext NOT NULL,
+     duration_ms int(10) DEFAULT NULL,
+     replacements_revs varchar(1024) DEFAULT NULL,
+     ordered_added_revs varchar(1024) DEFAULT NULL,
+    PRIMARY KEY (id)
+  );
+SQL
+  sqlite3 "$TESTTMP"/pushrebaserecording "$(cat "$TESTTMP"/pushrebaserecording.sql)"
+}
+
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
   mkdir mononoke-config

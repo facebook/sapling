@@ -23,6 +23,7 @@ from libfb.py import parutil, pathutils
 TESTDIR_PATH = 'scm/mononoke/tests/integration'
 
 MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
+MONONOKE_ADMIN_TARGET = '//scm/mononoke:admin'
 MONONOKE_ALIAS_VERIFY_TARGET = '//scm/mononoke:aliasverify'
 MONONOKE_BONSAI_VERIFY_TARGET = '//scm/mononoke:bonsai_verify'
 MONONOKE_APISERVER_TARGET = '//scm/mononoke/apiserver:apiserver'
@@ -32,6 +33,7 @@ BINARY_HGPYTHON_TARGET = '//scm/hg:hgpython'
 MONONOKE_HGCLI_TARGET = '//scm/mononoke/hgcli:hgcli'
 MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
 FACEBOOK_HOOKS_TARGET = '//scm/mononoke/facebook/hooks:hooks'
+PUSHREBASE_REPLAY_TARGET = '//scm/mononoke/facebook/pushrebase_replay:pushrebase_replay'
 
 
 @click.command()
@@ -115,6 +117,7 @@ def run(
 
     add_to_environ('MONONOKE_BLOBIMPORT', MONONOKE_BLOBIMPORT_TARGET)
     add_to_environ('MONONOKE_ALIAS_VERIFY', MONONOKE_ALIAS_VERIFY_TARGET)
+    add_to_environ('MONONOKE_ADMIN', MONONOKE_ADMIN_TARGET)
     add_to_environ('MONONOKE_BONSAI_VERIFY', MONONOKE_BONSAI_VERIFY_TARGET)
     add_to_environ(
         'DUMMYSSH', DUMMYSSH_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
@@ -126,6 +129,10 @@ def run(
         'FACEBOOK_HOOKS',
         FACEBOOK_HOOKS_TARGET,
         pathutils.BuildRuleTypes.FILEGROUP
+    )
+    add_to_environ(
+        'PUSHREBASE_REPLAY', PUSHREBASE_REPLAY_TARGET,
+        pathutils.BuildRuleTypes.PYTHON_BINARY,
     )
 
     # Provide an output directory so that we don't write to a xar's read-only
