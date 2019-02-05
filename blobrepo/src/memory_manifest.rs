@@ -11,7 +11,7 @@ use std::fmt::{self, Debug};
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
-use failure::{Error, Result};
+use crate::failure::{Error, Result};
 use futures::future::{self, Either, Future, IntoFuture};
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -26,13 +26,13 @@ use mercurial_types::{
 };
 use mononoke_types::{FileContents, FileType};
 
-use file::HgBlobEntry;
-use repo::{UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+use crate::file::HgBlobEntry;
+use crate::repo::{UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use super::BlobRepo;
-use errors::*;
-use manifest::BlobManifest;
+use crate::errors::*;
+use crate::manifest::BlobManifest;
 
 /// An in-memory manifest entry. Clones are *not* separate - they share a single set of changes.
 /// This is because futures require ownership, and I don't want to Arc all of this when there's
@@ -56,7 +56,7 @@ pub enum MemoryManifestEntry {
 }
 
 impl Debug for MemoryManifestEntry {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MemoryManifestEntry::Blob(blob) => {
                 fmt.debug_tuple("Blob hash").field(blob.get_hash()).finish()
@@ -686,7 +686,7 @@ impl MemoryManifestEntry {
                     } => {
                         let entry_changes = entry_changes.clone();
                         let element_known = {
-                            let mut changes = entry_changes.lock().expect("lock poisoned");
+                            let changes = entry_changes.lock().expect("lock poisoned");
                             changes.contains_key(&element)
                         };
                         if element_known {
@@ -1069,7 +1069,7 @@ impl MemoryRootManifest {
 }
 
 impl Debug for MemoryRootManifest {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.root_entry.fmt(fmt)
     }
 }

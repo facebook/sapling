@@ -6,8 +6,8 @@
 
 use std::collections::BTreeMap;
 
+use crate::failure::prelude::*;
 use blobstore::Blobstore;
-use failure::prelude::*;
 use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::FutureExt;
@@ -20,9 +20,9 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
 
-use errors::*;
-use BlobRepo;
-use HgBlobChangeset;
+use crate::errors::*;
+use crate::BlobRepo;
+use crate::HgBlobChangeset;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub fn create_bonsai_changeset_object(
@@ -97,9 +97,9 @@ fn find_file_changes(
 
     let p1_root_entry = parent_manifests
         .get(0)
-        .map(|root_mf| -> Box<Entry + Sync> { Box::new(repo.get_root_entry(root_mf)) });
-    let p2_root_entry: Option<Box<Entry + Sync>> = parent_manifests.get(1).map(|root_mf| {
-        let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(root_mf));
+        .map(|root_mf| -> Box<dyn Entry + Sync> { Box::new(repo.get_root_entry(root_mf)) });
+    let p2_root_entry: Option<Box<dyn Entry + Sync>> = parent_manifests.get(1).map(|root_mf| {
+        let entry: Box<dyn Entry + Sync> = Box::new(repo.get_root_entry(root_mf));
         entry
     });
 

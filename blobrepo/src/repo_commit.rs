@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::{
+use crate::failure::{
     err_msg, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
 };
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
@@ -33,12 +33,12 @@ use mercurial_types::{
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 
+use crate::errors::*;
+use crate::file::HgBlobEntry;
+use crate::BlobRepo;
+use crate::HgBlobChangeset;
 use blob_changeset::HgChangesetContent;
 use blob_changeset::{ChangesetMetadata, RepoBlobstore};
-use errors::*;
-use file::HgBlobEntry;
-use BlobRepo;
-use HgBlobChangeset;
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
@@ -313,7 +313,7 @@ impl UploadEntries {
     pub fn finalize(
         self,
         ctx: CoreContext,
-        filenodes: Arc<Filenodes>,
+        filenodes: Arc<dyn Filenodes>,
         cs_id: HgNodeHash,
     ) -> BoxFuture<(), Error> {
         let required_checks = {
@@ -510,8 +510,8 @@ fn compute_copy_from_info(
 
 fn compute_changed_files_pair(
     ctx: CoreContext,
-    to: &Box<Manifest + Sync>,
-    from: &Box<Manifest + Sync>,
+    to: &Box<dyn Manifest + Sync>,
+    from: &Box<dyn Manifest + Sync>,
 ) -> BoxFuture<HashSet<MPath>, Error> {
     changed_entry_stream(ctx, to, from, None)
         .filter_map(|change| match change.status {
@@ -547,9 +547,9 @@ fn compute_changed_files_pair(
 /// mock Manifests I will postpone writing tests for this
 pub fn compute_changed_files(
     ctx: CoreContext,
-    root: &Box<Manifest + Sync>,
-    p1: Option<&Box<Manifest + Sync>>,
-    p2: Option<&Box<Manifest + Sync>>,
+    root: &Box<dyn Manifest + Sync>,
+    p1: Option<&Box<dyn Manifest + Sync>>,
+    p2: Option<&Box<dyn Manifest + Sync>>,
 ) -> BoxFuture<Vec<MPath>, Error> {
     let empty = manifest::EmptyManifest {}.boxed();
     match (p1, p2) {
@@ -577,8 +577,8 @@ pub fn compute_changed_files(
 
 fn compute_added_files(
     ctx: CoreContext,
-    child: &Box<Manifest + Sync>,
-    parent: Option<&Box<Manifest + Sync>>,
+    child: &Box<dyn Manifest + Sync>,
+    parent: Option<&Box<dyn Manifest + Sync>>,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     let s = match parent {
         Some(parent) => changed_entry_stream(ctx, child, parent, None).boxify(),
@@ -671,7 +671,7 @@ pub fn process_entries(
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     new_child_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
-) -> BoxFuture<(Box<Manifest + Sync>, HgManifestId), Error> {
+) -> BoxFuture<(Box<dyn Manifest + Sync>, HgManifestId), Error> {
     let root_manifest_fut = root_manifest
         .context("While uploading root manifest")
         .from_err()
@@ -809,7 +809,13 @@ pub fn fetch_parent_manifests(
     ctx: CoreContext,
     repo: BlobRepo,
     parent_manifest_hashes: &Vec<HgManifestId>,
-) -> BoxFuture<(Option<Box<Manifest + Sync>>, Option<Box<Manifest + Sync>>), Error> {
+) -> BoxFuture<
+    (
+        Option<Box<dyn Manifest + Sync>>,
+        Option<Box<dyn Manifest + Sync>>,
+    ),
+    Error,
+> {
     let p1_manifest_hash = parent_manifest_hashes.get(0);
     let p2_manifest_hash = parent_manifest_hashes.get(1);
     let p1_manifest = p1_manifest_hash.map({

@@ -6,7 +6,7 @@
 
 //! Plain files, symlinks
 
-use failure::{Error, FutureFailureErrorExt};
+use crate::failure::{Error, FutureFailureErrorExt};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -24,9 +24,9 @@ use mononoke_types::{hash::Sha256, ContentId, FileContents, MononokeId};
 use blobstore::Blobstore;
 use context::CoreContext;
 
-use errors::*;
+use crate::errors::*;
 
-use manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
+use crate::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
 
 use blob_changeset::RepoBlobstore;
 

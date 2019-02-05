@@ -6,23 +6,26 @@
 
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
+use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
+use crate::errors::*;
+use crate::failure::{prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
+use crate::file::{
+    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
+    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
+    fetch_file_size_from_blobstore, fetch_raw_filenode_bytes, fetch_rename_from_blobstore,
+    get_rename_from_envelope, HgBlobEntry,
+};
+use crate::memory_manifest::MemoryRootManifest;
+use crate::repo_commit::*;
+use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::{Blobstore, MemWritesBlobstore, PrefixBlobstore};
-use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use bytes::Bytes;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use context::CoreContext;
-use errors::*;
-use failure::{prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
-use file::{
-    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
-    fetch_raw_filenode_bytes, fetch_rename_from_blobstore, HgBlobEntry,
-};
-use file::{fetch_file_envelope, get_rename_from_envelope};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{FuturesUnordered, Stream};
@@ -30,7 +33,6 @@ use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
-use memory_manifest::MemoryRootManifest;
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
@@ -43,7 +45,6 @@ use mononoke_types::{
     RepositoryId,
 };
 use post_commit::{self, PostCommitQueue};
-use repo_commit::*;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::Timeseries;
@@ -55,8 +56,6 @@ use std::sync::Arc;
 use time_ext::DurationExt;
 use tracing::{trace_args, EventId, Traced};
 use uuid::Uuid;
-use BlobManifest;
-use HgBlobChangeset;
 
 define_stats! {
     prefix = "mononoke.blobrepo";

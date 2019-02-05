@@ -10,7 +10,7 @@ use std::iter;
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::Error;
+use crate::failure::Error;
 use futures::future::Future;
 use futures::stream;
 use futures_ext::StreamExt;
