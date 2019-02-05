@@ -49,7 +49,9 @@
   $ chmod 666 $FILENODE_TO_CORRUPT
   $ sed -i s/hello_world/aaaaaaaaaaa/ $FILENODE_TO_CORRUPT
 
-  $ hgmn push -r . --to master_bookmark -v
+Do a push, but disable cache verification on the client side, otherwise
+filenode won't be send at all
+  $ hgmn push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev cb67355f2348 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
