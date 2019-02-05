@@ -10,7 +10,6 @@
 import binascii
 import collections
 import errno
-import io
 import os
 import re
 import stat
@@ -19,7 +18,18 @@ import typing
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 from unittest.mock import call, patch
 
 import eden.cli.doctor as doctor
@@ -64,22 +74,6 @@ class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(num_fixed_problems, fixer.num_fixed_problems)
         self.assertEqual(num_failed_fixes, fixer.num_failed_fixes)
         self.assertEqual(num_manual_fixes, fixer.num_manual_fixes)
-
-
-def _commit_hash_valid_test_dirstate_hex_invalid(
-    instance, mount_path, commit_hash
-) -> bool:
-    if commit_hash == "12000000" * 5:
-        return False
-    else:
-        return True
-
-
-def _commit_hash_valid_test_snapshot_invalid(instance, mount_path, commit_hash) -> bool:
-    if commit_hash == "12345678" * 5:
-        return False
-    else:
-        return True
 
 
 class DoctorTest(DoctorTestBase):
@@ -173,11 +167,10 @@ class DoctorTest(DoctorTestBase):
             f"""\
 Checking {edenfs_path1}
 <yellow>- Found problem:<reset>
-mercurial's parent commit for {edenfs_path1} is {edenfs_path1_dirstate_parent},
-but Eden's internal hash in its SNAPSHOT file is {edenfs_path1_snapshot}.
-
-Fixing Eden to point to parent commit {edenfs_path1_dirstate_parent}...\
-<green>fixed<reset>
+Found inconsistent/missing data in {edenfs_path1}/.hg:
+  mercurial's parent commit is {edenfs_path1_dirstate_parent}, \
+but Eden's internal parent commit is {edenfs_path1_snapshot}
+Repairing hg directory contents for {edenfs_path1}...<green>fixed<reset>
 
 Checking {edenfs_path2}
 <yellow>- Found problem:<reset>
@@ -657,13 +650,45 @@ command palette in Atom.
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-mercurial's parent commit for {checkout.path} is \
-1200000012000000120000001200000012000000,
-but Eden's internal hash in its SNAPSHOT file is \
-1234567812345678123456781234567812345678.
+Found inconsistent/missing data in {checkout.path}/.hg:
+  mercurial's parent commit is 1200000012000000120000001200000012000000, \
+but Eden's internal parent commit is \
+1234567812345678123456781234567812345678
+Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
-Fixing Eden to point to parent commit 1200000012000000120000001200000012000000...\
-<green>fixed<reset>
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        # Make sure resetParentCommits() was called once with the expected arguments
+        self.assertEqual(
+            checkout.instance.get_thrift_client().set_parents_calls,
+            [
+                ResetParentsCommitsArgs(
+                    mount=bytes(checkout.path),
+                    parent1=b"\x12\x00\x00\x00" * 5,
+                    parent2=None,
+                )
+            ],
+        )
+
+    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
+        def check_commit_validity(path: bytes, commit: str) -> bool:
+            if commit == "12345678" * 5:
+                return False
+            return True
+
+        dirstate_hash_hex = "12000000" * 5
+        snapshot_hex = "12345678" * 5
+        checkout, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex, commit_checker=check_commit_validity
+        )
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Found inconsistent/missing data in {checkout.path}/.hg:
+  Eden's snapshot file points to a bad commit: {snapshot_hex}
+Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
 """,
             out,
@@ -682,58 +707,29 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
         )
 
     @patch(
-        "eden.cli.doctor.check_hg.is_commit_hash_valid",
-        new=_commit_hash_valid_test_snapshot_invalid,
+        "eden.cli.doctor.check_hg.get_tip_commit_hash",
+        return_value=b"\x87\x65\x43\x21" * 5,
     )
-    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
-        dirstate_hash_hex = "12000000" * 5
-        snapshot_hex = "12345678" * 5
-        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
-        self.assertEqual(
-            f"""\
-<yellow>- Found problem:<reset>
-mercurial's parent commit for {checkout.path} is \
-1200000012000000120000001200000012000000,
-but Eden's internal hash in its SNAPSHOT file is \
-1234567812345678123456781234567812345678.
-
-Fixing Eden to point to parent commit 1200000012000000120000001200000012000000...\
-<green>fixed<reset>
-
-""",
-            out,
-        )
-        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
-        # Make sure resetParentCommits() was called once with the expected arguments
-        self.assertEqual(
-            checkout.instance.get_thrift_client().set_parents_calls,
-            [
-                ResetParentsCommitsArgs(
-                    mount=bytes(checkout.path),
-                    parent1=b"\x12\x00\x00\x00" * 5,
-                    parent2=None,
-                )
-            ],
-        )
-
-    @patch("eden.cli.doctor.check_hg.is_commit_hash_valid", return_value=False)
-    @patch("eden.cli.doctor.check_hg.get_tip_commit_hash", return_value="87654321" * 5)
     def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
-        self, mock_is_commit_hash_valid, mock_get_tip_commit_hash
+        self, mock_get_tip_commit_hash
     ):
+        def check_commit_validity(path: bytes, commit: str) -> bool:
+            return False
+
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
         valid_commit_hash = "87654321" * 5
-        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
+        checkout, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex, commit_checker=check_commit_validity
+        )
 
-        dirstate = checkout.path / ".hg" / "dirstate"
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-mercurial's parent commit {dirstate_hash_hex} in {dirstate} is invalid
-
-Fixing Eden to point to parent commit {valid_commit_hash}...\
-<green>fixed<reset>
+Found inconsistent/missing data in {checkout.path}/.hg:
+  mercurial's p0 commit points to a bad commit: {dirstate_hash_hex}
+  Eden's snapshot file points to a bad commit: {snapshot_hex}
+Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
 """,
             out,
@@ -750,28 +746,37 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
                 )
             ],
         )
+        self.assert_dirstate_p0(checkout, valid_commit_hash)
 
-    @patch("eden.cli.doctor.check_hg.is_commit_hash_valid", return_value=False)
-    @patch("eden.cli.doctor.check_hg.get_tip_commit_hash", return_value="87654321" * 5)
+    @patch(
+        "eden.cli.doctor.check_hg.get_tip_commit_hash",
+        return_value=b"\x87\x65\x43\x21" * 5,
+    )
     def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
-        self, mock_is_commit_hash_valid, mock_get_tip_commit_hash
+        self, mock_get_tip_commit_hash
     ):
+        def check_commit_validity(path: bytes, commit: str) -> bool:
+            return False
+
         dirstate_hash_hex = "12000000" * 5
         dirstate_parent2_hash_hex = "12340000" * 5
         snapshot_hex = "12345678" * 5
         valid_commit_hash = "87654321" * 5
         checkout, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex, dirstate_parent2_hash_hex
+            dirstate_hash_hex,
+            snapshot_hex,
+            dirstate_parent2_hash_hex,
+            commit_checker=check_commit_validity,
         )
 
-        dirstate = checkout.path / ".hg" / "dirstate"
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-mercurial's parent commit {dirstate_hash_hex} in {dirstate} is invalid
-
-Fixing Eden to point to parent commit {valid_commit_hash}...\
-<green>fixed<reset>
+Found inconsistent/missing data in {checkout.path}/.hg:
+  mercurial's p0 commit points to a bad commit: {dirstate_hash_hex}
+  mercurial's p1 commit points to a bad commit: {dirstate_parent2_hash_hex}
+  Eden's snapshot file points to a bad commit: {snapshot_hex}
+Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
 """,
             out,
@@ -788,44 +793,49 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
                 )
             ],
         )
+        self.assert_dirstate_p0(checkout, valid_commit_hash)
 
-    @patch(
-        "eden.cli.doctor.check_hg.is_commit_hash_valid",
-        side_effect=_commit_hash_valid_test_dirstate_hex_invalid,
-    )
-    def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(
-        self, mock_is_commit_hash_valid
-    ):
+    def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(self):
+        def check_commit_validity(path: bytes, commit: str) -> bool:
+            if commit == "12000000" * 5:
+                return False
+            return True
+
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
-        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
+        checkout, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex, commit_checker=check_commit_validity
+        )
 
-        dirstate = checkout.path / ".hg" / "dirstate"
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-mercurial's parent commit {dirstate_hash_hex} in {dirstate} is invalid
-
-Fixing Eden to point to parent commit {snapshot_hex}...\
-<green>fixed<reset>
+Found inconsistent/missing data in {checkout.path}/.hg:
+  mercurial's p0 commit points to a bad commit: {dirstate_hash_hex}
+Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
 """,
             out,
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
-        self.assertEqual(
-            checkout.instance.get_thrift_client().set_parents_calls,
-            [
-                ResetParentsCommitsArgs(
-                    mount=bytes(checkout.path),
-                    parent1=b"\x12\x34\x56\x78" * 5,
-                    parent2=None,
-                )
-            ],
-        )
+        # The dirstate file should have been updated to use the snapshot hash
+        self.assertEqual(checkout.instance.get_thrift_client().set_parents_calls, [])
+        self.assert_dirstate_p0(checkout, snapshot_hex)
+
+    def assert_dirstate_p0(self, checkout: EdenCheckout, commit: str) -> None:
+        dirstate_path = checkout.path / ".hg" / "dirstate"
+        with dirstate_path.open("rb") as f:
+            parents, self._tuples_dict, self._copymap = eden.dirstate.read(
+                f, str(dirstate_path)
+            )
+        self.assertEqual(binascii.hexlify(parents[0]).decode("utf-8"), commit)
 
     def _test_hash_check(
-        self, dirstate_hash_hex: str, snapshot_hex: str, dirstate_parent2_hash_hex=None
+        self,
+        dirstate_hash_hex: str,
+        snapshot_hex: str,
+        dirstate_parent2_hash_hex=None,
+        commit_checker: Optional[Callable[[bytes, str], bool]] = None,
     ) -> Tuple[EdenCheckout, doctor.ProblemFixer, str]:
         instance = FakeEdenInstance(self.make_temporary_directory())
         if dirstate_parent2_hash_hex is None:
@@ -839,10 +849,12 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
                 dirstate_parent=(dirstate_hash_hex, dirstate_parent2_hash_hex),
             )
 
+        if commit_checker:
+            client = typing.cast(FakeClient, checkout.instance.get_thrift_client())
+            client.commit_checker = commit_checker
+
         fixer, out = self.create_fixer(dry_run=False)
-        check_hg.check_snapshot_dirstate_consistency(
-            fixer, checkout.instance, str(checkout.path), snapshot_hex
-        )
+        check_hg.check_hg(fixer, checkout)
         return checkout, fixer, out.getvalue()
 
     @patch("eden.cli.version.get_installed_eden_rpm_version")
@@ -2264,6 +2276,8 @@ class ResetParentsCommitsArgs(NamedTuple):
 
 
 class FakeClient:
+    commit_checker: Optional[Callable[[bytes, str], bool]] = None
+
     def __init__(self):
         self._mounts = []
         self.set_parents_calls: List[ResetParentsCommitsArgs] = []
@@ -2287,9 +2301,41 @@ class FakeClient:
         )
 
     def getScmStatus(
-        self, mountPoint=None, listIgnored=None, commit=None
+        self,
+        mountPoint: Optional[bytes] = None,
+        listIgnored: Optional[bool] = None,
+        commit: Optional[bytes] = None,
     ) -> Optional[eden_ttypes.ScmStatus]:
+        assert mountPoint is not None
+        self._check_commit_valid(mountPoint, commit)
         return None
+
+    def getScmStatusBetweenRevisions(
+        self,
+        mountPoint: Optional[bytes] = None,
+        oldHash: Optional[bytes] = None,
+        newHash: Optional[bytes] = None,
+    ) -> Optional[eden_ttypes.ScmStatus]:
+        assert mountPoint is not None
+        self._check_commit_valid(mountPoint, oldHash)
+        self._check_commit_valid(mountPoint, newHash)
+        return None
+
+    def _check_commit_valid(self, path: bytes, commit: Union[None, bytes, str]):
+        if self.commit_checker is None:
+            return
+
+        if commit is None:
+            return
+        if isinstance(commit, str):
+            commit_hex = commit
+        else:
+            commit_hex = binascii.hexlify(commit).decode("utf-8")
+
+        if not self.commit_checker(path, commit_hex):
+            raise eden_ttypes.EdenError(
+                message=f"RepoLookupError: unknown revision {commit_hex}"
+            )
 
 
 class FakeCheckout(NamedTuple):
@@ -2719,6 +2765,8 @@ class OperatingSystemsCheckTest(DoctorTestBase):
 
 
 class CorruptHgTest(DoctorTestBase):
+    maxDiff = None
+
     def setUp(self) -> None:
         self.instance = FakeEdenInstance(self.make_temporary_directory())
         self.checkout = self.instance.create_test_mount("test_mount", scm_type="hg")
@@ -2740,8 +2788,20 @@ class CorruptHgTest(DoctorTestBase):
 
         out = TestOutput()
         self.cure_what_ails_you(out=out)
-        self.assertIn(f"Unable to read {dirstate_path}", out.getvalue())
-        self.assertIn("Reached EOF while ", out.getvalue())
+        self.assertEqual(
+            f"""\
+Checking {self.checkout.path}
+<yellow>- Found problem:<reset>
+Found inconsistent/missing data in {self.checkout.path}/.hg:
+  error parsing .hg/dirstate: Reached EOF while reading checksum \
+hash in {self.checkout.path}/.hg/dirstate.
+
+Would repair hg directory contents for {self.checkout.path}
+
+<yellow>Discovered 1 problem during --dry-run<reset>
+""",
+            out.getvalue(),
+        )
 
     def cure_what_ails_you(self, out: TestOutput) -> int:
         dry_run = True

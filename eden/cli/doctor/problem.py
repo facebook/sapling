@@ -77,6 +77,18 @@ class Problem(ProblemBase):
         return self._remediation
 
 
+class UnexpectedCheckError(Problem):
+    """A helper class for reporting about unexpected exceptions that occur
+    when running checks."""
+
+    def __init__(self):
+        import traceback
+
+        tb = traceback.format_exc()
+        description = f"unexpected error while checking for problems: {tb}"
+        super().__init__(description)
+
+
 class ProblemTracker(abc.ABC):
     def add_problem(self, problem: ProblemBase) -> None:
         """Record a new problem"""

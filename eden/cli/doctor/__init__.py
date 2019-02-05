@@ -330,12 +330,8 @@ def check_running_mount(
     check_filesystems.check_using_nfs_path(tracker, checkout.path)
     check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
     check_bind_mounts.check_bind_mounts(tracker, checkout, mount_table, fs_util)
-
     if config.scm_type == "hg":
-        snapshot_hex = checkout.get_snapshot()
-        check_hg.check_snapshot_dirstate_consistency(
-            tracker, checkout.instance, str(checkout.path), snapshot_hex
-        )
+        check_hg.check_hg(tracker, checkout)
 
 
 class CheckoutNotConfigured(Problem):
