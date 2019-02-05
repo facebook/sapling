@@ -19,7 +19,7 @@ use errors::*;
 use nodehash::HgNodeHash;
 use thrift;
 
-/// A mutable representation of a Mercurial file node.
+/// A mutable representation of a Mercurial changeset node.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HgChangesetEnvelopeMut {
     pub node_id: HgNodeHash,
