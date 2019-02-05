@@ -98,20 +98,22 @@ class DoctorTest(DoctorTestBase):
         # In edenfs_path1, we will break the snapshot check.
         edenfs_path1_snapshot = "abcd" * 10
         edenfs_path1_dirstate_parent = "12345678" * 5
-        edenfs_path1 = instance.create_test_mount(
-            "path1",
-            snapshot=edenfs_path1_snapshot,
-            dirstate_parent=edenfs_path1_dirstate_parent,
+        edenfs_path1 = str(
+            instance.create_test_mount(
+                "path1",
+                snapshot=edenfs_path1_snapshot,
+                dirstate_parent=edenfs_path1_dirstate_parent,
+            ).path
         )
 
         # In edenfs_path2, we will break the inotify check and the Nuclide
         # subscriptions check.
-        edenfs_path2 = instance.create_test_mount(
-            "path2", scm_type="git", setup_path=False
+        edenfs_path2 = str(
+            instance.create_test_mount("path2", scm_type="git", setup_path=False).path
         )
 
         # In edenfs_path3, we do not create the .hg directory
-        edenfs_path3 = instance.create_test_mount("path3", setup_path=False)
+        edenfs_path3 = str(instance.create_test_mount("path3", setup_path=False).path)
         os.makedirs(edenfs_path3)
 
         # Assume all paths are used as root folders in a connected Nuclide.
@@ -221,9 +223,9 @@ https://fb.facebook.com/groups/eden.users/
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
         instance = FakeEdenInstance(self.make_temporary_directory())
-        edenfs_path = instance.create_test_mount("eden-mount", scm_type="git")
-        edenfs_path_not_watched = instance.create_test_mount(
-            "eden-mount-not-watched", scm_type="git"
+        edenfs_path = str(instance.create_test_mount("eden-mount", scm_type="git").path)
+        edenfs_path_not_watched = str(
+            instance.create_test_mount("eden-mount-not-watched", scm_type="git").path
         )
         side_effects: List[Dict[str, Any]] = []
         calls = []
@@ -644,22 +646,19 @@ command palette in Atom.
     def test_snapshot_and_dirstate_file_match(self):
         dirstate_hash_hex = "12345678" * 5
         snapshot_hex = "12345678" * 5
-        _instance, _mount_path, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex
-        )
+        _checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     def test_snapshot_and_dirstate_file_differ(self):
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
-        instance, mount_path, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex
-        )
+        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-mercurial's parent commit for {mount_path} is 1200000012000000120000001200000012000000,
+mercurial's parent commit for {checkout.path} is \
+1200000012000000120000001200000012000000,
 but Eden's internal hash in its SNAPSHOT file is \
 1234567812345678123456781234567812345678.
 
@@ -672,10 +671,10 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
-                    mount=mount_path.encode("utf-8"),
+                    mount=bytes(checkout.path),
                     parent1=b"\x12\x00\x00\x00" * 5,
                     parent2=None,
                 )
@@ -689,13 +688,12 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
     def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
-        instance, mount_path, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex
-        )
+        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-mercurial's parent commit for {mount_path} is 1200000012000000120000001200000012000000,
+mercurial's parent commit for {checkout.path} is \
+1200000012000000120000001200000012000000,
 but Eden's internal hash in its SNAPSHOT file is \
 1234567812345678123456781234567812345678.
 
@@ -708,10 +706,10 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
-                    mount=mount_path.encode("utf-8"),
+                    mount=bytes(checkout.path),
                     parent1=b"\x12\x00\x00\x00" * 5,
                     parent2=None,
                 )
@@ -726,11 +724,9 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
         valid_commit_hash = "87654321" * 5
-        instance, mount_path, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex
-        )
+        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
 
-        dirstate = os.path.join(mount_path, ".hg", "dirstate")
+        dirstate = checkout.path / ".hg" / "dirstate"
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
@@ -745,10 +741,10 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
-                    mount=mount_path.encode("utf-8"),
+                    mount=bytes(checkout.path),
                     parent1=b"\x87\x65\x43\x21" * 5,
                     parent2=None,
                 )
@@ -764,11 +760,11 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
         dirstate_parent2_hash_hex = "12340000" * 5
         snapshot_hex = "12345678" * 5
         valid_commit_hash = "87654321" * 5
-        instance, mount_path, fixer, out = self._test_hash_check(
+        checkout, fixer, out = self._test_hash_check(
             dirstate_hash_hex, snapshot_hex, dirstate_parent2_hash_hex
         )
 
-        dirstate = os.path.join(mount_path, ".hg", "dirstate")
+        dirstate = checkout.path / ".hg" / "dirstate"
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
@@ -783,10 +779,10 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
-                    mount=mount_path.encode("utf-8"),
+                    mount=bytes(checkout.path),
                     parent1=b"\x87\x65\x43\x21" * 5,
                     parent2=None,
                 )
@@ -802,11 +798,9 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
     ):
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
-        instance, mount_path, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex
-        )
+        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
 
-        dirstate = os.path.join(mount_path, ".hg", "dirstate")
+        dirstate = checkout.path / ".hg" / "dirstate"
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
@@ -820,10 +814,10 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         self.assertEqual(
-            instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
-                    mount=mount_path.encode("utf-8"),
+                    mount=bytes(checkout.path),
                     parent1=b"\x12\x34\x56\x78" * 5,
                     parent2=None,
                 )
@@ -832,14 +826,14 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
 
     def _test_hash_check(
         self, dirstate_hash_hex: str, snapshot_hex: str, dirstate_parent2_hash_hex=None
-    ) -> Tuple["FakeEdenInstance", str, doctor.ProblemFixer, str]:
+    ) -> Tuple[EdenCheckout, doctor.ProblemFixer, str]:
         instance = FakeEdenInstance(self.make_temporary_directory())
         if dirstate_parent2_hash_hex is None:
-            mount_path = instance.create_test_mount(
+            checkout = instance.create_test_mount(
                 "path1", snapshot=snapshot_hex, dirstate_parent=dirstate_hash_hex
             )
         else:
-            mount_path = instance.create_test_mount(
+            checkout = instance.create_test_mount(
                 "path1",
                 snapshot=snapshot_hex,
                 dirstate_parent=(dirstate_hash_hex, dirstate_parent2_hash_hex),
@@ -847,9 +841,9 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
 
         fixer, out = self.create_fixer(dry_run=False)
         check_hg.check_snapshot_dirstate_consistency(
-            fixer, typing.cast(EdenInstance, instance), mount_path, snapshot_hex
+            fixer, checkout.instance, str(checkout.path), snapshot_hex
         )
-        return instance, mount_path, fixer, out.getvalue()
+        return checkout, fixer, out.getvalue()
 
     @patch("eden.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_match(self, mock_gierv):
@@ -902,10 +896,10 @@ may have important bug fixes or performance improvements.
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
         instance = FakeEdenInstance(self.make_temporary_directory())
-        edenfs_path1 = instance.create_test_mount("path1")
-        edenfs_path2 = instance.create_test_mount("path2")
+        edenfs_path1 = instance.create_test_mount("path1").path
+        edenfs_path2 = instance.create_test_mount("path2").path
         # Remove path2 from the list of mounts in the instance
-        instance.remove_checkout_configuration(edenfs_path2)
+        instance.remove_checkout_configuration(str(edenfs_path2))
 
         dry_run = False
         out = TestOutput()
@@ -974,7 +968,7 @@ Would remount {mounts[1]}
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set())
     def _test_remount_checkouts(
         self, mock_get_roots_for_nuclide, mock_watchman, dry_run: bool
-    ) -> Tuple[int, str, List[str]]:
+    ) -> Tuple[int, str, List[Path]]:
         """Test that `eden doctor` remounts configured mount points that are not
         currently mounted.
         """
@@ -982,8 +976,8 @@ Would remount {mounts[1]}
         instance = FakeEdenInstance(tmp_dir)
 
         mounts = []
-        mounts.append(instance.create_test_mount("path1"))
-        mounts.append(instance.create_test_mount("path2", active=False))
+        mounts.append(instance.create_test_mount("path1").path)
+        mounts.append(instance.create_test_mount("path2", active=False).path)
 
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
@@ -1001,7 +995,7 @@ Would remount {mounts[1]}
         tmp_dir = self.make_temporary_directory()
         instance = FakeEdenInstance(tmp_dir)
 
-        mount = instance.create_test_mount("path1", active=False)
+        mount = instance.create_test_mount("path1", active=False).path
 
         # Make calls to watchman fail rather than returning expected output
         side_effects = [{"error": "watchman failed"}]
@@ -1260,15 +1254,17 @@ class BindMountsCheckTest(DoctorTestBase):
 
         self.fbsource_client = os.path.join(self.instance.clients_path, "fbsource")
         self.fbsource_bind_mounts = os.path.join(self.fbsource_client, "bind-mounts")
-        self.edenfs_path1 = self.instance.create_test_mount(
-            "path1",
-            bind_mounts={
-                "fbcode-buck-out": "fbcode/buck-out",
-                "fbandroid-buck-out": "fbandroid/buck-out",
-                "buck-out": "buck-out",
-            },
-            client_name="fbsource",
-            setup_path=False,
+        self.edenfs_path1 = str(
+            self.instance.create_test_mount(
+                "path1",
+                bind_mounts={
+                    "fbcode-buck-out": "fbcode/buck-out",
+                    "fbandroid-buck-out": "fbandroid/buck-out",
+                    "buck-out": "buck-out",
+                },
+                client_name="fbsource",
+                setup_path=False,
+            ).path
         )
 
         # Entries for later inclusion in client bind mount table
@@ -2297,7 +2293,7 @@ class FakeClient:
 
 
 class FakeCheckout(NamedTuple):
-    state_dir: str
+    state_dir: Path
     config: CheckoutConfig
     snapshot: str
 
@@ -2322,7 +2318,7 @@ class FakeEdenInstance:
         # A map from mount path --> FakeCheckout
         self._checkouts_by_path: Dict[str, FakeCheckout] = {}
         # A map from checkout state directory --> FakeCheckout
-        self._checkouts_by_client_dir: Dict[str, FakeCheckout] = {}
+        self._checkouts_by_client_dir: Dict[Path, FakeCheckout] = {}
 
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
@@ -2341,7 +2337,7 @@ class FakeEdenInstance:
         active: bool = True,
         setup_path: bool = True,
         dirstate_parent: Union[str, Tuple[str, str], None] = None,
-    ) -> str:
+    ) -> EdenCheckout:
         """
         Define a configured mount.
 
@@ -2366,7 +2362,7 @@ class FakeEdenInstance:
         if client_name is None:
             client_name = path.replace("/", "_")
 
-        state_dir = os.path.join(self.clients_path, client_name)
+        state_dir = Path(self.clients_path) / client_name
         assert full_path not in self._checkouts_by_path
         assert state_dir not in self._checkouts_by_client_dir
         config = CheckoutConfig(
@@ -2405,7 +2401,9 @@ class FakeEdenInstance:
                 elif scm_type == "git":
                     os.mkdir(os.path.join(full_path, ".git"))
 
-        return full_path
+        return EdenCheckout(
+            typing.cast(EdenInstance, self), Path(full_path), Path(state_dir)
+        )
 
     def remove_checkout_configuration(self, mount_path: str) -> None:
         """Update the state to make it look like the specified mount path is still
@@ -2491,7 +2489,7 @@ class FakeEdenInstance:
 
     def _get_checkout_by_client_dir(self, client_dir: str) -> FakeCheckout:
         try:
-            return self._checkouts_by_client_dir[client_dir]
+            return self._checkouts_by_client_dir[Path(client_dir)]
         except KeyError:
             raise FileNotFoundError(os.path.join(client_dir, "config.toml"))
 
@@ -2723,12 +2721,10 @@ class OperatingSystemsCheckTest(DoctorTestBase):
 class CorruptHgTest(DoctorTestBase):
     def setUp(self) -> None:
         self.instance = FakeEdenInstance(self.make_temporary_directory())
-        self.checkout_path = Path(
-            self.instance.create_test_mount("test_mount", scm_type="hg")
-        )
+        self.checkout = self.instance.create_test_mount("test_mount", scm_type="hg")
 
     def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
-        sharedpath_path = self.checkout_path / ".hg" / "sharedpath"
+        sharedpath_path = self.checkout.path / ".hg" / "sharedpath"
         sharedpath_path.symlink_to(sharedpath_path.name)
 
         out = TestOutput()
@@ -2739,7 +2735,7 @@ class CorruptHgTest(DoctorTestBase):
         )
 
     def test_truncated_hg_dirstate_is_a_problem(self) -> None:
-        dirstate_path = self.checkout_path / ".hg" / "dirstate"
+        dirstate_path = self.checkout.path / ".hg" / "dirstate"
         os.truncate(dirstate_path, dirstate_path.stat().st_size - 1)
 
         out = TestOutput()
@@ -2838,7 +2834,7 @@ class NfsTest(DoctorTestBase):
     def test_nfs_mounted(self, mock_is_nfs_mounted):
         mock_is_nfs_mounted.return_value = True
         instance = FakeEdenInstance(self.make_temporary_directory())
-        checkout_path = instance.create_test_mount("mount_dir")
+        checkout = instance.create_test_mount("mount_dir")
 
         dry_run = True
         out = TestOutput()
@@ -2857,7 +2853,7 @@ Eden's state directory is on an NFS file system: {instance.state_dir}
 The most common cause for this is if your ~/local symlink does not point to local disk.\
   Make sure that ~/local is a symlink pointing to local disk and then restart Eden.
 
-Checking {checkout_path}
+Checking {checkout.path}
 <yellow>Discovered 1 problem during --dry-run<reset>
 """
         self.assertEqual(expected, out.getvalue())
@@ -2943,7 +2939,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at\
             mount_dir="mount_dir", shared_path="shared_path", instance=instance
         )
         mock_path_read_text.return_value = v.shared_path
-        v.client_path = instance.create_test_mount(v.mount_dir)
+        v.client_path = str(instance.create_test_mount(v.mount_dir).path)
 
         dry_run = True
         out = TestOutput()
