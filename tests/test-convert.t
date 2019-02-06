@@ -595,7 +595,6 @@ test specifying a sourcename
   > old branch new_branch
   > EOF
 
-  $ hg -R a branch -q 'old branch'
   $ echo gg > a/g
   $ hg -R a ci -m 'branch name with spaces'
   $ hg convert --branchmap branchmap.txt a d
@@ -611,9 +610,3 @@ test specifying a sourcename
   1 g
   0 branch name with spaces
 
-  $ hg -R a branches
-  old branch                     6:a24a66ade009
-  default                        5:a3bc6100aa8e (inactive)
-  $ hg -R d branches
-  new_branch                     6:64ed208b732b
-  default                        5:a3bc6100aa8e (inactive)
