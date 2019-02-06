@@ -580,7 +580,8 @@ class fileserverclient(object):
         self.writedata.addremotefilelognode(filename, bin(node), data)
 
     def requestpack(self, fileids):
-        """Requests the given file revisions from the server in a pack format.
+        """Requests the given file revisions from the server in a pack files
+        format. Returns pair of the data pack and history pack paths.
 
         See `remotefilelogserver.getpack` for the file format.
         """
@@ -599,7 +600,7 @@ class fileserverclient(object):
                 )
                 pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
 
-                receiveddata, receivedhistory = shallowutil.receivepack(
+                receiveddata, receivedhistory, datapackpath, histpackpath = shallowutil.receivepack(
                     self.repo.ui, pipei, packpath
                 )
                 rcvd = len(receiveddata)
@@ -610,6 +611,7 @@ class fileserverclient(object):
                 fetched_files=rcvd,
                 total_to_fetch=total,
             )
+            return datapackpath, histpackpath
         except Exception:
             self.ui.log(
                 "remotefilefetchlog",

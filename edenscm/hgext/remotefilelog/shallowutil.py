@@ -582,9 +582,12 @@ def receivepack(ui, fh, packpath):
     from . import datapack, historypack, wirepack
 
     mkstickygroupdir(ui, packpath)
+
     with datapack.mutabledatapack(ui, packpath) as dpack:
         with historypack.mutablehistorypack(ui, packpath) as hpack:
-            return wirepack.receivepack(ui, fh, dpack, hpack)
+            receiveddata, receivedhistory = wirepack.receivepack(ui, fh, dpack, hpack)
+
+    return receiveddata, receivedhistory, dpack.destpath, hpack.destpath
 
 
 def trygetattr(obj, names):
