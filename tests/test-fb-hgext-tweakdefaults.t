@@ -221,11 +221,6 @@ Crazy filenames
   f1:str1f1
   subdir1/subf1:str1sub
 
-This is kept to keep the rest of the test consistent:
-  $ hg branch foo
-  marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
-
 Test that status is default relative
   $ mkdir foo
   $ cd foo
