@@ -202,7 +202,7 @@ class cacheconnection(object):
         * `hit_count` - the number of hits
         * `misses` - list of missed keys
         """
-        missed = []
+        missed = set()
         hitcount = 0
         while True:
             key = self._receiveline()
@@ -219,7 +219,7 @@ class cacheconnection(object):
                 if prog is not None:
                     prog.value = hitcount
             else:
-                missed.append(key)
+                missed.add(key)
         return (hitcount, missed)
 
     def _receiveline(self):
@@ -404,10 +404,8 @@ class fileserverclient(object):
             try:
                 count, missed = cache.receive(prog)
             except CacheConnectionError:
-                missedset = set(missed)
                 for missingid in idmap.iterkeys():
-                    if not missingid in missedset:
-                        missed.append(missingid)
+                    missed.add(missingid)
                 self.ui.warn(
                     _(
                         "warning: cache connection closed early - "
@@ -419,9 +417,8 @@ class fileserverclient(object):
             # somewhere useful (e.g. in a pack file it generates).  Otherwise,
             # we must write the filename out for it.
             if not self.cacheprocesspasspath:
-                missedset = set(missed)
                 for fullid, file in idmap.iteritems():
-                    if fullid not in missedset:
+                    if fullid not in missed:
                         filenamepath = getfilenamepath(fullid)
                         if (
                             filenamepath is not None
@@ -449,11 +446,6 @@ class fileserverclient(object):
             try:
                 # receive cache misses from master
                 if missed:
-                    # try to get rid of possible duplicates
-                    missedset = set(missed)
-                    if len(missedset) != len(missed):
-                        self.ui.develwarn("Fetch request contains duplicates")
-                        missed = list(missedset)
 
                     def progresstick(name=""):
                         count[0] += 1
@@ -468,6 +460,7 @@ class fileserverclient(object):
                     try:
                         with self._connect() as conn:
                             remote = conn.peer
+                            missedlist = list(missed)
                             # TODO: deduplicate this with the constant in
                             #       shallowrepo
                             if remote.capable("remotefilelog"):
@@ -488,7 +481,7 @@ class fileserverclient(object):
                                     remote,
                                     functools.partial(self.receivemissing, draft),
                                     progresstick,
-                                    missed,
+                                    missedlist,
                                     idmap,
                                     step,
                                 )
@@ -504,7 +497,7 @@ class fileserverclient(object):
                                     remote,
                                     functools.partial(self.receivemissing, draft),
                                     progresstick,
-                                    missed,
+                                    missedlist,
                                     idmap,
                                     batchsize,
                                 )
@@ -651,7 +644,7 @@ class fileserverclient(object):
                     self.missingids = lines[2:-1]
 
                 def receive(self, prog=None):
-                    result = (0, self.missingids)
+                    result = (0, set(self.missingids))
                     self.missingids = []
                     return result
 
