@@ -37,6 +37,7 @@ pub fn create_getbundle_response(
     }
 
     let changesets_buffer_size = 1000; // TODO(stash): make it configurable
+    let heads_len = heads.len();
 
     let phases_part = if let Some(phases_hint) = phases_hint {
         // Phases were requested
@@ -139,8 +140,11 @@ pub fn create_getbundle_response(
         });
 
     let mut parts = vec![];
-
-    parts.push(parts::changegroup_part(changelogentries));
+    if heads_len != 0 {
+        // no heads means bookmark-only pushrebase, and the client
+        // does not expect a changegroup part in this case
+        parts.push(parts::changegroup_part(changelogentries));
+    }
 
     // Phases part has to be after the changegroup part.
     if let Some(phases_part) = phases_part {

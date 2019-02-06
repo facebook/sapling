@@ -74,7 +74,7 @@ pub fn resolve(
         .maybe_resolve_commonheads(bundle2)
         .and_then({
             cloned!(resolver);
-            move |(commonheads, bundle2)| {
+            move |(maybe_commonheads, bundle2)| {
                 resolver.maybe_resolve_pushvars(bundle2).and_then(
                     move |(maybe_pushvars, bundle2)| {
                         let mut bypass_readonly = false;
@@ -89,23 +89,39 @@ pub fn resolve(
                         if readonly == RepoReadOnly::ReadOnly && !bypass_readonly {
                             future::err(ErrorKind::RepoReadOnly.into()).left_future()
                         } else {
-                            future::ok((maybe_pushvars, commonheads, bundle2)).right_future()
+                            future::ok((maybe_pushvars, maybe_commonheads, bundle2)).right_future()
                         }
                     },
                 )
             }
         })
-        .and_then(move |(maybe_pushvars, commonheads, bundle2)| {
-            if let Some(commonheads) = commonheads {
-                resolve_pushrebase(
-                    ctx,
-                    commonheads,
-                    resolver,
-                    bundle2,
-                    maybe_pushvars,
-                    lca_hint,
-                    phases_hint,
-                )
+        .and_then({
+            cloned!(resolver);
+            move |(maybe_pushvars, maybe_commonheads, bundle2)| {
+                resolver
+                    .is_next_part_pushkey(bundle2)
+                    .map(move |(pushkey_next, bundle2)| (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2))
+            }
+        })
+        .and_then(move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
+            if let Some(commonheads) = maybe_commonheads {
+                if pushkey_next {
+                    resolve_bookmark_only_pushrebase(
+                        ctx,
+                        resolver,
+                        bundle2,
+                    )
+                } else {
+                    resolve_pushrebase(
+                        ctx,
+                        commonheads,
+                        resolver,
+                        bundle2,
+                        maybe_pushvars,
+                        lca_hint,
+                        phases_hint,
+                    )
+                }
             } else {
                 resolve_push(ctx, resolver, bundle2)
             }
@@ -190,7 +206,8 @@ fn resolve_push(
             move |(changegroup_id, bookmark_push)| {
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
-                    resolver.resolve_bookmark_pushes(bookmark_push)
+                    resolver
+                        .resolve_bookmark_pushes(bookmark_push)
                         .map(move |()| (changegroup_id, bookmark_ids))
                         .boxify()
                 })()
@@ -345,6 +362,69 @@ fn resolve_pushrebase(
         .boxify()
 }
 
+/// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
+fn resolve_bookmark_only_pushrebase(
+    ctx: CoreContext,
+    resolver: Bundle2Resolver,
+    bundle2: BoxStream<Bundle2Item, Error>,
+) -> BoxFuture<Bytes, Error> {
+    // TODO: we probably run hooks even if no changesets are pushed?
+    //       however, current run_hooks implementation will no-op such thing
+    resolver
+        .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+        .and_then({
+            cloned!(resolver);
+            move |(pushkeys, bundle2)| {
+                let pushkeys_len = pushkeys.len();
+                let bookmark_pushes: Vec<_> = pushkeys
+                    .into_iter()
+                    .filter_map(|pushkey| match pushkey {
+                        Pushkey::Phases => None,
+                        Pushkey::BookmarkPush(bp) => Some(bp),
+                    })
+                    .collect();
+
+                // this means we filtered some Phase pushkeys out
+                // which is not expected
+                if bookmark_pushes.len() != pushkeys_len {
+                    return err(err_msg("Expected bookmark-only push, phases pushkey found"))
+                        .boxify();
+                }
+
+                if bookmark_pushes.len() != 1 {
+                    return future::err(format_err!(
+                        "Too many pushkey parts: {:?}",
+                        bookmark_pushes
+                    ))
+                    .boxify();
+                }
+                let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
+                resolver
+                    .ensure_stream_finished(bundle2)
+                    .map(move |()| bookmark_push)
+                    .boxify()
+            }
+        })
+        //TODO (ikostia, T40115672): add hook run here. Make sure hooks run even without changesets
+        .and_then({
+            cloned!(resolver);
+            move |bookmark_push| {
+                let part_id = bookmark_push.part_id;
+                let pushes = vec![bookmark_push];
+                resolver
+                    .resolve_bookmark_pushes(pushes)
+                    .and_then(move |_| ok(part_id).boxify())
+            }
+        })
+        .and_then({
+            cloned!(resolver, ctx);
+            move |bookmark_push_part_id| {
+                resolver.prepare_push_bookmark_response(ctx, bookmark_push_part_id, true)
+            }
+        })
+        .boxify()
+}
+
 fn next_item(
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<(Option<Bundle2Item>, BoxStream<Bundle2Item, Error>), Error> {
@@ -440,7 +520,7 @@ impl Bundle2Resolver {
         }
     }
 
-    /// Produce a future that creates a transaction with multiple bookmark pushes
+    /// Produce a future that creates a transaction with potentitally multiple bookmark pushes
     fn resolve_bookmark_pushes(&self, bookmark_pushes: Vec<BookmarkPush>) -> impl Future<Item=(), Error=Error> {
         let resolver = self.clone();
         let ctx = resolver.ctx.clone();
@@ -472,6 +552,32 @@ impl Bundle2Resolver {
                         .boxify()
                 }
             })
+    }
+
+    /// Peek at the next `bundle2` item and check if it is a `Pushkey` part
+    /// Return unchanged `bundle2`
+    fn is_next_part_pushkey(
+        &self,
+        bundle2: BoxStream<Bundle2Item, Error>,
+    ) -> BoxFuture<(bool, BoxStream<Bundle2Item, Error>), Error> {
+        next_item(bundle2)
+            .and_then(|(start, bundle2)| match start {
+                Some(part) => {
+                    if let Bundle2Item::Pushkey(header, box_future) = part {
+                        ok((
+                            true,
+                            stream::once(Ok(Bundle2Item::Pushkey(header, box_future)))
+                                .chain(bundle2)
+                                .boxify(),
+                        ))
+                        .boxify()
+                    } else {
+                        ok((false, stream::once(Ok(part)).chain(bundle2).boxify())).boxify()
+                    }
+                }
+                _ => ok((false, bundle2)).boxify(),
+            })
+            .boxify()
     }
 
     /// Parse Start and Replycaps and ignore their content
@@ -971,6 +1077,30 @@ impl Bundle2Resolver {
             })
     }
 
+    fn prepare_push_bookmark_response(
+        &self,
+        _ctx: CoreContext,
+        bookmark_push_part_id: PartId,
+        success: bool,
+    ) -> impl Future<Item = Bytes, Error = Error> {
+        let writer = Cursor::new(Vec::new());
+        let mut bundle = Bundle2EncodeBuilder::new(writer);
+        // Mercurial currently hangs while trying to read compressed bundles over the wire:
+        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
+        // TODO: possibly enable compression support once this is fixed.
+        bundle.set_compressor_type(None);
+        bundle.add_part(try_boxfuture!(parts::replypushkey_part(
+            success,
+            bookmark_push_part_id
+        )));
+        bundle
+            .build()
+            .map(|cursor| Bytes::from(cursor.into_inner()))
+            .context("While preparing response")
+            .from_err()
+            .boxify()
+    }
+
     /// A method that can use any of the above maybe_resolve_* methods to return
     /// a Vec of (potentailly multiple) Part rather than an Option of Part.
     /// The original use case is to parse multiple pushkey Parts since bundle2 gets
@@ -1042,6 +1172,7 @@ impl Bundle2Resolver {
         pushvars: Option<HashMap<String, Bytes>>,
         onto_bookmark: &Bookmark,
     ) -> BoxFuture<(), RunHooksError> {
+        // TODO: should we also accept the Option<BookmarkPush> and run hooks on that?
         let mut futs = stream::FuturesUnordered::new();
         for (hg_cs_id, _) in changesets {
             futs.push(
