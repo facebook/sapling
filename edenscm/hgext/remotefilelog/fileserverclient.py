@@ -122,6 +122,13 @@ def peersetup(ui, peer):
     peer.__class__ = remotefilepeer
 
 
+class CacheConnectionError(Exception):
+    """Exception raised if the cache connection was unexpectedly closed."""
+
+    def __init__(self):
+        super("Scmmemcache connection was unexpectedly closed")
+
+
 class cacheconnection(object):
     """The connection for communicating with the remote cache. Performs
     gets and sets by communicating with an external process that has the
@@ -189,7 +196,33 @@ class cacheconnection(object):
             except IOError:
                 self.close()
 
-    def receiveline(self):
+    def receive(self, prog=None):
+        """Reads the cacheprocess' reply for the request sent and tracks
+        the progress. Returns a tuple (hit_count, misses) where:
+        * `hit_count` - the number of hits
+        * `misses` - list of missed keys
+        """
+        missed = []
+        hitcount = 0
+        while True:
+            key = self._receiveline()
+            if not key:
+                raise CacheConnectionError()
+            if key == "0":
+                # the end of the stream
+                break
+
+            if key.startswith("_hits_"):
+                # hit -> receive progress reports
+                parts = key.split("_")
+                hitcount += int(parts[2])
+                if prog is not None:
+                    prog.value = hitcount
+            else:
+                missed.append(key)
+        return (hitcount, missed)
+
+    def _receiveline(self):
         if not self.connected:
             return None
         try:
@@ -368,32 +401,19 @@ class fileserverclient(object):
         cache.request(request)
 
         with progress.bar(self.ui, _("downloading"), total=total) as prog:
-            missed = []
-            count = 0
-            while True:
-                missingid = cache.receiveline()
-                if not missingid:
-                    missedset = set(missed)
-                    for missingid in idmap.iterkeys():
-                        if not missingid in missedset:
-                            missed.append(missingid)
-                    self.ui.warn(
-                        _(
-                            "warning: cache connection closed early - "
-                            + "falling back to server\n"
-                        )
+            try:
+                count, missed = cache.receive(prog)
+            except CacheConnectionError:
+                missedset = set(missed)
+                for missingid in idmap.iterkeys():
+                    if not missingid in missedset:
+                        missed.append(missingid)
+                self.ui.warn(
+                    _(
+                        "warning: cache connection closed early - "
+                        + "falling back to server\n"
                     )
-                    break
-                if missingid == "0":
-                    break
-                if missingid.startswith("_hits_"):
-                    # receive progress reports
-                    parts = missingid.split("_")
-                    count += int(parts[2])
-                    prog.value = count
-                    continue
-
-                missed.append(missingid)
+                )
 
             # If the cacheprocess knew the filename, it should store it
             # somewhere useful (e.g. in a pack file it generates).  Otherwise,
@@ -629,12 +649,11 @@ class fileserverclient(object):
                     if lines[0] != "get":
                         return
                     self.missingids = lines[2:-1]
-                    self.missingids.append("0")
 
-                def receiveline(self):
-                    if len(self.missingids) > 0:
-                        return self.missingids.pop(0)
-                    return None
+                def receive(self, prog=None):
+                    result = (0, self.missingids)
+                    self.missingids = []
+                    return result
 
             self.remotecache = simplecache()
 
