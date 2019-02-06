@@ -36,7 +36,7 @@ Enable Mononoke API for Mercurial client
   > reponame = repo
   > [mononoke-api]
   > enabled = true
-  > host = $APISERVER
+  > url = $APISERVER
   > EOF
 
 Check that the API server is alive
@@ -51,7 +51,7 @@ Test fetching single file
 
 Verify that datapack has entry with expected metadata
   $ hg debugdatapack $DATAPACK_PATH
-  $TESTTMP/cachepath/repo/packs/cc19320e735e5952dd5a09ac307b26adcff5f4b4:
+  $TESTTMP/cachepath/repo/packs/*: (glob)
   test.txt:
   Node          Delta Base    Delta Length  Blob Size
   186cafa3319c  000000000000  13            13
@@ -67,11 +67,11 @@ Test fetching multiple files
 
 Verify file contents
   $ hg debugdatapack $DATAPACK_PATH --node $TEST_FILENODE
-  $TESTTMP/cachepath/repo/packs/04ccbe2c9216ebb0cc725c36892b6dd2f77a3e83:
+  $TESTTMP/cachepath/repo/packs/*: (glob)
   test content
 
   $ hg debugdatapack $DATAPACK_PATH --node $COPY_FILENODE
-  $TESTTMP/cachepath/repo/packs/04ccbe2c9216ebb0cc725c36892b6dd2f77a3e83:
+  $TESTTMP/cachepath/repo/packs/*: (glob)
   \x01 (esc)
   copy: test.txt
   copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
