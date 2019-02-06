@@ -86,13 +86,13 @@ use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
 
-use metaconfig_parser::RepoConfigs;
-use scuba_ext::ScubaSampleBuilder;
-
 use actor::{
     BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
 };
 use errors::ErrorKind;
+use metaconfig_parser::RepoConfigs;
+use middleware::ScubaMiddleware;
+use scuba_ext::ScubaSampleBuilder;
 
 mod config {
     pub const SCUBA_TABLE: &str = "mononoke_apiserver";
@@ -401,7 +401,6 @@ fn main() -> Result<()> {
         .value_of("mononoke-config-path")
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
-
     let myrouter_port = match matches.value_of("myrouter-port") {
         Some(port) => Some(
             port.parse::<u16>()
@@ -463,11 +462,13 @@ fn main() -> Result<()> {
         None
     };
 
-    let scuba_table = if with_scuba {
-        Some(config::SCUBA_TABLE.into())
+    let mut scuba_builder = if with_scuba {
+        ScubaSampleBuilder::new(config::SCUBA_TABLE)
     } else {
-        None
+        ScubaSampleBuilder::with_discard()
     };
+
+    scuba_builder.add_common_server_data();
 
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
@@ -477,7 +478,7 @@ fn main() -> Result<()> {
         repo_configs,
         myrouter_port,
         executor,
-        scuba_table.clone(),
+        scuba_builder.clone(),
     ))?;
     let mononoke = Arc::new(mononoke);
 
@@ -487,7 +488,7 @@ fn main() -> Result<()> {
             host.to_string(),
             port,
             mononoke.clone(),
-            scuba_table.clone(),
+            scuba_builder.clone(),
         );
     }
 
@@ -500,13 +501,7 @@ fn main() -> Result<()> {
     let server = server::new(move || {
         App::with_state(state.clone())
             .middleware(middleware::SLogger::new(actix_logger.clone()))
-            .middleware({
-                if with_scuba {
-                    middleware::ScubaMiddleware::new(scuba_table.clone())
-                } else {
-                    middleware::ScubaMiddleware::new(None)
-                }
-            })
+            .middleware(ScubaMiddleware::new(scuba_builder.clone()))
             .route(
                 "/health_check",
                 http::Method::GET,

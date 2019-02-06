@@ -16,15 +16,7 @@ pub struct ScubaMiddleware {
 }
 
 impl ScubaMiddleware {
-    pub fn new(table_name: Option<String>) -> ScubaMiddleware {
-        let mut scuba = if let Some(table_name) = table_name {
-            ScubaSampleBuilder::new(table_name)
-        } else {
-            ScubaSampleBuilder::with_discard()
-        };
-
-        scuba.add_common_server_data();
-
+    pub fn new(scuba: ScubaSampleBuilder) -> ScubaMiddleware {
         ScubaMiddleware { scuba }
     }
 }

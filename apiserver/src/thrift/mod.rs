@@ -21,13 +21,14 @@ use self::dispatcher::ThriftDispatcher;
 use self::fb303::FacebookServiceImpl;
 use self::mononoke::MononokeAPIServiceImpl;
 use super::actor::Mononoke;
+use scuba_ext::ScubaSampleBuilder;
 
 pub fn make_thrift(
     logger: Logger,
     host: String,
     port: i32,
     addr: Arc<Mononoke>,
-    scuba_table: Option<String>,
+    scuba_builder: ScubaSampleBuilder,
 ) {
     let dispatcher = ThriftDispatcher(Arbiter::new("thrift-worker"));
 
@@ -42,10 +43,10 @@ pub fn make_thrift(
                 .with_factory(dispatcher, {
                     move || {
                         move |proto| {
-                            cloned!(addr, logger, scuba_table);
+                            cloned!(addr, logger, scuba_builder);
                             make_MononokeAPIService_server(
                                 proto,
-                                MononokeAPIServiceImpl::new(addr, logger, scuba_table),
+                                MononokeAPIServiceImpl::new(addr, logger, scuba_builder),
                                 |proto| make_FacebookService_server(proto, FacebookServiceImpl {}),
                             )
                         }

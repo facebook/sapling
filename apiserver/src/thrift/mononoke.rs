@@ -21,7 +21,7 @@ use errors::ErrorKind;
 use failure::err_msg;
 use futures::{Future, IntoFuture};
 use futures_ext::BoxFuture;
-use futures_stats::Timed;
+use futures_stats::{FutureStats, Timed};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde::Serialize;
 use slog::Logger;
@@ -37,15 +37,7 @@ pub struct MononokeAPIServiceImpl {
 }
 
 impl MononokeAPIServiceImpl {
-    pub fn new(addr: Arc<Mononoke>, logger: Logger, scuba_table_name: Option<String>) -> Self {
-        let mut scuba_builder = if let Some(table_name) = scuba_table_name {
-            ScubaSampleBuilder::new(table_name)
-        } else {
-            ScubaSampleBuilder::with_discard()
-        };
-
-        scuba_builder.add_common_server_data();
-
+    pub fn new(addr: Arc<Mononoke>, logger: Logger, scuba_builder: ScubaSampleBuilder) -> Self {
         Self {
             addr,
             logger,
@@ -89,6 +81,27 @@ impl MononokeAPIServiceImpl {
     }
 }
 
+fn log_time<T, U>(
+    scuba: &mut ScubaSampleBuilder,
+    stats: &FutureStats,
+    resp: Result<T, U>,
+    response_size: usize,
+) {
+    scuba
+        .add_future_stats(&stats)
+        .add("response_time", stats.completion_time.as_micros_unchecked())
+        .add("response_size", response_size)
+        .add(
+            "success",
+            match resp {
+                Ok(_) => 1,
+                Err(_) => 0,
+            },
+        );
+
+    scuba.log();
+}
+
 impl MononokeApiservice for MononokeAPIServiceImpl {
     fn get_raw(&self, params: MononokeGetRawParams) -> BoxFuture<Vec<u8>, GetRawExn> {
         let mut scuba = self.create_scuba_logger(
@@ -115,12 +128,12 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .map_err(move |e| GetRawExn::e(e.into()))
             .timed({
                 move |stats, resp| {
-                    scuba
-                        .add_future_stats(&stats)
-                        .add("response_time", stats.completion_time.as_micros_unchecked())
-                        .add("response_size", resp.map(|vec| vec.len()).unwrap_or(0));
-
-                    scuba.log();
+                    log_time(
+                        &mut scuba,
+                        &stats,
+                        resp,
+                        resp.map(|vec| vec.len()).unwrap_or(0),
+                    );
 
                     Ok(())
                 }
@@ -157,21 +170,18 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .map_err(move |e| GetChangesetExn::e(e.into()))
             .timed({
                 move |stats, resp| {
-                    scuba
-                        .add(
-                            "response_size",
-                            resp.map(|resp| {
-                                resp.commit_hash.as_bytes().len()
-                                    + resp.message.len()
-                                    + resp.author.as_bytes().len()
-                                    + 8 // 8 bytes for the date as i64
-                            })
-                            .unwrap_or(0),
-                        )
-                        .add_future_stats(&stats)
-                        .add("response_time", stats.completion_time.as_micros_unchecked());
-
-                    scuba.log();
+                    log_time(
+                        &mut scuba,
+                        &stats,
+                        resp,
+                        resp.map(|resp| {
+                            resp.commit_hash.as_bytes().len()
+                                + resp.message.len()
+                                + resp.author.as_bytes().len()
+                                + 8 // 8 bytes for the date as i64
+                        })
+                        .unwrap_or(0),
+                    );
 
                     Ok(())
                 }
@@ -201,21 +211,18 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .map_err(move |e| GetBranchesExn::e(e.into()))
             .timed({
                 move |stats, resp| {
-                    scuba
-                        .add(
-                            "response_size",
-                            resp.map(|resp| {
-                                resp.branches
-                                    .iter()
-                                    .map(|(bookmark, hash)| bookmark.len() + hash.len())
-                                    .sum()
-                            })
-                            .unwrap_or(0),
-                        )
-                        .add_future_stats(&stats)
-                        .add("response_time", stats.completion_time.as_micros_unchecked());
-
-                    scuba.log();
+                    log_time(
+                        &mut scuba,
+                        &stats,
+                        resp,
+                        resp.map(|resp| {
+                            resp.branches
+                                .iter()
+                                .map(|(bookmark, hash)| bookmark.len() + hash.len())
+                                .sum()
+                        })
+                        .unwrap_or(0),
+                    );
 
                     Ok(())
                 }
@@ -252,23 +259,20 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .map_err(move |e| ListDirectoryExn::e(e.into()))
             .timed({
                 move |stats, resp| {
-                    scuba
-                        .add(
-                            "response_size",
-                            resp.map(|resp| {
-                                resp.files
-                                    .iter()
-                                    .map(
-                                        |file| file.name.len() + 1, // 1 byte for the filetype
-                                    )
-                                    .sum()
-                            })
-                            .unwrap_or(0),
-                        )
-                        .add_future_stats(&stats)
-                        .add("response_time", stats.completion_time.as_micros_unchecked());
-
-                    scuba.log();
+                    log_time(
+                        &mut scuba,
+                        &stats,
+                        resp,
+                        resp.map(|resp| {
+                            resp.files
+                                .iter()
+                                .map(
+                                    |file| file.name.len() + 1, // 1 byte for the filetype
+                                )
+                                .sum()
+                        })
+                        .unwrap_or(0),
+                    );
 
                     Ok(())
                 }

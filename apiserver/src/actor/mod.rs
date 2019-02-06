@@ -43,14 +43,9 @@ impl Mononoke {
         config: RepoConfigs,
         myrouter_port: Option<u16>,
         executor: TaskExecutor,
-        scuba_table_name: Option<String>,
+        scuba_builder: ScubaSampleBuilder,
     ) -> impl Future<Item = Self, Error = Error> {
         let log = logger.clone();
-        let scuba_builder = if let Some(table_name) = scuba_table_name {
-            ScubaSampleBuilder::new(table_name)
-        } else {
-            ScubaSampleBuilder::with_discard()
-        };
         join_all(
             config
                 .repos
