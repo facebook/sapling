@@ -11,7 +11,7 @@ use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Error, Result, SyncFailure};
+use failure_ext::{Error, Result};
 use futures::future::{join_all, ok, Future};
 use futures::future::{loop_fn, Loop};
 use futures_ext::{BoxFuture, FutureExt};
@@ -105,8 +105,7 @@ impl SkiplistNodeType {
 }
 
 pub fn deserialize_skiplist_map(bytes: Bytes) -> Result<HashMap<ChangesetId, SkiplistNodeType>> {
-    let map: HashMap<_, skiplist_thrift::SkiplistNodeType> =
-        compact_protocol::deserialize(&bytes).map_err(SyncFailure::new)?;
+    let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(&bytes)?;
 
     let v: Result<Vec<_>> = map
         .into_iter()

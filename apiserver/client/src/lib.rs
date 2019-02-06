@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate apiserver_thrift;
+extern crate failure_ext;
 extern crate futures_ext;
 extern crate srclient;
 
@@ -26,7 +27,7 @@ pub struct MononokeAPIClient {
 }
 
 impl MononokeAPIClient {
-    pub fn new_with_tier_repo(tier: &str, repo: &str) -> Result<Self, srclient::errors::Error> {
+    pub fn new_with_tier_repo(tier: &str, repo: &str) -> Result<Self, failure_ext::Error> {
         let inner =
             SRChannelBuilder::from_service_name(tier)?.build_client(make_MononokeAPIService)?;
 
@@ -41,7 +42,7 @@ impl MononokeAPIClient {
         revision: String,
         path: String,
         bookmark: bool,
-    ) -> BoxFuture<Vec<u8>, apiserver_thrift::errors::Error> {
+    ) -> BoxFuture<Vec<u8>, failure_ext::Error> {
         let rev = if bookmark {
             MononokeRevision::bookmark(revision)
         } else {
@@ -58,14 +59,14 @@ impl MononokeAPIClient {
     pub fn get_changeset(
         &self,
         revision: String,
-    ) -> BoxFuture<MononokeChangeset, apiserver_thrift::errors::Error> {
+    ) -> BoxFuture<MononokeChangeset, failure_ext::Error> {
         self.inner.get_changeset(&MononokeGetChangesetParams {
             repo: self.repo.clone(),
             revision: MononokeRevision::commit_hash(revision),
         })
     }
 
-    pub fn get_branches(&self) -> BoxFuture<MononokeBranches, apiserver_thrift::errors::Error> {
+    pub fn get_branches(&self) -> BoxFuture<MononokeBranches, failure_ext::Error> {
         self.inner.get_branches(&MononokeGetBranchesParams {
             repo: self.repo.clone(),
         })
@@ -75,7 +76,7 @@ impl MononokeAPIClient {
         &self,
         revision: String,
         path: String,
-    ) -> BoxFuture<MononokeDirectory, apiserver_thrift::errors::Error> {
+    ) -> BoxFuture<MononokeDirectory, failure_ext::Error> {
         self.inner.list_directory(&MononokeListDirectoryParams {
             repo: self.repo.clone(),
             revision: MononokeRevision::commit_hash(revision),

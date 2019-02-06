@@ -9,7 +9,7 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure::{chain::*, err_msg, SyncFailure};
+use failure::{chain::*, err_msg};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
@@ -83,9 +83,7 @@ impl HgFileEnvelope {
     }
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {
-        // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
         let thrift_tc = compact_protocol::deserialize(blob.0.as_ref())
-            .map_err(SyncFailure::new)
             .chain_err(ErrorKind::BlobDeserializeError("HgFileEnvelope".into()))?;
         Self::from_thrift(thrift_tc)
     }

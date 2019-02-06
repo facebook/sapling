@@ -40,7 +40,6 @@ use std::collections::{HashMap, HashSet};
 use std::result;
 
 use bytes::Bytes;
-use failure::SyncFailure;
 
 use sql::{Connection, Transaction};
 pub use sql_ext::SqlConstructors;
@@ -119,7 +118,7 @@ pub fn serialize_cs_entries(cs_entries: Vec<ChangesetEntry>) -> Bytes {
 
 pub fn deserialize_cs_entries(blob: &Bytes) -> Result<Vec<ChangesetEntry>> {
     let thrift_entries: Vec<changeset_entry_thrift::ChangesetEntry> =
-        compact_protocol::deserialize(blob).map_err(SyncFailure::new)?;
+        compact_protocol::deserialize(blob)?;
     let mut entries = vec![];
     for thrift_entry in thrift_entries {
         let parents: Result<Vec<_>> = thrift_entry
