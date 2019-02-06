@@ -1383,22 +1383,6 @@ def nodesummaries(repo, nodes, maxnumnodes=4):
     return _("%s and %d others") % (first, len(nodes) - maxnumnodes)
 
 
-def enforcesinglehead(repo, tr, desc):
-    """check that no named branch has multiple heads"""
-    if desc in ("strip", "repair"):
-        # skip the logic during strip
-        return
-    visible = repo.filtered("visible")
-    # possible improvement: we could restrict the check to affected branch
-    for name, heads in visible.branchmap().iteritems():
-        if len(heads) > 1:
-            msg = _('rejecting multiple heads on branch "%s"')
-            msg %= name
-            hint = _("%d heads: %s")
-            hint %= (len(heads), nodesummaries(repo, heads))
-            raise error.Abort(msg, hint=hint)
-
-
 def wrapconvertsink(sink):
     """Allow extensions to wrap the sink returned by convcmd.convertsink()
     before it is used, whether or not the convert extension was formally loaded.
