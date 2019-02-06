@@ -295,6 +295,8 @@ Test extension help:
        dialect       replace terms with more widely used equivalents
        directaccess  This extension provides direct access
        dirsync
+       disablesymlinks
+                     disables symlink support when enabled
        drop          drop specified changeset from the stack
        eden          accelerated hg functionality in Eden checkouts (eden !)
        edrecord      (no help text available)
