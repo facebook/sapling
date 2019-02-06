@@ -34,7 +34,7 @@ Enable Mononoke API for Mercurial client
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > reponame = repo
-  > [mononoke-api]
+  > [edenapi]
   > enabled = true
   > url = $APISERVER
   > EOF
