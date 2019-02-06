@@ -170,3 +170,16 @@ Push fast-forward
   |
   o  A [public;rev=0;426bada5c675]
   
+
+Push with no new commits
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 59e5396444cf to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  no changes found
+  updating bookmark master_bookmark
+  [1]
+  $ log -r "."
+  @  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  |
+  ~
