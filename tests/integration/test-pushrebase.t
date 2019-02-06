@@ -257,7 +257,7 @@ Push-Rebase over merge is not allowed
   [255]
   $ hgmn up master_bookmark -q
 
-Push-rebase of a commit with one parent being the ancestor of the destination bookmark
+Push-rebase of a commit with p2 being the ancestor of the destination bookmark
 - Do some preparatory work
   $ echo 9 > 9 && hg add 9 && hg ci -m 9
   $ echo 10 > 10 && hg add 10 && hg ci -m 10
@@ -393,6 +393,40 @@ Test creating a bookmark on a public commit
   | o  12 [public;rev=23;cd5aac4439e5]
   | |
   o |  11 [public;rev=22;589551466f25]
+  | |
+  o |  10 [public;rev=21;c573a92e1179]
+  |/
+  o  9 [public;rev=20;2f7cc50dc4e5]
+  |
+  ~
+
+Test a non-forward push
+  $ hgmn up 22 -q
+  $ log -r "20::"
+  o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
+  |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
+  @ |  11 [public;rev=22;589551466f25]
+  | |
+  o |  10 [public;rev=21;c573a92e1179]
+  |/
+  o  9 [public;rev=20;2f7cc50dc4e5]
+  |
+  ~
+  $ hgmn push --force -r . --to master_bookmark_2
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 589551466f25 to destination ssh://user@dummy/repo bookmark master_bookmark_2
+  searching for changes
+  no changes found
+  updating bookmark master_bookmark_2
+  [1]
+  $ log -r "20::"
+  o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
+  @ |  11 [public;rev=22;589551466f25] default/master_bookmark_2
   | |
   o |  10 [public;rev=21;c573a92e1179]
   |/
