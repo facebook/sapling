@@ -845,9 +845,7 @@ class fileserverclient(object):
 
             start = time.time()
             with self.ui.timesection("fetchingfiles"):
-                missingids = self.request(missingids)
-            if missingids:
-                raise error.Abort(_("unable to download %d files") % len(missingids))
+                self.request(missingids)
             fetchcost += time.time() - start
             if not batchlfsdownloads and dolfsprefetch:
                 self._lfsprefetch(fileids)
