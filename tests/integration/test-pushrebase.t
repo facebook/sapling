@@ -183,3 +183,62 @@ Push with no new commits
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
   |
   ~
+
+Push a merge commit with both parents not ancestors of destination bookmark
+  $ hg up -q 1
+  $ echo 6 > 6 && hg add 6 && hg ci -m 6
+  $ hg up -q 1
+  $ echo 7 > 7 && hg add 7 && hg ci -m 7
+  $ hg merge -q -r 13 && hg ci -m "merge 6 and 7"
+  $ log -r ":"
+  o  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  |
+  o  4 [public;rev=11;4f5a4463b24b]
+  |
+  o  3 [public;rev=10;7796136324ad]
+  |
+  o  1 [public;rev=4;c2e526aacb51]
+  |
+  o  C [public;rev=2;26805aba1e60]
+  |
+  | @    merge 6 and 7 [draft;rev=15;fad460d85200]
+  | |\
+  +---o  7 [draft;rev=14;299aa3fbbd3f]
+  | |
+  | o  6 [draft;rev=13;55337b4265b3]
+  |/
+  o  B [public;rev=1;112478962961]
+  |
+  o  A [public;rev=0;426bada5c675]
+  
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev fad460d85200 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
+  $ hgmn up master_bookmark -q && hg hide -r "13+14+15" -q
+  $ log -r ":"
+  @    merge 6 and 7 [public;rev=18;4a0002072071] default/master_bookmark
+  |\
+  \| o  (6|7) \[public;rev=17;.*\] (re)
+  | |
+  o \|  (7|6) \[public;rev=16;.*\] (re)
+  |/
+  o  5 [public;rev=12;59e5396444cf]
+  |
+  o  4 [public;rev=11;4f5a4463b24b]
+  |
+  o  3 [public;rev=10;7796136324ad]
+  |
+  o  1 [public;rev=4;c2e526aacb51]
+  |
+  o  C [public;rev=2;26805aba1e60]
+  |
+  o  B [public;rev=1;112478962961]
+  |
+  o  A [public;rev=0;426bada5c675]
+  
