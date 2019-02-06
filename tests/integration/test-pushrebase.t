@@ -379,3 +379,23 @@ Push-rebase of a commit with one parent being the ancestor of the destination bo
   |
   o  A [public;rev=0;426bada5c675]
   
+Test creating a bookmark on a public commit
+  $ hgmn push --rev 25 --to master_bookmark_2 --create
+  remote: .* DEBG Session with Mononoke started with uuid: .* (re)
+  pushing rev eb388b759fde to destination ssh://user@dummy/repo bookmark master_bookmark_2
+  searching for changes
+  no changes found
+  exporting bookmark master_bookmark_2
+  [1]
+  $ log -r "20::"
+  @    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
+  |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
+  o |  11 [public;rev=22;589551466f25]
+  | |
+  o |  10 [public;rev=21;c573a92e1179]
+  |/
+  o  9 [public;rev=20;2f7cc50dc4e5]
+  |
+  ~
