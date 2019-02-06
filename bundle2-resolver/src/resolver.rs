@@ -186,34 +186,11 @@ fn resolve_push(
             }
         })
         .and_then({
-            cloned!(ctx, resolver);
-            move |(changegroup_id, bookmarks_push)| {
-                let bookmarks_push_fut = bookmarks_push
-                    .into_iter()
-                    .map(|bp| BonsaiBookmarkPush::new(ctx.clone(), &resolver.repo, bp))
-                    .collect::<Vec<_>>();
-                future::join_all(bookmarks_push_fut)
-                    .map(move |bookmakrs_push| (changegroup_id, bookmakrs_push))
-            }
-        })
-        .and_then({
             cloned!(resolver);
             move |(changegroup_id, bookmark_push)| {
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
-
-                    let mut txn = resolver.repo.update_bookmark_transaction(ctx);
-                    for bp in bookmark_push {
-                        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
-                    }
-                    txn.commit()
-                        .and_then(|ok| {
-                            if ok {
-                                Ok(())
-                            } else {
-                                Err(format_err!("Bookmark transaction failed"))
-                            }
-                        })
+                    resolver.resolve_bookmark_pushes(bookmark_push)
                         .map(move |()| (changegroup_id, bookmark_ids))
                         .boxify()
                 })()
@@ -401,7 +378,6 @@ struct BookmarkPush {
 }
 
 struct BonsaiBookmarkPush {
-    part_id: PartId,
     name: Bookmark,
     old: Option<ChangesetId>,
     new: Option<ChangesetId>,
@@ -425,7 +401,7 @@ impl BonsaiBookmarkPush {
         }
 
         let BookmarkPush {
-            part_id,
+            part_id: _,
             name,
             old,
             new,
@@ -436,12 +412,7 @@ impl BonsaiBookmarkPush {
             bonsai_from_hg_opt(ctx, repo, new),
         )
             .into_future()
-            .map(move |(old, new)| BonsaiBookmarkPush {
-                part_id,
-                name,
-                old,
-                new,
-            })
+            .map(move |(old, new)| BonsaiBookmarkPush { name, old, new })
     }
 }
 
@@ -467,6 +438,40 @@ impl Bundle2Resolver {
             pushrebase,
             hook_manager,
         }
+    }
+
+    /// Produce a future that creates a transaction with multiple bookmark pushes
+    fn resolve_bookmark_pushes(&self, bookmark_pushes: Vec<BookmarkPush>) -> impl Future<Item=(), Error=Error> {
+        let resolver = self.clone();
+        let ctx = resolver.ctx.clone();
+        let repo = resolver.repo.clone();
+
+        let bookmarks_push_fut = bookmark_pushes
+            .into_iter()
+            .map(move |bp| BonsaiBookmarkPush::new(ctx.clone(), &repo, bp))
+            .collect::<Vec<_>>();
+
+        future::join_all(bookmarks_push_fut)
+            .and_then({
+                cloned!(resolver);
+                move |bonsai_bookmark_pushes| {
+                    let mut txn = resolver
+                        .repo
+                        .update_bookmark_transaction(resolver.ctx.clone());
+                    for bp in bonsai_bookmark_pushes {
+                        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
+                    }
+                    txn.commit()
+                        .and_then(|ok| {
+                            if ok {
+                                Ok(())
+                            } else {
+                                Err(format_err!("Bookmark transaction failed"))
+                            }
+                        })
+                        .boxify()
+                }
+            })
     }
 
     /// Parse Start and Replycaps and ignore their content
