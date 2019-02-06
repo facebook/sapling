@@ -1029,7 +1029,7 @@ class buildembedded(Command):
     def _process_hg_source(self, dirforpycs):
         """Py-Compile all of the Mercurial Python files and copy
         results to `dirforpycs`"""
-        hgdirs = ["edenscm/mercurial", "edenscm/hgdemandimport", "edenscm/hgext"]
+        hgdirs = ["edenscm"]
         for d, p in {pjoin(scriptdir, hgdir): hgdir for hgdir in hgdirs}.items():
             self._process_dir(d, p, set(), dirforpycs)
 
@@ -1042,7 +1042,7 @@ class buildembedded(Command):
         if not self.local_bins:
             # copy .pyd's from ./build/lib.win-amd64/, not from ./
             parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
-        hgdirs = ["edenscm/mercurial", "edenscm/hgdemandimport", "edenscm/hgext"]
+        hgdirs = ["edenscm"]
         for hgdir in hgdirs:
             fulldir = pjoin(parentdir, hgdir)
             for dirpath, dirnames, filenames in os.walk(fulldir):
