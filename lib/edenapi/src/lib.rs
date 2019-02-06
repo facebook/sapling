@@ -5,5 +5,5 @@ mod builder;
 mod client;
 
 pub use crate::api::EdenApi;
-pub use crate::builder::ClientBuilder;
+pub use crate::builder::Builder;
 pub use crate::client::EdenApiHttpClient;

@@ -19,15 +19,15 @@ use url::Url;
 use crate::client::EdenApiHttpClient;
 
 #[derive(Default)]
-pub struct ClientBuilder {
+pub struct Builder {
     base_url: Option<Url>,
     client_id: Option<Identity>,
     repo: Option<String>,
     cache_path: Option<PathBuf>,
 }
 
-impl ClientBuilder {
-    pub fn new() -> Self {
+impl Builder {
+    pub(crate) fn new() -> Self {
         Default::default()
     }
 

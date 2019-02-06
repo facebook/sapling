@@ -3,7 +3,7 @@
 
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
-use edenapi::{ClientBuilder, EdenApi, EdenApiHttpClient};
+use edenapi::{EdenApi, EdenApiHttpClient};
 use encoding::{local_bytes_to_path, path_to_local_bytes};
 use revisionstore::Key;
 use types::node::Node;
@@ -36,7 +36,7 @@ py_class!(class PyEdenApiHttpClient |py| {
         let cache_path = str::from_utf8(cache_path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
 
-        let mut builder = ClientBuilder::new();
+        let mut builder = EdenApiHttpClient::builder();
 
         if let Some((cert, key)) = client_creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
