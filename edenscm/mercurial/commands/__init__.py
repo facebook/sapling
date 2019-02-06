@@ -1304,7 +1304,7 @@ def branch(ui, repo, label=None, **opts):
         ui.write("%s\n" % repo.dirstate.branch())
         return
 
-    if not ui.configbool("ui", "allowbranches", default=True):
+    if not ui.configbool("ui", "allowbranches"):
         raise error.Abort(
             _("named branches are disabled in this repository"),
             hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
@@ -1368,7 +1368,7 @@ def branches(ui, repo, active=False, closed=False, **opts):
 
     Returns 0.
     """
-    if not ui.configbool("ui", "allowbranches", default=True):
+    if not ui.configbool("ui", "allowbranches"):
         # internal config: ui.disallowedbrancheshint
         raise error.Abort(
             _("named branches are disabled in this repository"),
