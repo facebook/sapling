@@ -1190,6 +1190,11 @@ class dirstate(object):
         else:
             markclean = lambda path: False
 
+        # We have seen some rare issues that a few "M" or "R" files show up
+        # while the files are expected to be clean. Log the reason of first few
+        # "M" files.
+        mtolog = ltolog = self._ui.configint("experimental", "samplestatus")
+
         # We need to do full walks when either
         # - we're listing all clean files, or
         # - match.traversedir does something, because match.traversedir should
@@ -1237,13 +1242,38 @@ class dirstate(object):
                     or fn in copymap
                 ):
                     madd(fn)
+                    if mtolog > 0:
+                        mtolog -= 1
+                        reasons = []
+                        if size == -2:
+                            reasons.append("exists in p2")
+                        elif size != st.st_size:
+                            reasons.append(
+                                "size changed (%s -> %s)" % (size, st.st_size)
+                            )
+                        if mode != st.st_mode:
+                            reasons.append(
+                                "mode changed (%s -> %s)" % (mode, st.st_mode)
+                            )
+                        if fn in copymap:
+                            reasons.append("has copy information")
+                        self._ui.log("status", "M %s: %s" % (fn, ", ".join(reasons)))
+
                 elif time != st.st_mtime and time != st.st_mtime & _rangemask:
+                    if ltolog:
+                        ltolog -= 1
+                        reason = "mtime changed (%s -> %s)" % (time, st.st_mtime)
+                        self._ui.log("status", "L %s: %s" % (fn, reason))
                     ladd(fn)
                 elif st.st_mtime == lastnormaltime:
                     # fn may have just been marked as normal and it may have
                     # changed in the same second without changing its size.
                     # This can happen if we quickly do multiple commits.
                     # Force lookup, so we don't miss such a racy file change.
+                    if ltolog:
+                        ltolog -= 1
+                        reason = "mtime untrusted (%s)" % (st.st_mtime)
+                        self._ui.log("status", "L %s: %s" % (fn, reason))
                     ladd(fn)
                 else:
                     cleanmarked |= markclean(fn)
@@ -1251,6 +1281,9 @@ class dirstate(object):
                         cadd(fn)
             elif state == "m":
                 madd(fn)
+                if mtolog > 0:
+                    mtolog -= 1
+                    self._ui.log("status", "M %s: state is 'm' (merge)" % fn)
             elif state == "a":
                 aadd(fn)
             elif state == "r":

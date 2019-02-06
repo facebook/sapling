@@ -1865,6 +1865,11 @@ class workingctx(committablectx):
         deleted = []
         fixup = []
         pctx = self._parents[0]
+
+        # Log some samples
+        ui = self._repo.ui
+        mtolog = ftolog = dtolog = ui.configint("experimental", "samplestatus")
+
         # do a full compare of any files that might have changed
         for f in sorted(files):
             try:
@@ -1876,8 +1881,14 @@ class workingctx(committablectx):
                     or pctx[f].cmp(self[f])
                 ):
                     modified.append(f)
+                    if mtolog > 0:
+                        mtolog -= 1
+                        ui.log("status", "M %s: checked in filesystem" % f)
                 else:
                     fixup.append(f)
+                    if ftolog > 0:
+                        ftolog -= 1
+                        ui.log("status", "C %s: checked in filesystem" % f)
             except (IOError, OSError):
                 # A file become inaccessible in between? Mark it as deleted,
                 # matching dirstate behavior (issue5584).
@@ -1886,6 +1897,9 @@ class workingctx(committablectx):
                 # bother with that: if f has made it to this point, we're sure
                 # it's in the dirstate.
                 deleted.append(f)
+                if dtolog > 0:
+                    dtolog -= 1
+                    ui.log("status", "R %s: checked in filesystem" % f)
 
         return modified, deleted, fixup
 
