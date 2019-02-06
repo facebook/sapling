@@ -390,10 +390,7 @@ test changelog without a manifest
 
   $ hg init b
   $ cd b
-  $ hg branch foo
-  marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg ci -m branchfoo
+  $ hg ci -m foo --config ui.allowemptycommit=1
   $ hg verify
   checking changesets
   checking manifests
