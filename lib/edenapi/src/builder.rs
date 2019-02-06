@@ -165,5 +165,7 @@ fn build_hyper_client(
     http.enforce_http(false);
 
     let https = HttpsConnector::from((http, tls));
-    Ok(Client::builder().build::<_, Body>(https))
+    let client = Client::builder().http2_only(true).build::<_, Body>(https);
+
+    Ok(client)
 }
