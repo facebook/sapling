@@ -675,21 +675,6 @@ note that percent encoding is not handled:
   [255]
   $ cd ..
 
-test to bundle revisions on the newly created branch (issue3828):
-
-  $ hg -q clone -U test test-clone
-  $ cd test
-
-  $ hg -q branch foo
-  $ hg commit -m "create foo branch"
-  $ hg -q outgoing ../test-clone
-  9:b4f5acb1ee27
-  $ hg -q bundle --branch foo foo.hg ../test-clone
-  $ hg -R foo.hg -q log -r "bundle()"
-  9:b4f5acb1ee27
-
-  $ cd ..
-
 test for https://bz.mercurial-scm.org/1144
 
 test that verify bundle does not traceback
