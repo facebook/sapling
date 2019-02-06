@@ -10,6 +10,11 @@ setup common configuration
   > ssh="$DUMMYSSH"
   > EOF
 
+Setup helpers
+  $ log() {
+  >   hg sl -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
+  > }
+
 setup repo
   $ hg init repo-hg
   $ cd repo-hg
@@ -61,36 +66,16 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
   $ hgmn up master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg sl -r ":"
-  @  changeset:   4:c2e526aacb51
-  |  tag:         tip
-  |  bookmark:    default/master_bookmark
-  |  hoistedname: master_bookmark
-  |  parent:      2:26805aba1e60
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     1
+  $ log -r ":"
+  @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
   |
-  o  changeset:   2:26805aba1e60
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     C
+  o  C [public;rev=2;26805aba1e60]
   |
-  o  changeset:   1:112478962961
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     B
+  o  B [public;rev=1;112478962961]
   |
-  | o  changeset:   3:a0c9c5791058
-  |/   parent:      0:426bada5c675
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     1
-  |
-  o  changeset:   0:426bada5c675
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     A
+  | o  1 [draft;rev=3;a0c9c5791058]
+  |/
+  o  A [public;rev=0;426bada5c675]
    (re)
 
 
@@ -121,56 +106,22 @@ Push stack
   added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hgmn up -q master_bookmark
-  $ hg sl -r ":"
-  @  changeset:   8:6398085ceb9d
-  |  tag:         tip
-  |  bookmark:    default/master_bookmark
-  |  hoistedname: master_bookmark
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     3
+  $ log -r ":"
+  @  3 [public;rev=8;6398085ceb9d] default/master_bookmark
   |
-  o  changeset:   7:dc31470c8386
-  |  parent:      4:c2e526aacb51
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     2
+  o  2 [public;rev=7;dc31470c8386]
   |
-  o  changeset:   4:c2e526aacb51
-  |  parent:      2:26805aba1e60
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     1
+  o  1 [public;rev=4;c2e526aacb51]
   |
-  o  changeset:   2:26805aba1e60
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     C
+  o  C [public;rev=2;26805aba1e60]
   |
-  o  changeset:   1:112478962961
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     B
+  o  B [public;rev=1;112478962961]
   |
-  | o  changeset:   6:3953a5b36168
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     3
+  | o  3 [draft;rev=6;3953a5b36168]
   | |
-  | o  changeset:   5:c9b2673d3218
-  |/   parent:      0:426bada5c675
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     2
-  |
-  | o  changeset:   3:a0c9c5791058
-  |/   parent:      0:426bada5c675
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     1
-  |
-  o  changeset:   0:426bada5c675
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     A
+  | o  2 [draft;rev=5;c9b2673d3218]
+  |/
+  | o  1 [draft;rev=3;a0c9c5791058]
+  |/
+  o  A [public;rev=0;426bada5c675]
    (re)
