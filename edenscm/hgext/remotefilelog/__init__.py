@@ -26,6 +26,7 @@ Configs:
     of storing them as loose files
     ``remotefilelog.fetchpacks`` fetch data from the server and scmmemcache in
     pack files format
+    ``remotefilelog.getfilesstep`` the number of files per batch during fetching
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
     days after which it is no longer prefetched.
