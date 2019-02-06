@@ -129,7 +129,6 @@ fn main() -> Result<()> {
 
             let tailer = try_boxfuture!(Tailer::new(
                 ctx,
-                repo_name,
                 blobrepo,
                 config.clone(),
                 bookmark,

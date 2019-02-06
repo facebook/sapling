@@ -121,7 +121,6 @@ fn run_hook(
     repo.and_then(move |repo| {
         let mut hook_manager = HookManager::new(
             ctx.clone(),
-            format!("repo-{:?}", repo.get_repoid()),
             Box::new(BlobRepoChangesetStore::new(repo.clone())),
             Arc::new(BlobRepoFileContentStore::new(repo.clone())),
             Default::default(),

@@ -522,7 +522,6 @@ fn test_changeset_hook_context() {
         );
         let expected_context = HookContext {
             hook_name: "hook1".into(),
-            repo_name: "some_repo".into(),
             config: Default::default(),
             data,
         };
@@ -1079,7 +1078,6 @@ fn hook_manager_blobrepo() -> HookManager {
     let logger = Logger::root(Discard {}.ignore_res(), o!());
     HookManager::new(
         ctx,
-        "some_repo".into(),
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),
@@ -1114,7 +1112,6 @@ fn hook_manager_inmem() -> HookManager {
     let logger = Logger::root(Discard {}.ignore_res(), o!());
     HookManager::new(
         ctx,
-        "some_repo".into(),
         Box::new(changeset_store),
         Arc::new(content_store),
         Default::default(),

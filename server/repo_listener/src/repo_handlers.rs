@@ -96,7 +96,6 @@ pub fn repo_handlers(
 
                 let mut hook_manager = HookManager::new(
                     ctx.clone(),
-                    format!("repo-{:?}", blobrepo.get_repoid()),
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     Arc::new(BlobRepoFileContentStore::new(blobrepo.clone())),
                     hook_manager_params,

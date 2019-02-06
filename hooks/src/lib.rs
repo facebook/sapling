@@ -94,7 +94,6 @@ pub struct HookManager {
     changeset_hooks: ChangesetHooks,
     file_hooks: FileHooks,
     bookmark_hooks: HashMap<Bookmark, Vec<String>>,
-    repo_name: String,
     changeset_store: Box<ChangesetStore>,
     content_store: Arc<FileContentStore>,
     logger: Logger,
@@ -104,7 +103,6 @@ pub struct HookManager {
 impl HookManager {
     pub fn new(
         ctx: CoreContext,
-        repo_name: String,
         changeset_store: Box<ChangesetStore>,
         content_store: Arc<FileContentStore>,
         hook_manager_params: HookManagerParams,
@@ -116,7 +114,6 @@ impl HookManager {
         let filler = HookCacheFiller {
             ctx,
             file_hooks: file_hooks.clone(),
-            repo_name: repo_name.clone(),
         };
         let cache = Asyncmemo::with_limits(
             "hooks",
@@ -147,7 +144,6 @@ impl HookManager {
             changeset_hooks,
             file_hooks,
             bookmark_hooks: HashMap::new(),
-            repo_name,
             changeset_store,
             content_store,
             logger,
@@ -235,7 +231,6 @@ impl HookManager {
             })
             .collect();
         let hooks = try_boxfuture!(hooks);
-        let repo_name = self.repo_name.clone();
         self.get_hook_changeset(ctx.clone(), changeset_id)
             .and_then({
                 move |hcs| {
@@ -245,12 +240,7 @@ impl HookManager {
                         maybe_pushvars.as_ref(),
                     );
 
-                    HookManager::run_changeset_hooks_for_changeset(
-                        ctx,
-                        repo_name,
-                        hcs.clone(),
-                        hooks.clone(),
-                    )
+                    HookManager::run_changeset_hooks_for_changeset(ctx, hcs.clone(), hooks.clone())
                 }
             })
             .map(move |res| {
@@ -271,19 +261,14 @@ impl HookManager {
 
     fn run_changeset_hooks_for_changeset(
         ctx: CoreContext,
-        repo_name: String,
         changeset: HookChangeset,
         hooks: Vec<(String, Arc<Hook<HookChangeset>>, HookConfig)>,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         let v: Vec<BoxFuture<(String, HookExecution), _>> = hooks
             .iter()
             .map(move |(hook_name, hook, config)| {
-                let hook_context: HookContext<HookChangeset> = HookContext::new(
-                    hook_name.clone(),
-                    repo_name.clone(),
-                    config.clone(),
-                    changeset.clone(),
-                );
+                let hook_context: HookContext<HookChangeset> =
+                    HookContext::new(hook_name.clone(), config.clone(), changeset.clone());
                 HookManager::run_changeset_hook(ctx.clone(), hook.clone(), hook_context)
             })
             .collect();
@@ -851,7 +836,6 @@ impl InMemoryFileContentStore {
 
 struct HookCacheFiller {
     ctx: CoreContext,
-    repo_name: String,
     file_hooks: FileHooks,
 }
 
@@ -864,12 +848,8 @@ impl Filler for HookCacheFiller {
         match hooks.get(&key.hook_name) {
             Some(arc_hook) => {
                 let arc_hook = arc_hook.clone();
-                let hook_context: HookContext<HookFile> = HookContext::new(
-                    key.hook_name.clone(),
-                    self.repo_name.clone(),
-                    arc_hook.1.clone(),
-                    key.file.clone(),
-                );
+                let hook_context: HookContext<HookFile> =
+                    HookContext::new(key.hook_name.clone(), arc_hook.1.clone(), key.file.clone());
                 arc_hook.0.run(self.ctx.clone(), hook_context)
             }
             None => panic!("Can't find hook {}", key.hook_name), // TODO
@@ -923,7 +903,6 @@ where
     T: Clone,
 {
     pub hook_name: String,
-    pub repo_name: String,
     pub config: HookConfig,
     pub data: T,
 }
@@ -932,10 +911,9 @@ impl<T> HookContext<T>
 where
     T: Clone,
 {
-    fn new(hook_name: String, repo_name: String, config: HookConfig, data: T) -> HookContext<T> {
+    fn new(hook_name: String, config: HookConfig, data: T) -> HookContext<T> {
         HookContext {
             hook_name,
-            repo_name,
             config,
             data,
         }

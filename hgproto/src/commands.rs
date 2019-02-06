@@ -16,20 +16,20 @@ use std::sync::Arc;
 
 use bytes::{Bytes, BytesMut};
 use failure::{err_msg, FutureFailureErrorExt};
-use futures::IntoFuture;
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
+use futures::IntoFuture;
 
-use HgNodeHash;
 use context::CoreContext;
 use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
-use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
+use mercurial_bundles::Bundle2Item;
 use mercurial_types::MPath;
-use tokio_io::AsyncRead;
 use tokio_io::codec::Decoder;
+use tokio_io::AsyncRead;
+use HgNodeHash;
 
 use {GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 
@@ -172,7 +172,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                         if !bytes.is_empty() {
                             Either::A(err(ErrorKind::UnconsumedData(
                                 String::from_utf8_lossy(bytes.as_ref()).into_owned(),
-                            ).into()))
+                            )
+                            .into()))
                         } else {
                             Either::B(remainder.check_is_done().from_err())
                         }
@@ -184,7 +185,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                                 Err(e) => err(e.into()),
                                 Ok(buf) => err(ErrorKind::UnconsumedData(
                                     String::from_utf8_lossy(buf).into_owned(),
-                                ).into()),
+                                )
+                                .into()),
                             },
                             Err(e) => err(e.into()),
                         },
@@ -268,7 +270,8 @@ impl Decoder for GetfilesArgDecoder {
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
-        let maybeindex = src.iter()
+        let maybeindex = src
+            .iter()
             .enumerate()
             .find(|item| item.1 == &b'\n')
             .map(|(index, _)| index);
@@ -364,7 +367,8 @@ where
                 });
 
             Some(fut)
-        }).boxify();
+        })
+        .boxify();
 
     let try_send_instream =
         |wrapped_send: &mut Option<oneshot::Sender<_>>, instream: BytesStream<S>| -> Result<()> {
@@ -539,7 +543,10 @@ pub trait HgCommands {
 
     // @wireprotocommand('stream_out_shallow', '*')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
-        once(Err(ErrorKind::Unimplemented("stream_out_shallow".into()).into())).boxify()
+        once(Err(
+            ErrorKind::Unimplemented("stream_out_shallow".into()).into()
+        ))
+        .boxify()
     }
 }
 
@@ -619,12 +626,10 @@ mod test {
         assert_eq!(Some((hash_ones(), MPath::new("path").unwrap())), res);
 
         let mut input = BytesMut::from(format!("{}path", hash_ones()).as_bytes());
-        assert!(
-            decoder
-                .decode(&mut input)
-                .expect("unexpected error")
-                .is_none()
-        );
+        assert!(decoder
+            .decode(&mut input)
+            .expect("unexpected error")
+            .is_none());
 
         let mut input =
             BytesMut::from(format!("{}path\n{}path2\n", hash_ones(), hash_twos()).as_bytes());
@@ -645,12 +650,10 @@ mod test {
         assert!(decoder.decode(&mut input).is_err());
 
         let mut input = BytesMut::from(format!("{}", hash_ones()).as_bytes());
-        assert!(
-            decoder
-                .decode(&mut input)
-                .expect("unexpected error")
-                .is_none()
-        );
+        assert!(decoder
+            .decode(&mut input)
+            .expect("unexpected error")
+            .is_none());
 
         let mut input = BytesMut::from("11111path\n".as_bytes());
         assert!(decoder.decode(&mut input).is_err());
@@ -683,7 +686,6 @@ mod test {
         let logger = Logger::root(Discard {}.ignore_res(), o!());
         Arc::new(HookManager::new(
             ctx,
-            "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),
             Default::default(),

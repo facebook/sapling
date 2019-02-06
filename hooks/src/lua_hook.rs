@@ -1837,12 +1837,7 @@ end"#;
             let ctx = CoreContext::test_mock();
 
             run_test_for_config_reading(ctx, |conf| {
-                HookContext::new(
-                    "testhook".into(),
-                    "some-repo".into(),
-                    conf,
-                    default_changeset(),
-                )
+                HookContext::new("testhook".into(), conf, default_changeset())
             });
         });
     }
@@ -1853,12 +1848,7 @@ end"#;
             let ctx = CoreContext::test_mock();
 
             run_test_for_config_reading(ctx, |conf| {
-                HookContext::new(
-                    "testhook".into(),
-                    "some-repo".into(),
-                    conf,
-                    default_hook_added_file(),
-                )
+                HookContext::new("testhook".into(), conf, default_hook_added_file())
             });
         });
     }
@@ -1869,12 +1859,7 @@ end"#;
         changeset: HookChangeset,
     ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
-        let context = HookContext::new(
-            hook.name.clone(),
-            "some-repo".into(),
-            Default::default(),
-            changeset,
-        );
+        let context = HookContext::new(hook.name.clone(), Default::default(), changeset);
         hook.run(ctx, context).wait()
     }
 
@@ -1884,12 +1869,7 @@ end"#;
         hook_file: HookFile,
     ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
-        let context = HookContext::new(
-            hook.name.clone(),
-            "some-repo".into(),
-            Default::default(),
-            hook_file,
-        );
+        let context = HookContext::new(hook.name.clone(), Default::default(), hook_file);
         hook.run(ctx, context).wait()
     }
 

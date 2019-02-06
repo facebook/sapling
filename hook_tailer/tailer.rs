@@ -37,7 +37,6 @@ pub struct Tailer {
 impl Tailer {
     pub fn new(
         ctx: CoreContext,
-        repo_name: String,
         repo: BlobRepo,
         config: RepoConfig,
         bookmark: Bookmark,
@@ -49,7 +48,6 @@ impl Tailer {
 
         let mut hook_manager = HookManager::new(
             ctx.clone(),
-            repo_name,
             Box::new(changeset_store),
             Arc::new(content_store),
             Default::default(),
