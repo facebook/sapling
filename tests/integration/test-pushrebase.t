@@ -141,3 +141,32 @@ Push stack
   |
   o  A [public;rev=0;426bada5c675]
    (re)
+
+Push fast-forward
+  $ hg up master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 5 > 5 && hg add 5 && hg ci -m 5
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 59e5396444cf to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
+  $ log -r ":"
+  @  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  |
+  o  4 [public;rev=11;4f5a4463b24b]
+  |
+  o  3 [public;rev=10;7796136324ad]
+  |
+  o  1 [public;rev=4;c2e526aacb51]
+  |
+  o  C [public;rev=2;26805aba1e60]
+  |
+  o  B [public;rev=1;112478962961]
+  |
+  o  A [public;rev=0;426bada5c675]
+  
