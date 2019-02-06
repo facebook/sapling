@@ -30,7 +30,7 @@ py_class!(class PyMononokeClient |py| {
         base_url: &PyBytes,
         cache_path: &PyBytes,
         repo: &PyBytes,
-        client_creds: Option<&PyBytes> = None
+        client_creds: Option<(&PyBytes, &PyBytes)> = None
     ) -> PyResult<PyMononokeClient> {
         let base_url = str::from_utf8(base_url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let cache_path = str::from_utf8(cache_path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -38,9 +38,10 @@ py_class!(class PyMononokeClient |py| {
 
         let mut builder = MononokeClientBuilder::new();
 
-        if let Some(path) = client_creds {
-            let path = local_bytes_to_path(path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-            builder = builder.client_creds(path).map_pyerr::<exc::RuntimeError>(py)?;
+        if let Some((cert, key)) = client_creds {
+            let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
+            let key = local_bytes_to_path(key.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
+            builder = builder.client_creds2(cert, key).map_pyerr::<exc::RuntimeError>(py)?;
         }
 
         let client = builder.base_url_str(base_url)
