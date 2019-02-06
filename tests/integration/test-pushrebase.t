@@ -8,6 +8,8 @@ setup common configuration
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > ssh="$DUMMYSSH"
+  > [extensions]
+  > amend=
   > EOF
 
 Setup helpers
@@ -79,37 +81,57 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
    (re)
 
 
-Push rebase fails with conflict
+Push rebase fails with conflict in the bottom of the stack
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
+  $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hgmn push -r . --to master_bookmark
   remote: * Session with Mononoke started with uuid: * (glob)
-  pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
   remote: * pushrebase failed * (glob)
   remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
   remote: * backtrace* (glob)
   abort: * (glob)
   [255]
+  $ hg hide -r ".^ + ." -q
+
+
+Push rebase fails with conflict in the top of the stack
+  $ hg up -q 0
+  $ echo 2 > 2 && hg add 2 && hg ci -m 2
+  $ echo 1 > 1 && hg add 1 && hg ci -m 1
+  $ hgmn push -r . --to master_bookmark
+  remote: * Session with Mononoke started with uuid: * (glob)
+  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  searching for changes
+  remote: * pushrebase failed * (glob)
+  remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote: * backtrace* (glob)
+  abort: * (glob)
+  [255]
+  $ hg hide -r ".^ + ." -q
+
 
 Push stack
   $ hg up -q 0
-  $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
+  $ echo 4 > 4 && hg add 4 && hg ci -m 4
   $ hgmn push -r . --to master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  pushing rev 3953a5b36168 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 7a68f123d810 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
+  $ hg hide -r ".^ + ." -q
   $ hgmn up -q master_bookmark
   $ log -r ":"
-  @  3 [public;rev=8;6398085ceb9d] default/master_bookmark
+  @  4 [public;rev=11;4f5a4463b24b] default/master_bookmark
   |
-  o  2 [public;rev=7;dc31470c8386]
+  o  3 [public;rev=10;7796136324ad]
   |
   o  1 [public;rev=4;c2e526aacb51]
   |
@@ -117,11 +139,5 @@ Push stack
   |
   o  B [public;rev=1;112478962961]
   |
-  | o  3 [draft;rev=6;3953a5b36168]
-  | |
-  | o  2 [draft;rev=5;c9b2673d3218]
-  |/
-  | o  1 [draft;rev=3;a0c9c5791058]
-  |/
   o  A [public;rev=0;426bada5c675]
    (re)
