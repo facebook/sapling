@@ -383,9 +383,6 @@ def install_platform_deps():
                 "zstd",
             ]
         )
-        run_cmd(["brew", "tap", "homebrew/cask"])
-        run_cmd(["brew", "cask", "install", "osxfuse"])
-
     else:
         # TODO: Handle distributions other than Ubuntu.
         raise Exception(
