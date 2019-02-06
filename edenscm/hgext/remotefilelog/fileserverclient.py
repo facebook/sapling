@@ -387,6 +387,70 @@ class fileserverclient(object):
         return self.repo.connectionpool.get(self.repo.fallbackpath)
 
     def request(self, fileids):
+        if self.ui.configbool("remotefilelog", "fetchpacks"):
+            return self.requestpacks(fileids)
+        return self.requestloose(fileids)
+
+    def requestpacks(self, fileids):
+        if not self.remotecache.connected:
+            self.connect()
+        cache = self.remotecache
+
+        total = len(fileids)
+        totalfetches = 2 * total  # requesting twice: data & history
+        with progress.bar(
+            self.ui, _("fetching from memcache"), total=totalfetches
+        ) as prog:
+            # generate `get` keys and make data request
+            getkeys = [file + "\0" + node for file, node in fileids]
+            cache.getdatapack(getkeys)
+            cache.gethistorypack(getkeys)
+
+            # receive both data and history
+            misses = []
+            try:
+                datamisses = cache.receive(prog)
+                histmisses = cache.receive(prog)
+
+                allmisses = histmisses.union(datamisses)
+                misses = map(lambda key: key.split("\0"), allmisses)
+            except CacheConnectionError:
+                misses = fileids
+                self.ui.warn(
+                    _(
+                        "warning: cache connection closed early - "
+                        + "falling back to server\n"
+                    )
+                )
+
+            global fetchmisses
+            missedfiles = len(misses)
+            fetchmisses += missedfiles
+
+            fromcache = total - missedfiles
+            self.ui.log(
+                "remotefilelog",
+                "remote cache hit rate is %r of %r\n",
+                fromcache,
+                total,
+                hit=fromcache,
+                total=total,
+            )
+
+        oldumask = os.umask(0o002)
+        try:
+            # receive cache misses from master
+            if missedfiles > 0:
+                datapackpath, histpackpath = self._fetchpackfiles(misses)
+                # send to the memcache
+                if self.ui.configbool("remotefilelog", "updatesharedcache"):
+                    if fetched:
+                        cache.setdatapack([datapackpath])
+                        cache.sethistorypack([histpackpath])
+        finally:
+            os.umask(oldumask)
+
+    def requestloose(self, fileids):
         """Takes a list of filename/node pairs and fetches them from the
         server. Files are stored in the local cache.
         A list of nodes that the server couldn't find is returned.
@@ -396,10 +460,6 @@ class fileserverclient(object):
             self.connect()
         cache = self.remotecache
         writedata = self.writedata
-
-        if self.ui.configbool("remotefilelog", "fetchpacks"):
-            self.requestpack(fileids)
-            return
 
         repo = self.repo
         idmap = {}
@@ -467,7 +527,8 @@ class fileserverclient(object):
             try:
                 # receive cache misses from master
                 if missed:
-                    fetchedfiles = self._requestloose(idmap, missed, prog=prog)
+
+                    fetchedfiles = self._fetchloosefiles(idmap, missed, prog=prog)
                     # send to memcache
                     if self.ui.configbool("remotefilelog", "updatesharedcache"):
                         if fetchedfiles:
@@ -478,7 +539,7 @@ class fileserverclient(object):
             finally:
                 os.umask(oldumask)
 
-    def _requestloose(self, idmap, missed, prog=None):
+    def _fetchloosefiles(self, idmap, missed, prog=None):
         """Fetch missed filesnodes from the server in the loose files format.
         Returns a set of the fetched file fullids.
         """
@@ -589,7 +650,7 @@ class fileserverclient(object):
             draftset.add(key)
         self.writedata.addremotefilelognode(filename, bin(node), data)
 
-    def requestpack(self, fileids):
+    def _fetchpackfiles(self, fileids):
         """Requests the given file revisions from the server in a pack files
         format. Returns pair of the data pack and history pack paths.
 
@@ -779,7 +840,9 @@ class fileserverclient(object):
                         self.ui.warn(fetchwarning + "\n")
                 self.logstacktrace()
             missingids = [(file, hex(id)) for file, id in missingids]
+
             fetched += len(missingids)
+
             start = time.time()
             with self.ui.timesection("fetchingfiles"):
                 missingids = self.request(missingids)

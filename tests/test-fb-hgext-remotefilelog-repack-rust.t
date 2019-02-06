@@ -51,13 +51,13 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
 # Pack a mix of packfiles and loosefiles into one packfile
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ hg prefetch -r 2
-  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ find $CACHEDIR | sort
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master

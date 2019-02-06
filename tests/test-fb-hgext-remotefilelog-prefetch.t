@@ -218,7 +218,7 @@
   > EOF
   $ clearcache
   $ hg prefetch -r .
-  3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
   $ find $TESTTMP/hgcache -type f | sort
   $TESTTMP/hgcache/master/packs/0a61bfbc8e0c4a08583b3f1abc7ad7f9cc9acc21.dataidx
   $TESTTMP/hgcache/master/packs/0a61bfbc8e0c4a08583b3f1abc7ad7f9cc9acc21.datapack
@@ -239,7 +239,7 @@
   $ hg pull -q
   (running background incremental repack)
   $ hg prefetch -r tip
-  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ hg up tip -q
   $ hg log -f z2 -T '{desc}\n'
   move z -> z2
@@ -259,17 +259,17 @@
   forgetting y2
   adding z
   forgetting z3
-  3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
   abort: z2@109c3a557a73: not found in manifest! (?)
 
 # Test connection pool lifetime
   $ clearcache
   $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=0 | grep 'closing expired connection'
-  4 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
   closing expired connection to ssh://user@dummy/master
   $ clearcache
   $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=300 | grep 'closing expired connection'
-  4 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
   [1]
 
   $ cat >$TESTTMP/testpool <<EOF

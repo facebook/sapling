@@ -24,6 +24,8 @@ Configs:
     ``remotefilelog.localdatarepack`` runs repack on local data loose files
     ``remotefilelog.packlocaldata`` use pack files to store local data instead
     of storing them as loose files
+    ``remotefilelog.fetchpacks`` fetch data from the server and scmmemcache in
+    pack files format
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
     days after which it is no longer prefetched.
@@ -146,6 +148,7 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem("remotefilelog", "fetchpacks", default=False)
 configitem("remotefilelog", "localdatarepack", default=False)
 configitem("remotefilelog", "packlocaldata", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
