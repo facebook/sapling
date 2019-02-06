@@ -387,6 +387,7 @@ Amend the commit to add a new file with an empty cache
   1 trees fetched over *s (glob)
   fetching tree 'a/b/c/d/e/f/g/h/i/j' 3724b7d74346d81b3dc95251596dcb69d000cda3
   1 trees fetched over *s (glob)
+  12 files fetched over 1 fetches - (12 misses, 0.00% hit ratio) over 0.00s (?)
 
 Try again, disabling the descendantrevfastpath
   $ clearcache
