@@ -1496,6 +1496,11 @@ else:
 if safehasattr(time, "perf_counter"):
     timer = time.perf_counter
 
+if "TESTTMP" in encoding.environ:
+    # Stabilize test output
+    def timer():
+        return 0
+
 
 def fstat(fp):
     """stat file object that may not have fileno method."""
