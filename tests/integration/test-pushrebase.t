@@ -433,3 +433,24 @@ Test a non-forward push
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
   ~
+
+Test deleting a bookmark
+  $ hgmn push --delete master_bookmark_2
+  pushing to ssh://user@dummy/repo
+  remote: .* DEBG Session with Mononoke started with uuid: .* (re)
+  searching for changes
+  no changes found
+  deleting remote bookmark master_bookmark_2
+  [1]
+  $ log -r "20::"
+  o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
+  @ |  11 [public;rev=22;589551466f25]
+  | |
+  o |  10 [public;rev=21;c573a92e1179]
+  |/
+  o  9 [public;rev=20;2f7cc50dc4e5]
+  |
+  ~
