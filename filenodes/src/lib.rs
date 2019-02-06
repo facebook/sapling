@@ -117,22 +117,22 @@ pub trait Filenodes: Send + Sync {
         &self,
         ctx: CoreContext,
         info: BoxStream<FilenodeInfo, Error>,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<(), Error>;
 
     fn get_filenode(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        filenode: &HgFileNodeId,
-        repo_id: &RepositoryId,
+        filenode: HgFileNodeId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error>;
 
     fn get_all_filenodes(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error>;
 }
 

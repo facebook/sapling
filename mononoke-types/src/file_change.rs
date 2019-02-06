@@ -71,8 +71,8 @@ impl FileChange {
         })?)
     }
 
-    pub fn content_id(&self) -> &ContentId {
-        &self.content_id
+    pub fn content_id(&self) -> ContentId {
+        self.content_id
     }
 
     pub fn file_type(&self) -> FileType {

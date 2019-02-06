@@ -31,8 +31,8 @@ impl CompositeEntry {
     #[inline]
     pub fn add_parent(&mut self, entry: Box<Entry + Sync>) {
         match entry.get_type() {
-            Type::Tree => self.trees.insert(*entry.get_hash(), entry),
-            Type::File(ft) => self.files.insert((ft, *entry.get_hash()), entry),
+            Type::Tree => self.trees.insert(entry.get_hash(), entry),
+            Type::File(ft) => self.files.insert((ft, entry.get_hash()), entry),
         };
     }
 
@@ -42,13 +42,13 @@ impl CompositeEntry {
     }
 
     #[inline]
-    pub fn contains_file(&self, file_type: &FileType, hash: &HgEntryId) -> bool {
-        self.files.contains_key(&(*file_type, *hash))
+    pub fn contains_file(&self, file_type: &FileType, hash: HgEntryId) -> bool {
+        self.files.contains_key(&(*file_type, hash))
     }
 
     /// Whether this composite entry contains the same hash but a different type.
     #[inline]
-    pub fn contains_file_other_type(&self, file_type: &FileType, hash: &HgEntryId) -> bool {
+    pub fn contains_file_other_type(&self, file_type: &FileType, hash: HgEntryId) -> bool {
         file_type
             .complement()
             .iter()
@@ -57,7 +57,7 @@ impl CompositeEntry {
 
     /// Whether this composite entry contains a file with this hash but with any possible type.
     #[inline]
-    pub fn contains_file_any_type(&self, hash: &HgEntryId) -> bool {
+    pub fn contains_file_any_type(&self, hash: HgEntryId) -> bool {
         FileType::all()
             .iter()
             .any(|ft| self.contains_file(ft, hash))
@@ -69,8 +69,8 @@ impl CompositeEntry {
     }
 
     #[inline]
-    pub fn contains_tree(&self, hash: &HgEntryId) -> bool {
-        self.trees.contains_key(hash)
+    pub fn contains_tree(&self, hash: HgEntryId) -> bool {
+        self.trees.contains_key(&hash)
     }
 
     pub fn manifest(

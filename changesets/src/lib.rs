@@ -310,12 +310,12 @@ impl Changesets for SqlChangesets {
         STATS::gets.add_value(1);
         cloned!(self.read_master_connection);
 
-        select_changeset(&self.read_connection, &repo_id, &cs_id)
+        select_changeset(&self.read_connection, repo_id, cs_id)
             .and_then(move |maybe_mapping| match maybe_mapping {
                 Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
                 None => {
                     STATS::gets_master.add_value(1);
-                    select_changeset(&read_master_connection, &repo_id, &cs_id)
+                    select_changeset(&read_master_connection, repo_id, cs_id)
                 }
             })
             .boxify()
@@ -457,7 +457,7 @@ fn check_changeset_matches(
     connection: &Connection,
     cs: ChangesetInsert,
 ) -> impl Future<Item = (), Error = Error> {
-    select_changeset(&connection, &cs.repo_id, &cs.cs_id).and_then(move |stored_cs| {
+    select_changeset(&connection, cs.repo_id, cs.cs_id).and_then(move |stored_cs| {
         let stored_parents = stored_cs.map(|cs| cs.parents);
         if Some(&cs.parents) == stored_parents.as_ref() {
             Ok(())
@@ -474,8 +474,8 @@ fn check_changeset_matches(
 
 fn select_changeset(
     connection: &Connection,
-    repo_id: &RepositoryId,
-    cs_id: &ChangesetId,
+    repo_id: RepositoryId,
+    cs_id: ChangesetId,
 ) -> BoxFuture<Option<ChangesetEntry>, Error> {
     cloned!(repo_id, cs_id);
 

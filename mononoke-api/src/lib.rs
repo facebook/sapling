@@ -27,11 +27,11 @@ pub fn get_content_by_path(
     changesetid: HgChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = Content, Error = Error> {
-    repo.get_changeset_by_changesetid(ctx.clone(), &changesetid)
+    repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
         .from_err()
         .and_then({
             cloned!(ctx, path);
-            move |changeset| repo.find_path_in_manifest(ctx, path, *changeset.manifestid())
+            move |changeset| repo.find_path_in_manifest(ctx, path, changeset.manifestid())
         })
         .and_then(|content| {
             content.ok_or_else(move || {

@@ -262,9 +262,9 @@ impl Entry for MockEntry {
     fn get_size(&self, _ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
         unimplemented!();
     }
-    fn get_hash(&self) -> &HgEntryId {
+    fn get_hash(&self) -> HgEntryId {
         match self.hash {
-            Some(ref hash) => hash,
+            Some(hash) => hash,
             None => panic!(
                 "hash for entry (name: '{:?}', type: '{:?}') is not set!",
                 self.name, self.ty

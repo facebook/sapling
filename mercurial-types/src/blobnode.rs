@@ -18,20 +18,20 @@ pub enum HgParents {
 }
 
 impl HgParents {
-    pub fn new(p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> Self {
+    pub fn new(p1: Option<HgNodeHash>, p2: Option<HgNodeHash>) -> Self {
         match (p1, p2) {
             (None, None) => HgParents::None,
-            (Some(p1), None) => HgParents::One(*p1),
-            (None, Some(p2)) => HgParents::One(*p2),
-            (Some(p1), Some(p2)) => HgParents::Two(*p1, *p2),
+            (Some(p1), None) => HgParents::One(p1),
+            (None, Some(p2)) => HgParents::One(p2),
+            (Some(p1), Some(p2)) => HgParents::Two(p1, p2),
         }
     }
 
-    pub fn get_nodes(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
+    pub fn get_nodes(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
         match self {
             &HgParents::None => (None, None),
-            &HgParents::One(ref p1) => (Some(p1), None),
-            &HgParents::Two(ref p1, ref p2) => (Some(p1), Some(p2)),
+            &HgParents::One(p1) => (Some(p1), None),
+            &HgParents::Two(p1, p2) => (Some(p1), Some(p2)),
         }
     }
 }
@@ -71,7 +71,7 @@ pub struct HgBlobNode {
 
 impl HgBlobNode {
     /// Construct a node with the given content and parents.
-    pub fn new<B>(blob: B, p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> HgBlobNode
+    pub fn new<B>(blob: B, p1: Option<HgNodeHash>, p2: Option<HgNodeHash>) -> HgBlobNode
     where
         B: Into<HgBlob>,
     {
@@ -138,17 +138,17 @@ mod test {
         let p = &HgBlobNode::new(blob.clone(), None, None);
         {
             let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), pid.as_ref(), None);
+            let n = HgBlobNode::new(blob.clone(), pid, None);
             assert_eq!(n.parents, HgParents::One(pid.unwrap()));
         }
         {
             let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), None, pid.as_ref());
+            let n = HgBlobNode::new(blob.clone(), None, pid);
             assert_eq!(n.parents, HgParents::One(pid.unwrap()));
         }
         {
             let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
+            let n = HgBlobNode::new(blob.clone(), pid, pid);
             assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
         }
     }
@@ -167,20 +167,12 @@ mod test {
         let pid2: Option<HgNodeHash> = Some((&p2).nodeid());
 
         let node1 = {
-            let n = HgBlobNode::new(
-                HgBlob::from(Bytes::from(&b"bar"[..])),
-                pid1.as_ref(),
-                pid2.as_ref(),
-            );
+            let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid1, pid2);
             assert_eq!(n.parents, HgParents::Two(pid1.unwrap(), pid2.unwrap()));
             n.nodeid()
         };
         let node2 = {
-            let n = HgBlobNode::new(
-                HgBlob::from(Bytes::from(&b"bar"[..])),
-                pid2.as_ref(),
-                pid1.as_ref(),
-            );
+            let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid2, pid1);
             assert_eq!(n.parents, HgParents::Two(pid2.unwrap(), pid1.unwrap()));
             n.nodeid()
         };

@@ -184,8 +184,8 @@ impl RevlogChangeset {
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
         Self {
-            p1: p1.cloned(),
-            p2: p2.cloned(),
+            p1,
+            p2,
             manifestid,
             user,
             time,
@@ -197,7 +197,7 @@ impl RevlogChangeset {
 
     pub fn new(node: HgBlobNode) -> Result<Self> {
         let (p1, p2) = node.parents().get_nodes();
-        Self::parse(node.as_blob().clone(), p1.cloned(), p2.cloned())
+        Self::parse(node.as_blob().clone(), p1, p2)
     }
 
     pub fn from_envelope(envelope: HgChangesetEnvelope) -> Result<Self> {
@@ -305,8 +305,8 @@ impl RevlogChangeset {
         Ok(HgBlobNode::new(Bytes::from(v), self.p1(), self.p2()))
     }
 
-    pub fn manifestid(&self) -> &HgManifestId {
-        &self.manifestid
+    pub fn manifestid(&self) -> HgManifestId {
+        self.manifestid
     }
 
     pub fn user(&self) -> &[u8] {
@@ -335,13 +335,13 @@ impl RevlogChangeset {
     }
 
     #[inline]
-    pub fn p1(&self) -> Option<&HgNodeHash> {
-        self.p1.as_ref()
+    pub fn p1(&self) -> Option<HgNodeHash> {
+        self.p1
     }
 
     #[inline]
-    pub fn p2(&self) -> Option<&HgNodeHash> {
-        self.p2.as_ref()
+    pub fn p2(&self) -> Option<HgNodeHash> {
+        self.p2
     }
 }
 

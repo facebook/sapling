@@ -604,12 +604,12 @@ mod tests {
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = repo
-            .get_bonsai_from_hg(ctx.clone(), &HgChangesetId::from_str(cs_id).unwrap())
+            .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap())
             .wait()
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, &head).unwrap();
+        txn.force_set(&book, head).unwrap();
         txn.commit().wait().unwrap();
     }
 
@@ -662,7 +662,7 @@ mod tests {
         let public_commit = repo
             .get_bonsai_from_hg(
                 ctx.clone(),
-                &HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
+                HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
             )
             .wait()
             .unwrap()
@@ -671,7 +671,7 @@ mod tests {
         let other_public_commit = repo
             .get_bonsai_from_hg(
                 ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
             )
             .wait()
             .unwrap()
@@ -680,7 +680,7 @@ mod tests {
         let draft_commit = repo
             .get_bonsai_from_hg(
                 ctx.clone(),
-                &HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
+                HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
             )
             .wait()
             .unwrap()
@@ -689,7 +689,7 @@ mod tests {
         let other_draft_commit = repo
             .get_bonsai_from_hg(
                 ctx.clone(),
-                &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
+                HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
             )
             .wait()
             .unwrap()
@@ -698,7 +698,7 @@ mod tests {
         let public_bookmark_commit = repo
             .get_bonsai_from_hg(
                 ctx.clone(),
-                &HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").unwrap(),
+                HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").unwrap(),
             )
             .wait()
             .unwrap()

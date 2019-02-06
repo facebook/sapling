@@ -1091,11 +1091,11 @@ fn hook_manager_inmem() -> HookManager {
     // Load up an in memory store with a single commit from the many_files_dirs store
     let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
     let cs = repo
-        .get_changeset_by_changesetid(ctx.clone(), &cs_id)
+        .get_changeset_by_changesetid(ctx.clone(), cs_id)
         .wait()
         .unwrap();
     let mut changeset_store = InMemoryChangesetStore::new();
-    changeset_store.insert(&cs_id, &cs);
+    changeset_store.insert(cs_id, &cs);
     let mut content_store = InMemoryFileContentStore::new();
     content_store.insert(
         (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir1/file_1")),

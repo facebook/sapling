@@ -34,7 +34,7 @@ define_stats! {
 // 6 hours in sec
 const TTL_DRAFT_SEC: u64 = 21600;
 
-pub fn get_cache_key(repo_id: &RepositoryId, cs_id: &ChangesetId) -> String {
+pub fn get_cache_key(repo_id: RepositoryId, cs_id: ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)
 }
 
@@ -71,7 +71,7 @@ impl Phases for CachingHintPhases {
     ) -> BoxFuture<bool, Error> {
         cloned!(self.keygen, self.memcache, self.phases_store);
         let repo_id = repo.get_repoid();
-        get_phase_from_memcache(&memcache, &keygen, &repo_id, &cs_id)
+        get_phase_from_memcache(&memcache, &keygen, repo_id, cs_id)
             .and_then(move |maybe_phase| {
                 match maybe_phase {
                     // The phase is already the same in memcache, nothing is needed.
@@ -80,7 +80,7 @@ impl Phases for CachingHintPhases {
                     }
                     _ => {
                         // The phase is missing or different in memcache. Refresh memcache.
-                        set_phase_to_memcache(&memcache, &keygen, &repo_id, &cs_id, &phase)
+                        set_phase_to_memcache(&memcache, &keygen, repo_id, cs_id, &phase)
                         // Refresh the underlying persistent storage (currently for public commits only).
                         .and_then(move |_| {
                             if phase == Phase::Public {
@@ -109,7 +109,7 @@ impl Phases for CachingHintPhases {
         get_phases_from_memcache(
             &memcache,
             &keygen,
-            &repo_id,
+            repo_id,
             phases.iter().map(|(cs_id, _)| cs_id.clone()).collect(),
         )
         .and_then(move |phases_mapping| {
@@ -141,7 +141,7 @@ impl Phases for CachingHintPhases {
                 })
                 .collect();
 
-            set_phases_to_memcache(&memcache, &keygen, &repo_id, add_to_memcache)
+            set_phases_to_memcache(&memcache, &keygen, repo_id, add_to_memcache)
                 .and_then(move |_| phases_store.add_all(ctx, repo, add_to_db))
         })
         .boxify()
@@ -197,7 +197,7 @@ impl Phases for CachingHintPhases {
         );
         let repo_id = repo.get_repoid();
         // Look up in the memcache.
-        get_phases_from_memcache(&memcache, &keygen, &repo_id, cs_ids)
+        get_phases_from_memcache(&memcache, &keygen, repo_id, cs_ids)
             .and_then(move |phases_mapping| {
                 let found_in_memcache = phases_mapping.calculated;
                 let not_found_in_memcache = phases_mapping.unknown;
@@ -276,7 +276,7 @@ impl Phases for CachingHintPhases {
                                     set_phases_to_memcache(
                                         &memcache,
                                         &keygen,
-                                        &repo_id,
+                                        repo_id,
                                         add_to_memcache,
                                     )
                                 })
@@ -296,8 +296,8 @@ impl Phases for CachingHintPhases {
 fn get_phase_from_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    cs_id: &ChangesetId,
+    repo_id: RepositoryId,
+    cs_id: ChangesetId,
 ) -> impl Future<Item = Option<Phase>, Error = Error> {
     memcache
         .get(keygen.key(get_cache_key(repo_id, cs_id)))
@@ -325,12 +325,12 @@ fn get_phase_from_memcache(
 fn get_phases_from_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     cs_ids: Vec<ChangesetId>,
 ) -> impl Future<Item = PhasesMapping, Error = Error> {
     stream::futures_unordered(cs_ids.into_iter().map(move |cs_id| {
         cloned!(memcache, keygen, repo_id);
-        get_phase_from_memcache(&memcache, &keygen, &repo_id, &cs_id)
+        get_phase_from_memcache(&memcache, &keygen, repo_id, cs_id)
             .map(move |maybe_phase| (cs_id, maybe_phase))
     }))
     .collect()
@@ -357,8 +357,8 @@ fn get_phases_from_memcache(
 fn set_phase_to_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    cs_id: &ChangesetId,
+    repo_id: RepositoryId,
+    cs_id: ChangesetId,
     phase: &Phase,
 ) -> impl Future<Item = (), Error = Error> {
     match phase {
@@ -387,13 +387,13 @@ fn set_phase_to_memcache(
 fn set_phases_to_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     phases: Vec<(ChangesetId, Phase)>,
 ) -> impl Future<Item = (), Error = Error> {
     cloned!(memcache, keygen, repo_id);
     stream::futures_unordered(
         phases.iter().map(|(cs_id, phase)| {
-            set_phase_to_memcache(&memcache, &keygen, &repo_id, &cs_id, &phase)
+            set_phase_to_memcache(&memcache, &keygen, repo_id, *cs_id, &phase)
         }),
     )
     .collect()

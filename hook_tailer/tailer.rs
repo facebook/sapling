@@ -219,7 +219,7 @@ fn nodehash_to_bonsai(
     node: HgNodeHash,
 ) -> impl Future<Item = ChangesetId, Error = Error> {
     let hg_cs = HgChangesetId::new(node);
-    repo.get_bonsai_from_hg(ctx, &hg_cs)
+    repo.get_bonsai_from_hg(ctx, hg_cs)
         .and_then(move |maybe_node| maybe_node.ok_or(ErrorKind::BonsaiNotFound(hg_cs).into()))
 }
 

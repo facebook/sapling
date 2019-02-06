@@ -60,8 +60,8 @@ impl HgChangesetContent {
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
         Self {
-            p1: p1.cloned(),
-            p2: p2.cloned(),
+            p1,
+            p2,
             manifestid,
             user: cs_metadata.user.into_bytes(),
             time: cs_metadata.time,
@@ -123,13 +123,13 @@ impl HgChangesetContent {
     }
 
     #[inline]
-    pub fn p1(&self) -> Option<&HgNodeHash> {
-        self.p1.as_ref()
+    pub fn p1(&self) -> Option<HgNodeHash> {
+        self.p1
     }
 
     #[inline]
-    pub fn p2(&self) -> Option<&HgNodeHash> {
-        self.p2.as_ref()
+    pub fn p2(&self) -> Option<HgNodeHash> {
+        self.p2
     }
 }
 
@@ -141,12 +141,12 @@ pub struct HgBlobChangeset {
 
 impl HgBlobChangeset {
     pub fn new(content: HgChangesetContent) -> Result<Self> {
-        Ok(Self::new_with_id(&content.compute_hash()?, content))
+        Ok(Self::new_with_id(content.compute_hash()?, content))
     }
 
-    pub fn new_with_id(changesetid: &HgChangesetId, content: HgChangesetContent) -> Self {
+    pub fn new_with_id(changesetid: HgChangesetId, content: HgChangesetContent) -> Self {
         Self {
-            changesetid: *changesetid,
+            changesetid,
             content,
         }
     }
@@ -158,13 +158,12 @@ impl HgBlobChangeset {
     pub fn load(
         ctx: CoreContext,
         blobstore: &RepoBlobstore,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
-        let changesetid = *changesetid;
         if changesetid == HgChangesetId::new(NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
             let cs = HgBlobChangeset::new_with_id(
-                &changesetid,
+                changesetid,
                 HgChangesetContent::from_revlogcs(revlogcs),
             );
             Either::A(Ok(Some(cs)).into_future())
@@ -177,7 +176,7 @@ impl HgBlobChangeset {
                     None => Ok(None),
                     Some(bytes) => {
                         let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
-                        if changesetid.as_nodehash() != envelope.node_id() {
+                        if changesetid != HgChangesetId::new(envelope.node_id()) {
                             bail_msg!(
                                 "Changeset ID mismatch (requested: {}, got: {})",
                                 changesetid,
@@ -186,7 +185,7 @@ impl HgBlobChangeset {
                         }
                         let revlogcs = RevlogChangeset::from_envelope(envelope)?;
                         let cs = HgBlobChangeset::new_with_id(
-                            &changesetid,
+                            changesetid,
                             HgChangesetContent::from_revlogcs(revlogcs),
                         );
                         Ok(Some(cs))
@@ -220,8 +219,8 @@ impl HgBlobChangeset {
             .and_then(|contents| {
                 let envelope = HgChangesetEnvelopeMut {
                     node_id: self.changesetid.into_nodehash(),
-                    p1: self.content.p1().cloned(),
-                    p2: self.content.p2().cloned(),
+                    p1: self.content.p1(),
+                    p2: self.content.p2(),
                     contents,
                 };
                 let envelope = envelope.freeze();
@@ -232,19 +231,19 @@ impl HgBlobChangeset {
     }
 
     #[inline]
-    pub fn p1(&self) -> Option<&HgNodeHash> {
+    pub fn p1(&self) -> Option<HgNodeHash> {
         self.content.p1()
     }
 
     #[inline]
-    pub fn p2(&self) -> Option<&HgNodeHash> {
+    pub fn p2(&self) -> Option<HgNodeHash> {
         self.content.p2()
     }
 }
 
 impl Changeset for HgBlobChangeset {
-    fn manifestid(&self) -> &HgManifestId {
-        &self.content.manifestid
+    fn manifestid(&self) -> HgManifestId {
+        self.content.manifestid
     }
 
     fn user(&self) -> &[u8] {

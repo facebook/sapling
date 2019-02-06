@@ -105,7 +105,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         name: &Bookmark,
-        repoid: &RepositoryId,
+        repoid: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error>;
 
     /// Lists the bookmarks that match the prefix with bookmark's values.
@@ -116,7 +116,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
-        repoid: &RepositoryId,
+        repoid: RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// Lists the bookmarks that match the prefix with bookmark's values but the bookmarks may not
@@ -129,32 +129,32 @@ pub trait Bookmarks: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
-        repoid: &RepositoryId,
+        repoid: RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// Creates a transaction that will be used for write operations.
-    fn create_transaction(&self, ctx: CoreContext, repoid: &RepositoryId) -> Box<Transaction>;
+    fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<Transaction>;
 }
 
 pub trait Transaction: Send + Sync + 'static {
     /// Adds set() operation to the transaction set.
     /// Updates a bookmark's value. Bookmark should already exist and point to `old_cs`, otherwise
     /// committing the transaction will fail.
-    fn update(&mut self, key: &Bookmark, new_cs: &ChangesetId, old_cs: &ChangesetId) -> Result<()>;
+    fn update(&mut self, key: &Bookmark, new_cs: ChangesetId, old_cs: ChangesetId) -> Result<()>;
 
     /// Adds create() operation to the transaction set.
     /// Creates a bookmark. Bookmark should not already exist, otherwise committing the
     /// transaction will fail.
-    fn create(&mut self, key: &Bookmark, new_cs: &ChangesetId) -> Result<()>;
+    fn create(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()>;
 
     /// Adds force_set() operation to the transaction set.
     /// Unconditionally sets the new value of the bookmark. Succeeds regardless of whether bookmark
     /// exists or not.
-    fn force_set(&mut self, key: &Bookmark, new_cs: &ChangesetId) -> Result<()>;
+    fn force_set(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()>;
 
     /// Adds delete operation to the transaction set.
     /// Deletes bookmark only if it currently points to `old_cs`.
-    fn delete(&mut self, key: &Bookmark, old_cs: &ChangesetId) -> Result<()>;
+    fn delete(&mut self, key: &Bookmark, old_cs: ChangesetId) -> Result<()>;
 
     /// Adds force_delete operation to the transaction set.
     /// Deletes bookmark unconditionally.

@@ -239,8 +239,8 @@ impl Details {
         )
     }
 
-    pub fn entryid(&self) -> &HgEntryId {
-        &self.entryid
+    pub fn entryid(&self) -> HgEntryId {
+        self.entryid
     }
 
     pub fn flag(&self) -> Type {
@@ -285,7 +285,8 @@ impl Stream for RevlogListStream {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
-        let v = self.0
+        let v = self
+            .0
             .next()
             .map(|(path, details)| RevlogEntry::new(self.1.clone(), path, details));
         match v {
@@ -327,7 +328,7 @@ impl RevlogEntry {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
-            .and_then(|revlog| revlog.get_rev_parents_by_nodeid(&nodeid))
+            .and_then(|revlog| revlog.get_rev_parents_by_nodeid(nodeid))
             .into_future()
             .boxify()
     }
@@ -336,7 +337,7 @@ impl RevlogEntry {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
-            .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
+            .and_then(|revlog| revlog.get_rev_by_nodeid(nodeid))
             .map(|node| node.as_blob().clone())
             .map_err(|err| {
                 err.context(format_err!(
@@ -355,7 +356,7 @@ impl RevlogEntry {
         let nodeid = self.get_hash().into_nodehash();
 
         revlog
-            .and_then(|revlog| revlog.is_ext_by_nodeid(&nodeid))
+            .and_then(|revlog| revlog.is_ext_by_nodeid(nodeid))
             .map_err(Error::from)
             .into_future()
             .boxify()
@@ -366,7 +367,7 @@ impl RevlogEntry {
         let nodeid = self.get_hash().into_nodehash();
 
         revlog
-            .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
+            .and_then(|revlog| revlog.get_rev_by_nodeid(nodeid))
             .and_then(|node| {
                 let data = node.as_blob();
                 match self.get_type() {
@@ -417,8 +418,8 @@ impl RevlogEntry {
             .boxify()
     }
 
-    pub fn get_hash(&self) -> &HgEntryId {
-        &self.details.entryid
+    pub fn get_hash(&self) -> HgEntryId {
+        self.details.entryid
     }
 
     pub fn get_name(&self) -> Option<&MPathElement> {

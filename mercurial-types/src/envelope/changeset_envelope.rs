@@ -85,14 +85,14 @@ impl HgChangesetEnvelope {
     /// The ID for this changeset, as recorded by Mercurial. This is expected to match the
     /// actual hash computed from the contents.
     #[inline]
-    pub fn node_id(&self) -> &HgNodeHash {
-        &self.inner.node_id
+    pub fn node_id(&self) -> HgNodeHash {
+        self.inner.node_id
     }
 
     /// The parent hashes for this node. The order matters.
     #[inline]
-    pub fn parents(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
-        (self.inner.p1.as_ref(), self.inner.p2.as_ref())
+    pub fn parents(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
+        (self.inner.p1, self.inner.p2)
     }
 
     /// The changeset contents as raw bytes.

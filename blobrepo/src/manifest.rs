@@ -128,7 +128,7 @@ pub fn fetch_manifest_envelope_opt(
                 None => return Ok(None),
             };
             let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
-            if &node_id != envelope.node_id() {
+            if node_id != envelope.node_id() {
                 bail_msg!(
                     "Manifest ID mismatch (requested: {}, got: {})",
                     node_id,
@@ -155,7 +155,7 @@ impl BlobManifest {
     pub fn load(
         ctx: CoreContext,
         blobstore: &RepoBlobstore,
-        manifestid: &HgManifestId,
+        manifestid: HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
         if nodehash == NULL_HASH {
@@ -203,23 +203,23 @@ impl BlobManifest {
     }
 
     #[inline]
-    pub fn node_id(&self) -> &HgNodeHash {
-        &self.node_id
+    pub fn node_id(&self) -> HgNodeHash {
+        self.node_id
     }
 
     #[inline]
-    pub fn p1(&self) -> Option<&HgNodeHash> {
-        self.p1.as_ref()
+    pub fn p1(&self) -> Option<HgNodeHash> {
+        self.p1
     }
 
     #[inline]
-    pub fn p2(&self) -> Option<&HgNodeHash> {
-        self.p2.as_ref()
+    pub fn p2(&self) -> Option<HgNodeHash> {
+        self.p2
     }
 
     #[inline]
-    pub fn computed_node_id(&self) -> &HgNodeHash {
-        &self.computed_node_id
+    pub fn computed_node_id(&self) -> HgNodeHash {
+        self.computed_node_id
     }
 }
 
@@ -282,8 +282,8 @@ impl Details {
         Ok(Details { entryid, flag })
     }
 
-    pub fn entryid(&self) -> &HgEntryId {
-        &self.entryid
+    pub fn entryid(&self) -> HgEntryId {
+        self.entryid
     }
 
     pub fn flag(&self) -> Type {

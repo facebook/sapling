@@ -209,19 +209,19 @@ impl Revlog {
     }
 
     /// Return an `Entry` entry from the `RevIdx`.
-    pub fn is_ext_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<bool> {
+    pub fn is_ext_by_nodeid(&self, nodeid: HgNodeHash) -> Result<bool> {
         self.inner.is_ext_by_nodeid(nodeid)
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    pub fn get_idx_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<RevIdx> {
+    pub fn get_idx_by_nodeid(&self, nodeid: HgNodeHash) -> Result<RevIdx> {
         self.inner.get_idx_by_nodeid(nodeid)
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    pub fn get_entry_by_id(&self, entryid: &HgEntryId) -> Result<Entry> {
+    pub fn get_entry_by_id(&self, entryid: HgEntryId) -> Result<Entry> {
         let nodeid = entryid.clone().into_nodehash();
-        self.inner.get_entry_by_nodeid(&nodeid)
+        self.inner.get_entry_by_nodeid(nodeid)
     }
 
     /// Return a `Chunk` for a revision at `RevIdx`.
@@ -238,11 +238,11 @@ impl Revlog {
         self.inner.get_rev(tgtidx)
     }
 
-    pub fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<HgBlobNode> {
+    pub fn get_rev_by_nodeid(&self, id: HgNodeHash) -> Result<HgBlobNode> {
         self.inner.get_rev_by_nodeid(id)
     }
 
-    pub fn get_rev_parents_by_nodeid(&self, id: &HgNodeHash) -> Result<HgParents> {
+    pub fn get_rev_parents_by_nodeid(&self, id: HgNodeHash) -> Result<HgParents> {
         self.inner.get_rev_parents_by_nodeid(id)
     }
 
@@ -272,7 +272,8 @@ impl RevlogInner {
                 return Err(ErrorKind::Revlog(format!(
                     "failed to parse entry offset {}: {:?}",
                     off, err
-                )).into())
+                ))
+                .into());
             }
         }
     }
@@ -319,20 +320,20 @@ impl RevlogInner {
     }
 
     // Return an `Entry` entry from the `RevIdx`.
-    fn is_ext_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<bool> {
+    fn is_ext_by_nodeid(&self, nodeid: HgNodeHash) -> Result<bool> {
         self.get_entry_by_nodeid(nodeid)
             .map(|entry| entry.flags.contains(IdxFlags::EXTSTORED))
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    fn get_idx_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<RevIdx> {
-        match self.nodeidx.get(nodeid).cloned() {
+    fn get_idx_by_nodeid(&self, nodeid: HgNodeHash) -> Result<RevIdx> {
+        match self.nodeidx.get(&nodeid).cloned() {
             Some(idx) => Ok(idx), // cache hit
             None => Err(ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into()),
         }
     }
 
-    fn get_entry_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<Entry> {
+    fn get_entry_by_nodeid(&self, nodeid: HgNodeHash) -> Result<Entry> {
         self.get_idx_by_nodeid(nodeid)
             .and_then(|idx| self.get_entry(idx))
     }
@@ -381,7 +382,8 @@ impl RevlogInner {
                         "Failed to unpack literal: {} remains, {:?}",
                         rest.len(),
                         &rest[..16]
-                    )).into()),
+                    ))
+                    .into()),
                     IResult::Done(_, literal) => Ok(Chunk::Literal(literal)),
                     err => Err(
                         ErrorKind::Revlog(format!("Failed to unpack literal: {:?}", err)).into(),
@@ -394,7 +396,8 @@ impl RevlogInner {
                     "Failed to unpack details: {} remains, {:?}",
                     rest.len(),
                     &rest[..16]
-                )).into()),
+                ))
+                .into()),
                 IResult::Done(_, deltas) => Ok(Chunk::Deltas(deltas)),
                 err => Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {:?}", err)).into()),
             }
@@ -422,7 +425,8 @@ impl RevlogInner {
         let mut data = Vec::new();
         let mut chain = Vec::new();
         for idx in baserev.range_to(tgtidx.succ()) {
-            let chunk = self.get_chunk(idx)
+            let chunk = self
+                .get_chunk(idx)
                 .with_context(|_| format_err!("simple tgtidx {:?} idx {:?}", tgtidx, idx));
 
             match chunk? {
@@ -520,7 +524,7 @@ impl RevlogInner {
     fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<HgBlobNode> {
         let (p1, p2) = self.parse_parents(entry)?;
 
-        Ok(HgBlobNode::new(blob, p1.as_ref(), p2.as_ref()))
+        Ok(HgBlobNode::new(blob, p1, p2))
     }
 
     fn get_rev(&self, tgtidx: RevIdx) -> Result<HgBlobNode> {
@@ -543,19 +547,19 @@ impl RevlogInner {
         let entry = self.get_entry(tgtidx)?;
         let (p1, p2) = self.parse_parents(&entry)?;
 
-        Ok(HgParents::new(p1.as_ref(), p2.as_ref()))
+        Ok(HgParents::new(p1, p2))
     }
 
-    fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<HgBlobNode> {
-        self.get_idx_by_nodeid(&id).and_then(move |idx| {
+    fn get_rev_by_nodeid(&self, id: HgNodeHash) -> Result<HgBlobNode> {
+        self.get_idx_by_nodeid(id).and_then(move |idx| {
             self.get_rev(idx)
                 .with_context(|_| format!("can't get rev for id {}", id))
                 .map_err(Error::from)
         })
     }
 
-    fn get_rev_parents_by_nodeid(&self, id: &HgNodeHash) -> Result<HgParents> {
-        self.get_idx_by_nodeid(&id).and_then(move |idx| {
+    fn get_rev_parents_by_nodeid(&self, id: HgNodeHash) -> Result<HgParents> {
+        self.get_idx_by_nodeid(id).and_then(move |idx| {
             self.get_parents(idx)
                 .with_context(|_| format!("can't get parents for id {}", id))
                 .map_err(Error::from)

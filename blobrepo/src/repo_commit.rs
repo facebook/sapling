@@ -83,7 +83,7 @@ impl ChangesetHandle {
 
     pub fn ready_cs_handle(ctx: CoreContext, repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
         let bonsai_cs = repo
-            .get_bonsai_from_hg(ctx.clone(), &hg_cs)
+            .get_bonsai_from_hg(ctx.clone(), hg_cs)
             .and_then(move |bonsai_id| {
                 bonsai_id.ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs).into())
             })
@@ -92,7 +92,7 @@ impl ChangesetHandle {
                 move |bonsai_id| repo.get_bonsai_changeset(ctx, bonsai_id)
             });
 
-        let cs = repo.get_changeset_by_changesetid(ctx, &hg_cs);
+        let cs = repo.get_changeset_by_changesetid(ctx, hg_cs);
 
         let (trigger, can_be_parent) = oneshot::channel();
         let fut = bonsai_cs.join(cs);
@@ -104,7 +104,7 @@ impl ChangesetHandle {
                     let _ = trigger.send((
                         bonsai_cs.get_changeset_id(),
                         hg_cs.get_changeset_id().into_nodehash(),
-                        *hg_cs.manifestid(),
+                        hg_cs.manifestid(),
                     ));
                 })
                 .boxify()
@@ -200,7 +200,7 @@ impl UploadEntries {
                             manifest::Type::Tree => RepoPath::DirectoryPath(mpath),
                         };
                         let mut inner = inner_mutex.lock().expect("Lock poisoned");
-                        inner.required_entries.insert(path, *entry.get_hash());
+                        inner.required_entries.insert(path, entry.get_hash());
                     }
                     future::ok(()).boxify()
                 }
@@ -254,7 +254,7 @@ impl UploadEntries {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             inner
                 .required_entries
-                .insert(RepoPath::root(), *entry.get_hash());
+                .insert(RepoPath::root(), entry.get_hash());
         }
         self.process_one_entry(ctx, entry, RepoPath::root())
     }
@@ -434,8 +434,8 @@ impl UploadEntries {
                                             filenode: HgFileNodeId::new(
                                                 blobentry.get_hash().into_nodehash(),
                                             ),
-                                            p1: p1.cloned().map(HgFileNodeId::new),
-                                            p2: p2.cloned().map(HgFileNodeId::new),
+                                            p1: p1.map(HgFileNodeId::new),
+                                            p2: p2.map(HgFileNodeId::new),
                                             copyfrom,
                                             linknode: HgChangesetId::new(cs_id),
                                         }
@@ -448,7 +448,7 @@ impl UploadEntries {
                 .boxify();
 
                 filenodes
-                    .add_filenodes(ctx, filenodeinfos, &inner.repoid)
+                    .add_filenodes(ctx, filenodeinfos, inner.repoid)
                     .timed({
                         let mut scuba_logger = self.scuba_logger();
                         move |stats, result| {
@@ -611,11 +611,11 @@ pub fn check_case_conflicts(
     child_root_mf: HgManifestId,
     parent_root_mf: Option<HgManifestId>,
 ) -> impl Future<Item = (), Error = Error> {
-    let child_mf_fut = repo.get_manifest_by_nodeid(ctx.clone(), &child_root_mf.clone());
+    let child_mf_fut = repo.get_manifest_by_nodeid(ctx.clone(), child_root_mf.clone());
 
     let parent_mf_fut = parent_root_mf.map({
         cloned!(ctx, repo);
-        move |m| repo.get_manifest_by_nodeid(ctx.clone(), &m)
+        move |m| repo.get_manifest_by_nodeid(ctx.clone(), m)
     });
 
     child_mf_fut
@@ -637,8 +637,8 @@ pub fn check_case_conflicts(
                     case_conflict_checks.push(
                         repo.check_case_conflict_in_manifest(
                             ctx.clone(),
-                            &parent_root_mf,
-                            &child_root_mf,
+                            parent_root_mf,
+                            child_root_mf,
                             f.clone(),
                         )
                         .map(move |add_conflict| (add_conflict, f)),
@@ -714,7 +714,7 @@ pub fn process_entries(
             ))
             .boxify(),
             Some(root_hash) => repo
-                .get_manifest_by_nodeid(ctx, &HgManifestId::new(root_hash))
+                .get_manifest_by_nodeid(ctx, HgManifestId::new(root_hash))
                 .context("While fetching root manifest")
                 .from_err()
                 .map(move |m| (m, HgManifestId::new(root_hash)))
@@ -783,7 +783,7 @@ pub fn handle_parents(
         .map_err(|e| Error::from(e))
         .map(
             move |((p1_hash, p1_manifest), (p2_hash, p2_manifest), bonsai_parents)| {
-                let parents = HgParents::new(p1_hash.as_ref(), p2_hash.as_ref());
+                let parents = HgParents::new(p1_hash, p2_hash);
                 let mut parent_manifest_hashes = vec![];
                 if let Some(p1_manifest) = p1_manifest {
                     parent_manifest_hashes.push(p1_manifest);
@@ -816,13 +816,13 @@ pub fn fetch_parent_manifests(
     ),
     Error,
 > {
-    let p1_manifest_hash = parent_manifest_hashes.get(0);
-    let p2_manifest_hash = parent_manifest_hashes.get(1);
+    let p1_manifest_hash = parent_manifest_hashes.get(0).cloned();
+    let p2_manifest_hash = parent_manifest_hashes.get(1).cloned();
     let p1_manifest = p1_manifest_hash.map({
         cloned!(ctx, repo);
-        move |m| repo.get_manifest_by_nodeid(ctx, &m)
+        move |m| repo.get_manifest_by_nodeid(ctx, m)
     });
-    let p2_manifest = p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(ctx, &m));
+    let p2_manifest = p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(ctx, m));
 
     p1_manifest.join(p2_manifest).boxify()
 }

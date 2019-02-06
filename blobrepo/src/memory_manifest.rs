@@ -59,7 +59,7 @@ impl Debug for MemoryManifestEntry {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MemoryManifestEntry::Blob(blob) => {
-                fmt.debug_tuple("Blob hash").field(blob.get_hash()).finish()
+                fmt.debug_tuple("Blob hash").field(&blob.get_hash()).finish()
             }
             MemoryManifestEntry::Conflict(conflicts) => {
                 fmt.debug_list().entries(conflicts.iter()).finish()
@@ -339,7 +339,7 @@ impl MemoryManifestEntry {
                 ..
             } => match base_manifest_id {
                 Some(manifest_id) => Either::B(
-                    BlobManifest::load(ctx.clone(), blobstore, &HgManifestId::new(*manifest_id))
+                    BlobManifest::load(ctx.clone(), blobstore, HgManifestId::new(*manifest_id))
                         .and_then({
                             let manifest_id = HgManifestId::new(*manifest_id);
                             move |m| m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
@@ -354,9 +354,9 @@ impl MemoryManifestEntry {
                                         .expect("Unnamed entry in a manifest")
                                         .clone();
                                     let memory_entry = match entry.get_type() {
-                                        Type::Tree => Self::convert_treenode(
-                                            &entry.get_hash().into_nodehash(),
-                                        ),
+                                        Type::Tree => {
+                                            Self::convert_treenode(entry.get_hash().into_nodehash())
+                                        }
                                         _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
                                             blobstore.clone(),
                                             name.clone(),
@@ -384,10 +384,10 @@ impl MemoryManifestEntry {
         }
     }
 
-    pub fn convert_treenode(manifest_id: &HgNodeHash) -> Self {
+    pub fn convert_treenode(manifest_id: HgNodeHash) -> Self {
         MemoryManifestEntry::MemTree {
-            base_manifest_id: Some(*manifest_id),
-            p1: Some(*manifest_id),
+            base_manifest_id: Some(manifest_id),
+            p1: Some(manifest_id),
             p2: None,
             changes: Arc::new(Mutex::new(BTreeMap::new())),
         }
@@ -472,7 +472,7 @@ impl MemoryManifestEntry {
                     &incomplete_filenodes,
                     repo_path.clone(),
                 )
-                .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
+                .map(|entry| Self::convert_treenode(entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     saved.merge_with_conflicts(
                         ctx,
@@ -494,7 +494,7 @@ impl MemoryManifestEntry {
                     &incomplete_filenodes,
                     repo_path.clone(),
                 )
-                .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
+                .map(|entry| Self::convert_treenode(entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     self.merge_with_conflicts(
                         ctx,
@@ -647,7 +647,7 @@ impl MemoryManifestEntry {
             let mut changes = entry_changes.lock().expect("lock poisoned");
             changes.entry(element.clone()).or_insert_with(move || {
                 let entry = match entry.get_type() {
-                    Type::Tree => Self::convert_treenode(&entry.get_hash().into_nodehash()),
+                    Type::Tree => Self::convert_treenode(entry.get_hash().into_nodehash()),
                     _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
                         blobstore,
                         element,
@@ -695,7 +695,7 @@ impl MemoryManifestEntry {
                             // Do the lookup in base_manifest_id
                             if let Some(manifest_id) = base_manifest_id {
                                 let manifest_id = HgManifestId::new(*manifest_id);
-                                BlobManifest::load(ctx.clone(), &blobstore, &manifest_id)
+                                BlobManifest::load(ctx.clone(), &blobstore, manifest_id)
                                     .and_then(move |m| {
                                         m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
                                     })
@@ -966,8 +966,8 @@ impl MemoryRootManifest {
         ctx: CoreContext,
         repo: BlobRepo,
         incomplete_filenodes: IncompleteFilenodes,
-        mp1: Option<&HgNodeHash>,
-        mp2: Option<&HgNodeHash>,
+        mp1: Option<HgNodeHash>,
+        mp2: Option<HgNodeHash>,
     ) -> BoxFuture<Self, Error> {
         match (mp1, mp2) {
             (None, None) => future::ok(Self::create(

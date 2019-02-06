@@ -44,15 +44,14 @@ use mercurial_types_mocks::nodehash;
 fn get_root_manifest(
     ctx: CoreContext,
     repo: Arc<BlobRepo>,
-    changesetid: &HgChangesetId,
+    changesetid: HgChangesetId,
 ) -> Box<Manifest> {
-    let cs = repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
+    let cs = repo
+        .get_changeset_by_changesetid(ctx.clone(), changesetid)
         .wait()
         .unwrap();
     let manifestid = cs.manifestid();
-    repo.get_manifest_by_nodeid(ctx, &manifestid)
-        .wait()
-        .unwrap()
+    repo.get_manifest_by_nodeid(ctx, manifestid).wait().unwrap()
 }
 
 fn get_hash(c: char) -> HgEntryId {
@@ -295,9 +294,9 @@ fn do_check_with_pruner(
     max_depth: Option<usize>,
 ) {
     {
-        let manifest = get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash));
+        let manifest = get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(main_hash));
         let base_manifest =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(base_hash));
 
         let res = find_changed_entry_status_stream(
             ctx.clone(),
@@ -318,9 +317,9 @@ fn do_check_with_pruner(
     // Vice-versa: compare base_hash to main_hash. Deleted paths become added, added become
     // deleted.
     {
-        let manifest = get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
+        let manifest = get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(base_hash));
         let base_manifest =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(main_hash));
 
         let res = find_changed_entry_status_stream(
             ctx.clone(),
@@ -380,7 +379,8 @@ fn test_recursive_changed_entry_stream_linear() {
             expected_modified,
         );
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -422,7 +422,8 @@ fn test_recursive_changed_entry_stream_simple() {
             vec![],
         );
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -441,12 +442,13 @@ fn test_recursive_entry_stream() {
         // dir1/subdir1/file_1
         // dir2/file_1_in_dir2
 
-        let cs = repo.get_changeset_by_changesetid(ctx.clone(), &HgChangesetId::new(changesetid))
+        let cs = repo
+            .get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(changesetid))
             .wait()
             .unwrap();
         let manifestid = cs.manifestid();
 
-        let root_entry = repo.get_root_entry(&manifestid);
+        let root_entry = repo.get_root_entry(manifestid);
         let fut = recursive_entry_stream(ctx.clone(), None, Box::new(root_entry)).collect();
         let res = fut.wait().unwrap();
 
@@ -470,7 +472,8 @@ fn test_recursive_entry_stream() {
 
         assert_eq!(actual, expected);
 
-        let root_mf = repo.get_manifest_by_nodeid(ctx.clone(), &manifestid)
+        let root_mf = repo
+            .get_manifest_by_nodeid(ctx.clone(), manifestid)
             .wait()
             .unwrap();
 
@@ -497,7 +500,8 @@ fn test_recursive_entry_stream() {
         assert_eq!(actual, expected);
 
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -530,7 +534,8 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
             expected_modified,
         );
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -573,7 +578,8 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
             vec![],
         );
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -664,7 +670,8 @@ fn test_depth_parameter() {
             Some(0),
         );
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[derive(Clone)]
@@ -712,7 +719,8 @@ fn test_recursive_changed_entry_prune() {
                 func: |entry: &ChangedEntry| {
                     let path = entry.get_full_path().clone();
                     match path {
-                        Some(path) => path.into_iter()
+                        Some(path) => path
+                            .into_iter()
                             .find(|elem| elem.to_bytes() == "subdir1".as_bytes())
                             .is_none(),
                         None => true,
@@ -746,7 +754,8 @@ fn test_recursive_changed_entry_prune() {
                 func: |entry: &ChangedEntry| {
                     let path = entry.get_full_path().clone();
                     match path {
-                        Some(path) => path.into_iter()
+                        Some(path) => path
+                            .into_iter()
                             .find(|elem| elem.to_bytes() == "file_2".as_bytes())
                             .is_none(),
                         None => true,
@@ -757,7 +766,8 @@ fn test_recursive_changed_entry_prune() {
         );
 
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -790,11 +800,11 @@ fn test_recursive_changed_entry_prune_visited() {
         // A dir1/subdir1/subsubdir2/file_2
 
         let manifest_1 =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_1));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(main_hash_1));
         let manifest_2 =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_2));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(main_hash_2));
         let basemanifest =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(base_hash));
 
         let pruner = VisitedPruner::new();
 
@@ -828,7 +838,8 @@ fn test_recursive_changed_entry_prune_visited() {
         assert!(unique_len < res.len());
 
         Ok(())
-    }).expect("test failed")
+    })
+    .expect("test failed")
 }
 
 #[test]
@@ -861,11 +872,11 @@ fn test_recursive_changed_entry_prune_visited_no_files() {
         // A dir1/subdir1/subsubdir2/file_2
 
         let manifest_1 =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_1));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(main_hash_1));
         let manifest_2 =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_2));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(main_hash_2));
         let basemanifest =
-            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
+            get_root_manifest(ctx.clone(), repo.clone(), HgChangesetId::new(base_hash));
 
         let pruner = CombinatorPruner::new(FilePruner, VisitedPruner::new());
         let first_stream = changed_entry_stream_with_pruner(

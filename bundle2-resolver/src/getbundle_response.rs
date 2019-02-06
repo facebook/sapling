@@ -113,7 +113,7 @@ pub fn create_getbundle_response(
                         cloned!(ctx, blobrepo);
                         move |node| {
                             blobrepo
-                                .get_changeset_by_changesetid(ctx, &HgChangesetId::new(node))
+                                .get_changeset_by_changesetid(ctx, HgChangesetId::new(node))
                                 .map(move |cs| (node, cs))
                         }
                     })
@@ -163,7 +163,7 @@ fn hg_to_bonsai_stream(
         .map({
             cloned!(repo);
             move |node| {
-                repo.get_bonsai_from_hg(ctx.clone(), &node)
+                repo.get_bonsai_from_hg(ctx.clone(), node)
                     .and_then(move |maybe_bonsai| {
                         maybe_bonsai.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node).into())
                     })
@@ -281,7 +281,7 @@ fn calculate_public_roots(
             // calculate parents
             let vecf: Vec<_> = drafts
                 .into_iter()
-                .map(|bonsai| repo.get_changeset_parents_by_bonsai(ctx.clone(), &bonsai))
+                .map(|bonsai| repo.get_changeset_parents_by_bonsai(ctx.clone(), bonsai))
                 .collect();
 
             // join them together and filter already processed

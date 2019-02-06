@@ -120,8 +120,8 @@ impl BonsaiChangeset {
     }
 
     /// Get the parents for this changeset. The order of parents is significant.
-    pub fn parents(&self) -> impl Iterator<Item = &ChangesetId> {
-        self.inner.parents.iter()
+    pub fn parents<'a>(&'a self) -> impl Iterator<Item = ChangesetId> + 'a {
+        self.inner.parents.iter().cloned()
     }
 
     /// Get the files changed in this changeset. The items returned are guaranteed

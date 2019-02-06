@@ -240,24 +240,24 @@ impl RevlogRepo {
         ChangesetStream::new(&self.changelog)
     }
 
-    pub fn get_changeset(&self, changesetid: &HgChangesetId) -> BoxFuture<RevlogChangeset, Error> {
+    pub fn get_changeset(&self, changesetid: HgChangesetId) -> BoxFuture<RevlogChangeset, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         let nodeid = changesetid.clone().into_nodehash();
         self.changelog
-            .get_idx_by_nodeid(&nodeid)
+            .get_idx_by_nodeid(nodeid)
             .and_then(|idx| self.changelog.get_rev(idx))
             .and_then(|rev| RevlogChangeset::new(rev))
             .into_future()
             .boxify()
     }
 
-    pub fn get_root_manifest(&self, manifestid: &HgManifestId) -> BoxFuture<RevlogManifest, Error> {
+    pub fn get_root_manifest(&self, manifestid: HgManifestId) -> BoxFuture<RevlogManifest, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         let nodeid = manifestid.clone().into_nodehash();
         let repo = self.clone();
         let revlog = try_boxfuture!(self.get_path_revlog(&RepoPath::root()));
         revlog
-            .get_idx_by_nodeid(&nodeid)
+            .get_idx_by_nodeid(nodeid)
             .and_then(|idx| revlog.get_rev(idx))
             .and_then(move |rev| RevlogManifest::new(repo, rev))
             .into_future()

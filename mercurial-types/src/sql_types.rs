@@ -14,13 +14,13 @@ type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
 impl From<HgFileNodeId> for Value {
     fn from(id: HgFileNodeId) -> Self {
-        Value::Bytes(id.as_nodehash().0.as_ref().into())
+        Value::Bytes(id.into_nodehash().0.as_ref().into())
     }
 }
 
 impl From<HgChangesetId> for Value {
     fn from(id: HgChangesetId) -> Self {
-        Value::Bytes(id.as_nodehash().0.as_ref().into())
+        Value::Bytes(id.into_nodehash().0.as_ref().into())
     }
 }
 

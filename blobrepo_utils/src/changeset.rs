@@ -103,8 +103,8 @@ struct VisitOneShared<V> {
 
 impl<V> VisitOneShared<V> {
     #[inline]
-    fn visit_started(&self, changeset_id: &HgChangesetId) -> bool {
-        self.visit_started.contains_key(changeset_id)
+    fn visit_started(&self, changeset_id: HgChangesetId) -> bool {
+        self.visit_started.contains_key(&changeset_id)
     }
 
     #[inline]
@@ -140,7 +140,7 @@ where
         if prev_follow_remaining == 0 {
             return None;
         }
-        if shared.visit_started(&changeset_id) {
+        if shared.visit_started(changeset_id) {
             return None;
         }
         if let Err(_) = sender.poll_ready() {
@@ -176,7 +176,7 @@ where
 
         let parents_fut = shared
             .repo
-            .get_changeset_parents(ctx.clone(), &changeset_id)
+            .get_changeset_parents(ctx.clone(), changeset_id)
             .map({
                 cloned!(ctx, shared, mut sender);
                 move |parent_hashes| {
@@ -199,7 +199,7 @@ where
 
         let visit_fut = shared
             .repo
-            .get_changeset_by_changesetid(ctx.clone(), &changeset_id)
+            .get_changeset_by_changesetid(ctx.clone(), changeset_id)
             .and_then({
                 cloned!(ctx, shared.visitor, shared.repo);
                 move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)

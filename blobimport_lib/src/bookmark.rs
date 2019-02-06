@@ -55,7 +55,7 @@ pub fn upload_bookmarks(
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
                     blobrepo
-                        .changeset_exists(ctx.clone(), &cs_id)
+                        .changeset_exists(ctx.clone(), cs_id)
                         .and_then({
                             cloned!(ctx, logger, key, blobrepo, stale_bookmarks);
                             move |exists| {
@@ -72,7 +72,7 @@ pub fn upload_bookmarks(
                                         );
 
                                         blobrepo
-                                            .changeset_exists(ctx, &stale_cs_id)
+                                            .changeset_exists(ctx, stale_cs_id)
                                             .map(move |exists| (key, stale_cs_id, exists))
                                             .boxify()
                                     }
@@ -83,7 +83,7 @@ pub fn upload_bookmarks(
                             cloned!(ctx, blobrepo, logger);
                             move |(key, cs_id, exists)| {
                                 if exists {
-                                    blobrepo.get_bonsai_from_hg(ctx, &cs_id)
+                                    blobrepo.get_bonsai_from_hg(ctx, cs_id)
                                         .and_then(move |bcs_id| bcs_id.ok_or(err_msg(
                                             format!("failed to resolve hg to bonsai: {}", cs_id),
                                         )))
@@ -114,7 +114,7 @@ pub fn upload_bookmarks(
 
                 for (key, value) in vec {
                     let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
-                    try_boxfuture!(transaction.force_set(&key, &value))
+                    try_boxfuture!(transaction.force_set(&key, value))
                 }
 
                 transaction.commit()

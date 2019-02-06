@@ -133,7 +133,7 @@ impl SqlBookmarks {
     fn list_by_prefix_impl(
         &self,
         prefix: &BookmarkPrefix,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
         conn: &Connection,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         if prefix.is_empty() {
@@ -155,7 +155,7 @@ impl Bookmarks for SqlBookmarks {
         &self,
         _ctx: CoreContext,
         name: &Bookmark,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         SelectBookmark::query(&self.read_master_connection, &repo_id, &name)
             .map(|rows| rows.into_iter().next().map(|row| row.0))
@@ -166,7 +166,7 @@ impl Bookmarks for SqlBookmarks {
         &self,
         _ctx: CoreContext,
         prefix: &BookmarkPrefix,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         self.list_by_prefix_impl(prefix, repo_id, &self.read_master_connection)
     }
@@ -175,12 +175,12 @@ impl Bookmarks for SqlBookmarks {
         &self,
         _ctx: CoreContext,
         prefix: &BookmarkPrefix,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         self.list_by_prefix_impl(prefix, repo_id, &self.read_connection)
     }
 
-    fn create_transaction(&self, _ctx: CoreContext, repoid: &RepositoryId) -> Box<Transaction> {
+    fn create_transaction(&self, _ctx: CoreContext, repoid: RepositoryId) -> Box<Transaction> {
         Box::new(SqlBookmarksTransaction::new(
             self.write_connection.clone(),
             repoid.clone(),
@@ -212,8 +212,10 @@ impl SqlBookmarksTransaction {
     }
 
     fn check_if_bookmark_already_used(&self, key: &Bookmark) -> Result<()> {
-        if self.creates.contains_key(key) || self.force_sets.contains_key(key)
-            || self.sets.contains_key(key) || self.force_deletes.contains(key)
+        if self.creates.contains_key(key)
+            || self.force_sets.contains_key(key)
+            || self.sets.contains_key(key)
+            || self.force_deletes.contains(key)
             || self.deletes.contains_key(key)
         {
             bail_msg!("{} bookmark was already used", key);
@@ -223,33 +225,28 @@ impl SqlBookmarksTransaction {
 }
 
 impl Transaction for SqlBookmarksTransaction {
-    fn update(&mut self, key: &Bookmark, new_cs: &ChangesetId, old_cs: &ChangesetId) -> Result<()> {
+    fn update(&mut self, key: &Bookmark, new_cs: ChangesetId, old_cs: ChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.sets.insert(
-            key.clone(),
-            BookmarkSetData {
-                new_cs: *new_cs,
-                old_cs: *old_cs,
-            },
-        );
+        self.sets
+            .insert(key.clone(), BookmarkSetData { new_cs, old_cs });
         Ok(())
     }
 
-    fn create(&mut self, key: &Bookmark, new_cs: &ChangesetId) -> Result<()> {
+    fn create(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.creates.insert(key.clone(), *new_cs);
+        self.creates.insert(key.clone(), new_cs);
         Ok(())
     }
 
-    fn force_set(&mut self, key: &Bookmark, new_cs: &ChangesetId) -> Result<()> {
+    fn force_set(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.force_sets.insert(key.clone(), *new_cs);
+        self.force_sets.insert(key.clone(), new_cs);
         Ok(())
     }
 
-    fn delete(&mut self, key: &Bookmark, old_cs: &ChangesetId) -> Result<()> {
+    fn delete(&mut self, key: &Bookmark, old_cs: ChangesetId) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.deletes.insert(key.clone(), *old_cs);
+        self.deletes.insert(key.clone(), old_cs);
         Ok(())
     }
 

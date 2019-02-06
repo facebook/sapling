@@ -45,8 +45,8 @@ where
                 HgChangesetId::new(chunk.node),
                 RevlogChangeset::new(HgBlobNode::new(
                     HgBlob::from(Bytes::from(delta::apply(b"", &chunk.delta)?)),
-                    chunk.p1.into_option().as_ref(),
-                    chunk.p2.into_option().as_ref(),
+                    chunk.p1.into_option(),
+                    chunk.p2.into_option(),
                 ))?,
             ))
         })
@@ -81,8 +81,8 @@ mod tests {
                 .unwrap()
                 .as_blob()
                 .clone(),
-            p1.into_option().as_ref(),
-            p2.into_option().as_ref(),
+            p1.into_option(),
+            p2.into_option(),
         );
 
         let delta = delta::Delta::new_fulltext(blobnode.as_blob().as_slice());

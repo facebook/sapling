@@ -398,8 +398,8 @@ impl RepoClient {
                 get_changed_manifests_stream(
                     self.ctx.clone(),
                     self.repo.blobrepo(),
-                    &manifest_id,
-                    &basemfnode,
+                    *manifest_id,
+                    basemfnode,
                     rootpath.clone(),
                     CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
                     fetchdepth,
@@ -411,8 +411,8 @@ impl RepoClient {
                 Some(mfnode) => get_changed_manifests_stream(
                     self.ctx.clone(),
                     self.repo.blobrepo(),
-                    &mfnode,
-                    &basemfnode,
+                    *mfnode,
+                    basemfnode,
                     rootpath.clone(),
                     default_pruner,
                     fetchdepth,
@@ -425,7 +425,7 @@ impl RepoClient {
         let changed_entries = changed_entries
             .filter({
                 let mut used_hashes = HashSet::new();
-                move |entry| used_hashes.insert(*entry.0.get_hash())
+                move |entry| used_hashes.insert(entry.0.get_hash())
             })
             .map({
                 cloned!(self.ctx);
@@ -508,16 +508,17 @@ impl HgCommands for RepoClient {
                     return Ok(Async::Ready(None));
                 }
 
-                self.wait_cs = self.wait_cs.take().or_else(|| {
-                    Some(self.repo.blobrepo().get_changeset_by_changesetid(
-                        self.ctx.clone(),
-                        &HgChangesetId::new(self.n),
-                    ))
-                });
+                self.wait_cs =
+                    self.wait_cs.take().or_else(|| {
+                        Some(self.repo.blobrepo().get_changeset_by_changesetid(
+                            self.ctx.clone(),
+                            HgChangesetId::new(self.n),
+                        ))
+                    });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
                 self.wait_cs = None; // got it
 
-                let p = cs.p1().cloned().unwrap_or(NULL_HASH);
+                let p = cs.p1().unwrap_or(NULL_HASH);
                 let prev_n = mem::replace(&mut self.n, p);
 
                 Ok(Async::Ready(Some(prev_n)))
@@ -622,7 +623,7 @@ impl HgCommands for RepoClient {
         let lookup_fut = match (node, bookmark) {
             (Some(node), Some(bookmark)) => {
                 let csid = HgChangesetId::new(node);
-                repo.changeset_exists(self.ctx.clone(), &csid)
+                repo.changeset_exists(self.ctx.clone(), csid)
                     .and_then({
                         cloned!(self.ctx);
                         move |exists| {
@@ -676,7 +677,7 @@ impl HgCommands for RepoClient {
         let nodes_len = nodes.len();
 
         ({
-            let ref_nodes: Vec<_> = nodes.iter().collect();
+            let ref_nodes: Vec<_> = nodes.iter().cloned().collect();
             blobrepo.many_changesets_exists(self.ctx.clone(), &ref_nodes[..])
         })
         .map(move |cs| {
@@ -1036,26 +1037,26 @@ impl HgCommands for RepoClient {
 fn get_changed_manifests_stream(
     ctx: CoreContext,
     repo: &BlobRepo,
-    mfid: &HgNodeHash,
-    basemfid: &HgNodeHash,
+    mfid: HgNodeHash,
+    basemfid: HgNodeHash,
     rootpath: Option<MPath>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
-    let mfid = HgManifestId::new(*mfid);
-    let manifest = repo.get_manifest_by_nodeid(ctx.clone(), &mfid).traced(
+    let mfid = HgManifestId::new(mfid);
+    let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid).traced(
         ctx.trace(),
         "fetch rootmf",
         trace_args!(),
     );
-    let basemfid = HgManifestId::new(*basemfid);
-    let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), &basemfid).traced(
+    let basemfid = HgManifestId::new(basemfid);
+    let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid).traced(
         ctx.trace(),
         "fetch baserootmf",
         trace_args!(),
     );
 
-    let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(&mfid));
+    let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(mfid));
     let root_entry_stream = stream::once(Ok((entry, rootpath.clone())));
 
     if max_depth == 1 {
@@ -1128,7 +1129,7 @@ fn fetch_treepack_part_input(
     );
 
     let linknode_fut = repo
-        .get_linknode_opt(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
+        .get_linknode_opt(ctx.clone(), &repo_path, entry.get_hash().into_nodehash())
         .traced(
             ctx.trace(),
             "fetching linknode",
@@ -1192,8 +1193,8 @@ fn fetch_treepack_part_input(
             let (p1, p2) = parents.get_nodes();
             parts::TreepackPartInput {
                 node: node.into_nodehash(),
-                p1: p1.cloned(),
-                p2: p2.cloned(),
+                p1,
+                p2,
                 content,
                 name: entry.get_name().cloned(),
                 linknode: linknode_opt.unwrap_or(NULL_CSID).into_nodehash(),

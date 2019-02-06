@@ -297,7 +297,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets.add_value(1);
         cloned!(self.read_master_connection);
 
-        select_mapping(&self.read_connection, &repo_id, &ids)
+        select_mapping(&self.read_connection, repo_id, &ids)
             .and_then(move |mut mappings| {
                 let left_to_fetch = filter_fetched_ids(ids, &mappings[..]);
 
@@ -305,7 +305,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                     Ok(mappings).into_future().left_future()
                 } else {
                     STATS::gets_master.add_value(1);
-                    select_mapping(&read_master_connection, &repo_id, &left_to_fetch)
+                    select_mapping(&read_master_connection, repo_id, &left_to_fetch)
                         .map(move |mut master_mappings| {
                             mappings.append(&mut master_mappings);
                             mappings
@@ -359,7 +359,7 @@ fn filter_fetched_ids(
 
 fn select_mapping(
     connection: &Connection,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     cs_id: &BonsaiOrHgChangesetIds,
 ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
     cloned!(repo_id, cs_id);

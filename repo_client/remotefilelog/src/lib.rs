@@ -174,7 +174,7 @@ fn validate_content(
     path: MPath,
     actual: HgNodeHash,
 ) -> impl Future<Item = (), Error = Error> {
-    let file_content = repo.get_file_content(ctx.clone(), &actual);
+    let file_content = repo.get_file_content(ctx.clone(), actual);
     let repopath = RepoPath::FilePath(path.clone());
     let filenode = get_maybe_draft_filenode(ctx, repo, repopath.clone(), actual);
 
@@ -195,7 +195,7 @@ fn validate_content(
 
             let p1 = filenode.p1.map(|p| p.into_nodehash());
             let p2 = filenode.p2.map(|p| p.into_nodehash());
-            let expected = HgBlobNode::new(bytes.freeze(), p1.as_ref(), p2.as_ref()).nodeid();
+            let expected = HgBlobNode::new(bytes.freeze(), p1, p2).nodeid();
             if actual == expected {
                 Ok(())
             } else {
@@ -217,7 +217,7 @@ fn get_raw_content(
     node: HgFileNodeId,
     lfs_params: LfsParams,
 ) -> impl Future<Item = Vec<u8>, Error = Error> {
-    repo.get_file_size(ctx.clone(), &node)
+    repo.get_file_size(ctx.clone(), node)
         .map({
             move |file_size| match lfs_params.threshold {
                 Some(threshold) => (file_size <= threshold, file_size),
@@ -229,7 +229,7 @@ fn get_raw_content(
             move |(direct_fetching_file, file_size)| {
                 if direct_fetching_file {
                     (
-                        repo.get_file_content(ctx, &node.into_nodehash())
+                        repo.get_file_content(ctx, node.into_nodehash())
                             .left_future(),
                         Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
                     )
@@ -237,7 +237,7 @@ fn get_raw_content(
                     // pass content id to prevent envelope fetching
                     cloned!(repo);
                     (
-                        repo.get_file_content_id(ctx.clone(), &node)
+                        repo.get_file_content_id(ctx.clone(), node)
                             .and_then(move |content_id| {
                                 repo.generate_lfs_file(ctx, content_id, file_size)
                             })
@@ -318,7 +318,7 @@ fn get_file_history(
             let history = filenode_fut.and_then(move |filenode| {
                 let p1 = filenode.p1.map(|p| p.into_nodehash());
                 let p2 = filenode.p2.map(|p| p.into_nodehash());
-                let parents = HgParents::new(p1.as_ref(), p2.as_ref());
+                let parents = HgParents::new(p1, p2);
 
                 let linknode = filenode.linknode;
 
@@ -365,7 +365,7 @@ fn get_maybe_draft_filenode(
     path: RepoPath,
     node: HgNodeHash,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-    repo.get_filenode_opt(ctx.clone(), &path, &node).and_then({
+    repo.get_filenode_opt(ctx.clone(), &path, node).and_then({
         cloned!(repo, ctx, path, node);
         move |filenode_opt| match filenode_opt {
             Some(filenode) => ok(filenode).left_future(),
@@ -374,7 +374,7 @@ fn get_maybe_draft_filenode(
                 // draft node, which doesn't get stored in the database.  Attempt
                 // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
                 // to indicate a draft linknode.
-                repo.get_filenode_from_envelope(ctx, &path, &node, &NULL_CSID)
+                repo.get_filenode_from_envelope(ctx, &path, node, NULL_CSID)
                     .right_future()
             }
         }

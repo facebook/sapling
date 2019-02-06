@@ -207,14 +207,14 @@ impl WorkingEntry {
                     if composite_entry.contains_file(ft, hash) {
                         None
                     } else if composite_entry.contains_file_other_type(ft, hash) {
-                        Some(BonsaiDiffResult::ChangedReusedId(path.clone(), *ft, *hash))
+                        Some(BonsaiDiffResult::ChangedReusedId(path.clone(), *ft, hash))
                     } else {
-                        Some(BonsaiDiffResult::Changed(path.clone(), *ft, *hash))
+                        Some(BonsaiDiffResult::Changed(path.clone(), *ft, hash))
                     }
                 } else if composite_entry.contains_file_any_type(hash) {
-                    Some(BonsaiDiffResult::ChangedReusedId(path.clone(), *ft, *hash))
+                    Some(BonsaiDiffResult::ChangedReusedId(path.clone(), *ft, hash))
                 } else {
-                    Some(BonsaiDiffResult::Changed(path.clone(), *ft, *hash))
+                    Some(BonsaiDiffResult::Changed(path.clone(), *ft, hash))
                 }
             }
             _other => {

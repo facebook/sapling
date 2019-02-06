@@ -73,7 +73,7 @@ fn load_manifest() {
             ctx.clone(),
             repo,
             IncompleteFilenodes::new(),
-            Some(&manifest_id),
+            Some(manifest_id),
             None,
         ).wait()
             .expect("Could not load manifest");
@@ -122,8 +122,9 @@ fn save_manifest() {
             IncompleteFilenodes::new(),
             None,
             None,
-        ).wait()
-            .expect("Could not create empty manifest");
+        )
+        .wait()
+        .expect("Could not create empty manifest");
 
         // Add an unmodified entry
         let dir_nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
@@ -144,7 +145,8 @@ fn save_manifest() {
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(ctx.clone(), &manifest_id)
+        let refound = repo
+            .get_manifest_by_nodeid(ctx.clone(), manifest_id)
             .map(|m| m.lookup(&path))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -176,10 +178,11 @@ fn remove_item() {
             ctx.clone(),
             repo.clone(),
             IncompleteFilenodes::new(),
-            Some(&manifest_id),
+            Some(manifest_id),
             None,
-        ).wait()
-            .expect("Could not load manifest");
+        )
+        .wait()
+        .expect("Could not load manifest");
 
         if !memory_manifest.unittest_root().is_dir() {
             panic!("Loaded manifest is not a MemTree");
@@ -203,7 +206,8 @@ fn remove_item() {
                     .get(&dir2)
                     .expect("dir2 is missing")
                     .clone()
-                    .map_or(false, |e| e.is_empty(ctx.clone(), &blobstore)
+                    .map_or(false, |e| e
+                        .is_empty(ctx.clone(), &blobstore)
                         .wait()
                         .unwrap()),
                 "Bad after remove"
@@ -229,7 +233,8 @@ fn remove_item() {
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(ctx.clone(), &manifest_id)
+        let refound = repo
+            .get_manifest_by_nodeid(ctx.clone(), manifest_id)
             .map(|m| m.lookup(&dir2))
             .wait()
             .expect("Lookup of entry just saved failed");
@@ -259,10 +264,11 @@ fn add_item() {
             ctx.clone(),
             repo.clone(),
             IncompleteFilenodes::new(),
-            Some(&manifest_id),
+            Some(manifest_id),
             None,
-        ).wait()
-            .expect("Could not load manifest");
+        )
+        .wait()
+        .expect("Could not load manifest");
 
         // Add a file
         let nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
@@ -288,7 +294,8 @@ fn add_item() {
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(ctx.clone(), &manifest_id)
+        let refound = repo
+            .get_manifest_by_nodeid(ctx.clone(), manifest_id)
             .map(|m| m.lookup(&new_file))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -318,10 +325,11 @@ fn replace_item() {
             ctx.clone(),
             repo.clone(),
             IncompleteFilenodes::new(),
-            Some(&manifest_id),
+            Some(manifest_id),
             None,
-        ).wait()
-            .expect("Could not load manifest");
+        )
+        .wait()
+        .expect("Could not load manifest");
 
         // Add a file
         let nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
@@ -347,7 +355,8 @@ fn replace_item() {
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(ctx, &manifest_id)
+        let refound = repo
+            .get_manifest_by_nodeid(ctx, manifest_id)
             .map(|m| m.lookup(&new_file))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -429,7 +438,8 @@ fn conflict_resolution() {
             logger,
             IncompleteFilenodes::new(),
             RepoPath::root(),
-        )).unwrap();
+        ))
+        .unwrap();
         match &merge {
             MemoryManifestEntry::MemTree { changes, .. } => {
                 let changes = changes.lock().expect("lock poisoned");
@@ -547,14 +557,16 @@ fn merge_manifests() {
             }
         };
 
-        let merged = base.merge_with_conflicts(
-            ctx,
-            other,
-            blobstore,
-            logger,
-            IncompleteFilenodes::new(),
-            RepoPath::root(),
-        ).wait()
+        let merged = base
+            .merge_with_conflicts(
+                ctx,
+                other,
+                blobstore,
+                logger,
+                IncompleteFilenodes::new(),
+                RepoPath::root(),
+            )
+            .wait()
             .unwrap();
 
         if let MemoryManifestEntry::MemTree { changes, .. } = merged {
@@ -565,7 +577,7 @@ fn merge_manifests() {
             {
                 assert_eq!(
                     blob.get_hash(),
-                    &HgEntryId::new(nodehash::ONES_HASH),
+                    HgEntryId::new(nodehash::ONES_HASH),
                     "Wrong hash for shared"
                 );
             } else {
@@ -576,7 +588,7 @@ fn merge_manifests() {
             {
                 assert_eq!(
                     blob.get_hash(),
-                    &HgEntryId::new(nodehash::ONES_HASH),
+                    HgEntryId::new(nodehash::ONES_HASH),
                     "Wrong hash for base"
                 );
             } else {
@@ -587,7 +599,7 @@ fn merge_manifests() {
             {
                 assert_eq!(
                     blob.get_hash(),
-                    &HgEntryId::new(nodehash::TWOS_HASH),
+                    HgEntryId::new(nodehash::TWOS_HASH),
                     "Wrong hash for other"
                 );
             } else {

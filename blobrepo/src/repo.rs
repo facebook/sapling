@@ -263,10 +263,10 @@ impl BlobRepo {
     pub fn get_file_content(
         &self,
         ctx: CoreContext,
-        key: &HgNodeHash,
+        key: HgNodeHash,
     ) -> BoxFuture<FileContents, Error> {
         STATS::get_file_content.add_value(1);
-        fetch_file_content_from_blobstore(ctx, &self.blobstore, *key).boxify()
+        fetch_file_content_from_blobstore(ctx, &self.blobstore, key).boxify()
     }
 
     pub fn get_file_content_by_content_id(
@@ -280,17 +280,17 @@ impl BlobRepo {
     pub fn get_file_size(
         &self,
         ctx: CoreContext,
-        key: &HgFileNodeId,
+        key: HgFileNodeId,
     ) -> impl Future<Item = u64, Error = Error> {
-        fetch_file_size_from_blobstore(ctx, &self.blobstore, *key)
+        fetch_file_size_from_blobstore(ctx, &self.blobstore, key)
     }
 
     pub fn get_file_content_id(
         &self,
         ctx: CoreContext,
-        key: &HgFileNodeId,
+        key: HgFileNodeId,
     ) -> impl Future<Item = ContentId, Error = Error> {
-        fetch_file_content_id_from_blobstore(ctx, &self.blobstore, *key)
+        fetch_file_content_id_from_blobstore(ctx, &self.blobstore, key)
     }
 
     pub fn get_file_sha256(
@@ -440,10 +440,10 @@ impl BlobRepo {
     pub fn get_raw_hg_content(
         &self,
         ctx: CoreContext,
-        key: &HgNodeHash,
+        key: HgNodeHash,
     ) -> BoxFuture<HgBlob, Error> {
         STATS::get_raw_hg_content.add_value(1);
-        fetch_raw_filenode_bytes(ctx, &self.blobstore, *key)
+        fetch_raw_filenode_bytes(ctx, &self.blobstore, key)
     }
 
     // Fetches copy data from blobstore instead of from filenodes db. This should be used only
@@ -451,10 +451,10 @@ impl BlobRepo {
     pub(crate) fn get_hg_file_copy_from_blobstore(
         &self,
         ctx: CoreContext,
-        key: &HgNodeHash,
+        key: HgNodeHash,
     ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
         STATS::get_hg_file_copy_from_blobstore.add_value(1);
-        fetch_rename_from_blobstore(ctx, &self.blobstore, *key)
+        fetch_rename_from_blobstore(ctx, &self.blobstore, key)
             .map(|rename| rename.map(|(path, hash)| (RepoPath::FilePath(path), hash)))
             .boxify()
     }
@@ -466,7 +466,7 @@ impl BlobRepo {
     ) -> impl Stream<Item = HgNodeHash, Error = Error> {
         STATS::get_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |(_, cs)| {
@@ -482,7 +482,7 @@ impl BlobRepo {
     ) -> impl Stream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix(ctx, &BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix(ctx, &BookmarkPrefix::empty(), self.repoid)
             .map(|(_, cs_id)| cs_id)
     }
 
@@ -490,14 +490,14 @@ impl BlobRepo {
     pub fn changeset_exists(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<bool, Error> {
         STATS::changeset_exists.add_value(1);
         let changesetid = changesetid.clone();
         let repo = self.clone();
         let repoid = self.repoid.clone();
 
-        self.get_bonsai_from_hg(ctx.clone(), &changesetid)
+        self.get_bonsai_from_hg(ctx.clone(), changesetid)
             .and_then(move |maybebonsai| match maybebonsai {
                 Some(bonsai) => repo
                     .changesets
@@ -512,10 +512,10 @@ impl BlobRepo {
     pub fn many_changesets_exists(
         &self,
         ctx: CoreContext,
-        changesetids: &[&HgChangesetId],
+        changesetids: &[HgChangesetId],
     ) -> BoxFuture<Vec<HgChangesetId>, Error> {
         STATS::many_changesets_exists.add_value(1);
-        let param = BonsaiOrHgChangesetIds::Hg(Vec::from_iter(changesetids.iter().map(|cs| **cs)));
+        let param = BonsaiOrHgChangesetIds::Hg(Vec::from_iter(changesetids.iter().cloned()));
 
         self.bonsai_hg_mapping.get(ctx, self.repoid, param)
             .map(|entries| entries.into_iter().map(|entry| entry.hg_cs_id).collect())
@@ -526,7 +526,7 @@ impl BlobRepo {
     pub fn changeset_exists_by_bonsai(
         &self,
         ctx: CoreContext,
-        changesetid: &ChangesetId,
+        changesetid: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         STATS::changeset_exists_by_bonsai.add_value(1);
         let changesetid = changesetid.clone();
@@ -543,10 +543,9 @@ impl BlobRepo {
     pub fn get_changeset_parents(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<Vec<HgChangesetId>, Error> {
         STATS::get_changeset_parents.add_value(1);
-        let changesetid = *changesetid;
         let repo = self.clone();
 
         self.get_bonsai_cs_entry_or_fail(ctx.clone(), changesetid)
@@ -565,10 +564,9 @@ impl BlobRepo {
     pub fn get_changeset_parents_by_bonsai(
         &self,
         ctx: CoreContext,
-        cs: &ChangesetId,
+        changesetid: ChangesetId,
     ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
-        let changesetid = *cs;
         let repo = self.clone();
         let repoid = self.repoid.clone();
 
@@ -588,7 +586,7 @@ impl BlobRepo {
         let repoid = self.repoid.clone();
         let changesets = self.changesets.clone();
 
-        self.get_bonsai_from_hg(ctx.clone(), &changesetid)
+        self.get_bonsai_from_hg(ctx.clone(), changesetid)
             .and_then(move |maybebonsai| {
                 maybebonsai.ok_or(ErrorKind::BonsaiMappingNotFound(changesetid).into())
             })
@@ -604,33 +602,29 @@ impl BlobRepo {
     pub fn get_changeset_by_changesetid(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
         STATS::get_changeset_by_changesetid.add_value(1);
-        let chid = changesetid.clone();
-        HgBlobChangeset::load(ctx, &self.blobstore, &chid)
-            .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(chid).into()))
+        HgBlobChangeset::load(ctx, &self.blobstore, changesetid)
+            .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(changesetid).into()))
             .boxify()
     }
 
     pub fn get_manifest_by_nodeid(
         &self,
         ctx: CoreContext,
-        manifestid: &HgManifestId,
+        manifestid: HgManifestId,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         STATS::get_manifest_by_nodeid.add_value(1);
-        BlobManifest::load(ctx, &self.blobstore, &manifestid)
-            .and_then({
-                let manifestid = *manifestid;
-                move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into())
-            })
+        BlobManifest::load(ctx, &self.blobstore, manifestid)
+            .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into()))
             .map(|m| m.boxed())
             .boxify()
     }
 
-    pub fn get_root_entry(&self, manifestid: &HgManifestId) -> HgBlobEntry {
+    pub fn get_root_entry(&self, manifestid: HgManifestId) -> HgBlobEntry {
         STATS::get_root_entry.add_value(1);
-        HgBlobEntry::new_root(self.blobstore.clone(), *manifestid)
+        HgBlobEntry::new_root(self.blobstore.clone(), manifestid)
     }
 
     pub fn get_bookmark(
@@ -640,7 +634,7 @@ impl BlobRepo {
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks
-            .get(ctx.clone(), name, &self.repoid)
+            .get(ctx.clone(), name, self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |cs_opt| match cs_opt {
@@ -660,7 +654,7 @@ impl BlobRepo {
         name: &Bookmark,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.bookmarks.get(ctx, name, &self.repoid)
+        self.bookmarks.get(ctx, name, self.repoid)
     }
 
     /// Heads maybe read from replica, so they may be out of date. Prefer to use this method
@@ -671,7 +665,7 @@ impl BlobRepo {
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
             .map({
                 let repo = self.clone();
                 move |(bm, cs)| {
@@ -689,14 +683,14 @@ impl BlobRepo {
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
             .boxify()
     }
 
     pub fn get_bookmarks(&self, ctx: CoreContext) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_bookmarks.add_value(1);
         self.bookmarks
-            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |(bm, cs)| {
@@ -713,20 +707,20 @@ impl BlobRepo {
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         STATS::get_bookmarks.add_value(1);
         self.bookmarks
-            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
             .boxify()
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<bookmarks::Transaction> {
         STATS::update_bookmark_transaction.add_value(1);
-        self.bookmarks.create_transaction(ctx, &self.repoid)
+        self.bookmarks.create_transaction(ctx, self.repoid)
     }
 
     pub fn get_linknode_opt(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: &HgNodeHash,
+        node: HgNodeHash,
     ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
         STATS::get_linknode_opt.add_value(1);
         self.get_filenode_opt(ctx, path, node)
@@ -737,7 +731,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: &HgNodeHash,
+        node: HgNodeHash,
     ) -> impl Future<Item = HgChangesetId, Error = Error> {
         STATS::get_linknode.add_value(1);
         self.get_filenode(ctx, path, node)
@@ -748,22 +742,22 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: &HgNodeHash,
+        node: HgNodeHash,
     ) -> impl Future<Item = Option<FilenodeInfo>, Error = Error> {
         let path = path.clone();
-        let node = HgFileNodeId::new(*node);
-        self.filenodes.get_filenode(ctx, &path, &node, &self.repoid)
+        let node = HgFileNodeId::new(node);
+        self.filenodes.get_filenode(ctx, &path, node, self.repoid)
     }
 
     pub fn get_filenode(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: &HgNodeHash,
+        node: HgNodeHash,
     ) -> impl Future<Item = FilenodeInfo, Error = Error> {
         self.get_filenode_opt(ctx, path, node).and_then({
             cloned!(path);
-            let node = HgFileNodeId::new(*node);
+            let node = HgFileNodeId::new(node);
             move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
         })
     }
@@ -772,11 +766,11 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: &HgNodeHash,
-        linknode: &HgChangesetId,
+        node: HgNodeHash,
+        linknode: HgChangesetId,
     ) -> impl Future<Item = FilenodeInfo, Error = Error> {
         let store = self.get_blobstore();
-        fetch_file_envelope(ctx, &store, *node)
+        fetch_file_envelope(ctx, &store, node)
             .with_context({
                 cloned!(path, node);
                 move |_| format!("While fetching filenode for {} {}", path, node)
@@ -788,10 +782,7 @@ impl BlobRepo {
                 move |envelope| {
                     let (p1, p2) = {
                         let (p1, p2) = envelope.parents();
-                        (
-                            p1.map(|p| HgFileNodeId::new(*p)),
-                            p2.map(|p| HgFileNodeId::new(*p)),
-                        )
+                        (p1.map(HgFileNodeId::new), p2.map(HgFileNodeId::new))
                     };
                     let copyfrom = get_rename_from_envelope(envelope)
                         .with_context({
@@ -817,17 +808,17 @@ impl BlobRepo {
         path: RepoPath,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::get_all_filenodes.add_value(1);
-        self.filenodes.get_all_filenodes(ctx, &path, &self.repoid)
+        self.filenodes.get_all_filenodes(ctx, &path, self.repoid)
     }
 
     pub fn get_bonsai_from_hg(
         &self,
         ctx: CoreContext,
-        hg_cs_id: &HgChangesetId,
+        hg_cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bonsai_from_hg.add_value(1);
         self.bonsai_hg_mapping
-            .get_bonsai_from_hg(ctx, self.repoid, *hg_cs_id)
+            .get_bonsai_from_hg(ctx, self.repoid, hg_cs_id)
     }
 
     // Returns only the mapping for valid changests that are known to the server.
@@ -862,13 +853,13 @@ impl BlobRepo {
     pub fn get_generation_number(
         &self,
         ctx: CoreContext,
-        cs: &HgChangesetId,
+        cs: HgChangesetId,
     ) -> impl Future<Item = Option<Generation>, Error = Error> {
         STATS::get_generation_number.add_value(1);
         let repo = self.clone();
         let repoid = self.repoid.clone();
 
-        self.get_bonsai_from_hg(ctx.clone(), &cs)
+        self.get_bonsai_from_hg(ctx.clone(), cs)
             .and_then(move |maybebonsai| match maybebonsai {
                 Some(bonsai) => repo
                     .changesets
@@ -883,13 +874,13 @@ impl BlobRepo {
     pub fn get_generation_number_by_bonsai(
         &self,
         ctx: CoreContext,
-        cs: &ChangesetId,
+        cs: ChangesetId,
     ) -> impl Future<Item = Option<Generation>, Error = Error> {
         STATS::get_generation_number_by_bonsai.add_value(1);
         let repo = self.clone();
         let repoid = self.repoid.clone();
         repo.changesets
-            .get(ctx, repoid, *cs)
+            .get(ctx, repoid, cs)
             .map(|res| res.map(|res| Generation::new(res.gen)))
     }
 
@@ -1059,11 +1050,11 @@ impl BlobRepo {
                         .get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
                         .and_then({
                             cloned!(ctx, repo);
-                            move |cs_id| repo.get_changeset_by_changesetid(ctx, &cs_id)
+                            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
                         })
                         .and_then({
                             cloned!(ctx, repo, path);
-                            move |cs| repo.find_file_in_manifest(ctx, &path, *cs.manifestid())
+                            move |cs| repo.find_file_in_manifest(ctx, &path, cs.manifestid())
                         })
                         .and_then({
                             cloned!(path);
@@ -1080,7 +1071,7 @@ impl BlobRepo {
                         let upload_entry = UploadHgFileEntry {
                             upload_node_id: UploadHgNodeHash::Generate,
                             contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-                                id: *change.content_id(),
+                                id: change.content_id(),
                                 copy_from: copy_from.clone().map(|(p, h)| (p, h.into_nodehash())),
                             }),
                             file_type: change.file_type(),
@@ -1118,13 +1109,13 @@ impl BlobRepo {
     pub fn check_case_conflict_in_manifest(
         &self,
         ctx: CoreContext,
-        parent_mf_id: &HgManifestId,
-        child_mf_id: &HgManifestId,
+        parent_mf_id: HgManifestId,
+        child_mf_id: HgManifestId,
         path: MPath,
     ) -> impl Future<Item = bool, Error = Error> {
         let repo = self.clone();
         let child_mf_id = child_mf_id.clone();
-        self.get_manifest_by_nodeid(ctx.clone(), &parent_mf_id)
+        self.get_manifest_by_nodeid(ctx.clone(), parent_mf_id)
             .and_then(move |mf| {
                 loop_fn(
                     (None, mf, path.into_iter()),
@@ -1228,7 +1219,7 @@ impl BlobRepo {
                 .boxify()
         }
 
-        self.get_manifest_by_nodeid(ctx.clone(), &manifest)
+        self.get_manifest_by_nodeid(ctx.clone(), manifest)
             .and_then(move |manifest| {
                 let content_init = future::ok(Some(Content::Tree(manifest))).boxify();
                 match path {
@@ -1273,8 +1264,8 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         bcs: BonsaiChangeset,
-        manifest_p1: Option<&HgManifestId>,
-        manifest_p2: Option<&HgManifestId>,
+        manifest_p1: Option<HgManifestId>,
+        manifest_p2: Option<HgManifestId>,
     ) -> BoxFuture<(HgManifestId, IncompleteFilenodes), Error> {
         let p1 = manifest_p1.map(|id| id.into_nodehash());
         let p2 = manifest_p2.map(|id| id.into_nodehash());
@@ -1282,13 +1273,11 @@ impl BlobRepo {
             ctx.clone(),
             self.clone(),
             IncompleteFilenodes::new(),
-            p1.as_ref(),
-            p2.as_ref(),
+            p1,
+            p2,
         )
         .and_then({
             let repo = self.clone();
-            let manifest_p1 = manifest_p1.cloned();
-            let manifest_p2 = manifest_p2.cloned();
             move |memory_manifest| {
                 let memory_manifest = Arc::new(memory_manifest);
                 let incomplete_filenodes = memory_manifest.get_incomplete_filenodes();
@@ -1373,13 +1362,14 @@ impl BlobRepo {
                 .and_then({
                     cloned!(ctx, repo);
                     move |bcs| {
-                        let parents_futs = bcs.parents()
+                        let parents_futs = bcs
+                            .parents()
                             .map(|p_bcs_id| {
-                                repo.get_hg_from_bonsai_changeset(ctx.clone(), *p_bcs_id)
+                                repo.get_hg_from_bonsai_changeset(ctx.clone(), p_bcs_id)
                                     .and_then({
                                         cloned!(ctx, repo);
                                         move |p_cs_id| {
-                                            repo.get_changeset_by_changesetid(ctx, &p_cs_id)
+                                            repo.get_changeset_by_changesetid(ctx, p_cs_id)
                                         }
                                     })
                             })
@@ -1396,18 +1386,18 @@ impl BlobRepo {
                                 let p0_hash = p0.as_ref().map(|p0| p0.get_changeset_id());
                                 let p1_hash = p1.as_ref().map(|p1| p1.get_changeset_id());
 
-                                let mf_p0 = p0.map(|p| *p.manifestid());
-                                let mf_p1 = p1.map(|p| *p.manifestid());
+                                let mf_p0 = p0.map(|p| p.manifestid());
+                                let mf_p1 = p1.map(|p| p.manifestid());
 
                                 assert!(
                                     parents.next().is_none(),
                                     "more than 2 parents are not supported by hg"
                                 );
                                 let hg_parents = HgParents::new(
-                                    p0_hash.map(|h| h.into_nodehash()).as_ref(),
-                                    p1_hash.map(|h| h.into_nodehash()).as_ref(),
+                                    p0_hash.map(|h| h.into_nodehash()),
+                                    p1_hash.map(|h| h.into_nodehash()),
                                 );
-                                repo.get_manifest_from_bonsai(ctx, bcs, mf_p0.as_ref(), mf_p1.as_ref())
+                                repo.get_manifest_from_bonsai(ctx, bcs, mf_p0, mf_p1)
                                     .map(move |(manifest_id, incomplete_filenodes)| {
                                         (manifest_id, incomplete_filenodes, hg_parents)
                                     })
@@ -1534,7 +1524,7 @@ impl UploadHgTreeEntry {
             path,
         } = self;
 
-        let computed_node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref()).nodeid();
+        let computed_node_id = HgBlobNode::new(contents.clone(), p1, p2).nodeid();
         let node_id: HgNodeHash = match upload_node_id {
             UploadHgNodeHash::Generate => computed_node_id,
             UploadHgNodeHash::Supplied(node_id) => node_id,
@@ -1646,8 +1636,8 @@ impl UploadHgFileContents {
                 (cbinfo, Either::A(upload_fut), Either::A(compute_fut))
             }
             UploadHgFileContents::RawBytes(raw_content) => {
-                let node_id = Self::node_id(raw_content.clone(), p1.as_ref(), p2.as_ref());
-                let f = File::new(raw_content, p1.as_ref(), p2.as_ref());
+                let node_id = Self::node_id(raw_content.clone(), p1, p2);
+                let f = File::new(raw_content, p1, p2);
                 let metadata = f.metadata();
 
                 let copy_from = match f.copied_from() {
@@ -1714,7 +1704,7 @@ impl UploadHgFileContents {
 
             // XXX this is just a hash computation, so it shouldn't require a copy
             let raw_content = [&metadata[..], &file_bytes[..]].concat();
-            let node_id = Self::node_id(raw_content, p1.as_ref(), p2.as_ref());
+            let node_id = Self::node_id(raw_content, p1, p2);
             (node_id, Bytes::from(metadata), size)
         })
     }
@@ -1722,8 +1712,8 @@ impl UploadHgFileContents {
     #[inline]
     fn node_id<B: Into<Bytes>>(
         raw_content: B,
-        p1: Option<&HgNodeHash>,
-        p2: Option<&HgNodeHash>,
+        p1: Option<HgNodeHash>,
+        p2: Option<HgNodeHash>,
     ) -> HgNodeHash {
         let raw_content = raw_content.into();
         HgBlobNode::new(raw_content, p1, p2).nodeid()
@@ -1891,7 +1881,7 @@ pub fn save_bonsai_changesets(
     // topologically sort commits.
     let mut bcs_parents = HashMap::new();
     for bcs in bonsai_changesets.values() {
-        let parents: Vec<_> = bcs.parents().cloned().collect();
+        let parents: Vec<_> = bcs.parents().collect();
         bcs_parents.insert(bcs.get_changeset_id(), parents);
     }
 
@@ -1905,7 +1895,7 @@ pub fn save_bonsai_changesets(
             let completion_record = ChangesetInsert {
                 repo_id: repoid,
                 cs_id: bcs_id,
-                parents: bcs.parents().into_iter().cloned().collect(),
+                parents: bcs.parents().into_iter().collect(),
             };
             let pc = post_commit::PreCommitInfo::new(repo.repoid, bcs_id, bcs);
             bonsai_complete_futs.push(
@@ -2093,7 +2083,7 @@ impl CreateChangeset {
                                             let bcs_id = bonsai_blob.id().clone();
 
                                             let cs_id = blobcs.get_changeset_id().into_nodehash();
-                                            let manifest_id = *blobcs.manifestid();
+                                            let manifest_id = blobcs.manifestid();
 
                                             if let Some(expected_nodeid) = expected_nodeid {
                                                 if cs_id != expected_nodeid {
@@ -2232,7 +2222,7 @@ impl CreateChangeset {
                     let completion_record = ChangesetInsert {
                         repo_id: repo.repoid,
                         cs_id: bonsai_cs.get_changeset_id(),
-                        parents: bonsai_cs.parents().into_iter().cloned().collect(),
+                        parents: bonsai_cs.parents().into_iter().collect(),
                     };
                     complete_changesets
                         .add(ctx.clone(), completion_record)

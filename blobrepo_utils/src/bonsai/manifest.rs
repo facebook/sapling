@@ -76,9 +76,10 @@ impl BonsaiMFVerifyDifference {
     ) -> impl Stream<Item = ChangedEntry, Error = Error> + Send {
         let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
         let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);
-        let original_mf = self.repo.get_manifest_by_nodeid(ctx.clone(), &lookup_mf_id);
-        let roundtrip_mf = self.repo
-            .get_manifest_by_nodeid(ctx.clone(), &roundtrip_mf_id);
+        let original_mf = self.repo.get_manifest_by_nodeid(ctx.clone(), lookup_mf_id);
+        let roundtrip_mf = self
+            .repo
+            .get_manifest_by_nodeid(ctx.clone(), roundtrip_mf_id);
         original_mf
             .join(roundtrip_mf)
             .map({
@@ -194,12 +195,13 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 
         debug!(logger, "Starting bonsai diff computation");
 
-        let parents_fut = repo.get_changeset_parents(ctx.clone(), &changeset_id)
+        let parents_fut = repo
+            .get_changeset_parents(ctx.clone(), changeset_id)
             .and_then({
                 cloned!(ctx, repo);
                 move |parent_hashes| {
                     let changesets = parent_hashes.into_iter().map(move |parent_id| {
-                        repo.get_changeset_by_changesetid(ctx.clone(), &parent_id)
+                        repo.get_changeset_by_changesetid(ctx.clone(), parent_id)
                     });
                     future::join_all(changesets)
                 }
@@ -226,7 +228,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 // Also fetch the manifest as we're interested in the computed node id.
                 let root_mf_id = HgManifestId::new(root_entry.get_hash().into_nodehash());
                 let root_mf_fut =
-                    BlobManifest::load(ctx.clone(), &repo.get_blobstore(), &root_mf_id);
+                    BlobManifest::load(ctx.clone(), &repo.get_blobstore(), root_mf_id);
 
                 bonsai_diff(ctx.clone(), root_entry, p1_entry, p2_entry)
                     .collect()
@@ -261,9 +263,10 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                         logger.clone(),
                         repo.clone(),
                         diff_result,
-                        manifest_p1.as_ref(),
-                        manifest_p2.as_ref(),
-                    ).and_then(move |roundtrip_mf_id| {
+                        manifest_p1,
+                        manifest_p2,
+                    )
+                    .and_then(move |roundtrip_mf_id| {
                         let lookup_mf_id = root_mf.node_id();
                         let computed_mf_id = root_mf.computed_node_id();
                         debug!(
@@ -282,15 +285,15 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                         } else {
                             computed_mf_id
                         };
-                        if &roundtrip_mf_id == expected_mf_id {
+                        if roundtrip_mf_id == expected_mf_id {
                             Either::A(future::ok(BonsaiMFVerifyResult::Valid {
-                                lookup_mf_id: *lookup_mf_id,
+                                lookup_mf_id,
                                 computed_mf_id: roundtrip_mf_id,
                             }))
                         } else {
                             let difference = BonsaiMFVerifyDifference {
-                                lookup_mf_id: *lookup_mf_id,
-                                expected_mf_id: *expected_mf_id,
+                                lookup_mf_id,
+                                expected_mf_id,
                                 roundtrip_mf_id,
                                 repo,
                             };
@@ -339,8 +342,8 @@ pub fn apply_diff(
     logger: Logger,
     repo: BlobRepo,
     diff_result: Vec<BonsaiDiffResult>,
-    manifest_p1: Option<&HgNodeHash>,
-    manifest_p2: Option<&HgNodeHash>,
+    manifest_p1: Option<HgNodeHash>,
+    manifest_p2: Option<HgNodeHash>,
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
     MemoryRootManifest::new(
         ctx.clone(),

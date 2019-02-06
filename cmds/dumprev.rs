@@ -57,7 +57,7 @@ fn run() -> Result<()> {
     println!("Revlog[{:?}] = {:?}", revidx, entry);
     match revlog.get_rev(revidx) {
         Ok(ref rev) => {
-            if entry.nodeid() != &rev.nodeid() {
+            if entry.nodeid() != rev.nodeid() {
                 println!(
                     "NOTE: hash mismatch: expected {}, got {}",
                     entry.nodeid(),

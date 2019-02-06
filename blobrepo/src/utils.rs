@@ -82,7 +82,7 @@ impl IncompleteFilenodes {
             move |node_info| node_info.with_linknode(cs_id)
         });
         repo.get_filenodes()
-            .add_filenodes(ctx, stream::iter_ok(filenodes).boxify(), &repo.get_repoid())
+            .add_filenodes(ctx, stream::iter_ok(filenodes).boxify(), repo.get_repoid())
             .map(move |_| cs_id)
     }
 }

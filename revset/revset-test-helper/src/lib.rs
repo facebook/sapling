@@ -23,7 +23,7 @@ pub fn single_changeset_id(
     cs_id: ChangesetId,
     repo: &BlobRepo,
 ) -> impl Stream<Item = ChangesetId, Error = Error> {
-    repo.changeset_exists_by_bonsai(ctx, &cs_id)
+    repo.changeset_exists_by_bonsai(ctx, cs_id)
         .map(move |exists| if exists { Some(cs_id) } else { None })
         .into_stream()
         .filter_map(|maybenode| maybenode)
@@ -36,7 +36,7 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
 pub fn string_to_bonsai(repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
     let ctx = CoreContext::test_mock();
     let node = string_to_nodehash(s);
-    repo.get_bonsai_from_hg(ctx, &HgChangesetId::new(node))
+    repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
         .wait()
         .unwrap()
         .unwrap()
@@ -60,7 +60,7 @@ pub fn assert_changesets_sequence<I>(
 
         let expected_generation = repo
             .clone()
-            .get_generation_number_by_bonsai(ctx.clone(), &expected)
+            .get_generation_number_by_bonsai(ctx.clone(), expected)
             .wait()
             .expect("Unexpected error");
 
@@ -77,7 +77,7 @@ pub fn assert_changesets_sequence<I>(
 
             let node_generation = repo
                 .clone()
-                .get_generation_number_by_bonsai(ctx.clone(), &expected)
+                .get_generation_number_by_bonsai(ctx.clone(), expected)
                 .wait()
                 .expect("Unexpected error");
 

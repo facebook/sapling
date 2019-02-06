@@ -90,20 +90,20 @@ impl HgFileEnvelope {
 
     /// The ID for this file version.
     #[inline]
-    pub fn node_id(&self) -> &HgNodeHash {
-        &self.inner.node_id
+    pub fn node_id(&self) -> HgNodeHash {
+        self.inner.node_id
     }
 
     /// The parent hashes for this node. The order matters.
     #[inline]
-    pub fn parents(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
-        (self.inner.p1.as_ref(), self.inner.p2.as_ref())
+    pub fn parents(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
+        (self.inner.p1, self.inner.p2)
     }
 
     /// The content ID -- this can be used to retrieve the contents.
     #[inline]
-    pub fn content_id(&self) -> &ContentId {
-        &self.inner.content_id
+    pub fn content_id(&self) -> ContentId {
+        self.inner.content_id
     }
 
     /// The size of the content ID, not counting the metadata.

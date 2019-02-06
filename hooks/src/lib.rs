@@ -435,8 +435,8 @@ impl HookManager {
         let content_store = self.content_store.clone();
         let hg_changeset = self
             .changeset_store
-            .get_changeset_by_changesetid(ctx.clone(), &changeset_id);
-        let changed_files = self.changeset_store.get_changed_files(ctx, &changeset_id);
+            .get_changeset_by_changesetid(ctx.clone(), changeset_id);
+        let changed_files = self.changeset_store.get_changed_files(ctx, changeset_id);
         let reviewers_acl_checker = self.reviewers_acl_checker.clone();
         Box::new((hg_changeset, changed_files).into_future().and_then(
             move |(changeset, changed_files)| {
@@ -733,13 +733,13 @@ pub trait ChangesetStore: Send + Sync {
     fn get_changeset_by_changesetid(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error>;
 
     fn get_changed_files(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error>;
 }
 
@@ -751,9 +751,9 @@ impl ChangesetStore for InMemoryChangesetStore {
     fn get_changeset_by_changesetid(
         &self,
         _ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
-        match self.map.get(changesetid) {
+        match self.map.get(&changesetid) {
             Some(cs) => Box::new(finished(cs.clone())),
             None => Box::new(failed(
                 ErrorKind::NoSuchChangeset(changesetid.to_string()).into(),
@@ -764,9 +764,9 @@ impl ChangesetStore for InMemoryChangesetStore {
     fn get_changed_files(
         &self,
         _ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error> {
-        match self.map.get(changesetid) {
+        match self.map.get(&changesetid) {
             Some(cs) => Box::new(finished(
                 cs.files()
                     .into_iter()
@@ -788,7 +788,7 @@ impl InMemoryChangesetStore {
         }
     }
 
-    pub fn insert(&mut self, changeset_id: &HgChangesetId, changeset: &HgBlobChangeset) {
+    pub fn insert(&mut self, changeset_id: HgChangesetId, changeset: &HgBlobChangeset) {
         self.map.insert(changeset_id.clone(), changeset.clone());
     }
 }
@@ -814,8 +814,7 @@ impl FileContentStore for InMemoryFileContentStore {
         changesetid: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
-        let opt = self
-            .map
+        let opt = self.map
             .get(&(changesetid, path.clone()))
             .map(|(file_type, bytes)| (file_type.clone(), bytes.clone()));
         finished(opt).boxify()

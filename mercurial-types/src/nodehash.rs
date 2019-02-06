@@ -16,9 +16,9 @@ use serde;
 use slog;
 use thrift;
 
-use RepoPath;
 use errors::*;
 use hash::{self, Sha1};
+use RepoPath;
 
 pub const NULL_HASH: HgNodeHash = HgNodeHash(hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
@@ -198,11 +198,6 @@ impl HgChangesetId {
         HgNodeHash::from_ascii_str(s).map(HgChangesetId)
     }
 
-    #[inline]
-    pub fn as_nodehash(&self) -> &HgNodeHash {
-        &self.0
-    }
-
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }
@@ -307,11 +302,6 @@ impl Arbitrary for HgManifestId {
 pub struct HgFileNodeId(HgNodeHash);
 
 impl HgFileNodeId {
-    #[inline]
-    pub(crate) fn as_nodehash(&self) -> &HgNodeHash {
-        &self.0
-    }
-
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }
@@ -403,7 +393,7 @@ macro_rules! impl_hash {
                 serializer.emit_str(key, hex.as_str())
             }
         }
-    }
+    };
 }
 
 impl_hash!(HgNodeHash);

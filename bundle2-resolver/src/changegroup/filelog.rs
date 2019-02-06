@@ -233,7 +233,7 @@ impl DeltaCache {
                                 })
                                 .boxify(),
                             None => self.repo
-                                .get_raw_hg_content(ctx, &base)
+                                .get_raw_hg_content(ctx, base)
                                 .and_then(move |blob| {
                                     let bytes = blob.into_inner();
                                     delta::apply(bytes.as_ref(), &delta)

@@ -25,7 +25,7 @@ fn test_parse() {
     let cset = RevlogChangeset::parse(HgBlob::new(Bytes::from(CHANGESET)), Some(p1), None)
         .expect("parsed");
 
-    let node = HgBlobNode::new(HgBlob::new(Bytes::from(CHANGESET)), Some(&p1), None);
+    let node = HgBlobNode::new(HgBlob::new(Bytes::from(CHANGESET)), Some(p1), None);
     assert_eq!(node.nodeid(), csid);
 
     assert_eq!(
@@ -48,7 +48,8 @@ fn test_parse() {
 
 Paths ending with \ will fail the verification introduced in 684a977c2ae0 when
 checking out on Windows ... and if it didn't fail it would probably not do what
-the user expected."#.into(),
+the user expected."#
+                .into(),
         }
     );
 
@@ -57,7 +58,7 @@ the user expected."#.into(),
     let cset = RevlogChangeset::parse(HgBlob::new(Bytes::from(CHANGESET_NOEXTRA)), Some(p1), None)
         .expect("parsed");
 
-    let node = HgBlobNode::new(Bytes::from(CHANGESET_NOEXTRA), Some(&p1), None);
+    let node = HgBlobNode::new(Bytes::from(CHANGESET_NOEXTRA), Some(p1), None);
     assert_eq!(node.nodeid(), csid);
 
     assert_eq!(
@@ -74,15 +75,16 @@ the user expected."#.into(),
             files: vec![MPath::new(b"hgweb.py").unwrap()],
             comments: r#"reorganize code into classes
 clean up html code for w3c validation
-"#.into(),
+"#
+            .into(),
         }
     );
 }
 
 #[test]
 fn test_generate() {
-    fn test(csid: HgNodeHash, p1: Option<&HgNodeHash>, blob: HgBlob, cs: &[u8]) {
-        let cset = RevlogChangeset::parse(blob.clone(), p1.cloned(), None).expect("parsed");
+    fn test(csid: HgNodeHash, p1: Option<HgNodeHash>, blob: HgBlob, cs: &[u8]) {
+        let cset = RevlogChangeset::parse(blob.clone(), p1, None).expect("parsed");
 
         let node = HgBlobNode::new(blob, p1, None);
         assert_eq!(node.nodeid(), csid);
@@ -98,7 +100,7 @@ fn test_generate() {
     let p1: HgNodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
     test(
         csid,
-        Some(&p1),
+        Some(p1),
         HgBlob::new(Bytes::from(CHANGESET)),
         CHANGESET,
     );
@@ -107,7 +109,7 @@ fn test_generate() {
     let p1: HgNodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
     test(
         csid,
-        Some(&p1),
+        Some(p1),
         HgBlob::new(Bytes::from(CHANGESET_NOEXTRA)),
         CHANGESET_NOEXTRA,
     );

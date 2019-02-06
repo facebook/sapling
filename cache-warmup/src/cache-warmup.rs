@@ -53,10 +53,10 @@ fn blobstore_and_filenodes_warmup(
 ) -> BoxFuture<(), Error> {
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
-    repo.get_changeset_by_changesetid(ctx.clone(), &revision)
+    repo.get_changeset_by_changesetid(ctx.clone(), revision)
         .map({
             let repo = repo.clone();
-            move |cs| repo.get_root_entry(&cs.manifestid())
+            move |cs| repo.get_root_entry(cs.manifestid())
         })
         .and_then({
             move |root_entry| {
@@ -72,7 +72,7 @@ fn blobstore_and_filenodes_warmup(
                             Some(path) => RepoPath::DirectoryPath(path),
                             None => RepoPath::RootPath,
                         };
-                        repo.get_linknode(ctx.clone(), &path, &hash.into_nodehash())
+                        repo.get_linknode(ctx.clone(), &path, hash.into_nodehash())
                     })
                     .buffered(buffer_size)
                     .for_each({
@@ -103,7 +103,7 @@ fn changesets_warmup(
 ) -> impl Future<Item = (), Error = Error> {
     info!(logger, "about to start warming up changesets cache");
 
-    repo.get_bonsai_from_hg(ctx.clone(), &start_rev)
+    repo.get_bonsai_from_hg(ctx.clone(), start_rev)
         .and_then({
             let start_rev = start_rev.clone();
             move |maybe_node| {

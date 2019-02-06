@@ -190,7 +190,7 @@ pub trait Entry: Send + 'static {
     fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error>;
 
     /// Get the identity of the object this entry refers to.
-    fn get_hash(&self) -> &HgEntryId;
+    fn get_hash(&self) -> HgEntryId;
 
     /// Get the name of the entry. None means that this is a root entry
     fn get_name(&self) -> Option<&MPathElement>;
@@ -248,7 +248,7 @@ where
         self.entry.get_size(ctx).boxify()
     }
 
-    fn get_hash(&self) -> &HgEntryId {
+    fn get_hash(&self) -> HgEntryId {
         self.entry.get_hash()
     }
 
@@ -278,7 +278,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_size(ctx)
     }
 
-    fn get_hash(&self) -> &HgEntryId {
+    fn get_hash(&self) -> HgEntryId {
         (**self).get_hash()
     }
 

@@ -85,7 +85,7 @@ impl Filenodes for CachingFilenodes {
         &self,
         ctx: CoreContext,
         info: BoxStream<FilenodeInfo, Error>,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         self.filenodes.add_filenodes(ctx, info, repo_id)
     }
@@ -94,8 +94,8 @@ impl Filenodes for CachingFilenodes {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        filenode_id: &HgFileNodeId,
-        repo_id: &RepositoryId,
+        filenode_id: HgFileNodeId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
         let cache_key = format!("{}.{}.{}", repo_id.prefix(), filenode_id, path).to_string();
         cloned!(self.filenodes, self.memcache, self.keygen);
@@ -114,12 +114,13 @@ impl Filenodes for CachingFilenodes {
                 repo_id,
                 filenode_id,
                 &path_hash,
-            ).then({
+            )
+            .then({
                 cloned!(filenode_id, path, repo_id);
                 move |res| match res {
                     Ok(filenode) => future::ok(Some(filenode)).left_future(),
                     Err(()) => filenodes
-                        .get_filenode(ctx, &path, &filenode_id, &repo_id)
+                        .get_filenode(ctx, &path, filenode_id, repo_id)
                         .inspect(move |maybefilenode| {
                             if let Some(filenode) = maybefilenode {
                                 schedule_fill_single_filenode_memcache(
@@ -135,7 +136,7 @@ impl Filenodes for CachingFilenodes {
                         .right_future(),
                 }
             })
-                .boxify()
+            .boxify()
         })
     }
 
@@ -143,7 +144,7 @@ impl Filenodes for CachingFilenodes {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         let path_hash = PathHash({
             let path = match path.mpath() {
@@ -160,13 +161,14 @@ impl Filenodes for CachingFilenodes {
             keygen.clone(),
             repo_id.clone(),
             path_hash.clone(),
-        ).then(move |from_memcache| {
+        )
+        .then(move |from_memcache| {
             if let Ok(from_memcache) = from_memcache {
                 return future::ok(from_memcache).left_future();
             }
 
             filenodes
-                .get_all_filenodes(ctx, &path, &repo_id)
+                .get_all_filenodes(ctx, &path, repo_id)
                 .inspect(move |all_filenodes| {
                     schedule_fill_all_filenodes_memcache(
                         all_filenodes,
@@ -178,7 +180,7 @@ impl Filenodes for CachingFilenodes {
                 })
                 .right_future()
         })
-            .boxify()
+        .boxify()
     }
 }
 
@@ -196,8 +198,8 @@ enum ErrorKind {
 
 fn get_mc_key_for_single_filenode(
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    filenode: &HgFileNodeId,
+    repo_id: RepositoryId,
+    filenode: HgFileNodeId,
     path_hash: &PathHash,
 ) -> String {
     keygen.key(format!("{}.{}.{}", repo_id.id(), filenode, path_hash.0))
@@ -205,7 +207,7 @@ fn get_mc_key_for_single_filenode(
 
 fn get_mc_key_for_filenodes_list(
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     path_hash: &PathHash,
 ) -> String {
     keygen.key(format!("{}.{}", repo_id.id(), path_hash.0))
@@ -213,7 +215,7 @@ fn get_mc_key_for_filenodes_list(
 
 fn get_mc_key_for_filenodes_list_pointer(
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     path_hash: &PathHash,
     pointer: Pointer,
 ) -> String {
@@ -223,16 +225,13 @@ fn get_mc_key_for_filenodes_list_pointer(
 fn get_single_filenode_from_memcache(
     memcache: MemcacheClient,
     keygen: KeyGen,
-    repo_id: &RepositoryId,
-    filenode: &HgFileNodeId,
+    repo_id: RepositoryId,
+    filenode: HgFileNodeId,
     path_hash: &PathHash,
 ) -> impl Future<Item = FilenodeInfo, Error = ()> {
     memcache
         .get(get_mc_key_for_single_filenode(
-            &keygen,
-            repo_id,
-            filenode,
-            path_hash,
+            &keygen, repo_id, filenode, path_hash,
         ))
         .map_err(|()| ErrorKind::MemcacheInternal)
         .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
@@ -280,7 +279,7 @@ fn get_all_filenodes_from_memcache(
     }
 
     memcache
-        .get(get_mc_key_for_filenodes_list(&keygen, &repo_id, &path_hash))
+        .get(get_mc_key_for_filenodes_list(&keygen, repo_id, &path_hash))
         .map_err(|()| ErrorKind::MemcacheInternal)
         .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
         .and_then(|serialized| {
@@ -300,10 +299,7 @@ fn get_all_filenodes_from_memcache(
                 let read_chunks_fut = list.into_iter().map(move |pointer| {
                     memcache
                         .get(get_mc_key_for_filenodes_list_pointer(
-                            &keygen,
-                            &repo_id,
-                            &path_hash,
-                            pointer,
+                            &keygen, repo_id, &path_hash, pointer,
                         ))
                         .then(|res| match res {
                             Ok(Some(res)) => Ok(res),
@@ -354,7 +350,7 @@ fn schedule_fill_single_filenode_memcache(
     // It's probably not even worth logging it
     if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
         tokio::spawn(memcache.set(
-            get_mc_key_for_single_filenode(&keygen, &repo_id, &filenode_id, &path_hash),
+            get_mc_key_for_single_filenode(&keygen, repo_id, filenode_id, &path_hash),
             serialized,
         ));
     }
@@ -393,7 +389,7 @@ fn schedule_fill_all_filenodes_memcache(
                         .set_with_ttl(
                             get_mc_key_for_filenodes_list_pointer(
                                 &keygen,
-                                &repo_id,
+                                repo_id,
                                 &path_hash,
                                 pointer,
                             ),
@@ -417,7 +413,7 @@ fn schedule_fill_all_filenodes_memcache(
     tokio::spawn(
         serialized_filenode_info_list_fut.and_then(move |serialized| {
             memcache.set_with_ttl(
-                get_mc_key_for_filenodes_list(&keygen, &repo_id, &path_hash),
+                get_mc_key_for_filenodes_list(&keygen, repo_id, &path_hash),
                 serialized,
                 Duration::from_secs(TTL_SEC + random::<u64>() % TTL_SEC_RAND),
             )

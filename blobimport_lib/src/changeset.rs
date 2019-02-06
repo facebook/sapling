@@ -44,7 +44,7 @@ struct ParseChangeset {
 // Extracts all the data from revlog repo that commit API may need.
 fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChangeset {
     let revlogcs = revlog_repo
-        .get_changeset(&csid)
+        .get_changeset(csid)
         .with_context(move |_| format!("While reading changeset {:?}", csid))
         .map_err(Fail::compat)
         .boxify()
@@ -62,7 +62,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
                     revlog_repo
                         .get_root_manifest(cs.manifestid())
                         .map({
-                            let manifest_id = *cs.manifestid();
+                            let manifest_id = cs.manifestid();
                             move |rootmf| Some((manifest_id, rootmf))
                         })
                         .boxify()
@@ -87,7 +87,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
                     .map(|csid| {
                         let revlog_repo = revlog_repo.clone();
                         revlog_repo
-                            .get_changeset(&csid)
+                            .get_changeset(csid)
                             .and_then(move |cs| {
                                 if cs.manifestid().into_nodehash() == NULL_HASH {
                                     future::ok(None).boxify()
@@ -137,8 +137,8 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
                 Ok(Some((
                     manifest_id,
                     HgBlob::from(Bytes::from(bytes)),
-                    p1.cloned(),
-                    p2.cloned(),
+                    p1,
+                    p2,
                 )))
             }
         })
@@ -186,8 +186,8 @@ fn upload_entry(
                     let upload = UploadHgTreeEntry {
                         upload_node_id,
                         contents: content.into_inner(),
-                        p1: p1.cloned(),
-                        p2: p2.cloned(),
+                        p1,
+                        p2,
                         path: RepoPath::DirectoryPath(path),
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
@@ -198,8 +198,8 @@ fn upload_entry(
                         upload_node_id,
                         contents: UploadHgFileContents::RawBytes(content.into_inner()),
                         file_type: ft,
-                        p1: p1.cloned(),
-                        p2: p2.cloned(),
+                        p1,
+                        p2,
                         path,
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));

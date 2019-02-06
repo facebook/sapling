@@ -238,9 +238,9 @@ impl Filenodes for SqlFilenodes {
         &self,
         _ctx: CoreContext,
         filenodes: BoxStream<FilenodeInfo, Error>,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
-        cloned!(repo_id, self.write_connection);
+        cloned!(self.write_connection);
 
         filenodes
             .chunks(DEFAULT_INSERT_CHUNK_SIZE)
@@ -255,9 +255,9 @@ impl Filenodes for SqlFilenodes {
                     })
                     .collect();
 
-                ensure_paths_exists(&write_connection, &repo_id, &filenodes).and_then({
+                ensure_paths_exists(&write_connection, repo_id, &filenodes).and_then({
                     cloned!(write_connection);
-                    move |()| insert_filenodes(&write_connection, &repo_id, &filenodes)
+                    move |()| insert_filenodes(&write_connection, repo_id, &filenodes)
                 })
             })
             .for_each(|()| Ok(()))
@@ -268,41 +268,35 @@ impl Filenodes for SqlFilenodes {
         &self,
         _ctx: CoreContext,
         path: &RepoPath,
-        filenode: &HgFileNodeId,
-        repo_id: &RepositoryId,
+        filenode: HgFileNodeId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
         STATS::gets.add_value(1);
         cloned!(self.read_master_connection, path, filenode, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 
-        select_filenode(
-            self.read_connection.clone(),
-            &path,
-            &filenode,
-            &pwh,
-            &repo_id,
-        )
-        .and_then(move |maybe_filenode_info| match maybe_filenode_info {
-            Some(filenode_info) => Ok(Some(filenode_info)).into_future().boxify(),
-            None => {
-                STATS::gets_master.add_value(1);
-                select_filenode(
-                    read_master_connection.clone(),
-                    &path,
-                    &filenode,
-                    &pwh,
-                    &repo_id,
-                )
-            }
-        })
-        .boxify()
+        select_filenode(self.read_connection.clone(), &path, filenode, &pwh, repo_id)
+            .and_then(move |maybe_filenode_info| match maybe_filenode_info {
+                Some(filenode_info) => Ok(Some(filenode_info)).into_future().boxify(),
+                None => {
+                    STATS::gets_master.add_value(1);
+                    select_filenode(
+                        read_master_connection.clone(),
+                        &path,
+                        filenode,
+                        &pwh,
+                        repo_id,
+                    )
+                }
+            })
+            .boxify()
     }
 
     fn get_all_filenodes(
         &self,
         _ctx: CoreContext,
         path: &RepoPath,
-        repo_id: &RepositoryId,
+        repo_id: RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::range_gets.add_value(1);
         cloned!(self.read_connection, path, repo_id);
@@ -340,12 +334,12 @@ impl Filenodes for SqlFilenodes {
 
 fn ensure_paths_exists(
     connections: &Vec<Connection>,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     filenodes: &Vec<(FilenodeInfo, PathWithHash)>,
 ) -> impl Future<Item = (), Error = Error> {
     let mut path_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
     for &(_, ref pwh) in filenodes {
-        path_rows[pwh.shard_number(connections.len())].push((repo_id, &pwh.path_bytes, &pwh.hash));
+        path_rows[pwh.shard_number(connections.len())].push((&repo_id, &pwh.path_bytes, &pwh.hash));
     }
 
     let futures: Vec<_> = connections
@@ -364,14 +358,14 @@ fn ensure_paths_exists(
 
 fn insert_filenodes(
     connections: &Vec<Connection>,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
     filenodes: &Vec<(FilenodeInfo, PathWithHash)>,
 ) -> impl Future<Item = (), Error = Error> {
     let mut filenode_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
     let mut copydata_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
     for &(ref filenode, ref pwh) in filenodes {
         filenode_rows[pwh.shard_number(connections.len())].push((
-            repo_id,
+            &repo_id,
             &pwh.hash,
             &pwh.is_tree,
             &filenode.filenode,
@@ -394,7 +388,7 @@ fn insert_filenodes(
                     .left_future();
             }
             copydata_rows[pwh.shard_number(connections.len())].push((
-                repo_id,
+                &repo_id,
                 &pwh.hash,
                 &filenode.filenode,
                 &pwh.is_tree,
@@ -456,9 +450,9 @@ fn insert_filenodes(
 fn select_filenode(
     connections: Arc<Vec<Connection>>,
     path: &RepoPath,
-    filenode: &HgFileNodeId,
+    filenode: HgFileNodeId,
     pwh: &PathWithHash,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
 ) -> BoxFuture<Option<FilenodeInfo>, Error> {
     let connection = &connections[pwh.shard_number(connections.len())];
     cloned!(connections, path, filenode, pwh, repo_id);
@@ -490,14 +484,14 @@ fn select_filenode(
 fn select_copydata(
     connections: Arc<Vec<Connection>>,
     path: &RepoPath,
-    filenode: &HgFileNodeId,
+    filenode: HgFileNodeId,
     pwh: &PathWithHash,
-    repo_id: &RepositoryId,
+    repo_id: RepositoryId,
 ) -> BoxFuture<(RepoPath, HgFileNodeId), Error> {
     let shard_number = connections.len();
     let cloned_connections = connections.clone();
     let connection = &connections[pwh.shard_number(shard_number)];
-    SelectCopyinfo::query(connection, repo_id, &pwh.hash, filenode, &pwh.is_tree)
+    SelectCopyinfo::query(connection, &repo_id, &pwh.hash, &filenode, &pwh.is_tree)
         .and_then({
             cloned!(path, filenode);
             move |maybe_copyinfo_row| {
@@ -544,7 +538,7 @@ fn convert_to_filenode_info(
     has_copyinfo: i8,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
     let copydata = if has_copyinfo != 0 {
-        select_copydata(connections, &path, &filenode, &pwh, &repo_id)
+        select_copydata(connections, &path, filenode, &pwh, repo_id)
             .map(Some)
             .boxify()
     } else {

@@ -81,7 +81,7 @@ fn create_bonsai_changeset_from_test_data(
         .map(|s| HgChangesetId::from_str(s).unwrap())
         .map(|p| {
             blobrepo
-                .get_bonsai_from_hg(ctx.clone(), &p)
+                .get_bonsai_from_hg(ctx.clone(), p)
                 .map(|maybe_cs| maybe_cs.unwrap())
         });
 
@@ -121,11 +121,11 @@ fn set_bookmark(blobrepo: BlobRepo, hg_cs_id: &str, bookmark: Bookmark) {
     let ctx = CoreContext::test_mock();
     let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
     let bcs_id = blobrepo
-        .get_bonsai_from_hg(ctx.clone(), &hg_cs_id)
+        .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
         .wait()
         .unwrap();
     let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, &bcs_id.unwrap()).unwrap();
+    txn.force_set(&bookmark, bcs_id.unwrap()).unwrap();
     txn.commit().wait().unwrap();
 }
 

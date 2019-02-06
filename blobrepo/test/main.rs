@@ -72,7 +72,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
-    assert!(run_future(repo.get_file_content(ctx.clone(), &expected_hash)).is_err());
+    assert!(run_future(repo.get_file_content(ctx.clone(), expected_hash)).is_err());
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
@@ -81,7 +81,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     // The entry we're given is correct...
     let (entry, path) = run_future(future).unwrap();
     assert!(path == fake_path);
-    assert!(entry.get_hash() == &HgEntryId::new(expected_hash));
+    assert!(entry.get_hash() == HgEntryId::new(expected_hash));
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
@@ -94,7 +94,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     };
 
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(ctx.clone(), &expected_hash)).unwrap();
+    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -112,7 +112,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
 
     // The blob does not exist...
-    run_future(repo.get_file_content(ctx.clone(), &expected_hash)).is_err();
+    run_future(repo.get_file_content(ctx.clone(), expected_hash)).is_err();
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_path, p1);
@@ -122,7 +122,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     let (entry, path) = run_future(future2.join(future).map(|(item, _)| item)).unwrap();
 
     assert!(path == fake_path);
-    assert!(entry.get_hash() == &HgEntryId::new(expected_hash));
+    assert!(entry.get_hash() == HgEntryId::new(expected_hash));
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
@@ -134,7 +134,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
         _ => panic!(),
     };
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(ctx.clone(), &expected_hash)).unwrap();
+    let bytes = run_future(repo.get_file_content(ctx.clone(), expected_hash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -186,13 +186,11 @@ fn create_one_changeset(repo: BlobRepo) {
     let ctx = CoreContext::test_mock();
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
-    let expected_files = vec![
-        RepoPath::file("dir/file")
-            .expect("Can't generate fake RepoPath")
-            .mpath()
-            .unwrap()
-            .clone(),
-    ];
+    let expected_files = vec![RepoPath::file("dir/file")
+        .expect("Can't generate fake RepoPath")
+        .mpath()
+        .unwrap()
+        .clone()];
     let author: String = "author <author@fb.com>".into();
 
     let (filehash, file_future) =
@@ -220,7 +218,7 @@ fn create_one_changeset(repo: BlobRepo) {
 
     let bonsai_hg = run_future(commit.get_completed_changeset()).unwrap();
     let cs = &bonsai_hg.1;
-    assert!(cs.manifestid() == &HgManifestId::new(roothash));
+    assert!(cs.manifestid() == HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
     let files: Vec<_> = cs.files().into();
@@ -230,7 +228,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = run_future(repo.get_file_content(ctx.clone(), &filehash)).unwrap();
+    let bytes = run_future(repo.get_file_content(ctx.clone(), filehash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -291,11 +289,12 @@ fn create_two_changesets(repo: BlobRepo) {
         commit1
             .get_completed_changeset()
             .join(commit2.get_completed_changeset()),
-    ).unwrap();
+    )
+    .unwrap();
 
     let commit1 = &commit1.1;
     let commit2 = &commit2.1;
-    assert!(commit2.manifestid() == &HgManifestId::new(roothash));
+    assert!(commit2.manifestid() == HgManifestId::new(roothash));
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
     let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
@@ -306,10 +305,10 @@ fn create_two_changesets(repo: BlobRepo) {
 
     assert!(commit1.parents().get_nodes() == (None, None));
     let commit1_id = Some(commit1.get_changeset_id().into_nodehash());
-    let expected_parents = (commit1_id.as_ref(), None);
+    let expected_parents = (commit1_id, None);
     assert!(commit2.parents().get_nodes() == expected_parents);
 
-    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, &filehash)).unwrap();
+    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, filehash)).unwrap();
     assert!(
         linknode == commit1.get_changeset_id(),
         "Bad linknode {} - should be {}",
@@ -355,7 +354,7 @@ fn check_bonsai_creation(repo: BlobRepo) {
     let commit = run_future(commit.get_completed_changeset()).unwrap();
     let commit = &commit.1;
     let bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx.clone(), &commit.get_changeset_id())).unwrap();
+        run_future(repo.get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())).unwrap();
     assert!(bonsai_cs_id.is_some());
     let bonsai = run_future(repo.get_bonsai_changeset(ctx.clone(), bonsai_cs_id.unwrap())).unwrap();
     assert_eq!(
@@ -427,12 +426,12 @@ fn check_bonsai_creation_with_rename(repo: BlobRepo) {
     let child_cs = &child_cs.1;
 
     let parent_bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx.clone(), &parent_cs.get_changeset_id()))
+        run_future(repo.get_bonsai_from_hg(ctx.clone(), parent_cs.get_changeset_id()))
             .unwrap()
             .unwrap();
 
     let bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx.clone(), &child_cs.get_changeset_id())).unwrap();
+        run_future(repo.get_bonsai_from_hg(ctx.clone(), child_cs.get_changeset_id())).unwrap();
     let bonsai = run_future(repo.get_bonsai_changeset(ctx.clone(), bonsai_cs_id.unwrap())).unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
     let file = MPath::new("file").unwrap();
@@ -536,7 +535,7 @@ fn create_double_linknode(repo: BlobRepo) {
     let parent = run_future(parent_commit.get_completed_changeset()).unwrap();
     let parent = &parent.1;
 
-    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, &filehash)).unwrap();
+    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, filehash)).unwrap();
     assert!(
         linknode != child.get_changeset_id(),
         "Linknode on child commit = should be on parent"
@@ -564,7 +563,8 @@ fn check_linknode_creation(repo: BlobRepo) {
         .map(|id| {
             let path = RepoPath::file(
                 MPath::new(format!("dir/file{}", id)).expect("String to MPath failed"),
-            ).expect("Can't generate fake RepoPath");
+            )
+            .expect("Can't generate fake RepoPath");
             let (hash, future) =
                 upload_file_no_parents(ctx.clone(), &repo, format!("blob id {}", id), &path);
             ((hash, format!("file{}", id)), future)
@@ -597,7 +597,7 @@ fn check_linknode_creation(repo: BlobRepo) {
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
     let cs = &cs.1;
-    assert!(cs.manifestid() == &HgManifestId::new(roothash));
+    assert!(cs.manifestid() == HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
 
@@ -606,7 +606,7 @@ fn check_linknode_creation(repo: BlobRepo) {
     metadata.into_iter().for_each(|(hash, basename)| {
         let path = RepoPath::file(format!("dir/{}", basename).as_str())
             .expect("Can't generate fake RepoPath");
-        let linknode = run_future(repo.get_linknode(ctx.clone(), &path, &hash)).unwrap();
+        let linknode = run_future(repo.get_linknode(ctx.clone(), &path, hash)).unwrap();
         assert!(
             linknode == cs_id,
             "Linknode is {}, should be {}",
@@ -645,7 +645,8 @@ where
         let ctx = CoreContext::test_mock();
         let value = <K::Value as Arbitrary>::arbitrary(g);
         let value_cloned = value.clone();
-        let store_fetch_future = self.repo
+        let store_fetch_future = self
+            .repo
             .unittest_store(ctx.clone(), value)
             .and_then({
                 cloned!(ctx, self.repo);
@@ -680,11 +681,11 @@ fn test_compute_changed_files_no_parents() {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs = run_future(repo.get_changeset_by_changesetid(
-            ctx.clone(),
-            &HgChangesetId::new(nodehash),
-        )).unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), &cs.manifestid())).unwrap();
+        let cs = run_future(
+            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
+        )
+        .unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), cs.manifestid())).unwrap();
 
         let diff = run_future(compute_changed_files(ctx.clone(), &mf, None, None)).unwrap();
         assert!(
@@ -716,25 +717,26 @@ fn test_compute_changed_files_one_parent() {
             MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
         ];
 
-        let cs = run_future(repo.get_changeset_by_changesetid(
-            ctx.clone(),
-            &HgChangesetId::new(nodehash),
-        )).unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), &cs.manifestid())).unwrap();
+        let cs = run_future(
+            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
+        )
+        .unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), cs.manifestid())).unwrap();
 
-        let parent_cs = run_future(repo.get_changeset_by_changesetid(
-            ctx.clone(),
-            &HgChangesetId::new(parenthash),
-        )).unwrap();
+        let parent_cs = run_future(
+            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(parenthash)),
+        )
+        .unwrap();
         let parent_mf =
-            run_future(repo.get_manifest_by_nodeid(ctx.clone(), &parent_cs.manifestid())).unwrap();
+            run_future(repo.get_manifest_by_nodeid(ctx.clone(), parent_cs.manifestid())).unwrap();
 
         let diff = run_future(compute_changed_files(
             ctx.clone(),
             &mf,
             Some(&parent_mf),
             None,
-        )).unwrap();
+        ))
+        .unwrap();
         assert!(
             diff == expected,
             "Got {:?}, expected {:?}\n",
@@ -761,8 +763,9 @@ fn make_bonsai_changeset(
             .into_iter()
             .map(|(path, change)| (MPath::new(path).unwrap(), change))
             .collect(),
-    }.freeze()
-        .unwrap()
+    }
+    .freeze()
+    .unwrap()
 }
 
 fn make_file_change(
@@ -784,17 +787,18 @@ fn test_get_manifest_from_bonsai() {
         let get_manifest_for_changeset = {
             cloned!(ctx, repo);
             move |cs_nodehash: &str| -> HgManifestId {
-                *run_future(repo.get_changeset_by_changesetid(
+                run_future(repo.get_changeset_by_changesetid(
                     ctx.clone(),
-                    &HgChangesetId::new(string_to_nodehash(cs_nodehash)),
-                )).unwrap()
-                    .manifestid()
+                    HgChangesetId::new(string_to_nodehash(cs_nodehash)),
+                ))
+                .unwrap()
+                .manifestid()
             }
         };
         let get_entries = {
             cloned!(ctx, repo);
-            move |ms_hash: &HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
-                repo.get_manifest_by_nodeid(ctx.clone(), &ms_hash)
+            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
+                repo.get_manifest_by_nodeid(ctx.clone(), ms_hash)
                     .map(|ms| {
                         ms.list()
                             .map(|e| {
@@ -827,8 +831,8 @@ fn test_get_manifest_from_bonsai() {
             let ms_hash = run_future(repo.get_manifest_from_bonsai(
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![]),
-                Some(&ms1),
-                Some(&ms2),
+                Some(ms1),
+                Some(ms2),
             ));
             assert!(match ms_hash
                 .expect_err("should have failed")
@@ -845,10 +849,11 @@ fn test_get_manifest_from_bonsai() {
             let (ms_hash, _) = run_future(repo.get_manifest_from_bonsai(
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![("base", None)]),
-                Some(&ms1),
-                Some(&ms2),
-            )).expect("merge should have succeeded");
-            let entries = run_future(get_entries(&ms_hash)).unwrap();
+                Some(ms1),
+                Some(ms2),
+            ))
+            .expect("merge should have succeeded");
+            let entries = run_future(get_entries(ms_hash)).unwrap();
 
             assert!(entries.get("1").is_some());
             assert!(entries.get("2").is_some());
@@ -859,7 +864,7 @@ fn test_get_manifest_from_bonsai() {
 
             // check trivial merge parents
             let (ms1_entries, ms2_entries) =
-                run_future(get_entries(&ms1).join(get_entries(&ms2))).unwrap();
+                run_future(get_entries(ms1).join(get_entries(ms2))).unwrap();
             let mut br_expected_parents = HashSet::new();
             br_expected_parents.insert(
                 ms1_entries
@@ -890,9 +895,9 @@ fn test_get_manifest_from_bonsai() {
             let fc = run_future(make_file_change(ctx.clone(), content_expected, &repo)).unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
             let (ms_hash, _) =
-                run_future(repo.get_manifest_from_bonsai(ctx.clone(), bcs, Some(&ms1), Some(&ms2)))
+                run_future(repo.get_manifest_from_bonsai(ctx.clone(), bcs, Some(ms1), Some(ms2)))
                     .expect("adding new file should not produce coflict");
-            let entries = run_future(get_entries(&ms_hash)).unwrap();
+            let entries = run_future(get_entries(ms_hash)).unwrap();
             let new = entries.get("new").expect("new file should be in entries");
             match run_future(new.get_content(ctx.clone())).unwrap() {
                 manifest::Content::File(content) => {
@@ -911,8 +916,8 @@ fn test_case_conflict_in_manifest() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
-        let get_manifest_for_changeset = |cs_id: &HgChangesetId| -> HgManifestId {
-            *run_future(repo.get_changeset_by_changesetid(ctx.clone(), cs_id))
+        let get_manifest_for_changeset = |cs_id: HgChangesetId| -> HgManifestId {
+            run_future(repo.get_changeset_by_changesetid(ctx.clone(), cs_id))
                 .unwrap()
                 .manifestid()
         };
@@ -920,9 +925,9 @@ fn test_case_conflict_in_manifest() {
         let hg_cs = HgChangesetId::new(string_to_nodehash(
             "2f866e7e549760934e31bf0420a873f65100ad63",
         ));
-        let mf = get_manifest_for_changeset(&hg_cs);
+        let mf = get_manifest_for_changeset(hg_cs);
 
-        let bonsai_parent = run_future(repo.get_bonsai_from_hg(ctx.clone(), &hg_cs))
+        let bonsai_parent = run_future(repo.get_bonsai_from_hg(ctx.clone(), hg_cs))
             .unwrap()
             .unwrap();
 
@@ -938,19 +943,19 @@ fn test_case_conflict_in_manifest() {
                 vec![bonsai_parent],
                 store_files(
                     ctx.clone(),
-                    btreemap!{*path => Some("caseconflicttest")},
+                    btreemap! {*path => Some("caseconflicttest")},
                     repo.clone(),
                 ),
             );
 
             let child_hg_cs =
                 run_future(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id.clone())).unwrap();
-            let child_mf = get_manifest_for_changeset(&child_hg_cs);
+            let child_mf = get_manifest_for_changeset(child_hg_cs);
             assert_eq!(
                 run_future(repo.check_case_conflict_in_manifest(
                     ctx.clone(),
-                    &mf,
-                    &child_mf,
+                    mf,
+                    child_mf,
                     MPath::new(path).unwrap()
                 )).unwrap(),
                 *result,

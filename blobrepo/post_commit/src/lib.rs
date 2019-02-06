@@ -44,12 +44,12 @@ impl PreCommitInfo {
         Self {
             repo_id,
             changeset_id,
-            parents: changeset.parents().cloned().collect(),
+            parents: changeset.parents().collect(),
         }
     }
 
-    pub fn get_changeset_id(&self) -> &ChangesetId {
-        &self.changeset_id
+    pub fn get_changeset_id(&self) -> ChangesetId {
+        self.changeset_id
     }
 
     pub fn complete(self, generation: Generation) -> PostCommitInfo {

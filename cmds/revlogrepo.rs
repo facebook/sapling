@@ -56,7 +56,7 @@ fn main() {
             let hash = HgNodeHash::from_str(hash).expect("Incorrect Sha1 hash provided");
 
             let raw = changelog
-                .get_idx_by_nodeid(&hash)
+                .get_idx_by_nodeid(hash)
                 .and_then(|idx| changelog.get_rev(idx))
                 .expect("Changeset not found");
 

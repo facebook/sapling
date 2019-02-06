@@ -476,7 +476,7 @@ impl BonsaiBookmarkPush {
         ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
             match cs_id {
                 None => future::ok(None).left_future(),
-                Some(cs_id) => repo.get_bonsai_from_hg(ctx, &cs_id).right_future(),
+                Some(cs_id) => repo.get_bonsai_from_hg(ctx, cs_id).right_future(),
             }
         }
 
@@ -868,7 +868,7 @@ impl Bundle2Resolver {
                 // XXX use these content blobs in the future
                 content_blobs: _content_blobs,
             } = try_boxfuture!(NewBlobs::new(
-                *revlog_cs.manifestid(),
+                revlog_cs.manifestid(),
                 &manifests,
                 &filelogs,
                 &content_blobs,
@@ -1249,9 +1249,9 @@ fn add_bookmark_to_transaction(
     bookmark_push: BonsaiBookmarkPush,
 ) -> Result<()> {
     match (bookmark_push.new, bookmark_push.old) {
-        (Some(new), Some(old)) => txn.update(&bookmark_push.name, &new, &old),
-        (Some(new), None) => txn.create(&bookmark_push.name, &new),
-        (None, Some(old)) => txn.delete(&bookmark_push.name, &old),
+        (Some(new), Some(old)) => txn.update(&bookmark_push.name, new, old),
+        (Some(new), None) => txn.create(&bookmark_push.name, new),
+        (None, Some(old)) => txn.delete(&bookmark_push.name, old),
         _ => Ok(()),
     }
 }
@@ -1356,7 +1356,7 @@ impl NewBlobs {
                 (entries, content_blobs, root_manifest)
             }
             None => {
-                let entry = (repo.get_root_entry(&manifest_root_id), RepoPath::RootPath);
+                let entry = (repo.get_root_entry(manifest_root_id), RepoPath::RootPath);
                 (vec![], vec![], future::ok(Some(entry)).boxify())
             }
         };

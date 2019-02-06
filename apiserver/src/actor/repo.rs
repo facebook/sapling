@@ -112,7 +112,7 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let filenode = try_boxfuture!(FS::get_nodehash(&filenode));
         self.repo
-            .get_raw_hg_content(ctx, &filenode)
+            .get_raw_hg_content(ctx, filenode)
             .map(|content| MononokeRepoResponse::GetHgFile {
                 content: content.into_inner(),
             })
@@ -137,7 +137,7 @@ impl MononokeRepo {
         let src_hash_future = src_hash_future
             .and_then({
                 cloned!(ctx, self.repo);
-                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, &hg_cs_id).from_err()
+                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
                 maybenode.ok_or(ErrorKind::NotFound(
@@ -154,7 +154,7 @@ impl MononokeRepo {
         let dst_hash_future = dst_hash_future
             .and_then({
                 cloned!(ctx, self.repo);
-                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, &hg_cs_id).from_err()
+                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
                 maybenode.ok_or(ErrorKind::NotFound(format!("{}", proposed_ancestor), None))
@@ -189,7 +189,7 @@ impl MononokeRepo {
         let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
 
         self.repo
-            .get_file_content(ctx, &blobhash)
+            .get_file_content(ctx, blobhash)
             .and_then(move |content| match content {
                 FileContents::Bytes(content) => {
                     Ok(MononokeRepoResponse::GetBlobContent { content })
@@ -237,7 +237,7 @@ impl MononokeRepo {
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
         let treemanifestid = HgManifestId::new(treehash);
         self.repo
-            .get_manifest_by_nodeid(ctx.clone(), &treemanifestid)
+            .get_manifest_by_nodeid(ctx.clone(), treemanifestid)
             .map(move |tree| {
                 join_all(tree.list().map(move |entry| {
                     EntryWithSizeAndContentHash::materialize_future(ctx.clone(), entry)
@@ -256,7 +256,7 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
-            .and_then(move |changesetid| repo.get_changeset_by_changesetid(ctx, &changesetid))
+            .and_then(move |changesetid| repo.get_changeset_by_changesetid(ctx, changesetid))
             .and_then(|changeset| changeset.try_into().map_err(From::from))
             .map(|changeset| MononokeRepoResponse::GetChangeset { changeset })
             .from_err()

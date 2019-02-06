@@ -86,20 +86,20 @@ impl HgManifestEnvelope {
     /// The ID for this manifest, as recorded by Mercurial. This might or might not match the
     /// actual hash computed from the contents.
     #[inline]
-    pub fn node_id(&self) -> &HgNodeHash {
-        &self.inner.node_id
+    pub fn node_id(&self) -> HgNodeHash {
+        self.inner.node_id
     }
 
     /// The parent hashes for this node. The order matters.
     #[inline]
-    pub fn parents(&self) -> (Option<&HgNodeHash>, Option<&HgNodeHash>) {
-        (self.inner.p1.as_ref(), self.inner.p2.as_ref())
+    pub fn parents(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
+        (self.inner.p1, self.inner.p2)
     }
 
     /// The computed ID for this manifest. This is primarily for consistency checks.
     #[inline]
-    pub fn computed_node_id(&self) -> &HgNodeHash {
-        &self.inner.computed_node_id
+    pub fn computed_node_id(&self) -> HgNodeHash {
+        self.inner.computed_node_id
     }
 
     /// The manifest contents as raw bytes.

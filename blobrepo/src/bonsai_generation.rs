@@ -97,9 +97,9 @@ fn find_file_changes(
 
     let p1_root_entry = parent_manifests
         .get(0)
-        .map(|root_mf| -> Box<dyn Entry + Sync> { Box::new(repo.get_root_entry(root_mf)) });
+        .map(|root_mf| -> Box<dyn Entry + Sync> { Box::new(repo.get_root_entry(*root_mf)) });
     let p2_root_entry: Option<Box<dyn Entry + Sync>> = parent_manifests.get(1).map(|root_mf| {
-        let entry: Box<dyn Entry + Sync> = Box::new(repo.get_root_entry(root_mf));
+        let entry: Box<dyn Entry + Sync> = Box::new(repo.get_root_entry(*root_mf));
         entry
     });
 
@@ -108,7 +108,7 @@ fn find_file_changes(
             bonsai_utils::BonsaiDiffResult::Changed(path, ty, entry_id) => {
                 let file_node_id = entry_id.into_nodehash();
                 cloned!(ctx, bonsai_parents, repo, parent_manifests);
-                repo.get_file_content(ctx.clone(), &file_node_id)
+                repo.get_file_content(ctx.clone(), file_node_id)
                     .and_then(move |file_contents| {
                         let size = file_contents.size();
                         let content_id = file_contents.into_blob().id().clone();
@@ -134,7 +134,7 @@ fn find_file_changes(
             bonsai_utils::BonsaiDiffResult::ChangedReusedId(path, ty, entry_id) => {
                 let file_node_id = entry_id.into_nodehash();
                 cloned!(ctx, repo);
-                repo.get_file_content(ctx, &file_node_id).and_then(move |file_contents| {
+                repo.get_file_content(ctx, file_node_id).and_then(move |file_contents| {
                     let size = file_contents.size();
                     let content_id = file_contents.into_blob().id().clone();
 
@@ -168,7 +168,7 @@ fn get_copy_info(
     nodehash: HgNodeHash,
     parent_manifests: Vec<HgManifestId>,
 ) -> impl Future<Item = Option<(MPath, ChangesetId)>, Error = Error> {
-    repo.get_hg_file_copy_from_blobstore(ctx.clone(), &nodehash)
+    repo.get_hg_file_copy_from_blobstore(ctx.clone(), nodehash)
         .and_then({
             cloned!(repo);
             move |maybecopy| match maybecopy {

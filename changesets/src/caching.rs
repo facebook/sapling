@@ -26,7 +26,7 @@ define_stats! {
     memcache_deserialize_err: timeseries("memcache.deserialize_err"; RATE, SUM),
 }
 
-pub fn get_cache_key(repo_id: &RepositoryId, cs_id: &ChangesetId) -> String {
+pub fn get_cache_key(repo_id: RepositoryId, cs_id: ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id).to_string()
 }
 
@@ -65,11 +65,11 @@ impl Changesets for CachingChangests {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        let cache_key = get_cache_key(&repo_id, &cs_id);
+        let cache_key = get_cache_key(repo_id, cs_id);
 
         cloned!(self.changesets, self.keygen, self.memcache);
         cachelib::get_cached_or_fill(&self.cache_pool, cache_key, || {
-            get_changeset_from_memcache(&self.memcache, &self.keygen, &repo_id, &cs_id)
+            get_changeset_from_memcache(&self.memcache, &self.keygen, repo_id, cs_id)
                 .then(move |res| match res {
                     Ok(res) => {
                         return future::ok(Some(res)).boxify();
@@ -115,8 +115,8 @@ enum ErrorKind {
 
 fn get_mc_key_for_changeset(
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    changeset: &ChangesetId,
+    repo_id: RepositoryId,
+    changeset: ChangesetId,
 ) -> String {
     keygen.key(get_cache_key(repo_id, changeset))
 }
@@ -124,8 +124,8 @@ fn get_mc_key_for_changeset(
 fn get_changeset_from_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    cs_id: &ChangesetId,
+    repo_id: RepositoryId,
+    cs_id: ChangesetId,
 ) -> impl Future<Item = ChangesetEntry, Error = ()> {
     memcache
         .get(get_mc_key_for_changeset(keygen, repo_id, cs_id))
@@ -170,7 +170,7 @@ fn schedule_fill_changesets_memcache(
     // It's probably not even worth logging it
     if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
         tokio::spawn(memcache.set(
-            get_mc_key_for_changeset(&keygen, &repo_id, &cs_id),
+            get_mc_key_for_changeset(&keygen, repo_id, cs_id),
             serialized,
         ));
     }

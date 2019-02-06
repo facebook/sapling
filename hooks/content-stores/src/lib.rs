@@ -40,7 +40,7 @@ impl FileContentStore for BlobRepoFileContentStore {
     ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
         let repo = self.repo.clone();
         let repo2 = repo.clone();
-        repo.get_changeset_by_changesetid(ctx.clone(), &changesetid)
+        repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
             .and_then({
                 cloned!(ctx);
                 move |changeset| {
@@ -49,7 +49,7 @@ impl FileContentStore for BlobRepoFileContentStore {
             })
             .and_then(move |opt| match opt {
                 Some((file_type, hash)) => repo2
-                    .get_file_content(ctx, &hash.into_nodehash())
+                    .get_file_content(ctx, hash.into_nodehash())
                     .map(move |content| Some((file_type, content)))
                     .boxify(),
                 None => finished(None).boxify(),
@@ -75,7 +75,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
     fn get_changeset_by_changesetid(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
         self.repo.get_changeset_by_changesetid(ctx, changesetid)
     }
@@ -83,7 +83,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
     fn get_changed_files(
         &self,
         ctx: CoreContext,
-        changesetid: &HgChangesetId,
+        changesetid: HgChangesetId,
     ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error> {
         cloned!(self.repo);
         self.repo
@@ -92,18 +92,19 @@ impl ChangesetStore for BlobRepoChangesetStore {
                 cloned!(ctx);
                 move |cs| {
                     let mf_id = cs.manifestid();
-                    let mf = repo.get_manifest_by_nodeid(ctx.clone(), &mf_id);
+                    let mf = repo.get_manifest_by_nodeid(ctx.clone(), mf_id);
                     let parents = cs.parents();
                     let (maybe_p1, _) = parents.get_nodes();
                     // TODO(stash): generate changed file stream correctly for merges
-                    let p_mf = match maybe_p1.cloned() {
-                        Some(p1) => repo
-                            .get_changeset_by_changesetid(ctx.clone(), &HgChangesetId::new(p1))
-                            .and_then({
-                                cloned!(repo);
-                                move |p1| repo.get_manifest_by_nodeid(ctx, &p1.manifestid())
-                            })
-                            .left_future(),
+                    let p_mf = match maybe_p1 {
+                        Some(p1) => {
+                            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(p1))
+                                .and_then({
+                                    cloned!(repo);
+                                    move |p1| repo.get_manifest_by_nodeid(ctx, p1.manifestid())
+                                })
+                                .left_future()
+                        }
                         None => finished(get_empty_manifest()).right_future(),
                     };
                     (mf, p_mf)

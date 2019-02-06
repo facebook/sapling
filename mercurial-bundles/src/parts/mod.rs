@@ -89,8 +89,8 @@ where
 
     let changelogentries = changelogentries.map(|(node, blobnode)| {
         let parents = blobnode.parents().get_nodes();
-        let p1 = *parents.0.unwrap_or(&NULL_HASH);
-        let p2 = *parents.1.unwrap_or(&NULL_HASH);
+        let p1 = parents.0.unwrap_or(NULL_HASH);
+        let p2 = parents.1.unwrap_or(NULL_HASH);
         let base = NULL_HASH;
         // Linknode is the same as node
         let linknode = node;

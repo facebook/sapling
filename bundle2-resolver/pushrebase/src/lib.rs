@@ -246,7 +246,7 @@ fn fetch_bonsai_changesets(
     commit_ids: Vec<HgChangesetId>,
 ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
     join_all(commit_ids.into_iter().map(move |hg_cs| {
-        repo.get_bonsai_from_hg(ctx.clone(), &hg_cs)
+        repo.get_bonsai_from_hg(ctx.clone(), hg_cs)
             .and_then({
                 cloned!(hg_cs);
                 move |bcs_cs| bcs_cs.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(hg_cs).into())
@@ -269,7 +269,7 @@ fn find_only_head_or_fail(
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
     for commit in commits {
         for p in commit.parents() {
-            commits_set.remove(p);
+            commits_set.remove(&p);
         }
     }
     if commits_set.len() == 1 {
@@ -290,7 +290,7 @@ fn find_roots(
     let mut roots = vec![];
     for commit in commits {
         for p in commit.parents() {
-            if !commits_set.contains(p) {
+            if !commits_set.contains(&p) {
                 roots.push(p.clone());
             }
         }
@@ -356,7 +356,7 @@ fn find_changed_files_between_manfiests(
             repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                 .and_then({
                     cloned!(ctx, repo);
-                    move |cs_id| repo.get_changeset_by_changesetid(ctx, &cs_id)
+                    move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
                 })
                 .map({
                     cloned!(repo);
@@ -443,7 +443,7 @@ fn find_changed_files(
                         if reject_merges {
                             return err(PushrebaseError::RebaseOverMerge).left_future();
                         }
-                        match (ids.get(p0_id), ids.get(p1_id)) {
+                        match (ids.get(&p0_id), ids.get(&p1_id)) {
                             (Some(_), Some(_)) => {
                                 // both parents are in the rebase set, so we can just take
                                 // filechanges from bonsai changeset
@@ -662,7 +662,7 @@ fn try_update_bookmark(
     new_value: ChangesetId,
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx);
-    try_boxfuture!(txn.update(bookmark_name, &new_value, &old_value));
+    try_boxfuture!(txn.update(bookmark_name, new_value, old_value));
     txn.commit()
         .map(move |success| if success { Some(new_value) } else { None })
         .from_err()
@@ -685,12 +685,12 @@ mod tests {
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
         let head = repo
-            .get_bonsai_from_hg(ctx.clone(), &head)
+            .get_bonsai_from_hg(ctx.clone(), head)
             .wait()
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, &head).unwrap();
+        txn.force_set(&book, head).unwrap();
         txn.commit().wait().unwrap();
     }
 
@@ -707,7 +707,7 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), &root)
+                .get_bonsai_from_hg(ctx.clone(), root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -750,7 +750,7 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), &root)
+                .get_bonsai_from_hg(ctx.clone(), root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -812,7 +812,7 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), &root)
+                .get_bonsai_from_hg(ctx.clone(), root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -891,7 +891,7 @@ mod tests {
             let root0 = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -900,7 +900,7 @@ mod tests {
             let root1 = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281").unwrap(),
+                    HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -939,7 +939,7 @@ mod tests {
             let bcs_id_master = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
+                    HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -998,13 +998,13 @@ mod tests {
 
             // bcs3 parent correctly updated and contains only {bcs2}
             assert_eq!(
-                bcs3.parents().cloned().collect::<Vec<_>>(),
+                bcs3.parents().collect::<Vec<_>>(),
                 vec![bcs2.get_changeset_id()]
             );
 
             // bcs2 parents cotains old bcs1 and old master bookmark
             assert_eq!(
-                bcs2.parents().cloned().collect::<HashSet<_>>(),
+                bcs2.parents().collect::<HashSet<_>>(),
                 hashset! { bcs_id_1, bcs_id_master },
             );
         });
@@ -1018,7 +1018,7 @@ mod tests {
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -1098,7 +1098,7 @@ mod tests {
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -1164,7 +1164,7 @@ mod tests {
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -1221,7 +1221,7 @@ mod tests {
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -1322,7 +1322,7 @@ mod tests {
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -1400,7 +1400,7 @@ mod tests {
             let root = repo
                 .get_bonsai_from_hg(
                     ctx.clone(),
-                    &HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap(),
+                    HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap(),
                 )
                 .wait()
                 .unwrap()
@@ -1476,13 +1476,13 @@ mod tests {
             let path_1 = MPath::new("1").unwrap();
 
             let root_hg =
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+                HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let root_cs = repo
-                .get_changeset_by_changesetid(ctx.clone(), &root_hg)
+                .get_changeset_by_changesetid(ctx.clone(), root_hg)
                 .wait()
                 .unwrap();
             let root_1_id = repo
-                .find_file_in_manifest(ctx.clone(), &path_1, *root_cs.manifestid())
+                .find_file_in_manifest(ctx.clone(), &path_1, root_cs.manifestid())
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -1503,7 +1503,7 @@ mod tests {
                 .clone();
             assert_eq!(file_1.file_type(), FileType::Regular);
             let file_1_exec = FileChange::new(
-                *file_1.content_id(),
+                file_1.content_id(),
                 FileType::Executable,
                 file_1.size(),
                 /* copy_from */ None,
@@ -1548,11 +1548,11 @@ mod tests {
                 .wait()
                 .unwrap();
             let result_cs = repo
-                .get_changeset_by_changesetid(ctx.clone(), &result_hg)
+                .get_changeset_by_changesetid(ctx.clone(), result_hg)
                 .wait()
                 .unwrap();
             let result_1_id = repo
-                .find_file_in_manifest(ctx.clone(), &path_1, *result_cs.manifestid())
+                .find_file_in_manifest(ctx.clone(), &path_1, result_cs.manifestid())
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -1571,7 +1571,7 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), &root)
+                .get_bonsai_from_hg(ctx.clone(), root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -1629,7 +1629,7 @@ mod tests {
             let previous_master =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
             let previous_master = repo
-                .get_bonsai_from_hg(ctx.clone(), &previous_master)
+                .get_bonsai_from_hg(ctx.clone(), previous_master)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -1640,7 +1640,7 @@ mod tests {
                 .unwrap()
                 .unwrap();
             let new_master = repo
-                .get_bonsai_from_hg(ctx.clone(), &new_master)
+                .get_bonsai_from_hg(ctx.clone(), new_master)
                 .wait()
                 .unwrap()
                 .unwrap();

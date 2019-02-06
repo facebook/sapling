@@ -265,12 +265,12 @@ fn fetch_content(
     let mf = resolved_cs_id
         .and_then({
             cloned!(ctx, repo);
-            move |cs_id| repo.get_changeset_by_changesetid(ctx, &cs_id)
+            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
         })
         .map(|cs| cs.manifestid().clone())
         .and_then({
             cloned!(ctx, repo);
-            move |root_mf_id| repo.get_manifest_by_nodeid(ctx, &root_mf_id)
+            move |root_mf_id| repo.get_manifest_by_nodeid(ctx, root_mf_id)
         });
 
     let all_but_last = iter_ok::<_, Error>(path.clone().into_iter().rev().skip(1).rev());
@@ -307,7 +307,7 @@ pub fn fetch_bonsai_changeset(
     hg_changeset_id
         .and_then({
             cloned!(ctx, repo);
-            move |hg_cs| repo.get_bonsai_from_hg(ctx, &hg_cs)
+            move |hg_cs| repo.get_bonsai_from_hg(ctx, hg_cs)
         })
         .and_then({
             let rev = rev.to_string();
@@ -373,8 +373,8 @@ fn slice_to_str(slice: &[u8]) -> String {
 fn hg_manifest_diff(
     ctx: CoreContext,
     repo: BlobRepo,
-    left: &HgManifestId,
-    right: &HgManifestId,
+    left: HgManifestId,
+    right: HgManifestId,
 ) -> impl Future<Item = Option<ChangesetAttrDiff>, Error = Error> {
     bonsai_diff(
         ctx,
@@ -411,8 +411,8 @@ fn hg_manifest_diff(
 fn hg_changeset_diff(
     ctx: CoreContext,
     repo: BlobRepo,
-    left_id: &HgChangesetId,
-    right_id: &HgChangesetId,
+    left_id: HgChangesetId,
+    right_id: HgChangesetId,
 ) -> impl Future<Item = ChangesetDiff, Error = Error> {
     (
         repo.get_changeset_by_changesetid(ctx.clone(), left_id),
@@ -860,7 +860,7 @@ fn main() -> Result<()> {
                         (left_cs, right_cs)
                             .into_future()
                             .and_then(move |(left_cs, right_cs)| {
-                                hg_changeset_diff(ctx, repo, &left_cs, &right_cs)
+                                hg_changeset_diff(ctx, repo, left_cs, right_cs)
                             })
                     })
                     .and_then(|diff| {
@@ -892,8 +892,8 @@ fn main() -> Result<()> {
                                 cloned!(ctx, repo);
                                 move |(start_cs, stop_cs)| {
                                     (
-                                        repo.get_bonsai_from_hg(ctx.clone(), &start_cs),
-                                        repo.get_bonsai_from_hg(ctx, &stop_cs),
+                                        repo.get_bonsai_from_hg(ctx.clone(), start_cs),
+                                        repo.get_bonsai_from_hg(ctx, stop_cs),
                                     )
                                 }
                             })
@@ -985,7 +985,7 @@ fn main() -> Result<()> {
                     if source == "hg" {
                         repo.get_bonsai_from_hg(
                             ctx,
-                            &HgChangesetId::from_str(&source_hash)
+                            HgChangesetId::from_str(&source_hash)
                                 .expect("source hash is not valid hg changeset id"),
                         )
                         .and_then(move |maybebonsai| {

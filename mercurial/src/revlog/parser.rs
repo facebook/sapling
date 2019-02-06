@@ -85,8 +85,8 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn nodeid(&self) -> &HgNodeHash {
-        &self.nodeid
+    pub fn nodeid(&self) -> HgNodeHash {
+        self.nodeid
     }
 }
 

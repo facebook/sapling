@@ -108,7 +108,7 @@ pub fn fetch_file_content_id_from_blobstore(
     node_id: HgFileNodeId,
 ) -> impl Future<Item = ContentId, Error = Error> {
     fetch_file_envelope(ctx, blobstore, node_id.into_nodehash())
-        .map({ |envelope| *envelope.content_id() })
+        .map({ |envelope| envelope.content_id() })
 }
 
 pub fn fetch_file_content_sha256_from_blobstore(
@@ -160,7 +160,7 @@ pub fn fetch_file_envelope_opt(
                 None => return Ok(None),
             };
             let envelope = HgFileEnvelope::from_blob(blobstore_bytes.into())?;
-            if &node_id != envelope.node_id() {
+            if node_id != envelope.node_id() {
                 bail_msg!(
                     "Manifest ID mismatch (requested: {}, got: {})",
                     node_id,
@@ -202,12 +202,7 @@ pub(crate) fn get_rename_from_envelope(
 
     // This is a bit of a hack because metadata is not the complete file. However, it's
     // equivalent to a zero-length file.
-    file::File::new(
-        envelope.metadata,
-        envelope.p1.as_ref(),
-        envelope.p2.as_ref(),
-    )
-    .copied_from()
+    file::File::new(envelope.metadata, envelope.p1, envelope.p2).copied_from()
 }
 
 impl HgBlobEntry {
@@ -273,7 +268,7 @@ impl Entry for HgBlobEntry {
         let blobstore = self.blobstore.clone();
         match self.ty {
             Type::Tree => {
-                BlobManifest::load(ctx, &blobstore, &HgManifestId::new(self.id.into_nodehash()))
+                BlobManifest::load(ctx, &blobstore, HgManifestId::new(self.id.into_nodehash()))
                     .and_then({
                         let node_id = self.id.into_nodehash();
                         move |blob_manifest| {
@@ -321,8 +316,8 @@ impl Entry for HgBlobEntry {
         }
     }
 
-    fn get_hash(&self) -> &HgEntryId {
-        &self.id
+    fn get_hash(&self) -> HgEntryId {
+        self.id
     }
 
     fn get_name(&self) -> Option<&MPathElement> {

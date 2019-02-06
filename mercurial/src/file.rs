@@ -28,7 +28,7 @@ const COPY_REV_KEY: &[u8] = b"copyrev";
 const META_SZ: usize = 2;
 
 impl File {
-    pub fn new<B: Into<HgBlob>>(blob: B, p1: Option<&HgNodeHash>, p2: Option<&HgNodeHash>) -> Self {
+    pub fn new<B: Into<HgBlob>>(blob: B, p1: Option<HgNodeHash>, p2: Option<HgNodeHash>) -> Self {
         let node = HgBlobNode::new(blob, p1, p2);
         File { node }
     }
