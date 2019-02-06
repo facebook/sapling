@@ -242,3 +242,17 @@ Push a merge commit with both parents not ancestors of destination bookmark
   |
   o  A [public;rev=0;426bada5c675]
   
+
+Push-Rebase over merge is not allowed
+  $ hgmn up 11 -q
+  $ echo 8 > 8 && hg add 8 && hg ci -m 8
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev e0f0824ca6a6 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  remote: * ERRO Command failed, remote: true, error: pushrebase failed RebaseOverMerge, root_cause: ErrorMessage { (glob)
+  remote:     msg: "pushrebase failed RebaseOverMerge"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hgmn up master_bookmark -q
