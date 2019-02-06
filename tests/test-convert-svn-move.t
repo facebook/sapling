@@ -78,9 +78,9 @@ Check move copy records
 
 Check branches
 
-  $ hg branches
-  default                       13:* (glob)
-  d1                             6:* (glob)
+  $ hg log -r 'all()' -T '{extras}\n' | sed 's/convert_revision=.*//' | sort -u
+  branch=d1
+  branch=default
   $ cd ..
 
   $ mkdir test-replace
