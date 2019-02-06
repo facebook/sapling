@@ -41,7 +41,8 @@ doc/common.txt
 doc/*.[0-9]
 doc/*.[0-9].txt
 doc/*.[0-9].gendoc.txt
-doc/*.[0-9].{x,ht}ml
+doc/*.[0-9].xml
+doc/*.[0-9].html
 MANIFEST
 MANIFEST.in
 patches
