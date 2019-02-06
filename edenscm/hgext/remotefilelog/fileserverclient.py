@@ -196,6 +196,14 @@ class cacheconnection(object):
             except IOError:
                 self.close()
 
+    def get(self, keys):
+        request = "get\n%d\n%s\n" % (len(keys), "\n".join(keys))
+        self.request(request)
+
+    def set(self, keys):
+        request = "set\n%d\n%s\n" % (len(keys), "\n".join(keys))
+        self.request(request)
+
     def receive(self, prog=None):
         """Reads the cacheprocess' reply for the request sent and tracks
         the progress. Returns a tuple (hit_count, misses) where:
@@ -384,22 +392,23 @@ class fileserverclient(object):
             return
 
         repo = self.repo
-        total = len(fileids)
-        request = "get\n%d\n" % total
         idmap = {}
         reponame = repo.name
+        for file, id in fileids:
+            key = getcachekey(reponame, file, id)
+            idmap[key] = file
+
+        # requesting scmmemcache
+        filefullids = idmap.keys()
+        if self.cacheprocesspasspath:
+            filefullids = [file + "\0" + fullid for fullid, file in idmap.iteritems()]
+        cache.get(filefullids)
+
         getfilenamepath = lambda name: None
         if util.safehasattr(self.writedata, "_getfilenamepath"):
             getfilenamepath = self.writedata._getfilenamepath
-        for file, id in fileids:
-            fullid = getcachekey(reponame, file, id)
-            if self.cacheprocesspasspath:
-                request += file + "\0"
-            request += fullid + "\n"
-            idmap[fullid] = file
 
-        cache.request(request)
-
+        total = len(fileids)
         with progress.bar(self.ui, _("downloading"), total=total) as prog:
             try:
                 count, missed = cache.receive(prog)
@@ -528,8 +537,7 @@ class fileserverclient(object):
                     if self.ui.configbool("remotefilelog", "updatesharedcache"):
                         upload = [n for n in missed if n not in draft]
                         if upload:
-                            request = "set\n%d\n%s\n" % (len(upload), "\n".join(upload))
-                            cache.request(request)
+                            cache.set(upload)
 
                 # mark ourselves as a user of this cache
                 writedata.markrepo(self.repo.path)
@@ -637,11 +645,11 @@ class fileserverclient(object):
                 def close(self):
                     pass
 
-                def request(self, value, flush=True):
-                    lines = value.split("\n")
-                    if lines[0] != "get":
-                        return
-                    self.missingids = lines[2:-1]
+                def set(self, keys):
+                    return
+
+                def get(self, keys):
+                    self.missingids = keys
 
                 def receive(self, prog=None):
                     result = (0, set(self.missingids))
