@@ -401,7 +401,9 @@ class fileserverclient(object):
         # requesting scmmemcache
         filefullids = idmap.keys()
         if self.cacheprocesspasspath:
-            filefullids = [file + "\0" + fullid for fullid, file in idmap.iteritems()]
+            filefullids = [
+                file + "\0" + filefullid for filefullid, file in idmap.iteritems()
+            ]
         cache.get(filefullids)
 
         getfilenamepath = lambda name: None
@@ -437,17 +439,17 @@ class fileserverclient(object):
                             shallowutil.writefile(filenamepath, file, readonly=True)
 
             global fetchmisses
-            fetchmisses += len(missed)
+            missedlen = len(missed)
+            fetchmisses += missedlen
 
-            count = [total - len(missed)]
-            fromcache = count[0]
-            prog.value = count[0]
+            fromcache = total - missedlen
+            prog.value = fromcache
             self.ui.log(
                 "remotefilelog",
                 "remote cache hit rate is %r of %r\n",
-                count[0],
+                fromcache,
                 total,
-                hit=count[0],
+                hit=fromcache,
                 total=total,
             )
 
@@ -455,94 +457,104 @@ class fileserverclient(object):
             try:
                 # receive cache misses from master
                 if missed:
-
-                    def progresstick(name=""):
-                        count[0] += 1
-                        prog.value = (count[0], name)
-
-                    # When verbose is true, sshpeer prints 'running ssh...'
-                    # to stdout, which can interfere with some command
-                    # outputs
-                    verbose = self.ui.verbose
-                    self.ui.verbose = False
-                    draft = set()
-                    try:
-                        with self._connect() as conn:
-                            remote = conn.peer
-                            missedlist = list(missed)
-                            # TODO: deduplicate this with the constant in
-                            #       shallowrepo
-                            if remote.capable("remotefilelog"):
-                                if not isinstance(remote, sshpeer.sshpeer):
-                                    msg = "remotefilelog requires ssh servers"
-                                    raise error.Abort(msg)
-                                step = self.ui.configint(
-                                    "remotefilelog", "getfilesstep", 10000
-                                )
-                                getfilestype = self.ui.config(
-                                    "remotefilelog", "getfilestype", "optimistic"
-                                )
-                                if getfilestype == "threaded":
-                                    _getfiles = _getfiles_threaded
-                                else:
-                                    _getfiles = _getfiles_optimistic
-                                _getfiles(
-                                    remote,
-                                    functools.partial(self.receivemissing, draft),
-                                    progresstick,
-                                    missedlist,
-                                    idmap,
-                                    step,
-                                )
-                            elif remote.capable("getfile"):
-                                if remote.capable("batch"):
-                                    batchdefault = 100
-                                else:
-                                    batchdefault = 10
-                                batchsize = self.ui.configint(
-                                    "remotefilelog", "batchsize", batchdefault
-                                )
-                                _getfilesbatch(
-                                    remote,
-                                    functools.partial(self.receivemissing, draft),
-                                    progresstick,
-                                    missedlist,
-                                    idmap,
-                                    batchsize,
-                                )
-                            else:
-                                msg = (
-                                    "configured remotefilelog server"
-                                    " does not support remotefilelog"
-                                )
-                                raise error.Abort(msg)
-
-                        self.ui.log(
-                            "remotefilefetchlog",
-                            "Success\n",
-                            fetched_files=count[0] - fromcache,
-                            total_to_fetch=total - fromcache,
-                        )
-                    except Exception:
-                        self.ui.log(
-                            "remotefilefetchlog",
-                            "Fail\n",
-                            fetched_files=count[0] - fromcache,
-                            total_to_fetch=total - fromcache,
-                        )
-                        raise
-                    finally:
-                        self.ui.verbose = verbose
+                    fetchedfiles = self._requestloose(idmap, missed, prog=prog)
                     # send to memcache
                     if self.ui.configbool("remotefilelog", "updatesharedcache"):
-                        upload = [n for n in missed if n not in draft]
-                        if upload:
-                            cache.set(upload)
+                        if fetchedfiles:
+                            cache.set(fetchedfiles)
 
                 # mark ourselves as a user of this cache
                 writedata.markrepo(self.repo.path)
             finally:
                 os.umask(oldumask)
+
+    def _requestloose(self, idmap, missed, prog=None):
+        """Fetch missed filesnodes from the server in the loose files format.
+        Returns a set of the fetched file fullids.
+        """
+        # let's track the progress
+        total = len(idmap)
+        count = [total - len(missed)]
+        fromcache = count[0]
+
+        def progresstick(name=""):
+            count[0] += 1
+            if prog is not None:
+                prog.value = (count[0], name)
+
+        # When verbose is true, sshpeer prints 'running ssh...'
+        # to stdout, which can interfere with some command
+        # outputs
+        verbose = self.ui.verbose
+        self.ui.verbose = False
+        draft = set()
+        try:
+            with self._connect() as conn:
+                remote = conn.peer
+                missedlist = list(missed)
+                # TODO: deduplicate this with the constant in
+                #       shallowrepo
+                if remote.capable("remotefilelog"):
+                    if not isinstance(remote, sshpeer.sshpeer):
+                        msg = "remotefilelog requires ssh servers"
+                        raise error.Abort(msg)
+                    step = self.ui.configint("remotefilelog", "getfilesstep", 10000)
+                    getfilestype = self.ui.config(
+                        "remotefilelog", "getfilestype", "optimistic"
+                    )
+                    if getfilestype == "threaded":
+                        _getfiles = _getfiles_threaded
+                    else:
+                        _getfiles = _getfiles_optimistic
+                    _getfiles(
+                        remote,
+                        functools.partial(self.receivemissing, draft),
+                        progresstick,
+                        missedlist,
+                        idmap,
+                        step,
+                    )
+                elif remote.capable("getfile"):
+                    if remote.capable("batch"):
+                        batchdefault = 100
+                    else:
+                        batchdefault = 10
+                    batchsize = self.ui.configint(
+                        "remotefilelog", "batchsize", batchdefault
+                    )
+                    _getfilesbatch(
+                        remote,
+                        functools.partial(self.receivemissing, draft),
+                        progresstick,
+                        missedlist,
+                        idmap,
+                        batchsize,
+                    )
+                else:
+                    msg = (
+                        "configured remotefilelog server"
+                        " does not support remotefilelog"
+                    )
+                    raise error.Abort(msg)
+
+            self.ui.log(
+                "remotefilefetchlog",
+                "Success\n",
+                fetched_files=count[0] - fromcache,
+                total_to_fetch=total - fromcache,
+            )
+        except Exception:
+            self.ui.log(
+                "remotefilefetchlog",
+                "Fail\n",
+                fetched_files=count[0] - fromcache,
+                total_to_fetch=total - fromcache,
+            )
+            raise
+        finally:
+            self.ui.verbose = verbose
+
+        return missed - draft
 
     def receivemissing(self, draftset, pipe, filename, node, key):
         line = pipe.readline()[:-1]
