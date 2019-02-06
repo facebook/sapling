@@ -3,13 +3,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::exc::UnicodeDecodeError;
-use cpython::{
-    exc, PyBytes, PyErr, PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject,
-};
-use encoding::local_bytes_to_path;
-use rust_bookmarkstore::BookmarkStore;
 use std::cell::RefCell;
+
+use cpython::exc::UnicodeDecodeError;
+use cpython::*;
+
+use ::bookmarkstore::BookmarkStore;
+use encoding::local_bytes_to_path;
 use types::node::Node;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

@@ -3,14 +3,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::{cell::RefCell, io::Cursor};
+
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use cpython::{exc, PyBytes, PyErr, PyModule, PyObject, PyResult, PyString, Python};
+use cpython::*;
 use cpython_failure::ResultPyErrExt;
-use encoding::local_bytes_to_path;
 use failure::ResultExt;
-use rust_mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore};
-use std::cell::RefCell;
-use std::io::Cursor;
+
+use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore};
+use encoding::local_bytes_to_path;
 use types::node::Node;
 use vlqencoding::{VLQDecode, VLQEncode};
 
@@ -24,9 +25,9 @@ const BUNDLE_FORMAT_VERSION: u8 = 1u8;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "mutationstore"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add(py, "ORIGIN_COMMIT", rust_mutationstore::ORIGIN_COMMIT)?;
-    m.add(py, "ORIGIN_OBSMARKER", rust_mutationstore::ORIGIN_OBSMARKER)?;
-    m.add(py, "ORIGIN_SYNTHETIC", rust_mutationstore::ORIGIN_SYNTHETIC)?;
+    m.add(py, "ORIGIN_COMMIT", ::mutationstore::ORIGIN_COMMIT)?;
+    m.add(py, "ORIGIN_OBSMARKER", ::mutationstore::ORIGIN_OBSMARKER)?;
+    m.add(py, "ORIGIN_SYNTHETIC", ::mutationstore::ORIGIN_SYNTHETIC)?;
     m.add_class::<mutationentry>(py)?;
     m.add_class::<mutationstore>(py)?;
     m.add(
@@ -40,7 +41,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn bundle(py: Python, entries: Vec<mutationentry>) -> PyResult<PyBytes> {
     // Pre-allocate capacity for all the entries, plus one for the header and extra breathing room.
-    let mut buf = Vec::with_capacity((entries.len() + 1) * rust_mutationstore::DEFAULT_ENTRY_SIZE);
+    let mut buf = Vec::with_capacity((entries.len() + 1) * ::mutationstore::DEFAULT_ENTRY_SIZE);
     buf.write_u8(BUNDLE_FORMAT_VERSION)
         .map_pyerr::<exc::IOError>(py)?;
     buf.write_vlq(entries.len()).map_pyerr::<exc::IOError>(py)?;

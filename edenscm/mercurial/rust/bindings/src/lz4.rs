@@ -5,7 +5,7 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::{exc, PyModule, PyObject, PyResult, Python};
+use cpython::*;
 use cpython_ext::{allocate_pybytes, vec_to_pyobj, SimplePyBuf};
 use cpython_failure::ResultPyErrExt;
 use lz4_pyframe::{compress, compresshc, decompress_into, decompress_size};

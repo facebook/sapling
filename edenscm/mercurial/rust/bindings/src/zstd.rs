@@ -5,11 +5,13 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::{exc, PyBytes, PyErr, PyModule, PyObject, PyResult, Python};
-use cpython_ext::SimplePyBuf;
-use rust_zstd::stream::{decode_all, encode_all};
-use rust_zstdelta::{apply, diff};
 use std::io;
+
+use cpython::*;
+use cpython_ext::SimplePyBuf;
+
+use ::zstd::stream::{decode_all, encode_all};
+use zstdelta::{apply, diff};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "zstd"].join(".");

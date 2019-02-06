@@ -5,13 +5,16 @@
 
 #![allow(non_camel_case_types)]
 
+use std::{cell::RefCell, collections::HashMap};
+
 use cpython::exc::UnicodeDecodeError;
-use cpython::{PyBytes, PyErr, PyModule, PyObject, PyResult, Python};
+use cpython::*;
+
+use ::configparser::{
+    config::{ConfigSet, Options},
+    hg::{parse_list, ConfigSetHgExt, OptionsHgExt},
+};
 use encoding::{local_bytes_to_path, path_to_local_bytes};
-use rust_configparser::config::{ConfigSet, Options};
-use rust_configparser::hg::{parse_list, ConfigSetHgExt, OptionsHgExt};
-use std::cell::RefCell;
-use std::collections::HashMap;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");

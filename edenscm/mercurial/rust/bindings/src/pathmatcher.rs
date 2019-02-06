@@ -5,10 +5,12 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::{PyBytes, PyErr, PyModule, PyResult, Python};
-use encoding::local_bytes_to_path;
-use rust_pathmatcher::GitignoreMatcher;
 use std::path::Path;
+
+use cpython::*;
+
+use ::pathmatcher::GitignoreMatcher;
+use encoding::local_bytes_to_path;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pathmatcher"].join(".");

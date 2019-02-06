@@ -12,19 +12,20 @@
 //! The directory state also stores files that are in the working copy parent manifest but have
 //! been marked as removed.
 
-use cpython::{
-    exc, NoArgs, ObjectProtocol, PyBytes, PyErr, PyIterator, PyModule, PyObject, PyResult,
-    PySequence, PyTuple, Python, PythonObject, ToPyObject,
-};
-use encoding::local_bytes_to_path;
-use rust_treestate::errors::{self, ErrorKind};
-use rust_treestate::filestate::{FileState, FileStateV2, StateFlags};
-use rust_treestate::store::BlockId;
-use rust_treestate::tree::{Key, KeyRef, VisitorResult};
-use rust_treestate::treedirstate::TreeDirstate;
-use rust_treestate::treestate::TreeState;
 use std::cell::RefCell;
 use std::path::PathBuf;
+
+use cpython::*;
+
+use ::treestate::{
+    errors::{self, ErrorKind},
+    filestate::{FileState, FileStateV2, StateFlags},
+    store::BlockId,
+    tree::{Key, KeyRef, VisitorResult},
+    treedirstate::TreeDirstate,
+    treestate::TreeState,
+};
+use encoding::local_bytes_to_path;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "treestate"].join(".");

@@ -3,25 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bookmarkstore as rust_bookmarkstore;
-extern crate byteorder;
-extern crate configparser as rust_configparser;
-#[macro_use]
-extern crate cpython;
-extern crate cpython_ext;
-extern crate cpython_failure;
-extern crate encoding;
-extern crate failure;
-extern crate lz4_pyframe;
-extern crate mutationstore as rust_mutationstore;
-extern crate nodemap as rust_nodemap;
-extern crate pathmatcher as rust_pathmatcher;
-extern crate treestate as rust_treestate;
-extern crate types;
-extern crate vlqencoding;
-extern crate zstd as rust_zstd;
-extern crate zstdelta as rust_zstdelta;
-
 use cpython::py_module_initializer;
 
 pub mod bookmarkstore;
