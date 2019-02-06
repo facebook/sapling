@@ -18,9 +18,9 @@ from edenscm.mercurial.node import bin, hex, nullid, short
 from . import (
     constants,
     datapack,
+    edenapi,
     fileserverclient,
     historypack,
-    mononokeapi,
     shallowrepo,
     shallowutil,
 )
@@ -482,7 +482,7 @@ def debugwaitonprefetch(repo):
 
 
 def debughttphealthcheck(ui, repo, **opts):
-    mononokeapi.healthcheck(ui, repo)
+    edenapi.healthcheck(ui, repo)
 
 
 def debuggetfiles(ui, repo, **opts):
@@ -493,5 +493,5 @@ def debuggetfiles(ui, repo, **opts):
             raise error.Abort(_("invalid input"))
         keys.append(tuple(key))
 
-    outpath = mononokeapi.getfiles(ui, repo, keys)
+    outpath = edenapi.getfiles(ui, repo, keys)
     ui.write(_("wrote datapack: %s\n") % outpath)

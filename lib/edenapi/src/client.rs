@@ -10,15 +10,15 @@ use url::Url;
 
 pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
-/// An HTTP client for the Mononoke API server.
+/// An HTTP client for the Eden API.
 ///
 /// # Example
 /// ```no_run
 /// use failure::Fallible;
-/// use mononokeapi::{MononokeApi, MononokeClient, MononokeClientBuilder};
+/// use edenapi::{ClientBuilder, EdenApi, EdenApiHttpClient};
 ///
 /// fn main() -> Fallible<()> {
-///     let client = MononokeClientBuilder::new()
+///     let client = ClientBuilder::new()
 ///         .base_url_str("https://mononoke-api.internal.tfbnw.net")?
 ///         .client_creds("/var/facebook/credentials/user/x509/user.pem")?
 ///         .build()?;
@@ -26,14 +26,14 @@ pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 ///     client.health_check()
 /// }
 /// ```
-pub struct MononokeClient {
+pub struct EdenApiHttpClient {
     pub(crate) client: Arc<HyperClient>,
     pub(crate) base_url: Url,
     pub(crate) repo: String,
     pub(crate) cache_path: PathBuf,
 }
 
-impl MononokeClient {
+impl EdenApiHttpClient {
     /// Return the base URL of the API server joined with the repo name
     /// and a trailing slash to allow additional URL components to be
     /// appended on.

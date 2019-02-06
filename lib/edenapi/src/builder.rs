@@ -16,17 +16,17 @@ use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
 use same_file::is_same_file;
 use url::Url;
 
-use crate::client::MononokeClient;
+use crate::client::EdenApiHttpClient;
 
 #[derive(Default)]
-pub struct MononokeClientBuilder {
+pub struct ClientBuilder {
     base_url: Option<Url>,
     client_id: Option<Identity>,
     repo: Option<String>,
     cache_path: Option<PathBuf>,
 }
 
-impl MononokeClientBuilder {
+impl ClientBuilder {
     pub fn new() -> Self {
         Default::default()
     }
@@ -79,7 +79,7 @@ impl MononokeClientBuilder {
         self
     }
 
-    pub fn build(self) -> Fallible<MononokeClient> {
+    pub fn build(self) -> Fallible<EdenApiHttpClient> {
         let base_url = match self.base_url {
             Some(url) => url,
             None => bail!("No base URL specified"),
@@ -102,7 +102,7 @@ impl MononokeClientBuilder {
 
         let hyper_client = build_hyper_client(self.client_id)?;
 
-        let client = MononokeClient {
+        let client = EdenApiHttpClient {
             client: Arc::new(hyper_client),
             base_url,
             repo,

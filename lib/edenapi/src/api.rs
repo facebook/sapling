@@ -15,19 +15,19 @@ use url::Url;
 use revisionstore::{DataPackVersion, Delta, Key, Metadata, MutableDataPack, MutablePack};
 use url_ext::UrlExt;
 
-use crate::client::{HyperClient, MononokeClient};
+use crate::client::{EdenApiHttpClient, HyperClient};
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";
     pub const GET_FILE: &str = "gethgfile/";
 }
 
-pub trait MononokeApi {
+pub trait EdenApi {
     fn health_check(&self) -> Fallible<()>;
     fn get_files(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<PathBuf>;
 }
 
-impl MononokeApi for MononokeClient {
+impl EdenApi for EdenApiHttpClient {
     /// Hit the API server's /health_check endpoint.
     /// Returns Ok(()) if the expected response is received, or an Error otherwise
     /// (e.g., if there was a connection problem or an unexpected repsonse).

@@ -3,18 +3,18 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""client for the Mononoke API server
+""""client for the Eden HTTP API
 
 Configs:
-    ``mononoke-api.enabled`` specifies whether HTTP data fetching should be used
-    ``mononoke-api.url`` specifies the base URL of the API server
+    ``edenapi.enabled`` specifies whether HTTP data fetching should be used
+    ``edenapi.url`` specifies the base URL of the API server
 
 To set up TLS mutual authentication, add an entry to the [auth] section
 matching the configured base URL:
-    ``auth.mononoke-api.prefix``: base URL to match (without scheme)
-    ``auth.mononoke-api.schemes``: URL scheme to match; should usually be "https".
-    ``auth.mononoke-api.cert``: client certificate for TLS mutual authenticaton
-    ``auth.mononoke-api.key``: client key for TLS mutual authentication
+    ``auth.edenapi.prefix``: base URL to match (without scheme)
+    ``auth.edenapi.schemes``: URL scheme to match; should usually be "https".
+    ``auth.edenapi.cert``: client certificate for TLS mutual authenticaton
+    ``auth.edenapi.key``: client key for TLS mutual authentication
 
 """
 
@@ -27,21 +27,21 @@ from . import shallowutil
 
 
 try:
-    from edenscm.mercurial.rust.pymononokeapi import PyMononokeClient, GetFilesRequest
+    from edenscm.mercurial.rust.pyedenapi import PyEdenApiHttpClient, GetFilesRequest
 except ImportError:
     pass
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("mononoke-api", "enabled", default=False)
+configitem("edenapi", "enabled", default=False)
 
 
 def getbaseurl(ui):
     """Get the base URL of the API server."""
-    url = ui.config("mononoke-api", "url")
+    url = ui.config("edenapi", "url")
     if url is None:
-        raise error.Abort(_("No Mononoke API server URL configured"))
+        raise error.Abort(_("No Eden API base URL configured"))
     return url
 
 
@@ -57,20 +57,20 @@ def getcreds(ui, url):
 
 
 def initclient(ui, repo):
-    """Initialize a new PyMononokeClient using the user's config."""
+    """Initialize a new PyEdenApiHttpClient using the user's config."""
     try:
-        PyMononokeClient
+        PyEdenApiHttpClient
     except NameError:
-        raise error.Abort(_("pymononokeapi rust extension is not loaded"))
+        raise error.Abort(_("pyedenapi rust extension is not loaded"))
 
-    if not ui.configbool("mononoke-api", "enabled"):
+    if not ui.configbool("edenapi", "enabled"):
         raise error.Abort(_("HTTP data fetching is not enabled for this repository"))
 
     url = getbaseurl(ui)
     creds = getcreds(ui, url)
     cachepath = shallowutil.getcachepath(ui)
 
-    return PyMononokeClient(url, cachepath, repo.name, creds)
+    return PyEdenApiHttpClient(url, cachepath, repo.name, creds)
 
 
 def healthcheck(ui, repo):

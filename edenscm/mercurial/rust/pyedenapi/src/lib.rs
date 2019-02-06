@@ -1,29 +1,29 @@
 // Copyright 2018 Facebook, Inc.
-//! pymononokeapi - Python bindings for the Rust `mononokeapi` crate
+//! pyedenapi - Python bindings for the Rust `edenapi` crate
 
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
+use edenapi::{ClientBuilder, EdenApi, EdenApiHttpClient};
 use encoding::{local_bytes_to_path, path_to_local_bytes};
-use mononokeapi::{MononokeApi, MononokeClient, MononokeClientBuilder};
 use revisionstore::Key;
 use types::node::Node;
 
 use std::{cell::RefCell, mem, str};
 
 py_module_initializer!(
-    pymononokeapi,        // module name
-    initpymononokeapi,    // py2 init name
-    PyInit_pymononokeapi, // py3 init name
+    pyedenapi,        // module name
+    initpyedenapi,    // py2 init name
+    PyInit_pyedenapi, // py3 init name
     |py, m| {
         // init function
-        m.add_class::<PyMononokeClient>(py)?;
+        m.add_class::<PyEdenApiHttpClient>(py)?;
         m.add_class::<GetFilesRequest>(py)?;
         Ok(())
     }
 );
 
-py_class!(class PyMononokeClient |py| {
-    data client: MononokeClient;
+py_class!(class PyEdenApiHttpClient |py| {
+    data client: EdenApiHttpClient;
 
     def __new__(
         _cls,
@@ -31,12 +31,12 @@ py_class!(class PyMononokeClient |py| {
         cache_path: &PyBytes,
         repo: &PyBytes,
         client_creds: Option<(&PyBytes, &PyBytes)> = None
-    ) -> PyResult<PyMononokeClient> {
+    ) -> PyResult<PyEdenApiHttpClient> {
         let base_url = str::from_utf8(base_url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let cache_path = str::from_utf8(cache_path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
 
-        let mut builder = MononokeClientBuilder::new();
+        let mut builder = ClientBuilder::new();
 
         if let Some((cert, key)) = client_creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -51,7 +51,7 @@ py_class!(class PyMononokeClient |py| {
             .build()
             .map_pyerr::<exc::RuntimeError>(py)?;
 
-        PyMononokeClient::create_instance(py, client)
+        PyEdenApiHttpClient::create_instance(py, client)
     }
 
     def health_check(&self) -> PyResult<PyObject> {

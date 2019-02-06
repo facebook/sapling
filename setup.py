@@ -2110,16 +2110,16 @@ rustextmodules = [
     ),
 ]
 
-# TODO(T37772042): Make the Mononoke API crate build on Windows as part of the
+# TODO(T37772042): Make the Eden API crate build on Windows as part of the
 # Mercurial build process. Presently, this fails because the of a dependency
-# on OpenSSL, which is either not available or incorrectly configured  in
+# on OpenSSL, which is either not available or incorrectly configured in
 # the Windows build environment.
 if not iswindows:
     rustextmodules.append(
         RustExtension(
-            "pymononokeapi",
+            "pyedenapi",
             package="edenscm.mercurial.rust",
-            manifest="edenscm/mercurial/rust/pymononokeapi/Cargo.toml",
+            manifest="edenscm/mercurial/rust/pyedenapi/Cargo.toml",
         )
     )
 

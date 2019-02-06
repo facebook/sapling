@@ -1,17 +1,17 @@
 [package]
-name = "pymononokeapi"
+name = "pyedenapi"
 version = "0.1.0"
 edition = "2018"
 
 [lib]
-name = "pymononokeapi"
+name = "pyedenapi"
 crate-type = ["cdylib"]
 
 [dependencies]
 cpython-failure = { path = "../../../../lib/cpython-failure" }
+edenapi = { path = "../../../../lib/edenapi" }
 encoding = { path = "../../../../lib/encoding" }
 failure = "0.1.3"
-mononokeapi = { path = "../../../../lib/mononokeapi" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 types = { path = "../../../../lib/types" }
 
