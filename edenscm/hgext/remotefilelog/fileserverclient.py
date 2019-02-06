@@ -187,7 +187,7 @@ class cacheconnection(object):
             self.subprocess = None
         self.connected = False
 
-    def request(self, request, flush=True):
+    def _request(self, request, flush=True):
         if self.connected:
             try:
                 self.pipei.write(request)
@@ -196,22 +196,33 @@ class cacheconnection(object):
             except IOError:
                 self.close()
 
+    def _makerequest(self, command, keys):
+        request = "%s\n%d\n%s\n" % (command, len(keys), "\n".join(keys))
+        self._request(request)
+
+    def getdatapack(self, keys):
+        self._makerequest("getdata", keys)
+
+    def gethistorypack(self, keys):
+        self._makerequest("gethistory", keys)
+
     def get(self, keys):
-        request = "get\n%d\n%s\n" % (len(keys), "\n".join(keys))
-        self.request(request)
+        self._makerequest("get", keys)
 
     def set(self, keys):
-        request = "set\n%d\n%s\n" % (len(keys), "\n".join(keys))
-        self.request(request)
+        self._makerequest("set", keys)
+
+    def setdatapack(self, keys):
+        self._makerequest("setdata", keys)
+
+    def sethistorypack(self, keys):
+        self._makerequest("sethistory", keys)
 
     def receive(self, prog=None):
         """Reads the cacheprocess' reply for the request sent and tracks
-        the progress. Returns a tuple (hit_count, misses) where:
-        * `hit_count` - the number of hits
-        * `misses` - list of missed keys
+        the progress. Returns a set of missed keys
         """
         missed = set()
-        hitcount = 0
         while True:
             key = self._receiveline()
             if not key:
@@ -223,12 +234,11 @@ class cacheconnection(object):
             if key.startswith("_hits_"):
                 # hit -> receive progress reports
                 parts = key.split("_")
-                hitcount += int(parts[2])
                 if prog is not None:
-                    prog.value = hitcount
+                    prog += int(parts[2])
             else:
                 missed.add(key)
-        return (hitcount, missed)
+        return missed
 
     def _receiveline(self):
         if not self.connected:
@@ -413,7 +423,7 @@ class fileserverclient(object):
         total = len(fileids)
         with progress.bar(self.ui, _("downloading"), total=total) as prog:
             try:
-                count, missed = cache.receive(prog)
+                missed = cache.receive(prog)
             except CacheConnectionError:
                 for missingid in idmap.iterkeys():
                     missed.add(missingid)
@@ -660,15 +670,26 @@ class fileserverclient(object):
                     pass
 
                 def set(self, keys):
-                    return
+                    pass
+
+                def setdatapack(self, keys):
+                    pass
+
+                def sethistorypack(self, keys):
+                    pass
 
                 def get(self, keys):
-                    self.missingids = keys
+                    self.missingids.append(keys)
+
+                def getdatapack(self, keys):
+                    self.missingids.append(keys)
+
+                def gethistorypack(self, keys):
+                    self.missingids.append(keys)
 
                 def receive(self, prog=None):
-                    result = (0, set(self.missingids))
-                    self.missingids = []
-                    return result
+                    missing = self.missingids.pop(0) if self.missingids else []
+                    return set(missing)
 
             self.remotecache = simplecache()
 
