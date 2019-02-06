@@ -84,11 +84,11 @@ Convert again
   o  branch= 0 init projA files:
   
 
-  $ hg branches
-  newbranch                     11:a6d7cc050ad1
-  default                       10:6e2b33404495
-  old                            9:93c4b0f99529
-  old2                           8:b52884d7bead (inactive)
+  $ hg log -r 'all()' -T '{extras}\n' | sed 's/convert_revision=.*//' | sort -u
+  branch=default
+  branch=newbranch
+  branch=old
+  branch=old2
   $ hg tags -q
   tip
   $ cd ..
@@ -123,8 +123,8 @@ Convert 'trunk' to branch other than 'default'
   0 last change to a
 
   $ cd C-hg
-  $ hg branches --template '{branch}\n'
-  hgtrunk
-  old
-  old2
+  $ hg log -r 'all()' -T '{extras}\n' | sed 's/convert_revision=.*//' | sort -u
+  branch=hgtrunk
+  branch=old
+  branch=old2
   $ cd ..
