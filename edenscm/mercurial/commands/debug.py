@@ -3027,7 +3027,7 @@ def debugwalk(ui, repo, *pats, **opts):
     if not items:
         return
     f = lambda fn: fn
-    if ui.configbool("ui", "slash") and pycompat.ossep != "/":
+    if repo.dirstate._slash:
         f = lambda fn: util.normpath(fn)
     fmt = "f  %%-%ds  %%-%ds  %%s" % (
         max([len(abs) for abs in items]),

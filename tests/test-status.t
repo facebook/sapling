@@ -493,6 +493,10 @@ warning message about such pattern.
 #if windows
   $ hg --config ui.slash=false status -A --rev 1 1
   R 1\2\3\4\5\b.txt
+  $ HGPLAIN=1 hg --config ui.slash=false status -A --rev 1 1
+  R 1/2/3/4/5/b.txt
+  $ hg --config ui.slash=true status -A --rev 1 1
+  R 1/2/3/4/5/b.txt
 #endif
 
   $ cd ..
