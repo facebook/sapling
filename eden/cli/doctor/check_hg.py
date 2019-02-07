@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple, Type
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
+from eden.cli import hg_util
 from eden.cli.config import EdenCheckout
 from eden.cli.doctor.problem import (
     FixableProblem,
@@ -83,7 +84,7 @@ class DirstateChecker(HgFileChecker):
     _old_dirstate_parents: Optional[Tuple[bytes, bytes]] = None
     _tuples_dict: Dict[bytes, Tuple[str, int, int]] = {}
     _copymap: Dict[bytes, bytes] = {}
-    _new_parents: Tuple[bytes, bytes] = (20 * b"0", 20 * b"0")
+    _new_parents: Optional[Tuple[bytes, bytes]] = None
 
     def __init__(self, checkout: EdenCheckout) -> None:
         super().__init__(checkout, "dirstate")
@@ -172,6 +173,12 @@ class DirstateChecker(HgFileChecker):
             return self._old_dirstate_parents
 
     def repair(self) -> None:
+        # If the .hg directory was missing entirely check_for_error() won't have been
+        # called yet.  Call it now to compute self._new_parents
+        if self._new_parents is None:
+            self.check_for_error()
+        assert self._new_parents is not None
+
         if self._new_parents != self._old_dirstate_parents:
             with self.path.open("wb") as f:
                 eden.dirstate.write(
@@ -211,6 +218,78 @@ class DirstateChecker(HgFileChecker):
             return self._null_commit_id
 
 
+class HgrcChecker(HgFileChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout, "hgrc")
+
+    def repair(self) -> None:
+        hgrc_data = hg_util.get_hgrc_data(self.checkout)
+        self.path.write_text(hgrc_data)
+
+
+class RequiresChecker(HgFileChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout, "requires")
+
+    def check_data(self, data: bytes) -> List[str]:
+        requirements = data.splitlines()
+        if b"eden" not in requirements:
+            return [".hg/requires file does not include Eden as a requirement"]
+        return []
+
+    def repair(self) -> None:
+        hgrc_data = hg_util.get_requires_data(self.checkout)
+        self.path.write_text(hgrc_data)
+
+
+class SharedPathChecker(HgFileChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout, "sharedpath")
+
+    def check_data(self, data: bytes) -> List[str]:
+        # TODO: make sure the sharedpath file points to a valid .hg directory that
+        # does not use Eden itself.  However, we can't fix errors about the sharedpath
+        # file pointing to a bad repo, so those should probably be reported as
+        # completely separate problems to the ProblemTracker.
+        #
+        # backing_repo = Path(os.fsdecode(data))
+        return []
+
+    def repair(self) -> None:
+        backing_hg_dir = hg_util.get_backing_hg_dir(self.checkout)
+        self.path.write_bytes(bytes(backing_hg_dir))
+
+
+class SharedChecker(HgFileChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout, "shared")
+
+    def check_data(self, data: bytes) -> List[str]:
+        # This file normally contains "bookmarks" for most users, but its fine
+        # if users don't have anything here if they don't want to share bookmarks.
+        # Therefore we don't do any other validation of the contents of this file.
+        return []
+
+    def repair(self) -> None:
+        self.path.write_text("bookmarks\n")
+
+
+class BookmarksChecker(HgFileChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout, "bookmarks")
+
+    def repair(self) -> None:
+        self.path.touch()
+
+
+class BranchChecker(HgFileChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout, "branch")
+
+    def repair(self) -> None:
+        self.path.write_text("default\n")
+
+
 def get_tip_commit_hash(repo: Path) -> bytes:
     # Try to get the tip commit ID.  If that fails, use the null commit ID.
     args = ["hg", "log", "-T", "{node}", "-r", "tip"]
@@ -229,21 +308,19 @@ def get_tip_commit_hash(repo: Path) -> bytes:
 def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
     checker_classes: List[Type[HgChecker]] = [
         DirstateChecker,
-        # hgrc
-        # requires
-        # sharedpath
-        # shared
-        # bookmarks
-        # branch
+        HgrcChecker,
+        RequiresChecker,
+        SharedPathChecker,
+        SharedChecker,
+        BookmarksChecker,
+        BranchChecker,
     ]
     checkers = [checker_class(checkout) for checker_class in checker_classes]
 
     hg_path = checkout.path / ".hg"
     if not os.path.exists(hg_path):
-        # TODO: Once we can fix all of the files in .hg:
-        # description = f"Missing hg directory: {checkout.path}/.hg"
-        # tracker.add_problem(HgDirectoryError(checkout, checkers, description))
-        tracker.add_problem(MissingHgDirectory(str(checkout.path)))
+        description = f"Missing hg directory: {checkout.path}/.hg"
+        tracker.add_problem(HgDirectoryError(checkout, checkers, description))
         return
 
     bad_checkers: List[HgChecker] = []
@@ -256,7 +333,12 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
             tracker.add_problem(UnexpectedCheckError())
 
     if bad_checkers:
-        tracker.add_problem(HgDirectoryError(checkout, bad_checkers))
+        msg = (
+            f"No contents present in hg directory: {checkout.path}/.hg"
+            if len(bad_checkers) == len(checkers)
+            else None
+        )
+        tracker.add_problem(HgDirectoryError(checkout, bad_checkers, msg))
 
 
 class HgDirectoryError(FixableProblem):
@@ -296,13 +378,3 @@ class HgDirectoryError(FixableProblem):
 
         for checker in self._checkers:
             checker.repair()
-
-
-class MissingHgDirectory(Problem):
-    def __init__(self, path: str) -> None:
-        remediation = f"""\
-The most common cause of this is if you previously tried to manually remove this eden
-mount with "rm -rf".  You should instead remove it using "eden rm {path}",
-and can re-clone the checkout afterwards if desired."""
-        super().__init__(f"{path}/.hg/dirstate is missing", remediation)
-        self._path = path

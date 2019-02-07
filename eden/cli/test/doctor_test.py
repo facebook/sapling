@@ -76,6 +76,12 @@ class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(num_failed_fixes, fixer.num_failed_fixes)
         self.assertEqual(num_manual_fixes, fixer.num_manual_fixes)
 
+    def assert_dirstate_p0(self, checkout: EdenCheckout, commit: str) -> None:
+        dirstate_path = checkout.path / ".hg" / "dirstate"
+        with dirstate_path.open("rb") as f:
+            parents, _tuples_dict, _copymap = eden.dirstate.read(f, str(dirstate_path))
+        self.assertEqual(binascii.hexlify(parents[0]).decode("utf-8"), commit)
+
 
 class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.
@@ -196,13 +202,11 @@ command palette in Atom.
 
 Checking {edenfs_path3}
 <yellow>- Found problem:<reset>
-{edenfs_path3}/.hg/dirstate is missing
-The most common cause of this is if you previously tried to manually remove this eden
-mount with "rm -rf".  You should instead remove it using "eden rm {edenfs_path3}",
-and can re-clone the checkout afterwards if desired.
+Missing hg directory: {edenfs_path3}/.hg
+Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
 
-<yellow>Successfully fixed 2 problems.<reset>
-<yellow>2 issues require manual attention.<reset>
+<yellow>Successfully fixed 3 problems.<reset>
+<yellow>1 issue requires manual attention.<reset>
 Ask in the Eden Users group if you need help fixing issues with Eden:
 https://fb.facebook.com/groups/eden.users/
 """,
@@ -822,14 +826,6 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         # The dirstate file should have been updated to use the snapshot hash
         self.assertEqual(checkout.instance.get_thrift_client().set_parents_calls, [])
         self.assert_dirstate_p0(checkout, snapshot_hex)
-
-    def assert_dirstate_p0(self, checkout: EdenCheckout, commit: str) -> None:
-        dirstate_path = checkout.path / ".hg" / "dirstate"
-        with dirstate_path.open("rb") as f:
-            parents, self._tuples_dict, self._copymap = eden.dirstate.read(
-                f, str(dirstate_path)
-            )
-        self.assertEqual(binascii.hexlify(parents[0]).decode("utf-8"), commit)
 
     def _test_hash_check(
         self,
@@ -2346,6 +2342,8 @@ class FakeCheckout(NamedTuple):
 
 
 class FakeEdenInstance:
+    default_commit_hash = "1" * 40
+
     def __init__(
         self,
         tmp_dir: str,
@@ -2363,6 +2361,8 @@ class FakeEdenInstance:
         self._eden_dir.mkdir()
         self.clients_path = self._eden_dir / "clients"
         self.clients_path.mkdir()
+        self.default_backing_repo = Path(self._tmp_dir) / "eden-repos" / "main_repo"
+        (self.default_backing_repo / ".hg").mkdir(parents=True)
 
         # A map from mount path --> FakeCheckout
         self._checkouts_by_path: Dict[str, FakeCheckout] = {}
@@ -2404,15 +2404,13 @@ class FakeEdenInstance:
             raise Exception(f"duplicate mount definition: {full_path}")
 
         if snapshot is None:
-            snapshot = "1" * 40
+            snapshot = self.default_commit_hash
         if bind_mounts is None:
             bind_mounts = {}
         if client_name is None:
             client_name = path.replace("/", "_")
         backing_repo_path = (
-            backing_repo
-            if backing_repo is not None
-            else (Path(self._tmp_dir) / "eden-repos" / client_name)
+            backing_repo if backing_repo is not None else self.default_backing_repo
         )
 
         state_dir = self.clients_path / client_name
@@ -2456,7 +2454,7 @@ class FakeEdenInstance:
             if setup_path:
                 os.makedirs(full_path)
                 if scm_type == "hg":
-                    self._setup_hg_path(full_path, dirstate_parent, snapshot)
+                    self._setup_hg_path(full_path, checkout, dirstate_parent)
                 elif scm_type == "git":
                     os.mkdir(os.path.join(full_path, ".git"))
 
@@ -2473,16 +2471,16 @@ class FakeEdenInstance:
     def _setup_hg_path(
         self,
         full_path: str,
+        fake_checkout: FakeCheckout,
         dirstate_parent: Union[str, Tuple[str, str], None],
-        snapshot: str,
     ):
-        hg_dir = os.path.join(full_path, ".hg")
-        os.mkdir(hg_dir)
-        dirstate_path = os.path.join(hg_dir, "dirstate")
+        hg_dir = Path(full_path) / ".hg"
+        hg_dir.mkdir()
+        dirstate_path = hg_dir / "dirstate"
 
         if dirstate_parent is None:
             # The dirstate parent should normally match the snapshot hash
-            parents = (binascii.unhexlify(snapshot), b"\x00" * 20)
+            parents = (binascii.unhexlify(fake_checkout.snapshot), b"\x00" * 20)
         elif isinstance(dirstate_parent, str):
             # Assume we were given a single parent hash as a hex string
             parents = (binascii.unhexlify(dirstate_parent), b"\x00" * 20)
@@ -2493,8 +2491,17 @@ class FakeEdenInstance:
                 binascii.unhexlify(dirstate_parent[1]),
             )
 
-        with open(dirstate_path, "wb") as f:
+        with dirstate_path.open("wb") as f:
             eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+
+        (hg_dir / "hgrc").write_text("# This file simply needs to exist\n")
+        (hg_dir / "requires").write_text("eden\nremotefilelog\nrevlogv1\nstore\n")
+        (hg_dir / "sharedpath").write_bytes(
+            bytes(fake_checkout.config.backing_repo / ".hg")
+        )
+        (hg_dir / "shared").write_text("bookmarks\n")
+        (hg_dir / "bookmarks").touch()
+        (hg_dir / "branch").write_text("default\n")
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._checkouts_by_path.keys()
@@ -2771,13 +2778,16 @@ class CorruptHgTest(DoctorTestBase):
     def setUp(self) -> None:
         self.instance = FakeEdenInstance(self.make_temporary_directory())
         self.checkout = self.instance.create_test_mount("test_mount", scm_type="hg")
+        self.backing_repo = typing.cast(
+            FakeEdenInstance, self.checkout.instance
+        ).default_backing_repo
 
     def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
         sharedpath_path = self.checkout.path / ".hg" / "sharedpath"
+        sharedpath_path.unlink()
         sharedpath_path.symlink_to(sharedpath_path.name)
 
-        out = TestOutput()
-        self.cure_what_ails_you(out=out)
+        out = self.cure_what_ails_you(dry_run=True)
         self.assertIn(
             "Failed to read .hg/sharedpath: [Errno 40] Too many levels of symbolic links",
             out.getvalue(),
@@ -2787,8 +2797,7 @@ class CorruptHgTest(DoctorTestBase):
         dirstate_path = self.checkout.path / ".hg" / "dirstate"
         os.truncate(dirstate_path, dirstate_path.stat().st_size - 1)
 
-        out = TestOutput()
-        self.cure_what_ails_you(out=out)
+        out = self.cure_what_ails_you(dry_run=True)
         self.assertEqual(
             f"""\
 Checking {self.checkout.path}
@@ -2804,9 +2813,91 @@ Would repair hg directory contents for {self.checkout.path}
             out.getvalue(),
         )
 
-    def cure_what_ails_you(self, out: TestOutput) -> int:
-        dry_run = True
-        return doctor.cure_what_ails_you(
+    def test_missing_sharedpath_and_requires(self) -> None:
+        sharedpath_path = self.checkout.path / ".hg" / "sharedpath"
+        sharedpath_path.unlink()
+        requires_path = self.checkout.path / ".hg" / "requires"
+        requires_path.unlink()
+
+        out = self.cure_what_ails_you(dry_run=False)
+        self.assertEqual(
+            f"""\
+Checking {self.checkout.path}
+<yellow>- Found problem:<reset>
+Found inconsistent/missing data in {self.checkout.path}/.hg:
+  error reading .hg/requires: [Errno 2] No such file or directory: \
+{str(requires_path)!r}
+  error reading .hg/sharedpath: [Errno 2] No such file or directory: \
+{str(sharedpath_path)!r}
+Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+            out.getvalue(),
+        )
+        self.assertIn("eden\n", requires_path.read_text())
+        self.assertEqual(sharedpath_path.read_text(), str(self.backing_repo / ".hg"))
+
+    def test_missing_hg_dir(self) -> None:
+        hg_dir = self.checkout.path / ".hg"
+        shutil.rmtree(hg_dir)
+
+        out = self.cure_what_ails_you(dry_run=False)
+        self.assertEqual(
+            f"""\
+Checking {self.checkout.path}
+<yellow>- Found problem:<reset>
+Missing hg directory: {self.checkout.path}/.hg
+Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+            out.getvalue(),
+        )
+        self._verify_hg_dir()
+
+    def test_empty_hg_dir(self) -> None:
+        hg_dir = self.checkout.path / ".hg"
+        shutil.rmtree(hg_dir)
+        hg_dir.mkdir()
+
+        out = self.cure_what_ails_you(dry_run=False)
+        self.assertEqual(
+            f"""\
+Checking {self.checkout.path}
+<yellow>- Found problem:<reset>
+No contents present in hg directory: {self.checkout.path}/.hg
+Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+            out.getvalue(),
+        )
+        self._verify_hg_dir()
+
+    def _verify_hg_dir(self) -> None:
+        hg_dir = self.checkout.path / ".hg"
+        self.assertTrue((hg_dir / "dirstate").is_file())
+        self.assertTrue((hg_dir / "hgrc").is_file())
+        self.assertTrue((hg_dir / "requires").is_file())
+        self.assertTrue((hg_dir / "sharedpath").is_file())
+        self.assertTrue((hg_dir / "shared").is_file())
+        self.assertTrue((hg_dir / "bookmarks").is_file())
+        self.assertTrue((hg_dir / "branch").is_file())
+
+        self.assert_dirstate_p0(self.checkout, FakeEdenInstance.default_commit_hash)
+        self.assertIn("[extensions]\neden =\n", (hg_dir / "hgrc").read_text())
+        self.assertIn("eden\n", (hg_dir / "requires").read_text())
+        self.assertEqual(
+            (hg_dir / "sharedpath").read_text(), str(self.backing_repo / ".hg")
+        )
+        self.assertEqual((hg_dir / "shared").read_text(), "bookmarks\n")
+        self.assertEqual((hg_dir / "bookmarks").read_text(), "")
+        self.assertEqual((hg_dir / "branch").read_text(), "default\n")
+
+    def cure_what_ails_you(self, dry_run: bool) -> TestOutput:
+        out = TestOutput()
+        doctor.cure_what_ails_you(
             typing.cast(EdenInstance, self.instance),
             dry_run,
             self.instance.mount_table,
@@ -2814,6 +2905,7 @@ Would repair hg directory contents for {self.checkout.path}
             process_finder=FakeProcessFinder(),
             out=out,
         )
+        return out
 
 
 class DiskUsageTest(DoctorTestBase):
@@ -2915,7 +3007,11 @@ The most common cause for this is if your ~/local symlink does not point to loca
   Make sure that ~/local is a symlink pointing to local disk and then restart Eden.
 
 Checking {checkout.path}
-<yellow>Discovered 1 problem during --dry-run<reset>
+<yellow>- Found problem:<reset>
+The Mercurial data directory for {checkout.path}/.hg/sharedpath is at \
+{instance.default_backing_repo}/.hg which is on a NFS filesystem. \
+Accessing files and directories in this repository will be slow.
+<yellow>Discovered 2 problems during --dry-run<reset>
 """
         self.assertEqual(expected, out.getvalue())
         self.assertEqual(1, exit_code)
