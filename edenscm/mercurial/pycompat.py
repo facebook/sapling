@@ -321,6 +321,7 @@ else:
 isjython = sysplatform.startswith("java")
 
 isdarwin = sysplatform == "darwin"
+islinux = sysplatform.startswith("linux")
 isposix = osname == "posix"
 iswindows = osname == "nt"
 
