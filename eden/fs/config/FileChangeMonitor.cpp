@@ -117,8 +117,11 @@ bool FileChangeMonitor::isChanged() {
   int rslt = stat(filePath_.c_str(), &currentStat);
   if (rslt != 0) {
     statErrno_ = errno;
-    // Log an error only if the error has changed (i.e., first time)
-    if (statErrno_ != prevStatErrno) {
+    // Log unexpected errors accessing the file (e.g., permission denied, or
+    // unexpected file type).  Don't log if the file simply doesn't exist.
+    // Also only log when the error changes, so that we don't repeatedly log
+    // the same message.
+    if (statErrno_ != ENOENT && statErrno_ != prevStatErrno) {
       XLOG(WARN) << "error accessing file " << filePath_ << ": "
                  << folly::errnoStr(statErrno_);
     }
