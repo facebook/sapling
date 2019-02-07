@@ -101,33 +101,24 @@ class UsageError(Exception):
     pass
 
 
-class CheckoutConfig:
+class CheckoutConfig(typing.NamedTuple):
     """Configuration for an Eden checkout. A checkout stores its config in config.toml
     it its state directory (.eden/clients/<checkout_name>/config.toml)
 
-    - path real path where the true repo resides on disk
-    - scm_type "hg" or "git"
-    - hooks_path path to where the hooks scripts are for the repo
-    - bind_mounts dict where keys are private pathnames under ~/.eden where the
+    - backing_repo: The path where the true repo resides on disk.  For mercurial backing
+        repositories this does not include the final ".hg" directory component.
+    - scm_type: "hg" or "git"
+    - hooks_path: path to where the hooks scripts are for the repo
+    - bind_mounts: dict where keys are private pathnames under ~/.eden where the
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
     """
 
-    __slots__ = ("path", "scm_type", "hooks_path", "bind_mounts", "default_revision")
-
-    def __init__(
-        self,
-        path: str,
-        scm_type: str,
-        hooks_path: str,
-        bind_mounts: Dict[str, str],
-        default_revision: str,
-    ) -> None:
-        self.path = path
-        self.scm_type = scm_type
-        self.hooks_path = hooks_path
-        self.bind_mounts = bind_mounts
-        self.default_revision = default_revision
+    backing_repo: Path
+    scm_type: str
+    hooks_path: str
+    bind_mounts: Dict[str, str]
+    default_revision: str
 
 
 class EdenInstance:
@@ -285,7 +276,7 @@ class EdenInstance:
         )
 
         return CheckoutConfig(
-            path=path,
+            backing_repo=Path(path),
             scm_type=scm_type,
             hooks_path=parser.get_str(repository_header, "hooks", default="")
             or self.get_default_hooks_path(),
@@ -393,7 +384,7 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-        self._post_clone_checkout_setup(checkout, checkout_config, snapshot_id)
+        self._post_clone_checkout_setup(checkout, snapshot_id)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
@@ -477,13 +468,13 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
     def _post_clone_checkout_setup(
-        self, checkout: "EdenCheckout", checkout_config: CheckoutConfig, commit_id: str
+        self, checkout: "EdenCheckout", commit_id: str
     ) -> None:
         # First, check to see if the post-clone hook has been run successfully
         # before.
         clone_success_path = checkout.state_dir / CLONE_SUCCEEDED
         is_initial_mount = not clone_success_path.is_file()
-        if is_initial_mount and checkout_config.scm_type == "hg":
+        if is_initial_mount and checkout.get_config().scm_type == "hg":
             from . import hg_util
 
             hg_util.setup_hg_dir(checkout, commit_id)
@@ -983,7 +974,7 @@ class EdenCheckout:
         # Store information about the mount in the config.toml file.
         config_data = {
             "repository": {
-                "path": checkout_config.path,
+                "path": str(checkout_config.backing_repo),
                 "type": checkout_config.scm_type,
                 "hooks": checkout_config.hooks_path,
             },
@@ -1039,7 +1030,7 @@ class EdenCheckout:
                 bind_mounts[key] = value
 
         return CheckoutConfig(
-            path=get_field("path"),
+            backing_repo=Path(get_field("path")),
             scm_type=scm_type,
             hooks_path=get_field("hooks"),
             bind_mounts=bind_mounts,

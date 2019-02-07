@@ -77,7 +77,7 @@ def get_backing_hg_dir(checkout: EdenCheckout) -> Path:
 
     This is the path that .hg/sharedpath should point to.
     """
-    return Path(checkout.get_config().path) / ".hg"
+    return checkout.get_config().backing_repo / ".hg"
 
 
 def get_hgrc_data(checkout: EdenCheckout) -> str:

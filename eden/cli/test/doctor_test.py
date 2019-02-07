@@ -2384,6 +2384,7 @@ class FakeEdenInstance:
         active: bool = True,
         setup_path: bool = True,
         dirstate_parent: Union[str, Tuple[str, str], None] = None,
+        backing_repo: Optional[Path] = None,
     ) -> EdenCheckout:
         """
         Define a configured mount.
@@ -2408,11 +2409,16 @@ class FakeEdenInstance:
             bind_mounts = {}
         if client_name is None:
             client_name = path.replace("/", "_")
+        backing_repo_path = (
+            backing_repo
+            if backing_repo is not None
+            else (Path(self._tmp_dir) / "eden-repos" / client_name)
+        )
 
         state_dir = self.clients_path / client_name
         assert full_path not in self._checkouts_by_path
         config = CheckoutConfig(
-            path=full_path,
+            backing_repo=backing_repo_path,
             scm_type=scm_type,
             hooks_path="",
             bind_mounts=bind_mounts,
@@ -2521,11 +2527,11 @@ class FakeEdenInstance:
 
     def get_checkouts(self) -> List[EdenCheckout]:
         results: List[EdenCheckout] = []
-        for checkout in self._checkouts_by_path.values():
+        for mount_path, checkout in self._checkouts_by_path.items():
             results.append(
                 EdenCheckout(
                     typing.cast(EdenInstance, self),
-                    Path(checkout.config.path),
+                    Path(mount_path),
                     Path(checkout.state_dir),
                 )
             )

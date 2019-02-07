@@ -12,6 +12,7 @@ import configparser
 import io
 import os
 import unittest
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import toml
@@ -146,7 +147,7 @@ class TomlConfigTest(
     def assert_git_repo_config(self, cfg: EdenInstance) -> None:
         cc = cfg.find_config_for_alias("git")
         assert cc is not None
-        self.assertEqual(cc.path, f"/home/{self._user}/src/git/.git")
+        self.assertEqual(cc.backing_repo, Path(f"/home/{self._user}/src/git/.git"))
         self.assertEqual(cc.scm_type, "git")
         self.assertEqual(cc.hooks_path, f"/home/{self._user}/my-git-hook")
         self.assertEqual(cc.bind_mounts, {})
@@ -155,7 +156,9 @@ class TomlConfigTest(
     def assert_fbsource_repo_config(self, cfg: EdenInstance) -> None:
         cc = cfg.find_config_for_alias("fbsource")
         assert cc is not None
-        self.assertEqual(cc.path, f"/data/users/{self._user}/fbsource-override")
+        self.assertEqual(
+            cc.backing_repo, Path(f"/data/users/{self._user}/fbsource-override")
+        )
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(
             cc.bind_mounts,
@@ -207,7 +210,7 @@ class TomlConfigTest(
         )
         cc = cfg.find_config_for_alias("fbsource")
         assert cc is not None
-        self.assertEqual(cc.path, f"/data/users/{self._user}/fbsource")
+        self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbsource"))
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(
             cc.bind_mounts,
@@ -245,7 +248,7 @@ class TomlConfigTest(
         # Check the newly added repo
         cc = cfg.find_config_for_alias("fbandroid")
         assert cc is not None
-        self.assertEqual(cc.path, f"/data/users/{self._user}/fbandroid")
+        self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbandroid"))
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(cc.hooks_path, f"{self._etc_eden_dir}/hooks")
         self.assertEqual(cc.bind_mounts, {})

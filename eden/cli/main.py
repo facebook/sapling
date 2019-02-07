@@ -428,16 +428,16 @@ re-run `eden clone` with --allow-empty-repo"""
         self, instance: EdenInstance, repo_arg: str, rev: Optional[str]
     ) -> Tuple[util.Repo, Optional[str], config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing Eden mount
-        eden_config = instance.get_checkout_config_for_path(repo_arg)
-        if eden_config is not None:
-            repo = util.get_repo(eden_config.path)
+        checkout_config = instance.get_checkout_config_for_path(repo_arg)
+        if checkout_config is not None:
+            repo = util.get_repo(str(checkout_config.backing_repo))
             if repo is None:
                 raise RepoError(
                     "eden mount is configured to use repository "
-                    f"{eden_config.path} but unable to find a "
+                    f"{checkout_config.backing_repo} but unable to find a "
                     "repository at that location"
                 )
-            return repo, None, eden_config
+            return repo, None, checkout_config
 
         # Check to see if repo_arg looks like an existing repository path.
         repo = util.get_repo(repo_arg)
@@ -452,12 +452,12 @@ re-run `eden clone` with --allow-empty-repo"""
                     "repository name"
                 )
 
-            repo = util.get_repo(repo_config.path)
+            repo = util.get_repo(str(repo_config.backing_repo))
             if repo is None:
                 raise RepoError(
                     f"cloning {repo_arg} requires an existing "
                     f"repository to be present at "
-                    f"{repo_config.path}"
+                    f"{repo_config.backing_repo}"
                 )
 
             return repo, repo_arg, repo_config
@@ -473,7 +473,7 @@ re-run `eden clone` with --allow-empty-repo"""
         repo_type = project_id
         if project_config is None:
             repo_config = config_mod.CheckoutConfig(
-                path=repo.source,
+                backing_repo=Path(repo.source),
                 scm_type=repo.type,
                 hooks_path=instance.get_default_hooks_path(),
                 bind_mounts={},
@@ -484,7 +484,7 @@ re-run `eden clone` with --allow-empty-repo"""
             # path and type, but the hooks, bind-mount, and revision
             # configuration from the project configuration.
             repo_config = config_mod.CheckoutConfig(
-                path=repo.source,
+                backing_repo=Path(repo.source),
                 scm_type=repo.type,
                 hooks_path=project_config.hooks_path,
                 bind_mounts=project_config.bind_mounts,
@@ -1214,14 +1214,14 @@ re-open these files after Eden is restarted.
         with instance.get_thrift_client() as client:
             try:
                 stop_aux_processes(client)
-            except Exception as ex:
+            except Exception:
                 pass
             try:
                 client.initiateShutdown(
                     f"`eden restart --force` requested by pid={os.getpid()} "
                     f"uid={os.getuid()}"
                 )
-            except Exception as ex:
+            except Exception:
                 print("Sending SIGTERM...")
                 os.kill(pid, signal.SIGTERM)
         self._wait_for_stop(instance, pid, timeout)
