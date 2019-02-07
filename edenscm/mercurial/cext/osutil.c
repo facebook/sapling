@@ -832,6 +832,11 @@ static const char* describefstype(const struct statfs* pbuf) {
   return pbuf->f_fstypename;
 }
 #elif defined(HAVE_LINUX_STATFS)
+/* FUSE_SUPER_MAGIC is mentioned in statfs linux-manpages, but not
+ * linux/magic.h. Define it.  */
+#ifndef FUSE_SUPER_MAGIC
+#define FUSE_SUPER_MAGIC 0x65735546
+#endif
 static const char* describefstype(const struct statfs* pbuf) {
   /* Begin of Linux filesystems */
 #ifdef ADFS_SUPER_MAGIC
