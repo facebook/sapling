@@ -18,15 +18,15 @@ use mononoke_types::ContentId;
 
 use super::HgEnvelopeBlob;
 use errors::*;
-use nodehash::HgNodeHash;
+use nodehash::{HgFileNodeId, HgNodeHash};
 use thrift;
 
 /// A mutable representation of a Mercurial file node.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HgFileEnvelopeMut {
-    pub node_id: HgNodeHash,
-    pub p1: Option<HgNodeHash>,
-    pub p2: Option<HgNodeHash>,
+    pub node_id: HgFileNodeId,
+    pub p1: Option<HgFileNodeId>,
+    pub p2: Option<HgFileNodeId>,
     pub content_id: ContentId,
     pub content_size: u64,
     pub metadata: Bytes,
@@ -41,8 +41,16 @@ impl HgFileEnvelopeMut {
 impl fmt::Display for HgFileEnvelopeMut {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "node id: {}", self.node_id)?;
-        writeln!(f, "p1: {}", HgNodeHash::display_opt(self.p1.as_ref()))?;
-        writeln!(f, "p2: {}", HgNodeHash::display_opt(self.p2.as_ref()))?;
+        writeln!(
+            f,
+            "p1: {}",
+            HgNodeHash::display_opt(self.p1.map(HgFileNodeId::into_nodehash).as_ref())
+        )?;
+        writeln!(
+            f,
+            "p2: {}",
+            HgNodeHash::display_opt(self.p2.map(HgFileNodeId::into_nodehash).as_ref())
+        )?;
         writeln!(f, "content id: {}", self.content_id)?;
         writeln!(f, "content size: {}", self.content_size)?;
         writeln!(f, "metadata: {:?}", self.metadata)
@@ -60,9 +68,9 @@ impl HgFileEnvelope {
         let catch_block = || {
             Ok(Self {
                 inner: HgFileEnvelopeMut {
-                    node_id: HgNodeHash::from_thrift(fe.node_id)?,
-                    p1: HgNodeHash::from_thrift_opt(fe.p1)?,
-                    p2: HgNodeHash::from_thrift_opt(fe.p2)?,
+                    node_id: HgFileNodeId::new(HgNodeHash::from_thrift(fe.node_id)?),
+                    p1: HgNodeHash::from_thrift_opt(fe.p1)?.map(HgFileNodeId::new),
+                    p2: HgNodeHash::from_thrift_opt(fe.p2)?.map(HgFileNodeId::new),
                     content_id: ContentId::from_thrift(
                         fe.content_id
                             .ok_or_else(|| err_msg("missing content id field"))?,
@@ -90,13 +98,13 @@ impl HgFileEnvelope {
 
     /// The ID for this file version.
     #[inline]
-    pub fn node_id(&self) -> HgNodeHash {
+    pub fn node_id(&self) -> HgFileNodeId {
         self.inner.node_id
     }
 
     /// The parent hashes for this node. The order matters.
     #[inline]
-    pub fn parents(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
+    pub fn parents(&self) -> (Option<HgFileNodeId>, Option<HgFileNodeId>) {
         (self.inner.p1, self.inner.p2)
     }
 
@@ -128,9 +136,9 @@ impl HgFileEnvelope {
     pub(crate) fn into_thrift(self) -> thrift::HgFileEnvelope {
         let inner = self.inner;
         thrift::HgFileEnvelope {
-            node_id: inner.node_id.into_thrift(),
-            p1: inner.p1.map(HgNodeHash::into_thrift),
-            p2: inner.p2.map(HgNodeHash::into_thrift),
+            node_id: inner.node_id.into_nodehash().into_thrift(),
+            p1: inner.p1.map(|p| p.into_nodehash().into_thrift()),
+            p2: inner.p2.map(|p| p.into_nodehash().into_thrift()),
             content_id: Some(inner.content_id.into_thrift()),
             content_size: inner.content_size as i64,
             metadata: Some(inner.metadata.to_vec()),

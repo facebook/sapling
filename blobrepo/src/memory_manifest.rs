@@ -825,16 +825,16 @@ impl MemoryManifestEntry {
                 let mut parents = parents.into_iter();
                 if let Some((file_type, file_content)) = content {
                     let path = try_boxfuture!(path.ok_or(ErrorKind::EmptyFilePath).into());
-                    let p1 = parents.next();
-                    let p2 = parents.next();
+                    let p1 = parents.next().map(HgFileNodeId::new);
+                    let p2 = parents.next().map(HgFileNodeId::new);
                     assert!(parents.next().is_none(), "Only support two parents");
 
                     let upload_entry = UploadHgFileEntry {
                         upload_node_id: UploadHgNodeHash::Generate,
                         contents: UploadHgFileContents::RawBytes(file_content.into_bytes()),
                         file_type,
-                        p1: p1.clone(),
-                        p2: p2.clone(),
+                        p1,
+                        p2,
                         path,
                     };
                     let (_, upload_future) = try_boxfuture!(upload_entry.upload(ctx, &repo));
@@ -843,8 +843,8 @@ impl MemoryManifestEntry {
                             incomplete_filenodes.add(IncompleteFilenodeInfo {
                                 path,
                                 filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
-                                p1: p1.map(|h| HgFileNodeId::new(h)),
-                                p2: p2.map(|h| HgFileNodeId::new(h)),
+                                p1,
+                                p2,
                                 copyfrom: None,
                             });
                             Some(MemoryManifestEntry::Blob(entry))

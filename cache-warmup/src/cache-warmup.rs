@@ -25,7 +25,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use mercurial_types::manifest::{Entry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
-use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
+use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath, RepoPath};
 use metaconfig_types::CacheWarmupParams;
 use revset::AncestorsNodeStream;
 use slog::Logger;
@@ -36,8 +36,10 @@ mod errors {
 
     #[derive(Debug, Fail)]
     pub enum ErrorKind {
-        #[fail(display = "Bookmark {} does not exist", _0)] BookmarkNotFound(Bookmark),
-        #[fail(display = "Bookmark value {} not found", _0)] BookmarkValueNotFound(HgChangesetId),
+        #[fail(display = "Bookmark {} does not exist", _0)]
+        BookmarkNotFound(Bookmark),
+        #[fail(display = "Bookmark value {} not found", _0)]
+        BookmarkValueNotFound(HgChangesetId),
     }
 }
 
@@ -66,13 +68,13 @@ fn blobstore_and_filenodes_warmup(
                 recursive_entry_stream(ctx.clone(), rootpath, Box::new(root_entry))
                     .filter(|&(ref _path, ref entry)| entry.get_type() == Type::Tree)
                     .map(move |(path, entry)| {
-                        let hash = entry.get_hash();
+                        let hash = HgFileNodeId::new(entry.get_hash().into_nodehash());
                         let path = MPath::join_element_opt(path.as_ref(), entry.get_name());
                         let path = match path {
                             Some(path) => RepoPath::DirectoryPath(path),
                             None => RepoPath::RootPath,
                         };
-                        repo.get_linknode(ctx.clone(), &path, hash.into_nodehash())
+                        repo.get_linknode(ctx.clone(), &path, hash)
                     })
                     .buffered(buffer_size)
                     .for_each({

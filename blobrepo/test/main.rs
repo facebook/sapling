@@ -45,8 +45,8 @@ use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
 use context::CoreContext;
 use mercurial_types::{
-    manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId, HgManifestId, HgParents, MPath,
-    MPathElement, RepoPath,
+    manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
+    MPath, MPathElement, RepoPath,
 };
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
@@ -68,7 +68,9 @@ use tests_utils::{create_commit, store_files};
 
 fn upload_blob_no_parents(repo: BlobRepo) {
     let ctx = CoreContext::test_mock();
-    let expected_hash = string_to_nodehash("c3127cdbf2eae0f09653f9237d85c8436425b246");
+    let expected_hash = HgFileNodeId::new(string_to_nodehash(
+        "c3127cdbf2eae0f09653f9237d85c8436425b246",
+    ));
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
@@ -81,7 +83,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     // The entry we're given is correct...
     let (entry, path) = run_future(future).unwrap();
     assert!(path == fake_path);
-    assert!(entry.get_hash() == HgEntryId::new(expected_hash));
+    assert!(HgFileNodeId::new(entry.get_hash().into_nodehash()) == expected_hash);
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
@@ -106,7 +108,9 @@ test_both_repotypes!(
 
 fn upload_blob_one_parent(repo: BlobRepo) {
     let ctx = CoreContext::test_mock();
-    let expected_hash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
+    let expected_hash = HgFileNodeId::new(string_to_nodehash(
+        "c2d60b35a8e7e034042a9467783bbdac88a0d219",
+    ));
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
@@ -122,7 +126,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     let (entry, path) = run_future(future2.join(future).map(|(item, _)| item)).unwrap();
 
     assert!(path == fake_path);
-    assert!(entry.get_hash() == HgEntryId::new(expected_hash));
+    assert!(HgFileNodeId::new(entry.get_hash().into_nodehash()) == expected_hash);
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))

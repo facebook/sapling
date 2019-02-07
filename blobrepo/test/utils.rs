@@ -22,7 +22,7 @@ use blobrepo::{
 use blobrepo_factory::new_memblob_empty;
 use blobstore::{EagerMemblob, LazyMemblob};
 use context::CoreContext;
-use mercurial_types::{FileType, HgBlobNode, HgNodeHash, RepoPath};
+use mercurial_types::{FileType, HgBlobNode, HgFileNodeId, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
 
@@ -66,7 +66,7 @@ macro_rules! test_both_repotypes {
                 $impl_name(get_empty_eager_repo());
             })
         }
-    }
+    };
 }
 
 pub fn upload_file_no_parents<B>(
@@ -74,7 +74,7 @@ pub fn upload_file_no_parents<B>(
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
-) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
+) -> (HgFileNodeId, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     B: Into<Bytes>,
 {
@@ -94,8 +94,8 @@ pub fn upload_file_one_parent<B>(
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
-    p1: HgNodeHash,
-) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)
+    p1: HgFileNodeId,
+) -> (HgFileNodeId, BoxFuture<(HgBlobEntry, RepoPath), Error>)
 where
     B: Into<Bytes>,
 {
@@ -159,12 +159,17 @@ fn upload_hg_file_entry(
     contents: Bytes,
     file_type: FileType,
     path: RepoPath,
-    p1: Option<HgNodeHash>,
-    p2: Option<HgNodeHash>,
-) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
+    p1: Option<HgFileNodeId>,
+    p2: Option<HgFileNodeId>,
+) -> (HgFileNodeId, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
     // Ideally the node id returned from upload.upload would be used, but that isn't immediately
     // available -- so compute it ourselves.
-    let node_id = HgBlobNode::new(contents.clone(), p1, p2).nodeid();
+    let node_id = HgBlobNode::new(
+        contents.clone(),
+        p1.map(HgFileNodeId::into_nodehash),
+        p2.map(HgFileNodeId::into_nodehash),
+    )
+    .nodeid();
 
     let upload = UploadHgFileEntry {
         upload_node_id: UploadHgNodeHash::Checked(node_id),
@@ -176,7 +181,7 @@ fn upload_hg_file_entry(
     };
 
     let (_, upload_fut) = upload.upload(ctx, repo).unwrap();
-    (node_id, upload_fut)
+    (HgFileNodeId::new(node_id), upload_fut)
 }
 
 pub fn create_changeset_no_parents(

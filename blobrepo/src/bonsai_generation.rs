@@ -6,8 +6,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::failure::prelude::*;
 use blobstore::Blobstore;
+use crate::failure::prelude::*;
 use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::FutureExt;
@@ -15,7 +15,7 @@ use futures_ext::FutureExt;
 use blob_changeset::RepoBlobstore;
 use bonsai_utils;
 use context::CoreContext;
-use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
+use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, MPath};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
@@ -106,7 +106,7 @@ fn find_file_changes(
     bonsai_utils::bonsai_diff(ctx.clone(), root_entry, p1_root_entry, p2_root_entry)
         .map(move |changed_file| match changed_file {
             bonsai_utils::BonsaiDiffResult::Changed(path, ty, entry_id) => {
-                let file_node_id = entry_id.into_nodehash();
+                let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
                 cloned!(ctx, bonsai_parents, repo, parent_manifests);
                 repo.get_file_content(ctx.clone(), file_node_id)
                     .and_then(move |file_contents| {
@@ -132,7 +132,7 @@ fn find_file_changes(
                     .boxify()
             }
             bonsai_utils::BonsaiDiffResult::ChangedReusedId(path, ty, entry_id) => {
-                let file_node_id = entry_id.into_nodehash();
+                let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
                 cloned!(ctx, repo);
                 repo.get_file_content(ctx, file_node_id).and_then(move |file_contents| {
                     let size = file_contents.size();
@@ -165,7 +165,7 @@ fn get_copy_info(
     repo: BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
     copy_from_path: MPath,
-    nodehash: HgNodeHash,
+    nodehash: HgFileNodeId,
     parent_manifests: Vec<HgManifestId>,
 ) -> impl Future<Item = Option<(MPath, ChangesetId)>, Error = Error> {
     repo.get_hg_file_copy_from_blobstore(ctx.clone(), nodehash)
@@ -189,9 +189,7 @@ fn get_copy_info(
                                 move |(bonsai_parent, parent_mf)| {
                                     repo.find_file_in_manifest(ctx.clone(), &repopath, parent_mf)
                                         .map(move |res| match res {
-                                            Some((_, node))
-                                                if node == HgFileNodeId::new(copyfromnode) =>
-                                            {
+                                            Some((_, node)) if node == copyfromnode => {
                                                 Some(bonsai_parent)
                                             }
                                             _ => None,

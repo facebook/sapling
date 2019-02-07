@@ -49,7 +49,7 @@ impl FileContentStore for BlobRepoFileContentStore {
             })
             .and_then(move |opt| match opt {
                 Some((file_type, hash)) => repo2
-                    .get_file_content(ctx, hash.into_nodehash())
+                    .get_file_content(ctx, hash)
                     .map(move |content| Some((file_type, content)))
                     .boxify(),
                 None => finished(None).boxify(),

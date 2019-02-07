@@ -12,7 +12,7 @@ use std::str::FromStr;
 use bytes::Bytes;
 use itertools::Itertools;
 
-use mercurial_types::{HgBlob, HgBlobNode, HgNodeHash, MPath};
+use mercurial_types::{HgBlob, HgBlobNode, HgFileNodeId, MPath};
 use mononoke_types::{hash::Sha256, FileContents};
 
 use errors::*;
@@ -28,8 +28,16 @@ const COPY_REV_KEY: &[u8] = b"copyrev";
 const META_SZ: usize = 2;
 
 impl File {
-    pub fn new<B: Into<HgBlob>>(blob: B, p1: Option<HgNodeHash>, p2: Option<HgNodeHash>) -> Self {
-        let node = HgBlobNode::new(blob, p1, p2);
+    pub fn new<B: Into<HgBlob>>(
+        blob: B,
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
+    ) -> Self {
+        let node = HgBlobNode::new(
+            blob,
+            p1.map(HgFileNodeId::into_nodehash),
+            p2.map(HgFileNodeId::into_nodehash),
+        );
         File { node }
     }
 
@@ -97,7 +105,7 @@ impl File {
         Self::parse_to_hash_map(content, &[b' '])
     }
 
-    pub fn copied_from(&self) -> Result<Option<(MPath, HgNodeHash)>> {
+    pub fn copied_from(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
         let buf = self.node.as_blob().as_slice();
 
         Self::get_copied_from(&Self::parse_meta(buf))
@@ -107,12 +115,12 @@ impl File {
         meta: &HashMap<&[u8], &[u8]>,
         copy_path_key: &'static [u8],
         copy_rev_key: &'static [u8],
-    ) -> Result<Option<(MPath, HgNodeHash)>> {
+    ) -> Result<Option<(MPath, HgFileNodeId)>> {
         let path = meta.get(copy_path_key).cloned().map(MPath::new);
         let nodeid = meta
             .get(copy_rev_key)
             .and_then(|rev| str::from_utf8(rev).ok())
-            .and_then(|rev| rev.parse().ok());
+            .and_then(|rev| rev.parse().map(HgFileNodeId::new).ok());
         match (path, nodeid) {
             (Some(Ok(path)), Some(nodeid)) => Ok(Some((path, nodeid))),
             (Some(Err(e)), _) => Err(e.context("invalid path in copy metadata").into()),
@@ -122,12 +130,12 @@ impl File {
 
     pub(crate) fn get_copied_from(
         meta: &HashMap<&[u8], &[u8]>,
-    ) -> Result<Option<(MPath, HgNodeHash)>> {
+    ) -> Result<Option<(MPath, HgFileNodeId)>> {
         Self::get_copied_from_with_keys(meta, COPY_PATH_KEY, COPY_REV_KEY)
     }
 
     pub fn generate_metadata<T>(
-        copy_from: Option<&(MPath, HgNodeHash)>,
+        copy_from: Option<&(MPath, HgFileNodeId)>,
         file_contents: &FileContents,
         buf: &mut T,
     ) -> Result<()>
@@ -234,7 +242,7 @@ impl File {
             })
     }
 
-    fn get_copied_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<Option<(MPath, HgNodeHash)>> {
+    fn get_copied_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<Option<(MPath, HgFileNodeId)>> {
         Self::get_copied_from_with_keys(contents, HGCOPY, HGCOPYREV)
     }
 
@@ -268,7 +276,7 @@ pub struct LFSContent {
     size: u64,
 
     // copy fields
-    copy_from: Option<(MPath, HgNodeHash)>,
+    copy_from: Option<(MPath, HgFileNodeId)>,
 }
 
 impl LFSContent {
@@ -280,7 +288,7 @@ impl LFSContent {
         self.oid.clone()
     }
 
-    pub fn copy_from(&self) -> Option<(MPath, HgNodeHash)> {
+    pub fn copy_from(&self) -> Option<(MPath, HgFileNodeId)> {
         self.copy_from.clone()
     }
 
@@ -473,7 +481,7 @@ mod test {
 
         let mut out: Vec<u8> = vec![];
         File::generate_metadata(
-            Some(&(MPath::new("foo").unwrap(), ONES_HASH)),
+            Some(&(MPath::new("foo").unwrap(), ONES_FNID)),
             &file_contents,
             &mut out,
         )
@@ -496,7 +504,7 @@ mod test {
 
         let mut out: Vec<u8> = vec![];
         File::generate_metadata(
-            Some(&(MPath::new("foo").unwrap(), ONES_HASH)),
+            Some(&(MPath::new("foo").unwrap(), ONES_FNID)),
             &file_contents,
             &mut out,
         )
@@ -625,7 +633,7 @@ mod test {
 
     quickcheck! {
         fn copy_info_roundtrip(
-            copy_info: Option<(MPath, HgNodeHash)>,
+            copy_info: Option<(MPath, HgFileNodeId)>,
             contents: FileContents
         ) -> bool {
             let mut buf = Vec::new();

@@ -22,8 +22,8 @@ use filenodes::FilenodeInfo;
 use context::CoreContext;
 use mercurial::file::File;
 use mercurial_types::{
-    HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath, RevFlags,
-    NULL_CSID, NULL_HASH,
+    HgBlobNode, HgChangesetId, HgFileNodeId, HgParents, MPath, RepoPath, RevFlags, NULL_CSID,
+    NULL_HASH,
 };
 use tracing::trace_args;
 
@@ -43,8 +43,8 @@ pub enum ErrorKind {
     )]
     DataCorruption {
         path: RepoPath,
-        expected: HgNodeHash,
-        actual: HgNodeHash,
+        expected: HgFileNodeId,
+        actual: HgFileNodeId,
     },
 }
 
@@ -53,7 +53,7 @@ struct HgFileHistoryEntry {
     node: HgFileNodeId,
     parents: HgParents,
     linknode: HgChangesetId,
-    copyfrom: Option<(MPath, HgNodeHash)>,
+    copyfrom: Option<(MPath, HgFileNodeId)>,
 }
 
 impl HgFileHistoryEntry {
@@ -61,7 +61,7 @@ impl HgFileHistoryEntry {
         node: HgFileNodeId,
         parents: HgParents,
         linknode: HgChangesetId,
-        copyfrom: Option<(MPath, HgNodeHash)>,
+        copyfrom: Option<(MPath, HgFileNodeId)>,
     ) -> Self {
         Self {
             node,
@@ -76,17 +76,17 @@ impl HgFileHistoryEntry {
     /// partially written loose file contents).
     fn serialize<W: Write>(&self, writer: &mut W) -> Fallible<()> {
         let (p1, p2) = match self.parents {
-            HgParents::None => (&NULL_HASH, &NULL_HASH),
-            HgParents::One(ref p) => (p, &NULL_HASH),
-            HgParents::Two(ref p1, ref p2) => (p1, p2),
+            HgParents::None => (NULL_HASH, NULL_HASH),
+            HgParents::One(p) => (p, NULL_HASH),
+            HgParents::Two(p1, p2) => (p1, p2),
         };
 
-        let (p1, p2, copied_from) = if let Some((ref copied_from, ref copied_rev)) = self.copyfrom {
+        let (p1, p2, copied_from) = if let Some((ref copied_from, copied_rev)) = self.copyfrom {
             // Mercurial has a complicated copy/renames logic.
             // If (path1, filenode1) is copied/renamed from (path2, filenode2),
             // filenode1's p1 is set to filenode2, and copy_from path is set to path2
             // filenode1's p2 is null for non-merge commits. It might be non-null for merges.
-            (copied_rev, p1, Some(copied_from))
+            (copied_rev.into_nodehash(), p1, Some(copied_from))
         } else {
             (p1, p2, None)
         };
@@ -108,20 +108,14 @@ impl HgFileHistoryEntry {
 pub fn create_remotefilelog_blob(
     ctx: CoreContext,
     repo: BlobRepo,
-    node: HgNodeHash,
+    node: HgFileNodeId,
     path: MPath,
     lfs_params: LfsParams,
     validate_hash: bool,
 ) -> BoxFuture<Bytes, Error> {
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
 
-    let raw_content_bytes = get_raw_content(
-        ctx.clone(),
-        repo.clone(),
-        HgFileNodeId::new(node),
-        lfs_params,
-    )
-    .traced(
+    let raw_content_bytes = get_raw_content(ctx.clone(), repo.clone(), node, lfs_params).traced(
         ctx.trace(),
         "fetching remotefilelog content",
         trace_args.clone(),
@@ -172,7 +166,7 @@ fn validate_content(
     ctx: CoreContext,
     repo: BlobRepo,
     path: MPath,
-    actual: HgNodeHash,
+    actual: HgFileNodeId,
 ) -> impl Future<Item = (), Error = Error> {
     let file_content = repo.get_file_content(ctx.clone(), actual);
     let repopath = RepoPath::FilePath(path.clone());
@@ -185,7 +179,7 @@ fn validate_content(
             File::generate_metadata(
                 filenode
                     .copyfrom
-                    .map(|(path, node)| (path.into_mpath().unwrap(), node.into_nodehash()))
+                    .map(|(path, node)| (path.into_mpath().unwrap(), node))
                     .as_ref(),
                 &content,
                 &mut out,
@@ -195,7 +189,7 @@ fn validate_content(
 
             let p1 = filenode.p1.map(|p| p.into_nodehash());
             let p2 = filenode.p2.map(|p| p.into_nodehash());
-            let expected = HgBlobNode::new(bytes.freeze(), p1, p2).nodeid();
+            let expected = HgFileNodeId::new(HgBlobNode::new(bytes.freeze(), p1, p2).nodeid());
             if actual == expected {
                 Ok(())
             } else {
@@ -229,8 +223,7 @@ fn get_raw_content(
             move |(direct_fetching_file, file_size)| {
                 if direct_fetching_file {
                     (
-                        repo.get_file_content(ctx, node.into_nodehash())
-                            .left_future(),
+                        repo.get_file_content(ctx, node).left_future(),
                         Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
                     )
                 } else {
@@ -277,12 +270,12 @@ fn prefetch_history(
     ctx: CoreContext,
     repo: BlobRepo,
     path: MPath,
-) -> impl Future<Item = HashMap<HgNodeHash, FilenodeInfo>, Error = Error> {
+) -> impl Future<Item = HashMap<HgFileNodeId, FilenodeInfo>, Error = Error> {
     repo.get_all_filenodes(ctx, RepoPath::FilePath(path))
         .map(|filenodes| {
             filenodes
                 .into_iter()
-                .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
+                .map(|filenode| (filenode.filenode, filenode))
                 .collect()
         })
 }
@@ -291,11 +284,11 @@ fn prefetch_history(
 fn get_file_history(
     ctx: CoreContext,
     repo: BlobRepo,
-    startnode: HgNodeHash,
+    startnode: HgFileNodeId,
     path: MPath,
-    prefetched_history: HashMap<HgNodeHash, FilenodeInfo>,
+    prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
 ) -> BoxStream<HgFileHistoryEntry, Error> {
-    if startnode == NULL_HASH {
+    if startnode == HgFileNodeId::new(NULL_HASH) {
         return stream::empty().boxify();
     }
     let mut startstate = VecDeque::new();
@@ -305,7 +298,7 @@ fn get_file_history(
 
     stream::unfold(
         (startstate, seen_nodes),
-        move |(mut nodes, mut seen_nodes): (VecDeque<HgNodeHash>, HashSet<HgNodeHash>)| {
+        move |(mut nodes, mut seen_nodes): (VecDeque<HgFileNodeId>, HashSet<HgFileNodeId>)| {
             let node = nodes.pop_front()?;
 
             let filenode_fut = if let Some(filenode) = prefetched_history.get(&node) {
@@ -323,19 +316,21 @@ fn get_file_history(
                 let linknode = filenode.linknode;
 
                 let copyfrom = match filenode.copyfrom {
-                    Some((RepoPath::FilePath(frompath), node)) => {
-                        Some((frompath, node.into_nodehash()))
-                    }
+                    Some((RepoPath::FilePath(frompath), node)) => Some((frompath, node)),
                     Some((frompath, _)) => {
                         return Err(ErrorKind::InconsistentCopyInfo(filenode.path, frompath).into());
                     }
                     None => None,
                 };
 
-                let node = HgFileNodeId::new(node);
                 let entry = HgFileHistoryEntry::new(node, parents, linknode, copyfrom);
 
-                nodes.extend(parents.into_iter().filter(|p| seen_nodes.insert(*p)));
+                nodes.extend(
+                    parents
+                        .into_iter()
+                        .map(HgFileNodeId::new)
+                        .filter(|p| seen_nodes.insert(*p)),
+                );
                 Ok((entry, (nodes, seen_nodes)))
             });
 
@@ -363,7 +358,7 @@ fn get_maybe_draft_filenode(
     ctx: CoreContext,
     repo: BlobRepo,
     path: RepoPath,
-    node: HgNodeHash,
+    node: HgFileNodeId,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
     repo.get_filenode_opt(ctx.clone(), &path, node).and_then({
         cloned!(repo, ctx, path, node);

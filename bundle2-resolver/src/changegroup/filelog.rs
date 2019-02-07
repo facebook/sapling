@@ -17,12 +17,16 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgFileContents,
-               UploadHgFileEntry, UploadHgNodeHash};
+use blobrepo::{
+    BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgFileContents,
+    UploadHgFileEntry, UploadHgNodeHash,
+};
 use mercurial::file::File;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, parse_rev_flags, Delta, FileType, HgNodeHash, HgNodeKey, MPath,
-                      RepoPath, RevFlags, NULL_HASH};
+use mercurial_types::{
+    delta, parse_rev_flags, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath,
+    RevFlags, NULL_HASH,
+};
 
 use errors::*;
 use stats::*;
@@ -79,8 +83,8 @@ impl UploadableHgBlob for Filelog {
             contents,
             // XXX should this really be Regular?
             file_type: FileType::Regular,
-            p1: self.p1,
-            p2: self.p2,
+            p1: self.p1.map(HgFileNodeId::new),
+            p2: self.p2.map(HgFileNodeId::new),
             path,
         };
 
@@ -232,8 +236,9 @@ impl DeltaCache {
                                         .map_err(Error::from)
                                 })
                                 .boxify(),
-                            None => self.repo
-                                .get_raw_hg_content(ctx, base)
+                            None => self
+                                .repo
+                                .get_raw_hg_content(ctx, HgFileNodeId::new(base))
                                 .and_then(move |blob| {
                                     let bytes = blob.into_inner();
                                     delta::apply(bytes.as_ref(), &delta)

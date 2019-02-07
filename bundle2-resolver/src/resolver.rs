@@ -521,7 +521,10 @@ impl Bundle2Resolver {
     }
 
     /// Produce a future that creates a transaction with potentitally multiple bookmark pushes
-    fn resolve_bookmark_pushes(&self, bookmark_pushes: Vec<BookmarkPush>) -> impl Future<Item=(), Error=Error> {
+    fn resolve_bookmark_pushes(
+        &self,
+        bookmark_pushes: Vec<BookmarkPush>,
+    ) -> impl Future<Item = (), Error = Error> {
         let resolver = self.clone();
         let ctx = resolver.ctx.clone();
         let repo = resolver.repo.clone();
@@ -531,27 +534,26 @@ impl Bundle2Resolver {
             .map(move |bp| BonsaiBookmarkPush::new(ctx.clone(), &repo, bp))
             .collect::<Vec<_>>();
 
-        future::join_all(bookmarks_push_fut)
-            .and_then({
-                cloned!(resolver);
-                move |bonsai_bookmark_pushes| {
-                    let mut txn = resolver
-                        .repo
-                        .update_bookmark_transaction(resolver.ctx.clone());
-                    for bp in bonsai_bookmark_pushes {
-                        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
-                    }
-                    txn.commit()
-                        .and_then(|ok| {
-                            if ok {
-                                Ok(())
-                            } else {
-                                Err(format_err!("Bookmark transaction failed"))
-                            }
-                        })
-                        .boxify()
+        future::join_all(bookmarks_push_fut).and_then({
+            cloned!(resolver);
+            move |bonsai_bookmark_pushes| {
+                let mut txn = resolver
+                    .repo
+                    .update_bookmark_transaction(resolver.ctx.clone());
+                for bp in bonsai_bookmark_pushes {
+                    try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
                 }
-            })
+                txn.commit()
+                    .and_then(|ok| {
+                        if ok {
+                            Ok(())
+                        } else {
+                            Err(format_err!("Bookmark transaction failed"))
+                        }
+                    })
+                    .boxify()
+            }
+        })
     }
 
     /// Peek at the next `bundle2` item and check if it is a `Pushkey` part

@@ -25,7 +25,7 @@ use context::CoreContext;
 use genbfs::GenerationNumberBFS;
 use mercurial_types::manifest::Content;
 
-use mercurial_types::{HgChangesetId, HgManifestId};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 
 use mononoke_types::{FileContents, RepositoryId};
@@ -112,7 +112,7 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let filenode = try_boxfuture!(FS::get_nodehash(&filenode));
         self.repo
-            .get_raw_hg_content(ctx, filenode)
+            .get_raw_hg_content(ctx, HgFileNodeId::new(filenode))
             .map(|content| MononokeRepoResponse::GetHgFile {
                 content: content.into_inner(),
             })
@@ -189,7 +189,7 @@ impl MononokeRepo {
         let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
 
         self.repo
-            .get_file_content(ctx, blobhash)
+            .get_file_content(ctx, HgFileNodeId::new(blobhash))
             .and_then(move |content| match content {
                 FileContents::Bytes(content) => {
                     Ok(MononokeRepoResponse::GetBlobContent { content })
@@ -324,7 +324,8 @@ impl MononokeRepo {
         req: BatchRequest,
         lfs_url: Option<Uri>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let lfs_address = try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
+        let lfs_address =
+            try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
             "Lfs batch request is not allowed, host address is missing in HttpRequest header"
                 .to_string(),
             None

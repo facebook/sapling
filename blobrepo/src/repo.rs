@@ -263,7 +263,7 @@ impl BlobRepo {
     pub fn get_file_content(
         &self,
         ctx: CoreContext,
-        key: HgNodeHash,
+        key: HgFileNodeId,
     ) -> BoxFuture<FileContents, Error> {
         STATS::get_file_content.add_value(1);
         fetch_file_content_from_blobstore(ctx, &self.blobstore, key).boxify()
@@ -440,7 +440,7 @@ impl BlobRepo {
     pub fn get_raw_hg_content(
         &self,
         ctx: CoreContext,
-        key: HgNodeHash,
+        key: HgFileNodeId,
     ) -> BoxFuture<HgBlob, Error> {
         STATS::get_raw_hg_content.add_value(1);
         fetch_raw_filenode_bytes(ctx, &self.blobstore, key)
@@ -451,8 +451,8 @@ impl BlobRepo {
     pub(crate) fn get_hg_file_copy_from_blobstore(
         &self,
         ctx: CoreContext,
-        key: HgNodeHash,
-    ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
+        key: HgFileNodeId,
+    ) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
         STATS::get_hg_file_copy_from_blobstore.add_value(1);
         fetch_rename_from_blobstore(ctx, &self.blobstore, key)
             .map(|rename| rename.map(|(path, hash)| (RepoPath::FilePath(path), hash)))
@@ -720,7 +720,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: HgNodeHash,
+        node: HgFileNodeId,
     ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
         STATS::get_linknode_opt.add_value(1);
         self.get_filenode_opt(ctx, path, node)
@@ -731,7 +731,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: HgNodeHash,
+        node: HgFileNodeId,
     ) -> impl Future<Item = HgChangesetId, Error = Error> {
         STATS::get_linknode.add_value(1);
         self.get_filenode(ctx, path, node)
@@ -742,10 +742,9 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: HgNodeHash,
+        node: HgFileNodeId,
     ) -> impl Future<Item = Option<FilenodeInfo>, Error = Error> {
         let path = path.clone();
-        let node = HgFileNodeId::new(node);
         self.filenodes.get_filenode(ctx, &path, node, self.repoid)
     }
 
@@ -753,11 +752,10 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: HgNodeHash,
+        node: HgFileNodeId,
     ) -> impl Future<Item = FilenodeInfo, Error = Error> {
         self.get_filenode_opt(ctx, path, node).and_then({
             cloned!(path);
-            let node = HgFileNodeId::new(node);
             move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
         })
     }
@@ -766,33 +764,29 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: &RepoPath,
-        node: HgNodeHash,
+        node: HgFileNodeId,
         linknode: HgChangesetId,
     ) -> impl Future<Item = FilenodeInfo, Error = Error> {
         let store = self.get_blobstore();
         fetch_file_envelope(ctx, &store, node)
             .with_context({
-                cloned!(path, node);
+                cloned!(path);
                 move |_| format!("While fetching filenode for {} {}", path, node)
             })
             .from_err()
             .and_then({
-                cloned!(path, node, linknode);
-                let filenode = HgFileNodeId::new(node);
+                cloned!(path, linknode);
                 move |envelope| {
-                    let (p1, p2) = {
-                        let (p1, p2) = envelope.parents();
-                        (p1.map(HgFileNodeId::new), p2.map(HgFileNodeId::new))
-                    };
+                    let (p1, p2) = envelope.parents();
                     let copyfrom = get_rename_from_envelope(envelope)
                         .with_context({
-                            cloned!(path, node);
+                            cloned!(path);
                             move |_| format!("While parsing copy information for {} {}", path, node)
                         })?
-                        .map(|(path, node)| (RepoPath::FilePath(path), HgFileNodeId::new(node)));
+                        .map(|(path, node)| (RepoPath::FilePath(path), node));
                     Ok(FilenodeInfo {
                         path,
-                        filenode,
+                        filenode: node,
                         p1,
                         p2,
                         copyfrom,
@@ -993,7 +987,6 @@ impl BlobRepo {
         match (p1, p2, change) {
             (Some(parent), None, Some(change)) | (None, Some(parent), Some(change)) => {
                 let store = self.get_blobstore();
-                let parent = parent.into_nodehash();
                 cloned!(ctx, change, path);
                 fetch_file_envelope(ctx.clone(), &store, parent)
                     .map(move |parent_envelope| {
@@ -1004,7 +997,7 @@ impl BlobRepo {
                                 HgBlobEntry::new(
                                     store,
                                     path.basename().clone(),
-                                    parent,
+                                    parent.into_nodehash(),
                                     Type::File(change.file_type()),
                                 ),
                                 None,
@@ -1072,11 +1065,11 @@ impl BlobRepo {
                             upload_node_id: UploadHgNodeHash::Generate,
                             contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
                                 id: change.content_id(),
-                                copy_from: copy_from.clone().map(|(p, h)| (p, h.into_nodehash())),
+                                copy_from: copy_from.clone(),
                             }),
                             file_type: change.file_type(),
-                            p1: p1.clone().map(|h| h.into_nodehash()),
-                            p2: p2.clone().map(|h| h.into_nodehash()),
+                            p1,
+                            p2,
                             path: path.clone(),
                         };
                         let upload_fut = match upload_entry.upload(ctx, &repo) {
@@ -1618,15 +1611,15 @@ impl UploadHgFileContents {
         self,
         ctx: CoreContext,
         repo: &BlobRepo,
-        p1: Option<HgNodeHash>,
-        p2: Option<HgNodeHash>,
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
         path: MPath,
     ) -> (
         ContentBlobInfo,
         // The future that does the upload and the future that computes the node ID/metadata are
         // split up to allow greater parallelism.
         impl Future<Item = (), Error = Error> + Send,
-        impl Future<Item = (HgNodeHash, Bytes, u64), Error = Error> + Send,
+        impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> + Send,
     ) {
         match self {
             UploadHgFileContents::ContentUploaded(cbmeta) => {
@@ -1689,9 +1682,9 @@ impl UploadHgFileContents {
         ctx: CoreContext,
         cbmeta: ContentBlobMeta,
         repo: &BlobRepo,
-        p1: Option<HgNodeHash>,
-        p2: Option<HgNodeHash>,
-    ) -> impl Future<Item = (HgNodeHash, Bytes, u64), Error = Error> {
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
+    ) -> impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> {
         // Computing the file node hash requires fetching the blob and gluing it together with the
         // metadata.
         repo.fetch(ctx, &cbmeta.id).map(move |file_contents| {
@@ -1712,11 +1705,18 @@ impl UploadHgFileContents {
     #[inline]
     fn node_id<B: Into<Bytes>>(
         raw_content: B,
-        p1: Option<HgNodeHash>,
-        p2: Option<HgNodeHash>,
-    ) -> HgNodeHash {
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
+    ) -> HgFileNodeId {
         let raw_content = raw_content.into();
-        HgBlobNode::new(raw_content, p1, p2).nodeid()
+        HgFileNodeId::new(
+            HgBlobNode::new(
+                raw_content,
+                p1.map(HgFileNodeId::into_nodehash),
+                p2.map(HgFileNodeId::into_nodehash),
+            )
+            .nodeid(),
+        )
     }
 }
 
@@ -1725,8 +1725,8 @@ pub struct UploadHgFileEntry {
     pub upload_node_id: UploadHgNodeHash,
     pub contents: UploadHgFileContents,
     pub file_type: FileType,
-    pub p1: Option<HgNodeHash>,
-    pub p2: Option<HgNodeHash>,
+    pub p1: Option<HgFileNodeId>,
+    pub p2: Option<HgFileNodeId>,
     pub path: MPath,
 }
 
@@ -1757,14 +1757,15 @@ impl UploadHgFileEntry {
             compute_fut.and_then(move |(computed_node_id, metadata, content_size)| {
                 let node_id = match upload_node_id {
                     UploadHgNodeHash::Generate => computed_node_id,
-                    UploadHgNodeHash::Supplied(node_id) => node_id,
+                    UploadHgNodeHash::Supplied(node_id) => HgFileNodeId::new(node_id),
                     UploadHgNodeHash::Checked(node_id) => {
+                        let node_id = HgFileNodeId::new(node_id);
                         if node_id != computed_node_id {
                             return Either::A(future::err(
                                 ErrorKind::InconsistentEntryHash(
                                     RepoPath::FilePath(path),
-                                    node_id,
-                                    computed_node_id,
+                                    node_id.into_nodehash(),
+                                    computed_node_id.into_nodehash(),
                                 )
                                 .into(),
                             ));
@@ -1783,12 +1784,12 @@ impl UploadHgFileEntry {
                 };
                 let envelope_blob = file_envelope.freeze().into_blob();
 
-                let blobstore_key = HgFileNodeId::new(node_id).blobstore_key();
+                let blobstore_key = node_id.blobstore_key();
 
                 let blob_entry = HgBlobEntry::new(
                     blobstore.clone(),
                     path.basename().clone(),
-                    node_id,
+                    node_id.into_nodehash(),
                     Type::File(file_type),
                 );
 
@@ -1819,7 +1820,13 @@ impl UploadHgFileEntry {
         Ok((cbinfo, fut.boxify()))
     }
 
-    fn log_stats(logger: Logger, path: MPath, nodeid: HgNodeHash, phase: &str, stats: FutureStats) {
+    fn log_stats(
+        logger: Logger,
+        path: MPath,
+        nodeid: HgFileNodeId,
+        phase: &str,
+        stats: FutureStats,
+    ) {
         let path = format!("{}", path);
         let nodeid = format!("{}", nodeid);
         trace!(logger, "Upload blob stats";
@@ -1846,7 +1853,7 @@ pub struct ContentBlobInfo {
 pub struct ContentBlobMeta {
     pub id: ContentId,
     // The copy info will later be stored as part of the commit.
-    pub copy_from: Option<(MPath, HgNodeHash)>,
+    pub copy_from: Option<(MPath, HgFileNodeId)>,
 }
 
 /// This function uploads bonsai changests object to blobstore in parallel, and then does

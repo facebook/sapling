@@ -26,7 +26,7 @@ use blobrepo::{
 };
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
-    HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
+    HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
 };
 use mononoke_types::BonsaiChangeset;
 use phases::{Phase, Phases};
@@ -198,8 +198,8 @@ fn upload_entry(
                         upload_node_id,
                         contents: UploadHgFileContents::RawBytes(content.into_inner()),
                         file_type: ft,
-                        p1,
-                        p2,
+                        p1: p1.map(HgFileNodeId::new),
+                        p2: p2.map(HgFileNodeId::new),
                         path,
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));

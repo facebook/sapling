@@ -150,9 +150,9 @@ pub enum ErrorKind {
     )]
     IncorrectCopyInfo {
         from_path: MPath,
-        from_node: HgNodeHash,
+        from_node: HgFileNodeId,
         to_path: MPath,
-        to_node: HgNodeHash,
+        to_node: HgFileNodeId,
     },
     #[fail(display = "Case conflict in a commit")]
     CaseConflict(MPath),

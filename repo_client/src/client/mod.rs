@@ -30,8 +30,8 @@ use mercurial_types::manifest_utils::{
     Pruner, VisitedPruner,
 };
 use mercurial_types::{
-    percent_encode, Entry, HgBlobNode, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath,
-    Type, NULL_CSID, NULL_HASH,
+    percent_encode, Entry, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
+    MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
 use phases::Phases;
 use rand;
@@ -335,7 +335,8 @@ impl RepoClient {
                 .collect(),
             self.lca_hint.clone(),
             if args.phases
-                && args.bundlecaps
+                && args
+                    .bundlecaps
                     .get("bundle2")
                     .and_then(|x| x.get("phases"))
                     .filter(|x| x.contains("heads"))
@@ -904,7 +905,7 @@ impl HgCommands for RepoClient {
                     create_remotefilelog_blob(
                         ctx.clone(),
                         repo.blobrepo().clone(),
-                        node,
+                        HgFileNodeId::new(node),
                         path.clone(),
                         repo.lfs_params().clone(),
                         validate_hash,
@@ -1129,7 +1130,11 @@ fn fetch_treepack_part_input(
     );
 
     let linknode_fut = repo
-        .get_linknode_opt(ctx.clone(), &repo_path, entry.get_hash().into_nodehash())
+        .get_linknode_opt(
+            ctx.clone(),
+            &repo_path,
+            HgFileNodeId::new(entry.get_hash().into_nodehash()),
+        )
         .traced(
             ctx.trace(),
             "fetching linknode",
