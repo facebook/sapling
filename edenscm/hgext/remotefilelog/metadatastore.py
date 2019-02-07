@@ -136,7 +136,10 @@ class remotefilelogmetadatastore(basestore.basestore):
         }
         """
         data = self._getdata(name, node)
-        ancestors = shallowutil.ancestormap(data)
+        try:
+            ancestors = shallowutil.ancestormap(data)
+        except ValueError:
+            self.handlecorruption(name, node)
         return ancestors
 
     def getnodeinfo(self, name, node):

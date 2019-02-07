@@ -95,3 +95,16 @@ Verify handling of corrupt server cache
   
           node =>           p1            p2      linknode     copyfrom
   076f5e2225b3 => 000000000000  000000000000  f3d0bb0d1e48  
+
+Verify some bad history data is caught and remediated even when validation is off
+  $ chmod u+w $CACHEDIR/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca
+  $ truncate -s 20 $CACHEDIR/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca
+  $ hg log -f y --config remotefilelog.validatecache=off
+  detected corruption in '$TESTTMP/hgcache/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca', moving it aside
+  changeset:   0:f3d0bb0d1e48
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     xy
+  
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s

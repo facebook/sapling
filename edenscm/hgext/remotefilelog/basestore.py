@@ -517,3 +517,20 @@ class basestore(object):
                 float(size) / 1024.0 / 1024.0 / 1024.0,
             )
         )
+
+    def handlecorruption(self, name, node):
+        filepath = self._getfilepath(name, node)
+        if self._shared:
+            self.ui.warn(_("detected corruption in '%s', moving it aside\n") % filepath)
+            os.rename(filepath, filepath + ".corrupt")
+            # Throw a KeyError so UnionStore can catch it and proceed to the
+            # next store.
+            raise KeyError(
+                "corruption in file '%s' for %s:%s" % (filepath, name, hex(node))
+            )
+        else:
+            # Throw a ValueError so UnionStore does not attempt to read further
+            # stores, since local data corruption is not recoverable.
+            raise ValueError(
+                "corruption in file '%s' for %s:%s" % (filepath, name, hex(node))
+            )

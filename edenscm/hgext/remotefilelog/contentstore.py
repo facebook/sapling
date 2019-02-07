@@ -170,7 +170,11 @@ class remotefilelogcontentstore(basestore.basestore):
         offset, size, flags = shallowutil.parsesizeflags(data)
         content = data[offset : offset + size]
 
-        ancestormap = shallowutil.ancestormap(data)
+        try:
+            ancestormap = shallowutil.ancestormap(data)
+        except ValueError:
+            self.handlecorruption(name, node)
+
         p1, p2, linknode, copyfrom = ancestormap[node]
         copyrev = None
         if copyfrom:
