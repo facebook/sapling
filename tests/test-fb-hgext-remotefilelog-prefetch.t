@@ -1,3 +1,4 @@
+#testcases vfscachestore simplecachestore
 
   $ . "$TESTDIR/library.sh"
 
@@ -7,6 +8,19 @@
   > [remotefilelog]
   > server=True
   > EOF
+
+#if simplecachestore
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > simplecacheserverstore=True
+  > [extensions]
+  > simplecache=
+  > [simplecache]
+  > cachedir=$TESTTMP/master/.hg/remotefilelogcache
+  > caches=local
+  > EOF
+#endif
+
   $ echo x > x
   $ echo z > z
   $ hg commit -qAm x
@@ -33,6 +47,11 @@
   $ hg cat -r 0 x
   x
 
+# check the cache (print file sizes)
+  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
+  57
+  57
+
 # prefetch with base
 
   $ clearcache
@@ -56,6 +75,16 @@
   $ hg prefetch -r 0::1 -b 1
   $ hg prefetch -r 0::1
 
+# check the cache (print file sizes)
+  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
+  108
+  57
+  57
+  57
+
+# clean the caches
+  $ rm -rf ../master/.hg/remotefilelogcache/
+
 # prefetch a range of revisions
 
   $ clearcache
@@ -66,6 +95,13 @@
   x
   $ hg cat -r 1 x
   x2
+
+# check the cache, check they recovered (print file sizes)
+  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
+  108
+  57
+  57
+  57
 
 # prefetch certain files
 

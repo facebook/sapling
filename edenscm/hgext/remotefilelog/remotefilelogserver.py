@@ -219,17 +219,62 @@ def onetimesetup(ui):
     wrapfunction(httpprotocol, "iscmd", _iscmd)
 
 
-def _loadfileblob(repo, cachepath, path, node):
-    filecachepath = os.path.join(cachepath, path, hex(node))
-    if not os.path.exists(filecachepath) or os.path.getsize(filecachepath) == 0:
+class trivialserializer(object):
+    """Trivial simple serializer for remotefilelog cache"""
+
+    @staticmethod
+    def serialize(value):
+        return value
+
+    @staticmethod
+    def deserialize(raw):
+        return raw
+
+
+def readvalue(repo, path, node):
+    filectx = repo.filectx(path, fileid=node)
+    if filectx.node() == nullid:
+        repo.changelog = changelog.changelog(repo.svfs)
         filectx = repo.filectx(path, fileid=node)
-        if filectx.node() == nullid:
-            repo.changelog = changelog.changelog(repo.svfs)
-            filectx = repo.filectx(path, fileid=node)
+    return lz4wrapper.lz4compresshc(createfileblob(filectx))
 
-        text = createfileblob(filectx)
-        text = lz4wrapper.lz4compresshc(text)
 
+def _loadfileblob(repo, path, node):
+    usesimplecache = repo.ui.configbool("remotefilelog", "simplecacheserverstore")
+    cachepath = repo.ui.config("remotefilelog", "servercachepath")
+    if cachepath and usesimplecache:
+        raise error.Abort(
+            "remotefilelog.servercachepath and remotefilelog.simplecacheserverstore can't be both enabled"
+        )
+
+    key = os.path.join(path, hex(node))
+
+    # simplecache store for remotefilelogcache
+    if usesimplecache:
+        try:
+            simplecache = extensions.find("simplecache")
+        except KeyError:
+            raise error.Abort(
+                "simplecache extension must be enabled with remotefilelog.simplecacheserverstore enabled"
+            )
+
+        # this function doesn't raise exception
+        text = simplecache.cacheget(key, trivialserializer, repo.ui)
+        if text:
+            return text
+        else:
+            text = readvalue(repo, path, node)
+            # this function doesn't raise exception
+            simplecache.cacheset(key, text, trivialserializer, repo.ui)
+            return text
+
+    # on disk store for remotefilelogcache
+    if not cachepath:
+        cachepath = os.path.join(repo.path, "remotefilelogcache")
+
+    filecachepath = os.path.join(cachepath, key)
+    if not os.path.exists(filecachepath) or os.path.getsize(filecachepath) == 0:
+        text = readvalue(repo, path, node)
         # everything should be user & group read/writable
         oldumask = os.umask(0o002)
         try:
@@ -240,7 +285,6 @@ def _loadfileblob(repo, cachepath, path, node):
                 except OSError as ex:
                     if ex.errno != errno.EEXIST:
                         raise
-
             f = None
             try:
                 f = util.atomictempfile(filecachepath, "w")
@@ -279,13 +323,10 @@ def getfile(repo, proto, file, node):
     """
     if shallowrepo.requirement in repo.requirements:
         return "1\0" + _("cannot fetch remote files from shallow repo")
-    cachepath = repo.ui.config("remotefilelog", "servercachepath")
-    if not cachepath:
-        cachepath = os.path.join(repo.path, "remotefilelogcache")
     node = bin(node.strip())
     if node == nullid:
         return "0\0"
-    return "0\0" + _loadfileblob(repo, cachepath, file, node)
+    return "0\0" + _loadfileblob(repo, file, node)
 
 
 def getfiles(repo, proto):
@@ -298,11 +339,6 @@ def getfiles(repo, proto):
 
     def streamer():
         fin = proto.fin
-
-        cachepath = repo.ui.config("remotefilelog", "servercachepath")
-        if not cachepath:
-            cachepath = os.path.join(repo.path, "remotefilelogcache")
-
         args = []
         responselen = 0
         start_time = time.time()
@@ -322,7 +358,7 @@ def getfiles(repo, proto):
 
             args.append([hexnode, path])
 
-            text = _loadfileblob(repo, cachepath, path, node)
+            text = _loadfileblob(repo, path, node)
 
             response = "%d\n%s" % (len(text), text)
             responselen += len(response)

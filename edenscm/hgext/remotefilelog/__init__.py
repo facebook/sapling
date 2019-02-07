@@ -77,6 +77,7 @@ Configs:
     ``treemanifest.forceallowflat`` lets a client tell the server that it
     requires flat manifests, despite blocksendflat being set. This is primarily
     used for mirroring infrastructure.
+    ``remotefilelog.simplecacheserverstore`` use simplecache as cache implementation.
 """
 from __future__ import absolute_import
 
@@ -154,6 +155,7 @@ configitem("remotefilelog", "localdatarepack", default=False)
 configitem("remotefilelog", "packlocaldata", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
+configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 
 testedwith = "ships-with-fb-hgext"
