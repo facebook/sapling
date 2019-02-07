@@ -292,17 +292,14 @@ def parsesizeflags(raw):
     return index + 1, size, flags
 
 
-def buildfileblobheader(size, flags, version=None):
+def buildfileblobheader(size, flags, version=1):
     """return the header of a remotefilelog blob.
 
     see remotefilelogserver.createfileblob for the format.
     approximately the reverse of parsesizeflags.
 
-    version could be 0 or 1, or None (auto decide).
+    version can currently only be 1, which is the default
     """
-    # choose v0 if flags is empty, otherwise v1
-    if version is None:
-        version = int(bool(flags))
     if version == 1:
         header = "v1\n%s%d\n%s%d" % (
             constants.METAKEYSIZE,
@@ -311,9 +308,7 @@ def buildfileblobheader(size, flags, version=None):
             flags,
         )
     elif version == 0:
-        if flags:
-            raise error.ProgrammingError("fileblob v0 does not support flag")
-        header = "%d" % size
+        raise error.ProgrammingError("fileblob version 0 no longer supported")
     else:
         raise error.ProgrammingError("unknown fileblob version %d" % version)
     return header

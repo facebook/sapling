@@ -58,7 +58,7 @@ Verify that hashes are checked
   $ rm .hg/remotefilelog_cache.log
   $ hg up -q null
   $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
-  $ printf 'z' | dd of=$CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 bs=1 seek=2 count=1 conv=notrunc 2> /dev/null
+  $ printf 'z' | dd of=$CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 bs=1 seek=9 count=1 conv=notrunc 2> /dev/null
   $ hg up tip --config remotefilelog.validatecachehashes=False
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat x
