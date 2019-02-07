@@ -18,6 +18,12 @@ _FS_CAP_TABLE = {
     "ext2": _ALL_CAPS,
     "ext3": _ALL_CAPS,
     "ext4": _ALL_CAPS,
+    "fuse.ntfs": {
+        SYMLINK: False,
+        HARDLINK: True,
+        EXECBIT: False,
+        ALWAYSCASESENSITIVE: False,
+    },
     "hfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "jfs": _ALL_CAPS,
     "reiserfs": _ALL_CAPS,
