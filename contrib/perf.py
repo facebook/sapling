@@ -460,6 +460,7 @@ def perfannotate(ui, repo, f, **opts):
     timer(lambda: len(fc.annotate(True)))
     fm.end()
 
+
 @command("perfdatapack", formatteropts)
 def perfdatapack(ui, repo, packpath, **opts):
     from edenscm.hgext.remotefilelog.datapack import datapack
@@ -474,20 +475,26 @@ def perfdatapack(ui, repo, packpath, **opts):
 
     key = keys[0]
     ui.write(("\nGet\n"))
+
     def f(pack):
         pack.getdelta(*key)
+
     _packtestfn(ui, packpath, opts, f)
 
     ui.write(("\nMark Ledger (Key Count: %s)\n") % len(keys))
     from edenscm.hgext.remotefilelog.repack import repackledger
+
     def f(pack):
         ledger = repackledger()
         pack.markledger(ledger, None)
+
     _packtestfn(ui, packpath, opts, f)
+
 
 def _packtestfn(ui, packpath, opts, func):
     from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
     from edenscm.hgext.extlib.pyrevisionstore import datapack as rustdatapack
+
     kinds = [("Python", datapack), ("C", fastdatapack), ("Rust", rustdatapack)]
 
     prepacks = [(name, f(packpath)) for name, f in kinds]
@@ -497,6 +504,7 @@ def _packtestfn(ui, packpath, opts, func):
         timer, fm = gettimer(ui, opts)
         timer(lambda: func(pack))
         fm.end()
+
 
 @command(
     "perfstatus",
@@ -954,7 +962,7 @@ def perfindex(ui, repo, **opts):
 @command("perfstartup", formatteropts)
 def perfstartup(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
-    cmd = ' '.join(util.gethgcmd())
+    cmd = " ".join(util.gethgcmd())
 
     def d():
         if os.name != "nt":
