@@ -30,11 +30,13 @@ import time
 
 from edenscm.mercurial import (
     changegroup,
+    changelog,
     cmdutil,
     commands,
     copies,
     error,
     extensions,
+    manifest,
     mdiff,
     merge,
     revlog,
@@ -558,16 +560,13 @@ def perfheads(ui, repo, **opts):
 
 @command("perftags", formatteropts)
 def perftags(ui, repo, **opts):
-    import mercurial.changelog
-    import mercurial.manifest
-
     timer, fm = gettimer(ui, opts)
     svfs = getsvfs(repo)
     repocleartagscache = repocleartagscachefunc(repo)
 
     def t():
-        repo.changelog = mercurial.changelog.changelog(svfs)
-        repo.manifestlog = mercurial.manifest.manifestlog(svfs, repo)
+        repo.changelog = changelog.changelog(svfs)
+        repo.manifestlog = manifest.manifestlog(svfs, repo)
         repocleartagscache()
         return len(repo.tags())
 
@@ -944,15 +943,13 @@ def perfchangeset(ui, repo, rev, **opts):
 
 @command("perfindex", formatteropts)
 def perfindex(ui, repo, **opts):
-    import mercurial.revlog
-
     timer, fm = gettimer(ui, opts)
-    mercurial.revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
     n = repo["tip"].node()
     svfs = getsvfs(repo)
 
     def d():
-        cl = mercurial.revlog.revlog(svfs, "00changelog.i")
+        cl = revlog.revlog(svfs, "00changelog.i")
         cl.rev(n)
 
     timer(d)
@@ -1037,11 +1034,9 @@ def perfrevrange(ui, repo, *specs, **opts):
 @command("perfnodelookup", formatteropts)
 def perfnodelookup(ui, repo, rev, **opts):
     timer, fm = gettimer(ui, opts)
-    import mercurial.revlog
-
-    mercurial.revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
     n = repo[rev].node()
-    cl = mercurial.revlog.revlog(getsvfs(repo), "00changelog.i")
+    cl = revlog.revlog(getsvfs(repo), "00changelog.i")
 
     def d():
         cl.rev(n)
