@@ -486,7 +486,7 @@ Do you want to run `eden mount %s` instead?"""
         if is_initial_mount and checkout_config.scm_type == "hg":
             from . import hg_util
 
-            hg_util.setup_hg_dir(checkout, checkout_config, commit_id)
+            hg_util.setup_hg_dir(checkout, commit_id)
 
         clone_success_path.touch()
 
