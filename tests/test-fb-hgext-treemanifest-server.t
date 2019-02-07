@@ -1,3 +1,5 @@
+#testcases vfscachestore simplecachestore
+
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
   $ . "$TESTDIR/library.sh"
@@ -21,6 +23,19 @@ TODO: Make this test compatibile with obsstore enabled.
   > [remotefilelog]
   > server=True
   > EOF
+
+#if simplecachestore
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > simplecacheserverstore=True
+  > cacheserverstore=False
+  > [extensions]
+  > simplecache=
+  > [simplecache]
+  > cachedir=$TESTTMP/master/.hg/hgsimplecache
+  > caches=local
+  > EOF
+#endif
 
 Test that local commits on the server produce trees
   $ mkdir subdir
@@ -303,10 +318,17 @@ Test fetching from the server populates the cache
   2 trees fetched over * (glob)
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   2 trees fetched over * (glob)
+#if simplecachestore
+  $ find ../master/.hg/hgsimplecache/trees/v2/get -type f | wc -l
+  \s*4 (re)
+  $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | wc -l
+  \s*4 (re)
+#else
   $ find ../master/.hg/cache/trees/v2/get -type f | wc -l
   \s*4 (re)
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*4 (re)
+#endif
 
 - Move the revlogs away to show that the cache is answering prefetches
   $ mv ../master/.hg/store/meta ../master/.hg/store/meta.bak
@@ -319,7 +341,11 @@ Test fetching from the server populates the cache
 
 - Corrupt the cache with the wrong value for a key and verify it notices
 - (by going past the cache and failing to access the revlog)
+#if simplecachestore
+  $ cp ../master/.hg/hgsimplecache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6:v1 ../master/.hg/hgsimplecache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa:v1
+#else
   $ cp ../master/.hg/cache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6 ../master/.hg/cache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa
+#endif
   $ clearcache
   $ hg status --change tip > /dev/null
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
@@ -344,11 +370,19 @@ Test fetching from the server populates the cache
   > servermaxcachesize=0
   > servercacheevictionpercent=90
   > EOF
+#if simplecachestore
+  $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}2
+  $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
+  $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
+  $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | wc -l
+  \s*16 (re)
+#else
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}2
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*16 (re)
+#endif
   $ clearcache
   $ hg status --change tip
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
@@ -356,8 +390,14 @@ Test fetching from the server populates the cache
   fetching tree '' 7e680cec965bd202ea244b3c4869181424ca5fe8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via a30b520ebf7a
   2 trees fetched over * (glob)
   A subdir2/z
+simplecachestore doesn't have eviction policy
+#if simplecachestore
+  $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | wc -l
+  \s*20 (re)
+#else
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
   \s*8 (re)
+#endif
 
 Try pulling while treemanifest.blocksendflat is True
   $ cat >> ../master/.hg/hgrc <<EOF

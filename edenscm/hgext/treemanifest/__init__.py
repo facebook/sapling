@@ -78,6 +78,15 @@ to prevent accesses of flat manifests.
     [treemanifest]
     treeonly = True
 
+`treemanifest.simplecacheserverstore` causes the treemanifest server to store a cache
+of treemanifest revisions in simplecache. This is a replacement for treemanifest.cacheserverstore
+Simplecache can be configured to use memcache as a store or a local disk.
+
+::
+
+    [treemanifest]
+    simplecacheserverstore = True
+
 `treemanifest.cacheserverstore` causes the treemanifest server to store a cache
 of treemanifest revisions in individual files. These improve lookup speed since
 we don't have to open a revlog.
@@ -88,7 +97,7 @@ we don't have to open a revlog.
     cacheserverstore = True
 
 `treemanifest.servermaxcachesize` the maximum number of entries in the server
-cache.
+cache. Not used for treemanifest.simplecacheserverstore.
 
 ::
 
@@ -96,7 +105,7 @@ cache.
     servermaxcachesize = 1000000
 
 `treemanifest.servercacheevictionpercent` the percent of the cache to evict
-when the maximum size is hit.
+when the maximum size is hit. Not used for treemanifest.simplecacheserverstore.
 
 ::
 
@@ -197,6 +206,7 @@ configitem = registrar.configitem(configtable)
 
 configitem("treemanifest", "sendtrees", default=False)
 configitem("treemanifest", "server", default=False)
+configitem("treemanifest", "simplecacheserverstore", default=False)
 configitem("treemanifest", "cacheserverstore", default=True)
 configitem("treemanifest", "servermaxcachesize", default=1000000)
 configitem("treemanifest", "servercacheevictionpercent", default=50)
@@ -474,12 +484,23 @@ def setuptreestores(repo, mfl):
         )
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
+
+        if ui.configbool("treemanifest", "cacheserverstore") and ui.configbool(
+            "treemanifest", "simplecacheserverstore"
+        ):
+            raise error.Abort(
+                "treemanifest.cacheserverstore and treemanifest.simplecacheserverstore can't be both enabled"
+            )
+
         if ui.configbool("treemanifest", "cacheserverstore"):
             maxcachesize = ui.configint("treemanifest", "servermaxcachesize")
             evictionrate = ui.configint("treemanifest", "servercacheevictionpercent")
-            revlogstore = cachestore(
+            revlogstore = vfscachestore(
                 revlogstore, repo.cachevfs, maxcachesize, evictionrate
             )
+
+        if ui.configbool("treemanifest", "simplecacheserverstore"):
+            revlogstore = simplecachestore(ui, revlogstore)
 
         mfl.datastore = unioncontentstore(
             datastore, revlogstore, mutablelocalstore, ondemandstore
@@ -2524,13 +2545,62 @@ NODEINFOFORMAT = "!20s20s20sI"
 NODEINFOLEN = struct.calcsize(NODEINFOFORMAT)
 
 
-class cachestore(object):
-    def __init__(self, store, vfs, maxcachesize, evictionrate):
+class nodeinfoserializer(object):
+    """Serializer for node info"""
+
+    @staticmethod
+    def serialize(value):
+        p1, p2, linknode, copyfrom = value
+        copyfrom = copyfrom if copyfrom else ""
+        return struct.pack(NODEINFOFORMAT, p1, p2, linknode, len(copyfrom)) + copyfrom
+
+    @staticmethod
+    def deserialize(raw):
+        p1, p2, linknode, copyfromlen = struct.unpack_from(NODEINFOFORMAT, raw, 0)
+        if len(raw) != NODEINFOLEN + copyfromlen:
+            raise IOError(
+                "invalid nodeinfo serialization: %s %s %s %s %s"
+                % (hex(p1), hex(p2), hex(linknode), str(copyfromlen), raw[NODEINFOLEN:])
+            )
+        return p1, p2, linknode, raw[NODEINFOLEN : NODEINFOLEN + copyfromlen]
+
+
+class cachestoreserializer(object):
+    """Simple serializer that attaches key and sha1 to the content"""
+
+    def __init__(self, key):
+        self.key = key
+
+    def serialize(self, value):
+        sha = hashlib.sha1(value).digest()
+        return sha + struct.pack("!I", len(self.key)) + self.key + value
+
+    def deserialize(self, raw):
+        key = self.key
+        if not raw:
+            raise IOError("missing content for the key in the cache: %s" % key)
+        sha = raw[:20]
+        keylen = struct.unpack_from("!I", raw, 20)[0]
+        storedkey = raw[24 : 24 + keylen]
+        if storedkey != key:
+            raise IOError(
+                "cache value has key '%s' but '%s' expected" % (storedkey, key)
+            )
+        value = raw[24 + keylen :]
+        realsha = hashlib.sha1(value).digest()
+        if sha != realsha:
+            raise IOError("invalid content for the key in the cache: %s" % key)
+        return value
+
+
+class cachestorecommon(object):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, store, version):
         self.store = store
-        self.vfs = vfs
-        self.version = 2
-        self.maxcachesize = maxcachesize
-        self.evictionrate = evictionrate
+        self.version = version
+
+    ########### HELPERS ########################################
 
     def _key(self, name, node, category):
         shakey = hex(hashlib.sha1(name + node).digest())
@@ -2538,24 +2608,38 @@ class cachestore(object):
             "trees", "v" + str(self.version), category, shakey[:2], shakey[2:]
         )
 
-    def _cachedirectory(self, key):
-        # The given key is of the format:
-        #   trees/v1/category/XX/XXXX...{38 character hash}
-        # So the directory is key[:-39] which is equivalent to
-        #   trees/v1/category/XX
-        return key[:-39]
+    ########### APIS ###########################################
+
+    def getancestors(self, name, node, known=None):
+        return self.store.getancestors(name, node, known=known)
+
+    def getnodeinfo(self, name, node):
+        key = self._key(name, node, "nodeinfo")
+        try:
+            value = self._read(key)
+            if value:
+                return nodeinfoserializer.deserialize(value)
+        except (IOError, OSError):
+            pass
+        # Failover to the underlying storage and update the cache
+        nodeinfo = self.store.getnodeinfo(name, node)
+        self._write(key, nodeinfoserializer.serialize(nodeinfo))
+        return nodeinfo
 
     def get(self, name, node):
         if node == nullid:
             return ""
-
+        key = self._key(name, node, "get")
         try:
-            key = self._key(name, node, "get")
-            return self._read(key)
+            data = self._read(key)
+            if data:
+                return data
         except (IOError, OSError):
-            data = self.store.get(name, node)
-            self._write(key, data)
-            return data
+            pass
+        # Failover to the underlying storage and update the cache
+        data = self.store.get(name, node)
+        self._write(key, data)
+        return data
 
     def getdelta(self, name, node):
         revision = self.get(name, node)
@@ -2570,57 +2654,66 @@ class cachestore(object):
         return self.store.getmeta(name, node)
 
     def getmissing(self, keys):
-        missing = []
-        for name, node in keys:
-            if not self.vfs.exists(self._key(name, node, "get")):
-                missing.append((name, node))
-
+        missing = [
+            (name, node)
+            for name, node in keys
+            if not self._exists(self._key(name, node, "get"))
+        ]
         return self.store.getmissing(missing)
 
-    def getancestors(self, name, node, known=None):
-        return self.store.getancestors(name, node, known=known)
+    ################## Overrides ################################
 
-    def _serializenodeinfo(self, nodeinfo):
-        p1, p2, linknode, copyfrom = nodeinfo
-        if copyfrom is None:
-            copyfrom = ""
-        raw = struct.pack(NODEINFOFORMAT, p1, p2, linknode, len(copyfrom))
-        return raw + copyfrom
+    @abc.abstractmethod
+    def _read(self, key):
+        """Read from the cache"""
 
-    def _deserializenodeinfo(self, raw):
-        p1, p2, linknode, copyfromlen = struct.unpack_from(NODEINFOFORMAT, raw, 0)
-        if len(raw) != NODEINFOLEN + copyfromlen:
-            raise IOError(
-                "invalid nodeinfo serialization: %s %s %s %s %s"
-                % (hex(p1), hex(p2), hex(linknode), str(copyfromlen), raw[NODEINFOLEN:])
-            )
-        return p1, p2, linknode, raw[NODEINFOLEN : NODEINFOLEN + copyfromlen]
+    @abc.abstractmethod
+    def _write(self, key, value):
+        """Write to the cache"""
 
-    def _verifyvalue(self, value):
-        sha, value = value[:20], value[20:]
-        realsha = hashlib.sha1(value).digest()
-        if sha != realsha:
-            raise IOError()
-        return value
+    @abc.abstractmethod
+    def _exists(self, key):
+        """Check in the cache"""
+
+
+class simplecachestore(cachestorecommon):
+    def __init__(self, ui, store):
+        super(simplecachestore, self).__init__(store, version=2)
+        self.ui = ui
+        try:
+            self.simplecache = extensions.find("simplecache")
+        except KeyError:
+            raise error.Abort("simplecache extension must be enabled")
+
+    def _read(self, key):
+        return self.simplecache.cacheget(key, cachestoreserializer(key), self.ui)
+
+    def _write(self, key, value):
+        self.simplecache.cacheset(key, value, cachestoreserializer(key), self.ui)
+
+    def _exists(self, key):
+        # _exists is not yet implemented in simplecache
+        # on server side this is only used by hooks
+        return False
+
+
+class vfscachestore(cachestorecommon):
+    def __init__(self, store, vfs, maxcachesize, evictionrate):
+        super(vfscachestore, self).__init__(store, version=2)
+        self.vfs = vfs
+        self.maxcachesize = maxcachesize
+        self.evictionrate = evictionrate
+
+    def _cachedirectory(self, key):
+        # The given key is of the format:
+        #   trees/v1/category/XX/XXXX...{38 character hash}
+        # So the directory is key[:-39] which is equivalent to
+        #   trees/v1/category/XX
+        return key[:-39]
 
     def _read(self, key):
         with self.vfs(key) as f:
-            raw = f.read()
-            if raw == "":
-                raise IOError("missing file contents: %s" % self.vfs.join(key))
-
-            sha = raw[:20]
-            keylen = struct.unpack_from("!I", raw, 20)[0]
-            storedkey = raw[24 : 24 + keylen]
-            if storedkey != key:
-                raise IOError(
-                    "cache value has key '%s' but '%s' expected" % (storedkey, key)
-                )
-            value = raw[24 + keylen :]
-            realsha = hashlib.sha1(value).digest()
-            if sha != realsha:
-                raise IOError("invalid file contents: %s" % self.vfs.join(key))
-            return value
+            return cachestoreserializer(key).deserialize(f.read())
 
     def _write(self, key, value):
         # Prevent the cache from getting 10% bigger than the max, by checking at
@@ -2644,21 +2737,10 @@ class cachestore(object):
                 pass
 
         with self.vfs(key, "w+", atomictemp=True) as f:
-            sha = hashlib.sha1(value).digest()
-            f.write(sha)
-            f.write(struct.pack("!I", len(key)))
-            f.write(key)
-            f.write(value)
+            f.write(cachestoreserializer(key).serialize(value))
 
-    def getnodeinfo(self, name, node):
-        key = self._key(name, node, "nodeinfo")
-        try:
-            raw = self._read(key)
-            return self._deserializenodeinfo(raw)
-        except (IOError, OSError):
-            nodeinfo = self.store.getnodeinfo(name, node)
-            self._write(key, self._serializenodeinfo(nodeinfo))
-            return nodeinfo
+    def _exists(self, key):
+        return self.vfs.exists(key)
 
 
 def pullbundle2extraprepare(orig, pullop, kwargs):
