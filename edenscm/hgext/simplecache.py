@@ -54,21 +54,21 @@ try:
 except NameError:
     xrange = range
 
+mcroutersocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 
 def extsetup(ui):
     extensions.wrapfunction(copies, "pathcopies", pathcopiesui(ui))
     extensions.wrapfunction(context.basectx, "_buildstatus", buildstatusui(ui))
 
 
-def getmcsock(ui):
+def gethostport(ui):
     """
-    Return a socket opened up to talk to localhost mcrouter.
+    Return host port to talk to mcrouter.
     """
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     host = ui.config("simplecache", "host", default="localhost")
     port = int(ui.config("simplecache", "port", default=11101))
-    s.connect((host, port))
-    return s
+    return (host, port)
 
 
 def mcget(key, ui):
@@ -77,25 +77,30 @@ def mcget(key, ui):
     """
     if type(key) != str:
         raise ValueError("Key must be a string")
-    s = getmcsock(ui)
+
     key = "cca.hg.%s" % key
-    s.sendall("get %s\r\n" % key)
+
+    try:
+        mcroutersocket.sendall("get %s\r\n" % key)
+    except socket.error:
+        mcroutersocket.connect(gethostport(ui))
+        mcroutersocket.sendall("get %s\r\n" % key)
+
     meta = []
     value = None
     while True:
-        char = s.recv(1)
+        char = mcroutersocket.recv(1)
         if char != "\r":
             meta.append(char)
         else:
             meta = "".join(meta)
             if meta == "END":
                 break
-            char = s.recv(1)  # throw away newline
+            char = mcroutersocket.recv(1)  # throw away newline
             _, key, flags, sz = "".join(meta).strip().split(" ")
-            value = s.recv(int(sz))
-            s.recv(7)  # throw away \r\nEND\r\n
+            value = mcroutersocket.recv(int(sz))
+            mcroutersocket.recv(7)  # throw away \r\nEND\r\n
             break
-    s.close()
     return value
 
 
@@ -111,16 +116,20 @@ def mcset(key, value, ui):
     key = "cca.hg.%s" % key
     sz = len(value)
     tmpl = "set %s 0 0 %d\r\n%s\r\n"
-    s = getmcsock(ui)
-    s.sendall(tmpl % (key, sz, value))
+
+    try:
+        mcroutersocket.sendall(tmpl % (key, sz, value))
+    except socket.error:
+        mcroutersocket.connect(gethostport(ui))
+        mcroutersocket.sendall(tmpl % (key, sz, value))
+
     data = []
     while True:
-        char = s.recv(1)
+        char = mcroutersocket.recv(1)
         if char not in "\r\n":
             data.append(char)
         else:
             break
-    s.close()
     return "".join(data) == "STORED"
 
 
