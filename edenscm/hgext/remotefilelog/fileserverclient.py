@@ -235,7 +235,7 @@ class cacheconnection(object):
                 # hit -> receive progress reports
                 parts = key.split("_")
                 if prog is not None:
-                    prog += int(parts[2])
+                    prog.value += int(parts[2])
             else:
                 missed.add(key)
         return missed
