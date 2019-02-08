@@ -1540,11 +1540,13 @@ def activepath(ui, remote):
         return ""
 
     # be stable under different orderings of paths in config files
-    # prefer any name other than 'default' and 'default-push' if available
+    # prefer any name other than 'default', 'default-push', 'infinitepush' or 'infinitepush-other' if available
     # prefer shortest name of remaining names, and break ties by alphabetizing
     cset = set(candidates)
     cset.discard("default")
     cset.discard("default-push")
+    cset.discard("infinitepush")
+    cset.discard("infinitepush-other")
     if cset:
         candidates = list(cset)
 
