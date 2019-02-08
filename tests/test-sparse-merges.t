@@ -8,21 +8,24 @@ test merging things outside of the sparse checkout
   > EOF
 
   $ echo foo > foo
+  $ hg commit -m initial -A foo
+  $ hg bookmark -ir. initial
+
   $ echo bar > bar
-  $ hg add foo bar
-  $ hg commit -m initial
+  $ hg commit -m 'feature - bar1' -A bar
+  $ hg bookmark -ir. feature1
 
-  $ hg branch feature
-  marked working directory as branch feature
-  (branches are permanent and global, did you want a bookmark?)
-  $ echo bar2 >> bar
-  $ hg commit -m 'feature - bar2'
+  $ hg update --inactive -q initial
+  $ echo bar2 > bar
+  $ hg commit -m 'feature - bar2' -A bar
+  $ hg bookmark -ir. feature2
 
-  $ hg update -q default
+  $ hg update --inactive -q feature1
   $ hg sparse --exclude 'bar**'
 
-  $ hg merge feature
+  $ hg merge feature2 --tool :merge-other
   temporarily included 1 file(s) in the sparse checkout for merging
+  merging bar
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -38,25 +41,26 @@ Verify bar disappears automatically when the working copy becomes clean
 
   $ hg commit -m "merged"
   cleaned up 1 temporarily added file(s) from the sparse checkout
+  $ hg bookmark -ir. merged
   $ hg status
   $ ls
   foo
 
   $ hg cat -r . bar
-  bar
   bar2
 
 Test merging things outside of the sparse checkout that are not in the working
 copy
 
   $ hg strip -q -r . --config extensions.strip=
-  $ hg up -q feature
+  $ hg up --inactive -q feature2
   $ touch branchonly
   $ hg ci -Aqm 'add branchonly'
 
-  $ hg up -q default
+  $ hg up --inactive -q feature1
   $ hg sparse -X branchonly
-  $ hg merge feature
-  temporarily included 2 file(s) in the sparse checkout for merging
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge feature2 --tool :merge-other
+  temporarily included 1 file(s) in the sparse checkout for merging
+  merging bar
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
