@@ -39,7 +39,15 @@ import random
 import socket
 import tempfile
 
-from edenscm.mercurial import context, copies, encoding, extensions, node, pycompat
+from edenscm.mercurial import (
+    context,
+    copies,
+    encoding,
+    error,
+    extensions,
+    node,
+    pycompat,
+)
 from edenscm.mercurial.node import nullid, wdirid
 from edenscm.mercurial.scmutil import status
 
@@ -82,7 +90,7 @@ def mcget(key, ui):
 
     try:
         mcroutersocket.sendall("get %s\r\n" % key)
-    except socket.error:
+    except (socket.error, error.SignalInterrupt):
         mcroutersocket.connect(gethostport(ui))
         mcroutersocket.sendall("get %s\r\n" % key)
 
@@ -119,7 +127,7 @@ def mcset(key, value, ui):
 
     try:
         mcroutersocket.sendall(tmpl % (key, sz, value))
-    except socket.error:
+    except (socket.error, error.SignalInterrupt):
         mcroutersocket.connect(gethostport(ui))
         mcroutersocket.sendall(tmpl % (key, sz, value))
 
