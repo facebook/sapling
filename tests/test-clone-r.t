@@ -231,9 +231,7 @@
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd test-9
-  $ hg branch foobar
-  marked working directory as branch foobar
-  (branches are permanent and global, did you want a bookmark?)
+  $ hg bookmark -r. -i foobar
   $ echo file2 >> file2
   $ hg add file2
   $ hg commit -m "changeset9"
@@ -246,8 +244,8 @@
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 3 files
-  new changesets f9ee2f85a263:7100abb79635
-  updating to branch foobar
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  new changesets f9ee2f85a263:0cde679f0060
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
