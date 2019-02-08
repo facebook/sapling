@@ -9,12 +9,12 @@ use std::sync::Arc;
 
 use apiserver_thrift::server::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
-    GetBranchesExn, GetChangesetExn, GetRawExn, ListDirectoryExn,
+    GetBranchesExn, GetChangesetExn, GetRawExn, IsAncestorExn, ListDirectoryExn,
 };
 use apiserver_thrift::types::{
     MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
-    MononokeGetChangesetParams, MononokeGetRawParams, MononokeListDirectoryParams,
-    MononokeRevision,
+    MononokeGetChangesetParams, MononokeGetRawParams, MononokeIsAncestorParams,
+    MononokeListDirectoryParams, MononokeRevision,
 };
 use apiserver_thrift::MononokeRevision::UnknownField;
 use errors::ErrorKind;
@@ -273,6 +273,46 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                         })
                         .unwrap_or(0),
                     );
+
+                    Ok(())
+                }
+            })
+    }
+
+    fn is_ancestor(&self, params: MononokeIsAncestorParams) -> BoxFuture<bool, IsAncestorExn> {
+        let mut scuba = self.create_scuba_logger(
+            "is_ancestor",
+            &params,
+            Vec::new(),
+            Some(params.descendant.clone()),
+        );
+
+        let ancestor = match params.ancestor.clone() {
+            MononokeRevision::commit_hash(hash) => hash,
+            MononokeRevision::bookmark(bookmark) => bookmark,
+            UnknownField(_) => "Not a valid MononokeRevision".to_string(),
+        };
+
+        scuba.add("ancestor", ancestor);
+
+        params
+            .try_into()
+            .into_future()
+            .from_err()
+            .and_then({
+                cloned!(self.addr);
+                move |param| addr.send_query(param)
+            })
+            .and_then(|resp: MononokeRepoResponse| match resp {
+                MononokeRepoResponse::IsAncestor { answer } => Ok(answer),
+                _ => Err(ErrorKind::InternalError(err_msg(
+                    "Actor returned wrong response type to query".to_string(),
+                ))),
+            })
+            .map_err(move |e| IsAncestorExn::e(e.into()))
+            .timed({
+                move |stats, resp| {
+                    log_time(&mut scuba, &stats, resp, resp.map(|_| 0).unwrap_or(0));
 
                     Ok(())
                 }

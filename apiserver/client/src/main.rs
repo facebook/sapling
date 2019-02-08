@@ -75,6 +75,24 @@ fn list_directory(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<
         .boxify()
 }
 
+fn is_ancestor(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+    let ancestor = matches.value_of("ancestor").expect("must provide ancestor");
+    let descendant = matches
+        .value_of("descendant")
+        .expect("must provide descendant");
+
+    client
+        .is_ancestor(ancestor.to_string(), descendant.to_string())
+        .and_then(|r| {
+            Ok(serde_json::to_string(&r).unwrap_or("Error converting request to json".to_string()))
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| {
+            println!("{}", res);
+        })
+        .boxify()
+}
+
 fn main() -> Result<(), ()> {
     let matches = App::new("Mononoke API Server Thrift client")
         .about("Send requests to Mononoke API Server thrift port")
@@ -153,6 +171,26 @@ fn main() -> Result<(), ()> {
                         .required(true),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("ancestor")
+                .about("Check whether a commit is descendant of a given ancestor")
+                .arg(
+                    Arg::with_name("ancestor")
+                        .short("a")
+                        .long("ancestor")
+                        .value_name("HASH")
+                        .help("hash/bookmark of the ancestor")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("descendant")
+                        .short("d")
+                        .long("descendant")
+                        .value_name("HASH")
+                        .help("hash/bookmark of the descendant")
+                        .required(true),
+                ),
+        )
         .get_matches();
 
     let tier = matches.value_of("tier").expect("must provide tier name");
@@ -169,6 +207,8 @@ fn main() -> Result<(), ()> {
         get_branches(client)
     } else if let Some(matches) = matches.subcommand_matches("list_directory") {
         list_directory(client, matches)
+    } else if let Some(matches) = matches.subcommand_matches("ancestor") {
+        is_ancestor(client, matches)
     } else {
         Ok(()).into_future().boxify()
     };

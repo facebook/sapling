@@ -14,12 +14,12 @@ use http::uri::Uri;
 
 use apiserver_thrift::types::{
     MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
-    MononokeListDirectoryParams, MononokeRevision,
+    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
 };
 
 use super::lfs::BatchRequest;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Revision {
     CommitHash(String),
     Bookmark(String),
@@ -49,8 +49,8 @@ pub enum MononokeRepoQuery {
     },
     GetBranches,
     IsAncestor {
-        proposed_ancestor: String,
-        proposed_descendent: String,
+        ancestor: Revision,
+        descendant: Revision,
     },
     DownloadLargeFile {
         oid: String,
@@ -122,6 +122,24 @@ impl TryFrom<MononokeListDirectoryParams> for MononokeQuery {
                 path,
                 revision: rev,
             },
+        })
+    }
+}
+
+impl TryFrom<MononokeIsAncestorParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeIsAncestorParams) -> Result<MononokeQuery, Self::Error> {
+        let repo = params.repo.clone();
+        let descendant = params.descendant.clone();
+        params.ancestor.try_into().and_then(move |ancestor| {
+            descendant.try_into().map(|descendant| MononokeQuery {
+                repo,
+                kind: MononokeRepoQuery::IsAncestor {
+                    ancestor,
+                    descendant,
+                },
+            })
         })
     }
 }

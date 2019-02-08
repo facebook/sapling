@@ -18,7 +18,6 @@ use futures::{future::join_all, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use tokio::runtime::TaskExecutor;
 use tracing::TraceContext;
 use uuid::Uuid;
 
@@ -42,7 +41,6 @@ impl Mononoke {
         logger: Logger,
         config: RepoConfigs,
         myrouter_port: Option<u16>,
-        executor: TaskExecutor,
         scuba_builder: ScubaSampleBuilder,
     ) -> impl Future<Item = Self, Error = Error> {
         let log = logger.clone();
@@ -53,7 +51,7 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        MononokeRepo::new(log.clone(), config, myrouter_port, executor.clone())
+                        MononokeRepo::new(log.clone(), config, myrouter_port)
                             .map(|repo| (name, repo))
                     }
                 }),

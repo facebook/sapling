@@ -4,32 +4,35 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::HashMap;
 use std::convert::TryInto;
-
-use bytes::Bytes;
-use failure::Error;
-use futures::future::join_all;
-use futures::sync::oneshot;
-use futures::Stream;
-use futures::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
-use http::uri::Uri;
-use slog::Logger;
-use tokio::runtime::TaskExecutor;
+use std::sync::Arc;
 
 use api;
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
+use blobstore::Blobstore;
 use bookmarks::Bookmark;
+use bytes::Bytes;
 use context::CoreContext;
-use genbfs::GenerationNumberBFS;
+use failure::Error;
+use futures::future::{join_all, ok};
+use futures::Stream;
+use futures::{Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
+use http::uri::Uri;
 use mercurial_types::manifest::Content;
+use scuba_ext::ScubaSampleBuilder;
+use slog::Logger;
+use tracing::TraceContext;
+use uuid::Uuid;
 
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 
 use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
+use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 
 use errors::ErrorKind;
 use from_string as FS;
@@ -40,7 +43,7 @@ use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 
 pub struct MononokeRepo {
     repo: BlobRepo,
-    executor: TaskExecutor,
+    skiplist_index: Arc<SkiplistIndex>,
 }
 
 impl MononokeRepo {
@@ -48,11 +51,43 @@ impl MononokeRepo {
         logger: Logger,
         config: RepoConfig,
         myrouter_port: Option<u16>,
-        executor: TaskExecutor,
     ) -> impl Future<Item = Self, Error = Error> {
+        let ctx = CoreContext::new(
+            Uuid::new_v4(),
+            logger.clone(),
+            ScubaSampleBuilder::with_discard(),
+            None,
+            TraceContext::default(),
+        );
+
+        let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
+
         let repoid = RepositoryId::new(config.repoid);
         open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port)
-            .map(|repo| Self { repo, executor })
+            .map(move |repo| {
+                let skiplist_index = match skiplist_index_blobstore_key.clone() {
+                    Some(skiplist_index_blobstore_key) => repo
+                        .get_blobstore()
+                        .get(ctx.clone(), skiplist_index_blobstore_key)
+                        .and_then(|maybebytes| {
+                            let map = match maybebytes {
+                                Some(bytes) => {
+                                    let bytes = bytes.into_bytes();
+                                    try_boxfuture!(deserialize_skiplist_map(bytes))
+                                }
+                                None => HashMap::new(),
+                            };
+                            ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
+                        })
+                        .left_future(),
+                    None => ok(Arc::new(SkiplistIndex::new())).right_future(),
+                };
+                skiplist_index.map(|skiplist_index| Self {
+                    repo,
+                    skiplist_index,
+                })
+            })
+            .flatten()
     }
 
     fn get_hgchangesetid_from_revision(
@@ -123,61 +158,42 @@ impl MononokeRepo {
     fn is_ancestor(
         &self,
         ctx: CoreContext,
-        proposed_ancestor: String,
-        proposed_descendent: String,
+        ancestor: Revision,
+        descendant: Revision,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let genbfs = GenerationNumberBFS::new();
-        let src_hash_maybe = FS::get_changeset_id(proposed_descendent.clone());
-        let dst_hash_maybe = FS::get_changeset_id(proposed_ancestor.clone());
-        let src_hash_future = src_hash_maybe.into_future().or_else({
-            cloned!(ctx, self.repo, proposed_descendent);
-            move |_| FS::string_to_bookmark_changeset_id(ctx, proposed_descendent, repo)
-        });
-
-        let src_hash_future = src_hash_future
+        let descendant_future = self
+            .get_hgchangesetid_from_revision(ctx.clone(), descendant.clone())
+            .from_err()
             .and_then({
                 cloned!(ctx, self.repo);
                 move |hg_cs_id| repo.get_bonsai_from_hg(ctx, hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
-                maybenode.ok_or(ErrorKind::NotFound(
-                    format!("{}", proposed_descendent),
-                    None,
-                ))
+                maybenode.ok_or(ErrorKind::NotFound(format!("{:?}", descendant), None))
             });
 
-        let dst_hash_future = dst_hash_maybe.into_future().or_else({
-            cloned!(ctx, self.repo, proposed_ancestor);
-            move |_| FS::string_to_bookmark_changeset_id(ctx, proposed_ancestor, repo)
-        });
-
-        let dst_hash_future = dst_hash_future
+        let ancestor_future = self
+            .get_hgchangesetid_from_revision(ctx.clone(), ancestor.clone())
+            .from_err()
             .and_then({
                 cloned!(ctx, self.repo);
                 move |hg_cs_id| repo.get_bonsai_from_hg(ctx, hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
-                maybenode.ok_or(ErrorKind::NotFound(format!("{}", proposed_ancestor), None))
+                maybenode.ok_or(ErrorKind::NotFound(format!("{:?}", ancestor), None))
             });
 
-        let (tx, rx) = oneshot::channel::<Result<bool, ErrorKind>>();
-
-        self.executor.spawn(
-            src_hash_future
-                .and_then(|src| dst_hash_future.map(move |dst| (src, dst)))
-                .and_then({
-                    cloned!(self.repo);
-                    move |(src, dst)| {
-                        genbfs
-                            .query_reachability(ctx, repo.get_changeset_fetcher(), src, dst)
-                            .from_err()
-                    }
-                })
-                .then(|r| tx.send(r).map_err(|_| ())),
-        );
-
-        rx.flatten()
+        descendant_future
+            .join(ancestor_future)
+            .map({
+                cloned!(self.repo, self.skiplist_index);
+                move |(desc, anc)| {
+                    skiplist_index.query_reachability(ctx, repo.get_changeset_fetcher(), desc, anc)
+                }
+            })
+            .flatten()
             .map(|answer| MononokeRepoResponse::IsAncestor { answer })
+            .from_err()
             .boxify()
     }
 
@@ -353,9 +369,9 @@ impl MononokeRepo {
             GetChangeset { revision } => self.get_changeset(ctx, revision),
             GetBranches => self.get_branches(ctx),
             IsAncestor {
-                proposed_ancestor,
-                proposed_descendent,
-            } => self.is_ancestor(ctx, proposed_ancestor, proposed_descendent),
+                ancestor,
+                descendant,
+            } => self.is_ancestor(ctx, ancestor, descendant),
 
             DownloadLargeFile { oid } => self.download_large_file(ctx, oid),
             LfsBatch {

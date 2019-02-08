@@ -16,8 +16,8 @@ use futures_ext::BoxFuture;
 use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
     MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
-    MononokeGetChangesetParams, MononokeGetRawParams, MononokeListDirectoryParams,
-    MononokeRevision,
+    MononokeGetChangesetParams, MononokeGetRawParams, MononokeIsAncestorParams,
+    MononokeListDirectoryParams, MononokeRevision,
 };
 use srclient::SRChannelBuilder;
 
@@ -81,6 +81,18 @@ impl MononokeAPIClient {
             repo: self.repo.clone(),
             revision: MononokeRevision::commit_hash(revision),
             path: path.into_bytes(),
+        })
+    }
+
+    pub fn is_ancestor(
+        &self,
+        ancestor: String,
+        descendant: String,
+    ) -> BoxFuture<bool, failure_ext::Error> {
+        self.inner.is_ancestor(&MononokeIsAncestorParams {
+            repo: self.repo.clone(),
+            ancestor: MononokeRevision::commit_hash(ancestor),
+            descendant: MononokeRevision::commit_hash(descendant),
         })
     }
 }

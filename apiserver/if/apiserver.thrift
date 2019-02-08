@@ -42,6 +42,12 @@ struct MononokeListDirectoryParams{
   3: binary path,
 }
 
+struct MononokeIsAncestorParams {
+  1: string repo,
+  2: MononokeRevision ancestor,
+  3: MononokeRevision descendant,
+}
+
 struct MononokeChangeset {
   1: string commit_hash,
   2: string message,
@@ -82,5 +88,8 @@ service MononokeAPIService extends fb303.FacebookService {
     throws (1: MononokeAPIException e),
 
   MononokeDirectory list_directory(1: MononokeListDirectoryParams params)
+    throws (1: MononokeAPIException e),
+
+  bool is_ancestor(1: MononokeIsAncestorParams params)
     throws (1: MononokeAPIException e),
 }

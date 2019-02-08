@@ -143,51 +143,24 @@ test reachability in basic repo
 
 test reachability response on nonexistent nodes
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT1/0000 | extract_json_error
-  0000 is invalid
-  400
+  internal server error: 0000 is invalid
+  500
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/$COMMIT2 | extract_json_error
-  1111 is invalid
-  400
+  internal server error: 1111 is invalid
+  500
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/2222 | extract_json_error
-  2222 is invalid
-  400
+  internal server error: 2222 is invalid
+  500
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/0123456789123456789012345678901234567890/$COMMIT1 | extract_json_error
-  0123456789123456789012345678901234567890 is not found
+  CommitHash("0123456789123456789012345678901234567890") is not found
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT2/1234567890123456789012345678901234567890 | extract_json_error
-  1234567890123456789012345678901234567890 is not found
+  CommitHash("1234567890123456789012345678901234567890") is not found
   404
-
-test reachability on bookmarks
-  $ echo $COMMITB2_BOOKMARK
-  B2
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$COMMITB2_BOOKMARK
-  true (no-eol)
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMITB2_BOOKMARK
-  true (no-eol)
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMIT2
-  false (no-eol)
-
-test reachability on url encoded bookmarks
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$ENCODED_FORWARD_SLASH_BM
-  true (no-eol)
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$ENCODED_FORWARD_SLASH_BM/$COMMIT2
-  false (no-eol)
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$ENCODED_FORWARD_SLASH_BM
-  true (no-eol)
-
-  $ sslcurl $APISERVER/repo/is_ancestor/$ENCODED_FORWARD_SLASH_BM/$COMMITB2_BOOKMARK
-  false (no-eol)
 
 test folder list
   $ sslcurl $APISERVER/repo/list/$COMMIT2/folder | tee output | jq .

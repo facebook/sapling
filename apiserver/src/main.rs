@@ -13,6 +13,7 @@ extern crate apiserver_thrift;
 extern crate ascii;
 extern crate blobrepo;
 extern crate blobrepo_factory;
+extern crate blobstore;
 extern crate bookmarks;
 extern crate bytes;
 extern crate cachelib;
@@ -29,7 +30,6 @@ extern crate fb303;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
-extern crate genbfs;
 extern crate http;
 extern crate mercurial_types;
 extern crate metaconfig_parser;
@@ -43,6 +43,7 @@ extern crate rust_thrift;
 extern crate scuba_ext;
 extern crate secure_utils;
 extern crate serde;
+extern crate skiplist;
 extern crate tracing;
 extern crate uuid;
 #[macro_use]
@@ -108,8 +109,8 @@ struct QueryInfo {
 #[derive(Deserialize)]
 struct IsAncestorQueryInfo {
     repo: String,
-    proposed_ancestor: String,
-    proposed_descendent: String,
+    ancestor: String,
+    descendant: String,
 }
 
 #[derive(Deserialize)]
@@ -166,17 +167,17 @@ fn get_hg_file(
 fn is_ancestor(
     (state, info): (State<HttpServerState>, actix_web::Path<IsAncestorQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let proposed_ancestor_parsed = percent_decode(info.proposed_ancestor.as_bytes())
+    let ancestor_parsed = percent_decode(info.ancestor.as_bytes())
         .decode_utf8_lossy()
         .to_string();
-    let proposed_descendent_parsed = percent_decode(info.proposed_descendent.as_bytes())
+    let descendant_parsed = percent_decode(info.descendant.as_bytes())
         .decode_utf8_lossy()
         .to_string();
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::IsAncestor {
-            proposed_ancestor: proposed_ancestor_parsed,
-            proposed_descendent: proposed_descendent_parsed,
+            ancestor: Revision::CommitHash(ancestor_parsed),
+            descendant: Revision::CommitHash(descendant_parsed),
         },
     })
 }
@@ -472,12 +473,10 @@ fn main() -> Result<()> {
 
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
-    let executor = runtime.executor();
     let mononoke = runtime.block_on(Mononoke::new(
         mononoke_logger.clone(),
         repo_configs,
         myrouter_port,
-        executor,
         scuba_builder.clone(),
     ))?;
     let mononoke = Arc::new(mononoke);
@@ -519,7 +518,7 @@ fn main() -> Result<()> {
                     r.method(http::Method::GET).with_async(get_hg_file)
                 })
                 .resource(
-                    "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
+                    "/is_ancestor/{ancestor}/{descendant}",
                     |r| r.method(http::Method::GET).with_async(is_ancestor),
                 )
                 .resource("/list/{changeset}/{path:.*}", |r| {
