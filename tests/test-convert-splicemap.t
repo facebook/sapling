@@ -128,9 +128,6 @@ Test splicemap and conversion order
   $ echo a > a
   $ hg ci -Am adda
   adding a
-  $ hg branch branch
-  marked working directory as branch branch
-  (branches are permanent and global, did you want a bookmark?)
   $ echo a >> a
   $ hg ci -Am changea
   $ echo a >> a
@@ -149,7 +146,7 @@ the bug should be exhibited with all conversion orders.
   > EOF
   $ cd ..
   $ cat splicemap
-  7c364e7fa7d70ae525610c016317ed717b519d97 717d54d67e6c31fd75ffef2ff3042bdd98418437, 102a90ea7b4a3361e4082ed620918c261189a36a
+  67b3901ca07e1edc2eeb0971ed1e4647833ec555 540395c442253af3b991be882b539e7e198b5808, 102a90ea7b4a3361e4082ed620918c261189a36a
 
 Test regular conversion
 
@@ -162,13 +159,13 @@ Test regular conversion
   2 changea
   1 addb
   0 changeaagain
-  spliced in 717d54d67e6c31fd75ffef2ff3042bdd98418437 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 7c364e7fa7d70ae525610c016317ed717b519d97
+  spliced in 540395c442253af3b991be882b539e7e198b5808 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 67b3901ca07e1edc2eeb0971ed1e4647833ec555
   $ glog -R ordered-hg1
-  o    3:4cb04b9afbf2 "changeaagain" files: a
+  o    3:e87a37405c69 "changeaagain" files: a
   |\
   | o  2:102a90ea7b4a "addb" files: b
   | |
-  o |  1:717d54d67e6c "changea" files: a
+  o |  1:540395c44225 "changea" files: a
   |/
   o  0:07f494440405 "adda" files: a
   
@@ -200,13 +197,13 @@ and destination identifiers. Test unknown splicemap target.
   sorting...
   converting...
   0 changeaagain
-  spliced in 717d54d67e6c31fd75ffef2ff3042bdd98418437 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 7c364e7fa7d70ae525610c016317ed717b519d97
+  spliced in 540395c442253af3b991be882b539e7e198b5808 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 67b3901ca07e1edc2eeb0971ed1e4647833ec555
   $ glog -R ordered-hg2
-  o    3:4cb04b9afbf2 "changeaagain" files: a
+  o    3:e87a37405c69 "changeaagain" files: a
   |\
   | o  2:102a90ea7b4a "addb" files: b
   | |
-  o |  1:717d54d67e6c "changea" files: a
+  o |  1:540395c44225 "changea" files: a
   |/
   o  0:07f494440405 "adda" files: a
   
@@ -225,7 +222,7 @@ Test clonebranches
   >   --splicemap splicemap ordered ordered-hg3
   initializing destination ordered-hg3 repository
   scanning source...
-  abort: revision 717d54d67e6c31fd75ffef2ff3042bdd98418437 not found in destination repository (lookups with clonebranches=true are not implemented)
+  abort: revision 540395c442253af3b991be882b539e7e198b5808 not found in destination repository (lookups with clonebranches=true are not implemented)
   [255]
 
 Test invalid dependency
