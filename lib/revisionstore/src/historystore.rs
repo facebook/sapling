@@ -4,6 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
+use serde_derive::{Deserialize, Serialize};
 
 use types::node::Node;
 
@@ -11,7 +12,17 @@ use std::{collections::HashMap, rc::Rc, sync::Arc};
 
 use crate::key::Key;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    Deserialize
+)]
 pub struct NodeInfo {
     pub parents: [Key; 2],
     pub linknode: Node,
