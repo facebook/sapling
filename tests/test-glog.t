@@ -1391,13 +1391,9 @@ File + limit + -ra:b, b < tip, (b - a) < limit:
 
 Do not crash or produce strange graphs if history is buggy
 
-  $ hg branch branch
-  marked working directory as branch branch
-  (branches are permanent and global, did you want a bookmark?)
   $ commit 36 "buggy merge: identical parents" 35 35
   $ hg log -G -l5
-  @  changeset:   36:08a19a744424
-  |  branch:      branch
+  @  changeset:   36:95fa8febd08a
   |  tag:         tip
   |  parent:      35:9159c3644c5e
   |  parent:      35:9159c3644c5e
@@ -1471,25 +1467,6 @@ glog always reorders nodes which explains the difference with log
           (func
             (symbol 'user')
             (string 'not-a-user'))))))
-  $ testlog -b not-a-branch
-  abort: unknown revision 'not-a-branch'!
-  abort: unknown revision 'not-a-branch'!
-  abort: unknown revision 'not-a-branch'!
-  $ testlog -b 35 -b 36 --only-branch branch
-  []
-  (group
-    (group
-      (or
-        (list
-          (func
-            (symbol 'branch')
-            (string 'default'))
-          (func
-            (symbol 'branch')
-            (string 'branch'))
-          (func
-            (symbol 'branch')
-            (string 'branch'))))))
   $ testlog -k expand -k merge
   []
   (group
@@ -2379,14 +2356,6 @@ should not draw line down to null due to the magic of fullreposet
      summary:     add a
   
 
-  $ hg log -G -r 'branch(default)' | tail -6
-  |
-  o  changeset:   0:f8035bb17114
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
-  
-
 working-directory revision
 
   $ hg log -G -qr '. + wdir()'
@@ -2441,8 +2410,7 @@ change graph edge styling
   > graphstyle.missing =
   > EOF
   $ hg log -G -r 'file("a")' -m
-  @  changeset:   36:08a19a744424
-  :  branch:      branch
+  @  changeset:   36:95fa8febd08a
   :  tag:         tip
   :  parent:      35:9159c3644c5e
   :  parent:      35:9159c3644c5e
@@ -2643,8 +2611,7 @@ change graph edge styling
 Setting HGPLAIN ignores graphmod styling:
 
   $ HGPLAIN=1 hg log -G -r 'file("a")' -m
-  @  changeset:   36:08a19a744424
-  |  branch:      branch
+  @  changeset:   36:95fa8febd08a
   |  tag:         tip
   |  parent:      35:9159c3644c5e
   |  parent:      35:9159c3644c5e
@@ -2845,8 +2812,7 @@ Setting HGPLAIN ignores graphmod styling:
 .. unless HGPLAINEXCEPT=graph is set:
 
   $ HGPLAIN=1 HGPLAINEXCEPT=graph hg log -G -r 'file("a")' -m
-  @  changeset:   36:08a19a744424
-  :  branch:      branch
+  @  changeset:   36:95fa8febd08a
   :  tag:         tip
   :  parent:      35:9159c3644c5e
   :  parent:      35:9159c3644c5e
@@ -3057,8 +3023,7 @@ Last 3 lines:
   > graphstyle.missing =
   > EOF
   $ hg log -G -r '36:18 & file("a")' -m
-  @  changeset:   36:08a19a744424
-  !  branch:      branch
+  @  changeset:   36:95fa8febd08a
   !  tag:         tip
   !  parent:      35:9159c3644c5e
   !  parent:      35:9159c3644c5e
@@ -3166,10 +3131,9 @@ All but the first 3 lines:
   > graphstyle.missing =
   > EOF
   $ hg log -G -r '36:18 & file("a")' -m
-  @  changeset:   36:08a19a744424
-  !  branch:      branch
+  @  changeset:   36:95fa8febd08a
   !  tag:         tip
-  .  parent:      35:9159c3644c5e
+  !  parent:      35:9159c3644c5e
   .  parent:      35:9159c3644c5e
   .  user:        test
   .  date:        Thu Jan 01 00:00:36 1970 +0000
