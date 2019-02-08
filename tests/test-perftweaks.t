@@ -49,28 +49,6 @@ Test disabling the case conflict check (only fails on case sensitive systems)
   $ cd ..
 #endif
 
-Test disabling resolving non-default branch names
-
-  $ hg init branchresolve
-  $ cd branchresolve
-  $ echo 1 >> A
-  $ hg commit -A A -m 1
-  $ hg branch foo
-  marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
-  $ echo 2 >> A
-  $ hg commit -A A -m 2
-  $ hg log -r default -T '{desc}\n'
-  1
-  $ hg log -r foo -T '{desc}\n'
-  2
-  $ hg log -r default -T '{desc}\n' --config perftweaks.disableresolvingbranches=1
-  1
-  $ hg log -r foo -T '{desc}\n' --config perftweaks.disableresolvingbranches=1
-  abort: unknown revision 'foo'!
-  [255]
-  $ cd ..
-
 Test disabling the branchcache
   $ hg init branchcache
   $ cd branchcache
