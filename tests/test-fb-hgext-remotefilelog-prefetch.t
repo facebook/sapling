@@ -47,9 +47,10 @@
   $ hg cat -r 0 x
   x
 
-# check the cache
-  $ find ../master/.hg/remotefilelogcache -type f | wc -l
-  2
+# check the cache (print file sizes)
+  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
+  64
+  64
 
 # prefetch with base
 
@@ -74,9 +75,12 @@
   $ hg prefetch -r 0::1 -b 1
   $ hg prefetch -r 0::1
 
-# check the cache
-  $ find ../master/.hg/remotefilelogcache -type f | wc -l
-  4
+# check the cache (print file sizes)
+  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
+  115
+  64
+  64
+  64
 
 # clean the caches
   $ rm -rf ../master/.hg/remotefilelogcache/
@@ -92,9 +96,12 @@
   $ hg cat -r 1 x
   x2
 
-# check the cache, check they recovered
-  $ find ../master/.hg/remotefilelogcache -type f | wc -l
-  4
+# check the cache, check they recovered (print file sizes)
+  $ find ../master/.hg/remotefilelogcache -type f | xargs -n1 wc -c | awk '{print $1}' | sort
+  115
+  64
+  64
+  64
 
 # prefetch certain files
 
