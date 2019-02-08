@@ -634,9 +634,6 @@ create bundle with two heads
   $ hg -R tobundle update -r -2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo y > tobundle/y
-  $ hg -R tobundle branch test
-  marked working directory as branch test
-  (branches are permanent and global, did you want a bookmark?)
   $ hg -R tobundle add tobundle/y
   $ hg -R tobundle commit -m'y'
   $ hg -R tobundle bundle tobundle.hg
@@ -647,8 +644,8 @@ create bundle with two heads
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  new changesets 125c9a1d6df6:9ba5f110a0b3
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets 125c9a1d6df6:9c404beeabc2
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
 update to active bookmark if it's not the parent
 
@@ -668,7 +665,7 @@ working directory of current repository)
   $ hg bookmarks
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
-   * Z                         3:125c9a1d6df6
+   * Z                         4:9c404beeabc2
      x  y                      2:db815d6d32e6
 
 pull --update works the same as pull && update
@@ -692,8 +689,8 @@ pull --update works the same as pull && update
   added 2 changesets with 2 changes to 2 files (+1 heads)
   updating bookmark Y
   updating bookmark Z
-  new changesets 125c9a1d6df6:9ba5f110a0b3
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets 125c9a1d6df6:9c404beeabc2
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
 (# tests strange but with --date crashing when bookmark have to move)
 
@@ -718,7 +715,7 @@ pull --update works the same as pull && update
   added 2 changesets with 2 changes to 2 files (+1 heads)
   updating bookmark Y
   updating bookmark Z
-  new changesets 125c9a1d6df6:9ba5f110a0b3
+  new changesets 125c9a1d6df6:9c404beeabc2
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -743,8 +740,8 @@ We warn about divergent during bare update to the active bookmark
   added 2 changesets with 2 changes to 2 files (+1 heads)
   updating bookmark Y
   updating bookmark Z
-  new changesets 125c9a1d6df6:9ba5f110a0b3
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets 125c9a1d6df6:9c404beeabc2
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence update
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -756,14 +753,14 @@ test wrongly formated bookmark
   $ hg bookmarks
      X2                        1:925d80f479bb
      Y                         3:125c9a1d6df6
-   * Z                         3:125c9a1d6df6
+   * Z                         4:9c404beeabc2
      x  y                      2:db815d6d32e6
   $ echo "Ican'thasformatedlines" >> .hg/bookmarks
   $ hg bookmarks
   malformed line in .hg/bookmarks: "Ican'thasformatedlines"
      X2                        1:925d80f479bb
      Y                         3:125c9a1d6df6
-   * Z                         3:125c9a1d6df6
+   * Z                         4:9c404beeabc2
      x  y                      2:db815d6d32e6
 
 test missing revisions
@@ -775,15 +772,14 @@ test missing revisions
 test stripping a non-checked-out but bookmarked revision
 
   $ hg log --graph
-  o  changeset:   4:9ba5f110a0b3
-  |  branch:      test
+  @  changeset:   4:9c404beeabc2
   |  tag:         tip
   |  parent:      2:db815d6d32e6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     y
   |
-  | @  changeset:   3:125c9a1d6df6
+  | o  changeset:   3:125c9a1d6df6
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     x
@@ -806,7 +802,7 @@ test stripping a non-checked-out but bookmarked revision
   
   $ hg book should-end-on-two
   $ hg co --clean 4
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark should-end-on-two)
   $ hg book four
   $ hg --config extensions.strip= strip 3
@@ -814,16 +810,15 @@ test stripping a non-checked-out but bookmarked revision
 should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.
   $ hg log --graph
-  @  changeset:   3:9ba5f110a0b3
-  |  branch:      test
+  @  changeset:   3:9c404beeabc2
   |  bookmark:    four
+  |  bookmark:    should-end-on-two
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     y
   |
   o  changeset:   2:db815d6d32e6
-  |  bookmark:    should-end-on-two
   |  parent:      0:f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -847,16 +842,16 @@ this test scenario, cloned-bookmark-default and tobundle exist in the
 working directory of current repository)
 
   $ hg bookmarks
-   * four                      3:9ba5f110a0b3
-     should-end-on-two         2:db815d6d32e6
+   * four                      3:9c404beeabc2
+     should-end-on-two         3:9c404beeabc2
   $ hg up four
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
-  parent: 3:9ba5f110a0b3 tip
+  parent: 3:9c404beeabc2 tip
    y
-  bookmarks: *four
+  bookmarks: *four should-end-on-two
   commit: 2 unknown (clean)
   phases: 4 draft
 
@@ -870,16 +865,16 @@ test clearing divergent bookmarks of linear ancestors
      Z                         0:f7b1eb17ad24
      Z@1                       1:925d80f479bb
      Z@2                       2:db815d6d32e6
-     Z@3                       3:9ba5f110a0b3
-   * four                      3:9ba5f110a0b3
-     should-end-on-two         2:db815d6d32e6
+     Z@3                       3:9c404beeabc2
+   * four                      3:9c404beeabc2
+     should-end-on-two         3:9c404beeabc2
   $ hg bookmark Z
   moving bookmark 'Z' forward from f7b1eb17ad24
   $ hg book
-   * Z                         3:9ba5f110a0b3
+   * Z                         3:9c404beeabc2
      Z@1                       1:925d80f479bb
-     four                      3:9ba5f110a0b3
-     should-end-on-two         2:db815d6d32e6
+     four                      3:9c404beeabc2
+     should-end-on-two         3:9c404beeabc2
 
 test clearing only a single divergent bookmark across branches
 
@@ -889,13 +884,13 @@ test clearing only a single divergent bookmark across branches
   $ hg book foo@3 -r 3
   $ hg book foo -r foo@3
   $ hg book
-   * Z                         3:9ba5f110a0b3
+   * Z                         3:9c404beeabc2
      Z@1                       1:925d80f479bb
-     foo                       3:9ba5f110a0b3
+     foo                       3:9c404beeabc2
      foo@1                     0:f7b1eb17ad24
      foo@2                     2:db815d6d32e6
-     four                      3:9ba5f110a0b3
-     should-end-on-two         2:db815d6d32e6
+     four                      3:9c404beeabc2
+     should-end-on-two         3:9c404beeabc2
 
 pull --update works the same as pull && update (case #2)
 
@@ -903,7 +898,6 @@ It is assumed that "hg pull" itself doesn't update current active
 bookmark ('Y' in tests below).
 
   $ hg pull -q ../cloned-bookmarks-update
-  divergent bookmark Z stored as Z@2
 
 (pulling revision on another named branch with --update updates
 neither the working directory nor current active bookmark: "no-op"
@@ -921,11 +915,11 @@ case)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  divergent bookmark Z stored as Z@default
+  updating bookmark Z
   adding remote bookmark foo
   adding remote bookmark four
   adding remote bookmark should-end-on-two
-  new changesets 5fb12f0f2d51
+  new changesets f047c86095b7
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
   3:125c9a1d6df6
@@ -948,7 +942,6 @@ updates the working directory and current active bookmark)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  divergent bookmark Z stored as Z@default
   new changesets 81dcce76aa0b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark Y
@@ -1047,14 +1040,13 @@ repositories visible to an external hook.
    * NEW                       6:81dcce76aa0b
      X2                        1:925d80f479bb
      Y                         4:125c9a1d6df6
-     Z                         5:5fb12f0f2d51
+     Z                         5:f047c86095b7
      Z@1                       1:925d80f479bb
-     Z@2                       4:125c9a1d6df6
-     foo                       3:9ba5f110a0b3
+     foo                       3:9c404beeabc2
      foo@1                     0:f7b1eb17ad24
      foo@2                     2:db815d6d32e6
-     four                      3:9ba5f110a0b3
-     should-end-on-two         2:db815d6d32e6
+     four                      3:9c404beeabc2
+     should-end-on-two         3:9c404beeabc2
      x  y                      2:db815d6d32e6
   @unrelated
   no bookmarks set
@@ -1086,28 +1078,26 @@ add hooks:
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     xx
   |
-  | o  changeset:   5:5fb12f0f2d51
-  | |  branch:      test
+  | o  changeset:   5:f047c86095b7
   | |  bookmark:    Z
   | |  phase:       draft
-  | |  parent:      3:9ba5f110a0b3
+  | |  parent:      3:9c404beeabc2
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     yy
   | |
   o |  changeset:   4:125c9a1d6df6
   | |  bookmark:    Y
-  | |  bookmark:    Z@2
   | |  phase:       public
   | |  parent:      2:db815d6d32e6
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     x
   | |
-  | o  changeset:   3:9ba5f110a0b3
-  |/   branch:      test
-  |    bookmark:    foo
+  | o  changeset:   3:9c404beeabc2
+  |/   bookmark:    foo
   |    bookmark:    four
+  |    bookmark:    should-end-on-two
   |    phase:       public
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1115,7 +1105,6 @@ add hooks:
   |
   o  changeset:   2:db815d6d32e6
   |  bookmark:    foo@2
-  |  bookmark:    should-end-on-two
   |  bookmark:    x  y
   |  phase:       public
   |  parent:      0:f7b1eb17ad24
@@ -1149,12 +1138,8 @@ attempt to create on a default changeset
 
 create on a public changeset
 
-  $ hg bookmark -r 9ba5f110a0b3 NEW
+  $ hg bookmark -r 'max(public())' NEW
 
 move to the other branch
 
   $ hg bookmark -f -r 125c9a1d6df6 NEW
-  transaction abort!
-  rollback completed
-  abort: pretxnclose-bookmark.force-forward hook exited with status 1
-  [255]
