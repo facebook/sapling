@@ -2000,7 +2000,10 @@ class TTest(Test):
 
             if lcmd:
                 # Add on last return code.
-                ret = int(lcmd.split()[1])
+                try:
+                    ret = int(lcmd.split()[1])
+                except ValueError:
+                    ret = 1
                 if ret != 0:
                     postout.append(b"  [%d]\n" % ret)
                 if pos in after:
