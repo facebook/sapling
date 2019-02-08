@@ -28,9 +28,6 @@ add initial changesets
 # see it when we run 'hg status' after transplanting.  Subtle data loss
 # bugs are worse than crashes, so reproduce the subtle case here.
 commit bug fixes on bug fix branch
-  $ hg branch fixes
-  marked working directory as branch fixes
-  (branches are permanent and global, did you want a bookmark?)
   $ echo fix1 > bugfix
   $ echo fix1 >> file1
   $ hg ci -Am"fix 1"
@@ -39,9 +36,9 @@ commit bug fixes on bug fix branch
   $ echo fix2 >> file1
   $ hg ci -Am"fix 2"
   $ hg log -G --template="$template"
-  @  3  fix 2  [fixes]
+  @  3  fix 2  [default]
   |
-  o  2  fix 1  [fixes]
+  o  2  fix 1  [default]
   |
   o  1  feature 2  [default]
   |
@@ -50,21 +47,19 @@ commit bug fixes on bug fix branch
 transplant bug fixes onto release branch
   $ hg update 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg branch release
-  marked working directory as branch release
   $ hg transplant 2 3
   applying [0-9a-f]{12} (re)
   [0-9a-f]{12} transplanted to [0-9a-f]{12} (re)
   applying [0-9a-f]{12} (re)
   [0-9a-f]{12} transplanted to [0-9a-f]{12} (re)
   $ hg log -G --template="$template"
-  @  5  fix 2  [release]
+  @  5  fix 2  [default]
   |
-  o  4  fix 1  [release]
+  o  4  fix 1  [default]
   |
-  | o  3  fix 2  [fixes]
+  | o  3  fix 2  [default]
   | |
-  | o  2  fix 1  [fixes]
+  | o  2  fix 1  [default]
   | |
   | o  1  feature 2  [default]
   |/
