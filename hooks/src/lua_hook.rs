@@ -28,7 +28,7 @@ use linked_hash_map::LinkedHashMap;
 use metaconfig_types::HookConfig;
 use mononoke_types::FileType;
 use regex::{Regex, RegexBuilder};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
@@ -151,18 +151,29 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let parse_commit_msg = function0(parse_commit_msg);
 
-        let reviewers_acl_checker = context.data.reviewers_acl_checker.clone();
         let is_valid_reviewer = {
-            move |user: String| -> Result<AnyFuture, Error> {
+            let mocked_valid_reviewers = context
+                .config
+                .strings
+                .get("test_mocked_valid_reviewers")
+                .map(|mocked| mocked.split(",").map(String::from).collect::<HashSet<_>>());
+            let reviewers_acl_checker = context.data.reviewers_acl_checker.clone();
+
+            function1(move |user: String| -> Result<AnyFuture, Error> {
+                if let Some(ref mocked) = mocked_valid_reviewers {
+                    return Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(
+                        mocked.contains(&user),
+                    ))));
+                }
+
                 let user = Identity::with_user(&user);
                 let valid = match *reviewers_acl_checker {
                     Some(ref reviewers_acl_checker) => reviewers_acl_checker.is_member(&[&user]),
                     None => false,
                 };
                 Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(valid))))
-            }
+            })
         };
-        let is_valid_reviewer = function1(is_valid_reviewer);
 
         let mut lua = Lua::new();
         lua.openlibs();
