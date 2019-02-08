@@ -6,6 +6,7 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use failure::{format_err, Fallible};
+use serde_derive::{Deserialize, Serialize};
 
 use std::{
     io::{Cursor, Write},
@@ -15,14 +16,14 @@ use std::{
 
 use crate::key::Key;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
     pub data: Bytes,
     pub base: Option<Key>,
     pub key: Key,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Metadata {
     pub size: Option<u64>,
     pub flags: Option<u64>,
