@@ -190,20 +190,22 @@ function register_hook {
   hook_type="$3"
 
   shift 3
-  EXTRA_CONFIG=""
+  EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
-    EXTRA_CONFIG="$1"
+    EXTRA_CONFIG_DESCRIPTOR="$1"
   fi
 
-  cat >> repos/repo/server.toml <<CONFIG
+  (
+    cat <<CONFIG
 [[bookmarks.hooks]]
 hook_name="$hook_name"
 [[hooks]]
 name="$hook_name"
 path="$path"
 hook_type="$hook_type"
-$EXTRA_CONFIG
 CONFIG
+    [ -n "$EXTRA_CONFIG_DESCRIPTOR" ] && cat "$EXTRA_CONFIG_DESCRIPTOR"
+  ) >> repos/repo/server.toml
 }
 
 function blobimport {
@@ -379,17 +381,17 @@ CONFIG
   HOOK_NAME="$2"
   HOOK_TYPE="$3"
   shift 3
-  EXTRA_CONFIG=""
+  EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
-    EXTRA_CONFIG="$1"
+    EXTRA_CONFIG_DESCRIPTOR="$1"
   fi
 
   if [[ ! -z "$HOOK_FILE" ]] ; then
     mkdir -p common/hooks
     cp "$HOOK_FILE" common/hooks/"$HOOK_NAME".lua
-    register_hook "$HOOK_NAME" common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$EXTRA_CONFIG"
+    register_hook "$HOOK_NAME" common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$EXTRA_CONFIG_DESCRIPTOR"
   else
-    register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$EXTRA_CONFIG"
+    register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$EXTRA_CONFIG_DESCRIPTOR"
   fi
 
   setup_common_hg_configs

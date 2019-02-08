@@ -18,7 +18,9 @@ setup configuration
   >  return true
   > end
   > CONFIG
-  $ register_hook file_size_hook common/hooks/file_size_hook.lua PerAddedOrModifiedFile "bypass_commit_string=\"@allow_large_files\""
+  $ register_hook file_size_hook common/hooks/file_size_hook.lua PerAddedOrModifiedFile <(
+  >   echo 'bypass_commit_string="@allow_large_files"'
+  > )
 
   $ cat > common/hooks/no_owners_file_deletes.lua <<CONFIG
   > hook = function (ctx)
@@ -30,7 +32,9 @@ setup configuration
   >   return true
   > end
   > CONFIG
-  $ register_hook no_owners_file_deletes common/hooks/no_owners_file_deletes.lua PerChangeset "bypass_commit_string=\"@allow_delete_owners\""
+  $ register_hook no_owners_file_deletes common/hooks/no_owners_file_deletes.lua PerChangeset <(
+  >   echo 'bypass_commit_string="@allow_delete_owners"'
+  > )
 
   $ cat > common/hooks/no_owners2_file_deletes_pushvars.lua <<CONFIG
   > hook = function (ctx)
@@ -42,7 +46,9 @@ setup configuration
   >   return true
   > end
   > CONFIG
-  $ register_hook no_owners2_file_deletes_pushvars common/hooks/no_owners2_file_deletes_pushvars.lua PerChangeset "bypass_pushvar=\"ALLOW_DELETE_OWNERS=true\""
+  $ register_hook no_owners2_file_deletes_pushvars common/hooks/no_owners2_file_deletes_pushvars.lua PerChangeset <(
+  >   echo 'bypass_pushvar="ALLOW_DELETE_OWNERS=true"'
+  > )
 
   $ setup_common_hg_configs
   $ cd $TESTTMP
