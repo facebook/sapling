@@ -34,9 +34,6 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ hg up -q -C 0
 
-  $ hg branch 'notdefault'
-  marked working directory as branch notdefault
-  (branches are permanent and global, did you want a bookmark?)
   $ echo F >> A
   $ hg ci -m F
 
@@ -50,7 +47,7 @@ Rebasing B onto E - check keep: and phases
   $ hg phase --force --secret 2
 
   $ tglogp
-  @  5: 01e6ebbd8272 draft 'F'  notdefault
+  @  5: 3225f3ea730a draft 'F'
   |
   | o  4: ae36e8e3dfd7 draft 'E'
   | |
@@ -86,7 +83,7 @@ Solve the conflict and go on:
   |
   o  6: 45396c49d53b draft 'B'
   |
-  | @  5: 01e6ebbd8272 draft 'F'  notdefault
+  | @  5: 3225f3ea730a draft 'F'
   | |
   o |  4: ae36e8e3dfd7 draft 'E'
   | |
@@ -108,7 +105,7 @@ Rebase F onto E - check keepbranches:
   $ hg phase --force --secret 2
 
   $ tglogp
-  @  5: 01e6ebbd8272 draft 'F'  notdefault
+  @  5: 3225f3ea730a draft 'F'
   |
   | o  4: ae36e8e3dfd7 draft 'E'
   | |
@@ -121,7 +118,7 @@ Rebase F onto E - check keepbranches:
   o  0: 4a2df7238c3b draft 'A'
   
   $ hg rebase -s 5 -d 4 --keepbranches
-  rebasing 5:01e6ebbd8272 "F" (tip)
+  rebasing 5:3225f3ea730a "F" (tip)
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -135,11 +132,11 @@ Solve the conflict and go on:
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 5:01e6ebbd8272 "F" (tip)
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/01e6ebbd8272-6fd3a015-rebase.hg
+  rebasing 5:3225f3ea730a "F" (tip)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/3225f3ea730a-289ce185-rebase.hg
 
   $ tglogp
-  @  5: 071d07019675 draft 'F'  notdefault
+  @  5: 530bc6058bd0 draft 'F'
   |
   o  4: ae36e8e3dfd7 draft 'E'
   |
