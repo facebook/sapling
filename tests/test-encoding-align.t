@@ -110,41 +110,15 @@ check alignment of filenames in diffstat
    \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d |  1 + (esc)
    3 files changed, 3 insertions(+), 0 deletions(-)
 
-add branches/tags
+add bookmarks
 
-  $ hg branch $S
-  marked working directory as branch \xe7\x9f\xad\xe5\x90\x8d (esc)
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg tag $S
   $ hg book -f $S
-  $ hg branch $M
-  marked working directory as branch MIDDLE_
-  $ hg tag $M
   $ hg book -f $M
-  $ hg branch $L
-  marked working directory as branch \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d (esc)
-  $ hg tag $L
   $ hg book -f $L
-
-check alignment of branches
-
-  $ hg branches
-  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                   5:d745ff46155b (esc)
-  MIDDLE_                        4:9259be597f19 (inactive)
-  \xe7\x9f\xad\xe5\x90\x8d                           3:b06c5b6def9e (inactive) (esc)
-  default                        2:64a70663cee8 (inactive)
-
-check alignment of tags
-
-  $ hg tags
-  tip                                5:d745ff46155b
-  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19 (esc)
-  MIDDLE_                            3:b06c5b6def9e
-  \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8 (esc)
 
 check alignment of bookmarks
 
   $ hg book
-     MIDDLE_                   5:d745ff46155b
-     \xe7\x9f\xad\xe5\x90\x8d                      4:9259be597f19 (esc)
-   * \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d              5:d745ff46155b (esc)
+     MIDDLE_                   2:64a70663cee8
+     \xe7\x9f\xad\xe5\x90\x8d                      2:64a70663cee8 (esc)
+   * \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d              2:64a70663cee8 (esc)
