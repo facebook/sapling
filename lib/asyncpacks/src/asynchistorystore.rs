@@ -1,10 +1,11 @@
 // Copyright 2019 Facebook, Inc.
 
 use failure::Error;
+use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
 use cloned::cloned;
-use revisionstore::{Ancestors, HistoryStore, Key, NodeInfo};
+use revisionstore::{Ancestors, HistoryStore, IterableStore, Key, NodeInfo};
 
 use crate::util::AsyncWrapper;
 
@@ -38,5 +39,15 @@ impl<T: HistoryStore + Send> AsyncHistoryStore<T> {
     pub fn get_node_info(&self, key: &Key) -> impl Future<Item = NodeInfo, Error = Error> + Send {
         cloned!(key);
         self.history.block(move |store| store.get_node_info(&key))
+    }
+}
+
+impl<T: HistoryStore + IterableStore + Send> AsyncHistoryStore<T> {
+    /// Iterate over all the keys of this historystore.
+    pub fn iter(&self) -> impl Stream<Item = Key, Error = Error> + Send {
+        let keysfut = self.history.block(move |store| store.iter().collect());
+        keysfut
+            .and_then(|keys: Vec<Key>| ok(iter_ok(keys.into_iter())))
+            .flatten_stream()
     }
 }

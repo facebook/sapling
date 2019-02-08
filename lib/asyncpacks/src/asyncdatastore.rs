@@ -1,10 +1,11 @@
 // Copyright 2019 Facebook, Inc.
 
 use failure::Error;
+use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
 use cloned::cloned;
-use revisionstore::{key::Key, DataStore, Delta, Metadata};
+use revisionstore::{key::Key, DataStore, Delta, IterableStore, Metadata};
 
 use crate::util::AsyncWrapper;
 
@@ -53,5 +54,15 @@ impl<T: DataStore + Send> AsyncDataStore<T> {
         keys: &'static [Key],
     ) -> impl Future<Item = Vec<Key>, Error = Error> + Send {
         self.data.block(move |store| store.get_missing(keys))
+    }
+}
+
+impl<T: DataStore + IterableStore + Send> AsyncDataStore<T> {
+    /// Iterate over all the keys of this datastore.
+    pub fn iter(&self) -> impl Stream<Item = Key, Error = Error> + Send {
+        let keysfut = self.data.block(move |store| store.iter().collect());
+        keysfut
+            .and_then(|keys: Vec<Key>| ok(iter_ok(keys.into_iter())))
+            .flatten_stream()
     }
 }

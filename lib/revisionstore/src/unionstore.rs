@@ -4,6 +4,11 @@
 use std::slice::Iter;
 use std::vec::IntoIter;
 
+use failure::Fallible;
+
+use crate::key::Key;
+use crate::repack::IterableStore;
+
 pub struct UnionStore<T> {
     stores: Vec<T>,
 }
@@ -33,5 +38,11 @@ impl<'a, T> IntoIterator for &'a UnionStore<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.stores.iter()
+    }
+}
+
+impl<T: IterableStore> IterableStore for UnionStore<T> {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+        Box::new(self.into_iter().map(|store| store.iter()).flatten())
     }
 }

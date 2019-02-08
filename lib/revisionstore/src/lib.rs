@@ -33,3 +33,4 @@ pub use crate::key::Key;
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::mutablepack::MutablePack;
+pub use crate::repack::IterableStore;
