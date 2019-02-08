@@ -293,7 +293,7 @@ def runchgserver():
     repo = None
     args = sys.argv[1:]
     cmd, func, args, globalopts, cmdopts = _parse(ui, args)
-    if not (cmd == "serve" and cmdopts["cmdserver"] == "chgunix"):
+    if not (cmd == "serve" and cmdopts["cmdserver"] == "chgunix2"):
         raise error.ProgrammingError("runchgserver called without chg command")
     from . import chgserver, server
 

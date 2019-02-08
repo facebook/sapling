@@ -107,7 +107,7 @@ static void setcmdserveropts(struct cmdserveropts* opts) {
   }
 
   const char* basename = (envsockname) ? envsockname : sockdir;
-  const char* sockfmt = (envsockname) ? "%s" : "%s/server";
+  const char* sockfmt = (envsockname) ? "%s" : "%s/server2";
   r = snprintf(opts->sockname, sizeof(opts->sockname), sockfmt, basename);
   if (r < 0 || (size_t)r >= sizeof(opts->sockname))
     abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
@@ -144,7 +144,7 @@ static void execcmdserver(const struct cmdserveropts* opts) {
       hgcmd,
       "serve",
       "--cmdserver",
-      "chgunix",
+      "chgunix2",
       "--address",
       opts->initsockname,
       "--daemon-postexec",

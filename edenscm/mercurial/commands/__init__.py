@@ -5913,7 +5913,7 @@ def serve(ui, repo, **opts):
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
-    if opts.get("cmdserver") == "chgunix":
+    if opts.get("cmdserver") in ["chgunix", "chgunix2"]:
         raise error.ProgrammingError(
             "chgunix server cannot be started via traditional command code path"
         )

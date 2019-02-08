@@ -55,7 +55,7 @@ def run(binaryexecution):
     executionmodel.setbinaryexecution(binaryexecution)
 
     if (
-        sys.argv[1:5] == ["serve", "--cmdserver", "chgunix", "--address"]
+        sys.argv[1:5] == ["serve", "--cmdserver", "chgunix2", "--address"]
         and sys.argv[6:8] == ["--daemon-postexec", "chdir:/"]
         and "CHGINTERNALMARK" in encoding.environ
     ):

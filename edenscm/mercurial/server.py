@@ -118,7 +118,7 @@ def runservice(
 
 
 _cmdservicemap = {
-    "chgunix": chgserver.chgunixservice,
+    "chgunix2": chgserver.chgunixservice,
     "pipe": commandserver.pipeservice,
     "unix": commandserver.unixforkingservice,
 }
