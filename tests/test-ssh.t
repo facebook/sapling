@@ -14,17 +14,6 @@ creating 'remote' repo
   $ echo this > fooO
   $ hg ci -A -m "init" foo fooO
 
-insert a closed branch (issue4428)
-
-  $ hg up null
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg branch closed
-  marked working directory as branch closed
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg ci -mc0
-  $ hg ci --close-branch -mc1
-  $ hg up -q default
-
 configure for serving
 
   $ cat <<EOF > .hg/hgrc
@@ -54,8 +43,8 @@ clone remote via stream
 
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/remote local-stream
   streaming all changes
-  4 files to transfer, 602 bytes of data
-  transferred 602 bytes in * seconds (*) (glob)
+  4 files to transfer, 392 bytes of data
+  transferred 392 bytes in 0.0 seconds (383 KB/sec)
   searching for changes
   no changes found
   updating to branch default
@@ -66,9 +55,7 @@ clone remote via stream
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 3 changesets, 2 total revisions
-  $ hg branches
-  default                        0:1160648e36ce
+  2 files, 1 changesets, 2 total revisions
   $ cd ..
 
 clone bookmarks via stream
@@ -76,8 +63,8 @@ clone bookmarks via stream
   $ hg -R local-stream book mybook
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/local-stream stream2
   streaming all changes
-  4 files to transfer, 602 bytes of data
-  transferred 602 bytes in * seconds (*) (glob)
+  4 files to transfer, 392 bytes of data
+  transferred 392 bytes in 0.0 seconds (383 KB/sec)
   searching for changes
   no changes found
   updating to branch default
@@ -95,8 +82,8 @@ clone remote via pull
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 2 files
-  new changesets 1160648e36ce:ad076bfb429d
+  added 1 changesets with 2 changes to 2 files
+  new changesets 1160648e36ce
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -108,7 +95,7 @@ verify
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 3 changesets, 2 total revisions
+  2 files, 1 changesets, 2 total revisions
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
   > changegroup = sh -c "printenv.py changegroup-in-local 0 ../dummylog"
@@ -147,9 +134,8 @@ find outgoing
   $ hg out ssh://user@dummy/remote
   comparing with ssh://user@dummy/remote
   searching for changes
-  changeset:   3:a28a9d1a809c
+  changeset:   1:a28a9d1a809c
   tag:         tip
-  parent:      0:1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -160,9 +146,8 @@ find incoming on the remote side
   $ hg incoming -R ../remote -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/local
   comparing with ssh://user@dummy/local
   searching for changes
-  changeset:   3:a28a9d1a809c
+  changeset:   1:a28a9d1a809c
   tag:         tip
-  parent:      0:1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -173,9 +158,8 @@ find incoming on the remote side (using absolute path)
   $ hg incoming -R ../remote -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/`pwd`"
   comparing with ssh://user@dummy/$TESTTMP/local
   searching for changes
-  changeset:   3:a28a9d1a809c
+  changeset:   1:a28a9d1a809c
   tag:         tip
-  parent:      0:1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -195,9 +179,8 @@ push
 check remote tip
 
   $ hg tip
-  changeset:   3:a28a9d1a809c
+  changeset:   1:a28a9d1a809c
   tag:         tip
-  parent:      0:1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -207,7 +190,7 @@ check remote tip
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 4 changesets, 3 total revisions
+  2 files, 2 changesets, 3 total revisions
   $ hg cat -r tip foo
   bleah
   $ echo z > z
@@ -292,14 +275,14 @@ push should succeed even though it has an unexpected response
   remote: KABOOM
   remote: KABOOM IN PROCESS
   $ hg -R ../remote heads
-  changeset:   5:1383141674ec
+  changeset:   3:1383141674ec
   tag:         tip
-  parent:      3:a28a9d1a809c
+  parent:      1:a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z
   
-  changeset:   4:6c0482d977a3
+  changeset:   2:6c0482d977a3
   parent:      0:1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -310,18 +293,18 @@ clone bookmarks
 
   $ hg -R ../remote bookmark test
   $ hg -R ../remote bookmarks
-   * test                      4:6c0482d977a3
+   * test                      2:6c0482d977a3
   $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote local-bookmarks
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 5 changes to 4 files (+1 heads)
+  added 4 changesets with 5 changes to 4 files (+1 heads)
   new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R local-bookmarks bookmarks
-     test                      4:6c0482d977a3
+     test                      2:6c0482d977a3
 
 passwords in ssh urls are not supported
 (we use a glob here because different Python versions give different
@@ -417,7 +400,7 @@ Test hg-ssh in read-only mode:
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 5 changes to 4 files (+1 heads)
+  added 4 changesets with 5 changes to 4 files (+1 heads)
   new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -497,7 +480,7 @@ debug output
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-part: total payload size 45
   bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size 72
+  bundle2-input-part: total payload size 48
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
 
