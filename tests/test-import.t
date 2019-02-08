@@ -455,7 +455,6 @@ invoking pretxncommit hook will cause marking '.hg/dirstate' as a file
 to be restored when rolling back, after DirstateTransactionPlan (see wiki
 page for detail).
 
-  $ hg --cwd b branch -q foobar
   $ hg --cwd b commit -m foobar
   $ hg --cwd b update 0 -q
   $ hg --cwd b import ../patch1 ../patch2 --config hooks.pretxncommit=true
