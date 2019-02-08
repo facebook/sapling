@@ -11,7 +11,7 @@ pub mod asyncmutabledatapack;
 pub mod asyncmutablehistorypack;
 pub mod asyncuniondatastore;
 
-pub use crate::asyncdatapack::AsyncDataPack;
+pub use crate::asyncdatapack::{AsyncDataPack, AsyncDataPackBuilder};
 pub use crate::asyncdatastore::AsyncDataStore;
 pub use crate::asynchistorypack::{AsyncHistoryPack, AsyncHistoryPackBuilder};
 pub use crate::asynchistorystore::AsyncHistoryStore;
