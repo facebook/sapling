@@ -157,8 +157,7 @@ match with the name of any existing bookmarks.
 
   $ cd ../t
   $ hg bookmark -d active-after-pull
-  $ hg branch bar -q
-  $ hg commit -m "#5 (bar #1)"
+  $ hg commit -m "#5 (bar #1)" --config ui.allowemptycommit=1
   $ cd ../tt
 
 (1) deactivating by --rev REV
@@ -167,19 +166,19 @@ match with the name of any existing bookmarks.
   $ hg bookmarks
    * active-before-pull        3:483b76ad4309
 
-  $ hg pull -u -r b5e4babfaaa7
+  $ hg pull -u -r f815b3da6163
   pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 1 files
-  new changesets f815b3da6163:b5e4babfaaa7
+  added 1 changesets with 1 changes to 1 files
+  new changesets f815b3da6163
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark active-before-pull)
 
   $ hg parents -q
-  5:b5e4babfaaa7
+  4:f815b3da6163
   $ hg bookmarks
      active-before-pull        3:483b76ad4309
 
@@ -187,54 +186,5 @@ match with the name of any existing bookmarks.
 
   $ hg update -q 483b76ad4309
   $ hg rollback -q
-
-(2) deactivating by --branch BRANCH
-
-  $ hg bookmark -f active-before-pull
-  $ hg bookmarks
-   * active-before-pull        3:483b76ad4309
-
-  $ hg pull -u -b bar
-  pulling from $TESTTMP/t
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 1 changes to 1 files
-  new changesets f815b3da6163:b5e4babfaaa7
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (leaving bookmark active-before-pull)
-
-  $ hg parents -q
-  5:b5e4babfaaa7
-  $ hg bookmarks
-     active-before-pull        3:483b76ad4309
-
-(discard pulled changes)
-
-  $ hg update -q 483b76ad4309
-  $ hg rollback -q
-
-(3) deactivating by URL#ANOTHER-BRANCH
-
-  $ hg bookmark -f active-before-pull
-  $ hg bookmarks
-   * active-before-pull        3:483b76ad4309
-
-  $ hg pull -u $TESTTMP/t#bar
-  pulling from $TESTTMP/t
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 1 changes to 1 files
-  new changesets f815b3da6163:b5e4babfaaa7
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (leaving bookmark active-before-pull)
-
-  $ hg parents -q
-  5:b5e4babfaaa7
-  $ hg bookmarks
-     active-before-pull        3:483b76ad4309
 
   $ cd ..
