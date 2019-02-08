@@ -457,39 +457,35 @@ backout with valid parent should be ok
 
   $ cd ..
 
-named branches
+bookmarks
 
-  $ hg init named_branches
-  $ cd named_branches
+  $ hg init bookmarks
+  $ cd bookmarks
 
   $ echo default > default
   $ hg ci -d '0 0' -Am default
   adding default
-  $ hg branch branch1
-  marked working directory as branch branch1
-  (branches are permanent and global, did you want a bookmark?)
-  $ echo branch1 > file1
+  $ echo bookmark1 > file1
   $ hg ci -d '1 0' -Am file1
   adding file1
-  $ hg branch branch2
-  marked working directory as branch branch2
+  $ hg bookmark -r . -i branch1
   $ echo branch2 > file2
   $ hg ci -d '2 0' -Am file2
   adding file2
+  $ hg bookmark -r . -i branch2
 
 without --merge
   $ hg backout --no-commit -r 1 --tool=true
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  changeset bf1602f437f3 backed out, don't forget to commit.
-  $ hg branch
-  branch2
+  changeset 4909abd0533a backed out, don't forget to commit.
   $ hg status -A
   R file1
   C default
   C file2
   $ hg summary
-  parent: 2:45bbcd363bf0 tip
+  parent: 2:ce121fd37829 tip
    file2
+  bookmarks: branch2
   commit: 1 removed
   phases: 3 draft
 
@@ -502,24 +498,25 @@ explicitly regardless of '--message')
   removing file1
   backout on branch1
   
-  Original commit changeset: bf1602f437f3
+  Original commit changeset: 4909abd0533a
   
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'branch2'
+  HG: branch 'default'
   HG: removed file1
-  changeset 3:8857f307d2b3 backs out changeset 1:bf1602f437f3
-  merging with changeset 3:8857f307d2b3
+  changeset 3:3ee3eb817232 backs out changeset 1:4909abd0533a
+  merging with changeset 3:3ee3eb817232
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg summary
-  parent: 2:45bbcd363bf0 
+  parent: 2:ce121fd37829 
    file2
-  parent: 3:8857f307d2b3 tip
+  parent: 3:3ee3eb817232 tip
    backout on branch1
+  bookmarks: branch2
   commit: 1 removed (merge)
   phases: 4 draft
   $ hg update -q -C 2
@@ -527,14 +524,15 @@ explicitly regardless of '--message')
 on branch2 with branch1 not merged, so file1 should still exist:
 
   $ hg id
-  45bbcd363bf0 (branch2)
+  ce121fd37829 branch2
   $ hg st -A
   C default
   C file1
   C file2
   $ hg summary
-  parent: 2:45bbcd363bf0 
+  parent: 2:ce121fd37829 
    file2
+  bookmarks: branch2
   commit: (clean)
   phases: 4 draft
 
@@ -545,28 +543,29 @@ on branch2 with branch1 merged, so file1 should be gone:
   (branch merge, don't forget to commit)
   $ hg ci -d '4 0' -m 'merge backout of branch1'
   $ hg id
-  6b63d6afbede (branch2) tip
+  1589644119df tip
   $ hg st -A
   C default
   C file2
   $ hg summary
-  parent: 4:6b63d6afbede tip
+  parent: 4:1589644119df tip
    merge backout of branch1
   commit: (clean)
   phases: 5 draft
 
 on branch1, so no file1 and file2:
 
-  $ hg co -C branch1
+  $ hg co --inactive -C branch1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg id
-  bf1602f437f3 (branch1)
+  4909abd0533a branch1
   $ hg st -A
   C default
   C file1
   $ hg summary
-  parent: 1:bf1602f437f3 
+  parent: 1:4909abd0533a 
    file1
+  bookmarks: branch1
   commit: (clean)
   phases: 5 draft
 
@@ -579,9 +578,8 @@ backout of empty changeset (issue4190)
 
   $ touch file1
   $ hg ci -Aqm file1
-  $ hg branch -q branch1
-  $ hg ci -qm branch1
-  $ hg backout -v 1
+  $ hg ci --config ui.allowemptycommit=1 -m empty
+  $ hg backout -v .
   resolving manifests
   nothing changed
   [1]
