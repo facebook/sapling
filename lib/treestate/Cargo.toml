@@ -11,7 +11,7 @@ twox-hash = "*"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-itertools = "0.7.8"
+itertools = "0.8"
 quickcheck = "0.6"
 rand = "0.5"
 tempdir = "0.3.7"
