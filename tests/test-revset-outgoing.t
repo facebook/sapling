@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [alias]
-  > tlog = log --template "{rev}:{node|short}: '{desc}' {branches}\n"
-  > tout = out --template "{rev}:{node|short}: '{desc}' {branches}\n"
+  > tlog = log --template "{rev}:{node|short}: '{desc}'\n"
+  > tout = out --template "{rev}:{node|short}: '{desc}'\n"
   > EOF
 
   $ hg init a
@@ -15,14 +15,11 @@
 
   $ hg up -q 0
 
-  $ hg branch stable
-  marked working directory as branch stable
-  (branches are permanent and global, did you want a bookmark?)
   $ echo bar >> a
   $ hg ci -qm2
 
   $ tglog
-  @  2: 7bee6c3bea3a '2'  stable
+  @  2: a578af2cfd0c '2'
   |
   | o  1: 3560197d8331 '1'
   |/
@@ -31,13 +28,13 @@
 
   $ cd ..
 
-  $ hg clone -q a#stable b
+  $ hg clone -q a b
 
   $ cd b
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/a#stable
+  default = $TESTTMP/a
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -59,11 +56,13 @@
   $ hg ci -qm4
 
   $ tglog
-  @  3: f0461977a3db '4'
+  @  4: acadbdc73b28 '4'
   |
-  | o  2: 1d4099801a4e '3'  stable
-  | |
-  | o  1: 7bee6c3bea3a '2'  stable
+  o  3: 5de9cb7d8f67 '3'
+  |
+  o  2: a578af2cfd0c '2'
+  |
+  | o  1: 3560197d8331 '1'
   |/
   o  0: f7b1eb17ad24 '0'
   
@@ -71,25 +70,29 @@
   $ hg tout
   comparing with $TESTTMP/a
   searching for changes
-  2:1d4099801a4e: '3' stable
+  3:5de9cb7d8f67: '3'
+  4:acadbdc73b28: '4'
 
   $ hg tlog -r 'outgoing()'
-  2:1d4099801a4e: '3' stable
+  3:5de9cb7d8f67: '3'
+  4:acadbdc73b28: '4'
 
   $ hg tout ../a#default
   comparing with ../a
   searching for changes
-  3:f0461977a3db: '4' 
+  3:5de9cb7d8f67: '3'
+  4:acadbdc73b28: '4'
 
   $ hg tlog -r 'outgoing("../a#default")'
-  3:f0461977a3db: '4' 
+  3:5de9cb7d8f67: '3'
+  4:acadbdc73b28: '4'
 
   $ echo "green = ../a#default" >> .hg/hgrc
 
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/a#stable
+  default = $TESTTMP/a
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
