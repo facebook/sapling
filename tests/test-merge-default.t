@@ -107,26 +107,11 @@ Should fail because there is only one head:
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ echo f >> a
-  $ hg branch foobranch
-  marked working directory as branch foobranch
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg commit -mf
-
-Should fail because merge with other branch:
-
-  $ hg merge
-  abort: branch 'foobranch' has one head - please merge with an explicit rev
-  (run 'hg heads' to see all heads)
-  [255]
-
-
 Test for issue2043: ensure that 'merge -P' shows ancestors of 6 that
 are not ancestors of 7, regardless of where their common ancestors are.
 
 Merge preview not affected by common ancestor:
 
-  $ hg up -q 7
   $ hg merge -q -P 6
   2:2d95304fed5d
   4:f25cbe84d8b3
@@ -136,8 +121,8 @@ Merge preview not affected by common ancestor:
 Test experimental destination revset
 
   $ hg log -r '_destmerge()'
-  abort: branch 'foobranch' has one head - please merge with an explicit rev
-  (run 'hg heads' to see all heads)
+  abort: nothing to merge
+  (use 'hg update' instead)
   [255]
 
 (on a branch with a two heads)
@@ -158,7 +143,7 @@ Test experimental destination revset
 (from the other head)
 
   $ hg log -r '_destmerge(e88e33f3bf62)'
-  changeset:   8:b613918999e2
+  changeset:   7:b613918999e2
   tag:         tip
   parent:      5:a431fabd6039
   user:        test
@@ -166,9 +151,3 @@ Test experimental destination revset
   summary:     f
   
 
-(from unrelated branch)
-
-  $ hg log -r '_destmerge(foobranch)'
-  abort: branch 'foobranch' has one head - please merge with an explicit rev
-  (run 'hg heads' to see all heads)
-  [255]
