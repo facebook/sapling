@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/InodeNumber.h"
 
 #include <folly/Conv.h>
 #include <ostream>

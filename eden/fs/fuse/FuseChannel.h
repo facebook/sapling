@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 

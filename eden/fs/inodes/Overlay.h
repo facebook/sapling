@@ -16,7 +16,7 @@
 #include <condition_variable>
 #include <optional>
 #include <thread>
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"

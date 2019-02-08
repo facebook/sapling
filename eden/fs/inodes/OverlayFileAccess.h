@@ -9,11 +9,12 @@
  */
 #pragma once
 
+#include <folly/File.h>
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
 #include "eden/fs/fuse/BufVec.h"
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/model/Hash.h"
 
 namespace facebook {

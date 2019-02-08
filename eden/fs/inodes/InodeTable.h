@@ -9,7 +9,7 @@
  */
 #pragma once
 
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/MappedDiskVector.h"

@@ -15,7 +15,7 @@
 #include <optional>
 #include <vector>
 #include "eden/fs/fuse/Dispatcher.h"
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/utils/DirType.h"
