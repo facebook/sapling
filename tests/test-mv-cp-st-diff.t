@@ -1619,8 +1619,7 @@ Make a second branch, we use a named branch to create a simple commit
 that does not touch f.
 
   $ hg up -qr 'desc(empty)'
-  $ hg branch -q dev
-  $ hg ci -Aqm dev
+  $ hg ci -Aqm dev --config ui.allowemptycommit=1
 
 Graft the initial change, as f was untouched, we reuse the same entry and the
 linkrev point to the older branch.
