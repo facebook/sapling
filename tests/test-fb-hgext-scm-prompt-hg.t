@@ -187,72 +187,45 @@ Test unshared bookmarks
   (unshared|remote/@|UPDATE_NEEDED)
   $ cd ../repo
 
-Test branches
-  $ cmd hg branch blah
-  marked working directory as branch blah
-  (branches are permanent and global, did you want a bookmark?)
-  (4b6cc7d|remote/@|blah)
-  $ cmd hg commit -m blah
-  (a742469|blah)
-  $ cmd hg up -q default
-  (42eaf5c)
-  $ cmd hg up -q
-  (42eaf5c)
-
-Test branches with bookmarks and other stuff
-  $ cmd hg up -q blah
-  (a742469|blah)
-  $ cmd hg book active
-  moving bookmark 'active' forward from 4b6cc7d5194b
-  (active|blah)
-  $ cmd hg merge 775bfdddc842
-  merging b
-  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
-  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
-  (active|blah|MERGE)
-  $ cmd hg up -q -C default
-  (42eaf5c)
-
 Test with symlinks to inside of subdir of repo
   $ mkdir subdir
   $ echo contents > subdir/file
   $ hg add subdir/file
   $ cmd hg commit -m subdir
-  (97af35b)
+  (ced0c43)
   $ cd ..
   $ cmd ln -s repo/subdir
   $ cmd cd subdir
-  (97af35b)
+  (ced0c43)
   $ cd ../repo
 
 Test formatting options
   $ _scm_prompt ' %s \n'
-   97af35b 
+   ced0c43 
   $ _scm_prompt ':%s:'
-  :97af35b: (no-eol)
+  :ced0c43: (no-eol)
 
 Test locked repo states (generally due to concurrency so tests are kinda fake)
   $ cmd ln -s "${HOSTNAME}:12345" .hg/wlock
-  (97af35b|WDIR-LOCKED)
+  (ced0c43|WDIR-LOCKED)
   $ cmd ln -s "${HOSTNAME}:12345" .hg/store/lock
-  (97af35b|STORE-LOCKED)
+  (ced0c43|STORE-LOCKED)
   $ cmd rm .hg/wlock
-  (97af35b|STORE-LOCKED)
+  (ced0c43|STORE-LOCKED)
   $ cmd rm .hg/store/lock
-  (97af35b)
+  (ced0c43)
 
 Test many remotenames
   $ hg log -r . -T '{node}\n'
-  97af35b3648c0098cbd8114ae1b1bafab997ac20
+  ced0c431a4731a9d5048efdb60a3535f5450167e
   $ for i in `$PYTHON $TESTDIR/seq.py 1 10`; do
-  > echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/remote$i >> .hg/remotenames
+  > echo ced0c431a4731a9d5048efdb60a3535f5450167e bookmarks remote/remote$i >> .hg/remotenames
   > done
   $ cmd
-  (97af35b|remote/remote9...)
+  (ced0c43|remote/remote9...)
   $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/abc/master >> .hg/remotenames
   $ cmd
-  (97af35b|remote/remote9...)
+  (ced0c43|remote/remote9...)
   $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/@ >> .hg/remotenames
   $ cmd
-  (97af35b|remote/@...)
+  (ced0c43|remote/remote9...)
