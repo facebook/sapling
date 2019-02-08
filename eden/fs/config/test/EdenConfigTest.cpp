@@ -39,7 +39,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultSystemConfigPath_{"/etc/eden/edenfs.rc"};
 
   // Used by various tests to verify default values is set
-  AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/ignore"};
+  AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/.edenignore"};
   AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
   AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
   optional<AbsolutePath> defaultClientCertificatePath_;
@@ -297,7 +297,7 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
       systemConfigPath);
 
   // Check default (starting point)
-  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/ignore");
+  EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/.edenignore");
 
   // Set from cli and verify that cannot over-ride
   AbsolutePath cliIgnoreFile{"/CLI_IGNORE_FILE"};

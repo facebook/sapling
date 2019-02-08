@@ -36,7 +36,8 @@ constexpr std::array<folly::StringPiece, 2> kEnvVars = {
     folly::StringPiece{"USER"}};
 
 const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
-const facebook::eden::RelativePathPiece kDefaultIgnoreFile{"ignore"};
+const facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{".edenignore"};
+const facebook::eden::RelativePathPiece kDefaultSystemIgnoreFile{"ignore"};
 const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
 namespace {
@@ -136,9 +137,11 @@ EdenConfig::EdenConfig(
   edenDir_.setValue(
       userHomePath_ + kDefaultEdenDirectory, facebook::eden::DEFAULT, true);
   userIgnoreFile_.setValue(
-      userHomePath + kDefaultIgnoreFile, facebook::eden::DEFAULT, true);
+      userHomePath + kDefaultUserIgnoreFile, facebook::eden::DEFAULT, true);
   systemIgnoreFile_.setValue(
-      systemConfigDir_ + kDefaultIgnoreFile, facebook::eden::DEFAULT, true);
+      systemConfigDir_ + kDefaultSystemIgnoreFile,
+      facebook::eden::DEFAULT,
+      true);
   clientCertificate_.setValue(
       kUnspecifiedDefault, facebook::eden::DEFAULT, true);
 }
