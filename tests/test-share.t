@@ -26,8 +26,6 @@ share shouldn't have a store dir
 
 share shouldn't have a cache dir, original repo should
 
-  $ hg branches
-  default                        0:d3873e73d99e
   $ hg tags
   tip                                0:d3873e73d99e
   $ test -d .hg/cache
