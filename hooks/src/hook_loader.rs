@@ -29,7 +29,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                     let rust_name = rust_name.to_string();
                     let rust_hook: Arc<Hook<HookChangeset>> = match rust_name.as_ref() {
                         "verify_integrity" => Arc::new(VerifyIntegrityHook::new()),
-                        "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new()),
+                        "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(&hook.config)),
                         _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
                     };
                     hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
@@ -49,21 +49,19 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                 hook_set.insert(name);
             }
             match config.bookmarks {
-                Some(bookmarks) => {
-                    for bookmark_hook in bookmarks {
-                        let bookmark = bookmark_hook.bookmark;
-                        let hooks = bookmark_hook.hooks;
-                        if let Some(hooks) = hooks {
-                            let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
-                            let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
-                            if diff.len() != 0 {
-                                return Err(ErrorKind::NoSuchBookmarkHook(bookmark).into());
-                            } else {
-                                hook_manager.set_hooks_for_bookmark(bookmark, hooks);
-                            }
-                        };
-                    }
-                }
+                Some(bookmarks) => for bookmark_hook in bookmarks {
+                    let bookmark = bookmark_hook.bookmark;
+                    let hooks = bookmark_hook.hooks;
+                    if let Some(hooks) = hooks {
+                        let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
+                        let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
+                        if diff.len() != 0 {
+                            return Err(ErrorKind::NoSuchBookmarkHook(bookmark).into());
+                        } else {
+                            hook_manager.set_hooks_for_bookmark(bookmark, hooks);
+                        }
+                    };
+                },
                 None => (),
             }
             Ok(())
