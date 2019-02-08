@@ -389,24 +389,6 @@ Clean hook cached version
   3: public
   
 
-  >>> import os
-  >>> from hgclient import check, readchannel, runcommand
-  >>> @check
-  ... def branch(server):
-  ...     readchannel(server)
-  ...     runcommand(server, ['branch'])
-  ...     os.system('hg branch foo')
-  ...     runcommand(server, ['branch'])
-  ...     os.system('hg branch default')
-  *** runcommand branch
-  default
-  marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
-  *** runcommand branch
-  foo
-  marked working directory as branch default
-  (branches are permanent and global, did you want a bookmark?)
-
   $ touch .hgignore
   >>> import os
   >>> from hgclient import check, readchannel, runcommand
@@ -499,9 +481,6 @@ cache of phase roots should be invalidated on strip (issue3827):
   ... 
   ...     # strip 1::4 outside server
   ...     os.system('hg -q --config extensions.strip= strip 1')
-  ... 
-  ...     # shouldn't raise "7966c8e3734d: no node!"
-  ...     runcommand(server, ['branches'])
   *** runcommand update -C 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (leaving bookmark bm3)
@@ -522,8 +501,6 @@ cache of phase roots should be invalidated on strip (issue3827):
   *** runcommand phase -p .
   *** runcommand phase .
   5: public
-  *** runcommand branches
-  default                        1:731265503d86
 
 in-memory cache must be reloaded if transaction is aborted. otherwise
 changelog and manifest would have invalid node:
