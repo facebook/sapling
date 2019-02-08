@@ -18,7 +18,6 @@ from . import (
     discovery,
     error,
     lock as lockmod,
-    logexchange,
     obsolete,
     phases,
     pushkey,
@@ -1474,10 +1473,6 @@ def pull(
         pullop.trmanager.close()
     finally:
         lockmod.release(pullop.trmanager, lock, wlock)
-
-    # storing remotenames
-    if repo.ui.configbool("experimental", "remotenames"):
-        logexchange.pullremotenames(repo, remote)
 
     return pullop
 

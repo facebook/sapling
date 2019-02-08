@@ -151,7 +151,6 @@ def _preimportmodules():
         "httppeer",
         "localrepo",
         "lock",
-        "logexchange",
         "mail",
         "manifest",
         "match",

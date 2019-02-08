@@ -26,7 +26,6 @@ from . import (
     httppeer,
     localrepo,
     lock,
-    logexchange,
     merge as mergemod,
     node,
     phases,
@@ -754,9 +753,6 @@ def clone(
             fp.close()
 
             destrepo.ui.setconfig("paths", "default", defaulturl, "clone")
-
-            if ui.configbool("experimental", "remotenames"):
-                logexchange.pullremotenames(destrepo, srcpeer)
 
             if update:
                 if update is not True:
