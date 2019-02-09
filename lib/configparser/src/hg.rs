@@ -185,8 +185,7 @@ impl ConfigSetHgExt for ConfigSet {
             #[cfg(unix)]
             {
                 errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
-                errors.append(&mut self.load_path("/etc/mercurial/hgrc", &opts));
-                errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/", &opts));
+                errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
             }
 
             #[cfg(windows)]
@@ -194,9 +193,7 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
                 if let Ok(program_data_path) = env::var("PROGRAMDATA") {
                     let hgrc_dir = Path::new(&program_data_path).join("Facebook\\Mercurial");
-                    errors.append(&mut self.load_path(hgrc_dir.join("mercurial.ini"), &opts));
-                    errors.append(&mut self.load_path(hgrc_dir.join("hgrc"), &opts));
-                    errors.append(&mut self.load_path(hgrc_dir.join("hgrc.d/"), &opts));
+                    errors.append(&mut self.load_path(hgrc_dir.join("system.rc"), &opts));
                 }
             }
         }
