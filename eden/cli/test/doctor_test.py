@@ -955,9 +955,27 @@ Remounting {mounts[1]}...<green>fixed<reset>
         )
         self.assertEqual(exit_code, 0)
 
+    def test_remount_checkouts_old_edenfs(self) -> None:
+        exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
+            dry_run=False, old_edenfs=True
+        )
+        self.assertEqual(
+            f"""\
+Checking {mounts[0]}
+Checking {mounts[1]}
+<yellow>- Found problem:<reset>
+{mounts[1]} is not currently mounted
+Remounting {mounts[1]}...<green>fixed<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+            out,
+        )
+        self.assertEqual(exit_code, 0)
+
     def test_remount_checkouts_dry_run(self) -> None:
         exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
-            dry_run=True
+            dry_run=True, old_edenfs=True
         )
         self.assertEqual(
             f"""\
@@ -976,7 +994,11 @@ Would remount {mounts[1]}
     @patch("eden.cli.doctor.check_watchman._call_watchman")
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set())
     def _test_remount_checkouts(
-        self, mock_get_roots_for_nuclide, mock_watchman, dry_run: bool
+        self,
+        mock_get_roots_for_nuclide,
+        mock_watchman,
+        dry_run: bool,
+        old_edenfs: bool = False,
     ) -> Tuple[int, str, List[Path]]:
         """Test that `eden doctor` remounts configured mount points that are not
         currently mounted.
@@ -985,8 +1007,12 @@ Would remount {mounts[1]}
         instance = FakeEdenInstance(tmp_dir)
 
         mounts = []
-        mounts.append(instance.create_test_mount("path1").path)
+        mount1 = instance.create_test_mount("path1")
+        mounts.append(mount1.path)
         mounts.append(instance.create_test_mount("path2", active=False).path)
+        if old_edenfs:
+            # Mimic older versions of edenfs, and do not return mount state data.
+            instance.get_thrift_client().change_mount_state(mount1.path, None)
 
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
@@ -2284,6 +2310,15 @@ class FakeClient:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         pass
+
+    def change_mount_state(self, path: Path, state: Optional[eden_ttypes.MountState]):
+        """This function allows tests to change the reported state of mounts."""
+        path_bytes = bytes(path)
+        for mount in self._mounts:
+            if mount.mountPoint == path_bytes:
+                mount.state = state
+                return
+        raise KeyError(f"no mount found at {path}")
 
     def listMounts(self):
         return self._mounts

@@ -210,12 +210,16 @@ def run_normal_checks(
     # Get information about the checkouts currently known to the running edenfs process
     with instance.get_thrift_client() as client:
         for mount in client.listMounts():
+            # Old versions of edenfs did not return a mount state field.
+            # These versions only listed running mounts, so treat the mount state
+            # as running in this case.
+            mount_state = mount.state if mount.state is not None else MountState.RUNNING
             path = Path(os.fsdecode(mount.mountPoint))
             checkout = CheckoutInfo(
                 instance,
                 path,
                 running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
-                state=mount.state,
+                state=mount_state,
             )
             checkouts[path] = checkout
 
