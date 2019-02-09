@@ -126,7 +126,9 @@ class CacheConnectionError(Exception):
     """Exception raised if the cache connection was unexpectedly closed."""
 
     def __init__(self):
-        super("Scmmemcache connection was unexpectedly closed")
+        super(CacheConnectionError, self).__init__(
+            "Scmmemcache connection was unexpectedly closed"
+        )
 
 
 class cacheconnection(object):
@@ -482,6 +484,7 @@ class fileserverclient(object):
 
         total = len(fileids)
         with progress.bar(self.ui, _("downloading"), total=total) as prog:
+            missed = set()
             try:
                 missed = cache.receive(prog)
             except CacheConnectionError:
