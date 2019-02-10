@@ -579,8 +579,6 @@ fn create_rebased_changesets(
             rebased.push(bcs_new);
         }
 
-        // XXX: This can potentially be slow for long stacks. To speed it up we can write
-        // all bonsai changests at once
         save_bonsai_changesets(rebased, ctx, repo)
             .map(move |_| remapping.get(&head).cloned().unwrap_or(head))
             .from_err()
