@@ -3,9 +3,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::{Backtrace, Context, Error, Fail};
-
 use std::fmt;
+
+use failure::{Backtrace, Context, Error, Fail};
 
 #[derive(Debug)]
 pub struct KeyError(Error);

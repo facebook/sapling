@@ -3,12 +3,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::{collections::HashMap, rc::Rc, sync::Arc};
+
 use failure::Fallible;
 use serde_derive::{Deserialize, Serialize};
 
 use types::node::Node;
-
-use std::{collections::HashMap, rc::Rc, sync::Arc};
 
 use crate::key::Key;
 

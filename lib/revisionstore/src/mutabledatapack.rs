@@ -3,6 +3,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::{
+    collections::HashMap,
+    io::{Read, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+    u16,
+};
+
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
@@ -11,13 +18,6 @@ use tempfile::NamedTempFile;
 
 use lz4_pyframe::compress;
 use types::node::Node;
-
-use std::{
-    collections::HashMap,
-    io::{Read, Seek, SeekFrom, Write},
-    path::{Path, PathBuf},
-    u16,
-};
 
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};

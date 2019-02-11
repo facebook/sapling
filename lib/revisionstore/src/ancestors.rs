@@ -3,12 +3,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::{Fail, Fallible};
-
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     iter::Iterator,
 };
+
+use failure::{Fail, Fallible};
 
 use crate::historystore::{Ancestors, NodeInfo};
 use crate::key::Key;

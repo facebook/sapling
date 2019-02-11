@@ -3,18 +3,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible};
-use memmap::{Mmap, MmapOptions};
-
-use types::node::Node;
-
 use std::{
     collections::HashMap,
     fs::File,
     io::{Cursor, Read, Write},
     path::Path,
 };
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::{Fail, Fallible};
+use memmap::{Mmap, MmapOptions};
+
+use types::node::Node;
 
 use crate::error::KeyError;
 use crate::fanouttable::FanoutTable;

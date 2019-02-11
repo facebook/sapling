@@ -8,15 +8,15 @@
 /// possible 1 or 2 byte prefix. If nodes exist with that prefix, that fanout slot is set to the
 /// offset of the earliest node with that prefix. If a fanout slot has no nodes, it's value is set
 /// to the value of the last valid offset, or 0 if there is none.
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Fallible};
-
-use types::node::Node;
-
 use std::{
     io::{Cursor, Write},
     option::Option,
 };
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::{Fail, Fallible};
+
+use types::node::Node;
 
 const SMALL_FANOUT_FACTOR: u8 = 1;
 const LARGE_FANOUT_FACTOR: u8 = 2;

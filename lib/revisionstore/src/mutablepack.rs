@@ -3,10 +3,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Fallible;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, path::PathBuf};
+
+use failure::Fallible;
 use tempfile::NamedTempFile;
 
 /// Mark the permission as read-only for user-group-other.

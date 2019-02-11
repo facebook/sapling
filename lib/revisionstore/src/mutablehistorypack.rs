@@ -3,18 +3,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use byteorder::WriteBytesExt;
-use crypto::digest::Digest;
-use crypto::sha1::Sha1;
-use failure::{Fail, Fallible};
-use tempfile::NamedTempFile;
-
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     io::Write,
     iter::FromIterator,
     path::{Path, PathBuf},
 };
+
+use byteorder::WriteBytesExt;
+use crypto::digest::Digest;
+use crypto::sha1::Sha1;
+use failure::{Fail, Fallible};
+use tempfile::NamedTempFile;
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};

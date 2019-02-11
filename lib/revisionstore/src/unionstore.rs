@@ -1,8 +1,7 @@
 // Copyright Facebook, Inc. 2018
 // Union store
 
-use std::slice::Iter;
-use std::vec::IntoIter;
+use std::{slice::Iter, vec::IntoIter};
 
 use failure::Fallible;
 

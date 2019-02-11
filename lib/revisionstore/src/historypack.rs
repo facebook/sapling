@@ -3,12 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{format_err, Fail, Fallible};
-use memmap::{Mmap, MmapOptions};
-
-use types::node::Node;
-
 use std::{
     fs::{remove_file, File},
     io::{Cursor, Read, Write},
@@ -16,6 +10,12 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::{format_err, Fail, Fallible};
+use memmap::{Mmap, MmapOptions};
+
+use types::node::Node;
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;

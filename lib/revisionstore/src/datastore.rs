@@ -3,16 +3,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use bytes::Bytes;
-use failure::{format_err, Fallible};
-use serde_derive::{Deserialize, Serialize};
-
 use std::{
     io::{Cursor, Write},
     rc::Rc,
     sync::Arc,
 };
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use bytes::Bytes;
+use failure::{format_err, Fallible};
+use serde_derive::{Deserialize, Serialize};
 
 use crate::key::Key;
 

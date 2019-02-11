@@ -1,11 +1,12 @@
 // Copyright Facebook, Inc. 2019
-use failure::Fallible;
 
 use std::{
     cell::{RefCell, RefMut},
     fmt::Debug,
     io::{self, BufWriter, Write},
 };
+
+use failure::Fallible;
 
 /// A `PackWriter` will buffers all the writes to `T` and count the total number of bytes written.
 pub struct PackWriter<T: Write> {

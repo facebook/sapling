@@ -3,12 +3,12 @@
 // hg/hgext/remotefilelog/remotefilelog.py:_createfileblob()
 // into the size of text, text and ancestors information.
 
+use std::{fs::File, io::prelude::*};
+
 use bytes::Bytes;
 use failure::{Fail, Fallible};
 
 use types::node::Node;
-
-use std::{fs::File, io::prelude::*};
 
 use crate::error::KeyError;
 use crate::historystore::{Ancestors, NodeInfo};

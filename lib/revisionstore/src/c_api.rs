@@ -6,9 +6,6 @@
 //! This module exports some concrete implementations of the revisionstore
 //! API for use from C++ code.  The exports in this file match up to the C++
 //! header file RevisionStore.h in the top level of this crate.
-use failure::Fallible;
-
-use types::node::Node;
 
 use std::{
     collections::HashMap,
@@ -20,6 +17,10 @@ use std::{
     rc::Rc,
     slice,
 };
+
+use failure::Fallible;
+
+use types::node::Node;
 
 use crate::datapack::DataPack;
 use crate::datastore::DataStore;

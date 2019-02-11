@@ -72,13 +72,6 @@
 //!
 //! ```
 //! [1]: new in version 1.
-use byteorder::{BigEndian, ReadBytesExt};
-use bytes::Bytes;
-use failure::{format_err, Fail, Fallible};
-use memmap::{Mmap, MmapOptions};
-
-use lz4_pyframe::decompress;
-use types::node::Node;
 
 use std::{
     cell::RefCell,
@@ -89,6 +82,14 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+
+use byteorder::{BigEndian, ReadBytesExt};
+use bytes::Bytes;
+use failure::{format_err, Fail, Fallible};
+use memmap::{Mmap, MmapOptions};
+
+use lz4_pyframe::decompress;
+use types::node::Node;
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
