@@ -17,6 +17,7 @@ use bonsai_changeset::BonsaiChangeset;
 use errors::*;
 use file_contents::FileContents;
 use hash::{Blake2, Context};
+use rawbundle2::RawBundle2;
 use thrift;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
@@ -46,6 +47,11 @@ pub struct ChangesetId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
 pub struct ContentId(Blake2);
+
+/// An identifier for raw bundle2 contents in Mononoke
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf)] //TODO(ikostia): which of these are actually needed?
+pub struct RawBundle2Id(Blake2);
 
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash {
@@ -217,6 +223,13 @@ impl_typed_hash! {
     value_type => FileContents,
     context_type => ContentIdContext,
     context_key => "content",
+}
+
+impl_typed_hash! {
+    hash_type => RawBundle2Id,
+    value_type => RawBundle2,
+    context_type => RawBundle2IdContext,
+    context_key => "rawbundle2",
 }
 
 #[cfg(test)]

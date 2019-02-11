@@ -38,6 +38,7 @@ union IdType {
 
 typedef IdType ChangesetId (hs.newtype)
 typedef IdType ContentId (hs.newtype)
+typedef IdType RawBundle2Id (hs.newtype)
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary.
@@ -112,6 +113,10 @@ struct DateTime {
 }
 
 union FileContents {
+  1: binary Bytes,
+}
+
+union RawBundle2 {
   1: binary Bytes,
 }
 

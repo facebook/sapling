@@ -9,7 +9,7 @@
 use bytes::Bytes;
 
 use errors::*;
-use typed_hash::{ChangesetId, ContentId, MononokeId};
+use typed_hash::{ChangesetId, ContentId, MononokeId, RawBundle2Id};
 
 /// A serialized blob in memory.
 pub struct Blob<Id> {
@@ -38,6 +38,7 @@ impl<Id> Blob<Id> {
 
 pub type ChangesetBlob = Blob<ChangesetId>;
 pub type ContentBlob = Blob<ContentId>;
+pub type RawBundle2Blob = Blob<RawBundle2Id>;
 
 pub use blobstore::BlobstoreBytes;
 
