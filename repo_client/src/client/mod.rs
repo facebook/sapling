@@ -98,6 +98,11 @@ fn timeout_duration() -> Duration {
     Duration::from_secs(15 * 60)
 }
 
+fn getfiles_timeout_duration() -> Duration {
+    // getfiles requests can be rather long. Let's bump the timeout
+    Duration::from_secs(60 * 60)
+}
+
 fn process_timeout_error(err: TimeoutError<Error>) -> Error {
     match err.into_inner() {
         Some(err) => err,
@@ -940,7 +945,7 @@ impl HgCommands for RepoClient {
                         .set_max_counter("getfiles_max_file_size", len);
                 }
             })
-            .whole_stream_timeout(timeout_duration())
+            .whole_stream_timeout(getfiles_timeout_duration())
             .map_err(process_stream_timeout_error)
             .timed({
                 cloned!(self.ctx);
