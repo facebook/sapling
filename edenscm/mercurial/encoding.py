@@ -74,6 +74,12 @@ else:
 
 _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 
+# cp65001 is a Windows variant of utf-8, which isn't supported on Python 2.
+# No idea if it should be rewritten to the canonical name 'utf-8' on Python 3.
+# https://bugs.python.org/issue13216
+if pycompat.iswindows and not pycompat.ispy3:
+    _encodingfixers["cp65001"] = lambda: "utf-8"
+
 try:
     encoding = environ.get("HGENCODING")
     if not encoding:
