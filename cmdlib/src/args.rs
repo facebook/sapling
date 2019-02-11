@@ -511,8 +511,7 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
 pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let config_path = matches
         .value_of("mononoke-config-path")
-        .expect("Mononoke config path must be specified");
-
+        .ok_or(err_msg("mononoke-config-path must be specified"))?;
     RepoConfigs::read_configs(config_path)
 }
 

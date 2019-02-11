@@ -4,7 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::failure::Error;
+use std::ops::Deref;
+
+use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use stats::DynamicTimeseries;
@@ -114,5 +116,13 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
                 res
             })
             .boxify()
+    }
+}
+
+impl<T: Blobstore> Deref for CountedBlobstore<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_inner()
     }
 }
