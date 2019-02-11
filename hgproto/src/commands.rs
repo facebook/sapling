@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead};
 use std::mem;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use bytes::{Bytes, BytesMut};
 use failure::{err_msg, FutureFailureErrorExt};
@@ -197,7 +197,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     Either::A(ok(SingleResponse::ReadyForStream)),
                     Either::B(
                         hgcmds
-                            .unbundle(heads, bundle2stream, self.hook_manager.clone())
+                            .unbundle(heads, bundle2stream, self.hook_manager.clone(), None)
                             .map(|bytes| SingleResponse::Unbundle(bytes)),
                     ),
                 ]);
@@ -527,6 +527,7 @@ pub trait HgCommands {
         _heads: Vec<String>,
         _stream: BoxStream<Bundle2Item, Error>,
         _hook_manager: Arc<HookManager>,
+        _maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
     }

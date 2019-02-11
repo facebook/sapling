@@ -1,7 +1,7 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-  $ setup_common_config
+  $ setup_common_config "blob:files"
   $ cd $TESTTMP
 
 setup common configuration

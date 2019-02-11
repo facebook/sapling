@@ -14,10 +14,12 @@
 //! 0-sized chunk is the indication of end of stream, so a proper stream of data should not
 //! contain empty chunks inside.
 
+use bytes::Bytes;
 use std::io::{self, BufRead, Read};
+use std::sync::{Arc, Mutex};
 
-use futures::{Async, Future};
 use futures::future::poll_fn;
+use futures::{Async, Future};
 use tokio_io::AsyncRead;
 
 /// Structure that wraps around a `AsyncRead + BufRead` object to provide chunked-based encoding
@@ -29,6 +31,7 @@ use tokio_io::AsyncRead;
 pub struct Dechunker<R> {
     bufread: R,
     state: DechunkerState,
+    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 }
 
 enum DechunkerState {
@@ -47,7 +50,15 @@ where
         Self {
             bufread,
             state: ParsingInt(Vec::new()),
+            maybe_full_content: None,
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn with_full_content(mut self, full_bundle2_content: Arc<Mutex<Bytes>>) -> Self {
+        // TODO(ikostia): make this used in commands.rs and remove the attribute above
+        self.maybe_full_content = Some(full_bundle2_content);
+        self
     }
 
     pub fn check_is_done(self) -> impl Future<Item = (bool, Self), Error = io::Error> {
@@ -93,7 +104,7 @@ where
                                 io::ErrorKind::InvalidData,
                                 format_err!("Failed to parse int for Dechunker from '{:?}'", buf)
                                     .compat(),
-                            ))
+                            ));
                         }
                     }
                 }
@@ -151,6 +162,12 @@ where
 
         let buf_size = self.bufread.read(&mut buf[0..buf_size])?;
         self.consume_chunk(buf_size);
+        if let Some(ref mut full_bundle2_content) = self.maybe_full_content {
+            full_bundle2_content
+                .lock()
+                .unwrap()
+                .extend_from_slice(&buf[0..buf_size]);
+        }
         Ok(buf_size)
     }
 }

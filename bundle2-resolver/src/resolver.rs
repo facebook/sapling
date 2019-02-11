@@ -7,13 +7,13 @@
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::ops::AddAssign;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use ascii::AsciiString;
 use blobrepo::{
     BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset, HgBlobEntry,
 };
-use bookmarks::{Bookmark, BookmarkUpdateReason, Transaction};
+use bookmarks::{Bookmark, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
@@ -32,7 +32,7 @@ use mercurial_types::{
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
 use metaconfig_types::{PushrebaseParams, RepoReadOnly};
-use mononoke_types::ChangesetId;
+use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -65,9 +65,9 @@ pub fn resolve(
     lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
     readonly: RepoReadOnly,
+    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(ctx.clone(), repo, pushrebase, hook_manager);
-
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
@@ -109,7 +109,7 @@ pub fn resolve(
             move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
                 if let Some(commonheads) = maybe_commonheads {
                     if pushkey_next {
-                        resolve_bookmark_only_pushrebase(ctx, resolver, bundle2)
+                        resolve_bookmark_only_pushrebase(ctx, resolver, bundle2, maybe_full_content)
                     } else {
                         resolve_pushrebase(
                             ctx,
@@ -119,10 +119,11 @@ pub fn resolve(
                             maybe_pushvars,
                             lca_hint,
                             phases_hint,
+                            maybe_full_content,
                         )
                     }
                 } else {
-                    resolve_push(ctx, resolver, bundle2)
+                    resolve_push(ctx, resolver, bundle2, maybe_full_content)
                 }
             },
         )
@@ -133,6 +134,7 @@ fn resolve_push(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
+    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_changegroup(ctx.clone(), bundle2)
@@ -197,17 +199,24 @@ fn resolve_push(
             cloned!(resolver);
             move |(changegroup_id, bookmark_push, bundle2)| {
                 resolver
-                    .ensure_stream_finished(bundle2)
-                    .map(move |()| (changegroup_id, bookmark_push))
+                    .ensure_stream_finished(bundle2, maybe_full_content)
+                    .map(move |maybe_raw_bundle2_id| {
+                        (changegroup_id, bookmark_push, maybe_raw_bundle2_id)
+                    })
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changegroup_id, bookmark_push)| {
+            move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id)| {
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
+                    let reason = BookmarkUpdateReason::Push {
+                        // TODO (ikostia): set bundle2 handle and changeset timestamps here
+                        bundle_replay_data: maybe_raw_bundle2_id
+                            .map(|id| BundleReplayData::new(id)),
+                    };
                     resolver
-                        .resolve_bookmark_pushes(bookmark_push)
+                        .resolve_bookmark_pushes(bookmark_push, reason)
                         .map(move |()| (changegroup_id, bookmark_ids))
                         .boxify()
                 })()
@@ -231,6 +240,7 @@ fn resolve_pushrebase(
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
+    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .resolve_b2xtreegroup2(ctx.clone(), bundle2)
@@ -306,8 +316,15 @@ fn resolve_pushrebase(
                             };
 
                             resolver
-                                .ensure_stream_finished(bundle2)
-                                .map(move |()| (changesets, bookmark_push_part_id, onto))
+                                .ensure_stream_finished(bundle2, maybe_full_content)
+                                .map(move |maybe_raw_bundle2_id| {
+                                    (
+                                        changesets,
+                                        bookmark_push_part_id,
+                                        onto,
+                                        maybe_raw_bundle2_id,
+                                    )
+                                })
                                 .boxify()
                         }
                     })
@@ -315,7 +332,7 @@ fn resolve_pushrebase(
         })
         .and_then({
             cloned!(ctx, resolver);
-            move |(changesets, bookmark_push_part_id, onto)| {
+            move |(changesets, bookmark_push_part_id, onto, maybe_raw_bundle2_id)| {
                 resolver
                     .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto)
                     .map_err(|err| match err {
@@ -342,9 +359,11 @@ fn resolve_pushrebase(
                         RunHooksError::Error(err) => err,
                     })
                     .and_then(move |()| {
-                        resolver.pushrebase(ctx, changesets.clone(), &onto).map(
-                            move |pushrebased_rev| (pushrebased_rev, onto, bookmark_push_part_id),
-                        )
+                        resolver
+                            .pushrebase(ctx, changesets.clone(), &onto, maybe_raw_bundle2_id)
+                            .map(move |pushrebased_rev| {
+                                (pushrebased_rev, onto, bookmark_push_part_id)
+                            })
                     })
             }
         })
@@ -367,6 +386,7 @@ fn resolve_bookmark_only_pushrebase(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
+    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
@@ -400,19 +420,23 @@ fn resolve_bookmark_only_pushrebase(
                 }
                 let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
                 resolver
-                    .ensure_stream_finished(bundle2)
-                    .map(move |()| bookmark_push)
+                    .ensure_stream_finished(bundle2, maybe_full_content)
+                    .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
                     .boxify()
             }
         })
         //TODO (ikostia, T40115672): add hook run here. Make sure hooks run even without changesets
         .and_then({
             cloned!(resolver);
-            move |bookmark_push| {
+            move |(bookmark_push, maybe_raw_bundle2_id)| {
                 let part_id = bookmark_push.part_id;
                 let pushes = vec![bookmark_push];
+                let reason = BookmarkUpdateReason::Pushrebase {
+                    // Since this a bookmark-only pushrebase, there are no changeset timestamps
+                    bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
+                };
                 resolver
-                    .resolve_bookmark_pushes(pushes)
+                    .resolve_bookmark_pushes(pushes, reason)
                     .and_then(move |_| ok(part_id).boxify())
             }
         })
@@ -524,6 +548,7 @@ impl Bundle2Resolver {
     fn resolve_bookmark_pushes(
         &self,
         bookmark_pushes: Vec<BookmarkPush>,
+        reason: BookmarkUpdateReason,
     ) -> impl Future<Item = (), Error = Error> {
         let resolver = self.clone();
         let ctx = resolver.ctx.clone();
@@ -541,9 +566,7 @@ impl Bundle2Resolver {
                     .repo
                     .update_bookmark_transaction(resolver.ctx.clone());
                 for bp in bonsai_bookmark_pushes {
-                    try_boxfuture!(add_bookmark_to_transaction(
-                        &mut txn, bp, BookmarkUpdateReason::Pushrebase { bundle_replay_data: None },
-                    ));
+                    try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp, reason.clone(),));
                 }
                 txn.commit()
                     .and_then(|ok| {
@@ -582,6 +605,27 @@ impl Bundle2Resolver {
                 _ => ok((false, bundle2)).boxify(),
             })
             .boxify()
+    }
+
+    /// Preserve the full raw content of the bundle2 for later replay
+    fn maybe_save_full_content_bundle2(
+        &self,
+        maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    ) -> BoxFuture<Option<RawBundle2Id>, Error> {
+        match maybe_full_content {
+            Some(full_content) => {
+                let blob = RawBundle2::new_bytes(full_content.lock().unwrap().clone()).into_blob();
+                let ctx = self.ctx.clone();
+                self.repo
+                    .upload_blob_no_alias(ctx.clone(), blob)
+                    .map(move |id| {
+                        debug!(ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
+                        Some(id)
+                    })
+                    .boxify()
+            }
+            None => ok(None).boxify(),
+        }
     }
 
     /// Parse Start and Replycaps and ignore their content
@@ -959,11 +1003,21 @@ impl Bundle2Resolver {
     fn ensure_stream_finished(
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(), Error> {
+        maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    ) -> BoxFuture<Option<RawBundle2Id>, Error> {
         next_item(bundle2)
             .and_then(|(none, _)| {
                 ensure_msg!(none.is_none(), "Expected end of Bundle2");
                 Ok(())
+            })
+            .and_then({
+                let resolver = self.clone();
+                move |_| {
+                    resolver
+                        .maybe_save_full_content_bundle2(maybe_full_content)
+                        .and_then(move |maybe_raw_bundle2_id| ok(maybe_raw_bundle2_id).boxify())
+                        .boxify()
+                }
             })
             .boxify()
     }
@@ -1141,6 +1195,7 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         changesets: Changesets,
         onto_bookmark: &Bookmark,
+        maybe_raw_bundle2_id: Option<RawBundle2Id>,
     ) -> impl Future<Item = ChangesetId, Error = Error> {
         pushrebase::do_pushrebase(
             ctx,
@@ -1151,6 +1206,7 @@ impl Bundle2Resolver {
                 .into_iter()
                 .map(|(hg_cs_id, _)| hg_cs_id)
                 .collect(),
+            maybe_raw_bundle2_id,
         )
         .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
         .timed({

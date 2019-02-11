@@ -43,7 +43,7 @@
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
-use bookmarks::{Bookmark, BookmarkUpdateReason};
+use bookmarks::{Bookmark, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{Error, Fail};
@@ -54,7 +54,9 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use maplit::hashmap;
 use mercurial_types::{Changeset, HgChangesetId, MPath};
 use metaconfig_types::PushrebaseParams;
-use mononoke_types::{check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange};
+use mononoke_types::{
+    check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
+};
 
 use revset::RangeNodeStream;
 use std::cmp::Ordering;
@@ -117,6 +119,7 @@ pub fn do_pushrebase(
     config: PushrebaseParams,
     onto_bookmark: Bookmark,
     pushed_set: Vec<HgChangesetId>,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     fetch_bonsai_changesets(ctx.clone(), repo.clone(), pushed_set)
         .and_then(|pushed| {
@@ -157,6 +160,7 @@ pub fn do_pushrebase(
                             root,
                             client_cf,
                             client_bcs,
+                            maybe_raw_bundle2_id,
                         )
                     })
             }
@@ -172,6 +176,7 @@ fn rebase_in_loop(
     root: ChangesetId,
     client_cf: Vec<MPath>,
     client_bcs: Vec<BonsaiChangeset>,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
     loop_fn(
         (root.clone(), 0),
@@ -210,6 +215,7 @@ fn rebase_in_loop(
                                 head,
                                 bookmark_val,
                                 onto_bookmark,
+                                maybe_raw_bundle2_id,
                             )
                             .map(move |update_res| match update_res {
                                 Some(result) => Loop::Break(PushrebaseSuccessResult {
@@ -234,9 +240,21 @@ fn do_rebase(
     head: ChangesetId,
     bookmark_val: ChangesetId,
     onto_bookmark: Bookmark,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
     create_rebased_changesets(ctx.clone(), repo.clone(), config, root, head, bookmark_val).and_then(
-        { move |new_head| try_update_bookmark(ctx, &repo, &onto_bookmark, bookmark_val, new_head) },
+        {
+            move |new_head| {
+                try_update_bookmark(
+                    ctx,
+                    &repo,
+                    &onto_bookmark,
+                    bookmark_val,
+                    new_head,
+                    maybe_raw_bundle2_id,
+                )
+            }
+        },
     )
 }
 
@@ -658,10 +676,13 @@ fn try_update_bookmark(
     bookmark_name: &Bookmark,
     old_value: ChangesetId,
     new_value: ChangesetId,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    // TODO (ikostia): also pass new timestamps of the rebased changeset
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx);
     let reason = BookmarkUpdateReason::Pushrebase {
-        bundle_replay_data: None,
+        // TODO (ikostia): record changeset timestamps
+        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
     };
     try_boxfuture!(txn.update(bookmark_name, new_value, old_value, reason));
     txn.commit()
@@ -744,7 +765,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs])
+            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs], None)
                 .wait()
                 .expect("pushrebase failed");
         });
@@ -806,9 +827,16 @@ mod tests {
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
                 .wait()
                 .unwrap();
-            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs_1, hg_cs_2])
-                .wait()
-                .expect("pushrebase failed");
+            do_pushrebase(
+                ctx,
+                repo,
+                Default::default(),
+                book,
+                vec![hg_cs_1, hg_cs_2],
+                None,
+            )
+            .wait()
+            .expect("pushrebase failed");
         });
     }
 
@@ -869,9 +897,16 @@ mod tests {
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
                 .wait()
                 .unwrap();
-            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs_1, hg_cs_2])
-                .wait()
-                .expect("pushrebase failed");
+            do_pushrebase(
+                ctx,
+                repo,
+                Default::default(),
+                book,
+                vec![hg_cs_1, hg_cs_2],
+                None,
+            )
+            .wait()
+            .expect("pushrebase failed");
         });
     }
 
@@ -992,6 +1027,7 @@ mod tests {
                 config,
                 book,
                 vec![hg_cs_1, hg_cs_2, hg_cs_3],
+                None,
             )
             .wait()
             .expect("pushrebase failed");
@@ -1081,6 +1117,7 @@ mod tests {
                 Default::default(),
                 book,
                 vec![hg_cs_1, hg_cs_2, hg_cs_3],
+                None,
             )
             .wait();
             match result {
@@ -1158,7 +1195,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, repo, Default::default(), book, hgcss)
+            do_pushrebase(ctx, repo, Default::default(), book, hgcss, None)
                 .wait()
                 .expect("push-rebase failed");
         })
@@ -1215,7 +1252,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, repo, Default::default(), book, hgcss)
+            do_pushrebase(ctx, repo, Default::default(), book, hgcss, None)
                 .wait()
                 .expect("push-rebase failed");
         })
@@ -1275,6 +1312,7 @@ mod tests {
                 Default::default(),
                 book.clone(),
                 hgcss,
+                None,
             )
             .wait()
             .expect("pushrebase failed");
@@ -1305,6 +1343,7 @@ mod tests {
                 config,
                 book.clone(),
                 hgcss.clone(),
+                None,
             )
             .wait();
             match result {
@@ -1316,7 +1355,7 @@ mod tests {
                 recursion_limit: 256,
                 ..Default::default()
             };
-            do_pushrebase(ctx, repo_arc, config, book, hgcss)
+            do_pushrebase(ctx, repo_arc, config, book, hgcss, None)
                 .wait()
                 .expect("push-rebase failed");
         })
@@ -1367,6 +1406,7 @@ mod tests {
                 config,
                 book.clone(),
                 hgcss.clone(),
+                None,
             )
             .wait()
             .expect("push-rebase failed");
@@ -1381,9 +1421,10 @@ mod tests {
                 rewritedates: true,
                 ..Default::default()
             };
-            let bcs_rewrite_date = do_pushrebase(ctx.clone(), repo.clone(), config, book, hgcss)
-                .wait()
-                .expect("push-rebase failed");
+            let bcs_rewrite_date =
+                do_pushrebase(ctx.clone(), repo.clone(), config, book, hgcss, None)
+                    .wait()
+                    .expect("push-rebase failed");
 
             let bcs = repo.get_bonsai_changeset(ctx.clone(), bcs).wait().unwrap();
             let bcs_keep_date = repo
@@ -1437,7 +1478,7 @@ mod tests {
                 "2f866e7e549760934e31bf0420a873f65100ad63",
             );
 
-            let result = do_pushrebase(ctx, repo, Default::default(), book, hgcss).wait();
+            let result = do_pushrebase(ctx, repo, Default::default(), book, hgcss, None).wait();
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
                     assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1").unwrap())
@@ -1536,9 +1577,16 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            let result = do_pushrebase(ctx.clone(), repo.clone(), Default::default(), book, hgcss)
-                .wait()
-                .expect("pushrebase failed");
+            let result = do_pushrebase(
+                ctx.clone(),
+                repo.clone(),
+                Default::default(),
+                book,
+                hgcss,
+                None,
+            )
+            .wait()
+            .expect("pushrebase failed");
             let result_bcs = repo
                 .get_bonsai_changeset(ctx.clone(), result.head)
                 .wait()
@@ -1619,6 +1667,7 @@ mod tests {
                         Default::default(),
                         book.clone(),
                         vec![hg_cs],
+                        None,
                     )
                     .map_err(|_| err_msg("error while pushrebasing")),
                 );

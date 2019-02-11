@@ -22,7 +22,7 @@ use context::CoreContext;
 use failure::{err_msg, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::HgChangesetId;
-use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
+use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -174,6 +174,20 @@ pub trait Bookmarks: Send + Sync + 'static {
 pub struct BundleReplayData {
     pub bundle_handle: String,
     pub commit_timestamps: HashMap<HgChangesetId, Timestamp>,
+}
+
+impl BundleReplayData {
+    pub fn new(raw_bundle2_id: RawBundle2Id) -> Self {
+        Self {
+            bundle_handle: raw_bundle2_id.to_hex().as_str().to_owned(),
+            commit_timestamps: HashMap::new(),
+        }
+    }
+
+    pub fn with_timestamps(mut self, commit_timestamps: HashMap<HgChangesetId, Timestamp>) -> Self {
+        self.commit_timestamps = commit_timestamps;
+        self
+    }
 }
 
 /// Describes why a bookmark was moved

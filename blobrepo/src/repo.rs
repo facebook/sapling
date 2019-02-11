@@ -914,6 +914,24 @@ impl BlobRepo {
         })
     }
 
+    pub fn upload_blob_no_alias<Id>(
+        &self,
+        ctx: CoreContext,
+        blob: Blob<Id>,
+    ) -> impl Future<Item = Id, Error = Error> + Send
+    where
+        Id: MononokeId,
+    {
+        STATS::upload_blob.add_value(1);
+        let id = blob.id().clone();
+        let blobstore_key = id.blobstore_key();
+        let blob_contents: BlobstoreBytes = blob.into();
+
+        // Upload {blobstore_key: blob_contents}
+        self.upload_blobstore_bytes(ctx, blobstore_key, blob_contents.clone())
+            .map(move |_| id)
+    }
+
     pub fn upload_blob<Id>(
         &self,
         ctx: CoreContext,

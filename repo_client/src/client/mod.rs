@@ -815,6 +815,7 @@ impl HgCommands for RepoClient {
         heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
         hook_manager: Arc<HookManager>,
+        maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
         let ctx = self.prepared_ctx(ops::UNBUNDLE, None);
         let mut scuba_logger = ctx.scuba().clone();
@@ -829,6 +830,7 @@ impl HgCommands for RepoClient {
             self.lca_hint.clone(),
             self.phases_hint.clone(),
             self.repo.readonly(),
+            maybe_full_content,
         );
 
         res.timeout(timeout_duration())
