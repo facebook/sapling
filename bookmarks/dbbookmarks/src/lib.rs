@@ -20,10 +20,13 @@ extern crate sql_ext;
 
 use std::collections::{HashMap, HashSet};
 
-use bookmarks::{Bookmark, BookmarkPrefix, Bookmarks, Transaction};
+use bookmarks::{Bookmark, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Transaction};
 use context::CoreContext;
 use failure::{Error, Result};
-use futures::{stream, Future, IntoFuture, future::{loop_fn, Loop}};
+use futures::{
+    future::{loop_fn, Loop},
+    stream, Future, IntoFuture,
+};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use sql::Connection;
 pub use sql_ext::SqlConstructors;
@@ -225,32 +228,53 @@ impl SqlBookmarksTransaction {
 }
 
 impl Transaction for SqlBookmarksTransaction {
-    fn update(&mut self, key: &Bookmark, new_cs: ChangesetId, old_cs: ChangesetId) -> Result<()> {
+    fn update(
+        &mut self,
+        key: &Bookmark,
+        new_cs: ChangesetId,
+        old_cs: ChangesetId,
+        _reason: BookmarkUpdateReason,
+    ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.sets
             .insert(key.clone(), BookmarkSetData { new_cs, old_cs });
         Ok(())
     }
 
-    fn create(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()> {
+    fn create(
+        &mut self,
+        key: &Bookmark,
+        new_cs: ChangesetId,
+        _reason: BookmarkUpdateReason,
+    ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.creates.insert(key.clone(), new_cs);
         Ok(())
     }
 
-    fn force_set(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()> {
+    fn force_set(
+        &mut self,
+        key: &Bookmark,
+        new_cs: ChangesetId,
+        _reason: BookmarkUpdateReason,
+    ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.force_sets.insert(key.clone(), new_cs);
         Ok(())
     }
 
-    fn delete(&mut self, key: &Bookmark, old_cs: ChangesetId) -> Result<()> {
+    fn delete(
+        &mut self,
+        key: &Bookmark,
+        old_cs: ChangesetId,
+        _reason: BookmarkUpdateReason,
+    ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.deletes.insert(key.clone(), old_cs);
         Ok(())
     }
 
-    fn force_delete(&mut self, key: &Bookmark) -> Result<()> {
+    fn force_delete(&mut self, key: &Bookmark, _reason: BookmarkUpdateReason) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.force_deletes.insert(key.clone());
         Ok(())

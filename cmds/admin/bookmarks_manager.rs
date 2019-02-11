@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
+use bookmarks::{Bookmark, BookmarkUpdateReason};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use context::CoreContext;
 use failure::Error;
@@ -131,7 +131,11 @@ fn handle_set<'a>(
     repo.and_then(move |repo| {
         ::fetch_bonsai_changeset(ctx.clone(), &rev, &repo).and_then(move |bonsai_cs| {
             let mut transaction = repo.update_bookmark_transaction(ctx);
-            try_boxfuture!(transaction.force_set(&bookmark, bonsai_cs.get_changeset_id()));
+            try_boxfuture!(transaction.force_set(
+                &bookmark,
+                bonsai_cs.get_changeset_id(),
+                BookmarkUpdateReason::ManualMove
+            ));
             transaction.commit().map(|_| ()).from_err().boxify()
         })
     })

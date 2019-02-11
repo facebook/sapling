@@ -136,29 +136,111 @@ pub trait Bookmarks: Send + Sync + 'static {
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<Transaction>;
 }
 
+/// Describes why a bookmark was moved
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum BookmarkUpdateReason {
+    Pushrebase {
+        /// For now, let the bundle handle be not specified.
+        /// We may change it later
+        bundle_handle: Option<String>,
+    },
+    Push {
+        /// For now, let the bundle handle be not specified.
+        /// We may change it later
+        bundle_handle: Option<String>,
+    },
+    Blobimport,
+    /// Bookmark was moved manually i.e. via mononoke_admin tool
+    ManualMove,
+    /// Only used for tests, should never be used in production
+    TestMove,
+}
+
+impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::Bytes(ref b) if b == &b"pushrebase" => Ok(BookmarkUpdateReason::Pushrebase {
+                bundle_handle: None,
+            }),
+            Value::Bytes(ref b) if b == &b"push" => Ok(BookmarkUpdateReason::Push {
+                bundle_handle: None,
+            }),
+            Value::Bytes(ref b) if b == &b"blobimport" => Ok(BookmarkUpdateReason::Blobimport),
+            Value::Bytes(ref b) if b == &b"manualmove" => Ok(BookmarkUpdateReason::ManualMove),
+            Value::Bytes(ref b) if b == &b"testmove" => Ok(BookmarkUpdateReason::TestMove),
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> BookmarkUpdateReason {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for BookmarkUpdateReason {
+    type Intermediate = BookmarkUpdateReason;
+}
+
+impl From<BookmarkUpdateReason> for Value {
+    fn from(bookmark_update_reason: BookmarkUpdateReason) -> Self {
+        match bookmark_update_reason {
+            BookmarkUpdateReason::Pushrebase { .. } => Value::Bytes(b"pushrebase".to_vec()),
+            BookmarkUpdateReason::Push { .. } => Value::Bytes(b"push".to_vec()),
+            BookmarkUpdateReason::Blobimport { .. } => Value::Bytes(b"blobimport".to_vec()),
+            BookmarkUpdateReason::ManualMove { .. } => Value::Bytes(b"manualmove".to_vec()),
+            BookmarkUpdateReason::TestMove { .. } => Value::Bytes(b"testmove".to_vec()),
+        }
+    }
+}
+
 pub trait Transaction: Send + Sync + 'static {
     /// Adds set() operation to the transaction set.
     /// Updates a bookmark's value. Bookmark should already exist and point to `old_cs`, otherwise
     /// committing the transaction will fail.
-    fn update(&mut self, key: &Bookmark, new_cs: ChangesetId, old_cs: ChangesetId) -> Result<()>;
+    fn update(
+        &mut self,
+        key: &Bookmark,
+        new_cs: ChangesetId,
+        old_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()>;
 
     /// Adds create() operation to the transaction set.
     /// Creates a bookmark. Bookmark should not already exist, otherwise committing the
     /// transaction will fail.
-    fn create(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()>;
+    fn create(
+        &mut self,
+        key: &Bookmark,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()>;
 
     /// Adds force_set() operation to the transaction set.
     /// Unconditionally sets the new value of the bookmark. Succeeds regardless of whether bookmark
     /// exists or not.
-    fn force_set(&mut self, key: &Bookmark, new_cs: ChangesetId) -> Result<()>;
+    fn force_set(
+        &mut self,
+        key: &Bookmark,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()>;
 
     /// Adds delete operation to the transaction set.
     /// Deletes bookmark only if it currently points to `old_cs`.
-    fn delete(&mut self, key: &Bookmark, old_cs: ChangesetId) -> Result<()>;
+    fn delete(
+        &mut self,
+        key: &Bookmark,
+        old_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()>;
 
     /// Adds force_delete operation to the transaction set.
     /// Deletes bookmark unconditionally.
-    fn force_delete(&mut self, key: &Bookmark) -> Result<()>;
+    fn force_delete(&mut self, key: &Bookmark, reason: BookmarkUpdateReason) -> Result<()>;
 
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by

@@ -531,7 +531,7 @@ mod tests {
     use futures::Stream;
     use mercurial_types::nodehash::HgChangesetId;
     use std::str::FromStr;
-    use tests::bookmarks::Bookmark;
+    use tests::bookmarks::{Bookmark, BookmarkUpdateReason};
     use tests::fixtures::linear;
     use tests::mononoke_types_mocks::changesetid::*;
 
@@ -598,7 +598,8 @@ mod tests {
 
     fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark) {
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_delete(&book).unwrap();
+        txn.force_delete(&book, BookmarkUpdateReason::TestMove)
+            .unwrap();
         txn.commit().wait().unwrap();
     }
 
@@ -609,32 +610,33 @@ mod tests {
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, head).unwrap();
+        txn.force_set(&book, head, BookmarkUpdateReason::TestMove)
+            .unwrap();
         txn.commit().wait().unwrap();
     }
 
     /*
-        @  79a13814c5ce7330173ec04d279bf95ab3f652fb
-        |
-        o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
-        |
-        o  3c15267ebf11807f3d772eb891272b911ec68759
-        |
-        o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
-        |
-        o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
-        |
-        o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
-        |
-        o  cb15ca4a43a59acff5388cea9648c162afde8372
-        |
-        o  d0a361e9022d226ae52f689667bd7d212a19cfe0
-        |
-        o  607314ef579bd2407752361ba1b0c1729d08b281
-        |
-        o  3e0e761030db6e479a7fb58b12881883f9f8c63f
-        |
-        o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+            @  79a13814c5ce7330173ec04d279bf95ab3f652fb
+            |
+            o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
+            |
+            o  3c15267ebf11807f3d772eb891272b911ec68759
+            |
+            o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
+            |
+            o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
+            |
+            o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
+            |
+            o  cb15ca4a43a59acff5388cea9648c162afde8372
+            |
+            o  d0a361e9022d226ae52f689667bd7d212a19cfe0
+            |
+            o  607314ef579bd2407752361ba1b0c1729d08b281
+            |
+            o  3e0e761030db6e479a7fb58b12881883f9f8c63f
+            |
+            o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
     */
 
     fn get_hint_phase() {

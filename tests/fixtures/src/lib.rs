@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use bookmarks::Bookmark;
+use bookmarks::{Bookmark, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::{join_all, Future};
@@ -125,7 +125,8 @@ fn set_bookmark(blobrepo: BlobRepo, hg_cs_id: &str, bookmark: Bookmark) {
         .wait()
         .unwrap();
     let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id.unwrap()).unwrap();
+    txn.force_set(&bookmark, bcs_id.unwrap(), BookmarkUpdateReason::TestMove)
+        .unwrap();
     txn.commit().wait().unwrap();
 }
 

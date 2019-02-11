@@ -15,7 +15,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
+use bookmarks::{Bookmark, BookmarkUpdateReason};
 use context::CoreContext;
 use mercurial::RevlogRepo;
 use mercurial_types::HgChangesetId;
@@ -114,7 +114,7 @@ pub fn upload_bookmarks(
 
                 for (key, value) in vec {
                     let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
-                    try_boxfuture!(transaction.force_set(&key, value))
+                    try_boxfuture!(transaction.force_set(&key, value, BookmarkUpdateReason::Blobimport))
                 }
 
                 transaction.commit()

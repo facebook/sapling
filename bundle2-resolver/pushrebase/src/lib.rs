@@ -43,7 +43,7 @@
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
-use bookmarks::Bookmark;
+use bookmarks::{Bookmark, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{Error, Fail};
@@ -660,7 +660,10 @@ fn try_update_bookmark(
     new_value: ChangesetId,
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx);
-    try_boxfuture!(txn.update(bookmark_name, new_value, old_value));
+    let reason = BookmarkUpdateReason::Pushrebase {
+        bundle_handle: None,
+    };
+    try_boxfuture!(txn.update(bookmark_name, new_value, old_value, reason));
     txn.commit()
         .map(move |success| if success { Some(new_value) } else { None })
         .from_err()
@@ -688,7 +691,8 @@ mod tests {
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, head).unwrap();
+        txn.force_set(&book, head, BookmarkUpdateReason::TestMove)
+            .unwrap();
         txn.commit().wait().unwrap();
     }
 

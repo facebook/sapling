@@ -13,7 +13,7 @@ use ascii::AsciiString;
 use blobrepo::{
     BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset, HgBlobEntry,
 };
-use bookmarks::{Bookmark, Transaction};
+use bookmarks::{Bookmark, BookmarkUpdateReason, Transaction};
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
@@ -100,32 +100,32 @@ pub fn resolve(
             move |(maybe_pushvars, maybe_commonheads, bundle2)| {
                 resolver
                     .is_next_part_pushkey(bundle2)
-                    .map(move |(pushkey_next, bundle2)| (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2))
+                    .map(move |(pushkey_next, bundle2)| {
+                        (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)
+                    })
             }
         })
-        .and_then(move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
-            if let Some(commonheads) = maybe_commonheads {
-                if pushkey_next {
-                    resolve_bookmark_only_pushrebase(
-                        ctx,
-                        resolver,
-                        bundle2,
-                    )
+        .and_then(
+            move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
+                if let Some(commonheads) = maybe_commonheads {
+                    if pushkey_next {
+                        resolve_bookmark_only_pushrebase(ctx, resolver, bundle2)
+                    } else {
+                        resolve_pushrebase(
+                            ctx,
+                            commonheads,
+                            resolver,
+                            bundle2,
+                            maybe_pushvars,
+                            lca_hint,
+                            phases_hint,
+                        )
+                    }
                 } else {
-                    resolve_pushrebase(
-                        ctx,
-                        commonheads,
-                        resolver,
-                        bundle2,
-                        maybe_pushvars,
-                        lca_hint,
-                        phases_hint,
-                    )
+                    resolve_push(ctx, resolver, bundle2)
                 }
-            } else {
-                resolve_push(ctx, resolver, bundle2)
-            }
-        })
+            },
+        )
         .boxify()
 }
 
@@ -541,7 +541,13 @@ impl Bundle2Resolver {
                     .repo
                     .update_bookmark_transaction(resolver.ctx.clone());
                 for bp in bonsai_bookmark_pushes {
-                    try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
+                    try_boxfuture!(add_bookmark_to_transaction(
+                        &mut txn,
+                        bp,
+                        BookmarkUpdateReason::Pushrebase {
+                            bundle_handle: None
+                        },
+                    ));
                 }
                 txn.commit()
                     .and_then(|ok| {
@@ -1249,11 +1255,12 @@ impl From<Error> for RunHooksError {
 fn add_bookmark_to_transaction(
     txn: &mut Box<Transaction>,
     bookmark_push: BonsaiBookmarkPush,
+    bookmark_update_reason: BookmarkUpdateReason,
 ) -> Result<()> {
     match (bookmark_push.new, bookmark_push.old) {
-        (Some(new), Some(old)) => txn.update(&bookmark_push.name, new, old),
-        (Some(new), None) => txn.create(&bookmark_push.name, new),
-        (None, Some(old)) => txn.delete(&bookmark_push.name, old),
+        (Some(new), Some(old)) => txn.update(&bookmark_push.name, new, old, bookmark_update_reason),
+        (Some(new), None) => txn.create(&bookmark_push.name, new, bookmark_update_reason),
+        (None, Some(old)) => txn.delete(&bookmark_push.name, old, bookmark_update_reason),
         _ => Ok(()),
     }
 }
