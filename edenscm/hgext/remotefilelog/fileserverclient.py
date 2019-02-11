@@ -718,7 +718,7 @@ class fileserverclient(object):
 
     def connect(self):
         if self.cacheprocess:
-            cmd = "%s %s" % (self.cacheprocess, self.writedata._path)
+            cmd = "%s %s" % (self.cacheprocess, shallowutil.getcachepath(self.ui))
             self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always
