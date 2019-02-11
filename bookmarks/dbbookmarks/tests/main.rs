@@ -21,11 +21,16 @@ extern crate mononoke_types;
 extern crate mononoke_types_mocks;
 extern crate tokio;
 
-use bookmarks::{Bookmark, BookmarkPrefix, BookmarkUpdateReason, Bookmarks};
+use bookmarks::{
+    Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
+};
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use futures::{Future, Stream};
-use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
+use mononoke_types::Timestamp;
+use mononoke_types_mocks::changesetid::{
+    FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
+};
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 
 fn create_bookmark(book: &str) -> Bookmark {
@@ -34,6 +39,15 @@ fn create_bookmark(book: &str) -> Bookmark {
 
 fn create_prefix(book: &str) -> BookmarkPrefix {
     BookmarkPrefix::new(book.to_string()).unwrap()
+}
+
+fn compare_log_entries(expected: BookmarkUpdateLogEntry, actual: BookmarkUpdateLogEntry) {
+    assert_eq!(expected.id, actual.id);
+    assert_eq!(expected.repo_id, actual.repo_id);
+    assert_eq!(expected.bookmark_name, actual.bookmark_name);
+    assert_eq!(expected.to_changeset_id, actual.to_changeset_id);
+    assert_eq!(expected.from_changeset_id, actual.from_changeset_id);
+    assert_eq!(expected.reason, actual.reason);
 }
 
 #[test]
@@ -62,6 +76,23 @@ fn test_simple_unconditional_set_get() {
             .unwrap(),
         None
     );
+
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entry(ctx.clone(), 0)
+            .wait()
+            .unwrap()
+            .unwrap(),
+        BookmarkUpdateLogEntry {
+            id: 1,
+            repo_id: REPO_ZERO,
+            bookmark_name: name_correct,
+            to_changeset_id: Some(ONES_CSID),
+            from_changeset_id: None,
+            reason: BookmarkUpdateReason::TestMove,
+            timestamp: Timestamp::now(),
+        },
+    );
 }
 
 #[test]
@@ -85,6 +116,7 @@ fn test_multi_unconditional_set_get() {
             .unwrap(),
         Some(ONES_CSID)
     );
+
     assert_eq!(
         bookmarks
             .get(ctx.clone(), &name_2, REPO_ZERO)
@@ -136,6 +168,23 @@ fn test_simple_create() {
             .wait()
             .unwrap(),
         Some(ONES_CSID)
+    );
+
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entry(ctx.clone(), 0)
+            .wait()
+            .unwrap()
+            .unwrap(),
+        BookmarkUpdateLogEntry {
+            id: 1,
+            repo_id: REPO_ZERO,
+            bookmark_name: name_1,
+            to_changeset_id: Some(ONES_CSID),
+            from_changeset_id: None,
+            reason: BookmarkUpdateReason::TestMove,
+            timestamp: Timestamp::now(),
+        },
     );
 }
 
@@ -277,6 +326,23 @@ fn test_simple_update_bookmark() {
             .unwrap(),
         Some(TWOS_CSID)
     );
+
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entry(ctx.clone(), 1)
+            .wait()
+            .unwrap()
+            .unwrap(),
+        BookmarkUpdateLogEntry {
+            id: 2,
+            repo_id: REPO_ZERO,
+            bookmark_name: name_1,
+            to_changeset_id: Some(TWOS_CSID),
+            from_changeset_id: Some(ONES_CSID),
+            reason: BookmarkUpdateReason::TestMove,
+            timestamp: Timestamp::now(),
+        },
+    );
 }
 
 #[test]
@@ -359,6 +425,23 @@ fn test_force_delete() {
             .unwrap(),
         None
     );
+
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entry(ctx.clone(), 2)
+            .wait()
+            .unwrap()
+            .unwrap(),
+        BookmarkUpdateLogEntry {
+            id: 3,
+            repo_id: REPO_ZERO,
+            bookmark_name: name_1,
+            to_changeset_id: None,
+            from_changeset_id: None,
+            reason: BookmarkUpdateReason::TestMove,
+            timestamp: Timestamp::now(),
+        },
+    );
 }
 
 #[test]
@@ -386,6 +469,23 @@ fn test_delete() {
     txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().wait().unwrap());
+
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entry(ctx.clone(), 1)
+            .wait()
+            .unwrap()
+            .unwrap(),
+        BookmarkUpdateLogEntry {
+            id: 2,
+            repo_id: REPO_ZERO,
+            bookmark_name: name_1,
+            to_changeset_id: None,
+            from_changeset_id: Some(ONES_CSID),
+            reason: BookmarkUpdateReason::TestMove,
+            timestamp: Timestamp::now(),
+        },
+    );
 }
 
 #[test]
@@ -516,4 +616,91 @@ fn test_create_different_repos() {
     txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
+}
+
+#[test]
+fn test_log_correct_order() {
+    let ctx = CoreContext::test_mock();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
+    let name_1 = create_bookmark("book");
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
+        .unwrap();
+    assert!(txn.commit().wait().is_ok());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        TWOS_CSID,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove,
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        THREES_CSID,
+        TWOS_CSID,
+        BookmarkUpdateReason::TestMove,
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        FOURS_CSID,
+        THREES_CSID,
+        BookmarkUpdateReason::TestMove,
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        FIVES_CSID,
+        FOURS_CSID,
+        BookmarkUpdateReason::TestMove,
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 0)
+        .wait()
+        .unwrap()
+        .unwrap();
+    assert_eq!(log_entry.to_changeset_id.unwrap(), ONES_CSID);
+
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 1)
+        .wait()
+        .unwrap()
+        .unwrap();
+    assert_eq!(log_entry.to_changeset_id.unwrap(), TWOS_CSID);
+
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 2)
+        .wait()
+        .unwrap()
+        .unwrap();
+    assert_eq!(log_entry.to_changeset_id.unwrap(), THREES_CSID);
+
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 3)
+        .wait()
+        .unwrap()
+        .unwrap();
+    assert_eq!(log_entry.to_changeset_id.unwrap(), FOURS_CSID);
+
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 4)
+        .wait()
+        .unwrap()
+        .unwrap();
+    assert_eq!(log_entry.to_changeset_id.unwrap(), FIVES_CSID);
 }

@@ -20,8 +20,11 @@ use ascii::AsciiString;
 use context::CoreContext;
 use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
-use mononoke_types::{ChangesetId, RepositoryId};
-use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
+use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
+use sql::mysql_async::{
+    prelude::{ConvIr, FromValue},
+    FromValueError, Value,
+};
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
@@ -99,6 +102,26 @@ impl BookmarkPrefix {
     }
 }
 
+/// Entry that describes an update to a bookmark
+pub struct BookmarkUpdateLogEntry {
+    /// Number that sets a total order on single bookmark updates. It can be used to fetch
+    /// new log entries
+    pub id: i64,
+    /// Id of a repo
+    pub repo_id: RepositoryId,
+    /// Name of the bookmark
+    pub bookmark_name: Bookmark,
+    /// Previous position of bookmark if it's known. It might not be known if a bookmark was
+    /// force set or if a bookmark didn't exist
+    pub to_changeset_id: Option<ChangesetId>,
+    /// New position of a bookmark. It can be None if the bookmark was deleted
+    pub from_changeset_id: Option<ChangesetId>,
+    /// Reason for a bookmark update
+    pub reason: BookmarkUpdateReason,
+    /// When update happened
+    pub timestamp: Timestamp,
+}
+
 pub trait Bookmarks: Send + Sync + 'static {
     /// Returns Some(ChangesetId) if bookmark exists, returns None if doesn't
     fn get(
@@ -134,6 +157,14 @@ pub trait Bookmarks: Send + Sync + 'static {
 
     /// Creates a transaction that will be used for write operations.
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<Transaction>;
+
+    /// Read the next entry from Bookmark update log. It either returns a new log entry with id
+    /// bigger than `id` or None if there are no more log entries with bigger id.
+    fn read_next_bookmark_log_entry(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+    ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error>;
 }
 
 /// Describes why a bookmark was moved

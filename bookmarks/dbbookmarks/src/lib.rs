@@ -18,9 +18,11 @@ extern crate mononoke_types;
 extern crate sql;
 extern crate sql_ext;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use bookmarks::{Bookmark, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Transaction};
+use bookmarks::{
+    Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Transaction,
+};
 use context::CoreContext;
 use failure::{Error, Result};
 use futures::{
@@ -28,7 +30,8 @@ use futures::{
     stream, Future, IntoFuture,
 };
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use sql::Connection;
+use mononoke_types::Timestamp;
+use sql::{Connection, Transaction as SqlTransaction};
 pub use sql_ext::SqlConstructors;
 
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -82,6 +85,33 @@ queries! {
          WHERE repo_id = {repo_id}
            AND name = {name}
            AND changeset_id = {changeset_id}"
+    }
+
+    write AddBookmarkLog(
+        values: (
+            repo_id: RepositoryId,
+            name: Bookmark,
+            from_changeset_id: Option<ChangesetId>,
+            to_changeset_id: Option<ChangesetId>,
+            reason: BookmarkUpdateReason,
+            timestamp: Timestamp,
+        ),
+    ) {
+        none,
+        "INSERT INTO bookmarks_update_log
+         (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp)
+         VALUES {values}"
+    }
+
+    read ReadNextBookmarkLogEntry(min_id: u64) -> (
+        i64, RepositoryId, Bookmark, Option<ChangesetId>, Option<ChangesetId>,
+        BookmarkUpdateReason, Timestamp
+    ) {
+        "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp
+         FROM bookmarks_update_log
+         WHERE id > {min_id}
+         ORDER BY id asc
+         LIMIT 1"
     }
 
     read SelectBookmark(repo_id: RepositoryId, name: Bookmark) -> (ChangesetId) {
@@ -189,16 +219,40 @@ impl Bookmarks for SqlBookmarks {
             repoid.clone(),
         ))
     }
+
+    fn read_next_bookmark_log_entry(
+        &self,
+        _ctx: CoreContext,
+        id: u64,
+    ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error> {
+        ReadNextBookmarkLogEntry::query(&self.read_connection, &id)
+            .map(|entries| {
+                entries.into_iter().next().map(
+                    |(id, repo_id, name, to_cs_id, from_cs_id, reason, timestamp)| {
+                        BookmarkUpdateLogEntry {
+                            id,
+                            repo_id,
+                            bookmark_name: name,
+                            to_changeset_id: to_cs_id,
+                            from_changeset_id: from_cs_id,
+                            reason,
+                            timestamp,
+                        }
+                    },
+                )
+            })
+            .boxify()
+    }
 }
 
 struct SqlBookmarksTransaction {
     write_connection: Connection,
     repo_id: RepositoryId,
-    force_sets: HashMap<Bookmark, ChangesetId>,
-    creates: HashMap<Bookmark, ChangesetId>,
-    sets: HashMap<Bookmark, BookmarkSetData>,
-    force_deletes: HashSet<Bookmark>,
-    deletes: HashMap<Bookmark, ChangesetId>,
+    force_sets: HashMap<Bookmark, (ChangesetId, BookmarkUpdateReason)>,
+    creates: HashMap<Bookmark, (ChangesetId, BookmarkUpdateReason)>,
+    sets: HashMap<Bookmark, (BookmarkSetData, BookmarkUpdateReason)>,
+    force_deletes: HashMap<Bookmark, BookmarkUpdateReason>,
+    deletes: HashMap<Bookmark, (ChangesetId, BookmarkUpdateReason)>,
 }
 
 impl SqlBookmarksTransaction {
@@ -209,7 +263,7 @@ impl SqlBookmarksTransaction {
             force_sets: HashMap::new(),
             creates: HashMap::new(),
             sets: HashMap::new(),
-            force_deletes: HashSet::new(),
+            force_deletes: HashMap::new(),
             deletes: HashMap::new(),
         }
     }
@@ -218,12 +272,42 @@ impl SqlBookmarksTransaction {
         if self.creates.contains_key(key)
             || self.force_sets.contains_key(key)
             || self.sets.contains_key(key)
-            || self.force_deletes.contains(key)
+            || self.force_deletes.contains_key(key)
             || self.deletes.contains_key(key)
         {
             bail_msg!("{} bookmark was already used", key);
         }
         Ok(())
+    }
+
+    fn log_bookmark_moves(
+        repo_id: RepositoryId,
+        timestamp: Timestamp,
+        moves: HashMap<
+            Bookmark,
+            (
+                Option<ChangesetId>,
+                Option<ChangesetId>,
+                BookmarkUpdateReason,
+            ),
+        >,
+        sql_transaction: SqlTransaction,
+    ) -> impl Future<Item = SqlTransaction, Error = Error> {
+        let mut ref_rows = Vec::new();
+
+        for (bookmark, (ref from_changeset_id, ref to_changeset_id, ref reason)) in moves.iter() {
+            ref_rows.push((
+                &repo_id,
+                bookmark,
+                from_changeset_id,
+                to_changeset_id,
+                reason,
+                &timestamp,
+            ));
+        }
+
+        AddBookmarkLog::query_with_transaction(sql_transaction, &ref_rows[..])
+            .map(|(transaction, _)| transaction)
     }
 }
 
@@ -233,11 +317,11 @@ impl Transaction for SqlBookmarksTransaction {
         key: &Bookmark,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
-        _reason: BookmarkUpdateReason,
+        reason: BookmarkUpdateReason,
     ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.sets
-            .insert(key.clone(), BookmarkSetData { new_cs, old_cs });
+            .insert(key.clone(), (BookmarkSetData { new_cs, old_cs }, reason));
         Ok(())
     }
 
@@ -245,10 +329,10 @@ impl Transaction for SqlBookmarksTransaction {
         &mut self,
         key: &Bookmark,
         new_cs: ChangesetId,
-        _reason: BookmarkUpdateReason,
+        reason: BookmarkUpdateReason,
     ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.creates.insert(key.clone(), new_cs);
+        self.creates.insert(key.clone(), (new_cs, reason));
         Ok(())
     }
 
@@ -256,10 +340,10 @@ impl Transaction for SqlBookmarksTransaction {
         &mut self,
         key: &Bookmark,
         new_cs: ChangesetId,
-        _reason: BookmarkUpdateReason,
+        reason: BookmarkUpdateReason,
     ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.force_sets.insert(key.clone(), new_cs);
+        self.force_sets.insert(key.clone(), (new_cs, reason));
         Ok(())
     }
 
@@ -267,16 +351,16 @@ impl Transaction for SqlBookmarksTransaction {
         &mut self,
         key: &Bookmark,
         old_cs: ChangesetId,
-        _reason: BookmarkUpdateReason,
+        reason: BookmarkUpdateReason,
     ) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.deletes.insert(key.clone(), old_cs);
+        self.deletes.insert(key.clone(), (old_cs, reason));
         Ok(())
     }
 
-    fn force_delete(&mut self, key: &Bookmark, _reason: BookmarkUpdateReason) -> Result<()> {
+    fn force_delete(&mut self, key: &Bookmark, reason: BookmarkUpdateReason) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
-        self.force_deletes.insert(key.clone());
+        self.force_deletes.insert(key.clone(), reason);
         Ok(())
     }
 
@@ -293,46 +377,77 @@ impl Transaction for SqlBookmarksTransaction {
             deletes,
         } = this;
 
+        let mut log_rows: HashMap<_, (Option<ChangesetId>, Option<ChangesetId>, _)> =
+            HashMap::new();
+        for (bookmark, (to_cs_id, reason)) in force_sets.clone() {
+            log_rows.insert(bookmark, (None, Some(to_cs_id), reason));
+        }
+
+        for (bookmark, (to_cs_id, reason)) in creates.clone() {
+            log_rows.insert(bookmark, (None, Some(to_cs_id), reason));
+        }
+
+        for (bookmark, (bookmark_set_data, reason)) in sets.clone() {
+            let from_cs_id = bookmark_set_data.old_cs;
+            let to_cs_id = bookmark_set_data.new_cs;
+            log_rows.insert(bookmark, (Some(from_cs_id), Some(to_cs_id), reason));
+        }
+
+        for (bookmark, reason) in force_deletes.clone() {
+            log_rows.insert(bookmark, (None, None, reason));
+        }
+
+        for (bookmark, (from_cs_id, reason)) in deletes.clone() {
+            log_rows.insert(bookmark, (Some(from_cs_id), None, reason));
+        }
+
         write_connection
             .start_transaction()
             .map_err(Some)
             .and_then(move |transaction| {
-                let force_set: Vec<_> = force_sets.into_iter().collect();
+                let force_set: Vec<_> = force_sets.clone().into_iter().collect();
                 let mut ref_rows = Vec::new();
                 for idx in 0..force_set.len() {
-                    ref_rows.push((&repo_id, &force_set[idx].0, &force_set[idx].1))
+                    let (ref to_changeset_id, _) = force_set[idx].1;
+                    ref_rows.push((&repo_id, &force_set[idx].0, to_changeset_id));
                 }
+
                 ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..]).map_err(Some)
             })
             .and_then(move |(transaction, _)| {
-                let creates: Vec<_> = creates.into_iter().collect();
+                let creates_vec: Vec<_> = creates.clone().into_iter().collect();
                 let mut ref_rows = Vec::new();
-                for idx in 0..creates.len() {
-                    ref_rows.push((&repo_id, &creates[idx].0, &creates[idx].1))
+                for idx in 0..creates_vec.len() {
+                    let (ref to_changeset_id, _) = creates_vec[idx].1;
+                    ref_rows.push((&repo_id, &creates_vec[idx].0, to_changeset_id))
                 }
+
                 InsertBookmarks::query_with_transaction(transaction, &ref_rows[..]).map_err(Some)
             })
             .and_then(move |(transaction, _)| {
                 loop_fn(
                     (transaction, sets.into_iter()),
                     move |(transaction, mut updates)| match updates.next() {
-                        Some((name, BookmarkSetData { new_cs, old_cs })) => {
+                        Some((name, (BookmarkSetData { new_cs, old_cs }, _reason))) => {
                             UpdateBookmark::query_with_transaction(
                                 transaction,
                                 &repo_id,
                                 &name,
                                 &old_cs,
                                 &new_cs,
-                            ).then(move |res| match res {
+                            )
+                            .then(move |res| match res {
                                 Err(err) => Err(Some(err)),
-                                Ok((transaction, result)) => if result.affected_rows() == 1 {
-                                    Ok((transaction, updates))
-                                } else {
-                                    Err(None)
-                                },
+                                Ok((transaction, result)) => {
+                                    if result.affected_rows() == 1 {
+                                        Ok((transaction, updates))
+                                    } else {
+                                        Err(None)
+                                    }
+                                }
                             })
-                                .map(Loop::Continue)
-                                .left_future()
+                            .map(Loop::Continue)
+                            .left_future()
                         }
                         None => Ok(Loop::Break(transaction)).into_future().right_future(),
                     },
@@ -342,7 +457,7 @@ impl Transaction for SqlBookmarksTransaction {
                 loop_fn(
                     (transaction, force_deletes.into_iter()),
                     move |(transaction, mut deletes)| match deletes.next() {
-                        Some(name) => {
+                        Some((name, _reason)) => {
                             DeleteBookmark::query_with_transaction(transaction, &repo_id, &name)
                                 .then(move |res| match res {
                                     Err(err) => Err(Some(err)),
@@ -359,24 +474,33 @@ impl Transaction for SqlBookmarksTransaction {
                 loop_fn(
                     (transaction, deletes.into_iter()),
                     move |(transaction, mut deletes)| match deletes.next() {
-                        Some((name, old_cs)) => DeleteBookmarkIf::query_with_transaction(
-                            transaction,
-                            &repo_id,
-                            &name,
-                            &old_cs,
-                        ).then(move |res| match res {
-                            Err(err) => Err(Some(err)),
-                            Ok((transaction, result)) => if result.affected_rows() == 1 {
-                                Ok((transaction, deletes))
-                            } else {
-                                Err(None)
-                            },
-                        })
+                        Some((name, (old_cs, _reason))) => {
+                            DeleteBookmarkIf::query_with_transaction(
+                                transaction,
+                                &repo_id,
+                                &name,
+                                &old_cs,
+                            )
+                            .then(move |res| match res {
+                                Err(err) => Err(Some(err)),
+                                Ok((transaction, result)) => {
+                                    if result.affected_rows() == 1 {
+                                        Ok((transaction, deletes))
+                                    } else {
+                                        Err(None)
+                                    }
+                                }
+                            })
                             .map(Loop::Continue)
-                            .left_future(),
+                            .left_future()
+                        }
                         None => Ok(Loop::Break(transaction)).into_future().right_future(),
                     },
                 )
+            })
+            .and_then(move |transaction| {
+                Self::log_bookmark_moves(repo_id, Timestamp::now(), log_rows, transaction)
+                    .map_err(Some)
             })
             .then(|result| match result {
                 Ok(transaction) => transaction.commit().and_then(|()| Ok(true)).left_future(),
@@ -387,6 +511,7 @@ impl Transaction for SqlBookmarksTransaction {
     }
 }
 
+#[derive(Clone)]
 struct BookmarkSetData {
     new_cs: ChangesetId,
     old_cs: ChangesetId,
