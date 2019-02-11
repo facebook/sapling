@@ -42,6 +42,7 @@ impl Mononoke {
         config: RepoConfigs,
         myrouter_port: Option<u16>,
         scuba_builder: ScubaSampleBuilder,
+        with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
         let log = logger.clone();
         join_all(
@@ -51,7 +52,7 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        MononokeRepo::new(log.clone(), config, myrouter_port)
+                        MononokeRepo::new(log.clone(), config, myrouter_port, with_skiplist)
                             .map(|repo| (name, repo))
                     }
                 }),

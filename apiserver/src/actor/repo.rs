@@ -51,6 +51,7 @@ impl MononokeRepo {
         logger: Logger,
         config: RepoConfig,
         myrouter_port: Option<u16>,
+        with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
         let ctx = CoreContext::new(
             Uuid::new_v4(),
@@ -65,22 +66,29 @@ impl MononokeRepo {
         let repoid = RepositoryId::new(config.repoid);
         open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port)
             .map(move |repo| {
-                let skiplist_index = match skiplist_index_blobstore_key.clone() {
-                    Some(skiplist_index_blobstore_key) => repo
-                        .get_blobstore()
-                        .get(ctx.clone(), skiplist_index_blobstore_key)
-                        .and_then(|maybebytes| {
-                            let map = match maybebytes {
-                                Some(bytes) => {
-                                    let bytes = bytes.into_bytes();
-                                    try_boxfuture!(deserialize_skiplist_map(bytes))
-                                }
-                                None => HashMap::new(),
-                            };
-                            ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
-                        })
-                        .left_future(),
-                    None => ok(Arc::new(SkiplistIndex::new())).right_future(),
+                let skiplist_index = {
+                    if !with_skiplist {
+                        ok(Arc::new(SkiplistIndex::new())).right_future()
+                    } else {
+                        match skiplist_index_blobstore_key.clone() {
+                            Some(skiplist_index_blobstore_key) => repo
+                                .get_blobstore()
+                                .get(ctx.clone(), skiplist_index_blobstore_key)
+                                .and_then(|maybebytes| {
+                                    let map = match maybebytes {
+                                        Some(bytes) => {
+                                            let bytes = bytes.into_bytes();
+                                            try_boxfuture!(deserialize_skiplist_map(bytes))
+                                        }
+                                        None => HashMap::new(),
+                                    };
+                                    ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map)))
+                                        .boxify()
+                                })
+                                .left_future(),
+                            None => ok(Arc::new(SkiplistIndex::new())).right_future(),
+                        }
+                    }
                 };
                 skiplist_index.map(|skiplist_index| Self {
                     repo,

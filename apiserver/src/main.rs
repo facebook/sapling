@@ -345,6 +345,7 @@ fn main() -> Result<()> {
             )
             .arg(Arg::with_name("with-scuba").long("with-scuba"))
             .arg(Arg::with_name("debug").short("p").long("debug"))
+            .arg(Arg::with_name("without-skiplist").long("without-skiplist"))
             .arg(
                 Arg::with_name("stdlog")
                     .long("stdlog")
@@ -402,6 +403,7 @@ fn main() -> Result<()> {
         .value_of("mononoke-config-path")
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
+    let with_skiplist = !matches.is_present("without-skiplist");
     let myrouter_port = match matches.value_of("myrouter-port") {
         Some(port) => Some(
             port.parse::<u16>()
@@ -478,6 +480,7 @@ fn main() -> Result<()> {
         repo_configs,
         myrouter_port,
         scuba_builder.clone(),
+        with_skiplist,
     ))?;
     let mononoke = Arc::new(mononoke);
 
