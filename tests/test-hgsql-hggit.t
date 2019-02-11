@@ -27,8 +27,5 @@ Pull from git
   $ hg pull $TESTTMP/a-git
   pulling from $TESTTMP/a-git
   importing git objects into hg
-  transaction abort!
-  rollback completed
-  ProgrammingError: Failed processing format-parameters; 'CustomConverter' object has no attribute '_bytearray_to_mysql'
-  [255]
+  (run 'hg update' to get a working copy)
 

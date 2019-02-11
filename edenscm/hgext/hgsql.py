@@ -1602,6 +1602,9 @@ def wraprepo(repo):
         def _BLOB_to_python(self, value, dsc=None):
             return str(value)
 
+        def _bytearray_to_mysql(self, value, dsc=None):
+            return str(value)
+
 
 class bufferedopener(object):
     """Opener implementation that buffers all writes in memory until
