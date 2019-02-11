@@ -106,7 +106,7 @@ Various statprof formatters work
 #if normal-layout
 statprof can be used as a standalone module
 
-  $ $PYTHON -m mercurial.statprof hotpath
+  $ $PYTHON -m edenscm.mercurial.statprof hotpath
   must specify --file to load
   [1]
 #endif
