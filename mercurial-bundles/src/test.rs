@@ -17,15 +17,14 @@ use futures_ext::BoxStream;
 use tokio::runtime::Runtime;
 use tokio_io::AsyncRead;
 
-use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use async_compression::membuf::MemBuf;
-use mercurial_types::{HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
+use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
+use mercurial_types::{HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use parts::phases_part;
-use quickcheck::{QuickCheck, StdGen};
 use quickcheck::rand;
+use quickcheck::{QuickCheck, StdGen};
 
-use Bundle2Item;
 use bundle2::{Bundle2Stream, StreamEvent};
 use bundle2_encode::Bundle2EncodeBuilder;
 use changegroup;
@@ -36,6 +35,7 @@ use part_header::{PartHeaderBuilder, PartHeaderType};
 use types::StreamHeader;
 use utils::get_compression_param;
 use wirepack;
+use Bundle2Item;
 
 const BZIP2_BUNDLE2: &[u8] = include_bytes!("fixtures/bzip2.bin");
 const UNCOMP_BUNDLE2: &[u8] = include_bytes!("fixtures/uncompressed.bin");
@@ -156,15 +156,15 @@ fn test_phases_part_encording() {
     let ctx = CoreContext::test_mock();
     let phases_entries = stream::iter_ok(vec![
         (
-            HgNodeHash::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
+            HgChangesetId::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
             HgPhase::Public,
         ),
         (
-            HgNodeHash::from_bytes(b"cccccccccccccccccccc").unwrap(),
+            HgChangesetId::from_bytes(b"cccccccccccccccccccc").unwrap(),
             HgPhase::Public,
         ),
         (
-            HgNodeHash::from_bytes(b"aaaaaaaaaaaaaaaaaaaa").unwrap(),
+            HgChangesetId::from_bytes(b"aaaaaaaaaaaaaaaaaaaa").unwrap(),
             HgPhase::Draft,
         ),
     ]);

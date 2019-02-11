@@ -17,7 +17,7 @@ use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
-use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, NULL_CSID};
+use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
 use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -180,7 +180,7 @@ fn prepare_phases_stream(
     repo: BlobRepo,
     heads: Vec<HgChangesetId>,
     phases_hint: Arc<Phases>,
-) -> impl Stream<Item = (HgNodeHash, HgPhase), Error = Error> {
+) -> impl Stream<Item = (HgChangesetId, HgPhase), Error = Error> {
     // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
     // heads that are not known by the server will be skipped
     let mapping_fut =
@@ -237,16 +237,11 @@ fn prepare_phases_stream(
             pub_roots_future.map(move |public_roots| {
                 let phases = heads_phases
                     .into_iter()
-                    .map(|(bonsai, phase)| {
-                        (
-                            bonsai_node_mapping[&bonsai].into_nodehash(),
-                            HgPhase::from(phase),
-                        )
-                    })
+                    .map(|(bonsai, phase)| (bonsai_node_mapping[&bonsai], HgPhase::from(phase)))
                     .chain(
                         public_roots
                             .into_iter()
-                            .map(|(hg_cs_id, _)| (hg_cs_id.into_nodehash(), HgPhase::Public)),
+                            .map(|(hg_cs_id, _)| (hg_cs_id, HgPhase::Public)),
                     )
                     .collect::<Vec<_>>();
 

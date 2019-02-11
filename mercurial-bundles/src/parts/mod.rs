@@ -22,8 +22,9 @@ use super::wirepack::packer::WirePackPacker;
 
 use context::CoreContext;
 use errors::*;
-use mercurial_types::{Delta, HgBlobNode, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath,
-                      NULL_HASH};
+use mercurial_types::{
+    Delta, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath, NULL_HASH,
+};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -56,7 +57,7 @@ where
 
 pub fn phases_part<S>(ctx: CoreContext, phases_entries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (HgNodeHash, HgPhase), Error = Error> + Send + 'static,
+    S: Stream<Item = (HgChangesetId, HgPhase), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::PhaseHeads)?;
     let mut scuba_logger = ctx.scuba().clone();

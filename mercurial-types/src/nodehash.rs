@@ -198,6 +198,10 @@ impl HgChangesetId {
         HgNodeHash::from_ascii_str(s).map(HgChangesetId)
     }
 
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        HgNodeHash::from_bytes(bytes).map(HgChangesetId)
+    }
+
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }
@@ -215,6 +219,12 @@ impl HgChangesetId {
     #[inline]
     pub fn blobstore_key(&self) -> String {
         format!("hgchangeset.sha1.{}", self.0)
+    }
+}
+
+impl AsRef<[u8]> for HgChangesetId {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }
 
