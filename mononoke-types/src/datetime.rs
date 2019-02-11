@@ -109,7 +109,18 @@ impl Arbitrary for DateTime {
 }
 
 /// Number of non-leap-nanoseconds since January 1, 1970 UTC
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    Deserialize,
+    Serialize
+)]
 pub struct Timestamp(i64);
 
 impl Timestamp {

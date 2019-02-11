@@ -17,16 +17,21 @@ extern crate dbbookmarks;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
+#[macro_use]
+extern crate maplit;
+extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 extern crate mononoke_types_mocks;
 extern crate tokio;
 
 use bookmarks::{
     Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
+    BundleReplayData,
 };
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use futures::{Future, Stream};
+use mercurial_types_mocks::nodehash as mercurial_mocks;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
@@ -58,8 +63,14 @@ fn test_simple_unconditional_set_get() {
     let name_incorrect = create_bookmark("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_correct, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_correct,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     assert_eq!(
@@ -89,7 +100,9 @@ fn test_simple_unconditional_set_get() {
             bookmark_name: name_correct,
             to_changeset_id: Some(ONES_CSID),
             from_changeset_id: None,
-            reason: BookmarkUpdateReason::TestMove,
+            reason: BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
             timestamp: Timestamp::now(),
         },
     );
@@ -103,10 +116,22 @@ fn test_multi_unconditional_set_get() {
     let name_2 = create_bookmark("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    txn.force_set(&name_2, TWOS_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.force_set(
+        &name_2,
+        TWOS_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     assert_eq!(
@@ -133,13 +158,25 @@ fn test_unconditional_set_same_bookmark() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     assert_eq!(
@@ -158,8 +195,14 @@ fn test_simple_create() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     assert_eq!(
@@ -182,7 +225,9 @@ fn test_simple_create() {
             bookmark_name: name_1,
             to_changeset_id: Some(ONES_CSID),
             from_changeset_id: None,
-            reason: BookmarkUpdateReason::TestMove,
+            reason: BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
             timestamp: Timestamp::now(),
         },
     );
@@ -195,13 +240,25 @@ fn test_create_already_existing() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().is_err());
 }
 
@@ -212,28 +269,60 @@ fn test_create_change_same_bookmark() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn
-        .force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
+        .force_set(
+            &name_1,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
+        )
         .is_err());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn
-        .create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
+        .create(
+            &name_1,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
+        )
         .is_err());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn
         .update(
             &name_1,
             TWOS_CSID,
             ONES_CSID,
-            BookmarkUpdateReason::TestMove
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
         )
         .is_err());
 
@@ -242,46 +331,18 @@ fn test_create_change_same_bookmark() {
         &name_1,
         TWOS_CSID,
         ONES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     assert!(txn
-        .force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .is_err());
-
-    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.update(
-        &name_1,
-        TWOS_CSID,
-        ONES_CSID,
-        BookmarkUpdateReason::TestMove,
-    )
-    .unwrap();
-    assert!(txn
-        .force_delete(&name_1, BookmarkUpdateReason::TestMove)
-        .is_err());
-
-    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    assert!(txn
-        .update(
+        .force_set(
             &name_1,
-            TWOS_CSID,
             ONES_CSID,
-            BookmarkUpdateReason::TestMove
-        )
-        .is_err());
-
-    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    assert!(txn
-        .update(
-            &name_1,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
         )
         .is_err());
 
@@ -290,11 +351,77 @@ fn test_create_change_same_bookmark() {
         &name_1,
         TWOS_CSID,
         ONES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     assert!(txn
-        .delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
+        .force_delete(
+            &name_1,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
+        )
+        .is_err());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.force_delete(
+        &name_1,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn
+        .update(
+            &name_1,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
+        )
+        .is_err());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.delete(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn
+        .update(
+            &name_1,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
+        )
+        .is_err());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        TWOS_CSID,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn
+        .delete(
+            &name_1,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None
+            }
+        )
         .is_err());
 }
 
@@ -305,8 +432,14 @@ fn test_simple_update_bookmark() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
@@ -314,7 +447,9 @@ fn test_simple_update_bookmark() {
         &name_1,
         TWOS_CSID,
         ONES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     assert!(txn.commit().wait().unwrap());
@@ -339,7 +474,9 @@ fn test_simple_update_bookmark() {
             bookmark_name: name_1,
             to_changeset_id: Some(TWOS_CSID),
             from_changeset_id: Some(ONES_CSID),
-            reason: BookmarkUpdateReason::TestMove,
+            reason: BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
             timestamp: Timestamp::now(),
         },
     );
@@ -356,7 +493,9 @@ fn test_update_non_existent_bookmark() {
         &name_1,
         TWOS_CSID,
         ONES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
@@ -369,8 +508,14 @@ fn test_update_existing_bookmark_with_incorrect_commit() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
@@ -378,7 +523,9 @@ fn test_update_existing_bookmark_with_incorrect_commit() {
         &name_1,
         ONES_CSID,
         TWOS_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
@@ -391,8 +538,13 @@ fn test_force_delete() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_delete(
+        &name_1,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     assert_eq!(
@@ -404,8 +556,14 @@ fn test_force_delete() {
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
     assert!(bookmarks
         .get(ctx.clone(), &name_1, REPO_ZERO)
@@ -414,8 +572,13 @@ fn test_force_delete() {
         .is_some());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_delete(
+        &name_1,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     assert_eq!(
@@ -438,7 +601,9 @@ fn test_force_delete() {
             bookmark_name: name_1,
             to_changeset_id: None,
             from_changeset_id: None,
-            reason: BookmarkUpdateReason::TestMove,
+            reason: BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
             timestamp: Timestamp::now(),
         },
     );
@@ -451,13 +616,25 @@ fn test_delete() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.delete(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
     assert!(bookmarks
         .get(ctx.clone(), &name_1, REPO_ZERO)
@@ -466,8 +643,14 @@ fn test_delete() {
         .is_some());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.delete(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     compare_log_entries(
@@ -482,7 +665,9 @@ fn test_delete() {
             bookmark_name: name_1,
             to_changeset_id: None,
             from_changeset_id: Some(ONES_CSID),
-            reason: BookmarkUpdateReason::TestMove,
+            reason: BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
             timestamp: Timestamp::now(),
         },
     );
@@ -495,8 +680,14 @@ fn test_delete_incorrect_hash() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
     assert!(bookmarks
         .get(ctx.clone(), &name_1, REPO_ZERO)
@@ -505,8 +696,14 @@ fn test_delete_incorrect_hash() {
         .is_some());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.delete(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.delete(
+        &name_1,
+        TWOS_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
 }
 
@@ -518,10 +715,22 @@ fn test_list_by_prefix() {
     let name_2 = create_bookmark("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    txn.create(&name_2, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.create(
+        &name_2,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().unwrap());
 
     let prefix = create_prefix("book");
@@ -562,8 +771,14 @@ fn test_create_different_repos() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().is_ok());
 
     // Updating value from another repo, should fail
@@ -572,15 +787,23 @@ fn test_create_different_repos() {
         &name_1,
         TWOS_CSID,
         ONES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
 
     // Creating value should succeed
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ONE);
-    txn.create(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.create(
+        &name_1,
+        TWOS_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().is_ok());
 
     assert_eq!(
@@ -600,8 +823,13 @@ fn test_create_different_repos() {
 
     // Force deleting should delete only from one repo
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ONE);
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_delete(
+        &name_1,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().is_ok());
     assert_eq!(
         bookmarks
@@ -613,8 +841,14 @@ fn test_create_different_repos() {
 
     // delete should fail for another repo
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ONE);
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.delete(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert_eq!(txn.commit().wait().unwrap(), false);
 }
 
@@ -625,8 +859,14 @@ fn test_log_correct_order() {
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     assert!(txn.commit().wait().is_ok());
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
@@ -634,7 +874,9 @@ fn test_log_correct_order() {
         &name_1,
         TWOS_CSID,
         ONES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     txn.commit().wait().unwrap();
@@ -644,7 +886,9 @@ fn test_log_correct_order() {
         &name_1,
         THREES_CSID,
         TWOS_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     txn.commit().wait().unwrap();
@@ -654,7 +898,9 @@ fn test_log_correct_order() {
         &name_1,
         FOURS_CSID,
         THREES_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     txn.commit().wait().unwrap();
@@ -664,7 +910,9 @@ fn test_log_correct_order() {
         &name_1,
         FIVES_CSID,
         FOURS_CSID,
-        BookmarkUpdateReason::TestMove,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
     )
     .unwrap();
     txn.commit().wait().unwrap();
@@ -703,4 +951,42 @@ fn test_log_correct_order() {
         .unwrap()
         .unwrap();
     assert_eq!(log_entry.to_changeset_id.unwrap(), FIVES_CSID);
+}
+
+#[test]
+fn test_log_bundle_replay_data() {
+    let ctx = CoreContext::test_mock();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
+    let name_1 = create_bookmark("book");
+    let timestamp = Timestamp::now();
+    let expected = BundleReplayData {
+        bundle_handle: "handle".to_string(),
+        commit_timestamps: hashmap! {mercurial_mocks::ONES_CSID => timestamp.clone()},
+    };
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: Some(expected.clone()),
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().is_ok());
+
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 0)
+        .wait()
+        .unwrap()
+        .unwrap();
+    let bundle_replay_data = match log_entry.reason {
+        BookmarkUpdateReason::TestMove { bundle_replay_data } => bundle_replay_data,
+        _ => {
+            panic!("unexpected reason");
+        }
+    };
+
+    let actual = bundle_replay_data.unwrap();
+    assert_eq!(actual, expected);
 }

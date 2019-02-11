@@ -542,11 +542,7 @@ impl Bundle2Resolver {
                     .update_bookmark_transaction(resolver.ctx.clone());
                 for bp in bonsai_bookmark_pushes {
                     try_boxfuture!(add_bookmark_to_transaction(
-                        &mut txn,
-                        bp,
-                        BookmarkUpdateReason::Pushrebase {
-                            bundle_handle: None
-                        },
+                        &mut txn, bp, BookmarkUpdateReason::Pushrebase { bundle_replay_data: None },
                     ));
                 }
                 txn.commit()

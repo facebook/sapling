@@ -14,3 +14,9 @@ CREATE TABLE bookmarks_update_log (
   reason VARCHAR(32) NOT NULL, -- enum is used in mysql
   timestamp BIGINT NOT NULL
 );
+
+CREATE TABLE bundle_replay_data (
+  bookmark_update_log_id INTEGER PRIMARY KEY NOT NULL,
+  bundle_handle VARCHAR(256) NOT NULL,
+  commit_hashes_json MEDIUMTEXT NOT NULL
+);

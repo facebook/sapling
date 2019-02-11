@@ -12,8 +12,10 @@ extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate mononoke_types;
+extern crate serde_json;
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
@@ -21,12 +23,13 @@ extern crate sql_ext;
 use std::collections::HashMap;
 
 use bookmarks::{
-    Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Transaction,
+    Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
+    BundleReplayData, Transaction,
 };
 use context::CoreContext;
-use failure::{Error, Result};
+use failure::{err_msg, Error, Result};
 use futures::{
-    future::{loop_fn, Loop},
+    future::{self, loop_fn, Loop},
     stream, Future, IntoFuture,
 };
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -105,13 +108,22 @@ queries! {
 
     read ReadNextBookmarkLogEntry(min_id: u64) -> (
         i64, RepositoryId, Bookmark, Option<ChangesetId>, Option<ChangesetId>,
-        BookmarkUpdateReason, Timestamp
+        BookmarkUpdateReason, Timestamp, Option<String>, Option<String>
     ) {
-        "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp
-         FROM bookmarks_update_log
-         WHERE id > {min_id}
+        "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp,
+              replay.bundle_handle, replay.commit_hashes_json
+         FROM bookmarks_update_log log
+         LEFT JOIN bundle_replay_data replay ON log.id == replay.bookmark_update_log_id
+         WHERE log.id > {min_id}
          ORDER BY id asc
          LIMIT 1"
+    }
+
+    write AddBundleReplayData(values: (id: u64, bundle_handle: String, commit_hashes_json: String)) {
+        none,
+        "INSERT INTO bundle_replay_data
+         (bookmark_update_log_id, bundle_handle, commit_hashes_json)
+         VALUES {values}"
     }
 
     read SelectBookmark(repo_id: RepositoryId, name: Bookmark) -> (ChangesetId) {
@@ -226,20 +238,34 @@ impl Bookmarks for SqlBookmarks {
         id: u64,
     ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error> {
         ReadNextBookmarkLogEntry::query(&self.read_connection, &id)
-            .map(|entries| {
-                entries.into_iter().next().map(
-                    |(id, repo_id, name, to_cs_id, from_cs_id, reason, timestamp)| {
-                        BookmarkUpdateLogEntry {
-                            id,
-                            repo_id,
-                            bookmark_name: name,
-                            to_changeset_id: to_cs_id,
-                            from_changeset_id: from_cs_id,
-                            reason,
-                            timestamp,
-                        }
-                    },
-                )
+            .and_then(|entries| {
+                let entry = entries.into_iter().next();
+                match entry {
+                    Some((
+                        id,
+                        repo_id,
+                        name,
+                        to_cs_id,
+                        from_cs_id,
+                        reason,
+                        timestamp,
+                        bundle_handle,
+                        commit_timestamps,
+                    )) => get_bundle_replay_data(bundle_handle, commit_timestamps).and_then(
+                        |replay_data| {
+                            Ok(Some(BookmarkUpdateLogEntry {
+                                id,
+                                repo_id,
+                                bookmark_name: name,
+                                to_changeset_id: to_cs_id,
+                                from_changeset_id: from_cs_id,
+                                reason: reason.update_bundle_replay_data(replay_data)?,
+                                timestamp,
+                            }))
+                        },
+                    ),
+                    None => Ok(None),
+                }
             })
             .boxify()
     }
@@ -280,6 +306,39 @@ impl SqlBookmarksTransaction {
         Ok(())
     }
 
+    fn log_bundle_replay_data(
+        id: u64,
+        reason: BookmarkUpdateReason,
+        sql_transaction: SqlTransaction,
+    ) -> impl Future<Item = SqlTransaction, Error = Error> {
+        use BookmarkUpdateReason::*;
+        match reason {
+            Pushrebase {
+                bundle_replay_data: Some(bundle_replay_data),
+            }
+            | Push {
+                bundle_replay_data: Some(bundle_replay_data),
+            }
+            | TestMove {
+                bundle_replay_data: Some(bundle_replay_data),
+            } => {
+                let BundleReplayData {
+                    bundle_handle,
+                    commit_timestamps,
+                } = bundle_replay_data;
+                let commit_timestamps = try_boxfuture!(serde_json::to_string(&commit_timestamps));
+
+                AddBundleReplayData::query_with_transaction(
+                    sql_transaction,
+                    &[(&id, &bundle_handle, &commit_timestamps)],
+                )
+                .map(move |(sql_transaction, _)| sql_transaction)
+                .boxify()
+            }
+            _ => future::ok(sql_transaction).boxify(),
+        }
+    }
+
     fn log_bookmark_moves(
         repo_id: RepositoryId,
         timestamp: Timestamp,
@@ -293,21 +352,36 @@ impl SqlBookmarksTransaction {
         >,
         sql_transaction: SqlTransaction,
     ) -> impl Future<Item = SqlTransaction, Error = Error> {
-        let mut ref_rows = Vec::new();
-
-        for (bookmark, (ref from_changeset_id, ref to_changeset_id, ref reason)) in moves.iter() {
-            ref_rows.push((
-                &repo_id,
-                bookmark,
-                from_changeset_id,
-                to_changeset_id,
-                reason,
-                &timestamp,
-            ));
-        }
-
-        AddBookmarkLog::query_with_transaction(sql_transaction, &ref_rows[..])
-            .map(|(transaction, _)| transaction)
+        loop_fn(
+            (moves.into_iter(), sql_transaction),
+            move |(mut moves, sql_transaction)| match moves.next() {
+                Some((bookmark, (from_changeset_id, to_changeset_id, reason))) => {
+                    let row = vec![(
+                        &repo_id,
+                        &bookmark,
+                        &from_changeset_id,
+                        &to_changeset_id,
+                        &reason,
+                        &timestamp,
+                    )];
+                    let reason = reason.clone();
+                    AddBookmarkLog::query_with_transaction(sql_transaction, &row[..])
+                        .and_then(move |(sql_transaction, query_result)| {
+                            if let Some(id) = query_result.last_insert_id() {
+                                Self::log_bundle_replay_data(id, reason, sql_transaction)
+                                    .map(move |sql_transaction| (moves, sql_transaction))
+                                    .left_future()
+                            } else {
+                                future::err(err_msg("failed to insert bookmark log entry"))
+                                    .right_future()
+                            }
+                        })
+                        .map(Loop::Continue)
+                        .left_future()
+                }
+                None => future::ok(Loop::Break(sql_transaction)).right_future(),
+            },
+        )
     }
 }
 
@@ -515,4 +589,21 @@ impl Transaction for SqlBookmarksTransaction {
 struct BookmarkSetData {
     new_cs: ChangesetId,
     old_cs: ChangesetId,
+}
+
+fn get_bundle_replay_data(
+    bundle_handle: Option<String>,
+    commit_timestamps: Option<String>,
+) -> Result<Option<BundleReplayData>> {
+    match (bundle_handle, commit_timestamps) {
+        (Some(bundle_handle), Some(commit_timestamps)) => {
+            let replay_data = BundleReplayData {
+                bundle_handle,
+                commit_timestamps: serde_json::from_str(&commit_timestamps)?,
+            };
+            Ok(Some(replay_data))
+        }
+        (None, None) => Ok(None),
+        _ => Err(err_msg("inconsistent replay data")),
+    }
 }

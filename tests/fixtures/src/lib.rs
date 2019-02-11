@@ -125,8 +125,14 @@ fn set_bookmark(blobrepo: BlobRepo, hg_cs_id: &str, bookmark: Bookmark) {
         .wait()
         .unwrap();
     let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id.unwrap(), BookmarkUpdateReason::TestMove)
-        .unwrap();
+    txn.force_set(
+        &bookmark,
+        bcs_id.unwrap(),
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
     txn.commit().wait().unwrap();
 }
 

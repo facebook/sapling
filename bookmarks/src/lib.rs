@@ -11,6 +11,7 @@ extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures_ext;
+extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate sql;
 
@@ -18,13 +19,15 @@ use std::fmt;
 
 use ascii::AsciiString;
 use context::CoreContext;
-use failure::{Error, Result};
+use failure::{err_msg, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
+use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
+use std::collections::HashMap;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
@@ -167,38 +170,68 @@ pub trait Bookmarks: Send + Sync + 'static {
     ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error>;
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BundleReplayData {
+    pub bundle_handle: String,
+    pub commit_timestamps: HashMap<HgChangesetId, Timestamp>,
+}
+
 /// Describes why a bookmark was moved
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BookmarkUpdateReason {
     Pushrebase {
         /// For now, let the bundle handle be not specified.
         /// We may change it later
-        bundle_handle: Option<String>,
+        bundle_replay_data: Option<BundleReplayData>,
     },
     Push {
         /// For now, let the bundle handle be not specified.
         /// We may change it later
-        bundle_handle: Option<String>,
+        bundle_replay_data: Option<BundleReplayData>,
     },
     Blobimport,
     /// Bookmark was moved manually i.e. via mononoke_admin tool
     ManualMove,
     /// Only used for tests, should never be used in production
-    TestMove,
+    TestMove {
+        bundle_replay_data: Option<BundleReplayData>,
+    },
+}
+
+impl BookmarkUpdateReason {
+    pub fn update_bundle_replay_data(
+        self,
+        bundle_replay_data: Option<BundleReplayData>,
+    ) -> Result<Self> {
+        use BookmarkUpdateReason::*;
+        match self {
+            Pushrebase { .. } => Ok(Pushrebase { bundle_replay_data }),
+            Push { .. } => Ok(Push { bundle_replay_data }),
+            Blobimport | ManualMove => match bundle_replay_data {
+                Some(..) => Err(err_msg(
+                    "internal error: bundle replay data can not be specified",
+                )),
+                None => Ok(self),
+            },
+            TestMove { .. } => Ok(TestMove { bundle_replay_data }),
+        }
+    }
 }
 
 impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
     fn new(v: Value) -> FromValueResult<Self> {
         match v {
             Value::Bytes(ref b) if b == &b"pushrebase" => Ok(BookmarkUpdateReason::Pushrebase {
-                bundle_handle: None,
+                bundle_replay_data: None,
             }),
             Value::Bytes(ref b) if b == &b"push" => Ok(BookmarkUpdateReason::Push {
-                bundle_handle: None,
+                bundle_replay_data: None,
             }),
             Value::Bytes(ref b) if b == &b"blobimport" => Ok(BookmarkUpdateReason::Blobimport),
             Value::Bytes(ref b) if b == &b"manualmove" => Ok(BookmarkUpdateReason::ManualMove),
-            Value::Bytes(ref b) if b == &b"testmove" => Ok(BookmarkUpdateReason::TestMove),
+            Value::Bytes(ref b) if b == &b"testmove" => Ok(BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            }),
             v => Err(FromValueError(v)),
         }
     }

@@ -661,7 +661,7 @@ fn try_update_bookmark(
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx);
     let reason = BookmarkUpdateReason::Pushrebase {
-        bundle_handle: None,
+        bundle_replay_data: None,
     };
     try_boxfuture!(txn.update(bookmark_name, new_value, old_value, reason));
     txn.commit()
@@ -691,8 +691,14 @@ mod tests {
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, head, BookmarkUpdateReason::TestMove)
-            .unwrap();
+        txn.force_set(
+            &book,
+            head,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
+        )
+        .unwrap();
         txn.commit().wait().unwrap();
     }
 

@@ -598,8 +598,13 @@ mod tests {
 
     fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark) {
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_delete(&book, BookmarkUpdateReason::TestMove)
-            .unwrap();
+        txn.force_delete(
+            &book,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
+        )
+        .unwrap();
         txn.commit().wait().unwrap();
     }
 
@@ -610,8 +615,14 @@ mod tests {
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, head, BookmarkUpdateReason::TestMove)
-            .unwrap();
+        txn.force_set(
+            &book,
+            head,
+            BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
+        )
+        .unwrap();
         txn.commit().wait().unwrap();
     }
 
