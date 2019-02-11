@@ -19,6 +19,7 @@ use bookmarks::{Bookmark, BookmarkUpdateReason};
 use context::CoreContext;
 use mercurial::RevlogRepo;
 use mercurial_types::HgChangesetId;
+use mononoke_types::ChangesetId;
 
 pub fn read_bookmarks(revlogrepo: RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChangesetId)>, Error> {
     let bookmarks = Arc::new(try_boxfuture!(revlogrepo.get_bookmarks()));
@@ -45,6 +46,7 @@ pub fn upload_bookmarks(
     revlogrepo: RevlogRepo,
     blobrepo: Arc<BlobRepo>,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
+    mononoke_bookmarks: Vec<(Bookmark, ChangesetId)>,
 ) -> BoxFuture<(), Error> {
     let logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
@@ -108,24 +110,32 @@ pub fn upload_bookmarks(
         .chunks(100) // send 100 bookmarks in a single transaction
         .and_then({
             let blobrepo = blobrepo.clone();
+            let mononoke_bookmarks: HashMap<_, _> = mononoke_bookmarks.into_iter().collect();
             move |vec| {
-                let count = vec.len();
                 let mut transaction = blobrepo.update_bookmark_transaction(ctx.clone());
 
+                let mut count = 0;
                 for (key, value) in vec {
                     let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
-                    try_boxfuture!(transaction.force_set(&key, value, BookmarkUpdateReason::Blobimport))
+                    if mononoke_bookmarks.get(&key) != Some(&value) {
+                        count += 1;
+                        try_boxfuture!(transaction.force_set(&key, value, BookmarkUpdateReason::Blobimport))
+                    }
                 }
 
-                transaction.commit()
-                    .and_then(move |ok| {
-                        if ok {
-                            Ok(count)
-                        } else {
-                            Err(format_err!("Bookmark transaction failed"))
-                        }
-                    })
-                    .boxify()
+                if count > 0 {
+                    transaction.commit()
+                        .and_then(move |ok| {
+                            if ok {
+                                Ok(count)
+                            } else {
+                                Err(format_err!("Bookmark transaction failed"))
+                            }
+                        })
+                        .boxify()
+                } else {
+                    Ok(0).into_future().boxify()
+                }
             }
         }).for_each(move |count| {
             info!(logger, "uploaded chunk of {:?} bookmarks", count);

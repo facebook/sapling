@@ -122,9 +122,13 @@ impl Blobimport {
                 }
             });
 
+        let mononoke_bookmarks = blobrepo.get_bonsai_bookmarks(ctx.clone());
         stale_bookmarks
-            .and_then(move |stale_bookmarks| upload_changesets.map(|()| stale_bookmarks))
-            .and_then(move |stale_bookmarks| {
+            .join(mononoke_bookmarks.collect())
+            .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
+                upload_changesets.map(move |()| (stale_bookmarks, mononoke_bookmarks))
+            })
+            .and_then(move |(stale_bookmarks, mononoke_bookmarks)| {
                 if no_bookmark {
                     info!(
                         logger,
@@ -132,7 +136,14 @@ impl Blobimport {
                     );
                     future::ok(()).boxify()
                 } else {
-                    bookmark::upload_bookmarks(ctx, &logger, revlogrepo, blobrepo, stale_bookmarks)
+                    bookmark::upload_bookmarks(
+                        ctx,
+                        &logger,
+                        revlogrepo,
+                        blobrepo,
+                        stale_bookmarks,
+                        mononoke_bookmarks,
+                    )
                 }
             })
             .boxify()
