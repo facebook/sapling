@@ -66,147 +66,148 @@ def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
     runshellcommand(cmd, encoding.environ)
 
 
-def fullrepack(repo, options=None):
-    """If ``packsonly`` is True, stores creating only loose objects are skipped.
-    """
+def _shareddatastoresrepack(repo, options, incremental):
     if util.safehasattr(repo.fileslog, "shareddatastores"):
-        datasource = contentstore.unioncontentstore(*repo.fileslog.shareddatastores)
-        historysource = metadatastore.unionmetadatastore(
-            *repo.fileslog.sharedhistorystores, allowincomplete=True
-        )
-
         packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-        _runrepack(
-            repo,
-            datasource,
-            historysource,
-            packpath,
-            constants.FILEPACK_CATEGORY,
-            options=options,
-            shared=True,
-        )
+        if incremental:
+            _incrementalrepack(
+                repo,
+                repo.fileslog.shareddatastores,
+                repo.fileslog.sharedhistorystores,
+                packpath,
+                constants.FILEPACK_CATEGORY,
+                options=options,
+                shared=True,
+            )
+        else:
+            datasource = contentstore.unioncontentstore(*repo.fileslog.shareddatastores)
+            historysource = metadatastore.unionmetadatastore(
+                *repo.fileslog.sharedhistorystores, allowincomplete=True
+            )
 
+            _runrepack(
+                repo,
+                datasource,
+                historysource,
+                packpath,
+                constants.FILEPACK_CATEGORY,
+                options=options,
+                shared=True,
+            )
+
+
+def _localdatarepack(repo, options, incremental):
     if repo.ui.configbool("remotefilelog", "localdatarepack") and util.safehasattr(
         repo.fileslog, "localdatastores"
     ):
         packpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )
-        datasource = contentstore.unioncontentstore(*repo.fileslog.localdatastores)
-        historysource = metadatastore.unionmetadatastore(
-            *repo.fileslog.localhistorystores, allowincomplete=True
-        )
-        _runrepack(
-            repo,
-            datasource,
-            historysource,
-            packpath,
-            constants.FILEPACK_CATEGORY,
-            options=options,
-            shared=False,
-        )
 
+        if incremental:
+            _incrementalrepack(
+                repo,
+                repo.fileslog.localdatastores,
+                repo.fileslog.localhistorystores,
+                packpath,
+                constants.FILEPACK_CATEGORY,
+                options=options,
+                shared=False,
+            )
+        else:
+            datasource = contentstore.unioncontentstore(*repo.fileslog.localdatastores)
+            historysource = metadatastore.unionmetadatastore(
+                *repo.fileslog.localhistorystores, allowincomplete=True
+            )
+            _runrepack(
+                repo,
+                datasource,
+                historysource,
+                packpath,
+                constants.FILEPACK_CATEGORY,
+                options=options,
+                shared=False,
+            )
+
+
+def _manifestrepack(repo, options, incremental):
     if repo.ui.configbool("treemanifest", "server"):
         treemfmod = extensions.find("treemanifest")
-        treemfmod.serverrepack(repo, options=options)
+        treemfmod.serverrepack(repo, options=options, incremental=incremental)
     elif util.safehasattr(repo.manifestlog, "datastore"):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
         spackpath, sdstores, shstores = shareddata
 
         # Repack the shared manifest store
-        datasource = contentstore.unioncontentstore(*sdstores)
-        historysource = metadatastore.unionmetadatastore(
-            *shstores, allowincomplete=True
-        )
-        _runrepack(
-            repo,
-            datasource,
-            historysource,
-            spackpath,
-            constants.TREEPACK_CATEGORY,
-            options=options,
-            shared=True,
-        )
+        if incremental:
+            _incrementalrepack(
+                repo,
+                sdstores,
+                shstores,
+                spackpath,
+                constants.TREEPACK_CATEGORY,
+                options=options,
+                shared=True,
+            )
+        else:
+            datasource = contentstore.unioncontentstore(*sdstores)
+            historysource = metadatastore.unionmetadatastore(
+                *shstores, allowincomplete=True
+            )
+            _runrepack(
+                repo,
+                datasource,
+                historysource,
+                spackpath,
+                constants.TREEPACK_CATEGORY,
+                options=options,
+                shared=True,
+            )
 
         # Repack the local manifest store
-        datasource = contentstore.unioncontentstore(*ldstores, allowincomplete=True)
-        historysource = metadatastore.unionmetadatastore(
-            *lhstores, allowincomplete=True
-        )
-        _runrepack(
-            repo,
-            datasource,
-            historysource,
-            lpackpath,
-            constants.TREEPACK_CATEGORY,
-            options=options,
-            shared=False,
-        )
+        if incremental:
+            _incrementalrepack(
+                repo,
+                ldstores,
+                lhstores,
+                lpackpath,
+                constants.TREEPACK_CATEGORY,
+                allowincompletedata=True,
+                options=options,
+                shared=False,
+            )
+        else:
+            datasource = contentstore.unioncontentstore(*ldstores, allowincomplete=True)
+            historysource = metadatastore.unionmetadatastore(
+                *lhstores, allowincomplete=True
+            )
+            _runrepack(
+                repo,
+                datasource,
+                historysource,
+                lpackpath,
+                constants.TREEPACK_CATEGORY,
+                options=options,
+                shared=False,
+            )
+
+
+def fullrepack(repo, options=None):
+    """If ``packsonly`` is True, stores creating only loose objects are skipped.
+    """
+    _shareddatastoresrepack(repo, options, False)
+    _localdatarepack(repo, options, False)
+    _manifestrepack(repo, options, False)
 
 
 def incrementalrepack(repo, options=None):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
-    if util.safehasattr(repo.fileslog, "shareddatastores"):
-        packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-        _incrementalrepack(
-            repo,
-            repo.fileslog.shareddatastores,
-            repo.fileslog.sharedhistorystores,
-            packpath,
-            constants.FILEPACK_CATEGORY,
-            options=options,
-            shared=True,
-        )
-
-    if repo.ui.configbool("remotefilelog", "localdatarepack") and util.safehasattr(
-        repo.fileslog, "localdatastores"
-    ):
-        packpath = shallowutil.getlocalpackpath(
-            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-        )
-        _incrementalrepack(
-            repo,
-            repo.fileslog.localdatastores,
-            repo.fileslog.localhistorystores,
-            packpath,
-            constants.FILEPACK_CATEGORY,
-            options=options,
-            shared=False,
-        )
-
-    if repo.ui.configbool("treemanifest", "server"):
-        treemfmod = extensions.find("treemanifest")
-        treemfmod.serverrepack(repo, incremental=True)
-    elif util.safehasattr(repo.manifestlog, "datastore"):
-        localdata, shareddata = _getmanifeststores(repo)
-        lpackpath, ldstores, lhstores = localdata
-        spackpath, sdstores, shstores = shareddata
-
-        # Repack the shared manifest store
-        _incrementalrepack(
-            repo,
-            sdstores,
-            shstores,
-            spackpath,
-            constants.TREEPACK_CATEGORY,
-            options=options,
-            shared=True,
-        )
-
-        # Repack the local manifest store
-        _incrementalrepack(
-            repo,
-            ldstores,
-            lhstores,
-            lpackpath,
-            constants.TREEPACK_CATEGORY,
-            allowincompletedata=True,
-            options=options,
-            shared=False,
-        )
+    _shareddatastoresrepack(repo, options, True)
+    _localdatarepack(repo, options, True)
+    _manifestrepack(repo, options, True)
 
 
 def _getmanifeststores(repo):
