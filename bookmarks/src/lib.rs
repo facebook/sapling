@@ -167,6 +167,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         id: u64,
+        repoid: RepositoryId,
     ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error>;
 }
 

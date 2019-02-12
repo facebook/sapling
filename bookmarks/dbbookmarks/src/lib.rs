@@ -106,7 +106,7 @@ queries! {
          VALUES {values}"
     }
 
-    read ReadNextBookmarkLogEntry(min_id: u64) -> (
+    read ReadNextBookmarkLogEntry(min_id: u64, repo_id: RepositoryId) -> (
         i64, RepositoryId, Bookmark, Option<ChangesetId>, Option<ChangesetId>,
         BookmarkUpdateReason, Timestamp, Option<String>, Option<String>
     ) {
@@ -114,7 +114,7 @@ queries! {
               replay.bundle_handle, replay.commit_hashes_json
          FROM bookmarks_update_log log
          LEFT JOIN bundle_replay_data replay ON log.id == replay.bookmark_update_log_id
-         WHERE log.id > {min_id}
+         WHERE log.id > {min_id} AND log.repo_id = {repo_id}
          ORDER BY id asc
          LIMIT 1"
     }
@@ -236,8 +236,9 @@ impl Bookmarks for SqlBookmarks {
         &self,
         _ctx: CoreContext,
         id: u64,
+        repoid: RepositoryId,
     ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error> {
-        ReadNextBookmarkLogEntry::query(&self.read_connection, &id)
+        ReadNextBookmarkLogEntry::query(&self.read_connection, &id, &repoid)
             .and_then(|entries| {
                 let entry = entries.into_iter().next();
                 match entry {

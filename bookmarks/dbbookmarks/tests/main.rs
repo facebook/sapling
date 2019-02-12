@@ -36,7 +36,7 @@ use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
 };
-use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
 
 fn create_bookmark(book: &str) -> Bookmark {
     Bookmark::new(book.to_string()).unwrap()
@@ -90,7 +90,7 @@ fn test_simple_unconditional_set_get() {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entry(ctx.clone(), 0)
+            .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_ZERO)
             .wait()
             .unwrap()
             .unwrap(),
@@ -215,7 +215,7 @@ fn test_simple_create() {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entry(ctx.clone(), 0)
+            .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_ZERO)
             .wait()
             .unwrap()
             .unwrap(),
@@ -464,7 +464,7 @@ fn test_simple_update_bookmark() {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entry(ctx.clone(), 1)
+            .read_next_bookmark_log_entry(ctx.clone(), 1, REPO_ZERO)
             .wait()
             .unwrap()
             .unwrap(),
@@ -591,7 +591,7 @@ fn test_force_delete() {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entry(ctx.clone(), 2)
+            .read_next_bookmark_log_entry(ctx.clone(), 2, REPO_ZERO)
             .wait()
             .unwrap()
             .unwrap(),
@@ -655,7 +655,7 @@ fn test_delete() {
 
     compare_log_entries(
         bookmarks
-            .read_next_bookmark_log_entry(ctx.clone(), 1)
+            .read_next_bookmark_log_entry(ctx.clone(), 1, REPO_ZERO)
             .wait()
             .unwrap()
             .unwrap(),
@@ -918,35 +918,35 @@ fn test_log_correct_order() {
     txn.commit().wait().unwrap();
 
     let log_entry = bookmarks
-        .read_next_bookmark_log_entry(ctx.clone(), 0)
+        .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_ZERO)
         .wait()
         .unwrap()
         .unwrap();
     assert_eq!(log_entry.to_changeset_id.unwrap(), ONES_CSID);
 
     let log_entry = bookmarks
-        .read_next_bookmark_log_entry(ctx.clone(), 1)
+        .read_next_bookmark_log_entry(ctx.clone(), 1, REPO_ZERO)
         .wait()
         .unwrap()
         .unwrap();
     assert_eq!(log_entry.to_changeset_id.unwrap(), TWOS_CSID);
 
     let log_entry = bookmarks
-        .read_next_bookmark_log_entry(ctx.clone(), 2)
+        .read_next_bookmark_log_entry(ctx.clone(), 2, REPO_ZERO)
         .wait()
         .unwrap()
         .unwrap();
     assert_eq!(log_entry.to_changeset_id.unwrap(), THREES_CSID);
 
     let log_entry = bookmarks
-        .read_next_bookmark_log_entry(ctx.clone(), 3)
+        .read_next_bookmark_log_entry(ctx.clone(), 3, REPO_ZERO)
         .wait()
         .unwrap()
         .unwrap();
     assert_eq!(log_entry.to_changeset_id.unwrap(), FOURS_CSID);
 
     let log_entry = bookmarks
-        .read_next_bookmark_log_entry(ctx.clone(), 4)
+        .read_next_bookmark_log_entry(ctx.clone(), 4, REPO_ZERO)
         .wait()
         .unwrap()
         .unwrap();
@@ -976,7 +976,7 @@ fn test_log_bundle_replay_data() {
     assert!(txn.commit().wait().is_ok());
 
     let log_entry = bookmarks
-        .read_next_bookmark_log_entry(ctx.clone(), 0)
+        .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_ZERO)
         .wait()
         .unwrap()
         .unwrap();
@@ -989,4 +989,57 @@ fn test_log_bundle_replay_data() {
 
     let actual = bundle_replay_data.unwrap();
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_read_log_entry_many_repos() {
+    let ctx = CoreContext::test_mock();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
+    let name_1 = create_bookmark("book");
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().is_ok());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ONE);
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().is_ok());
+
+    assert!(bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_ZERO)
+        .wait()
+        .unwrap()
+        .is_some());
+
+    assert!(bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_ONE)
+        .wait()
+        .unwrap()
+        .is_some());
+
+    assert!(bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 1, REPO_ZERO)
+        .wait()
+        .unwrap()
+        .is_none());
+
+    assert!(bookmarks
+        .read_next_bookmark_log_entry(ctx.clone(), 0, REPO_TWO)
+        .wait()
+        .unwrap()
+        .is_none());
 }
