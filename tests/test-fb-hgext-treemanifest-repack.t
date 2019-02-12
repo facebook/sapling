@@ -282,7 +282,7 @@ Test incremental repack that doesn't take all packs
 
 - Test pruning the manifest cache using packs.maxpackfilecount
   $ hg repack --incremental --config packs.maxpackfilecount=0
-  $ hg repack --incremental --config packs.maxpackfilecount=1
+  $ hg repack --incremental --packsonly --config packs.maxpackfilecount=1
   purging shared treemanifest pack cache (4 entries) -- too many files
   $ ls_l .hg/cache/packs/manifests/
   $ cd ..
