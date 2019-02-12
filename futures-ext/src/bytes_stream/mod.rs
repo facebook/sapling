@@ -98,8 +98,8 @@ where
     S: Stream<Item = Bytes, Error = io::Error>,
 {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let async = self.poll_buffer_until(buf.len())?;
-        if self.bytes.is_empty() && async.is_not_ready() {
+        let r#async = self.poll_buffer_until(buf.len())?;
+        if self.bytes.is_empty() && r#async.is_not_ready() {
             Err(io::Error::new(
                 io::ErrorKind::WouldBlock,
                 "inner stream not ready",

@@ -44,10 +44,10 @@ pub mod encode;
 
 pub mod io;
 
-pub use bytes_stream::{BytesStream, BytesStreamFuture};
-pub use futures_ordered::{futures_ordered, FuturesOrdered};
-pub use select_all::{select_all, SelectAll};
-pub use stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
+pub use crate::bytes_stream::{BytesStream, BytesStreamFuture};
+pub use crate::futures_ordered::{futures_ordered, FuturesOrdered};
+pub use crate::select_all::{select_all, SelectAll};
+pub use crate::stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
 
 use std::time::{Duration, Instant};
 
