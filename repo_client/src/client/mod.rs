@@ -199,6 +199,8 @@ pub struct RepoClient {
     hash_validation_percentage: usize,
     lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
+    // Whether to save raw bundle2 content into the blobstore
+    preserve_raw_bundle2: bool,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -301,6 +303,7 @@ impl RepoClient {
         hash_validation_percentage: usize,
         lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
+        preserve_raw_bundle2: bool,
     ) -> Self {
         RepoClient {
             repo,
@@ -308,6 +311,7 @@ impl RepoClient {
             hash_validation_percentage,
             lca_hint,
             phases_hint,
+            preserve_raw_bundle2,
         }
     }
 
@@ -1039,6 +1043,11 @@ impl HgCommands for RepoClient {
             .whole_stream_timeout(timeout_duration())
             .map_err(process_stream_timeout_error)
             .boxify()
+    }
+
+    // whether raw bundle2 contents should be preverved in the blobstore
+    fn should_preserve_raw_bundle2(&self) -> bool {
+        self.preserve_raw_bundle2
     }
 }
 

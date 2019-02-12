@@ -161,6 +161,13 @@ disable_acl_checker=true
 CONFIG
 fi
 
+if [[ -v ENABLE_PRESERVE_BUNDLE2 ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[bundle2_replay_params]
+preserve_raw_bundle2 = true
+CONFIG
+fi
+
 if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
   cat >> repos/repo/server.toml <<CONFIG
 [cache_warmup]

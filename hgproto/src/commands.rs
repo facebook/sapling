@@ -160,7 +160,18 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 ok(instream).boxify(),
             ),
             SingleRequest::Unbundle { heads } => {
-                let bundle2stream = Bundle2Stream::new(self.ctx.clone(), Dechunker::new(instream));
+                let dechunker = Dechunker::new(instream);
+                let (dechunker, maybe_full_content) = if hgcmds.should_preserve_raw_bundle2() {
+                    let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
+                    (
+                        dechunker.with_full_content(full_bundle2_content.clone()),
+                        Some(full_bundle2_content)
+                    )
+                } else {
+                    (dechunker, None)
+                };
+
+                let bundle2stream = Bundle2Stream::new(self.ctx.clone(), dechunker);
                 let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
 
                 let remainder = remainder
@@ -197,7 +208,12 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     Either::A(ok(SingleResponse::ReadyForStream)),
                     Either::B(
                         hgcmds
-                            .unbundle(heads, bundle2stream, self.hook_manager.clone(), None)
+                            .unbundle(
+                                heads,
+                                bundle2stream,
+                                self.hook_manager.clone(),
+                                maybe_full_content,
+                            )
                             .map(|bytes| SingleResponse::Unbundle(bytes)),
                     ),
                 ]);
@@ -548,6 +564,11 @@ pub trait HgCommands {
             ErrorKind::Unimplemented("stream_out_shallow".into()).into()
         ))
         .boxify()
+    }
+
+    // whether raw bundle2 contents should be preverved in the blobstore
+    fn should_preserve_raw_bundle2(&self) -> bool {
+        unimplemented!("should_preserve_raw_bundle2")
     }
 }
 

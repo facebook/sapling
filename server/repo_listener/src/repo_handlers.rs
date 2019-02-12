@@ -40,6 +40,7 @@ pub struct RepoHandler {
     pub hash_validation_percentage: usize,
     pub lca_hint: Arc<LeastCommonAncestorsHint>,
     pub phases_hint: Arc<Phases>,
+    pub preserve_raw_bundle2: bool,
 }
 
 pub fn repo_handlers(
@@ -133,6 +134,8 @@ pub fn repo_handlers(
                 scuba_logger.add_common_server_data();
                 let hash_validation_percentage = config.hash_validation_percentage.clone();
                 let wireproto_scribe_category = config.wireproto_scribe_category.clone();
+                let preserve_raw_bundle2 =
+                    config.bundle2_replay_params.preserve_raw_bundle2.clone();
 
                 let skip_index = match config.skiplist_index_blobstore_key.clone() {
                     Some(skiplist_index_blobstore_key) => {
@@ -209,6 +212,7 @@ pub fn repo_handlers(
                                     hash_validation_percentage,
                                     lca_hint,
                                     phases_hint,
+                                    preserve_raw_bundle2,
                                 },
                             )
                         }
