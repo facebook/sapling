@@ -399,6 +399,10 @@ class datapacktestsbase(object):
         origpackcount = len(os.listdir(packdir))
         ui.pushbuffer(error=True)
         store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
+        # Constructing the store doesn't load the packfiles, these are loaded
+        # on demand, and thus the detection of bad packfiles only happen then.
+        # Let's force a refresh to make sure the bad pack files are deleted.
+        store.refresh()
         ui.popbuffer()
         newpackcount = len(os.listdir(packdir))
 

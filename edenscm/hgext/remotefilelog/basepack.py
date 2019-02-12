@@ -305,7 +305,6 @@ class basepackstore(object):
                     try:
                         newpack = self.getpack(filepath)
                         newpacks.append(newpack)
-                        self.packs.add(newpack)
                     except Exception:
                         # The pack file is likely corrupt
                         if self.deletecorruptpacks:
@@ -319,29 +318,32 @@ class basepackstore(object):
                             )
 
             self.lastrefresh = time.time()
+
+        for pack in reversed(newpacks):
+            self.packs.add(pack)
+
         return newpacks
 
     def runonpacks(self, func):
         badpacks = []
-        for pack in self.packs:
-            try:
-                yield func(pack)
-            except KeyError:
-                pass
-            except Exception:
-                # Other exceptions indicate an issue with the pack file, so
-                # remove it.
-                badpacks.append(pack)
 
-        for pack in self.refresh():
-            try:
-                yield func(pack)
-            except KeyError:
-                pass
-            except Exception:
-                # Other exceptions indicate an issue with the pack file, so
-                # remove it.
-                badpacks.append(pack)
+        oldpacks = set()
+        for i in range(2):
+            for pack in self.packs:
+                if pack not in oldpacks:
+                    try:
+                        yield func(pack)
+                    except KeyError:
+                        pass
+                    except Exception:
+                        # Other exceptions indicate an issue with the pack file, so
+                        # remove it.
+                        badpacks.append(pack)
+                    oldpacks.add(pack)
+
+            # Let's refresh the packs, what is being looked for might be on-disk.
+            if i == 0:
+                self.refresh()
 
         if badpacks:
             if self.deletecorruptpacks:
