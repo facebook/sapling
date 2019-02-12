@@ -27,6 +27,7 @@ class state(object):
         self._rootdir = pathutil.normasprefix(repo.root)
         self._lastclock = None
         self._lastisfresh = False
+        self._lastchangedfilecount = 0
 
         self.mode = self._ui.config("fsmonitor", "mode")
         self.walk_on_invalidate = self._ui.configbool("fsmonitor", "walk_on_invalidate")
@@ -146,6 +147,10 @@ class state(object):
             ds = self._repo.dirstate
             dmap = ds._map
             changed = bool(self._droplist) or bool(self._lastisfresh)
+            if self._lastchangedfilecount >= self._ui.configint(
+                "fsmonitor", "watchman-changed-file-threshold"
+            ):
+                changed = True
             for path in self._droplist:
                 dmap.deletefile(path, None)
             self._droplist = []
@@ -204,6 +209,9 @@ class state(object):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             self._ui.log("fsmonitor_details", "setlastisfresh: %r" % isfresh)
         self._lastisfresh = isfresh
+
+    def setwatchmanchangedfilecount(self, filecount):
+        self._lastchangedfilecount = filecount
 
     def getlastclock(self):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):

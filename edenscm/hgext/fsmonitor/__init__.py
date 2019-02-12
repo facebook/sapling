@@ -105,6 +105,17 @@ more correctly if files get unignored, or added to the sparse profile, at the
 cost of slowing down status command. Turning it off would make things faster,
 at the cast of removing files from ignore patterns (or adding files to sparse
 profiles) won't be detected automatically. (default: True)
+
+::
+
+    [fsmonitor]
+    watchman-changed-file-threshold = 200
+
+Number of possibly changed files returned by watchman to force a write to
+treestate. Set this to a small value updates treestate more frequently,
+leading to better performance, at the cost of disk usage. Set this to a large
+value would update treestate less frequently, with the downside that
+performance might regress in some cases. (default: 200)
 """
 
 # Platforms Supported
@@ -180,6 +191,7 @@ configitem("fsmonitor", "mode", default="on")
 configitem("fsmonitor", "timeout", default=10)
 configitem("fsmonitor", "track-ignore-files", default=True)
 configitem("fsmonitor", "walk_on_invalidate", default=False)
+configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -455,6 +467,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             self._ui.log(
                 "fsmonitor_details", "watchman returned %s" % _reprshort(filelist)
             )
+        state.setwatchmanchangedfilecount(len(result))
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap

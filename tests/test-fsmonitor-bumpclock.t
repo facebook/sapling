@@ -44,3 +44,20 @@ means the "status" command could still be slow.
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned ['a', 'b', 'c', 'd']
+
+With watchman-changed-file-threshold set, clock is bumped and watchman can
+return an empty list:
+
+  $ setconfig fsmonitor.watchman-changed-file-threshold=2
+
+  $ rm .hg/blackbox*
+  $ hg status
+  $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
+  watchman returned ['a', 'b', 'c', 'd']
+
+  $ sleep 1
+
+  $ rm .hg/blackbox*
+  $ hg status
+  $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
+  watchman returned []
