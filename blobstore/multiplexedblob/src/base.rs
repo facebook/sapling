@@ -95,7 +95,7 @@ impl MultiplexedBlobstoreBase {
 impl Blobstore for MultiplexedBlobstoreBase {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-        let requests = self
+        let requests: Vec<_> = self
             .blobstores
             .iter()
             .map(|&(blobstore_id, ref blobstore)| {
@@ -109,8 +109,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         let session = ctx.session().clone();
                         cloned!(self.scuba_logger);
                         move |stats, result| {
-                            // It won't log slow failed blobstores and because of that the
-                            // results might be skewed.
                             if !should_log {
                                 return future::ok(());
                             }
@@ -133,6 +131,16 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
                                     sample.add("session", session.to_string());
                                 }
+
+                                match result {
+                                    Ok(Some(data)) => {
+                                        sample.add("size", data.len());
+                                    }
+                                    Err((_, error)) => {
+                                        sample.add("error", error.to_string());
+                                    }
+                                    Ok(None) => {}
+                                }
                                 scuba_logger.log(&sample);
                             }
 
@@ -150,7 +158,18 @@ impl Blobstore for MultiplexedBlobstoreBase {
             future::select_all(requests).then({
                 move |result| {
                     let requests = match result {
-                        Ok((value @ Some(_), ..)) => return future::ok(Loop::Break(value)),
+                        Ok((value @ Some(_), _, requests)) => {
+                            if should_log {
+                                // Allow the other requests to complete so that we can record some
+                                // metrics for the blobstore.
+                                let requests_fut = future::join_all(
+                                    requests.into_iter().map(|request| request.then(|_| Ok(()))),
+                                )
+                                .map(|_| ());
+                                spawn(requests_fut);
+                            }
+                            return future::ok(Loop::Break(value));
+                        }
                         Ok((None, _, requests)) => requests,
                         Err(((blobstore_id, error), _, requests)) => {
                             errors.insert(blobstore_id, error);
