@@ -1,9 +1,10 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 use bytes::BytesMut;
+use failure::{bail_err, ensure_err};
 use tokio_io::codec::Decoder;
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Debug, Copy, Clone)]
 enum State {
@@ -50,7 +51,8 @@ impl NetstringDecoder {
     fn decode_buf<'a>(&mut self, buf: &'a [u8]) -> Result<(usize, Option<(bool, Slice)>)> {
         let mut consumed = 0;
         loop {
-            let state = self.state
+            let state = self
+                .state
                 .take()
                 .ok_or(ErrorKind::NetstringDecode("bad state"))?;
 
@@ -62,7 +64,7 @@ impl NetstringDecoder {
 
                     for (idx, inp) in buf.iter().enumerate() {
                         match *inp {
-                            digit @ b'0'...b'9' => cur = cur * 10 + ((digit - b'0') as usize),
+                            digit @ b'0'..=b'9' => cur = cur * 10 + ((digit - b'0') as usize),
                             b':' => {
                                 next = Some((idx + 1, State::Body(cur)));
                                 break;

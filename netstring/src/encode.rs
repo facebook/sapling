@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use bytes::{BufMut, BytesMut};
 use tokio_io::codec::Encoder;
 
-use errors::*;
+use crate::errors::*;
 
 /// A Netstring encoder.
 ///
@@ -61,8 +61,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use NetstringDecoder;
+    use crate::NetstringDecoder;
     use bytes::BytesMut;
+    use quickcheck::quickcheck;
     use tokio_io::codec::Decoder;
 
     use super::*;

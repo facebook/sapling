@@ -9,26 +9,23 @@
 //! payload, followed by a ':', then the payload, and a terminating ','. There is no error
 //! checking or correction other than the requirement that the message be followed by a comma.
 
-extern crate bytes;
-#[macro_use]
+#![deny(warnings)]
+
 extern crate failure_ext as failure;
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-extern crate tokio_io;
 
 mod errors {
-    pub use failure::{Error, Result};
+    pub use failure::{Error, Fail, Result};
 
     #[derive(Clone, Debug, Fail)]
     pub enum ErrorKind {
-        #[fail(display = "{}", _0)] NetstringDecode(&'static str),
+        #[fail(display = "{}", _0)]
+        NetstringDecode(&'static str),
     }
 }
-pub use errors::*;
+pub use crate::errors::*;
 
 mod decode;
 mod encode;
 
-pub use decode::NetstringDecoder;
-pub use encode::NetstringEncoder;
+pub use crate::decode::NetstringDecoder;
+pub use crate::encode::NetstringEncoder;

@@ -1,0 +1,13 @@
+[package]
+name = "netstring"
+version = "0.1.0"
+authors = ["Jeremy Fitzhardinge <jsgf@fb.com>"]
+edition = "2018"
+
+[dependencies]
+failure_ext = { path = "../failure_ext" }
+bytes = "0.4.11"
+tokio-io = "0.1.10"
+
+[dev-dependencies]
+quickcheck = "0.6.2"
