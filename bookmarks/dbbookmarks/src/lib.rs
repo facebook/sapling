@@ -113,7 +113,7 @@ queries! {
         "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp,
               replay.bundle_handle, replay.commit_hashes_json
          FROM bookmarks_update_log log
-         LEFT JOIN bundle_replay_data replay ON log.id == replay.bookmark_update_log_id
+         LEFT JOIN bundle_replay_data replay ON log.id = replay.bookmark_update_log_id
          WHERE log.id > {min_id} AND log.repo_id = {repo_id}
          ORDER BY id asc
          LIMIT 1"
