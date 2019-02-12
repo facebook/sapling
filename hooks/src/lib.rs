@@ -632,32 +632,35 @@ impl HookFile {
     }
 
     pub fn len(&self, ctx: CoreContext) -> BoxFuture<u64, Error> {
-        self.file_content(ctx)
-            .and_then(|bytes| Ok(bytes.len() as u64))
+        let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
+        cloned!(self.changeset_id);
+        self.content_store
+            .get_file_size(ctx, changeset_id, path.clone())
+            .and_then(move |opt| {
+                opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
+            })
             .boxify()
     }
 
     pub fn file_content(&self, ctx: CoreContext) -> BoxFuture<Bytes, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
-        let changeset_id = self.changeset_id.clone();
+        cloned!(self.changeset_id);
         self.content_store
-            .get_file_content_for_changeset(ctx, self.changeset_id, path.clone())
+            .get_file_content(ctx, changeset_id, path.clone())
             .and_then(move |opt| {
-                opt.ok_or(ErrorKind::NoFileContent(changeset_id, path.into()).into())
+                opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
             })
-            .map(|(_, bytes)| bytes)
             .boxify()
     }
 
     pub fn file_type(&self, ctx: CoreContext) -> BoxFuture<FileType, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
-        let changeset_id = self.changeset_id.clone();
+        cloned!(self.changeset_id);
         self.content_store
-            .get_file_content_for_changeset(ctx, self.changeset_id, path.clone())
+            .get_file_type(ctx, changeset_id, path.clone())
             .and_then(move |opt| {
-                opt.ok_or(ErrorKind::NoFileContent(changeset_id, path.into()).into())
+                opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
             })
-            .map(|(file_type, _)| file_type)
             .boxify()
     }
 }
@@ -686,8 +689,7 @@ impl HookChangeset {
     pub fn file_content(&self, ctx: CoreContext, path: String) -> BoxFuture<Option<Bytes>, Error> {
         let path = try_boxfuture!(MPath::new(path.as_bytes()));
         self.content_store
-            .get_file_content_for_changeset(ctx, self.changeset_id, path.clone())
-            .map(|opt| opt.map(|(_, bytes)| bytes))
+            .get_file_content(ctx, self.changeset_id, path.clone())
             .boxify()
     }
 }
@@ -794,12 +796,26 @@ impl InMemoryChangesetStore {
 }
 
 pub trait FileContentStore: Send + Sync {
-    fn get_file_content_for_changeset(
+    fn get_file_content(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<(FileType, Bytes)>, Error>;
+    ) -> BoxFuture<Option<Bytes>, Error>;
+
+    fn get_file_type(
+        &self,
+        ctx: CoreContext,
+        changesetid: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<FileType>, Error>;
+
+    fn get_file_size(
+        &self,
+        ctx: CoreContext,
+        changesetid: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<u64>, Error>;
 }
 
 #[derive(Clone)]
@@ -808,15 +824,42 @@ pub struct InMemoryFileContentStore {
 }
 
 impl FileContentStore for InMemoryFileContentStore {
-    fn get_file_content_for_changeset(
+    fn get_file_content(
         &self,
         _ctx: CoreContext,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
-        let opt = self.map
+    ) -> BoxFuture<Option<Bytes>, Error> {
+        let opt = self
+            .map
             .get(&(changesetid, path.clone()))
-            .map(|(file_type, bytes)| (file_type.clone(), bytes.clone()));
+            .map(|(_, bytes)| bytes.clone());
+        finished(opt).boxify()
+    }
+
+    fn get_file_type(
+        &self,
+        _ctx: CoreContext,
+        changesetid: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<FileType>, Error> {
+        let opt = self
+            .map
+            .get(&(changesetid, path.clone()))
+            .map(|(file_type, _)| file_type.clone());
+        finished(opt).boxify()
+    }
+
+    fn get_file_size(
+        &self,
+        _ctx: CoreContext,
+        changesetid: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<u64>, Error> {
+        let opt = self
+            .map
+            .get(&(changesetid, path.clone()))
+            .map(|(_, bytes)| bytes.len() as u64);
         finished(opt).boxify()
     }
 }

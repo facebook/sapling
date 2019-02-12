@@ -17,7 +17,9 @@ use futures::{finished, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{ChangedFileType, ChangesetStore, FileContentStore};
 use mercurial_types::manifest_utils;
-use mercurial_types::{manifest::get_empty_manifest, Changeset, HgChangesetId, MPath};
+use mercurial_types::{
+    manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId, MPath,
+};
 use mononoke_types::{FileContents, FileType};
 
 // TODO this can cache file content locally to prevent unnecessary lookup of changeset,
@@ -31,35 +33,63 @@ pub struct BlobRepoChangesetStore {
     pub repo: BlobRepo,
 }
 
+fn find_file_in_repo(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    changesetid: HgChangesetId,
+    path: MPath,
+) -> impl Future<Item = Option<(FileType, HgFileNodeId)>, Error = Error> {
+    repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
+        .and_then(move |changeset| {
+            repo.find_file_in_manifest(ctx, &path, changeset.manifestid().clone())
+        })
+}
+
 impl FileContentStore for BlobRepoFileContentStore {
-    fn get_file_content_for_changeset(
+    fn get_file_content(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
-        let repo = self.repo.clone();
-        let repo2 = repo.clone();
-        repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
+    ) -> BoxFuture<Option<Bytes>, Error> {
+        find_file_in_repo(ctx.clone(), self.repo.clone(), changesetid, path)
             .and_then({
-                cloned!(ctx);
-                move |changeset| {
-                    repo.find_file_in_manifest(ctx, &path, changeset.manifestid().clone())
+                cloned!(self.repo);
+                move |opt| match opt {
+                    Some((_, hash)) => repo
+                        .get_file_content(ctx, hash)
+                        .map(|FileContents::Bytes(bytes)| Some(bytes))
+                        .left_future(),
+                    None => finished(None).right_future(),
                 }
             })
-            .and_then(move |opt| match opt {
-                Some((file_type, hash)) => repo2
-                    .get_file_content(ctx, hash)
-                    .map(move |content| Some((file_type, content)))
-                    .boxify(),
-                None => finished(None).boxify(),
-            })
-            .and_then(|opt| match opt {
-                Some((file_type, content)) => {
-                    let FileContents::Bytes(bytes) = content;
-                    Ok(Some((file_type, bytes)))
+            .boxify()
+    }
+
+    fn get_file_type(
+        &self,
+        ctx: CoreContext,
+        changesetid: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<FileType>, Error> {
+        find_file_in_repo(ctx.clone(), self.repo.clone(), changesetid, path)
+            .map(move |opt| opt.map(|(file_type, _)| file_type))
+            .boxify()
+    }
+
+    fn get_file_size(
+        &self,
+        ctx: CoreContext,
+        changesetid: HgChangesetId,
+        path: MPath,
+    ) -> BoxFuture<Option<u64>, Error> {
+        find_file_in_repo(ctx.clone(), self.repo.clone(), changesetid, path)
+            .and_then({
+                cloned!(self.repo);
+                move |opt| match opt {
+                    Some((_, hash)) => repo.get_file_size(ctx, hash).map(Some).left_future(),
+                    None => finished(None).right_future(),
                 }
-                None => Ok(None),
             })
             .boxify()
     }

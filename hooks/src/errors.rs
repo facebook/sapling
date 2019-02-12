@@ -25,8 +25,8 @@ pub enum ErrorKind {
     #[fail(display = "invalid path: {}", _0)]
     InvalidPath(MPath),
 
-    #[fail(display = "No file content for '{}'", _0)]
-    NoFileContent(HgChangesetId, MPath),
+    #[fail(display = "Missing file for cs '{}' path '{}'", _0, _1)]
+    MissingFile(HgChangesetId, MPath),
 
     #[fail(display = "Hook(s) referenced in bookmark {} do not exist", _0)]
     NoSuchBookmarkHook(Bookmark),
