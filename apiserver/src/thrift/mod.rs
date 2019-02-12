@@ -15,6 +15,7 @@ use slog::Logger;
 
 use apiserver_thrift::server::make_MononokeAPIService_server;
 use fb303::server::make_FacebookService_server;
+use fb303_core::server::make_BaseService_server;
 use srserver::ThriftServerBuilder;
 
 use self::dispatcher::ThriftDispatcher;
@@ -47,7 +48,15 @@ pub fn make_thrift(
                             make_MononokeAPIService_server(
                                 proto,
                                 MononokeAPIServiceImpl::new(addr, logger, scuba_builder),
-                                |proto| make_FacebookService_server(proto, FacebookServiceImpl {}),
+                                |proto| {
+                                    make_FacebookService_server(
+                                        proto,
+                                        FacebookServiceImpl {},
+                                        |proto| {
+                                            make_BaseService_server(proto, FacebookServiceImpl {})
+                                        },
+                                    )
+                                },
                             )
                         }
                     }

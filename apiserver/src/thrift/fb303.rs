@@ -10,9 +10,12 @@ use futures_ext::{BoxFuture, FutureExt};
 use fb303::fb_status;
 use fb303::server::FacebookService;
 use fb303::services::facebook_service::{GetNameExn, GetStatusDetailsExn, GetStatusExn};
+use fb303_core::server::BaseService;
 
 #[derive(Clone)]
 pub struct FacebookServiceImpl {}
+
+impl BaseService for FacebookServiceImpl {}
 
 impl FacebookService for FacebookServiceImpl {
     fn getName(&self) -> BoxFuture<String, GetNameExn> {

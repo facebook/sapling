@@ -27,6 +27,7 @@ extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate fb303;
+extern crate fb303_core;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
