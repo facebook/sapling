@@ -66,34 +66,109 @@ def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
     runshellcommand(cmd, encoding.environ)
 
 
+def _userustrepack(repo):
+    return repo.ui.configbool("remotefilelog", "userustrepack", False)
+
+
+def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
+    # In the case of a loose-only repack, fallback to Python, as Rust doesn't support them.
+    if options and options.get(constants.OPTION_LOOSEONLY):
+        return pythonrepack(repo, options, packpath, incremental)
+
+    # Similarly, if a loose+pack repack is requested, let's first run the loose-only Python repack.
+    if options and not options.get(constants.OPTION_PACKSONLY):
+        newoptions = dict(options)
+        newoptions[constants.OPTION_LOOSEONLY] = True
+        pythonrepack(repo, newoptions, packpath, incremental)
+
+    try:
+        with flock(
+            repacklockvfs(repo).join("repacklock"),
+            _("repacking %s") % repo.origroot,
+            timeout=0,
+        ):
+            repo.hook("prerepack")
+
+            _cleanuptemppacks(repo.ui, packpath)
+
+            if incremental:
+                repackincrementaldatapacks(packpath, packpath)
+                repackincrementalhistpacks(packpath, packpath)
+            else:
+                repackdatapacks(packpath, packpath)
+                repackhistpacks(packpath, packpath)
+    except Exception as e:
+        repo.ui.warn(
+            _("warning: rust repack failed for: %s, fallback to python: %s\n")
+            % (packpath, e)
+        )
+        pythonrepack(repo, options, packpath, incremental)
+
+
+def _shareddatastorespythonrepack(repo, options, packpath, incremental):
+    if incremental:
+        _incrementalrepack(
+            repo,
+            repo.fileslog.shareddatastores,
+            repo.fileslog.sharedhistorystores,
+            packpath,
+            constants.FILEPACK_CATEGORY,
+            options=options,
+            shared=True,
+        )
+    else:
+        datasource = contentstore.unioncontentstore(*repo.fileslog.shareddatastores)
+        historysource = metadatastore.unionmetadatastore(
+            *repo.fileslog.sharedhistorystores, allowincomplete=True
+        )
+
+        _runrepack(
+            repo,
+            datasource,
+            historysource,
+            packpath,
+            constants.FILEPACK_CATEGORY,
+            options=options,
+            shared=True,
+        )
+
+
 def _shareddatastoresrepack(repo, options, incremental):
     if util.safehasattr(repo.fileslog, "shareddatastores"):
         packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-        if incremental:
-            _incrementalrepack(
-                repo,
-                repo.fileslog.shareddatastores,
-                repo.fileslog.sharedhistorystores,
-                packpath,
-                constants.FILEPACK_CATEGORY,
-                options=options,
-                shared=True,
+        if _userustrepack(repo):
+            _runrustrepack(
+                repo, options, packpath, incremental, _shareddatastorespythonrepack
             )
         else:
-            datasource = contentstore.unioncontentstore(*repo.fileslog.shareddatastores)
-            historysource = metadatastore.unionmetadatastore(
-                *repo.fileslog.sharedhistorystores, allowincomplete=True
-            )
+            _shareddatastorespythonrepack(repo, options, packpath, incremental)
 
-            _runrepack(
-                repo,
-                datasource,
-                historysource,
-                packpath,
-                constants.FILEPACK_CATEGORY,
-                options=options,
-                shared=True,
-            )
+
+def _localdatapythonrepack(repo, options, packpath, incremental):
+    if incremental:
+        _incrementalrepack(
+            repo,
+            repo.fileslog.localdatastores,
+            repo.fileslog.localhistorystores,
+            packpath,
+            constants.FILEPACK_CATEGORY,
+            options=options,
+            shared=False,
+        )
+    else:
+        datasource = contentstore.unioncontentstore(*repo.fileslog.localdatastores)
+        historysource = metadatastore.unionmetadatastore(
+            *repo.fileslog.localhistorystores, allowincomplete=True
+        )
+        _runrepack(
+            repo,
+            datasource,
+            historysource,
+            packpath,
+            constants.FILEPACK_CATEGORY,
+            options=options,
+            shared=False,
+        )
 
 
 def _localdatarepack(repo, options, incremental):
@@ -104,30 +179,37 @@ def _localdatarepack(repo, options, incremental):
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )
 
-        if incremental:
-            _incrementalrepack(
-                repo,
-                repo.fileslog.localdatastores,
-                repo.fileslog.localhistorystores,
-                packpath,
-                constants.FILEPACK_CATEGORY,
-                options=options,
-                shared=False,
-            )
+        if _userustrepack(repo):
+            _runrustrepack(repo, options, packpath, incremental, _localdatapythonrepack)
         else:
-            datasource = contentstore.unioncontentstore(*repo.fileslog.localdatastores)
-            historysource = metadatastore.unionmetadatastore(
-                *repo.fileslog.localhistorystores, allowincomplete=True
-            )
-            _runrepack(
-                repo,
-                datasource,
-                historysource,
-                packpath,
-                constants.FILEPACK_CATEGORY,
-                options=options,
-                shared=False,
-            )
+            _localdatapythonrepack(repo, options, packpath, incremental)
+
+
+def _manifestpythonrepack(
+    repo, options, packpath, dstores, hstores, incremental, shared
+):
+    if incremental:
+        _incrementalrepack(
+            repo,
+            dstores,
+            hstores,
+            packpath,
+            constants.TREEPACK_CATEGORY,
+            options=options,
+            shared=shared,
+        )
+    else:
+        datasource = contentstore.unioncontentstore(*dstores)
+        historysource = metadatastore.unionmetadatastore(*hstores, allowincomplete=True)
+        _runrepack(
+            repo,
+            datasource,
+            historysource,
+            packpath,
+            constants.TREEPACK_CATEGORY,
+            options=options,
+            shared=shared,
+        )
 
 
 def _manifestrepack(repo, options, incremental):
@@ -139,58 +221,27 @@ def _manifestrepack(repo, options, incremental):
         lpackpath, ldstores, lhstores = localdata
         spackpath, sdstores, shstores = shareddata
 
+        def _domanifestrepack(packpath, dstores, hstores, shared):
+            if _userustrepack(repo):
+                _runrustrepack(
+                    repo,
+                    options,
+                    packpath,
+                    incremental,
+                    lambda repo, options, packpath, incremental: _manifestpythonrepack(
+                        repo, options, packpath, dstores, hstores, incremental, shared
+                    ),
+                )
+            else:
+                _manifestpythonrepack(
+                    repo, options, packpath, dstores, hstores, incremental, shared
+                )
+
         # Repack the shared manifest store
-        if incremental:
-            _incrementalrepack(
-                repo,
-                sdstores,
-                shstores,
-                spackpath,
-                constants.TREEPACK_CATEGORY,
-                options=options,
-                shared=True,
-            )
-        else:
-            datasource = contentstore.unioncontentstore(*sdstores)
-            historysource = metadatastore.unionmetadatastore(
-                *shstores, allowincomplete=True
-            )
-            _runrepack(
-                repo,
-                datasource,
-                historysource,
-                spackpath,
-                constants.TREEPACK_CATEGORY,
-                options=options,
-                shared=True,
-            )
+        _domanifestrepack(spackpath, sdstores, shstores, True)
 
         # Repack the local manifest store
-        if incremental:
-            _incrementalrepack(
-                repo,
-                ldstores,
-                lhstores,
-                lpackpath,
-                constants.TREEPACK_CATEGORY,
-                allowincompletedata=True,
-                options=options,
-                shared=False,
-            )
-        else:
-            datasource = contentstore.unioncontentstore(*ldstores, allowincomplete=True)
-            historysource = metadatastore.unionmetadatastore(
-                *lhstores, allowincomplete=True
-            )
-            _runrepack(
-                repo,
-                datasource,
-                historysource,
-                lpackpath,
-                constants.TREEPACK_CATEGORY,
-                options=options,
-                shared=False,
-            )
+        _domanifestrepack(lpackpath, ldstores, lhstores, False)
 
 
 def fullrepack(repo, options=None):
@@ -648,34 +699,6 @@ class repacker(object):
         for cleanup in ledger.cleanup:
             cleanup(self.repo.ui)
 
-    def _runrustrepack(self, ledger, packpath, targetdata, targethistory):
-        if not (self.options and self.options.get(constants.OPTION_LOOSEONLY)):
-            try:
-                if not (self.options and self.options.get(constants.OPTION_PACKSONLY)):
-                    options = dict(self.options)
-                    options[constants.OPTION_LOOSEONLY] = True
-                    self._runpythonrepack(
-                        ledger, packpath, targetdata, targethistory, options
-                    )
-
-                if self.history == self.fullhistory:
-                    # full repack
-                    repackdatapacks(packpath, targetdata.opener.base)
-                    repackhistpacks(packpath, targethistory.opener.base)
-                else:
-                    repackincrementaldatapacks(packpath, targetdata.opener.base)
-                    repackincrementalhistpacks(packpath, targethistory.opener.base)
-                return
-            except Exception as e:
-                self.repo.ui.warn(
-                    _("warning: rust repack failed, fallback to python: %s\n") % e
-                )
-
-        self._runpythonrepack(ledger, packpath, targetdata, targethistory, self.options)
-
-    def _userustrepack(self):
-        return self.repo.ui.configbool("remotefilelog", "userustrepack", False)
-
     def run(self, packpath, targetdata, targethistory):
         ledger = repackledger()
 
@@ -688,12 +711,9 @@ class repacker(object):
 
             _cleanuptemppacks(self.repo.ui, self.packpath)
 
-            if self._userustrepack():
-                self._runrustrepack(ledger, packpath, targetdata, targethistory)
-            else:
-                self._runpythonrepack(
-                    ledger, packpath, targetdata, targethistory, self.options
-                )
+            self._runpythonrepack(
+                ledger, packpath, targetdata, targethistory, self.options
+            )
 
     def _chainorphans(self, ui, filename, nodes, orphans, deltabases):
         """Reorderes ``orphans`` into a single chain inside ``nodes`` and
