@@ -11,9 +11,9 @@ use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
 use metaconfig_types::{
-    BlobstoreId, BookmarkParams, CacheWarmupParams, GlusterArgs, HookBypass, HookConfig,
-    HookManagerParams, HookParams, HookType, LfsParams, ManifoldArgs, MysqlBlobstoreArgs,
-    PushrebaseParams, RemoteBlobstoreArgs, RepoConfig, RepoReadOnly, RepoType,
+    BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, GlusterArgs, HookBypass,
+    HookConfig, HookManagerParams, HookParams, HookType, LfsParams, ManifoldArgs,
+    MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig, RepoReadOnly, RepoType,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -340,6 +340,13 @@ impl RepoConfigs {
             })
             .unwrap_or_default();
 
+        let bundle2_replay_params = this
+            .bundle2_replay_params
+            .map(|raw| Bundle2ReplayParams {
+                preserve_raw_bundle2: raw.preserve_raw_bundle2.unwrap_or(false),
+            })
+            .unwrap_or_default();
+
         let lfs = match this.lfs {
             Some(lfs_params) => LfsParams {
                 threshold: lfs_params.threshold,
@@ -372,6 +379,7 @@ impl RepoConfigs {
             hash_validation_percentage,
             readonly,
             skiplist_index_blobstore_key,
+            bundle2_replay_params,
         })
     }
 }
@@ -400,6 +408,7 @@ struct RawRepoConfig {
     hook_manager_params: Option<HookManagerParams>,
     skiplist_index_blobstore_key: Option<String>,
     remote_blobstore: Option<Vec<RawRemoteBlobstoreConfig>>,
+    bundle2_replay_params: Option<RawBundle2ReplayParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -487,6 +496,11 @@ struct RawLfsParams {
     threshold: Option<u64>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct RawBundle2ReplayParams {
+    preserve_raw_bundle2: Option<bool>,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -550,6 +564,8 @@ mod test {
             recursion_limit = 1024
             [lfs]
             threshold = 1000
+            [bundle2_replay_params]
+            preserve_raw_bundle2 = true
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -639,8 +655,8 @@ mod test {
                         hook_type: HookType::PerAddedOrModifiedFile,
                         config: HookConfig {
                             bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
-                            strings: hashmap!{},
-                            ints: hashmap!{},
+                            strings: hashmap! {},
+                            ints: hashmap! {},
                         },
                     },
                     HookParams {
@@ -652,11 +668,11 @@ mod test {
                                 name: "pushvar".into(),
                                 value: "pushval".into(),
                             }),
-                            strings: hashmap!{
+                            strings: hashmap! {
                                 "conf1".into() => "val1".into(),
                                 "conf2".into() => "val2".into(),
                             },
-                            ints: hashmap!{},
+                            ints: hashmap! {},
                         },
                     },
                     HookParams {
@@ -665,8 +681,8 @@ mod test {
                         hook_type: HookType::PerChangeset,
                         config: HookConfig {
                             bypass: None,
-                            strings: hashmap!{},
-                            ints: hashmap!{
+                            strings: hashmap! {},
+                            ints: hashmap! {
                                 "int1".into() => 44,
                             },
                         },
@@ -683,6 +699,9 @@ mod test {
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 skiplist_index_blobstore_key: Some("skiplist_key".into()),
+                bundle2_replay_params: Bundle2ReplayParams {
+                    preserve_raw_bundle2: true,
+                },
             },
         );
         repos.insert(
@@ -703,6 +722,7 @@ mod test {
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 skiplist_index_blobstore_key: None,
+                bundle2_replay_params: Bundle2ReplayParams::default(),
             },
         );
         assert_eq!(

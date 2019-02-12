@@ -86,6 +86,8 @@ pub struct RepoConfig {
     pub hook_manager_params: Option<HookManagerParams>,
     /// Skiplist blobstore key (used to make revset faster)
     pub skiplist_index_blobstore_key: Option<String>,
+    /// Params fro the bunle2 replay
+    pub bundle2_replay_params: Bundle2ReplayParams,
 }
 
 impl RepoConfig {
@@ -319,4 +321,11 @@ pub enum RepoType {
         /// If present, the number of shards to spread filenodes across
         filenode_shards: Option<usize>,
     },
+}
+
+/// Params fro the bunle2 replay
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub struct Bundle2ReplayParams {
+    /// A flag specifying whether to preserve raw bundle2 contents in the blobstore
+    pub preserve_raw_bundle2: bool,
 }

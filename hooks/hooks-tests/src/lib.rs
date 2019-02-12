@@ -22,7 +22,9 @@ use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
-use metaconfig_types::{BookmarkParams, HookParams, HookType, RepoConfig, RepoReadOnly, RepoType};
+use metaconfig_types::{
+    BookmarkParams, Bundle2ReplayParams, HookParams, HookType, RepoConfig, RepoReadOnly, RepoType,
+};
 use mononoke_types::FileType;
 use slog::{o, Logger};
 use slog::{Discard, Drain};
@@ -1141,6 +1143,7 @@ fn default_repo_config() -> RepoConfig {
         hash_validation_percentage: 0,
         readonly: RepoReadOnly::ReadWrite,
         skiplist_index_blobstore_key: None,
+        bundle2_replay_params: Bundle2ReplayParams::default(),
     }
 }
 
