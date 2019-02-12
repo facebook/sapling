@@ -111,28 +111,30 @@ pub fn repack_datapacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
 ) -> Fallible<PathBuf> {
-    let mut empty = true;
     let mut mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
+
+    if paths.clone().into_iter().count() <= 1 {
+        if let Some(path) = paths.into_iter().next() {
+            return Ok(path.to_path_buf());
+        } else {
+            return Ok(PathBuf::new());
+        }
+    }
 
     for path in paths.clone() {
         let data_pack = DataPack::new(&path)?;
         repack_datapack(&data_pack, &mut mut_pack)?;
-        empty = false;
     }
 
-    if empty {
-        Ok(PathBuf::new())
-    } else {
-        let new_pack_path = mut_pack.close()?;
-        for path in paths {
-            let datapack = DataPack::new(&path)?;
-            if datapack.base_path() != new_pack_path {
-                datapack.delete()?;
-            }
+    let new_pack_path = mut_pack.close()?;
+    for path in paths {
+        let datapack = DataPack::new(&path)?;
+        if datapack.base_path() != new_pack_path {
+            datapack.delete()?;
         }
-
-        Ok(new_pack_path)
     }
+
+    Ok(new_pack_path)
 }
 
 fn repack_historypack(
@@ -152,28 +154,30 @@ pub fn repack_historypacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
 ) -> Fallible<PathBuf> {
-    let mut empty = true;
     let mut mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
+
+    if paths.clone().into_iter().count() <= 1 {
+        if let Some(path) = paths.into_iter().next() {
+            return Ok(path.to_path_buf());
+        } else {
+            return Ok(PathBuf::new());
+        }
+    }
 
     for path in paths.clone() {
         let history_pack = HistoryPack::new(path)?;
         repack_historypack(&history_pack, &mut mut_pack)?;
-        empty = false;
     }
 
-    if empty {
-        Ok(PathBuf::new())
-    } else {
-        let new_pack_path = mut_pack.close()?;
-        for path in paths {
-            let history_pack = HistoryPack::new(path)?;
-            if history_pack.base_path() != new_pack_path {
-                history_pack.delete()?;
-            }
+    let new_pack_path = mut_pack.close()?;
+    for path in paths {
+        let history_pack = HistoryPack::new(path)?;
+        if history_pack.base_path() != new_pack_path {
+            history_pack.delete()?;
         }
-
-        Ok(new_pack_path)
     }
+
+    Ok(new_pack_path)
 }
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
