@@ -883,48 +883,9 @@ def _firstdescendants(repo, subset, x):
 
 @predicate("destination([set])", safe=True, weight=10)
 def destination(repo, subset, x):
-    """Changesets that were created by a graft, transplant or rebase operation,
-    with the given revisions specified as the source.  Omitting the optional set
-    is the same as passing all().
-    """
-    if x is not None:
-        sources = getset(repo, fullreposet(repo), x)
-    else:
-        sources = fullreposet(repo)
-
-    dests = set()
-
-    # subset contains all of the possible destinations that can be returned, so
-    # iterate over them and see if their source(s) were provided in the arg set.
-    # Even if the immediate src of r is not in the arg set, src's source (or
-    # further back) may be.  Scanning back further than the immediate src allows
-    # transitive transplants and rebases to yield the same results as transitive
-    # grafts.
-    for r in subset:
-        src = _getrevsource(repo, r)
-        lineage = None
-
-        while src is not None:
-            if lineage is None:
-                lineage = list()
-
-            lineage.append(r)
-
-            # The visited lineage is a match if the current source is in the arg
-            # set.  Since every candidate dest is visited by way of iterating
-            # subset, any dests further back in the lineage will be tested by a
-            # different iteration over subset.  Likewise, if the src was already
-            # selected, the current lineage can be selected without going back
-            # further.
-            if src in sources or src in dests:
-                dests.update(lineage)
-                break
-
-            r = src
-            src = _getrevsource(repo, r)
-
-    return subset.filter(
-        dests.__contains__, condrepr=lambda: "<destination %r>" % sorted(dests)
+    """Deprecated. Use successors instead."""
+    raise error.Abort(
+        _("destination() revset is being removed. Use successors() instead.")
     )
 
 
@@ -1592,35 +1553,10 @@ def only(repo, subset, x):
 
 @predicate("origin([set])", safe=True)
 def origin(repo, subset, x):
-    """
-    Changesets that were specified as a source for the grafts, transplants or
-    rebases that created the given revisions.  Omitting the optional set is the
-    same as passing all().  If a changeset created by these operations is itself
-    specified as a source for one of these operations, only the source changeset
-    for the first operation is selected.
-    """
-    if x is not None:
-        dests = getset(repo, fullreposet(repo), x)
-    else:
-        dests = fullreposet(repo)
-
-    def _firstsrc(rev):
-        src = _getrevsource(repo, rev)
-        if src is None:
-            return None
-
-        while True:
-            prev = _getrevsource(repo, src)
-
-            if prev is None:
-                return src
-            src = prev
-
-    o = {_firstsrc(r) for r in dests}
-    o -= {None}
-    # XXX we should turn this into a baseset instead of a set, smartset may do
-    # some optimizations from the fact this is a baseset.
-    return subset & o
+    """Deprecated. Use predecessors instead."""
+    raise error.Abort(
+        _("origin() revset is being removed. Use predecessors() instead.")
+    )
 
 
 @predicate("outgoing([path])", safe=False, weight=10)
