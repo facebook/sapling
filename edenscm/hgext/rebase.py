@@ -190,10 +190,6 @@ class rebaseruntime(object):
             self.extrafns = [e]
 
         self.keepf = opts.get("keep", False)
-        self.keepbranchesf = opts.get("keepbranches", False)
-        # keepopen is not meant for use on the command line, but by
-        # other extensions
-        self.keepopen = opts.get("keepopen", False)
         self.obsoletenotrebased = {}
         self.obsoletewithoutsuccessorindestination = set()
         self.inmemory = inmemory
@@ -224,7 +220,7 @@ class rebaseruntime(object):
         f.write(repo[self.external].hex() + "\n")
         f.write("%d\n" % int(self.collapsef))
         f.write("%d\n" % int(self.keepf))
-        f.write("%d\n" % int(self.keepbranchesf))
+        f.write("0\n")  # used to be the "keepbranches" flag.
         f.write("%s\n" % (self.activebookmark or ""))
         destmap = self.destmap
         for d, v in self.state.iteritems():
@@ -242,13 +238,13 @@ class rebaseruntime(object):
         self.prepared = True
         repo = self.repo
         assert repo.filtername is None
-        keepbranches = None
         legacydest = None
         collapse = False
         external = nullrev
         activebookmark = None
         state = {}
         destmap = {}
+        originalwd = None
 
         try:
             f = repo.localvfs("rebasestate")
@@ -267,7 +263,8 @@ class rebaseruntime(object):
                 elif i == 4:
                     keep = bool(int(l))
                 elif i == 5:
-                    keepbranches = bool(int(l))
+                    # used to be the "keepbranches" flag
+                    pass
                 elif i == 6 and not (len(l) == 81 and ":" in l):
                     # line 6 is a recent addition, so for backwards
                     # compatibility check that the line doesn't look like the
@@ -295,7 +292,7 @@ class rebaseruntime(object):
                 raise
             cmdutil.wrongtooltocontinue(repo, _("rebase"))
 
-        if keepbranches is None:
+        if originalwd is None:
             raise error.Abort(_(".hg/rebasestate is incomplete"))
 
         # recompute the predecessor map
@@ -322,7 +319,6 @@ class rebaseruntime(object):
         self.skipped = skipped
         self.collapsef = collapse
         self.keepf = keep
-        self.keepbranchesf = keepbranches
         self.external = external
         self.activebookmark = activebookmark
 
@@ -415,7 +411,7 @@ class rebaseruntime(object):
 
         for destrev in sorted(set(destmap.values())):
             dest = self.repo[destrev]
-            if dest.closesbranch() and not self.keepbranchesf:
+            if dest.closesbranch():
                 self.ui.status(_("reopening closed branch head %s\n") % dest)
 
         self.prepared = True
@@ -469,19 +465,6 @@ class rebaseruntime(object):
     def _performrebase(self, tr):
         self._assignworkingcopy()
         repo, ui = self.repo, self.ui
-        if self.keepbranchesf:
-            # insert _savebranch at the start of extrafns so if
-            # there's a user-provided extrafn it can clobber branch if
-            # desired
-            self.extrafns.insert(0, _savebranch)
-            if self.collapsef:
-                branches = set()
-                for rev in self.state:
-                    branches.add(repo[rev].branch())
-                    if len(branches) > 1:
-                        raise error.Abort(
-                            _("cannot collapse multiple named " "branches")
-                        )
 
         # Calculate self.obsoletenotrebased
         obsrevs = _filterobsoleterevs(self.repo, self.state)
@@ -666,7 +649,6 @@ class rebaseruntime(object):
                     wctx=self.wctx,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
-                    keepbranches=self.keepbranchesf,
                     date=self.date,
                     copypreds=copypreds,
                 )
@@ -679,7 +661,6 @@ class rebaseruntime(object):
                     p2,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
-                    keepbranches=self.keepbranchesf,
                     date=self.date,
                     copypreds=copypreds,
                 )
@@ -712,7 +693,7 @@ class rebaseruntime(object):
 
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
-        if self.collapsef and not self.keepopen:
+        if self.collapsef:
             p1, p2, _base = defineparents(
                 repo,
                 min(self.state),
@@ -744,7 +725,6 @@ class rebaseruntime(object):
                     commitmsg=commitmsg,
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
-                    keepbranches=self.keepbranchesf,
                     date=self.date,
                     wctx=self.wctx,
                 )
@@ -760,7 +740,6 @@ class rebaseruntime(object):
                         commitmsg=commitmsg,
                         extrafn=_makeextrafn(self.extrafns),
                         editor=editor,
-                        keepbranches=self.keepbranchesf,
                         date=self.date,
                     )
             if newnode is not None:
@@ -857,7 +836,6 @@ class rebaseruntime(object):
         ("e", "edit", False, _("invoke editor on commit messages")),
         ("l", "logfile", "", _("read collapse commit message from file"), _("FILE")),
         ("k", "keep", False, _("keep original changesets")),
-        ("", "keepbranches", False, _("keep original branch names")),
         ("D", "detach", False, _("(DEPRECATED)")),
         ("i", "interactive", False, _("(DEPRECATED)")),
         ("t", "tool", "", _("specify merge tool")),
@@ -1342,7 +1320,6 @@ def concludememorynode(
     commitmsg=None,
     editor=None,
     extrafn=None,
-    keepbranches=False,
     date=None,
     copypreds=None,
 ):
@@ -1352,7 +1329,6 @@ def concludememorynode(
     ctx = repo[rev]
     if commitmsg is None:
         commitmsg = ctx.description()
-    keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
     extra = {"rebase_source": ctx.hex()}
     preds = [ctx.node()]
     mutop = "rebase"
@@ -1366,8 +1342,6 @@ def concludememorynode(
     destphase = max(ctx.phase(), phases.draft)
     overrides = {("phases", "new-commit"): destphase}
     with repo.ui.configoverride(overrides, "rebase"):
-        if keepbranch:
-            repo.ui.setconfig("ui", "allowemptycommit", True)
         # Replicates the empty check in ``repo.commit``.
         if wctx.isempty() and not repo.ui.configbool("ui", "allowemptycommit"):
             return None
@@ -1375,11 +1349,7 @@ def concludememorynode(
         if date is None:
             date = ctx.date()
 
-        # By convention, ``extra['branch']`` (set by extrafn) clobbers
-        # ``branch`` (used when passing ``--keepbranches``).
         branch = repo[p1].branch()
-        if "branch" in extra:
-            branch = extra["branch"]
 
         memctx = wctx.tomemctx(
             commitmsg,
@@ -1403,7 +1373,6 @@ def concludenode(
     commitmsg=None,
     editor=None,
     extrafn=None,
-    keepbranches=False,
     date=None,
     copypreds=None,
 ):
@@ -1418,7 +1387,6 @@ def concludenode(
         ctx = repo[rev]
         if commitmsg is None:
             commitmsg = ctx.description()
-        keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
         extra = {"rebase_source": ctx.hex()}
         preds = [ctx.node()]
         mutop = "rebase"
@@ -1432,8 +1400,6 @@ def concludenode(
         destphase = max(ctx.phase(), phases.draft)
         overrides = {("phases", "new-commit"): destphase}
         with repo.ui.configoverride(overrides, "rebase"):
-            if keepbranch:
-                repo.ui.setconfig("ui", "allowemptycommit", True)
             # Commit might fail if unresolved files exist
             if date is None:
                 date = ctx.date()

@@ -98,7 +98,7 @@ Solve the conflict and go on:
   $ cd ..
 
 
-Rebase F onto E - check keepbranches:
+Rebase F onto E:
 
   $ hg clone -q -u . a a2
   $ cd a2
@@ -117,7 +117,7 @@ Rebase F onto E - check keepbranches:
   |/
   o  0: 4a2df7238c3b draft 'A'
   
-  $ hg rebase -s 5 -d 4 --keepbranches
+  $ hg rebase -s 5 -d 4
   rebasing 5:3225f3ea730a "F" (tip)
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
