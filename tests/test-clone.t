@@ -27,15 +27,6 @@ List files in store/data (should show a 'b.d'):
   .hg/store/data/b.d
   .hg/store/data/b.i
 
-Trigger branchcache creation:
-
-  $ hg branches
-  default                       10:a7949464abda
-  $ ls .hg/cache | grep -v check
-  branch2-served
-  rbc-names-v1
-  rbc-revs-v1
-
 Default operation:
 
   $ hg clone . ../b
@@ -180,9 +171,7 @@ Adding some more history to repo a:
   $ hg ci -m "hacked default"
   $ hg up ref1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg branch stable
-  marked working directory as branch stable
-  (branches are permanent and global, did you want a bookmark?)
+  $ hg bookmark stable
   $ echo some text >a
   $ hg ci -m "starting branch stable"
   $ hg tag ref2
@@ -190,9 +179,9 @@ Adding some more history to repo a:
   $ hg ci -m "another change for branch stable"
   $ hg up ref2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark stable)
   $ hg parents
-  changeset:   13:e8ece76546a6
-  branch:      stable
+  changeset:   13:7bc8ee83a26f
   tag:         ref2
   parent:      10:a7949464abda
   user:        test
@@ -203,8 +192,8 @@ Adding some more history to repo a:
 Repo a has two heads:
 
   $ hg heads
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
+  changeset:   15:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -229,14 +218,14 @@ Testing --noupdate with --updaterev (must abort):
 Testing clone -u:
 
   $ hg clone -u . a ua
-  updating to branch stable
+  updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
+  changeset:   15:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -251,9 +240,9 @@ Repo ua has both heads:
 Same revision checked out in repo a and ua:
 
   $ hg -R a parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
   $ hg -R ua parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
 
   $ rm -r ua
 
@@ -266,15 +255,15 @@ Testing clone --pull -u:
   adding manifests
   adding file changes
   added 16 changesets with 16 changes to 3 files (+1 heads)
-  new changesets acb14030fe0a:0aae7cf88f0d
-  updating to branch stable
+  new changesets acb14030fe0a:7b0a8591eda2
+  updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
+  changeset:   15:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -289,9 +278,9 @@ Repo ua has both heads:
 Same revision checked out in repo a and ua:
 
   $ hg -R a parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
   $ hg -R ua parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
 
   $ rm -r ua
 
@@ -299,14 +288,14 @@ Same revision checked out in repo a and ua:
 Testing clone -u <branch>:
 
   $ hg clone -u stable a ua
-  updating to branch stable
+  updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
+  changeset:   15:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -321,8 +310,8 @@ Repo ua has both heads:
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
+  changeset:   15:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -341,8 +330,8 @@ Testing default checkout:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
+  changeset:   15:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -354,85 +343,37 @@ Repo ua has both heads:
   summary:     hacked default
   
 
-Branch 'default' is checked out:
-
-  $ hg -R ua parents
-  changeset:   12:f21241060d6a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
-  
-Test clone with a branch named "@" (issue3677)
-
-  $ hg -R ua branch @
-  marked working directory as branch @
-  $ hg -R ua commit -m 'created branch @'
-  $ hg clone ua atbranch
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R atbranch heads
-  changeset:   16:798b6d97153e
-  branch:      @
-  tag:         tip
-  parent:      12:f21241060d6a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     created branch @
-  
-  changeset:   15:0aae7cf88f0d
-  branch:      stable
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-  
-  changeset:   12:f21241060d6a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
-  
-  $ hg -R atbranch parents
-  changeset:   12:f21241060d6a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
-  
-
-  $ rm -r ua atbranch
+  $ rm -r ua
 
 
-Testing #<branch>:
+Testing #<bookmark>:
 
   $ hg clone -u . a#stable ua
   adding changesets
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:0aae7cf88f0d
-  updating to branch stable
+  new changesets acb14030fe0a:7b0a8591eda2
+  updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:0aae7cf88f0d
-  branch:      stable
+  changeset:   13:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   10:a7949464abda
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     test
-  
 
 Same revision checked out in repo a and ua:
 
   $ hg -R a parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
   $ hg -R ua parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
 
   $ rm -r ua
 
@@ -444,32 +385,27 @@ Testing -u -r <branch>:
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:0aae7cf88f0d
-  updating to branch stable
+  new changesets acb14030fe0a:7b0a8591eda2
+  updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:0aae7cf88f0d
-  branch:      stable
+  changeset:   13:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   10:a7949464abda
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     test
-  
 
 Same revision checked out in repo a and ua:
 
   $ hg -R a parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
   $ hg -R ua parents --template "{node|short}\n"
-  e8ece76546a6
+  7bc8ee83a26f
 
   $ rm -r ua
 
@@ -481,72 +417,32 @@ Testing -r <branch>:
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:0aae7cf88f0d
-  updating to branch stable
+  new changesets acb14030fe0a:7b0a8591eda2
+  updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:0aae7cf88f0d
-  branch:      stable
+  changeset:   13:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
-  changeset:   10:a7949464abda
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     test
   
 
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
-  changeset:   13:0aae7cf88f0d
-  branch:      stable
+  changeset:   13:7b0a8591eda2
+  bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
 
-  $ rm -r ua
-
-
-Issue2267: Error in 1.6 hg.py: TypeError: 'NoneType' object is not
-iterable in addbranchrevs()
-
-  $ cat <<EOF > simpleclone.py
-  > from edenscm.mercurial import ui, hg
-  > myui = ui.ui.load()
-  > repo = hg.repository(myui, 'a')
-  > hg.clone(myui, {}, repo, dest="ua")
-  > EOF
-
-  $ $PYTHON simpleclone.py
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ rm -r ua
-
-  $ cat <<EOF > branchclone.py
-  > from edenscm.mercurial import ui, hg, extensions
-  > myui = ui.ui.load()
-  > extensions.loadall(myui)
-  > repo = hg.repository(myui, 'a')
-  > hg.clone(myui, {}, repo, dest="ua", branch=["stable",])
-  > EOF
-
-  $ $PYTHON branchclone.py
-  adding changesets
-  adding manifests
-  adding file changes
-  added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:0aae7cf88f0d
-  updating to branch stable
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -r ua
 
 
@@ -562,12 +458,13 @@ Test clone with special '@' bookmark:
 
   $ hg bookmark -f -r stable @
   $ hg bookmarks
-     @                         15:0aae7cf88f0d
+     @                         15:7b0a8591eda2
+     stable                    15:7b0a8591eda2
   $ hg clone . ../i
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -i ../i
-  0aae7cf88f0d
+  7b0a8591eda2
   $ cd "$TESTTMP"
 
 
@@ -734,14 +631,11 @@ Create repositories to test auto sharing functionality
   $ hg commit -m head2
   $ hg bookmark head2
   $ hg -q up -r 0
-  $ hg branch branch1
-  marked working directory as branch branch1
-  (branches are permanent and global, did you want a bookmark?)
+  $ hg bookmark branch1
   $ echo branch1 > foo
   $ hg commit -m branch1
   $ hg -q up -r 0
-  $ hg branch branch2
-  marked working directory as branch branch2
+  $ hg bookmark branch2
   $ echo branch2 > foo
   $ hg commit -m branch2
   $ cd ..
@@ -823,9 +717,11 @@ Clone with existing share dir should result in pull + share
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files (+4 heads)
+  adding remote bookmark branch1
+  adding remote bookmark branch2
   adding remote bookmark head1
   adding remote bookmark head2
-  new changesets 4a8dc1ab4c13:6bacf4683960
+  new changesets 4a8dc1ab4c13:79168763a548
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -838,6 +734,8 @@ Clone with existing share dir should result in pull + share
 We only get bookmarks from the remote, not everything in the share
 
   $ hg -R share-dest1b bookmarks
+     branch1                   5:ec6257d0246c
+     branch2                   6:79168763a548
      head1                     3:4a8dc1ab4c13
      head2                     4:99f71071f117
 
@@ -849,12 +747,13 @@ Default path should be source, not share.
 Checked out revision should be head of default branch
 
   $ hg -R share-dest1b log -r .
-  changeset:   4:99f71071f117
-  bookmark:    head2
+  changeset:   6:79168763a548
+  bookmark:    branch2
+  tag:         tip
   parent:      0:b5f04eac9d8f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     head2
+  summary:     branch2
   
 
 Clone from unrelated repo should result in new share
@@ -902,9 +801,11 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 1 files (+4 heads)
-  new changesets b5f04eac9d8f:6bacf4683960
+  new changesets b5f04eac9d8f:79168763a548
   searching for changes
   no changes found
+  adding remote bookmark branch1
+  adding remote bookmark branch2
   adding remote bookmark head1
   adding remote bookmark head2
   updating working directory
@@ -973,65 +874,6 @@ making another clone should only pull down requested rev
   |    summary:     head1
   |
   o  changeset:   0:b5f04eac9d8f
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     initial
-  
-
-Request to clone a single branch is respected in sharing mode
-
-  $ hg --config share.pool=sharebranch clone -b branch1 source1b share-1bbranch1
-  (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 1 files
-  new changesets b5f04eac9d8f:5f92a6c1a1b1
-  no changes found
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ hg -R share-1bbranch1 log -G
-  o  changeset:   1:5f92a6c1a1b1
-  |  branch:      branch1
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     branch1
-  |
-  @  changeset:   0:b5f04eac9d8f
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     initial
-  
-
-  $ hg --config share.pool=sharebranch clone -b branch2 source1b share-1bbranch2
-  (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
-  new changesets 6bacf4683960
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ hg -R share-1bbranch2 log -G
-  o  changeset:   2:6bacf4683960
-  |  branch:      branch2
-  |  tag:         tip
-  |  parent:      0:b5f04eac9d8f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     branch2
-  |
-  | o  changeset:   1:5f92a6c1a1b1
-  |/   branch:      branch1
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     branch1
-  |
-  @  changeset:   0:b5f04eac9d8f
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     initial
@@ -1175,7 +1017,7 @@ attack succeeded.
 Cloning without fsmonitor enabled does not print a warning for small repos
 
   $ hg clone a fsmonitor-default
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Lower the warning threshold to simulate a large repo
@@ -1189,12 +1031,12 @@ We should see a warning about no fsmonitor on supported platforms
 
 #if linuxormacos no-fsmonitor
   $ hg clone a nofsmonitor
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor")
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #else
   $ hg clone a nofsmonitor
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
 
@@ -1202,21 +1044,21 @@ We should not see warning about fsmonitor when it is enabled
 
 #if fsmonitor
   $ hg clone a fsmonitor-enabled
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
 
 We can disable the fsmonitor warning
 
   $ hg --config fsmonitor.warn_when_unused=false clone a fsmonitor-disable-warning
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Loaded fsmonitor but disabled in config should still print warning
 
 #if linuxormacos fsmonitor
   $ hg --config fsmonitor.mode=off clone a fsmonitor-mode-off
-  updating to bookmark @ on branch stable
+  updating to bookmark @
   (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (fsmonitor !)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
