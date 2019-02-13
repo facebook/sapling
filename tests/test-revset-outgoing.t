@@ -77,17 +77,17 @@
   3:5de9cb7d8f67: '3'
   4:acadbdc73b28: '4'
 
-  $ hg tout ../a#default
+  $ hg tout ../a
   comparing with ../a
   searching for changes
   3:5de9cb7d8f67: '3'
   4:acadbdc73b28: '4'
 
-  $ hg tlog -r 'outgoing("../a#default")'
+  $ hg tlog -r 'outgoing("../a")'
   3:5de9cb7d8f67: '3'
   4:acadbdc73b28: '4'
 
-  $ echo "green = ../a#default" >> .hg/hgrc
+  $ echo "green = ../a" >> .hg/hgrc
 
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
@@ -104,7 +104,7 @@
   [ui]
   # name and email (local to this repository, optional), e.g.
   # username = Jane Doe <jdoe@example.com>
-  green = ../a#default
+  green = ../a
 
   $ hg tout green
   abort: repository green does not exist!
