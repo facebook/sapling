@@ -27,34 +27,32 @@
   $ hg tag -m 'create tag2' tag2
   $ hg bookmark bookmark2
   $ hg -q up -r 0
-  $ hg -q branch test-branch
+  $ hg -q bookmark test-branch
   $ echo branch > foo
   $ hg commit -m 'create test branch'
   $ echo branch_commit_2 > foo
   $ hg commit -m 'another commit in test-branch'
-  $ hg -q up default
-  $ hg merge --tool :local test-branch
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  $ hg debugsetparents bookmark2 test-branch
+ (Make dirstate detect "M status" after hacky debugsetparents)
+  $ echo 1 >> foo
   $ hg commit -m 'merge test-branch into default'
 
   $ hg log -G
-  @    changeset:   9:cc725e08502a
-  |\   tag:         tip
+  @    changeset:   9:2153d924c878
+  |\   bookmark:    test-branch
+  | |  tag:         tip
   | |  parent:      6:ceed296fe500
-  | |  parent:      8:ed66c30e87eb
+  | |  parent:      8:470bc09d350b
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge test-branch into default
   | |
-  | o  changeset:   8:ed66c30e87eb
-  | |  branch:      test-branch
+  | o  changeset:   8:470bc09d350b
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     another commit in test-branch
   | |
-  | o  changeset:   7:6ab967a8ab34
-  | |  branch:      test-branch
+  | o  changeset:   7:6544561ecafb
   | |  parent:      0:06e557f3edf6
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -144,12 +142,14 @@ file/{revision}/{path} shows file revision
 
 file/{revision} shows root directory info
 
-  $ request json-file/cc725e08502a
+  $ request json-file/ceed296fe500
   200 Script output follows
   
   {
     "abspath": "/",
-    "bookmarks": [],
+    "bookmarks": [
+      "bookmark2"
+    ],
     "directories": [
       {
         "abspath": "/da",
@@ -179,10 +179,8 @@ file/{revision} shows root directory info
         "size": 4
       }
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
-    "tags": [
-      "tip"
-    ]
+    "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+    "tags": []
   }
 
 changelog/ shows information about several changesets
@@ -194,17 +192,19 @@ changelog/ shows information about several changesets
     "changeset_count": 10,
     "changesets": [
       {
-        "bookmarks": [],
+        "bookmarks": [
+          "test-branch"
+        ],
         "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "merge test-branch into default",
-        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
         "parents": [
           "ceed296fe500c3fac9541e31dad860cb49c89e45",
-          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+          "470bc09d350b9bf68082d459fb57ae61d37321f8"
         ],
         "phase": "draft",
         "tags": [
@@ -214,15 +214,15 @@ changelog/ shows information about several changesets
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "another commit in test-branch",
-        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "node": "470bc09d350b9bf68082d459fb57ae61d37321f8",
         "parents": [
-          "6ab967a8ab3489227a83f80e920faa039a71819f"
+          "6544561ecafb616c0333cf7a1ccce3795dff6ac8"
         ],
         "phase": "draft",
         "tags": [],
@@ -230,13 +230,13 @@ changelog/ shows information about several changesets
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "create test branch",
-        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "node": "6544561ecafb616c0333cf7a1ccce3795dff6ac8",
         "parents": [
           "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
         ],
@@ -363,7 +363,7 @@ changelog/ shows information about several changesets
         "user": "test"
       }
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f"
   }
 
 changelog/{revision} shows information starting at a specific changeset
@@ -417,17 +417,19 @@ shortlog/ shows information about a set of changesets
     "changeset_count": 10,
     "changesets": [
       {
-        "bookmarks": [],
+        "bookmarks": [
+          "test-branch"
+        ],
         "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "merge test-branch into default",
-        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
         "parents": [
           "ceed296fe500c3fac9541e31dad860cb49c89e45",
-          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+          "470bc09d350b9bf68082d459fb57ae61d37321f8"
         ],
         "phase": "draft",
         "tags": [
@@ -437,15 +439,15 @@ shortlog/ shows information about a set of changesets
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "another commit in test-branch",
-        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "node": "470bc09d350b9bf68082d459fb57ae61d37321f8",
         "parents": [
-          "6ab967a8ab3489227a83f80e920faa039a71819f"
+          "6544561ecafb616c0333cf7a1ccce3795dff6ac8"
         ],
         "phase": "draft",
         "tags": [],
@@ -453,13 +455,13 @@ shortlog/ shows information about a set of changesets
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "create test branch",
-        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "node": "6544561ecafb616c0333cf7a1ccce3795dff6ac8",
         "parents": [
           "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
         ],
@@ -586,7 +588,7 @@ shortlog/ shows information about a set of changesets
         "user": "test"
       }
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f"
   }
 
 changeset/ renders the tip changeset
@@ -595,17 +597,19 @@ changeset/ renders the tip changeset
   200 Script output follows
   
   {
-    "bookmarks": [],
+    "bookmarks": [
+      "test-branch"
+    ],
     "branch": "default",
     "date": [
       0.0,
       0
     ],
     "desc": "merge test-branch into default",
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
     "parents": [
       "ceed296fe500c3fac9541e31dad860cb49c89e45",
-      "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+      "470bc09d350b9bf68082d459fb57ae61d37321f8"
     ],
     "phase": "draft",
     "tags": [
@@ -662,28 +666,6 @@ changeset/{revision} shows bookmarks
     "user": "test"
   }
 
-changeset/{revision} shows branches
-
-  $ request json-rev/6ab967a8ab34
-  200 Script output follows
-  
-  {
-    "bookmarks": [],
-    "branch": "test-branch",
-    "date": [
-      0.0,
-      0
-    ],
-    "desc": "create test branch",
-    "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
-    "parents": [
-      "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
-    ],
-    "phase": "draft",
-    "tags": [],
-    "user": "test"
-  }
-
 manifest/{revision}/{path} shows info about a directory at a revision
 
   $ request json-manifest/06e557f3edf6/
@@ -721,7 +703,7 @@ tags/ shows tags info
   200 Script output follows
   
   {
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
     "tags": [
       {
         "date": [
@@ -750,6 +732,14 @@ bookmarks/ shows bookmarks info
   {
     "bookmarks": [
       {
+        "bookmark": "test-branch",
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f"
+      },
+      {
         "bookmark": "bookmark2",
         "date": [
           0.0,
@@ -766,7 +756,7 @@ bookmarks/ shows bookmarks info
         "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5"
       }
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f"
   }
 
 branches/ shows branches info
@@ -782,17 +772,8 @@ branches/ shows branches info
           0.0,
           0
         ],
-        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
         "status": "open"
-      },
-      {
-        "branch": "test-branch",
-        "date": [
-          0.0,
-          0
-        ],
-        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
-        "status": "inactive"
       }
     ]
   }
@@ -813,6 +794,14 @@ summary/ shows a summary of repository state
     ],
     "bookmarks": [
       {
+        "bookmark": "test-branch",
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f"
+      },
+      {
         "bookmark": "bookmark2",
         "date": [
           0.0,
@@ -836,17 +825,8 @@ summary/ shows a summary of repository state
           0.0,
           0
         ],
-        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
         "status": "open"
-      },
-      {
-        "branch": "test-branch",
-        "date": [
-          0.0,
-          0
-        ],
-        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
-        "status": "inactive"
       }
     ],
     "labels": [],
@@ -854,20 +834,22 @@ summary/ shows a summary of repository state
       0.0,
       0
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
     "shortlog": [
       {
-        "bookmarks": [],
+        "bookmarks": [
+          "test-branch"
+        ],
         "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "merge test-branch into default",
-        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
         "parents": [
           "ceed296fe500c3fac9541e31dad860cb49c89e45",
-          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+          "470bc09d350b9bf68082d459fb57ae61d37321f8"
         ],
         "phase": "draft",
         "tags": [
@@ -877,15 +859,15 @@ summary/ shows a summary of repository state
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "another commit in test-branch",
-        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "node": "470bc09d350b9bf68082d459fb57ae61d37321f8",
         "parents": [
-          "6ab967a8ab3489227a83f80e920faa039a71819f"
+          "6544561ecafb616c0333cf7a1ccce3795dff6ac8"
         ],
         "phase": "draft",
         "tags": [],
@@ -893,13 +875,13 @@ summary/ shows a summary of repository state
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "create test branch",
-        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "node": "6544561ecafb616c0333cf7a1ccce3795dff6ac8",
         "parents": [
           "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
         ],
@@ -1053,13 +1035,13 @@ summary/ shows a summary of repository state
     "entries": [
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "date": [
           0.0,
           0
         ],
         "desc": "create test branch",
-        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "node": "6544561ecafb616c0333cf7a1ccce3795dff6ac8",
         "parents": [
           "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
         ],
@@ -1102,7 +1084,7 @@ summary/ shows a summary of repository state
         "user": "test"
       }
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
     "query": "create"
   }
 
@@ -1269,7 +1251,7 @@ filelog/{revision}/{path} shows history of a single file
     ]
   }
 
-  $ request json-filelog/cc725e08502a/da/foo
+  $ request json-filelog/bookmark2/da/foo
   200 Script output follows
   
   {
@@ -1340,7 +1322,9 @@ graph/ shows information that can be used to render a graph of the DAG
     "changeset_count": 10,
     "changesets": [
       {
-        "bookmarks": [],
+        "bookmarks": [
+          "test-branch"
+        ],
         "branch": "default",
         "col": 0,
         "color": 1,
@@ -1365,10 +1349,10 @@ graph/ shows information that can be used to render a graph of the DAG
             "width": -1
           }
         ],
-        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f",
         "parents": [
           "ceed296fe500c3fac9541e31dad860cb49c89e45",
-          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+          "470bc09d350b9bf68082d459fb57ae61d37321f8"
         ],
         "phase": "draft",
         "row": 0,
@@ -1379,7 +1363,7 @@ graph/ shows information that can be used to render a graph of the DAG
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "col": 1,
         "color": 2,
         "date": [
@@ -1403,9 +1387,9 @@ graph/ shows information that can be used to render a graph of the DAG
             "width": -1
           }
         ],
-        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "node": "470bc09d350b9bf68082d459fb57ae61d37321f8",
         "parents": [
-          "6ab967a8ab3489227a83f80e920faa039a71819f"
+          "6544561ecafb616c0333cf7a1ccce3795dff6ac8"
         ],
         "phase": "draft",
         "row": 1,
@@ -1414,7 +1398,7 @@ graph/ shows information that can be used to render a graph of the DAG
       },
       {
         "bookmarks": [],
-        "branch": "test-branch",
+        "branch": "default",
         "col": 1,
         "color": 2,
         "date": [
@@ -1438,7 +1422,7 @@ graph/ shows information that can be used to render a graph of the DAG
             "width": -1
           }
         ],
-        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "node": "6544561ecafb616c0333cf7a1ccce3795dff6ac8",
         "parents": [
           "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
         ],
@@ -1684,7 +1668,7 @@ graph/ shows information that can be used to render a graph of the DAG
         "user": "test"
       }
     ],
-    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+    "node": "2153d924c8788fa16bd7af79d2203dc4eefca33f"
   }
 
 help/ shows help topics
