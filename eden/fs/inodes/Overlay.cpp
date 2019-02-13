@@ -402,7 +402,12 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
         << "saveOverlayDir called with entry using unallocated inode number";
 
     overlay::OverlayEntry oent;
-    oent.mode = ent.getModeUnsafe();
+    // TODO: Eventually, we should merely serialize the child entry's dtype
+    // into the Overlay. But, as of now, it's possible to create an inode under
+    // a tree, serialize that tree into the overlay, then restart Eden. Since
+    // writing mode bits into the InodeMetadataTable only occurs when the inode
+    // is loaded, the initial mode bits must persist until the first load.
+    oent.mode = ent.getInitialMode();
     oent.inodeNumber = ent.getInodeNumber().get();
     bool isMaterialized = ent.isMaterialized();
     if (!isMaterialized) {

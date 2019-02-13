@@ -109,18 +109,6 @@ class DirEntry {
    * Note: when the mode_t for an inode changes, this value does not update.
    */
   mode_t getInitialMode() const {
-    // Callers should not check getMode() if an inode is loaded.
-    // If the child inode is loaded it is the authoritative source for
-    // the mode bits.
-    DCHECK(!hasInodePointer_);
-    return initialMode_;
-  }
-
-  mode_t getModeUnsafe() const {
-    // TODO: T20354866 Remove this method once all callers are refactored.
-    //
-    // Callers should always call getMode() instead. This method only exists
-    // for supporting legacy code which will be refactored eventually.
     return initialMode_;
   }
 

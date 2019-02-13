@@ -893,11 +893,7 @@ FileInodePtr TreeInode::createImpl(
     auto& entry = insertion.first->second;
 
     inode = FileInodePtr::makeNew(
-        childNumber,
-        this->inodePtrFromThis(),
-        name,
-        entry.getInitialMode(),
-        inodeTimestamps);
+        childNumber, this->inodePtrFromThis(), name, mode, inodeTimestamps);
 
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
