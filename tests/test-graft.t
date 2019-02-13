@@ -25,11 +25,15 @@ Create a repo with some stuff in it:
   $ hg ci -m4
   $ hg up -q 3
   $ echo b > e
-  $ hg branch -q stable
   $ hg ci -m5
-  $ hg merge -q default --tool internal:local
-  $ hg branch -q default
+ (Make sure mtime < fsnow to make the next merge commit stable)
+  $ sleep 1
+  $ hg status
+  $ hg debugsetparents 4 5
   $ hg ci -m6
+ (Force "refersh" treestate)
+  $ hg up -qC null
+  $ hg up -qC tip
   $ hg phase --public 3
   $ hg phase --force --secret 6
 
@@ -140,7 +144,7 @@ Look for extra:source
   phase:       draft
   parent:      0:68795b066622ca79a25816a662041d8f78f3cd9e
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    7:e59b6b228f9cbf9903d5e9abf996e083a1f533eb
+  manifest:    6:e59b6b228f9cbf9903d5e9abf996e083a1f533eb
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      b
@@ -159,7 +163,7 @@ Graft out of order, skipping a merge and a duplicate
   skipping ungraftable merge revision 6
   skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
   grafting 1:5d205f8b35b6 "1"
-  grafting 5:97f8bfe72746 "5"
+  grafting 5:5345cd5c0f38 "5"
   grafting 4:9c233e8e184d "4"
   grafting 3:4c60f11aa304 "3"
 
@@ -189,13 +193,13 @@ Graft out of order, skipping a merge and a duplicate
   committing manifest
   committing changelog
   updating the branch cache
-  grafting 5:97f8bfe72746 "5"
+  grafting 5:5345cd5c0f38 "5"
     searching for copies back to rev 1
     unmatched files in other (from topological common ancestor):
      c
   resolving manifests
    branchmerge: True, force: True, partial: False
-   ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
+   ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 5345cd5c0f38
    e: remote is newer -> g
   getting e
   committing files:
@@ -211,17 +215,17 @@ Graft out of order, skipping a merge and a duplicate
      c
   resolving manifests
    branchmerge: True, force: True, partial: False
-   ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
+   ancestor: 4c60f11aa304, local: 9436191a062e+, remote: 9c233e8e184d
    preserving e for resolve of e
    d: remote is newer -> g
   getting d
    e: versions differ -> m (premerge)
   picked tool ':merge' for e (binary False symlink False changedelete False)
   merging e
-  my e@1905859650ec+ other e@9c233e8e184d ancestor e@4c60f11aa304
+  my e@9436191a062e+ other e@9c233e8e184d ancestor e@4c60f11aa304
    e: versions differ -> m (merge)
   picked tool ':merge' for e (binary False symlink False changedelete False)
-  my e@1905859650ec+ other e@9c233e8e184d ancestor e@4c60f11aa304
+  my e@9436191a062e+ other e@9c233e8e184d ancestor e@4c60f11aa304
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue --log')
@@ -278,7 +282,7 @@ Graft again:
   skipping ungraftable merge revision 6
   skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
   skipping revision 1:5d205f8b35b6 (already grafted to 8:6b9e5368ca4e)
-  skipping revision 5:97f8bfe72746 (already grafted to 9:1905859650ec)
+  skipping revision 5:5345cd5c0f38 (already grafted to 9:9436191a062e)
   grafting 4:9c233e8e184d "4"
   merging e
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -323,6 +327,12 @@ Continue for real, clobber usernames
 Compare with original:
 
   $ hg diff -r 6
+  diff -r 7f1f8cbe8466 e
+  --- a/e	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/e	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -f
+  +b
   $ hg status --rev 0:. -C
   M d
   M e
@@ -378,7 +388,7 @@ Graft again onto another branch should preserve the original source
   phase:       draft
   parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    13:dc313617b8c32457c0d589e0dbbedfe71f3cd637
+  manifest:    12:dc313617b8c32457c0d589e0dbbedfe71f3cd637
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      b
