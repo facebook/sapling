@@ -1437,7 +1437,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     p2 = extractdata.get("p2")
 
     nocommit = opts.get("no_commit")
-    importbranch = opts.get("import_branch")
     update = not opts.get("bypass")
     strip = opts["strip"]
     prefix = opts["prefix"]
@@ -1496,7 +1495,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             if p2 != parents[1]:
                 repo.setparents(p1.node(), p2.node())
 
-            if opts.get("exact") or importbranch:
+            if opts.get("exact"):
                 repo.dirstate.setbranch(branch or "default")
 
             partial = opts.get("partial", False)
@@ -1550,7 +1549,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     for idfunc in extrapostimport:
                         extrapostimportmap[idfunc](repo[n])
         else:
-            if opts.get("exact") or importbranch:
+            if opts.get("exact"):
                 branch = branch or "default"
             else:
                 branch = p1.branch()

@@ -3779,12 +3779,6 @@ def identify(
         ("", "partial", None, _("commit even if some hunks fail")),
         ("", "exact", None, _("abort if patch would apply lossily")),
         ("", "prefix", "", _("apply patch to subdirectory"), _("DIR")),
-        (
-            "",
-            "import-branch",
-            None,
-            _("use any branch information in patch (implied by --exact)"),
-        ),
     ]
     + commitopts
     + commitopts2
