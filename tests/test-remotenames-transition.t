@@ -20,7 +20,7 @@ Set up extension and repos
   searching for changes
   no changes found
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
-  cb9a9f314b8b default/bm1 default/bm2 default/default
+  cb9a9f314b8b default/bm1 default/bm2
 
 Test renaming
 
@@ -32,7 +32,7 @@ Test renaming
   searching for changes
   no changes found
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
-  cb9a9f314b8b remote/bm1 remote/bm2 remote/default
+  cb9a9f314b8b remote/bm1 remote/bm2
 
 Test hoisting basics
   $ hg book
@@ -41,7 +41,6 @@ Test hoisting basics
   default
   remote/bm1
   remote/bm2
-  remote/default
   tip
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "hoist = remote" >> $HGRCPATH
@@ -51,7 +50,6 @@ Test hoisting basics
   default
   remote/bm1
   remote/bm2
-  remote/default
   tip
 
 Test hoisting name lookup

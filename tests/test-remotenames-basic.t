@@ -17,8 +17,8 @@ Test that remotenames works on a repo without any names file
   $ mkcommit a
   $ mkcommit b
   $ hg log -r 'upstream()'
-  $ hg log -r . -T '{remotenames} {remotebranches} {remotebookmarks}\n'
-    
+  $ hg log -r . -T '{remotenames} {remotebookmarks}\n'
+   
 
 Continue testing
 
@@ -96,7 +96,6 @@ graph shows tags for the branch heads of each path
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  | |  branch:      beta/stable
   | |  parent:      2:95cb4ab9fe1d
   | |  parent:      3:78f83396d79e
   | |  user:        test
@@ -105,7 +104,6 @@ graph shows tags for the branch heads of each path
   | |
   | o  changeset:   3:78f83396d79e
   | |  bookmark:    beta/babar
-  | |  branch:      beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -113,13 +111,11 @@ graph shows tags for the branch heads of each path
   | |
   o |  changeset:   2:95cb4ab9fe1d
   |/   branch:      stable
-  |    branch:      alpha/stable
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     add c
   |
   o  changeset:   1:7c3bad9141dc
-  |  branch:      alpha/default
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add b
@@ -147,20 +143,6 @@ make sure we can list remote bookmarks with --all
   $ hg bookmarks --remote
      beta/babar                3:78f83396d79e
 
-  $ hg branches --all
-  default                        6:ce61ec32ee23
-  stable                         4:8948da77173b (inactive)
-  beta/stable                    4:8948da77173b
-  beta/default                   3:78f83396d79e
-  alpha/stable                   2:95cb4ab9fe1d
-  alpha/default                  1:7c3bad9141dc
-
-  $ hg branches --remote
-  beta/stable                    4:8948da77173b
-  beta/default                   3:78f83396d79e
-  alpha/stable                   2:95cb4ab9fe1d
-  alpha/default                  1:7c3bad9141dc
-
 Verify missing node doesnt break remotenames
 
   $ echo "18f8e0f8ba54270bf158734c781327581cf43634 bookmarks beta/foo" >> .hg/remotenames
@@ -181,6 +163,20 @@ make sure bogus revisions in .hg/remotenames do not break hg
   
 Verify that the revsets operate as expected:
   $ hg log -r 'not pushed()'
+  changeset:   2:95cb4ab9fe1d
+  branch:      stable
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add c
+  
+  changeset:   4:8948da77173b
+  branch:      stable
+  parent:      2:95cb4ab9fe1d
+  parent:      3:78f83396d79e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merged
+  
   changeset:   5:6d6442577283
   parent:      3:78f83396d79e
   user:        test
@@ -199,9 +195,24 @@ Verify that the revsets operate as expected:
 
 Upstream without configuration is synonymous with upstream('default'):
   $ hg log -r 'not upstream()'
+  changeset:   0:1f0dee641bb7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a
+  
+  changeset:   1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add b
+  
+  changeset:   2:95cb4ab9fe1d
+  branch:      stable
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add c
+  
   changeset:   3:78f83396d79e
   bookmark:    beta/babar
-  branch:      beta/default
   parent:      1:7c3bad9141dc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -209,7 +220,6 @@ Upstream without configuration is synonymous with upstream('default'):
   
   changeset:   4:8948da77173b
   branch:      stable
-  branch:      beta/stable
   parent:      2:95cb4ab9fe1d
   parent:      3:78f83396d79e
   user:        test
@@ -251,50 +261,48 @@ but configured, it'll do the expected thing:
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  ~ |  branch:      beta/stable
-    |  parent:      2:95cb4ab9fe1d
-    |  parent:      3:78f83396d79e
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     merged
-   /
-  o  changeset:   3:78f83396d79e
-  |  bookmark:    beta/babar
-  ~  branch:      beta/default
-     parent:      1:7c3bad9141dc
+  | |  parent:      2:95cb4ab9fe1d
+  | |  parent:      3:78f83396d79e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merged
+  | |
+  | o  changeset:   3:78f83396d79e
+  | |  bookmark:    beta/babar
+  | |  parent:      1:7c3bad9141dc
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     add d
+  | |
+  o |  changeset:   2:95cb4ab9fe1d
+  |/   branch:      stable
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add d
+     summary:     add a
   
   $ hg log --limit 2 --graph -r 'heads(upstream())'
-  o  changeset:   2:95cb4ab9fe1d
-  |  branch:      stable
-  ~  branch:      alpha/stable
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add c
-  
 
 Test remotenames revset and keyword
 
   $ hg log -r 'remotenames()' \
   >   --template '{rev}:{node|short} {remotenames}\n'
-  1:7c3bad9141dc alpha/default
-  2:95cb4ab9fe1d alpha/stable
-  3:78f83396d79e beta/babar beta/default
-  4:8948da77173b beta/stable
+  3:78f83396d79e beta/babar
 
-Test remotebookmark and remotebranch revsets
+Test remotebookmark revsets
 
   $ hg log -r 'remotebookmark()' \
   >   --template '{rev}:{node|short} {remotebookmarks}\n'
   3:78f83396d79e beta/babar
-  $ hg log -r 'remotebranch()' \
-  >   --template '{rev}:{node|short} {remotebranches}\n'
-  1:7c3bad9141dc alpha/default
-  2:95cb4ab9fe1d alpha/stable
-  3:78f83396d79e beta/default
-  4:8948da77173b beta/stable
   $ hg log -r 'remotebookmark("beta/babar")' \
   >   --template '{rev}:{node|short} {remotebookmarks}\n'
   3:78f83396d79e beta/babar
@@ -302,9 +310,6 @@ Test remotebookmark and remotebranch revsets
   >   --template '{rev}:{node|short} {remotebookmarks}\n'
   abort: no remote bookmarks exist that match 'beta/stable'!
   [255]
-  $ hg log -r 'remotebranch("beta/stable")' \
-  >   --template '{rev}:{node|short} {remotebranches}\n'
-  4:8948da77173b beta/stable
   $ hg log -r 'remotebookmark("re:beta/.*")' \
   >   --template '{rev}:{node|short} {remotebookmarks}\n'
   3:78f83396d79e beta/babar
@@ -338,20 +343,6 @@ Test loading with hggit
   $ hg help bookmarks  | egrep -- '--(un){0,1}track'
    -t --track BOOKMARK track this bookmark or remote name
    -u --untrack        remove tracking for this bookmark
-
-Test branches marked as closed are not loaded
-  $ cd ../alpha
-  $ hg branch
-  stable
-  $ hg commit --close-branch -m 'close this branch'
-
-  $ cd ../beta
-  $ hg branches --remote
-  default/stable                 2:95cb4ab9fe1d
-  default/default                1:7c3bad9141dc
-  $ hg pull -q
-  $ hg branches --remote
-  default/default                1:7c3bad9141dc
 
 Test json formatted bookmarks with tracking data
   $ cd ..

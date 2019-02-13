@@ -151,10 +151,10 @@ Tests that there are no race condition between pulling changesets and remote boo
   $ cd ../localrepo
   $ hg up tracking -q
   $ hg log -l 1 --template="{desc} {remotenames}\n"
-  foo default/bookmarkonremote default/default
+  foo default/bookmarkonremote
   $ hg -q pull
   $ hg log -l 1 --template="{desc} {remotenames}\n"
-  between_pull default/bookmarkonremote default/default
+  between_pull default/bookmarkonremote
 
 Test pull with --rebase and --tool
   $ cd ../remoterepo

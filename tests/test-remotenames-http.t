@@ -48,7 +48,6 @@ verify that the branchheads are stored properly
   |  summary:     add alpha
   |
   o  changeset:   0:8b6053c928fe
-     branch:      default/default
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     1

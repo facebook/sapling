@@ -25,7 +25,7 @@ Set up
 
 Test that hg pull --rebase aborts without --dest
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
-  @  083f922fc4a9  default/three default/default
+  @  083f922fc4a9  default/three
   |
   o  301d76bdc3ae  default/two
   |
@@ -78,7 +78,7 @@ Test that setting a defaultdest allows --update and --rebase to work
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   o  5413b62180b7 bm
   |
-  o  083f922fc4a9  default/three default/default
+  o  083f922fc4a9  default/three
   |
   @  301d76bdc3ae  default/two
   |
@@ -97,7 +97,7 @@ Test that setting a defaultdest allows --update and --rebase to work
   |
   | o  5413b62180b7 bm
   |/
-  o  083f922fc4a9  default/three default/default
+  o  083f922fc4a9  default/three
   |
   o  301d76bdc3ae  default/two
   |
@@ -122,7 +122,7 @@ Test that hg pull --rebase also works with a --tool argument
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   @  d6553cf01770
   |
-  o  e8aa3bc9f3f0  default/three default/default
+  o  e8aa3bc9f3f0  default/three
   |
   | o  5413b62180b7 bm
   |/

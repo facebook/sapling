@@ -986,7 +986,7 @@ Pull it into one of the clients and rebase one of the stacks onto it
   $ cd ../client1
   $ hg pull -q
   $ hg trglog
-  o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2 default/default
+  o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2
   |
   | @  799d22972c4e 'stack 2 second'
   | |
@@ -1042,7 +1042,7 @@ Sync this onto the second client, the remote bookmarks don't change.
   | |
   | o  3597ff85ead0 'stack 2 first'
   |/
-  @  d20a80d4def3 'base'  default/default
+  @  d20a80d4def3 'base'
   
 Do a pull on this client.  The remote bookmarks now get updated.
   $ hg pull
@@ -1055,7 +1055,7 @@ Do a pull on this client.  The remote bookmarks now get updated.
   new changesets 97250524560a
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg trglog
-  o  97250524560a 'public 2'  default/publicbookmark2 default/default
+  o  97250524560a 'public 2'  default/publicbookmark2
   |
   | o  2da6c73964b8 'stack 1 second'
   | |
@@ -1098,7 +1098,7 @@ Rebase the commits again, and resync to the first client.
   |
   o  97250524560a 'public 2'
   |
-  o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2 default/default
+  o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2
   |
   | @  799d22972c4e 'stack 2 second'
   | |
@@ -1113,7 +1113,7 @@ A final pull gets everything in sync here, too.
   |
   o  81cd67693e59 'stack 1 first'
   |
-  o  97250524560a 'public 2'  default/publicbookmark2 default/default
+  o  97250524560a 'public 2'  default/publicbookmark2
   |
   o  acd5b9e8c656 'public'  default/publicbookmark1
   |
@@ -1195,7 +1195,7 @@ Rejoin
   | |
   | o  3597ff85ead0 'stack 2 first'
   | |
-  @ |  97250524560a 'public 2'  default/publicbookmark2 default/default
+  @ |  97250524560a 'public 2'  default/publicbookmark2
   | |
   o |  acd5b9e8c656 'public'  default/publicbookmark1
   |/

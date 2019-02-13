@@ -22,7 +22,6 @@ Clone primary repo
      tag:         tip
      bookmark:    default/mainline
      hoistedname: mainline
-     branch:      default/default
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     file0
@@ -39,7 +38,6 @@ Share to secondary repo
      tag:         tip
      bookmark:    default/mainline
      hoistedname: mainline
-     branch:      default/default
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     file0

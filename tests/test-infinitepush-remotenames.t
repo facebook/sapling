@@ -137,7 +137,6 @@ Go back to client, make pull and make sure that we pulled remote branches
   $ cat .hg/remotenames | sort
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
   ac312cb08db5366e622a01fd001e583917eb9f1c bookmarks default/scratch/serverbook
-  ac312cb08db5366e622a01fd001e583917eb9f1c branches default/default
   $ hg pull
   pulling from ssh://user@dummy/repo
   searching for changes
@@ -150,8 +149,6 @@ Go back to client, make pull and make sure that we pulled remote branches
   $ cat .hg/remotenames | sort
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
   64d557aa86fdc42384b193f7eab99059da84f1f0 bookmarks default/scratch/serverbook
-  64d557aa86fdc42384b193f7eab99059da84f1f0 branches default/default
-  dc4b2ecb723bbf077b2d1ecab0dace0b001eb5b8 branches default/default
   $ cd ..
 
 Push from another client, make sure that push doesn't override scratch bookmarks

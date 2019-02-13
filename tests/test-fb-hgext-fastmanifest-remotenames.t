@@ -60,7 +60,6 @@ Check that remotename changes trigger caching
   changeset:   2:4538525df7e2
   tag:         tip
   bookmark:    remote/master
-  branch:      remote/default
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add c

@@ -159,6 +159,6 @@ changesets
   $ hg rebase -d default/master
   note: not rebasing 2:1a07332e9fa1 "add c", already in destination as 6:d446b1b2be43 "add c"
   note: not rebasing 3:ee96b78ae17d "add d", already in destination as 7:1f539cc6f364 "add d"
-  note: not rebasing 4:d5895ab36037 "add e", already in destination as 8:461a5b25b3dc "add e" (default/master master default/default)
+  note: not rebasing 4:d5895ab36037 "add e", already in destination as 8:461a5b25b3dc "add e" (default/master master)
   rebasing 9:df5f40cb6607 "add k" (tip)
 

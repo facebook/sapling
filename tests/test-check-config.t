@@ -142,7 +142,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.resolvenodes (bool)
   undocumented: remotenames.selectivepull (bool)
   undocumented: remotenames.selectivepulldefault (list)
-  undocumented: remotenames.suppressbranches (bool)
   undocumented: remotenames.syncbookmarks (bool)
   undocumented: remotenames.tracking (bool)
   undocumented: remotenames.transitionmessage (str)

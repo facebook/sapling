@@ -63,7 +63,6 @@ configitem = registrar.configitem(configtable)
 configitem("remotenames", "alias.default", default=False)
 configitem("remotenames", "allownonfastforward", default=False)
 configitem("remotenames", "bookmarks", default=True)
-configitem("remotenames", "branches", default=True)
 configitem("remotenames", "calculatedistance", default=True)
 configitem("remotenames", "disallowedbookmarks", default=[])
 configitem("remotenames", "disallowedhint", default=None)
@@ -79,7 +78,6 @@ configitem("remotenames", "pushrev", default=None)
 configitem("remotenames", "resolvenodes", default=True)
 configitem("remotenames", "selectivepull", default=False)
 configitem("remotenames", "selectivepulldefault", default=[])
-configitem("remotenames", "suppressbranches", default=False)
 configitem("remotenames", "syncbookmarks", default=False)
 configitem("remotenames", "tracking", default=True)
 configitem("remotenames", "transitionbookmarks", default=[])
@@ -479,7 +477,8 @@ class lazyremotenamedict(UserDict.DictMixin):
     def __init__(self, kind, repo):
         self.cache = {}
         self.potentialentries = {}
-        self._kind = kind  # bookmarks or branches
+        assert kind == "bookmarks"  # only support bookmarks
+        self._kind = kind
         self._repo = repo
         self.loaded = False
 
@@ -513,7 +512,6 @@ class lazyremotenamedict(UserDict.DictMixin):
         # Skip closed branches
         if (
             nametype == "branches"
-            and _branchesenabled(repo.ui)
             and repo[binnode].closesbranch()
         ):
             return None
@@ -586,7 +584,6 @@ class remotenames(dict):
     def clearnames(self):
         """Clear all remote names state"""
         self["bookmarks"] = lazyremotenamedict("bookmarks", self._repo)
-        self["branches"] = lazyremotenamedict("branches", self._repo)
         self._invalidatecache()
         self._loadednames = False
 
@@ -678,21 +675,6 @@ def hoistednames(repo):
         return None
 
 
-@namespacepredicate("remotebranches", priority=65)
-def remotebranches(repo):
-    if _branchesenabled(repo.ui):
-        return namespaces.namespace(
-            templatename="remotebranches",
-            logname="branch",
-            colorname="remotebranch",
-            listnames=lambda repo: repo._remotenames.branch2nodes().keys(),
-            namemap=lambda repo, name: repo._remotenames.branch2nodes().get(name, []),
-            nodemap=lambda repo, node: repo._remotenames.node2branch().get(node, []),
-        )
-    else:
-        return None
-
-
 def reposetup(ui, repo):
     if not repo.local():
         return
@@ -706,7 +688,7 @@ def _tracking(ui):
 
 
 def _branchesenabled(ui):
-    return ui.configbool("remotenames", "branches")
+    return False
 
 
 def exrebasecmd(orig, ui, repo, *pats, **opts):
@@ -891,7 +873,6 @@ def extsetup(ui):
     extensions.afterloaded("journal", hasjournal)
 
     bookcmd = extensions.wrapcommand(commands.table, "bookmarks", exbookmarks)
-    branchcmd = extensions.wrapcommand(commands.table, "branches", exbranches)
     pushcmd = extensions.wrapcommand(commands.table, "push", expushcmd)
 
     if _tracking(ui):
@@ -905,8 +886,6 @@ def extsetup(ui):
     newopts = [
         (bookcmd, ("a", "all", None, "show both remote and local bookmarks")),
         (bookcmd, ("", "remote", None, "show only remote bookmarks")),
-        (branchcmd, ("a", "all", None, "show both remote and local branches")),
-        (branchcmd, ("", "remote", None, "show only remote branches")),
         (pushcmd, ("t", "to", "", "push revs to this bookmark", "BOOKMARK")),
         (pushcmd, ("d", "delete", "", "delete remote bookmark", "BOOKMARK")),
         (pushcmd, ("", "create", None, "create a new remote bookmark")),
@@ -1243,52 +1222,6 @@ def exclonecmd(orig, ui, *args, **opts):
     if opts["mirror"]:
         ui.setconfig("remotenames", "syncbookmarks", True, "mirror-clone")
     orig(ui, *args, **opts)
-
-
-def exbranches(orig, ui, repo, *args, **opts):
-    if not opts.get("remote"):
-        orig(ui, repo, *args, **opts)
-
-    if opts.get("all") or opts.get("remote"):
-        # exit early if namespace doesn't even exist
-        namespace = "remotebranches"
-        if namespace not in repo.names:
-            return
-
-        ns = repo.names[namespace]
-        label = "log." + ns.colorname
-        fm = ui.formatter("branches", opts)
-
-        # it seems overkill to hide displaying hidden remote branches
-        repo = repo.unfiltered()
-
-        # create a sorted by descending rev list
-        revs = set()
-        for name in ns.listnames(repo):
-            for n in ns.nodes(repo, name):
-                revs.add(repo.changelog.rev(n))
-
-        for r in sorted(revs, reverse=True):
-            ctx = repo[r]
-            for name in ns.names(repo, ctx.node()):
-                fm.startitem()
-                padsize = max(31 - len(str(r)) - encoding.colwidth(name), 0)
-
-                tmplabel = label
-                if ctx.obsolete():
-                    tmplabel = tmplabel + " changeset.obsolete"
-                fm.write(ns.colorname, "%s", name, label=label)
-                fmt = " " * padsize + " %d:%s"
-                fm.condwrite(
-                    not ui.quiet,
-                    "rev node",
-                    fmt,
-                    r,
-                    fm.hexfunc(ctx.node()),
-                    label=tmplabel,
-                )
-                fm.plain("\n")
-        fm.end()
 
 
 def _readtracking(repo):
@@ -1723,11 +1656,6 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
                     entrydata.append((joinedremotename, bin(oldnode), bin(newnode)))
             repo.journal.recordmany(journalremotebookmarktype, entrydata)
 
-        for branch, nodes in branches.iteritems():
-            for n in nodes:
-                rname = joinremotename(remotepath, branch)
-                f.write("%s branches %s\n" % (hex(n), rname))
-
         nm = repo.unfiltered().changelog.nodemap
         for bookmark, n in bookmarks.iteritems():
             bookhex = n
@@ -1993,27 +1921,6 @@ def remotebookmarkrevset(repo, subset, x):
     return subset & smartset.baseset(sorted(remoterevs))
 
 
-@revsetpredicate("remotebranch([name])")
-def remotebranchrevset(repo, subset, x):
-    """The named remote branch, or all remote branches.
-
-    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
-    """
-    args = revset.getargs(x, 0, 1, _("remotebranch takes one or no arguments"))
-    if args:
-        branchname = revset.getstring(
-            args[0], _("the argument to remotebranch must be a string")
-        )
-    else:
-        branchname = None
-    remoterevs = getremoterevs(repo, "remotebranches", branchname)
-    if not remoterevs and branchname is not None:
-        raise error.RepoLookupError(
-            _("no remote branches exist that match '%s'") % branchname
-        )
-    return subset & smartset.baseset(sorted(remoterevs))
-
-
 ###########
 # templates
 ###########
@@ -2031,9 +1938,5 @@ def remotenameskw(**args):
     remotenames = []
     if "remotebookmarks" in repo.names:
         remotenames = repo.names["remotebookmarks"].names(repo, ctx.node())
-
-    suppress = repo.ui.configbool("remotenames", "suppressbranches")
-    if (not remotenames or not suppress) and "remotebranches" in repo.names:
-        remotenames += repo.names["remotebranches"].names(repo, ctx.node())
 
     return templatekw.showlist("remotename", remotenames, args, plural="remotenames")
