@@ -4,11 +4,9 @@ Test basic functionality of url#rev syntax
   $ cd repo
   $ echo a > a
   $ hg ci -qAm 'add a'
-  $ hg branch foo
-  marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
   $ echo >> a
   $ hg ci -m 'change a'
+  $ hg bookmark foo
   $ cd ..
 
   $ hg clone 'repo#foo' clone
@@ -16,26 +14,21 @@ Test basic functionality of url#rev syntax
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  new changesets 1f0dee641bb7:cd2a86ecc814
-  updating to branch foo
+  new changesets 1f0dee641bb7:17d330177ee9
+  updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg --cwd clone heads
-  changeset:   1:cd2a86ecc814
-  branch:      foo
+  changeset:   1:17d330177ee9
+  bookmark:    foo
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change a
   
-  changeset:   0:1f0dee641bb7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add a
-  
   $ hg --cwd clone parents
-  changeset:   1:cd2a86ecc814
-  branch:      foo
+  changeset:   1:17d330177ee9
+  bookmark:    foo
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -69,21 +62,19 @@ Changing original repo:
   $ hg ci -qAm 'add bar'
 
   $ hg log
-  changeset:   3:4cd725637392
+  changeset:   3:ad4513930219
   tag:         tip
-  parent:      0:1f0dee641bb7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
   
-  changeset:   2:faba9097cad4
-  branch:      foo
+  changeset:   2:7d4251d04d20
+  bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  changeset:   1:cd2a86ecc814
-  branch:      foo
+  changeset:   1:17d330177ee9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change a
@@ -94,50 +85,46 @@ Changing original repo:
   summary:     add a
   
   $ hg -q outgoing '../clone'
-  2:faba9097cad4
-  3:4cd725637392
+  2:7d4251d04d20
+  3:ad4513930219
   $ hg summary --remote --config paths.default='../clone'
-  parent: 3:4cd725637392 tip
+  parent: 3:ad4513930219 tip
    add bar
   commit: (clean)
   phases: 4 draft
   remote: 2 outgoing
   $ hg -q outgoing '../clone#foo'
-  2:faba9097cad4
+  2:7d4251d04d20
   $ hg summary --remote --config paths.default='../clone#foo'
-  parent: 3:4cd725637392 tip
+  parent: 3:ad4513930219 tip
    add bar
   commit: (clean)
   phases: 4 draft
   remote: 1 outgoing
 
   $ hg -q --cwd ../clone incoming '../repo#foo'
-  2:faba9097cad4
+  2:7d4251d04d20
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
-  parent: 1:cd2a86ecc814 tip
+  parent: 1:17d330177ee9 tip
    change a
+  bookmarks: foo
   commit: (clean)
   remote: 1 or more incoming
 
   $ hg -q push '../clone#foo'
 
   $ hg --cwd ../clone heads
-  changeset:   2:faba9097cad4
-  branch:      foo
+  changeset:   2:7d4251d04d20
+  bookmark:    foo
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  changeset:   0:1f0dee641bb7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add a
-  
   $ hg -q --cwd ../clone incoming '../repo#foo'
   [1]
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
-  parent: 1:cd2a86ecc814 
+  parent: 1:17d330177ee9 
    change a
   commit: (clean)
   remote: (synced)
@@ -149,27 +136,22 @@ Changing original repo:
   repository tip rolled back to revision 1 (undo push)
 
   $ hg -q incoming
-  2:faba9097cad4
+  2:7d4251d04d20
 
   $ hg -q pull
 
   $ hg heads
-  changeset:   2:faba9097cad4
-  branch:      foo
+  changeset:   2:7d4251d04d20
+  bookmark:    foo
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  changeset:   0:1f0dee641bb7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add a
-  
 Pull should not have updated:
 
   $ hg parents -q
-  1:cd2a86ecc814
+  1:17d330177ee9
 
 Going back to the default branch:
 
@@ -200,8 +182,8 @@ Pull -u takes us back to branch foo:
   $ hg pull -qu
 
   $ hg parents
-  changeset:   2:faba9097cad4
-  branch:      foo
+  changeset:   2:7d4251d04d20
+  bookmark:    foo
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -213,37 +195,29 @@ Pull -u takes us back to branch foo:
 
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark foo)
 
   $ hg parents -q
   0:1f0dee641bb7
 
   $ hg heads -q
-  1:cd2a86ecc814
-  0:1f0dee641bb7
+  1:17d330177ee9
 
   $ hg pull -qur default default
 
   $ hg parents
-  changeset:   3:4cd725637392
+  changeset:   3:ad4513930219
   tag:         tip
-  parent:      0:1f0dee641bb7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
   
   $ hg heads
-  changeset:   3:4cd725637392
+  changeset:   3:ad4513930219
   tag:         tip
-  parent:      0:1f0dee641bb7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
-  
-  changeset:   2:faba9097cad4
-  branch:      foo
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     new head of branch foo
   
 Test handling of invalid urls
 
@@ -268,41 +242,21 @@ Test handling common incoming revisions between "default" and
   $ hg -q push -r ".^1" '../clone'
 
   $ hg -q outgoing '../clone'
-  2:faba9097cad4
-  4:d515801a8f3d
-
-  $ hg summary --remote --config paths.default='../clone#default' --config paths.default-push='../clone#foo'
-  parent: 4:d515801a8f3d tip
-   new head to push current default head
-  commit: (clean)
-  phases: 1 draft
-  remote: 1 outgoing
+  4:44b4e0c07491
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
-  parent: 4:d515801a8f3d tip
+  parent: 4:44b4e0c07491 tip
    new head to push current default head
   commit: (clean)
   phases: 1 draft
-  remote: 2 outgoing
+  remote: 1 outgoing
 
   $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
-  parent: 4:d515801a8f3d tip
+  parent: 4:44b4e0c07491 tip
    new head to push current default head
   commit: (clean)
   phases: 1 draft
-  remote: 1 outgoing
-
-  $ hg clone -q -r 0 . ../another
-  $ hg -q outgoing '../another#default'
-  3:4cd725637392
-  4:d515801a8f3d
-
-  $ hg summary --remote --config paths.default='../another#default' --config paths.default-push='../clone#default'
-  parent: 4:d515801a8f3d tip
-   new head to push current default head
-  commit: (clean)
-  phases: 1 draft
-  remote: 1 outgoing
+  remote: (synced)
 
   $ cd ..
 
