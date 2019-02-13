@@ -135,10 +135,7 @@ void TestMount::initialize(
   setInitialCommit(initialCommitHash);
 
   // Create edenMount_
-  shared_ptr<ObjectStore> objectStore =
-      ObjectStore::create(localStore_, backingStore_);
-  edenMount_ = EdenMount::create(
-      std::move(config_), std::move(objectStore), blobCache_, serverState_);
+  createMount();
   edenMount_->initialize().get();
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
@@ -148,10 +145,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   setInitialCommit(commitHash, rootTreeHash);
 
   // Create edenMount_
-  shared_ptr<ObjectStore> objectStore =
-      ObjectStore::create(localStore_, backingStore_);
-  edenMount_ = EdenMount::create(
-      std::move(config_), std::move(objectStore), blobCache_, serverState_);
+  createMount();
   edenMount_->initialize().get();
 }
 
@@ -170,10 +164,15 @@ void TestMount::initialize(
   setInitialCommit(initialCommitHash, rootTree->get().getHash());
 
   // Create edenMount_
-  auto objectStore = ObjectStore::create(localStore_, backingStore_);
+  createMount();
+  edenMount_->initialize().get();
+}
+
+void TestMount::createMount() {
+  shared_ptr<ObjectStore> objectStore =
+      ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
       std::move(config_), std::move(objectStore), blobCache_, serverState_);
-  edenMount_->initialize().get();
 }
 
 void TestMount::registerFakeFuse(std::shared_ptr<FakeFuse> fuse) {

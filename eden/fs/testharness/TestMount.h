@@ -292,6 +292,7 @@ class TestMount {
   }
 
  private:
+  void createMount();
   void initTestDirectory();
   void setInitialCommit(Hash commitHash);
   void setInitialCommit(Hash commitHash, Hash rootTreeHash);
