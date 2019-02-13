@@ -1,126 +1,30 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "schemes=" >> $HGRCPATH
-  $ echo "remotenames=" >> $HGRCPATH
+  $ enable schemes remotenames
 
-  $ cat >> $HGRCPATH <<EOF
+  $ newrepo a
+  $ drawdag << 'EOS'
+  > X
+  > |
+  > Z
+  > EOS
+  $ hg bookmark -r $X bookmark-X
+
+  $ newrepo b
+  $ drawdag << 'EOS'
+  > Y
+  > |
+  > Z
+  > EOS
+  $ hg bookmark -r $Y bookmark-Y
+
+  $ newrepo c
+  $ cat >> .hg/hgrc << EOF
   > [schemes]
   > dotdot = ../{1}
   > EOF
-  $ FILTERPWD="sed s%`pwd`/%%g"
 
-  $ mkcommit()
-  > {
-  >   echo $1 > $1
-  >   hg add $1
-  >   hg ci -m "add $1"
-  > }
+  $ hg pull -q dotdot://a
+  $ hg pull -q dotdot://b
 
-  $ hg init alpha
-  $ cd alpha
-  $ mkcommit a
-  $ mkcommit b
-  $ hg branch stable
-  marked working directory as branch stable
-  (branches are permanent and global, did you want a bookmark?)
-  $ mkcommit c
-  $ cd ..
-  $ hg clone alpha beta | $FILTERPWD
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd beta
-  $ mkcommit d
-  $ hg co -C stable
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg merge default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ hg ci -m 'merged'
-  $ cd ..
-  $ hg init gamma
-  $ cd gamma
+  $ hg bookmark --remote
 
-  $ cat > .hg/hgrc <<EOF
-  > [paths]
-  > default = ../alpha
-  > alpha = ../alpha
-  > beta = dotdot://beta/
-  > EOF
-
-  $ hg pull | $FILTERPWD
-  pulling from alpha
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 3 files
-  new changesets 1f0dee641bb7:95cb4ab9fe1d
-  (run 'hg update' to get a working copy)
-  $ hg pull beta | $FILTERPWD
-  pulling from dotdot://beta/
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 1 changes to 1 files
-  new changesets 78f83396d79e:8948da77173b
-  (run 'hg update' to get a working copy)
-  $ hg co -C default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch default
-  marked working directory as branch default
-  $ mkcommit e
-  $ hg merge stable
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ hg ci -m 'merging stable'
-graph shows tags for the branch heads of each path
-  $ hg log --graph
-  @    changeset:   6:ce61ec32ee23
-  |\   tag:         tip
-  | |  parent:      5:6d6442577283
-  | |  parent:      4:8948da77173b
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merging stable
-  | |
-  | o  changeset:   5:6d6442577283
-  | |  parent:      3:78f83396d79e
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     add e
-  | |
-  o |  changeset:   4:8948da77173b
-  |\|  branch:      stable
-  | |  branch:      beta/stable
-  | |  parent:      2:95cb4ab9fe1d
-  | |  parent:      3:78f83396d79e
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merged
-  | |
-  | o  changeset:   3:78f83396d79e
-  | |  branch:      beta/default
-  | |  parent:      1:7c3bad9141dc
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     add d
-  | |
-  o |  changeset:   2:95cb4ab9fe1d
-  |/   branch:      stable
-  |    branch:      alpha/stable
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add c
-  |
-  o  changeset:   1:7c3bad9141dc
-  |  branch:      alpha/default
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
-  
 
