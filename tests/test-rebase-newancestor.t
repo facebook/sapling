@@ -5,6 +5,9 @@ TODO: Make this test compatibile with obsstore enabled.
   > usegeneraldelta=yes
   > [extensions]
   > rebase=
+  > [revsetalias]
+  > dev=desc("dev")
+  > def=desc("def")
   > EOF
 
   $ hg init repo
@@ -73,115 +76,81 @@ how rebasing of ancestor merges should be handled, but the current behavior
 with spurious prompts for conflicts in files that didn't change seems very
 wrong.
 
+The branches are emulated using commit messages.
+
   $ hg init ancestor-merge
   $ cd ancestor-merge
 
-  $ touch f-default
-  $ hg ci -Aqm 'default: create f-default'
-
-  $ hg branch -q dev
-  $ hg ci -qm 'dev: create branch'
-
-  $ echo stuff > f-dev
-  $ hg ci -Aqm 'dev: f-dev stuff'
-
-  $ hg up -q default
-  $ echo stuff > f-default
-  $ hg ci -m 'default: f-default stuff'
-
-  $ hg up -q dev
-  $ hg merge -q default
-  $ hg ci -m 'dev: merge default'
-
-  $ hg up -q default
-  $ hg rm f-default
-  $ hg ci -m 'default: remove f-default'
-
-  $ hg up -q dev
-  $ hg merge -q default
-  $ hg ci -m 'dev: merge default'
-
-  $ hg up -q default
-  $ echo stuff > f-other
-  $ hg ci -Aqm 'default: f-other stuff'
-
-  $ tglog
-  @  7: e08089805d82 'default: f-other stuff'
-  |
-  | o  6: 9455ee510502 'dev: merge default'  dev
-  |/|
-  o |  5: 462860db70a1 'default: remove f-default'
-  | |
-  | o  4: 4b019212aaf6 'dev: merge default'  dev
-  |/|
-  o |  3: f157ecfd2b6b 'default: f-default stuff'
-  | |
-  | o  2: ec2c14fb2984 'dev: f-dev stuff'  dev
-  | |
-  | o  1: 1d1a643d390e 'dev: create branch'  dev
-  |/
-  o  0: e90e8eb90b6f 'default: create f-default'
-  
+  $ drawdag <<'EOS'
+  > o    default4
+  > |
+  > | o  devmerge2
+  > |/|
+  > o |  default3
+  > | |
+  > | o  devmerge1
+  > |/|
+  > o |  default2
+  > | |
+  > | o  dev2
+  > | |
+  > | o  dev1
+  > |/
+  > o    default1
+  > EOS
   $ hg clone -qU . ../ancestor-merge-2
 
 Full rebase all the way back from branching point:
 
-  $ hg rebase -r 'only(dev,default)' -d default --config ui.interactive=True << EOF
+  $ hg rebase -r 'only(dev,def)' -d $default4 --config ui.interactive=True << EOF
   > c
   > EOF
-  rebasing 1:1d1a643d390e "dev: create branch"
-  note: rebase of 1:1d1a643d390e created no changes to commit
-  rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
-  rebasing 4:4b019212aaf6 "dev: merge default"
-  other [source] changed f-default which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
-  rebasing 6:9455ee510502 "dev: merge default"
-  saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1d1a643d390e-43e9e04b-rebase.hg
+  rebasing 2:1e48f4172d62 "dev1"
+  rebasing 4:aeae94a564c6 "dev2"
+  rebasing 6:da5b1609fcb1 "devmerge1"
+  note: rebase of 6:da5b1609fcb1 created no changes to commit
+  rebasing 7:bea5bcfda5f9 "devmerge2" (tip)
+  note: rebase of 7:bea5bcfda5f9 created no changes to commit
+  saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1e48f4172d62-cc446d63-rebase.hg
   $ tglog
-  o  6: fbc098e72227 'dev: merge default'
+  o  5: f66b059fae0f 'dev2'
   |
-  o  5: eda7b7f46f5d 'dev: merge default'
+  o  4: 1073bfc4c1ed 'dev1'
   |
-  o  4: 3e075b1c0a40 'dev: f-dev stuff'
+  o  3: 22e5a3eb70f1 'default4'
   |
-  @  3: e08089805d82 'default: f-other stuff'
+  o  2: a51061c4b2cb 'default3'
   |
-  o  2: 462860db70a1 'default: remove f-default'
+  o  1: dfbdae6572c4 'default2'
   |
-  o  1: f157ecfd2b6b 'default: f-default stuff'
-  |
-  o  0: e90e8eb90b6f 'default: create f-default'
+  o  0: 6ee4113c6616 'default1'
   
 Grafty cherry picking rebasing:
 
   $ cd ../ancestor-merge-2
 
   $ hg phase -fdr0:
-  $ hg rebase -r 'children(only(dev,default))' -d default --config ui.interactive=True << EOF
+  $ hg rebase -r 'children(only(dev,def))' -d $default4 --config ui.interactive=True << EOF
   > c
   > EOF
-  rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
-  rebasing 4:4b019212aaf6 "dev: merge default"
-  other [source] changed f-default which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
-  rebasing 6:9455ee510502 "dev: merge default"
-  saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/ec2c14fb2984-62d0b222-rebase.hg
+  rebasing 4:aeae94a564c6 "dev2"
+  rebasing 6:da5b1609fcb1 "devmerge1"
+  note: rebase of 6:da5b1609fcb1 created no changes to commit
+  rebasing 7:bea5bcfda5f9 "devmerge2" (tip)
+  note: rebase of 7:bea5bcfda5f9 created no changes to commit
+  saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/aeae94a564c6-2b0faa8a-rebase.hg
   $ tglog
-  o  7: fbc098e72227 'dev: merge default'
+  o  5: 9cdc50ee9a9d 'dev2'
   |
-  o  6: eda7b7f46f5d 'dev: merge default'
+  o  4: 22e5a3eb70f1 'default4'
   |
-  o  5: 3e075b1c0a40 'dev: f-dev stuff'
+  o  3: a51061c4b2cb 'default3'
   |
-  o  4: e08089805d82 'default: f-other stuff'
-  |
-  o  3: 462860db70a1 'default: remove f-default'
-  |
-  o  2: f157ecfd2b6b 'default: f-default stuff'
-  |
-  | o  1: 1d1a643d390e 'dev: create branch'  dev
+  | o  2: 1e48f4172d62 'dev1'
+  | |
+  o |  1: dfbdae6572c4 'default2'
   |/
-  o  0: e90e8eb90b6f 'default: create f-default'
+  o  0: 6ee4113c6616 'default1'
   
   $ cd ..
 
