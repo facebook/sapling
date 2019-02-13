@@ -1108,13 +1108,13 @@ are specified (issue5100):
   $ hg init revorder
   $ cd revorder
 
-  $ hg branch -q b0
+  $ hg book -q b0
   $ echo 0 >> f0
   $ hg ci -qAm k0 -u u0
-  $ hg branch -q b1
+  $ hg book -q b1
   $ echo 1 >> f1
   $ hg ci -qAm k1 -u u1
-  $ hg branch -q b2
+  $ hg book -q b2
   $ echo 2 >> f2
   $ hg ci -qAm k2 -u u2
 
@@ -1130,45 +1130,19 @@ are specified (issue5100):
 
  summary of revisions:
 
-  $ hg log -G -T '{rev} {branch} {author} {desc} {files}\n'
+  $ hg log -G -T '{rev} {bookmarks} {author} {desc} {files}\n'
   @  5 b0 u0 k0 f0
   |
   | o  4 b1 u1 k1 f1
   | |
   | | o  3 b2 u2 k2 f2
   | | |
-  | | o  2 b2 u2 k2 f2
+  | | o  2  u2 k2 f2
   | |/
-  | o  1 b1 u1 k1 f1
+  | o  1  u1 k1 f1
   |/
-  o  0 b0 u0 k0 f0
+  o  0  u0 k0 f0
   
-
- log -b BRANCH in ascending order:
-
-  $ hg log -r0:tip -T '{rev} {branch}\n' -b b0 -b b1
-  0 b0
-  1 b1
-  4 b1
-  5 b0
-  $ hg log -r0:tip -T '{rev} {branch}\n' -b b1 -b b0
-  0 b0
-  1 b1
-  4 b1
-  5 b0
-
- log --only-branch BRANCH in descending order:
-
-  $ hg log -rtip:0 -T '{rev} {branch}\n' --only-branch b1 --only-branch b2
-  4 b1
-  3 b2
-  2 b2
-  1 b1
-  $ hg log -rtip:0 -T '{rev} {branch}\n' --only-branch b2 --only-branch b1
-  4 b1
-  3 b2
-  2 b2
-  1 b1
 
  log -u USER in ascending order, against compound set:
 
@@ -1253,179 +1227,25 @@ User
   $ echo a > a
   $ hg ci -A -m "commit on default"
   adding a
-  $ hg branch test
-  marked working directory as branch test
-  (branches are permanent and global, did you want a bookmark?)
+  $ hg book test
   $ echo b > b
   $ hg ci -A -m "commit on test"
   adding b
 
   $ hg up default
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark test)
   $ echo c > c
   $ hg ci -A -m "commit on default"
   adding c
   $ hg up test
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark test)
   $ echo c > c
   $ hg ci -A -m "commit on test"
   adding c
 
 
-log -b default
-
-  $ hg log -b default
-  changeset:   2:c3a4f03cc9a7
-  parent:      0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-  changeset:   0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-
-
-log -b test
-
-  $ hg log -b test
-  changeset:   3:f5d8de11c2e2
-  branch:      test
-  tag:         tip
-  parent:      1:d32277701ccb
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   1:d32277701ccb
-  branch:      test
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-
-
-log -b dummy
-
-  $ hg log -b dummy
-  abort: unknown revision 'dummy'!
-  [255]
-
-
-log -b .
-
-  $ hg log -b .
-  changeset:   3:f5d8de11c2e2
-  branch:      test
-  tag:         tip
-  parent:      1:d32277701ccb
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   1:d32277701ccb
-  branch:      test
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-
-
-log -b default -b test
-
-  $ hg log -b default -b test
-  changeset:   3:f5d8de11c2e2
-  branch:      test
-  tag:         tip
-  parent:      1:d32277701ccb
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   2:c3a4f03cc9a7
-  parent:      0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-  changeset:   1:d32277701ccb
-  branch:      test
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-
-
-log -b default -b .
-
-  $ hg log -b default -b .
-  changeset:   3:f5d8de11c2e2
-  branch:      test
-  tag:         tip
-  parent:      1:d32277701ccb
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   2:c3a4f03cc9a7
-  parent:      0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-  changeset:   1:d32277701ccb
-  branch:      test
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-
-
-log -b . -b test
-
-  $ hg log -b . -b test
-  changeset:   3:f5d8de11c2e2
-  branch:      test
-  tag:         tip
-  parent:      1:d32277701ccb
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-  changeset:   1:d32277701ccb
-  branch:      test
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on test
-  
-
-
-log -b 2
-
-  $ hg log -b 2
-  changeset:   2:c3a4f03cc9a7
-  parent:      0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
-  changeset:   0:24427303d56f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     commit on default
-  
 #if gettext normal-layout
 
 Test that all log names are translated (e.g. branches, bookmarks, tags):
@@ -1433,11 +1253,11 @@ Test that all log names are translated (e.g. branches, bookmarks, tags):
   $ hg bookmark babar -r tip
 
   $ HGENCODING=UTF-8 LANGUAGE=de hg log -r tip
-  \xc3\x84nderung:        3:f5d8de11c2e2 (esc)
-  Zweig:           test
+  \xc3\x84nderung:        3:91f0fa364897 (esc)
   Lesezeichen:     babar
+  Lesezeichen:     test
   Marke:           tip
-  Vorg\xc3\xa4nger:       1:d32277701ccb (esc)
+  Vorg\xc3\xa4nger:       1:45efe61fb969 (esc)
   Nutzer:          test
   Datum:           Thu Jan 01 00:00:00 1970 +0000
   Zusammenfassung: commit on test
@@ -1450,39 +1270,37 @@ log -p --cwd dir (in subdir)
 
   $ mkdir dir
   $ hg log -p --cwd dir
-  changeset:   3:f5d8de11c2e2
-  branch:      test
+  changeset:   3:91f0fa364897
+  bookmark:    test
   tag:         tip
-  parent:      1:d32277701ccb
+  parent:      1:45efe61fb969
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit on test
   
-  diff -r d32277701ccb -r f5d8de11c2e2 c
+  diff -r 45efe61fb969 -r 91f0fa364897 c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +c
   
-  changeset:   2:c3a4f03cc9a7
-  parent:      0:24427303d56f
+  changeset:   2:735dba46f54d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit on default
   
-  diff -r 24427303d56f -r c3a4f03cc9a7 c
+  diff -r 45efe61fb969 -r 735dba46f54d c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +c
   
-  changeset:   1:d32277701ccb
-  branch:      test
+  changeset:   1:45efe61fb969
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit on test
   
-  diff -r 24427303d56f -r d32277701ccb b
+  diff -r 24427303d56f -r 45efe61fb969 b
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
