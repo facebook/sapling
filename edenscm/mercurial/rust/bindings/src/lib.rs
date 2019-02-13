@@ -7,6 +7,7 @@ use cpython::py_module_initializer;
 
 pub mod bookmarkstore;
 pub mod configparser;
+mod init;
 pub mod lz4;
 pub mod mutationstore;
 pub mod nodemap;
@@ -15,6 +16,7 @@ pub mod treestate;
 pub mod zstd;
 
 py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
+    init::init_rust();
     let name = m.get(py, "__name__")?.extract::<String>(py)?;
     m.add(py, "__doc__", "Mercurial Rust Bindings")?;
     m.add(py, "bookmarkstore", bookmarkstore::init_module(py, &name)?)?;
