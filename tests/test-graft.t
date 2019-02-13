@@ -771,82 +771,75 @@ graft works on complex revset
 
 graft with --force (still doesn't graft merges)
 
-  $ hg graft 19 0 6
-  skipping ungraftable merge revision 6
-  skipping ancestor revision 0:68795b066622
-  skipping already grafted revision 19:9627f653b421 (22:d1cb6591fa4b also has origin 2:5c095ad7e90f)
+  $ newrepo
+  $ drawdag <<'EOS'
+  > C D
+  > |/|
+  > A B
+  > EOS
+  $ hg update -q $C
+  $ hg graft $B
+  grafting 1:fc2b737bb2e5 "B"
+  $ hg rm A B C
+  $ hg commit -m remove-all
+  $ hg graft $B $A $D
+  skipping ungraftable merge revision 3
+  skipping ancestor revision 0:426bada5c675
+  skipping revision 1:fc2b737bb2e5 (already grafted to 4:bd8a7a0a7392)
   [255]
-  $ hg graft 19 0 6 --force
-  skipping ungraftable merge revision 6
-  grafting 19:9627f653b421 "2"
-  merging b
-  warning: can't find ancestor for 'b' copied from 'a'!
-  grafting 0:68795b066622 "0"
+  $ hg graft $B $A $D --force
+  skipping ungraftable merge revision 3
+  grafting 1:fc2b737bb2e5 "B"
+  grafting 0:426bada5c675 "A"
 
 graft --force after backout
 
-  $ echo abc > a
-  $ hg ci -m 28
-  $ hg backout 28
-  reverting a
-  changeset 29:9915a2e5f087 backs out changeset 28:50a516bb8b57
-  $ hg graft 28
-  skipping ancestor revision 28:50a516bb8b57
+  $ echo abc > A
+  $ hg ci -m to-backout
+  $ hg bookmark -i to-backout
+  $ hg backout to-backout
+  reverting A
+  changeset 9:14707ec2ae63 backs out changeset 8:b2fde3ce6adf
+  $ hg graft to-backout
+  skipping ancestor revision 8:b2fde3ce6adf
   [255]
-  $ hg graft 28 --force
-  grafting 28:50a516bb8b57 "28"
-  merging a
-  $ cat a
+  $ hg graft to-backout --force
+  grafting 8:b2fde3ce6adf "to-backout" (to-backout)
+  merging A
+  $ cat A
   abc
 
 graft --continue after --force
 
-  $ echo def > a
+  $ echo def > A
   $ hg ci -m 31
-  $ hg graft 28 --force --tool internal:fail
-  grafting 28:50a516bb8b57 "28"
+  $ hg graft to-backout --force --tool internal:fail
+  grafting 8:b2fde3ce6adf "to-backout" (to-backout)
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
-  $ hg resolve --all
-  merging a
-  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
-  [1]
-  $ echo abc > a
-  $ hg resolve -m a
-  (no more unresolved files)
+  $ echo abc > A
+  $ hg resolve -qm A
   continue: hg graft --continue
   $ hg graft -c
-  grafting 28:50a516bb8b57 "28"
-  $ cat a
+  grafting 8:b2fde3ce6adf "to-backout" (to-backout)
+  $ cat A
   abc
-
-Continue testing same origin policy, using revision numbers from test above
-but do some destructive editing of the repo:
-
-  $ hg up -qC 7
-  $ hg tag -l -r 13 tmp
-  $ hg --config extensions.strip= strip 2
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/5c095ad7e90f-d323a1e4-backup.hg
-  $ hg graft tmp
-  skipping already grafted revision 8:7a4785234d87 (2:ef0ef43d49e7 also has unknown origin 5c095ad7e90f)
-  [255]
 
 Empty graft
 
-  $ hg up -qr 26
-  $ hg tag -f something
-  $ hg graft -qr 27
-  $ hg graft -f 27
-  grafting 27:f42eca69d511 "28"
-  note: graft of 27:f42eca69d511 created no changes to commit
-
-  $ cd ..
+  $ newrepo
+  $ drawdag <<'EOS'
+  > A  B  # B/A=A
+  > EOS
+  $ hg up -qr $B
+  $ hg graft $A
+  grafting 0:426bada5c675 "A"
+  note: graft of 0:426bada5c675 created no changes to commit
 
 Graft to duplicate a commit
 
-  $ hg init graftsibling
-  $ cd graftsibling
+  $ newrepo graftsibling
   $ touch a
   $ hg commit -qAm a
   $ touch b
