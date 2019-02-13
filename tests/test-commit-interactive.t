@@ -1257,22 +1257,15 @@ Mock "Preserve chmod -x"
 
 Abort early when a merge is in progress
 
-  $ hg up 4
-  1 files updated, 0 files merged, 7 files removed, 0 files unresolved
+  $ newrepo
+  $ drawdag <<'EOS'
+  > Y Z
+  > |/
+  > X
+  > EOS
 
-  $ touch iwillmergethat
-  $ hg add iwillmergethat
-
-  $ hg branch thatbranch
-  marked working directory as branch thatbranch
-  (branches are permanent and global, did you want a bookmark?)
-
-  $ hg ci -m'new head'
-
-  $ hg up default
-  7 files updated, 0 files merged, 2 files removed, 0 files unresolved
-
-  $ hg merge thatbranch
+  $ hg up -Cq $Y
+  $ hg merge $Z
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -1280,11 +1273,9 @@ Abort early when a merge is in progress
   abort: cannot partially commit a merge (use "hg commit" instead)
   [255]
 
-  $ hg up -C
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-
 Editing patch (and ignoring trailing text)
 
+  $ cd $TESTTMP/a
   $ cat > editor.sh << '__EOF__'
   > sed -e 7d -e '5s/^-/ /' -e '/^# ---/i\
   > trailing\nditto' "$1" > tmp
@@ -1554,7 +1545,7 @@ Ignore win32text deprecation warning for now:
   $ hg status -A subdir/f1
   C subdir/f1
   $ hg tip -p
-  changeset:   30:* (glob)
+  changeset:   29:ae3cd1fa0aef
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:24 1970 +0000
@@ -1624,7 +1615,7 @@ The #if execbit block above changes the hash here on some systems
   $ hg status -A plain3
   C plain3
   $ hg tip
-  changeset:   32:* (glob)
+  changeset:   31:113649fb68c0
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
@@ -1689,7 +1680,7 @@ Add new file from within a subdirectory
   
 The #if execbit block above changes the hashes here on some systems
   $ hg tip -p
-  changeset:   34:* (glob)
+  changeset:   33:211b43f781aa
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
