@@ -17,6 +17,7 @@ byteorder = "1.2.7"
 configparser = { path = "../../../../lib/configparser" }
 cpython-ext = { path = "../../../../lib/cpython-ext" }
 cpython-failure = { path = "../../../../lib/cpython-failure" }
+edenapi = { path = "../../../../lib/edenapi" }
 encoding = { path = "../../../../lib/encoding" }
 env_logger = "0.5.13"
 failure = "0.1.3"
@@ -24,6 +25,7 @@ lz4-pyframe = { path = "../../../../lib/lz4-pyframe" }
 mutationstore = { path = "../../../../lib/mutationstore" }
 nodemap = { path = "../../../../lib/nodemap" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
+revisionstore = { path = "../../../../lib/revisionstore" }
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
 vlqencoding = { path = "../../../../lib/vlqencoding" }

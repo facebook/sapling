@@ -2111,19 +2111,6 @@ rustextmodules = [
     ),
 ]
 
-# TODO(T37772042): Make the Eden API crate build on Windows as part of the
-# Mercurial build process. Presently, this fails because the of a dependency
-# on OpenSSL, which is either not available or incorrectly configured in
-# the Windows build environment.
-if not iswindows:
-    rustextmodules.append(
-        RustExtension(
-            "pyedenapi",
-            package="edenscm.mercurial.rust",
-            manifest="edenscm/mercurial/rust/pyedenapi/Cargo.toml",
-        )
-    )
-
 hgmainfeatures = (
     " ".join(
         filter(

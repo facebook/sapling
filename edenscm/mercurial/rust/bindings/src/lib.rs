@@ -7,6 +7,7 @@ use cpython::py_module_initializer;
 
 pub mod bookmarkstore;
 pub mod configparser;
+pub mod edenapi;
 mod init;
 pub mod lz4;
 pub mod mutationstore;
@@ -21,6 +22,7 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "__doc__", "Mercurial Rust Bindings")?;
     m.add(py, "bookmarkstore", bookmarkstore::init_module(py, &name)?)?;
     m.add(py, "configparser", configparser::init_module(py, &name)?)?;
+    m.add(py, "edenapi", edenapi::init_module(py, &name)?)?;
     m.add(py, "lz4", lz4::init_module(py, &name)?)?;
     m.add(py, "mutationstore", mutationstore::init_module(py, &name)?)?;
     m.add(py, "nodemap", nodemap::init_module(py, &name)?)?;

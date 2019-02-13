@@ -27,9 +27,11 @@ from . import shallowutil
 
 
 try:
-    from edenscm.mercurial.rust.pyedenapi import PyEdenApiHttpClient, GetFilesRequest
+    from edenscm.mercurial.rust.bindings import edenapi
 except ImportError:
-    pass
+    # Eden API bindings are not available on some platforms. As such,
+    # we need to check if this module is available before usage.
+    raise
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -59,9 +61,9 @@ def getcreds(ui, url):
 def initclient(ui, repo):
     """Initialize a new PyEdenApiHttpClient using the user's config."""
     try:
-        PyEdenApiHttpClient
+        edenapi
     except NameError:
-        raise error.Abort(_("pyedenapi rust extension is not loaded"))
+        raise error.Abort(_("edenapi module is not loaded"))
 
     if not ui.configbool("edenapi", "enabled"):
         raise error.Abort(_("HTTP data fetching is not enabled for this repository"))
@@ -70,7 +72,7 @@ def initclient(ui, repo):
     creds = getcreds(ui, url)
     cachepath = shallowutil.getcachepath(ui)
 
-    return PyEdenApiHttpClient(url, cachepath, repo.name, creds)
+    return edenapi.client(url, cachepath, repo.name, creds)
 
 
 def healthcheck(ui, repo):
@@ -88,7 +90,7 @@ def healthcheck(ui, repo):
 def getfiles(ui, repo, keys):
     """Fetch files from the server and write them to a datapack."""
     client = initclient(ui, repo)
-    req = GetFilesRequest()
+    req = edenapi.getfilesrequest()
     for (node, path) in keys:
         req.push(node, path)
     return client.get_files(req)

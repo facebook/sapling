@@ -1,29 +1,28 @@
 // Copyright 2018 Facebook, Inc.
 //! pyedenapi - Python bindings for the Rust `edenapi` crate
 
-use cpython::*;
-use cpython_failure::ResultPyErrExt;
-use edenapi::{EdenApi, EdenApiHttpClient};
-use encoding::{local_bytes_to_path, path_to_local_bytes};
-use revisionstore::Key;
-use types::node::Node;
+#![allow(non_camel_case_types)]
 
 use std::{cell::RefCell, mem, str};
 
-py_module_initializer!(
-    pyedenapi,        // module name
-    initpyedenapi,    // py2 init name
-    PyInit_pyedenapi, // py3 init name
-    |py, m| {
-        // init function
-        m.add_class::<PyEdenApiHttpClient>(py)?;
-        m.add_class::<GetFilesRequest>(py)?;
-        Ok(())
-    }
-);
+use cpython::*;
+use cpython_failure::ResultPyErrExt;
 
-py_class!(class PyEdenApiHttpClient |py| {
-    data client: EdenApiHttpClient;
+use ::edenapi::{EdenApi, EdenApiHttpClient};
+use ::revisionstore::Key;
+use encoding::{local_bytes_to_path, path_to_local_bytes};
+use types::node::Node;
+
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "edenapi"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add_class::<client>(py)?;
+    m.add_class::<getfilesrequest>(py)?;
+    Ok(m)
+}
+
+py_class!(class client |py| {
+    data inner: EdenApiHttpClient;
 
     def __new__(
         _cls,
@@ -31,7 +30,7 @@ py_class!(class PyEdenApiHttpClient |py| {
         cache_path: &PyBytes,
         repo: &PyBytes,
         client_creds: Option<(&PyBytes, &PyBytes)> = None
-    ) -> PyResult<PyEdenApiHttpClient> {
+    ) -> PyResult<client> {
         let base_url = str::from_utf8(base_url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let cache_path = str::from_utf8(cache_path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -44,38 +43,38 @@ py_class!(class PyEdenApiHttpClient |py| {
             builder = builder.client_creds(cert, key).map_pyerr::<exc::RuntimeError>(py)?;
         }
 
-        let client = builder.base_url_str(base_url)
+        let inner = builder.base_url_str(base_url)
             .map_pyerr::<exc::RuntimeError>(py)?
             .cache_path(cache_path)
             .repo(repo)
             .build()
             .map_pyerr::<exc::RuntimeError>(py)?;
 
-        PyEdenApiHttpClient::create_instance(py, client)
+        client::create_instance(py, inner)
     }
 
     def health_check(&self) -> PyResult<PyObject> {
-        self.client(py).health_check()
+        self.inner(py).health_check()
             .map(|()| py.None())
             .map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_files(&self, request: &GetFilesRequest) -> PyResult<PyBytes> {
+    def get_files(&self, request: &getfilesrequest) -> PyResult<PyBytes> {
         let mut keys = request.keys(py).try_borrow_mut().map_pyerr::<exc::RuntimeError>(py)?;
         let keys = mem::replace(&mut *keys, Vec::new());
 
-        let out_path = self.client(py).get_files(keys).map_pyerr::<exc::RuntimeError>(py)?;
+        let out_path = self.inner(py).get_files(keys).map_pyerr::<exc::RuntimeError>(py)?;
         let out_path = path_to_local_bytes(&out_path).map_pyerr::<exc::RuntimeError>(py)?;
         Ok(PyBytes::new(py, &out_path))
 
     }
 });
 
-py_class!(class GetFilesRequest |py| {
+py_class!(class getfilesrequest |py| {
     data keys: RefCell<Vec<Key>>;
 
-    def __new__(_cls) -> PyResult<GetFilesRequest> {
-        GetFilesRequest::create_instance(py, RefCell::new(Vec::new()))
+    def __new__(_cls) -> PyResult<getfilesrequest> {
+        getfilesrequest::create_instance(py, RefCell::new(Vec::new()))
     }
 
     def push(&self, node: &PyBytes, path: &PyBytes) -> PyResult<PyObject> {
