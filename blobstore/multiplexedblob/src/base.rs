@@ -15,6 +15,7 @@ use std::sync::{
 use std::time::Duration;
 
 use cloned::cloned;
+use failure::err_msg;
 use failure_ext::{Error, Fail};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
@@ -23,6 +24,8 @@ use lazy_static::lazy_static;
 use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
 use tokio::executor::spawn;
+use tokio::prelude::FutureExt as TokioFutureExt;
+use tokio::timer::timeout::Error as TimeoutError;
 
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -30,6 +33,7 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 const SAMPLING_THRESHOLD: f32 = 1.0 - (1.0 / 100.0);
 
 lazy_static! {
@@ -92,6 +96,13 @@ impl MultiplexedBlobstoreBase {
     }
 }
 
+fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
+    match err.into_inner() {
+        Some(err) => err,
+        None => err_msg("blobstore operation timeout"),
+    }
+}
+
 impl Blobstore for MultiplexedBlobstoreBase {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
@@ -101,9 +112,10 @@ impl Blobstore for MultiplexedBlobstoreBase {
             .map(|&(blobstore_id, ref blobstore)| {
                 blobstore
                     .get(ctx.clone(), key.clone())
+                    .timeout(REQUEST_TIMEOUT)
                     .map_err({
                         cloned!(blobstore_id);
-                        move |error| (blobstore_id, error)
+                        move |error| (blobstore_id, remap_timeout_error(error))
                     })
                     .timed({
                         let session = ctx.session().clone();
@@ -204,6 +216,10 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let requests = self.blobstores.iter().map(|(blobstore_id, blobstore)| {
             blobstore
                 .put(ctx.clone(), key.clone(), value.clone())
+                .timeout(REQUEST_TIMEOUT)
+                .map_err({
+                    move |error| remap_timeout_error(error)
+                })
                 .and_then({
                     cloned!(ctx, key, blobstore_id, self.handler);
                     move |_| handler.on_put(ctx, blobstore_id, key)
