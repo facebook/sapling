@@ -99,7 +99,7 @@ push an infinitepush commit with new content
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
   |
-  o  d998012a9c34a2423757a3d40f8579c78af1b342 base (default/master_bookmark default/default)
+  o  d998012a9c34a2423757a3d40f8579c78af1b342 base (default/master_bookmark)
   
 
 pull the infinitepush commit
