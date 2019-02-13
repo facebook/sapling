@@ -344,7 +344,6 @@ Test extension help:
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
        ownercheck    prevent operations on repos not owned by the current user
        p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
-       patchbomb     command to send changesets as (a series of) patch emails
        perfsuite     (no help text available)
        phabdiff      (no help text available)
        phabstatus    (no help text available)

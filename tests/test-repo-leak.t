@@ -153,7 +153,6 @@ Somehow problematic: With many extensions
   > morecolors=
   > morestatus=
   > myparent=
-  > patchbomb=
   > patchrmdir=
   > phabdiff=
   > phabstatus=

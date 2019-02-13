@@ -10,7 +10,7 @@
   > unknown = bargle
   > ambiguous = s
   > recursive = recursive
-  > disabled = email
+  > disabled = purge
   > nodefinition =
   > noclosingquotation = '
   > no--cwd = status --cwd elsewhere
@@ -90,15 +90,15 @@ recursive
 disabled
 
   $ hg disabled
-  abort: alias 'disabled' resolves to unknown command 'email'
-  ('email' is provided by 'patchbomb' extension)
+  abort: alias 'disabled' resolves to unknown command 'purge'
+  ('purge' is provided by 'purge' extension)
   [255]
   $ hg help disabled
-  alias 'disabled' resolves to unknown command 'email'
+  alias 'disabled' resolves to unknown command 'purge'
   
-  'email' is provided by the following extension:
+  'purge' is provided by the following extension:
   
-      patchbomb     command to send changesets as (a series of) patch emails
+      purge         command to delete untracked files from the working directory
   
   (use 'hg help extensions' for information on enabling extensions)
 

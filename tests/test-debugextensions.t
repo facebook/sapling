@@ -14,7 +14,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > patchbomb=
   > rebase=
   > mq=
   > ext1 = $debugpath
@@ -25,7 +24,6 @@
   ext1 (untested!)
   ext2 (3.2.1!)
   histedit
-  patchbomb
   rebase
 
   $ hg debugextensions -v --excludedefault
@@ -39,9 +37,6 @@
     bug reporting: https://example.org/bts
   histedit
     location: */hgext/histedit.py* (glob)
-    bundled: yes
-  patchbomb
-    location: */hgext/patchbomb.py* (glob)
     bundled: yes
   rebase
     location: */hgext/rebase.py* (glob)
@@ -68,13 +63,6 @@
     "bundled": true,
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
-    "testedwith": []
-   },
-   {
-    "buglink": "",
-    "bundled": true,
-    "name": "patchbomb",
-    "source": "*/hgext/patchbomb.py*", (glob)
     "testedwith": []
    },
    {

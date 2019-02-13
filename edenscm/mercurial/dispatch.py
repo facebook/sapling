@@ -249,7 +249,6 @@ def _preimportmodules():
         "mergedriver",
         "morecolors",
         "morestatus",
-        "patchbomb",
         "patchrmdir",
         "phabdiff",
         "phabstatus",
