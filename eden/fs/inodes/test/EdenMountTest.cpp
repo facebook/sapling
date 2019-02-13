@@ -415,12 +415,7 @@ class ChownTest : public ::testing::Test {
     edenMount_ = testMount_->getEdenMount();
     auto initFuture = edenMount_->startFuse();
 
-    struct fuse_init_in initArg;
-    initArg.major = FUSE_KERNEL_VERSION;
-    initArg.minor = FUSE_KERNEL_MINOR_VERSION;
-    initArg.max_readahead = 0;
-    initArg.flags = 0;
-    fuse_->sendRequest(FUSE_INIT, 1, initArg);
+    fuse_->sendInitRequest();
     fuse_->recvResponse();
     // Wait for the mount to complete
     testMount_->drainServerExecutor();

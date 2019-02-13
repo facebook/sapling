@@ -56,12 +56,7 @@ TEST(FuseTest, initMount) {
             ADD_FAILURE() << "startFuse() failed: " << folly::exceptionStr(ew);
           });
 
-  struct fuse_init_in initArg;
-  initArg.major = FUSE_KERNEL_VERSION;
-  initArg.minor = FUSE_KERNEL_MINOR_VERSION;
-  initArg.max_readahead = 0;
-  initArg.flags = 0;
-  auto reqID = fuse->sendRequest(FUSE_INIT, 1, initArg);
+  auto reqID = fuse->sendInitRequest();
   auto response = fuse->recvResponse();
   EXPECT_EQ(reqID, response.header.unique);
   EXPECT_EQ(0, response.header.error);
@@ -147,12 +142,7 @@ TEST(FuseTest, destroyWithInitRace) {
     completionFuture = testMount.getEdenMount()->getFuseCompletionFuture();
 
     // Send the FUSE INIT request.
-    struct fuse_init_in initArg;
-    initArg.major = FUSE_KERNEL_VERSION;
-    initArg.minor = FUSE_KERNEL_MINOR_VERSION;
-    initArg.max_readahead = 0;
-    initArg.flags = 0;
-    auto reqID = fuse->sendRequest(FUSE_INIT, 1, initArg);
+    auto reqID = fuse->sendInitRequest();
 
     // Wait to receive the INIT reply from the FuseChannel code to confirm
     // that it saw the INIT request.
