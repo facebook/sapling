@@ -12,9 +12,6 @@
 #include <folly/Range.h>
 #include <memory>
 #include <optional>
-#ifndef EDEN_WIN
-#include "eden/fs/rocksdb/RocksHandles.h"
-#endif
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/utils/PathFuncs.h"
 
