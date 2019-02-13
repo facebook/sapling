@@ -1140,6 +1140,7 @@ fn default_repo_config() -> RepoConfig {
         pushrebase: Default::default(),
         lfs: Default::default(),
         wireproto_scribe_category: None,
+        post_commit_scribe_category: None,
         hash_validation_percentage: 0,
         readonly: RepoReadOnly::ReadWrite,
         skiplist_index_blobstore_key: None,

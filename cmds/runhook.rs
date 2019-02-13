@@ -175,13 +175,14 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo,
             .parse()
             .expect("shard count must be a positive integer")
     });
-    blobrepo_factory::new_remote_no_postcommit(
+    blobrepo_factory::new_remote(
         logger.clone(),
         &blobstore_args,
         db_address,
         filenode_shards,
         RepositoryId::new(0),
         myrouter_port,
+        None,
     )
     .boxify()
 }

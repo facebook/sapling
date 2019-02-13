@@ -11,6 +11,7 @@ use failure_ext::Error;
 use futures::{Future, IntoFuture};
 use futures_ext::{asynchronize, try_boxfuture, BoxFuture, FutureExt};
 use scribe::ScribeClient;
+use scribe_cxx::ScribeCxxClient;
 use serde_derive::Serialize;
 use serde_json;
 
@@ -93,14 +94,23 @@ where
     C: ScribeClient + Sync + Send + 'static,
 {
     client: Arc<C>,
-    category: String,
+    category: Option<String>,
+}
+
+impl LogToScribe<ScribeCxxClient> {
+    pub fn new_with_default_scribe(category: Option<String>) -> Self {
+        Self {
+            client: Arc::new(ScribeCxxClient::new()),
+            category,
+        }
+    }
 }
 
 impl<C> LogToScribe<C>
 where
     C: ScribeClient + Sync + Send + 'static,
 {
-    pub fn new(client: C, category: String) -> Self {
+    pub fn new(client: C, category: Option<String>) -> Self {
         Self {
             client: Arc::new(client),
             category,
@@ -113,15 +123,20 @@ where
     C: ScribeClient + Sync + Send + 'static,
 {
     fn queue_commit(&self, pc: PostCommitInfo) -> BoxFuture<(), Error> {
-        let pc = try_boxfuture!(serde_json::to_string(&pc));
-        self.client
-            .offer(&self.category, &pc)
-            .into_future()
-            .or_else({
-                cloned!(self.client, self.category);
-                move |_| asynchronize(move || client.blocking_put(&category, &pc))
-            })
-            .from_err()
-            .boxify()
+        match &self.category {
+            Some(category) => {
+                let pc = try_boxfuture!(serde_json::to_string(&pc));
+                self.client
+                    .offer(category, &pc)
+                    .into_future()
+                    .or_else({
+                        cloned!(self.client, category);
+                        move |_| asynchronize(move || client.blocking_put(&category, &pc))
+                    })
+                    .from_err()
+                    .boxify()
+            }
+            None => Ok(()).into_future().boxify(),
+        }
     }
 }

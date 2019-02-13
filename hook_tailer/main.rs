@@ -104,11 +104,16 @@ fn main() -> Result<()> {
         None => None,
     };
 
+    let post_commit_category = matches
+        .value_of("post-commit-category")
+        .map(|category| category.to_string());
+
     let blobrepo = open_blobrepo(
         logger.clone(),
         config.repotype.clone(),
         RepositoryId::new(config.repoid),
         myrouter_port,
+        post_commit_category,
     );
 
     let rc = RequestContext {

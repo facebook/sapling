@@ -559,7 +559,15 @@ fn open_repo_internal<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
-    open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port).boxify()
+    let post_commit_category = parse_post_commit_category(matches);
+    open_blobrepo(
+        logger.clone(),
+        repotype.clone(),
+        repo_id,
+        myrouter_port,
+        post_commit_category,
+    )
+    .boxify()
 }
 
 pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {
@@ -591,6 +599,12 @@ pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
         ),
         None => None,
     }
+}
+
+pub fn parse_post_commit_category<'a>(matches: &ArgMatches<'a>) -> Option<String> {
+    matches
+        .value_of("post-commit-category")
+        .map(|category| category.to_string())
 }
 
 pub fn parse_data_dir<'a>(matches: &ArgMatches<'a>) -> PathBuf {

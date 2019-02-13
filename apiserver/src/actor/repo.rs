@@ -64,7 +64,7 @@ impl MononokeRepo {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = RepositoryId::new(config.repoid);
-        open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port)
+        open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port, None)
             .map(move |repo| {
                 let skiplist_index = {
                     if !with_skiplist {
