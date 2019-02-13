@@ -373,7 +373,6 @@ Test extension help:
        stablerev     provide a way to expose the "stable" commit via a revset
        stat          (no help text available)
        strip         strip changesets and their descendants from history
-       transplant    command to transplant changesets from another branch
        treemanifest
        tweakdefaults
                      user friendly defaults
@@ -385,7 +384,7 @@ Test extension help:
 
 Verify that extension keywords appear in help templates
 
-  $ hg help --config extensions.transplant= templating|grep transplant > /dev/null
+  $ hg help --config extensions.phabdiff= templating|grep phabdiff > /dev/null
 
 Normal help for add
 
