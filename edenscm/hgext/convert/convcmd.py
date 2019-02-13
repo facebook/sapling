@@ -22,7 +22,6 @@ from . import (
     git,
     gnuarch,
     hg as hgconvert,
-    monotone,
     p4,
     subversion,
 )
@@ -40,7 +39,6 @@ darcs_source = darcs.darcs_source
 gnuarch_source = gnuarch.gnuarch_source
 mercurial_sink = hgconvert.mercurial_sink
 mercurial_source = hgconvert.mercurial_source
-monotone_source = monotone.monotone_source
 p4_source = p4.p4_source
 svn_sink = subversion.svn_sink
 svn_source = subversion.svn_source
@@ -95,7 +93,6 @@ source_converters = [
     ("svn", svn_source, "branchsort"),
     ("hg", mercurial_source, "sourcesort"),
     ("darcs", darcs_source, "branchsort"),
-    ("mtn", monotone_source, "branchsort"),
     ("gnuarch", gnuarch_source, "branchsort"),
     ("bzr", bzr_source, "branchsort"),
     ("p4", p4_source, "branchsort"),

@@ -483,7 +483,6 @@ running from a devel copy, not a temp installation
   emptydir does not look like a Subversion repository
   emptydir is not a local Mercurial repository
   emptydir does not look like a darcs repository
-  emptydir does not look like a monotone repository
   emptydir does not look like a GNU Arch repository
   emptydir does not look like a Bazaar repository
   cannot find required "p4" tool
