@@ -3,9 +3,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use failure::Fallible;
-use hyper::client::HttpConnector;
-use hyper::{Body, Client};
-use hyper_tls::HttpsConnector;
+use hyper::{client::HttpConnector, Body, Client};
+use hyper_rustls::HttpsConnector;
 use url::Url;
 
 use crate::builder::Builder;
@@ -15,14 +14,18 @@ pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 /// An HTTP client for the Eden API.
 ///
 /// # Example
-/// ```no_run
+/// ```
 /// use failure::Fallible;
 /// use edenapi::{EdenApi, EdenApiHttpClient};
 ///
 /// fn main() -> Fallible<()> {
+///     let cert = "/var/facebook/credentials/user/x509/user.pem";
+///     let key = "/var/facebook/credentials/user/x509/user.pem";
 ///     let client = EdenApiHttpClient::builder()
 ///         .base_url_str("https://mononoke-api.internal.tfbnw.net")?
-///         .client_creds("/var/facebook/credentials/user/x509/user.pem")?
+///         .repo("fbsource")
+///         .cache_path("/var/cache/hgcache")
+///         .client_creds(cert, key)?
 ///         .build()?;
 ///
 ///     client.health_check()

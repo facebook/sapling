@@ -9,6 +9,7 @@ use bytes::Bytes;
 use failure::{ensure, Error, Fallible};
 use futures::{stream::futures_unordered, Future, IntoFuture, Stream};
 use hyper::Chunk;
+use log::debug;
 use tokio::runtime::Runtime;
 use url::Url;
 
@@ -35,6 +36,7 @@ impl EdenApi for EdenApiHttpClient {
         let url = self.base_url.join(paths::HEALTH_CHECK)?.to_uri();
 
         let fut = self.client.get(url).map_err(Error::from).and_then(|res| {
+            debug!("Received response: {:#?}", &res);
             let status = res.status();
             res.into_body()
                 .concat2()

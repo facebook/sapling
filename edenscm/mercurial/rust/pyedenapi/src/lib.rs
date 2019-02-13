@@ -41,7 +41,7 @@ py_class!(class PyEdenApiHttpClient |py| {
         if let Some((cert, key)) = client_creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
             let key = local_bytes_to_path(key.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-            builder = builder.client_creds2(cert, key).map_pyerr::<exc::RuntimeError>(py)?;
+            builder = builder.client_creds(cert, key).map_pyerr::<exc::RuntimeError>(py)?;
         }
 
         let client = builder.base_url_str(base_url)

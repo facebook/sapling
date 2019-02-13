@@ -2,26 +2,24 @@
 
 use std::{
     fs::{self, File},
-    io::Read,
+    io::BufReader,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
-use failure::{bail, ensure, Fallible};
-use hyper::client::HttpConnector;
-use hyper::{Body, Client};
-use hyper_tls::HttpsConnector;
-use native_tls::{Identity, TlsConnector};
-use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
-use same_file::is_same_file;
+use failure::{bail, ensure, format_err, Fallible};
+use hyper::{client::HttpConnector, Body, Client};
+use hyper_rustls::HttpsConnector;
+use rustls::{internal::pemfile, Certificate, ClientConfig, PrivateKey};
 use url::Url;
+use webpki_roots::TLS_SERVER_ROOTS;
 
-use crate::client::EdenApiHttpClient;
+use crate::client::{EdenApiHttpClient, HyperClient};
 
 #[derive(Default)]
 pub struct Builder {
     base_url: Option<Url>,
-    client_id: Option<Identity>,
+    creds: Option<ClientCreds>,
     repo: Option<String>,
     cache_path: Option<PathBuf>,
 }
@@ -44,25 +42,12 @@ impl Builder {
         Ok(self.base_url(url))
     }
 
-    /// Convenience function for setting client credentials when the certificate and
-    /// private key are in the same PEM file.
-    pub fn client_creds(self, cert_and_key: impl AsRef<Path>) -> Fallible<Self> {
-        self.client_creds2(cert_and_key.as_ref(), cert_and_key.as_ref())
-    }
-
     /// Set client credentials by providing paths to a PEM encoded X.509 client certificate
     /// and a PEM encoded private key. These credentials are used for TLS mutual authentication;
     /// if not set, mutual authentication will not be used.
-    pub fn client_creds2(self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
-        Ok(self.client_id(Some(read_identity(cert, key)?)))
-    }
-
-    /// Directly set the client credentials with a native_tls::Identity rather than
-    /// parsing them from a PEM file. If None is specified, TLS mutual authentication will
-    /// be disabled.
-    pub fn client_id(mut self, id: Option<Identity>) -> Self {
-        self.client_id = id;
-        self
+    pub fn client_creds(mut self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
+        self.creds = Some(ClientCreds::new(cert, key)?);
+        Ok(self)
     }
 
     /// Set the name of the current repo.
@@ -100,7 +85,7 @@ impl Builder {
             &cache_path
         );
 
-        let hyper_client = build_hyper_client(self.client_id)?;
+        let hyper_client = build_hyper_client(self.creds)?;
 
         let client = EdenApiHttpClient {
             client: Arc::new(hyper_client),
@@ -116,56 +101,70 @@ impl Builder {
     }
 }
 
-fn read_bytes(path: impl AsRef<Path>) -> Fallible<Vec<u8>> {
-    let mut buf = Vec::new();
-    File::open(path)?.read_to_end(&mut buf)?;
-    Ok(buf)
+/// Client credentials for TLS mutual authentication, including an X.509 client
+/// certificate chain and an RSA or ECDSA private key.
+struct ClientCreds {
+    cert_chain: Vec<Certificate>,
+    key: PrivateKey,
 }
 
-/// Read an X.509 certificate and private key from PEM files and
-/// convert them to a native_tls::Identity. If both paths refer
-/// to the same file, it is only read once.
-fn read_identity(cert_path: impl AsRef<Path>, key_path: impl AsRef<Path>) -> Fallible<Identity> {
-    let cert_pem = read_bytes(&cert_path)?;
-    let cert = X509::from_pem(&cert_pem)?;
-
-    // The certificate and key might be in same PEM file, in which
-    // case, don't duplicate the read.
-    let key = if is_same_file(&cert_path, &key_path)? {
-        PKey::private_key_from_pem(&cert_pem)?
-    } else {
-        let key_pem = read_bytes(&key_path)?;
-        PKey::private_key_from_pem(&key_pem)?
-    };
-
-    // Build a DER-encoded PKCS#12 archive, since that's what native_tls accepts.
-    // The password is intentionally set to the empty string because the archive
-    // will be immediately read by the constructor for native_tls::Identity.
-    let password = "";
-    let pkcs12_der_bytes = Pkcs12::builder()
-        .build(password, "client certificate and key", &key, &cert)?
-        .to_der()?;
-
-    Ok(Identity::from_pkcs12(&pkcs12_der_bytes, &password)?)
-}
-
-/// Build a hyper::Client that supports HTTPS. Optionally takes a client identity
-/// (certificate + private key) which, if provided, will be used for TLS mutual authentication.
-fn build_hyper_client(
-    client_id: Option<Identity>,
-) -> Fallible<Client<HttpsConnector<HttpConnector>, Body>> {
-    let mut builder = TlsConnector::builder();
-    if let Some(id) = client_id {
-        let _ = builder.identity(id);
+impl ClientCreds {
+    /// Read client credentials from the specified PEM files.
+    fn new(cert_pem: impl AsRef<Path>, key_pem: impl AsRef<Path>) -> Fallible<Self> {
+        Ok(Self {
+            cert_chain: read_cert_chain(cert_pem)?,
+            key: read_key(key_pem)?,
+        })
     }
-    let tls = builder.build()?;
+}
 
+/// Read and parse a PEM-encoded X.509 client certificate chain.
+fn read_cert_chain(path: impl AsRef<Path>) -> Fallible<Vec<Certificate>> {
+    let mut reader = BufReader::new(File::open(path.as_ref())?);
+    pemfile::certs(&mut reader).map_err(|()| {
+        format_err!(
+            "failed to read certificates from PEM file: {:?}",
+            path.as_ref()
+        )
+    })
+}
+
+/// Read and parse a PEM-encoded RSA or ECDSA private key.
+fn read_key(path: impl AsRef<Path>) -> Fallible<PrivateKey> {
+    let mut reader = BufReader::new(File::open(path.as_ref())?);
+    pemfile::pkcs8_private_keys(&mut reader)
+        .and_then(|mut keys| keys.pop().ok_or(()))
+        .map_err(|()| {
+            format_err!(
+                "failed to read private key from PEM file: {:?}",
+                path.as_ref()
+            )
+        })
+}
+
+/// Set up a Hyper client that configured to support HTTP/2 over TLS (with ALPN).
+/// Optionally takes client credentials to be used for TLS mutual authentication.
+fn build_hyper_client(creds: Option<ClientCreds>) -> Fallible<HyperClient> {
     let num_dns_threads = 1;
     let mut http = HttpConnector::new(num_dns_threads);
+
+    // Allow URLs to begin with "https://" since we intend to use TLS.
     http.enforce_http(false);
 
-    let https = HttpsConnector::from((http, tls));
-    let client = Client::builder().build::<_, Body>(https);
+    let mut config = ClientConfig::new();
+    config
+        .root_store
+        .add_server_trust_anchors(&TLS_SERVER_ROOTS);
+    if let Some(creds) = creds {
+        config.set_single_client_cert(creds.cert_chain, creds.key);
+    }
 
+    // Tell the server to use HTTP/2 during protocol negotiation.
+    config.alpn_protocols.push("h2".to_string());
+
+    let connector = HttpsConnector::from((http, config));
+    let client = Client::builder()
+        .http2_only(true)
+        .build::<_, Body>(connector);
     Ok(client)
 }
