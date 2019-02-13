@@ -13,6 +13,8 @@ The following things are tested elsewhere and are therefore omitted:
   > allowbundle1=True
   > EOF
 
+  $ setconfig ui.allowemptycommit=1
+
 Set up the repo
 
   $ hg init test
@@ -27,12 +29,9 @@ Set up the repo
   $ hg bookmark something
   $ hg bookmark -r0 anotherthing
   $ echo another > foo
-  $ hg branch stable
-  marked working directory as branch stable
-  (branches are permanent and global, did you want a bookmark?)
+  $ hg bookmark stable
   $ hg ci -Ambranch
-  $ hg branch unstable
-  marked working directory as branch unstable
+  $ hg bookmark unstable
   >>> open('msg', 'wb').write('branch commit with null character: \0\n')
   $ hg ci -l msg
   $ rm msg
@@ -50,9 +49,9 @@ Set up the repo
   $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg log -G --template '{rev}:{node|short} {desc}\n'
-  @  3:cad8025a2e87 branch commit with null character: \x00 (esc)
+  @  3:09cdda9ba925 branch commit with null character: \x00 (esc)
   |
-  o  2:1d22e65f027e branch
+  o  2:f1550bad5957 branch
   |
   o  1:a4f92ed23982 Added tag 1.0 for changeset 2ef0ac749a14
   |
@@ -74,9 +73,9 @@ Logs and changes
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>[unstable] branch commit with null character: </title>
-    <id>http://*:$HGPORT/#changeset-cad8025a2e87f88c06259790adfa15acb4080123</id> (glob)
-    <link href="http://*:$HGPORT/rev/cad8025a2e87"/> (glob)
+    <title>[default] branch commit with null character: </title>
+    <id>http://*/#changeset-09cdda9ba9259039f6c79df097ffae3c8fc4bac8</id> (glob)
+    <link href="http://*/rev/09cdda9ba925"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -87,15 +86,15 @@ Logs and changes
      <table xmlns="http://www.w3.org/1999/xhtml">
       <tr>
        <th style="text-align:left;">changeset</th>
-       <td>cad8025a2e87</td>
+       <td>09cdda9ba925</td>
       </tr>
       <tr>
        <th style="text-align:left;">branch</th>
-       <td>unstable</td>
+       <td>default</td>
       </tr>
       <tr>
        <th style="text-align:left;">bookmark</th>
-       <td>something</td>
+       <td>unstable</td>
       </tr>
       <tr>
        <th style="text-align:left;">tag</th>
@@ -117,9 +116,9 @@ Logs and changes
     </content>
    </entry>
    <entry>
-    <title>[stable] branch</title>
-    <id>http://*:$HGPORT/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
-    <link href="http://*:$HGPORT/rev/1d22e65f027e"/> (glob)
+    <title>branch</title>
+    <id>http://*/#changeset-f1550bad59574fb7fdd810a04904b273b085c29f</id> (glob)
+    <link href="http://*/rev/f1550bad5957"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -130,15 +129,15 @@ Logs and changes
      <table xmlns="http://www.w3.org/1999/xhtml">
       <tr>
        <th style="text-align:left;">changeset</th>
-       <td>1d22e65f027e</td>
+       <td>f1550bad5957</td>
       </tr>
       <tr>
        <th style="text-align:left;">branch</th>
-       <td>stable</td>
+       <td></td>
       </tr>
       <tr>
        <th style="text-align:left;">bookmark</th>
-       <td></td>
+       <td>stable</td>
       </tr>
       <tr>
        <th style="text-align:left;">tag</th>
@@ -160,7 +159,7 @@ Logs and changes
     </content>
    </entry>
    <entry>
-    <title>[default] Added tag 1.0 for changeset 2ef0ac749a14</title>
+    <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
     <id>http://*:$HGPORT/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
     <link href="http://*:$HGPORT/rev/a4f92ed23982"/> (glob)
     <author>
@@ -177,11 +176,11 @@ Logs and changes
       </tr>
       <tr>
        <th style="text-align:left;">branch</th>
-       <td>default</td>
+       <td></td>
       </tr>
       <tr>
        <th style="text-align:left;">bookmark</th>
-       <td></td>
+       <td>something</td>
       </tr>
       <tr>
        <th style="text-align:left;">tag</th>
@@ -259,23 +258,23 @@ Logs and changes
       <title>test Changelog</title>
       <description>test Changelog</description>
       <item>
-      <title>[unstable] branch commit with null character: </title>
-      <guid isPermaLink="true">http://*:$HGPORT/rev/cad8025a2e87</guid> (glob)
-      <link>http://*:$HGPORT/rev/cad8025a2e87</link> (glob)
+      <title>[default] branch commit with null character: </title>
+      <guid isPermaLink="true">http://*/rev/09cdda9ba925</guid> (glob)
+      <link>http://*/rev/09cdda9ba925</link> (glob)
       <description>
       <![CDATA[
           <table>
               <tr>
                   <th style="text-align:left;">changeset</th>
-                  <td>cad8025a2e87</td>
+                  <td>09cdda9ba925</td>
               </tr>
               <tr>
                   <th style="text-align:left;">branch</th>
-                  <td>unstable</td>
+                  <td>default</td>
               </tr>
               <tr>
                   <th style="text-align:left;">bookmark</th>
-                  <td>something</td>
+                  <td>unstable</td>
               </tr>
               <tr>
                   <th style="text-align:left;">tag</th>
@@ -300,23 +299,23 @@ Logs and changes
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
   </item>
   <item>
-      <title>[stable] branch</title>
-      <guid isPermaLink="true">http://*:$HGPORT/rev/1d22e65f027e</guid> (glob)
-      <link>http://*:$HGPORT/rev/1d22e65f027e</link> (glob)
+      <title>branch</title>
+      <guid isPermaLink="true">http://*/rev/f1550bad5957</guid> (glob)
+      <link>http://*/rev/f1550bad5957</link> (glob)
       <description>
       <![CDATA[
           <table>
               <tr>
                   <th style="text-align:left;">changeset</th>
-                  <td>1d22e65f027e</td>
+                  <td>f1550bad5957</td>
               </tr>
               <tr>
                   <th style="text-align:left;">branch</th>
-                  <td>stable</td>
+                  <td></td>
               </tr>
               <tr>
                   <th style="text-align:left;">bookmark</th>
-                  <td></td>
+                  <td>stable</td>
               </tr>
               <tr>
                   <th style="text-align:left;">tag</th>
@@ -341,7 +340,7 @@ Logs and changes
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
   </item>
   <item>
-      <title>[default] Added tag 1.0 for changeset 2ef0ac749a14</title>
+      <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
       <guid isPermaLink="true">http://*:$HGPORT/rev/a4f92ed23982</guid> (glob)
       <link>http://*:$HGPORT/rev/a4f92ed23982</link> (glob)
       <description>
@@ -353,11 +352,11 @@ Logs and changes
               </tr>
               <tr>
                   <th style="text-align:left;">branch</th>
-                  <td>default</td>
+                  <td></td>
               </tr>
               <tr>
                   <th style="text-align:left;">bookmark</th>
-                  <td></td>
+                  <td>something</td>
               </tr>
               <tr>
                   <th style="text-align:left;">tag</th>
@@ -438,7 +437,7 @@ Logs and changes
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>[default] Added tag 1.0 for changeset 2ef0ac749a14</title>
+    <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
     <id>http://*:$HGPORT/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
     <link href="http://*:$HGPORT/rev/a4f92ed23982"/> (glob)
     <author>
@@ -455,11 +454,11 @@ Logs and changes
       </tr>
       <tr>
        <th style="text-align:left;">branch</th>
-       <td>default</td>
+       <td></td>
       </tr>
       <tr>
        <th style="text-align:left;">bookmark</th>
-       <td></td>
+       <td>something</td>
       </tr>
       <tr>
        <th style="text-align:left;">tag</th>
@@ -537,7 +536,7 @@ Logs and changes
       <title>test Changelog</title>
       <description>test Changelog</description>
       <item>
-      <title>[default] Added tag 1.0 for changeset 2ef0ac749a14</title>
+      <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
       <guid isPermaLink="true">http://*:$HGPORT/rev/a4f92ed23982</guid> (glob)
       <link>http://*:$HGPORT/rev/a4f92ed23982</link> (glob)
       <description>
@@ -549,11 +548,11 @@ Logs and changes
               </tr>
               <tr>
                   <th style="text-align:left;">branch</th>
-                  <td>default</td>
+                  <td></td>
               </tr>
               <tr>
                   <th style="text-align:left;">bookmark</th>
-                  <td></td>
+                  <td>something</td>
               </tr>
               <tr>
                   <th style="text-align:left;">tag</th>
@@ -777,16 +776,16 @@ Logs and changes
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/cad8025a2e87">branch commit with null character: </a>
-     <span class="phase">draft</span> <span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> 
+     <a href="/rev/09cdda9ba925">branch commit with null character: </a>
+     <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">unstable</span> 
     </td>
    </tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/1d22e65f027e">branch</a>
-     <span class="phase">draft</span> <span class="branchhead">stable</span> 
+     <a href="/rev/f1550bad5957">branch</a>
+     <span class="phase">draft</span> <span class="tag">stable</span> 
     </td>
    </tr>
    <tr>
@@ -794,7 +793,7 @@ Logs and changes
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a>
-     <span class="phase">draft</span> <span class="branchhead">default</span> 
+     <span class="phase">draft</span> <span class="tag">something</span> 
     </td>
    </tr>
    <tr>
@@ -1087,16 +1086,16 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "tip^"
   # Mode revset expression search
   
-  changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  changeset:   f1550bad59574fb7fdd810a04904b273b085c29f
   revision:    2
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     branch
-  branch:      stable
+  bookmark:    stable
   
   
   $ get-with-headers.py $LOCALIP:$HGPORT 'log?rev=last(all(),2)^&style=raw'
@@ -1104,23 +1103,23 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "last(all(),2)^"
   # Mode revset expression search
   
-  changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  changeset:   f1550bad59574fb7fdd810a04904b273b085c29f
   revision:    2
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     branch
-  branch:      stable
+  bookmark:    stable
   
   changeset:   a4f92ed23982be056b9852de5dfe873eaac7f0de
   revision:    1
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     Added tag 1.0 for changeset 2ef0ac749a14
-  branch:      default
+  bookmark:    something
   
   
   $ get-with-headers.py $LOCALIP:$HGPORT 'log?rev=last(all(,2)^&style=raw'
@@ -1128,7 +1127,7 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "last(all(,2)^"
   # Mode literal keyword search
   
@@ -1138,7 +1137,7 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "last(al(),2)^"
   # Mode literal keyword search
   
@@ -1148,7 +1147,7 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "bookmark(anotherthing)"
   # Mode revset expression search
   
@@ -1166,7 +1165,7 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "bookmark(abc)"
   # Mode literal keyword search
   
@@ -1176,7 +1175,7 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "deadbeef:"
   # Mode literal keyword search
   
@@ -1187,32 +1186,32 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "user("test")"
   # Mode revset expression search
   
-  changeset:   cad8025a2e87f88c06259790adfa15acb4080123
+  changeset:   09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   revision:    3
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     branch commit with null character: \x00 (esc)
-  branch:      unstable
+  branch:      default
   tag:         tip
-  bookmark:    something
+  bookmark:    unstable
   
-  changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  changeset:   f1550bad59574fb7fdd810a04904b273b085c29f
   revision:    2
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     branch
-  branch:      stable
+  bookmark:    stable
   
   changeset:   a4f92ed23982be056b9852de5dfe873eaac7f0de
   revision:    1
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     Added tag 1.0 for changeset 2ef0ac749a14
-  branch:      default
+  bookmark:    something
   
   changeset:   2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   revision:    0
@@ -1228,7 +1227,7 @@ Search with revset syntax
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "user("re:test")"
   # Mode literal keyword search
   
@@ -1315,7 +1314,7 @@ File-related
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    view foo @ 1:<a href="/rev/a4f92ed23982">a4f92ed23982</a>
-   <span class="phase">draft</span> <span class="branchhead">default</span> 
+   <span class="phase">draft</span> <span class="tag">something</span> 
   </h3>
   
   
@@ -1343,7 +1342,7 @@ File-related
   </tr>
   <tr>
    <th class="author">children</th>
-   <td class="author"><a href="/file/1d22e65f027e/foo">1d22e65f027e</a> </td>
+   <td class="author"><a href="/file/f1550bad5957/foo">f1550bad5957</a> </td>
   </tr>
   </table>
   
@@ -1410,7 +1409,7 @@ File-related
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
   <script type="text/javascript" src="/static/mercurial.js"></script>
   
-  <title>test: 1d22e65f027e foo</title>
+  <title>test: f1550bad5957 foo</title>
   </head>
   <body>
   
@@ -1448,8 +1447,8 @@ File-related
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   view foo @ 2:<a href="/rev/1d22e65f027e">1d22e65f027e</a>
-   <span class="phase">draft</span> <span class="branchhead">stable</span> 
+   view foo @ 2:<a href="/rev/f1550bad5957">f1550bad5957</a>
+   <span class="phase">draft</span> <span class="tag">stable</span> 
   </h3>
   
   
@@ -1510,18 +1509,18 @@ Overviews
   $ get-with-headers.py $LOCALIP:$HGPORT 'raw-tags'
   200 Script output follows
   
-  tip	cad8025a2e87f88c06259790adfa15acb4080123
+  tip	09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   1.0	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   $ get-with-headers.py $LOCALIP:$HGPORT 'raw-branches'
   200 Script output follows
   
-  unstable	cad8025a2e87f88c06259790adfa15acb4080123	open
-  stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	inactive
-  default	a4f92ed23982be056b9852de5dfe873eaac7f0de	inactive
+  default	09cdda9ba9259039f6c79df097ffae3c8fc4bac8	open
   $ get-with-headers.py $LOCALIP:$HGPORT 'raw-bookmarks'
   200 Script output follows
   
-  something	cad8025a2e87f88c06259790adfa15acb4080123
+  unstable	09cdda9ba9259039f6c79df097ffae3c8fc4bac8
+  stable	f1550bad59574fb7fdd810a04904b273b085c29f
+  something	a4f92ed23982be056b9852de5dfe873eaac7f0de
   anotherthing	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   $ get-with-headers.py $LOCALIP:$HGPORT 'summary/?style=gitweb'
   200 Script output follows
@@ -1585,28 +1584,28 @@ Overviews
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
-  <a class="list" href="/rev/cad8025a2e87?style=gitweb">
+  <a class="list" href="/rev/09cdda9ba925?style=gitweb">
   <b>branch commit with null character: </b>
-  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="unstable">unstable</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
-  <a href="/rev/cad8025a2e87?style=gitweb">changeset</a> |
-  <a href="/file/cad8025a2e87?style=gitweb">files</a>
+  <a href="/rev/09cdda9ba925?style=gitweb">changeset</a> |
+  <a href="/file/09cdda9ba925?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity1">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
-  <a class="list" href="/rev/1d22e65f027e?style=gitweb">
+  <a class="list" href="/rev/f1550bad5957?style=gitweb">
   <b>branch</b>
-  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="stable">stable</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="bookmarktag" title="stable">stable</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
-  <a href="/rev/1d22e65f027e?style=gitweb">changeset</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a>
+  <a href="/rev/f1550bad5957?style=gitweb">changeset</a> |
+  <a href="/file/f1550bad5957?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity0">
@@ -1615,7 +1614,7 @@ Overviews
   <td>
   <a class="list" href="/rev/a4f92ed23982?style=gitweb">
   <b>Added tag 1.0 for changeset 2ef0ac749a14</b>
-  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="bookmarktag" title="something">something</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
@@ -1660,11 +1659,29 @@ Overviews
   
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
+  <td><a class="list" href="/rev/unstable?style=gitweb"><b>unstable</b></a></td>
+  <td class="link">
+  <a href="/rev/09cdda9ba925?style=gitweb">changeset</a> |
+  <a href="/log/09cdda9ba925?style=gitweb">changelog</a> |
+  <a href="/file/09cdda9ba925?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="parity1">
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
+  <td><a class="list" href="/rev/stable?style=gitweb"><b>stable</b></a></td>
+  <td class="link">
+  <a href="/rev/f1550bad5957?style=gitweb">changeset</a> |
+  <a href="/log/f1550bad5957?style=gitweb">changelog</a> |
+  <a href="/file/f1550bad5957?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="parity0">
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/rev/something?style=gitweb"><b>something</b></a></td>
   <td class="link">
-  <a href="/rev/cad8025a2e87?style=gitweb">changeset</a> |
-  <a href="/log/cad8025a2e87?style=gitweb">changelog</a> |
-  <a href="/file/cad8025a2e87?style=gitweb">files</a>
+  <a href="/rev/a4f92ed23982?style=gitweb">changeset</a> |
+  <a href="/log/a4f92ed23982?style=gitweb">changelog</a> |
+  <a href="/file/a4f92ed23982?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity1">
@@ -1684,29 +1701,11 @@ Overviews
   
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td class="open"><a class="list" href="/shortlog/unstable?style=gitweb"><b>unstable</b></a></td>
+  <td class="open"><a class="list" href="/shortlog/default?style=gitweb"><b>default</b></a></td>
   <td class="link">
-  <a href="/changeset/cad8025a2e87?style=gitweb">changeset</a> |
-  <a href="/log/cad8025a2e87?style=gitweb">changelog</a> |
-  <a href="/file/cad8025a2e87?style=gitweb">files</a>
-  </td>
-  </tr>
-  <tr class="parity1">
-  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td class="inactive"><a class="list" href="/shortlog/stable?style=gitweb"><b>stable</b></a></td>
-  <td class="link">
-  <a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> |
-  <a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a>
-  </td>
-  </tr>
-  <tr class="parity0">
-  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td class="inactive"><a class="list" href="/shortlog/default?style=gitweb"><b>default</b></a></td>
-  <td class="link">
-  <a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> |
-  <a href="/log/a4f92ed23982?style=gitweb">changelog</a> |
-  <a href="/file/a4f92ed23982?style=gitweb">files</a>
+  <a href="/changeset/09cdda9ba925?style=gitweb">changeset</a> |
+  <a href="/log/09cdda9ba925?style=gitweb">changelog</a> |
+  <a href="/file/09cdda9ba925?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="light">
@@ -1785,25 +1784,25 @@ Overviews
   <div id="wrapper">
   <ul id="nodebgs"></ul>
   <canvas id="graph"></canvas>
-  <ul id="graphnodes"><li data-node="cad8025a2e87">
+  <ul id="graphnodes"><li data-node="09cdda9ba925">
    <span class="desc">
-    <a class="list" href="/rev/cad8025a2e87?style=gitweb"><b>branch commit with null character: </b></a>
+    <a class="list" href="/rev/09cdda9ba925?style=gitweb"><b>branch commit with null character: </b></a>
    </span>
-   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="unstable">unstable</span> </span>
    <span class="info">1970-01-01, by test</span>
   </li>
-  <li data-node="1d22e65f027e">
+  <li data-node="f1550bad5957">
    <span class="desc">
-    <a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>branch</b></a>
+    <a class="list" href="/rev/f1550bad5957?style=gitweb"><b>branch</b></a>
    </span>
-   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="stable">stable</span> </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="bookmarktag" title="stable">stable</span> </span>
    <span class="info">1970-01-01, by test</span>
   </li>
   <li data-node="a4f92ed23982">
    <span class="desc">
     <a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b></a>
    </span>
-   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="bookmarktag" title="something">something</span> </span>
    <span class="info">1970-01-01, by test</span>
   </li>
   <li data-node="2ef0ac749a14">
@@ -1817,7 +1816,7 @@ Overviews
   </div>
   
   <script>
-  var data = [{"edges": [[0, 0, 1, 3, "FF0000"]], "node": "cad8025a2e87", "vertex": [0, 1]}, {"edges": [[0, 0, 1, 3, ""]], "node": "1d22e65f027e", "vertex": [0, 1]}, {"edges": [[0, 0, 1, 3, ""]], "node": "a4f92ed23982", "vertex": [0, 1]}, {"edges": [], "node": "2ef0ac749a14", "vertex": [0, 1]}];
+  var data = [{"edges": [[0, 0, 1, 3, ""]], "node": "09cdda9ba925", "vertex": [0, 1]}, {"edges": [[0, 0, 1, 3, ""]], "node": "f1550bad5957", "vertex": [0, 1]}, {"edges": [[0, 0, 1, 3, ""]], "node": "a4f92ed23982", "vertex": [0, 1]}, {"edges": [], "node": "2ef0ac749a14", "vertex": [0, 1]}];
   var graph = new Graph();
   graph.scale(39);
   
@@ -1837,7 +1836,7 @@ Overviews
   
   <script type="text/javascript">
       ajaxScrollInit(
-              '/graph/%next%?graphtop=cad8025a2e87f88c06259790adfa15acb4080123&style=gitweb',
+              '/graph/%next%?graphtop=09cdda9ba9259039f6c79df097ffae3c8fc4bac8&style=gitweb',
               '', <!-- NEXTHASH
               function (htmlText, previousVal) {
                   var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);
@@ -1868,25 +1867,25 @@ raw graph
   
   
   # HG graph
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Rows shown 4
   
-  changeset:   cad8025a2e87
+  changeset:   09cdda9ba925
   user:        test
   date:        1970-01-01
   summary:     branch commit with null character: \x00 (esc)
-  branch:      unstable
+  branch:      default
   tag:         tip
-  bookmark:    something
+  bookmark:    unstable
   
   node:        (0, 0) (color 1)
   edge:        (0, 0) -> (0, 1) (color 1)
   
-  changeset:   1d22e65f027e
+  changeset:   f1550bad5957
   user:        test
   date:        1970-01-01
   summary:     branch
-  branch:      stable
+  bookmark:    stable
   
   node:        (0, 1) (color 1)
   edge:        (0, 1) -> (0, 2) (color 1)
@@ -1895,7 +1894,7 @@ raw graph
   user:        test
   date:        1970-01-01
   summary:     Added tag 1.0 for changeset 2ef0ac749a14
-  branch:      default
+  bookmark:    something
   
   node:        (0, 2) (color 1)
   edge:        (0, 2) -> (0, 3) (color 1)
@@ -1923,7 +1922,7 @@ heads
   $ get-with-headers.py $LOCALIP:$HGPORT '?cmd=heads'
   200 Script output follows
   
-  cad8025a2e87f88c06259790adfa15acb4080123
+  09cdda9ba9259039f6c79df097ffae3c8fc4bac8
 
 branches
 
@@ -1938,11 +1937,11 @@ changegroup
   $ get-with-headers.py $LOCALIP:$HGPORT '?cmd=changegroup&roots=0000000000000000000000000000000000000000'
   200 Script output follows
   
-  x\x9c\xbd\x94MHTQ\x14\xc7'+\x9d\xc66\x81\x89P\xc1\xa3\x14\xcct\xba\xef\xbe\xfb\xde\xbb\xcfr0\xb3"\x02\x11[%\x98\xdcO\xa7\xd2\x19\x98y\xd2\x07h"\x96\xa0e\xda\xa6lUY-\xca\x08\xa2\x82\x16\x96\xd1\xa2\xf0#\xc8\x95\x1b\xdd$!m*"\xc8\x82\xea\xbe\x9c\x01\x85\xc9\x996\x1d\xf8\xc1\xe3~\x9d\xff9\xef\x7f\xaf\xcf\xe7\xbb\x19\xfc4\xec^\xcb\x9b\xfbz\xa6\xbe\xb3\x90_\xef/\x8d\x9e\xad\xbe\xe4\xcb0\xd2\xec\xad\x12X:\xc8\x12\x12\xd9:\x95\xba	\x1cG\xb7$\xc5\xc44\x1c(\x1d\x03\x03\xdb\x84\x0cK#\xe0\x8a\xb8\x1b\x00\x1a\x08p\xb2SF\xa3\x01\x8f\x00%q\xa1Ny{k!8\xe5t>[{\xe2j\xddl\xc3\xcf\xee\xd0\xddW\x9ff3U\x9djobj\xbb\x87E\x88\x05l\x001\x12\x18\x13\xc6 \xb7(\xe3\x02a\x80\x81\xcel.u\x9b\x1b\x8c\x91\x80Z\x0c\x15\x15 (esc)
-  \x7f0\xdc\xe4\x92\xa6\xb87\x16\xf2\xcaT\x14\xef\xe1\\pM\r (no-eol) (esc)
-  kz\x10h2\x1a\xd3X\x98D\x9aD\\\xb8\x1a\x14\x12\x10f#\x87\xe8H\xad\x1d\xd9\xb2\xf5}cV{}\xf6:\xb3\xbd\xad\xaf\xd5?\xb9\xe3\xf6\xd4\xcf\x15\x84.\x8bT{\x97\x16\xa4Z\xeaX\x10\xabL\xc8\x81DJ\xc8\x18\x00\xccq\x80A-j2j	\x83\x1b\x02\x03O|PQ\xae\xc8W\x9d\xd7h\x8cDX\xb8<\xee\x12\xda,\xfe\xfc\x005\xb3K\xc1\x14\xd9\x8b\xb3^C\xc7\xa6\xb3\xea\x83\xdd\xdf.d\x17]\xe9\xbf\xff}\xe3\xf0#\xff\xaam+\x88Z\x16\xa9\xf6&tT+\xf2\x96\xe8h\x8d$\x94\xa8\xf1}\x8aC\x8a\xc2\xc59\x8dE[Z\x8e\xb9\xda\xc9cnX\x8b\xb467{\xad\x8e\x11\xe6\x8aX\xb9\x96L52\xbf\xb0\xff\xe3\x81M\x9fk\x07\xf3\x7f\xf4\x1c\xbe\xbc\x80s\xea^\x7fY\xc1\xca\xcb"\x8d\xbb\x1a\x16]\xea\x83\x82Cb8:$\x80Bd\x02\x08\x90!\x88P^\x12\x88B\xdba:\xa6\x0e\xe0<\xf0O\x8bU\x82\x81\xe3wr\xb2\xba\xe6{&\xcaNL\xceutln\xfb\xdc\xb6{,\xd3\x82\xd28IO\xb8\xd7G\x0cF!\x16\x86\x8d\x11@\x02A\xcb\xc2\x94Q\x04L\x01\x00u8\x86&0\xb0EtO\xd0\xc5\x9c#\xb4'\xef`\xc9\xaf\xd2\xd1\xf5\x83\xab\x9f<\x1e\x8fT\x84:R\x89L%\xe8/\xee \x8a>E\x99\xd7\x1dlZ\x08B\x1dc\xf5\\0\x83\x01B\x95Im\x1d[\x92s*\x99`L\xd7\x894e qfn\xb2 (esc)
-  \xa5mh\xbc\xf8\xdd\xa9\xca\x9a*\xd9;^y\xd4\xf7t\xbah\xf5\xf9\x1b\x99\xfe\xe94\xcd*[zu\x05\x92\xa6ML\x82!D\x16"\xc0\x01\x90Y\xd2\x96\x08a\xe9\xdd\xfa\xa4\xb6\xc4#\xa6\xbexpjh\xa0$\xb7\xb0V\xdb\xfba\xbef\xee\xe1\xe9\x17\xbd\xfd3\x99JKc\xc25\x89+\xeaE\xce\xffK\x17>\xc7\xb7\x16tE^\x8e\xde\x0bu\x17Dg\x9e\xbf\x99\xd8\xf0\xa01\xd3\xbc+\xbc\x13k\x14~\x12\x89\xbaa\x11K\x96\xe5\xfb\r (no-eol) (esc)
-  \x95)\xbe\xf6 (no-eol) (esc)
+  x\x9c\xbdT]HTA\x14^\xd2\xb2\xd6\x1e (esc)
+  "\x82z\xb8\x84B\x89ns\xe7\xce\xbdw\xc6L\xcc\xa2\xf0\xc5\xc4\x88(\xa8\x98_\xd7\xd4]\xd8\xbd\xd1\x0fH"\x9a`\x94\xdaKYD\x96\x11\xf4\x1fBEAe?P\xa4\x06\xf9$\x81\xbe\xe4\x83\xf4\x92\x12\x05\x12esi\x172Vw{\xe9\xc0\xc7\x1df\xce\x99\xf3\x9ds\xbf9\x81@\xe0Jh\xf2\x96w~\xc5\xf8\xd7c{\x9b\xf3DOga\xf4\xf8\xd6\x8e@\x86\x96&\xb6\\bE\x90#\x15rM\xa6L\x1b\x10b:\x8aaj[\x04*ba\xe0\xda\x90ce\x05=\x19\xf7\x82\xc0\x00AA7\xa8h4\xe8#\xc8h\\\xea[\xde_\x9d\x0e\r (no-eol) (esc)
+  \x93\xe6\xa7\x0b\xeb\xceU\x8f\xed\xfb\xd9Vz\xe3\xf5\xe4X\xa6\xacS\xc5&\x8e\xd6\xfbp(u\x80\x0b F\x12c\xca9\x14\x0e\xe3B"\x0c00\xb9+\x94\xe9 (esc)
+  \x8bs\x1a\xd4\xcePc\x93\xc6\xe2P\xb8\xc6\xa35q\x7f\xaf\xd4/Sc\xddf!\xa40\xf4\xb6a\x86\x80\xa1\xa21\x83\x87i\xa4F\xc6\xa5g@\xa9\x00\xe5."\xd4D\xda\xf7\xe6\xd4\xae\xdc\xdb{v\xefx\xf8cdYOEv_\xfc^\xeb\x8bK\xf3\x10\x9de\xa9b\xff,H\xb7\x948\x10\xebL\x88@\xaa\x14\xe4\x1c\x00N\x08\xb0\x98\xc3l\xce\x1ci	Kb\x90,\xa8X#\xdbo\xb7\xfen\xd4\xe0\x1a\x8bX\x8cFxX\xaf:\x97\x0c}\xb8p=\xbf\x93|{}q\xf2\xec\xcc\x9d\x92\x8eW\x8f\xdf\xccCa\x96\xa5\x8aMdu\x12.n\xa2\xa5y\xbf3\x1a<\xda\xd0P\xeb\x19\x87k\xbd\xb0\x119T_\xef71F\xb9'c\xc5F\xf2\xda'\x13\xd3\xdb>o_=U\xd5\xbd\xf2{\xfb\xce3\xd38\xa7\xfa\xcd\x97\xb9\x14\xfa\xb7\xa5\xd1\xcd\xbe\xdf\xfa\x0b@) \xb5\x88	)`\x10\xd9\x00\x02dI*\xb5J$b\xd0%\xdc\xc4\x8c\x00!\x82\xff\xe4\xac\x13t\x1d\xbc\x96\xb3\xa0e\xa2}\xb0\xa8nh\xbc\xa9iM\xe3Tc\xc9\xdbL\x0bJ\xa3\x113\xa1\xcb\x00\xb58\x83XZ.F\x00I\x04\x1d\x073\xce\x10\xb0%\x00\x8c\x08\x0cm`a\x87\x9a>\xa1S9{X\xfb\x8a\x8a\x82\x99\xc2\xfe\xa5\xddY\x0f\xee\x0fD6\x956\xa5"\x99\x8a\xd0\x1cJ\xa0\x1a\xa75\x8a\xfc\xee`\xdbA\x10\x9a\x18\xebA\xc0-\x0e(\xd3\xf2sM\xec(!\x98\xe2\x92s\xd3\xa4\xcaV\xc1\xc4\x9d\xb9\xc9*4\xb7\xde\x81u\x1f\x8f\x94U\x96\xab\x93\x03e\xfb\x03\x8fF\xf2\xb3N\\\xce\xf4O\xa7iV\xd1\x9f\x8fR"e\xbb\xd4\xa6\x18B\xe4  (esc)
+  \x08\x80\xdcQ\xaeB\x08+\xff='\xb9%\xc6\x93^\x89\xd0poWAn^\x95\xb1\xe5\xd3D\xe5x\xdf\xd1\xe7';G3\xa5\x96F\x84\xc9\xe7\xe8[\xce\xffK\x17n\x15kW\xb5D^\xf6\xdf,m[\x15\x1d}\xf6np\xf9\xdd\x03\x99\xe6\x9dg&dk,\xa6\x91\xa8\x17\x96\xb1dY\x81_o'\xc4G (no-eol) (esc)
 #endif
 
 stream_out
@@ -2102,7 +2101,7 @@ repository root. (issue4568)
   
   
   # HG changesets search
-  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Node ID 09cdda9ba9259039f6c79df097ffae3c8fc4bac8
   # Query "adds("foo")"
   # Mode revset expression search
   
