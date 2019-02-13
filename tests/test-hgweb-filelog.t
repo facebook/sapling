@@ -12,9 +12,7 @@
   $ hg bookmark -r 1 a-bookmark
   $ hg rm a
   $ hg ci -m "del a"
-  $ hg branch a-branch
-  marked working directory as branch a-branch
-  (branches are permanent and global, did you want a bookmark?)
+  $ hg bookmark a-branch
   $ echo b > a
   $ hg ci -Am "second a"
   adding a
@@ -25,56 +23,53 @@
   $ echo c >> c
   $ hg ci -m "change c"
   $ hg log -p
-  changeset:   7:46c1a66bd8fc
-  branch:      a-branch
+  changeset:   7:3a23d52e0c2b
+  bookmark:    a-branch
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change c
   
-  diff -r c9637d3cc8ef -r 46c1a66bd8fc c
+  diff -r 06f03bbb6452 -r 3a23d52e0c2b c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
    b
   +c
   
-  changeset:   6:c9637d3cc8ef
-  branch:      a-branch
+  changeset:   6:06f03bbb6452
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mv b
   
-  diff -r 958bd88be4eb -r c9637d3cc8ef b
+  diff -r a204d89a2d15 -r 06f03bbb6452 b
   --- a/b	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -b
-  diff -r 958bd88be4eb -r c9637d3cc8ef c
+  diff -r a204d89a2d15 -r 06f03bbb6452 c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +b
   
-  changeset:   5:958bd88be4eb
-  branch:      a-branch
+  changeset:   5:a204d89a2d15
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     del2 a
   
-  diff -r 3f41bc784e7e -r 958bd88be4eb a
+  diff -r 2c1e988ef37a -r a204d89a2d15 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -b
   
-  changeset:   4:3f41bc784e7e
-  branch:      a-branch
+  changeset:   4:2c1e988ef37a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second a
   
-  diff -r 292258f86fdf -r 3f41bc784e7e a
+  diff -r 292258f86fdf -r 2c1e988ef37a a
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
@@ -189,8 +184,8 @@ tip - two revisions
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
-   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+   log a @ 4:<a href="/rev/2c1e988ef37a">2c1e988ef37a</a>
+   <span class="phase">draft</span> 
    
   </h3>
   
@@ -220,8 +215,8 @@ tip - two revisions
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/3f41bc784e7e">second a</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/2c1e988ef37a">second a</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    
@@ -312,8 +307,8 @@ second version - two revisions
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
-   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+   log a @ 4:<a href="/rev/2c1e988ef37a">2c1e988ef37a</a>
+   <span class="phase">draft</span> 
    
   </h3>
   
@@ -343,8 +338,8 @@ second version - two revisions
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/3f41bc784e7e">second a</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/2c1e988ef37a">second a</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    
@@ -676,8 +671,8 @@ before addition - error
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  changeset:   7:46c1a66bd8fc
-  branch:      a-branch
+  changeset:   7:3a23d52e0c2b
+  bookmark:    a-branch
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -740,8 +735,8 @@ before addition - error
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log c @ 7:<a href="/rev/46c1a66bd8fc">46c1a66bd8fc</a>
-   <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+   log c @ 7:<a href="/rev/3a23d52e0c2b">3a23d52e0c2b</a>
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">a-branch</span> 
     (following lines 1:2 <a href="/log/tip/c">all revisions for this file</a>)
   </h3>
   
@@ -771,8 +766,8 @@ before addition - error
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/46c1a66bd8fc">change c</a>
-     <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+     <a href="/rev/3a23d52e0c2b">change c</a>
+     <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">a-branch</span> 
     </td>
    </tr>
    
@@ -860,8 +855,8 @@ before addition - error
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log c @ 7:<a href="/rev/46c1a66bd8fc?revcount=1">46c1a66bd8fc</a>
-   <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+   log c @ 7:<a href="/rev/3a23d52e0c2b?revcount=1">3a23d52e0c2b</a>
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">a-branch</span> 
     (following lines 1:2 <a href="/log/tip/c?revcount=1">all revisions for this file</a>)
   </h3>
   
@@ -891,8 +886,8 @@ before addition - error
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/46c1a66bd8fc?revcount=1">change c</a>
-     <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+     <a href="/rev/3a23d52e0c2b?revcount=1">change c</a>
+     <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">a-branch</span> 
     </td>
    </tr>
    
@@ -966,19 +961,19 @@ should show base link, use spartan because it shows it
   
   <h2><a href="/">Mercurial</a>  / c revision history</h2>
   
-  <p>navigate: <small class="navigate"><a href="/log/c9637d3cc8ef/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
+  <p>navigate: <small class="navigate"><a href="/log/06f03bbb6452/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
   
   <table class="logEntry parity0">
    <tr>
     <th class="label"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
-    <th class="firstline"><a href="/rev/46c1a66bd8fc?style=spartan">change c</a></th>
+    <th class="firstline"><a href="/rev/3a23d52e0c2b?style=spartan">change c</a></th>
    </tr>
    <tr>
     <th class="revision">revision 1:</th>
     <td class="node">
-     <a href="/file/46c1a66bd8fc/c?style=spartan">46c1a66bd8fc</a>
-     <a href="/diff/46c1a66bd8fc/c?style=spartan">(diff)</a>
-     <a href="/annotate/46c1a66bd8fc/c?style=spartan">(annotate)</a>
+     <a href="/file/3a23d52e0c2b/c?style=spartan">3a23d52e0c2b</a>
+     <a href="/diff/3a23d52e0c2b/c?style=spartan">(diff)</a>
+     <a href="/annotate/3a23d52e0c2b/c?style=spartan">(annotate)</a>
     </td>
    </tr>
    
@@ -996,14 +991,14 @@ should show base link, use spartan because it shows it
   <table class="logEntry parity1">
    <tr>
     <th class="label"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
-    <th class="firstline"><a href="/rev/c9637d3cc8ef?style=spartan">mv b</a></th>
+    <th class="firstline"><a href="/rev/06f03bbb6452?style=spartan">mv b</a></th>
    </tr>
    <tr>
     <th class="revision">revision 0:</th>
     <td class="node">
-     <a href="/file/c9637d3cc8ef/c?style=spartan">c9637d3cc8ef</a>
-     <a href="/diff/c9637d3cc8ef/c?style=spartan">(diff)</a>
-     <a href="/annotate/c9637d3cc8ef/c?style=spartan">(annotate)</a>
+     <a href="/file/06f03bbb6452/c?style=spartan">06f03bbb6452</a>
+     <a href="/diff/06f03bbb6452/c?style=spartan">(diff)</a>
+     <a href="/annotate/06f03bbb6452/c?style=spartan">(annotate)</a>
     </td>
    </tr>
    
@@ -1097,8 +1092,8 @@ filelog with patch
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
-   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+   log a @ 4:<a href="/rev/2c1e988ef37a">2c1e988ef37a</a>
+   <span class="phase">draft</span> 
    
   </h3>
   
@@ -1128,15 +1123,15 @@ filelog with patch
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/3f41bc784e7e">second a</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/2c1e988ef37a">second a</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="3f41bc784e7e-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3f41bc784e7e-l1.1"></a>
-  <span id="3f41bc784e7e-l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3f41bc784e7e-l1.2"></a>
-  <span id="3f41bc784e7e-l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#3f41bc784e7e-l1.3"></a>
-  <span id="3f41bc784e7e-l1.4" class="plusline">+b</span><a href="#3f41bc784e7e-l1.4"></a></pre></div></td></tr>
+  <span id="2c1e988ef37a-l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#2c1e988ef37a-l1.1"></a>
+  <span id="2c1e988ef37a-l1.2" class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000</span><a href="#2c1e988ef37a-l1.2"></a>
+  <span id="2c1e988ef37a-l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#2c1e988ef37a-l1.3"></a>
+  <span id="2c1e988ef37a-l1.4" class="plusline">+b</span><a href="#2c1e988ef37a-l1.4"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1243,26 +1238,24 @@ filelog with 'linerange' and 'patch'
   @@ -0,0 +1,1 @@
   +b
   
-  changeset:   7:46c1a66bd8fc
-  branch:      a-branch
+  changeset:   7:3a23d52e0c2b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change c
   
-  diff -r c9637d3cc8ef -r 46c1a66bd8fc c
+  diff -r 06f03bbb6452 -r 3a23d52e0c2b c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
    b
   +c
   
-  changeset:   8:5c6574614c37
-  branch:      a-branch
+  changeset:   8:70fc6cd8c2eb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     make c bigger and touch its beginning
   
-  diff -r 46c1a66bd8fc -r 5c6574614c37 c
+  diff -r 3a23d52e0c2b -r 70fc6cd8c2eb c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,11 @@
@@ -1279,13 +1272,12 @@ filelog with 'linerange' and 'patch'
   +e
   +f
   
-  changeset:   10:e95928d60479
-  branch:      a-branch
+  changeset:   10:febe79daefb9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touch beginning of c
   
-  diff -r e1d3e9c5a23f -r e95928d60479 c
+  diff -r 94baf69a9858 -r febe79daefb9 c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,7 +1,7 @@
@@ -1298,13 +1290,12 @@ filelog with 'linerange' and 'patch'
    a
    a
   
-  changeset:   11:fb9bc322513a
-  branch:      a-branch
+  changeset:   11:28e81051fa8e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touching beginning and end of c
   
-  diff -r e95928d60479 -r fb9bc322513a c
+  diff -r febe79daefb9 -r 28e81051fa8e c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,6 +1,6 @@
@@ -1379,8 +1370,8 @@ filelog with 'linerange' and 'patch'
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log c @ 12:<a href="/rev/6e4182052f7b">6e4182052f7b</a>
-   <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+   log c @ 12:<a href="/rev/419b4a8660dd">419b4a8660dd</a>
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">a-branch</span> 
     (following lines 3:4 <a href="/log/tip/c">all revisions for this file</a>)
   </h3>
   
@@ -1410,79 +1401,79 @@ filelog with 'linerange' and 'patch'
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/28e81051fa8e">touching beginning and end of c</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="fb9bc322513a-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#fb9bc322513a-l1.1"></a>
-  <span id="fb9bc322513a-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#fb9bc322513a-l1.2"></a>
-  <span id="fb9bc322513a-l1.3" class="atline">@@ -1,6 +1,6 @@</span><a href="#fb9bc322513a-l1.3"></a>
-  <span id="fb9bc322513a-l1.4"> 0</span><a href="#fb9bc322513a-l1.4"></a>
-  <span id="fb9bc322513a-l1.5"> 0</span><a href="#fb9bc322513a-l1.5"></a>
-  <span id="fb9bc322513a-l1.6" class="minusline">-b</span><a href="#fb9bc322513a-l1.6"></a>
-  <span id="fb9bc322513a-l1.7" class="plusline">+b-</span><a href="#fb9bc322513a-l1.7"></a>
-  <span id="fb9bc322513a-l1.8"> c++</span><a href="#fb9bc322513a-l1.8"></a>
-  <span id="fb9bc322513a-l1.9"> </span><a href="#fb9bc322513a-l1.9"></a>
-  <span id="fb9bc322513a-l1.10"> a</span><a href="#fb9bc322513a-l1.10"></a></pre></div></td></tr>
+  <span id="28e81051fa8e-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#28e81051fa8e-l1.1"></a>
+  <span id="28e81051fa8e-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#28e81051fa8e-l1.2"></a>
+  <span id="28e81051fa8e-l1.3" class="atline">@@ -1,6 +1,6 @@</span><a href="#28e81051fa8e-l1.3"></a>
+  <span id="28e81051fa8e-l1.4"> 0</span><a href="#28e81051fa8e-l1.4"></a>
+  <span id="28e81051fa8e-l1.5"> 0</span><a href="#28e81051fa8e-l1.5"></a>
+  <span id="28e81051fa8e-l1.6" class="minusline">-b</span><a href="#28e81051fa8e-l1.6"></a>
+  <span id="28e81051fa8e-l1.7" class="plusline">+b-</span><a href="#28e81051fa8e-l1.7"></a>
+  <span id="28e81051fa8e-l1.8"> c++</span><a href="#28e81051fa8e-l1.8"></a>
+  <span id="28e81051fa8e-l1.9"> </span><a href="#28e81051fa8e-l1.9"></a>
+  <span id="28e81051fa8e-l1.10"> a</span><a href="#28e81051fa8e-l1.10"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/e95928d60479">touch beginning of c</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/febe79daefb9">touch beginning of c</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="e95928d60479-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#e95928d60479-l1.1"></a>
-  <span id="e95928d60479-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#e95928d60479-l1.2"></a>
-  <span id="e95928d60479-l1.3" class="atline">@@ -1,7 +1,7 @@</span><a href="#e95928d60479-l1.3"></a>
-  <span id="e95928d60479-l1.4"> 0</span><a href="#e95928d60479-l1.4"></a>
-  <span id="e95928d60479-l1.5"> 0</span><a href="#e95928d60479-l1.5"></a>
-  <span id="e95928d60479-l1.6"> b</span><a href="#e95928d60479-l1.6"></a>
-  <span id="e95928d60479-l1.7" class="minusline">-c+</span><a href="#e95928d60479-l1.7"></a>
-  <span id="e95928d60479-l1.8" class="plusline">+c++</span><a href="#e95928d60479-l1.8"></a>
-  <span id="e95928d60479-l1.9"> </span><a href="#e95928d60479-l1.9"></a>
-  <span id="e95928d60479-l1.10"> a</span><a href="#e95928d60479-l1.10"></a>
-  <span id="e95928d60479-l1.11"> a</span><a href="#e95928d60479-l1.11"></a></pre></div></td></tr>
+  <span id="febe79daefb9-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#febe79daefb9-l1.1"></a>
+  <span id="febe79daefb9-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#febe79daefb9-l1.2"></a>
+  <span id="febe79daefb9-l1.3" class="atline">@@ -1,7 +1,7 @@</span><a href="#febe79daefb9-l1.3"></a>
+  <span id="febe79daefb9-l1.4"> 0</span><a href="#febe79daefb9-l1.4"></a>
+  <span id="febe79daefb9-l1.5"> 0</span><a href="#febe79daefb9-l1.5"></a>
+  <span id="febe79daefb9-l1.6"> b</span><a href="#febe79daefb9-l1.6"></a>
+  <span id="febe79daefb9-l1.7" class="minusline">-c+</span><a href="#febe79daefb9-l1.7"></a>
+  <span id="febe79daefb9-l1.8" class="plusline">+c++</span><a href="#febe79daefb9-l1.8"></a>
+  <span id="febe79daefb9-l1.9"> </span><a href="#febe79daefb9-l1.9"></a>
+  <span id="febe79daefb9-l1.10"> a</span><a href="#febe79daefb9-l1.10"></a>
+  <span id="febe79daefb9-l1.11"> a</span><a href="#febe79daefb9-l1.11"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/70fc6cd8c2eb">make c bigger and touch its beginning</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="5c6574614c37-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5c6574614c37-l1.1"></a>
-  <span id="5c6574614c37-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#5c6574614c37-l1.2"></a>
-  <span id="5c6574614c37-l1.3" class="atline">@@ -1,2 +1,11 @@</span><a href="#5c6574614c37-l1.3"></a>
-  <span id="5c6574614c37-l1.4" class="plusline">+0</span><a href="#5c6574614c37-l1.4"></a>
-  <span id="5c6574614c37-l1.5" class="plusline">+0</span><a href="#5c6574614c37-l1.5"></a>
-  <span id="5c6574614c37-l1.6"> b</span><a href="#5c6574614c37-l1.6"></a>
-  <span id="5c6574614c37-l1.7" class="minusline">-c</span><a href="#5c6574614c37-l1.7"></a>
-  <span id="5c6574614c37-l1.8" class="plusline">+c+</span><a href="#5c6574614c37-l1.8"></a>
-  <span id="5c6574614c37-l1.9" class="plusline">+</span><a href="#5c6574614c37-l1.9"></a>
-  <span id="5c6574614c37-l1.10" class="plusline">+a</span><a href="#5c6574614c37-l1.10"></a>
-  <span id="5c6574614c37-l1.11" class="plusline">+a</span><a href="#5c6574614c37-l1.11"></a>
-  <span id="5c6574614c37-l1.12" class="plusline">+</span><a href="#5c6574614c37-l1.12"></a>
-  <span id="5c6574614c37-l1.13" class="plusline">+d</span><a href="#5c6574614c37-l1.13"></a>
-  <span id="5c6574614c37-l1.14" class="plusline">+e</span><a href="#5c6574614c37-l1.14"></a>
-  <span id="5c6574614c37-l1.15" class="plusline">+f</span><a href="#5c6574614c37-l1.15"></a></pre></div></td></tr>
+  <span id="70fc6cd8c2eb-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#70fc6cd8c2eb-l1.1"></a>
+  <span id="70fc6cd8c2eb-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#70fc6cd8c2eb-l1.2"></a>
+  <span id="70fc6cd8c2eb-l1.3" class="atline">@@ -1,2 +1,11 @@</span><a href="#70fc6cd8c2eb-l1.3"></a>
+  <span id="70fc6cd8c2eb-l1.4" class="plusline">+0</span><a href="#70fc6cd8c2eb-l1.4"></a>
+  <span id="70fc6cd8c2eb-l1.5" class="plusline">+0</span><a href="#70fc6cd8c2eb-l1.5"></a>
+  <span id="70fc6cd8c2eb-l1.6"> b</span><a href="#70fc6cd8c2eb-l1.6"></a>
+  <span id="70fc6cd8c2eb-l1.7" class="minusline">-c</span><a href="#70fc6cd8c2eb-l1.7"></a>
+  <span id="70fc6cd8c2eb-l1.8" class="plusline">+c+</span><a href="#70fc6cd8c2eb-l1.8"></a>
+  <span id="70fc6cd8c2eb-l1.9" class="plusline">+</span><a href="#70fc6cd8c2eb-l1.9"></a>
+  <span id="70fc6cd8c2eb-l1.10" class="plusline">+a</span><a href="#70fc6cd8c2eb-l1.10"></a>
+  <span id="70fc6cd8c2eb-l1.11" class="plusline">+a</span><a href="#70fc6cd8c2eb-l1.11"></a>
+  <span id="70fc6cd8c2eb-l1.12" class="plusline">+</span><a href="#70fc6cd8c2eb-l1.12"></a>
+  <span id="70fc6cd8c2eb-l1.13" class="plusline">+d</span><a href="#70fc6cd8c2eb-l1.13"></a>
+  <span id="70fc6cd8c2eb-l1.14" class="plusline">+e</span><a href="#70fc6cd8c2eb-l1.14"></a>
+  <span id="70fc6cd8c2eb-l1.15" class="plusline">+f</span><a href="#70fc6cd8c2eb-l1.15"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/46c1a66bd8fc">change c</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/3a23d52e0c2b">change c</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
-  <span id="46c1a66bd8fc-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#46c1a66bd8fc-l1.1"></a>
-  <span id="46c1a66bd8fc-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#46c1a66bd8fc-l1.2"></a>
-  <span id="46c1a66bd8fc-l1.3" class="atline">@@ -1,1 +1,2 @@</span><a href="#46c1a66bd8fc-l1.3"></a>
-  <span id="46c1a66bd8fc-l1.4"> b</span><a href="#46c1a66bd8fc-l1.4"></a>
-  <span id="46c1a66bd8fc-l1.5" class="plusline">+c</span><a href="#46c1a66bd8fc-l1.5"></a></pre></div></td></tr>
+  <span id="3a23d52e0c2b-l1.1" class="minusline">--- a/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3a23d52e0c2b-l1.1"></a>
+  <span id="3a23d52e0c2b-l1.2" class="plusline">+++ b/c	Thu Jan 01 00:00:00 1970 +0000</span><a href="#3a23d52e0c2b-l1.2"></a>
+  <span id="3a23d52e0c2b-l1.3" class="atline">@@ -1,1 +1,2 @@</span><a href="#3a23d52e0c2b-l1.3"></a>
+  <span id="3a23d52e0c2b-l1.4"> b</span><a href="#3a23d52e0c2b-l1.4"></a>
+  <span id="3a23d52e0c2b-l1.5" class="plusline">+c</span><a href="#3a23d52e0c2b-l1.5"></a></pre></div></td></tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
@@ -1513,13 +1504,12 @@ filelog with 'linerange' and 'patch'
   </html>
   
   $ hg log -r 'followlines(c, 3:4, startrev=8, descend=True) and follow(c)' -p
-  changeset:   8:5c6574614c37
-  branch:      a-branch
+  changeset:   8:70fc6cd8c2eb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     make c bigger and touch its beginning
   
-  diff -r 46c1a66bd8fc -r 5c6574614c37 c
+  diff -r 3a23d52e0c2b -r 70fc6cd8c2eb c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,11 @@
@@ -1536,13 +1526,12 @@ filelog with 'linerange' and 'patch'
   +e
   +f
   
-  changeset:   10:e95928d60479
-  branch:      a-branch
+  changeset:   10:febe79daefb9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touch beginning of c
   
-  diff -r e1d3e9c5a23f -r e95928d60479 c
+  diff -r 94baf69a9858 -r febe79daefb9 c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,7 +1,7 @@
@@ -1555,13 +1544,12 @@ filelog with 'linerange' and 'patch'
    a
    a
   
-  changeset:   11:fb9bc322513a
-  branch:      a-branch
+  changeset:   11:28e81051fa8e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     touching beginning and end of c
   
-  diff -r e95928d60479 -r fb9bc322513a c
+  diff -r febe79daefb9 -r 28e81051fa8e c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,6 +1,6 @@
@@ -1636,8 +1624,8 @@ filelog with 'linerange' and 'patch'
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   log c @ 8:<a href="/rev/5c6574614c37">5c6574614c37</a>
-   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+   log c @ 8:<a href="/rev/70fc6cd8c2eb">70fc6cd8c2eb</a>
+   <span class="phase">draft</span> 
     (following lines 3:4, descending <a href="/log/8/c">all revisions for this file</a>)
   </h3>
   
@@ -1667,8 +1655,8 @@ filelog with 'linerange' and 'patch'
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/70fc6cd8c2eb">make c bigger and touch its beginning</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    
@@ -1676,8 +1664,8 @@ filelog with 'linerange' and 'patch'
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/e95928d60479">touch beginning of c</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/febe79daefb9">touch beginning of c</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    
@@ -1685,8 +1673,8 @@ filelog with 'linerange' and 'patch'
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
-     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
+     <a href="/rev/28e81051fa8e">touching beginning and end of c</a>
+     <span class="phase">draft</span> 
     </td>
    </tr>
    
@@ -1724,7 +1712,7 @@ rss log
       <description>a revision history</description>
       <item>
       <title>second a</title>
-      <link>http://*:$HGPORT/log/3f41bc784e7e/a</link> (glob)
+      <link>http://*/log/2c1e988ef37a/a</link> (glob)
       <description><![CDATA[second a]]></description>
       <author>&#116;&#101;&#115;&#116;</author>
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
@@ -1753,9 +1741,9 @@ atom log
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>[a-branch] second a</title>
-    <id>http://*:$HGPORT/#changeset-3f41bc784e7e73035c6d47112c6cc7efb673adf8</id> (glob)
-    <link href="http://*:$HGPORT/rev/3f41bc784e7e"/> (glob)
+    <title>second a</title>
+    <id>http://*/#changeset-2c1e988ef37ab910f131648a31fc60c1caa9cf4a</id> (glob)
+    <link href="http://*/rev/2c1e988ef37a"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -1766,11 +1754,11 @@ atom log
      <table xmlns="http://www.w3.org/1999/xhtml">
       <tr>
        <th style="text-align:left;">changeset</th>
-       <td>3f41bc784e7e</td>
+       <td>2c1e988ef37a</td>
       </tr>
       <tr>
        <th style="text-align:left;">branch</th>
-       <td>a-branch</td>
+       <td></td>
       </tr>
       <tr>
        <th style="text-align:left;">bookmark</th>
