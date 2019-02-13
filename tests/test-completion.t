@@ -371,10 +371,8 @@ Show all commands + options
   $ echo dead > fie/dead
   $ echo live > fie/live
   $ hg bookmark fo
-  $ hg branch -q fie
   $ hg ci -q -Amfie
   $ echo fo > fo
-  $ hg branch -qf default
   $ hg ci -q -Amfo
   $ echo Fum > Fum
   $ hg ci -q -AmFum
@@ -402,12 +400,10 @@ Test debugnamecomplete
   Fum
   default
   fee
-  fie
   fo
   tip
   $ hg debugnamecomplete f
   fee
-  fie
   fo
 
 Test debuglabelcomplete, a deprecated name for debugnamecomplete that is still
@@ -417,10 +413,8 @@ used for completions in some shells.
   Fum
   default
   fee
-  fie
   fo
   tip
   $ hg debuglabelcomplete f
   fee
-  fie
   fo
