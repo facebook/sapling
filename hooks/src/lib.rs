@@ -72,8 +72,9 @@ use failure::{err_msg, Error, FutureFailureErrorExt};
 use futures::{failed, finished, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{manifest_utils::EntryStatus, Changeset, HgChangesetId, HgParents, MPath};
-use metaconfig_types::{HookBypass, HookConfig, HookManagerParams};
+use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
+use regex::Regex;
 use slog::Logger;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -94,6 +95,7 @@ pub struct HookManager {
     changeset_hooks: ChangesetHooks,
     file_hooks: FileHooks,
     bookmark_hooks: HashMap<Bookmark, Vec<String>>,
+    regex_hooks: Vec<(Regex, Vec<String>)>,
     changeset_store: Box<ChangesetStore>,
     content_store: Arc<FileContentStore>,
     logger: Logger,
@@ -144,6 +146,7 @@ impl HookManager {
             changeset_hooks,
             file_hooks,
             bookmark_hooks: HashMap::new(),
+            regex_hooks: Vec::new(),
             changeset_store,
             content_store,
             logger,
@@ -171,8 +174,15 @@ impl HookManager {
         hooks.insert(hook_name.to_string(), (hook, config));
     }
 
-    pub fn set_hooks_for_bookmark(&mut self, bookmark: Bookmark, hooks: Vec<String>) {
-        self.bookmark_hooks.insert(bookmark, hooks);
+    pub fn set_hooks_for_bookmark(&mut self, bookmark: BookmarkOrRegex, hooks: Vec<String>) {
+        match bookmark {
+            BookmarkOrRegex::Bookmark(bookmark) => {
+                self.bookmark_hooks.insert(bookmark, hooks);
+            }
+            BookmarkOrRegex::Regex(regex) => {
+                self.regex_hooks.push((regex, hooks));
+            }
+        }
     }
 
     pub fn changeset_hook_names(&self) -> HashSet<String> {
@@ -191,6 +201,22 @@ impl HookManager {
             .collect()
     }
 
+    fn hooks_for_bookmark(&self, bookmark: &Bookmark) -> HashSet<String> {
+        let mut hooks: HashSet<_> = match self.bookmark_hooks.get(bookmark) {
+            Some(hooks) => hooks.clone().into_iter().collect(),
+            None => HashSet::new(),
+        };
+
+        let bookmark_str = bookmark.to_string();
+        for (regex, r_hooks) in &self.regex_hooks {
+            if regex.is_match(&bookmark_str) {
+                hooks.extend(r_hooks.iter().cloned());
+            }
+        }
+
+        hooks
+    }
+
     // Changeset hooks
 
     pub fn run_changeset_hooks_for_bookmark(
@@ -200,16 +226,16 @@ impl HookManager {
         bookmark: &Bookmark,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
-        match self.bookmark_hooks.get(bookmark) {
-            Some(hooks) => {
-                let hooks = hooks
-                    .clone()
-                    .into_iter()
-                    .filter(|name| self.changeset_hooks.contains_key(name))
-                    .collect();
-                self.run_changeset_hooks_for_changeset_id(ctx, changeset_id, hooks, maybe_pushvars)
-            }
-            None => return finished(Vec::new()).boxify(),
+        let hooks: Vec<_> = self
+            .hooks_for_bookmark(bookmark)
+            .into_iter()
+            .filter(|name| self.changeset_hooks.contains_key(name))
+            .collect();
+
+        if hooks.is_empty() {
+            finished(Vec::new()).boxify()
+        } else {
+            self.run_changeset_hooks_for_changeset_id(ctx, changeset_id, hooks, maybe_pushvars)
         }
     }
 
@@ -304,23 +330,25 @@ impl HookManager {
             self.logger.clone(),
             "Running file hooks for bookmark {:?}", bookmark
         );
-        match self.bookmark_hooks.get(bookmark) {
-            Some(hooks) => {
-                let file_hooks = self.file_hooks.lock().unwrap();
-                let hooks = hooks
-                    .clone()
-                    .into_iter()
-                    .filter_map(|name| file_hooks.get(&name).map(|hook| (name, hook.clone())))
-                    .collect();
-                self.run_file_hooks_for_changeset_id(
-                    ctx,
-                    changeset_id,
-                    hooks,
-                    maybe_pushvars,
-                    self.logger.clone(),
-                )
-            }
-            None => return Box::new(finished(Vec::new())),
+        let hooks: Vec<_> = {
+            let hooks = self.hooks_for_bookmark(bookmark);
+            let file_hooks = self.file_hooks.lock().unwrap();
+            hooks
+                .into_iter()
+                .filter_map(|name| file_hooks.get(&name).map(|hook| (name, hook.clone())))
+                .collect()
+        };
+
+        if hooks.is_empty() {
+            finished(Vec::new()).boxify()
+        } else {
+            self.run_file_hooks_for_changeset_id(
+                ctx,
+                changeset_id,
+                hooks,
+                maybe_pushvars,
+                self.logger.clone(),
+            )
         }
     }
 

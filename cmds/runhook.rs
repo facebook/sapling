@@ -136,7 +136,7 @@ fn run_hook(
             hook_manager.register_changeset_hook("testhook", Arc::new(hook), Default::default());
         }
         let bookmark = Bookmark::new("testbm").unwrap();
-        hook_manager.set_hooks_for_bookmark(bookmark.clone(), vec!["testhook".to_string()]);
+        hook_manager.set_hooks_for_bookmark(bookmark.clone().into(), vec!["testhook".to_string()]);
         let id = try_boxfuture!(HgChangesetId::from_str(&revstr));
         if file_hook {
             hook_manager

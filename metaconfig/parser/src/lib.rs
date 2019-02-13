@@ -20,9 +20,11 @@ extern crate futures;
 #[cfg(test)]
 extern crate maplit;
 extern crate metaconfig_types;
+extern crate regex;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_regex;
 extern crate sql;
 #[cfg(test)]
 extern crate tempdir;

@@ -11,10 +11,12 @@ use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
 use metaconfig_types::{
-    BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, GlusterArgs, HookBypass,
-    HookConfig, HookManagerParams, HookParams, HookType, LfsParams, ManifoldArgs,
-    MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig, RepoReadOnly, RepoType,
+    BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
+    GlusterArgs, HookBypass, HookConfig, HookManagerParams, HookParams, HookType, LfsParams,
+    ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig,
+    RepoReadOnly, RepoType,
 };
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -306,20 +308,34 @@ impl RepoConfigs {
             disable_acl_checker: params.disable_acl_checker,
         });
         let bookmarks = match this.bookmarks {
-            Some(bookmarks) => Some(
-                bookmarks
-                    .into_iter()
-                    .map(|bm| BookmarkParams {
-                        bookmark: Bookmark::new(bm.name).unwrap(),
-                        hooks: match bm.hooks {
+            Some(bookmarks) => {
+                let mut bookmark_params = Vec::new();
+                for bookmark in bookmarks {
+                    let bookmark_or_regex = match (bookmark.regex, bookmark.name) {
+                        (None, Some(name)) => {
+                            BookmarkOrRegex::Bookmark(Bookmark::new(name).unwrap())
+                        }
+                        (Some(regex), None) => BookmarkOrRegex::Regex(regex.0),
+                        _ => {
+                            return Err(ErrorKind::InvalidConfig(
+                                "bookmark's params need to specify regex xor name".into(),
+                            )
+                            .into());
+                        }
+                    };
+
+                    bookmark_params.push(BookmarkParams {
+                        bookmark: bookmark_or_regex,
+                        hooks: match bookmark.hooks {
                             Some(hooks) => {
                                 Some(hooks.into_iter().map(|rbmh| rbmh.hook_name).collect())
                             }
                             None => None,
                         },
-                    })
-                    .collect(),
-            ),
+                    });
+                }
+                Some(bookmark_params)
+            }
             None => None,
         };
 
@@ -426,9 +442,17 @@ struct RawHookManagerParams {
     weightlimit: usize,
 }
 
+/// This structure helps to resolve an issue that when using serde_regex on Option<Regex> parsing
+/// the toml file fails when the "regex" field is not provided. It works as expected when the
+/// indirect Option<RawRegex> is used.
+#[derive(Debug, Deserialize, Clone)]
+struct RawRegex(#[serde(with = "serde_regex")] Regex);
+
 #[derive(Debug, Deserialize, Clone)]
 struct RawBookmarkConfig {
-    name: String,
+    /// Either the regex or the name should be provided, not both
+    regex: Option<RawRegex>,
+    name: Option<String>,
     hooks: Option<Vec<RawBookmarkHook>>,
 }
 
@@ -547,6 +571,8 @@ mod test {
             hook_name="hook2"
             [[bookmarks.hooks]]
             hook_name="rust:rusthook"
+            [[bookmarks]]
+            regex="[^/]*/stable"
             [[hooks]]
             name="hook1"
             path="common/hooks/hook1.lua"
@@ -643,14 +669,20 @@ mod test {
                     weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
-                bookmarks: Some(vec![BookmarkParams {
-                    bookmark: Bookmark::new("master").unwrap(),
-                    hooks: Some(vec![
-                        "hook1".to_string(),
-                        "hook2".to_string(),
-                        "rust:rusthook".to_string(),
-                    ]),
-                }]),
+                bookmarks: Some(vec![
+                    BookmarkParams {
+                        bookmark: Bookmark::new("master").unwrap().into(),
+                        hooks: Some(vec![
+                            "hook1".to_string(),
+                            "hook2".to_string(),
+                            "rust:rusthook".to_string(),
+                        ]),
+                    },
+                    BookmarkParams {
+                        bookmark: Regex::new("[^/]*/stable").unwrap().into(),
+                        hooks: None,
+                    },
+                ]),
                 hooks: Some(vec![
                     HookParams {
                         name: "hook1".to_string(),

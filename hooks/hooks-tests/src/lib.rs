@@ -23,9 +23,11 @@ use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::{
-    BookmarkParams, Bundle2ReplayParams, HookParams, HookType, RepoConfig, RepoReadOnly, RepoType,
+    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookParams, HookType, RepoConfig,
+    RepoReadOnly, RepoType,
 };
 use mononoke_types::FileType;
+use regex::Regex;
 use slog::{o, Logger};
 use slog::{Discard, Drain};
 use std::collections::hash_map::Entry;
@@ -443,10 +445,11 @@ fn test_changeset_hook_accepted() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -460,10 +463,11 @@ fn test_changeset_hook_rejected() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => default_rejection()
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -477,15 +481,17 @@ fn test_changeset_hook_mix() {
             "hook3".to_string() => always_accepting_changeset_hook(),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(),
-             "hook3".to_string()]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook3".to_string()],
         };
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted,
             "hook2".to_string() => default_rejection(),
             "hook3".to_string() => HookExecution::Accepted,
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -533,10 +539,11 @@ fn test_changeset_hook_context() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -565,14 +572,17 @@ fn test_changeset_hook_contains_string() {
             "hook3".to_string() => contains_string_matching_changeset_hook(hook3_map),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string()]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook3".to_string()]
         };
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted,
             "hook2".to_string() => default_rejection(),
             "hook3".to_string() => default_rejection(),
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -588,7 +598,10 @@ fn test_changeset_hook_other_file_content() {
             "hook5".to_string() => other_file_matching_changeset_hook("no/such/path".to_string(), Some("whateva".to_string())),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string(), "hook4".to_string(), "hook5".to_string()]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string()]
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook3".to_string(), "hook4".to_string(), "hook5".to_string()]
         };
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted,
@@ -597,7 +610,7 @@ fn test_changeset_hook_other_file_content() {
             "hook4".to_string() => HookExecution::Accepted,
             "hook5".to_string() => default_rejection(),
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -626,14 +639,17 @@ fn test_changeset_hook_file_content() {
             "hook3".to_string() => file_content_matching_changeset_hook(hook3_map),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string()]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook2".to_string(), "hook3".to_string()]
         };
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted,
             "hook2".to_string() => default_rejection(),
             "hook3".to_string() => default_rejection(),
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -662,16 +678,17 @@ fn test_changeset_hook_lengths() {
             "hook3".to_string() => length_matching_changeset_hook(hook3_map),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(),
-             "hook2".to_string(), "hook3".to_string()
-             ]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook3".to_string()],
         };
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted,
             "hook2".to_string() => default_rejection(),
             "hook3".to_string() => default_rejection(),
         };
-        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -685,6 +702,7 @@ fn test_file_hook_accepted() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
                 "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
@@ -692,7 +710,7 @@ fn test_file_hook_accepted() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -706,6 +724,7 @@ fn test_file_hook_rejected() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
                 "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
@@ -713,7 +732,7 @@ fn test_file_hook_rejected() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -726,7 +745,10 @@ fn test_file_hook_mix() {
             "hook2".to_string() => always_accepting_file_hook()
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
+            "bm1".to_string() => vec!["hook1".to_string()]
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook2".to_string()]
         };
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
@@ -740,7 +762,7 @@ fn test_file_hook_mix() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -758,6 +780,7 @@ fn test_file_hooks_paths() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
                 "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
@@ -765,7 +788,7 @@ fn test_file_hooks_paths() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -783,7 +806,10 @@ fn test_file_hooks_paths_mix() {
             "hook2".to_string() => path_matching_file_hook(matching_paths2),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
+            "bm1".to_string() => vec!["hook1".to_string()]
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook2".to_string()]
         };
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
@@ -797,7 +823,7 @@ fn test_file_hooks_paths_mix() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
             }
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -811,9 +837,10 @@ fn test_file_hook_contains_string() {
             "hook3".to_string() => contains_string_matching_file_hook("eels".to_string())
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(),
-            "hook2".to_string(), "hook3".to_string()
-        ]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
+        };
+        let regexes = hashmap! {
+            "^b.*$".to_string() => vec!["hook3".to_string()],
         };
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
@@ -832,7 +859,7 @@ fn test_file_hook_contains_string() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -846,9 +873,10 @@ fn test_file_hook_file_content() {
             "hook3".to_string() => file_content_matching_file_hook("eels".to_string())
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(),
-            "hook2".to_string(), "hook3".to_string()
-        ]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook3".to_string()],
         };
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
@@ -867,7 +895,7 @@ fn test_file_hook_file_content() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -880,9 +908,10 @@ fn test_file_hook_is_symlink() {
             "hook2".to_string() => is_symlink_matching_file_hook(false),
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(),
-            "hook2".to_string()
-        ]
+            "bm1".to_string() => vec!["hook1".to_string()],
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook2".to_string()],
         };
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
@@ -896,7 +925,7 @@ fn test_file_hook_is_symlink() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -911,9 +940,10 @@ fn test_file_hook_length() {
             "hook4".to_string() => length_matching_file_hook(999)
         };
         let bookmarks = hashmap! {
-            "bm1".to_string() => vec!["hook1".to_string(),
-            "hook2".to_string(), "hook3".to_string(), "hook4".to_string()
-            ]
+            "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string()],
+        };
+        let regexes = hashmap! {
+            "b.*".to_string() => vec!["hook3".to_string(), "hook4".to_string()],
         };
         let expected = hashmap! {
             "hook1".to_string() => hashmap! {
@@ -937,7 +967,7 @@ fn test_file_hook_length() {
                 "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
             },
         };
-        run_file_hooks(ctx, "bm1", hooks, bookmarks, expected);
+        run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected);
     });
 }
 
@@ -967,10 +997,11 @@ fn test_with_blob_store() {
         let bookmarks = hashmap! {
             "bm1".to_string() => vec!["hook1".to_string()]
         };
+        let regexes = hashmap! {};
         let expected = hashmap! {
             "hook1".to_string() => HookExecution::Accepted
         };
-        run_changeset_hooks_with_mgr(ctx, "bm1", hooks, bookmarks, expected, false);
+        run_changeset_hooks_with_mgr(ctx, "bm1", hooks, bookmarks, regexes, expected, false);
     });
 }
 
@@ -979,9 +1010,18 @@ fn run_changeset_hooks(
     bookmark_name: &str,
     hooks: HashMap<String, Box<Hook<HookChangeset>>>,
     bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HookExecution>,
 ) {
-    run_changeset_hooks_with_mgr(ctx, bookmark_name, hooks, bookmarks, expected, true)
+    run_changeset_hooks_with_mgr(
+        ctx,
+        bookmark_name,
+        hooks,
+        bookmarks,
+        regexes,
+        expected,
+        true,
+    )
 }
 
 fn run_changeset_hooks_with_mgr(
@@ -989,10 +1029,11 @@ fn run_changeset_hooks_with_mgr(
     bookmark_name: &str,
     hooks: HashMap<String, Box<Hook<HookChangeset>>>,
     bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HookExecution>,
     inmem: bool,
 ) {
-    let mut hook_manager = setup_hook_manager(bookmarks, inmem);
+    let mut hook_manager = setup_hook_manager(bookmarks, regexes, inmem);
     for (hook_name, hook) in hooks {
         hook_manager.register_changeset_hook(&hook_name, hook.into(), Default::default());
     }
@@ -1015,9 +1056,18 @@ fn run_file_hooks(
     bookmark_name: &str,
     hooks: HashMap<String, Box<Hook<HookFile>>>,
     bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
 ) {
-    run_file_hooks_with_mgr(ctx, bookmark_name, hooks, bookmarks, expected, true)
+    run_file_hooks_with_mgr(
+        ctx,
+        bookmark_name,
+        hooks,
+        bookmarks,
+        regexes,
+        expected,
+        true,
+    )
 }
 
 fn run_file_hooks_with_mgr(
@@ -1025,10 +1075,11 @@ fn run_file_hooks_with_mgr(
     bookmark_name: &str,
     hooks: HashMap<String, Box<Hook<HookFile>>>,
     bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
     inmem: bool,
 ) {
-    let mut hook_manager = setup_hook_manager(bookmarks, inmem);
+    let mut hook_manager = setup_hook_manager(bookmarks, regexes, inmem);
     for (hook_name, hook) in hooks {
         hook_manager.register_file_hook(&hook_name, hook.into(), Default::default());
     }
@@ -1052,14 +1103,22 @@ fn run_file_hooks_with_mgr(
     assert_eq!(expected, map);
 }
 
-fn setup_hook_manager(bookmarks: HashMap<String, Vec<String>>, inmem: bool) -> HookManager {
+fn setup_hook_manager(
+    bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
+    inmem: bool,
+) -> HookManager {
     let mut hook_manager = if inmem {
         hook_manager_inmem()
     } else {
         hook_manager_blobrepo()
     };
     for (bookmark_name, hook_names) in bookmarks {
-        hook_manager.set_hooks_for_bookmark(Bookmark::new(bookmark_name).unwrap(), hook_names);
+        hook_manager
+            .set_hooks_for_bookmark(Bookmark::new(bookmark_name).unwrap().into(), hook_names);
+    }
+    for (regx, hook_names) in regexes {
+        hook_manager.set_hooks_for_bookmark(Regex::new(&regx).unwrap().into(), hook_names);
     }
     hook_manager
 }
@@ -1154,11 +1213,11 @@ fn test_load_hooks() {
         let mut config = default_repo_config();
         config.bookmarks = Some(vec![
             BookmarkParams {
-                bookmark: Bookmark::new("bm1").unwrap(),
+                bookmark: Bookmark::new("bm1").unwrap().into(),
                 hooks: Some(vec!["hook1".into(), "hook2".into()]),
             },
             BookmarkParams {
-                bookmark: Bookmark::new("bm2").unwrap(),
+                bookmark: Regex::new("bm2").unwrap().into(),
                 hooks: Some(vec![
                     "hook2".into(),
                     "hook3".into(),
@@ -1205,9 +1264,10 @@ fn test_load_hooks() {
 #[test]
 fn test_load_hooks_no_such_hook() {
     async_unit::tokio_unit_test(|| {
+        let book_or_rex = BookmarkOrRegex::Bookmark(Bookmark::new("bm1").unwrap());
         let mut config = default_repo_config();
         config.bookmarks = Some(vec![BookmarkParams {
-            bookmark: Bookmark::new("bm1").unwrap(),
+            bookmark: book_or_rex.clone(),
             hooks: Some(vec!["hook1".into(), "hook2".into()]),
         }]);
 
@@ -1225,7 +1285,7 @@ fn test_load_hooks_no_such_hook() {
             .downcast::<ErrorKind>()
         {
             Ok(ErrorKind::NoSuchBookmarkHook(bookmark)) => {
-                assert_eq!(Bookmark::new("bm1").unwrap(), bookmark);
+                assert_eq!(book_or_rex, bookmark);
             }
             _ => assert!(false, "Unexpected err type"),
         };
@@ -1237,7 +1297,7 @@ fn test_load_hooks_bad_rust_hook() {
     async_unit::tokio_unit_test(|| {
         let mut config = default_repo_config();
         config.bookmarks = Some(vec![BookmarkParams {
-            bookmark: Bookmark::new("bm1").unwrap(),
+            bookmark: Bookmark::new("bm1").unwrap().into(),
             hooks: Some(vec!["rust:hook1".into()]),
         }]);
 

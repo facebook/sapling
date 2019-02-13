@@ -11,6 +11,7 @@
 #![deny(warnings)]
 
 use bookmarks::Bookmark;
+use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql_async::{
@@ -145,11 +146,45 @@ impl Default for HookManagerParams {
     }
 }
 
+/// Configuration might be done for a single bookmark or for all bookmarks matching a regex
+#[derive(Debug, Clone)]
+pub enum BookmarkOrRegex {
+    /// Matches a single bookmark
+    Bookmark(Bookmark),
+    /// Matches bookmarks with a regex
+    Regex(Regex),
+}
+
+impl PartialEq for BookmarkOrRegex {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BookmarkOrRegex::Bookmark(ref b1), BookmarkOrRegex::Bookmark(ref b2)) => b1.eq(b2),
+            (BookmarkOrRegex::Regex(ref r1), BookmarkOrRegex::Regex(ref r2)) => {
+                r1.as_str().eq(r2.as_str())
+            }
+            _ => false,
+        }
+    }
+}
+impl Eq for BookmarkOrRegex {}
+
+impl From<Bookmark> for BookmarkOrRegex {
+    fn from(b: Bookmark) -> Self {
+        BookmarkOrRegex::Bookmark(b)
+    }
+}
+
+impl From<Regex> for BookmarkOrRegex {
+    fn from(r: Regex) -> Self {
+        BookmarkOrRegex::Regex(r)
+    }
+}
+
 /// Configuration for a bookmark
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BookmarkParams {
     /// The bookmark
-    pub bookmark: Bookmark,
+    pub bookmark: BookmarkOrRegex,
     /// The hooks active for the bookmark
     pub hooks: Option<Vec<String>>,
 }

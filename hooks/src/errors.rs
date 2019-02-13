@@ -4,8 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use bookmarks::Bookmark;
 pub use mercurial_types::HgChangesetId;
+use metaconfig_types::BookmarkOrRegex;
 pub use mononoke_types::MPath;
 
 #[derive(Debug, Fail)]
@@ -28,8 +28,8 @@ pub enum ErrorKind {
     #[fail(display = "Missing file for cs '{}' path '{}'", _0, _1)]
     MissingFile(HgChangesetId, MPath),
 
-    #[fail(display = "Hook(s) referenced in bookmark {} do not exist", _0)]
-    NoSuchBookmarkHook(Bookmark),
+    #[fail(display = "Hook(s) referenced in bookmark {:#?} do not exist", _0)]
+    NoSuchBookmarkHook(BookmarkOrRegex),
 
     #[fail(display = "invalid rust hook: {}", _0)]
     InvalidRustHook(String),
