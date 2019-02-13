@@ -1683,6 +1683,11 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
         pushvarspart.addparam("BYPASS_READONLY", "True", mandatory=False)
 
         backup = False
+
+        if outgoing and not outgoing.missing and not bookmarks:
+            ui.status(_("nothing to back up\n"))
+            return True
+
         if outgoing and outgoing.missing:
             backup = True
             parts = bundleparts.getscratchbranchparts(
