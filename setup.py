@@ -1496,6 +1496,7 @@ packages = [
 
 if havefb:
     packages.append("edenscm.mercurial.fb")
+    packages.append("edenscm.mercurial.fb.mergedriver")
 
 common_depends = [
     "edenscm/mercurial/bitmanipulation.h",
