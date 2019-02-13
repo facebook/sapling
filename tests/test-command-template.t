@@ -1,5 +1,7 @@
   $ . helpers-usechg.sh
 
+  $ setconfig ui.allowemptycommit=1
+
   $ hg init a
   $ cd a
   $ echo a > a
@@ -20,8 +22,8 @@
   $ echo c >> c
   $ hg commit -m 'no user, no domain' -d '1300000 0' -u 'person'
 
-  $ echo foo > .hg/branch
   $ hg commit -m 'new branch' -d '1400000 0' -u 'person'
+  $ hg bookmark foo
 
   $ hg co -q 3
   $ echo other 4 >> d
@@ -482,13 +484,13 @@ Compact style works:
   7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
     second
   
-  6:5,4   d41e714fe50d   1970-01-18 08:40 +0000   person
+  6:5,4   f7e5795620e7   1970-01-18 08:40 +0000   person
     merge
   
   5:3   13207e5a10d9   1970-01-18 08:40 +0000   person
     new head
   
-  4   bbe44766e73d   1970-01-17 04:53 +0000   person
+  4[foo]   07fa1db10648   1970-01-17 04:53 +0000   person
     new branch
   
   3   10e46f2dcbf4   1970-01-16 01:06 +0000   person
@@ -511,13 +513,13 @@ Compact style works:
   7:-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
     second
   
-  6:5,4   d41e714fe50d   1970-01-18 08:40 +0000   person
+  6:5,4   f7e5795620e7   1970-01-18 08:40 +0000   person
     merge
   
   5:3   13207e5a10d9   1970-01-18 08:40 +0000   person
     new head
   
-  4   bbe44766e73d   1970-01-17 04:53 +0000   person
+  4   07fa1db10648   1970-01-17 04:53 +0000   person
     new branch
   
   3   10e46f2dcbf4   1970-01-16 01:06 +0000   person
@@ -544,13 +546,13 @@ Compact style works:
   7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
     second
   
-  6:5,4   d41e714fe50d   1970-01-18 08:40 +0000   person
+  6:5,4   f7e5795620e7   1970-01-18 08:40 +0000   person
     merge
   
   5:3,-1   13207e5a10d9   1970-01-18 08:40 +0000   person
     new head
   
-  4:3,-1   bbe44766e73d   1970-01-17 04:53 +0000   person
+  4:3,-1   07fa1db10648   1970-01-17 04:53 +0000   person
     new branch
   
   3:2,-1   10e46f2dcbf4   1970-01-16 01:06 +0000   person
@@ -592,9 +594,9 @@ Test xml styles:
   <date>1970-01-12T13:46:40+00:00</date>
   <msg xml:space="preserve">second</msg>
   </logentry>
-  <logentry revision="6" node="d41e714fe50d9e4a5f11b4d595d543481b5f980b">
+  <logentry revision="6" node="f7e5795620e78993ad76680c4306bb2da83907b3">
   <parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-  <parent revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74" />
+  <parent revision="4" node="07fa1db1064879a32157227401eb44b322ae53ce" />
   <author email="person">person</author>
   <date>1970-01-18T08:40:01+00:00</date>
   <msg xml:space="preserve">merge</msg>
@@ -605,8 +607,8 @@ Test xml styles:
   <date>1970-01-18T08:40:00+00:00</date>
   <msg xml:space="preserve">new head</msg>
   </logentry>
-  <logentry revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74">
-  <branch>foo</branch>
+  <logentry revision="4" node="07fa1db1064879a32157227401eb44b322ae53ce">
+  <bookmark>foo</bookmark>
   <author email="person">person</author>
   <date>1970-01-17T04:53:20+00:00</date>
   <msg xml:space="preserve">new branch</msg>
@@ -663,9 +665,9 @@ Test xml styles:
   <path action="A">second</path>
   </paths>
   </logentry>
-  <logentry revision="6" node="d41e714fe50d9e4a5f11b4d595d543481b5f980b">
+  <logentry revision="6" node="f7e5795620e78993ad76680c4306bb2da83907b3">
   <parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-  <parent revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74" />
+  <parent revision="4" node="07fa1db1064879a32157227401eb44b322ae53ce" />
   <author email="person">person</author>
   <date>1970-01-18T08:40:01+00:00</date>
   <msg xml:space="preserve">merge</msg>
@@ -681,8 +683,8 @@ Test xml styles:
   <path action="A">d</path>
   </paths>
   </logentry>
-  <logentry revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74">
-  <branch>foo</branch>
+  <logentry revision="4" node="07fa1db1064879a32157227401eb44b322ae53ce">
+  <bookmark>foo</bookmark>
   <author email="person">person</author>
   <date>1970-01-17T04:53:20+00:00</date>
   <msg xml:space="preserve">new branch</msg>
@@ -758,9 +760,9 @@ Test xml styles:
   </paths>
   <extra key="branch">default</extra>
   </logentry>
-  <logentry revision="6" node="d41e714fe50d9e4a5f11b4d595d543481b5f980b">
+  <logentry revision="6" node="f7e5795620e78993ad76680c4306bb2da83907b3">
   <parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-  <parent revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74" />
+  <parent revision="4" node="07fa1db1064879a32157227401eb44b322ae53ce" />
   <author email="person">person</author>
   <date>1970-01-18T08:40:01+00:00</date>
   <msg xml:space="preserve">merge</msg>
@@ -779,8 +781,8 @@ Test xml styles:
   </paths>
   <extra key="branch">default</extra>
   </logentry>
-  <logentry revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74">
-  <branch>foo</branch>
+  <logentry revision="4" node="07fa1db1064879a32157227401eb44b322ae53ce">
+  <bookmark>foo</bookmark>
   <parent revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
   <parent revision="-1" node="0000000000000000000000000000000000000000" />
   <author email="person">person</author>
@@ -788,7 +790,7 @@ Test xml styles:
   <msg xml:space="preserve">new branch</msg>
   <paths>
   </paths>
-  <extra key="branch">foo</extra>
+  <extra key="branch">default</extra>
   </logentry>
   <logentry revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47">
   <parent revision="2" node="97054abb4ab824450e9164180baf491ae0078465" />
@@ -920,7 +922,7 @@ honor --git but not format-breaking diffopts
    },
    {
     "rev": 6,
-    "node": "d41e714fe50d9e4a5f11b4d595d543481b5f980b",
+    "node": "f7e5795620e78993ad76680c4306bb2da83907b3",
     "branch": "default",
     "phase": "draft",
     "user": "person",
@@ -928,7 +930,7 @@ honor --git but not format-breaking diffopts
     "desc": "merge",
     "bookmarks": [],
     "tags": [],
-    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "bbe44766e73d5f11ed2177f1838de10c53ef3e74"]
+    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "07fa1db1064879a32157227401eb44b322ae53ce"]
    },
    {
     "rev": 5,
@@ -944,13 +946,13 @@ honor --git but not format-breaking diffopts
    },
    {
     "rev": 4,
-    "node": "bbe44766e73d5f11ed2177f1838de10c53ef3e74",
-    "branch": "foo",
+    "node": "07fa1db1064879a32157227401eb44b322ae53ce",
+    "branch": "default",
     "phase": "draft",
     "user": "person",
     "date": [1400000, 0],
     "desc": "new branch",
-    "bookmarks": [],
+    "bookmarks": ["foo"],
     "tags": [],
     "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"]
    },
@@ -1021,7 +1023,7 @@ honor --git but not format-breaking diffopts
    },
    {
     "rev": 6,
-    "node": "d41e714fe50d9e4a5f11b4d595d543481b5f980b",
+    "node": "f7e5795620e78993ad76680c4306bb2da83907b3",
     "branch": "default",
     "phase": "draft",
     "user": "person",
@@ -1029,20 +1031,7 @@ honor --git but not format-breaking diffopts
     "desc": "merge",
     "bookmarks": [],
     "tags": [],
-    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "bbe44766e73d5f11ed2177f1838de10c53ef3e74"],
-    "files": []
-   },
-   {
-    "rev": 4,
-    "node": "bbe44766e73d5f11ed2177f1838de10c53ef3e74",
-    "branch": "foo",
-    "phase": "draft",
-    "user": "person",
-    "date": [1400000, 0],
-    "desc": "new branch",
-    "bookmarks": [],
-    "tags": [],
-    "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
+    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "07fa1db1064879a32157227401eb44b322ae53ce"],
     "files": []
    }
   ]
@@ -1085,7 +1074,7 @@ honor --git but not format-breaking diffopts
    },
    {
     "rev": 6,
-    "node": "d41e714fe50d9e4a5f11b4d595d543481b5f980b",
+    "node": "f7e5795620e78993ad76680c4306bb2da83907b3",
     "branch": "default",
     "phase": "draft",
     "user": "person",
@@ -1093,7 +1082,7 @@ honor --git but not format-breaking diffopts
     "desc": "merge",
     "bookmarks": [],
     "tags": [],
-    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "bbe44766e73d5f11ed2177f1838de10c53ef3e74"],
+    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "07fa1db1064879a32157227401eb44b322ae53ce"],
     "manifest": "4dc3def4f9b4c6e8de820f6ee74737f91e96a216",
     "extra": {"branch": "default"},
     "modified": [],
@@ -1119,17 +1108,17 @@ honor --git but not format-breaking diffopts
    },
    {
     "rev": 4,
-    "node": "bbe44766e73d5f11ed2177f1838de10c53ef3e74",
-    "branch": "foo",
+    "node": "07fa1db1064879a32157227401eb44b322ae53ce",
+    "branch": "default",
     "phase": "draft",
     "user": "person",
     "date": [1400000, 0],
     "desc": "new branch",
-    "bookmarks": [],
+    "bookmarks": ["foo"],
     "tags": [],
     "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
     "manifest": "cb5a1327723bada42f117e4c55a303246eaf9ccc",
-    "extra": {"branch": "foo"},
+    "extra": {"branch": "default"},
     "modified": [],
     "added": [],
     "removed": []
@@ -1389,7 +1378,7 @@ Issue338:
   1970-01-18  person  <person>
   
   	* merge
-  	[d41e714fe50d]
+  	[f7e5795620e7]
   
   	* d:
   	new head
@@ -1398,7 +1387,7 @@ Issue338:
   1970-01-17  person  <person>
   
   	* new branch
-  	[bbe44766e73d] <foo>
+  	[07fa1db10648]
   
   1970-01-16  person  <person>
   
@@ -1439,12 +1428,7 @@ Issue2130: xml output for 'hg heads' is malformed
   1970-01-18  person  <person>
   
   	* merge
-  	[d41e714fe50d]
-  
-  1970-01-17  person  <person>
-  
-  	* new branch
-  	[bbe44766e73d] <foo>
+  	[f7e5795620e7]
   
 
 Keys work:
@@ -1488,7 +1472,7 @@ Keys work:
   branch: default
   branch: default
   branch: default
-  branch: foo
+  branch: default
   branch: default
   branch: default
   branch: default
@@ -1497,7 +1481,7 @@ Keys work:
   branch--verbose: default
   branch--verbose: default
   branch--verbose: default
-  branch--verbose: foo
+  branch--verbose: default
   branch--verbose: default
   branch--verbose: default
   branch--verbose: default
@@ -1506,7 +1490,7 @@ Keys work:
   branch--debug: default
   branch--debug: default
   branch--debug: default
-  branch--debug: foo
+  branch--debug: default
   branch--debug: default
   branch--debug: default
   branch--debug: default
@@ -1515,7 +1499,7 @@ Keys work:
   branches: 
   branches: 
   branches: 
-  branches: foo
+  branches: 
   branches: 
   branches: 
   branches: 
@@ -1524,7 +1508,7 @@ Keys work:
   branches--verbose: 
   branches--verbose: 
   branches--verbose: 
-  branches--verbose: foo
+  branches--verbose: 
   branches--verbose: 
   branches--verbose: 
   branches--verbose: 
@@ -1533,7 +1517,7 @@ Keys work:
   branches--debug: 
   branches--debug: 
   branches--debug: 
-  branches--debug: foo
+  branches--debug: 
   branches--debug: 
   branches--debug: 
   branches--debug: 
@@ -1795,34 +1779,34 @@ Keys work:
   manifest--debug: 0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   node: 95c24699272ef57d062b8bccc32c878bf841784a
   node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
-  node: d41e714fe50d9e4a5f11b4d595d543481b5f980b
+  node: f7e5795620e78993ad76680c4306bb2da83907b3
   node: 13207e5a10d9fd28ec424934298e176197f2c67f
-  node: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  node: 07fa1db1064879a32157227401eb44b322ae53ce
   node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
   node: 97054abb4ab824450e9164180baf491ae0078465
   node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   node: 1e4e1b8f71e05681d422154f5421e385fec3454f
   node--verbose: 95c24699272ef57d062b8bccc32c878bf841784a
   node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
-  node--verbose: d41e714fe50d9e4a5f11b4d595d543481b5f980b
+  node--verbose: f7e5795620e78993ad76680c4306bb2da83907b3
   node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
-  node--verbose: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  node--verbose: 07fa1db1064879a32157227401eb44b322ae53ce
   node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
   node--verbose: 97054abb4ab824450e9164180baf491ae0078465
   node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
   node--debug: 95c24699272ef57d062b8bccc32c878bf841784a
   node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
-  node--debug: d41e714fe50d9e4a5f11b4d595d543481b5f980b
+  node--debug: f7e5795620e78993ad76680c4306bb2da83907b3
   node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
-  node--debug: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  node--debug: 07fa1db1064879a32157227401eb44b322ae53ce
   node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
   node--debug: 97054abb4ab824450e9164180baf491ae0078465
   node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
   parents: 
   parents: -1:000000000000 
-  parents: 5:13207e5a10d9 4:bbe44766e73d 
+  parents: 5:13207e5a10d9 4:07fa1db10648 
   parents: 3:10e46f2dcbf4 
   parents: 
   parents: 
@@ -1831,7 +1815,7 @@ Keys work:
   parents: 
   parents--verbose: 
   parents--verbose: -1:000000000000 
-  parents--verbose: 5:13207e5a10d9 4:bbe44766e73d 
+  parents--verbose: 5:13207e5a10d9 4:07fa1db10648 
   parents--verbose: 3:10e46f2dcbf4 
   parents--verbose: 
   parents--verbose: 
@@ -1840,7 +1824,7 @@ Keys work:
   parents--verbose: 
   parents--debug: 7:29114dbae42b9f078cf2714dbe3a86bba8ec7453 -1:0000000000000000000000000000000000000000 
   parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000 
-  parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:bbe44766e73d5f11ed2177f1838de10c53ef3e74 
+  parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:07fa1db1064879a32157227401eb44b322ae53ce 
   parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000 
   parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000 
   parents--debug: 2:97054abb4ab824450e9164180baf491ae0078465 -1:0000000000000000000000000000000000000000 
@@ -1932,7 +1916,7 @@ Keys work:
   extras: branch=default
   extras: branch=default
   extras: branch=default
-  extras: branch=foo
+  extras: branch=default
   extras: branch=default
   extras: branch=default
   extras: branch=default
@@ -1941,7 +1925,7 @@ Keys work:
   extras--verbose: branch=default
   extras--verbose: branch=default
   extras--verbose: branch=default
-  extras--verbose: branch=foo
+  extras--verbose: branch=default
   extras--verbose: branch=default
   extras--verbose: branch=default
   extras--verbose: branch=default
@@ -1950,7 +1934,7 @@ Keys work:
   extras--debug: branch=default
   extras--debug: branch=default
   extras--debug: branch=default
-  extras--debug: branch=foo
+  extras--debug: branch=default
   extras--debug: branch=default
   extras--debug: branch=default
   extras--debug: branch=default
@@ -2038,7 +2022,7 @@ Keys work:
   p1node--debug: 0000000000000000000000000000000000000000
   p2node: 0000000000000000000000000000000000000000
   p2node: 0000000000000000000000000000000000000000
-  p2node: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  p2node: 07fa1db1064879a32157227401eb44b322ae53ce
   p2node: 0000000000000000000000000000000000000000
   p2node: 0000000000000000000000000000000000000000
   p2node: 0000000000000000000000000000000000000000
@@ -2047,7 +2031,7 @@ Keys work:
   p2node: 0000000000000000000000000000000000000000
   p2node--verbose: 0000000000000000000000000000000000000000
   p2node--verbose: 0000000000000000000000000000000000000000
-  p2node--verbose: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  p2node--verbose: 07fa1db1064879a32157227401eb44b322ae53ce
   p2node--verbose: 0000000000000000000000000000000000000000
   p2node--verbose: 0000000000000000000000000000000000000000
   p2node--verbose: 0000000000000000000000000000000000000000
@@ -2056,7 +2040,7 @@ Keys work:
   p2node--verbose: 0000000000000000000000000000000000000000
   p2node--debug: 0000000000000000000000000000000000000000
   p2node--debug: 0000000000000000000000000000000000000000
-  p2node--debug: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  p2node--debug: 07fa1db1064879a32157227401eb44b322ae53ce
   p2node--debug: 0000000000000000000000000000000000000000
   p2node--debug: 0000000000000000000000000000000000000000
   p2node--debug: 0000000000000000000000000000000000000000
@@ -2157,9 +2141,9 @@ Filters work:
   $ hg log --template '{node|short}\n'
   95c24699272e
   29114dbae42b
-  d41e714fe50d
+  f7e5795620e7
   13207e5a10d9
-  bbe44766e73d
+  07fa1db10648
   10e46f2dcbf4
   97054abb4ab8
   b608e9d1a3f0
@@ -2180,9 +2164,9 @@ Filters work:
   8: 
   7: 8:95c24699272e
   6: 
-  5: 6:d41e714fe50d
-  4: 6:d41e714fe50d
-  3: 4:bbe44766e73d 5:13207e5a10d9
+  5: 6:f7e5795620e7
+  4: 6:f7e5795620e7
+  3: 4:07fa1db10648 5:13207e5a10d9
   2: 3:10e46f2dcbf4
   1: 2:97054abb4ab8
   0: 1:b608e9d1a3f0
@@ -2262,8 +2246,8 @@ Count filter:
 
 Upper/lower filters:
 
-  $ hg log -r0 --template '{branch|upper}\n'
-  DEFAULT
+  $ hg log -r0 --template '{author|upper}\n'
+  USER NAME <USER@HOSTNAME>
   $ hg log -r0 --template '{author|lower}\n'
   user name <user@hostname>
   $ hg log -r0 --template '{date|upper}\n'
@@ -2449,9 +2433,9 @@ Check the bisect template
   date:        Fri Jan 16 01:06:40 1970 +0000
   summary:     no user, no domain
   
-  changeset:   4:bbe44766e73d
+  changeset:   4:07fa1db10648
   bisect:      bad (implicit)
-  branch:      foo
+  bookmark:    foo
   user:        person
   date:        Sat Jan 17 04:53:20 1970 +0000
   summary:     new branch
@@ -2517,16 +2501,16 @@ Check the bisect template
   no user, no domain
   
   
-  changeset:   4:bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  changeset:   4:07fa1db1064879a32157227401eb44b322ae53ce
   bisect:      bad (implicit)
-  branch:      foo
+  bookmark:    foo
   phase:       draft
   parent:      3:10e46f2dcbf4823578cf180f33ecf0b957964c47
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc
   user:        person
   date:        Sat Jan 17 04:53:20 1970 +0000
-  extra:       branch=foo
+  extra:       branch=default
   description:
   new branch
   
@@ -2572,9 +2556,9 @@ Check the bisect template
   no user, no domain
   
   
-  changeset:   4:bbe44766e73d
+  changeset:   4:07fa1db10648
   bisect:      bad (implicit)
-  branch:      foo
+  bookmark:    foo
   user:        person
   date:        Sat Jan 17 04:53:20 1970 +0000
   description:
@@ -2606,9 +2590,9 @@ Check the bisect template
   [log.date|date:        Fri Jan 16 01:06:40 1970 +0000]
   [log.summary|summary:     no user, no domain]
   
-  [log.changeset changeset.draft|changeset:   4:bbe44766e73d]
+  [log.changeset changeset.draft|changeset:   4:07fa1db10648]
   [log.bisect bisect.bad|bisect:      bad (implicit)]
-  [log.branch|branch:      foo]
+  [log.bookmark|bookmark:    foo]
   [log.user|user:        person]
   [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
   [log.summary|summary:     new branch]
@@ -2674,16 +2658,16 @@ Check the bisect template
   [ui.note log.description|no user, no domain]
   
   
-  [log.changeset changeset.draft|changeset:   4:bbe44766e73d5f11ed2177f1838de10c53ef3e74]
+  [log.changeset changeset.draft|changeset:   4:07fa1db1064879a32157227401eb44b322ae53ce]
   [log.bisect bisect.bad|bisect:      bad (implicit)]
-  [log.branch|branch:      foo]
+  [log.bookmark|bookmark:    foo]
   [log.phase|phase:       draft]
   [log.parent changeset.public|parent:      3:10e46f2dcbf4823578cf180f33ecf0b957964c47]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
   [ui.debug log.manifest|manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc]
   [log.user|user:        person]
   [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
-  [ui.debug log.extra|extra:       branch=foo]
+  [ui.debug log.extra|extra:       branch=default]
   [ui.note log.description|description:]
   [ui.note log.description|new branch]
   
@@ -2729,9 +2713,9 @@ Check the bisect template
   [ui.note log.description|no user, no domain]
   
   
-  [log.changeset changeset.draft|changeset:   4:bbe44766e73d]
+  [log.changeset changeset.draft|changeset:   4:07fa1db10648]
   [log.bisect bisect.bad|bisect:      bad (implicit)]
-  [log.branch|branch:      foo]
+  [log.bookmark|bookmark:    foo]
   [log.user|user:        person]
   [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
   [ui.note log.description|description:]
@@ -2819,10 +2803,6 @@ Test index keyword:
   $ hg log -l 2 -T '{index + 10}{files % " {index}:{file}"}\n'
   10 0:a 1:b 2:fifth 3:fourth 4:third
   11 0:a
-
-  $ hg branches -T '{index} {branch}\n'
-  0 default
-  1 foo
 
 Test diff function:
 
@@ -3614,7 +3594,7 @@ Test string escaping in nested expression:
 
   $ hg log -R a -r 3:4 --template '{rev}:{sub(if("1", "\x6e"), ifeq(branch, "foo", r"\x5c\x786e", "\x5c\x786e"), desc)}\n'
   3:\x6eo user, \x6eo domai\x6e
-  4:\x5c\x786eew bra\x5c\x786ech
+  4:\x6eew bra\x6ech
 
 Test quotes in nested expression are evaluated just like a $(command)
 substitution in POSIX shells:
@@ -3636,17 +3616,17 @@ Test recursive evaluation:
   $ hg log -r 0 --template '{if(rev, "{author} {rev}")}\n'
   test 0
 
-  $ hg branch -q 'text.{rev}'
+  $ hg bookmark -q 'text.{rev}'
   $ echo aa >> aa
   $ hg ci -u '{node|short}' -m 'desc to be wrapped desc to be wrapped'
 
-  $ hg log -l1 --template '{fill(desc, "20", author, branch)}'
+  $ hg log -l1 --template '{fill(desc, "20", author, bookmarks)}'
   {node|short}desc to
   text.{rev}be wrapped
   text.{rev}desc to be
   text.{rev}wrapped (no-eol)
   $ hg log -l1 --template '{fill(desc, "20", "{node|short}:", "text.{rev}:")}'
-  bcc7ff960b8e:desc to
+  ea4c0948489d:desc to
   text.1:be wrapped
   text.1:desc to be
   text.1:wrapped (no-eol)
@@ -3655,14 +3635,14 @@ Test recursive evaluation:
   [255]
 
   $ COLUMNS=25 hg log -l1 --template '{fill(desc, termwidth, "{node|short}:", "termwidth.{rev}:")}'
-  bcc7ff960b8e:desc to be
+  ea4c0948489d:desc to be
   termwidth.1:wrapped desc
   termwidth.1:to be wrapped (no-eol)
 
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", author)}'
   {node|short} (no-eol)
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", "{node|short}")}'
-  bcc-ff---b-e (no-eol)
+  ea-c-------d (no-eol)
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -3672,7 +3652,7 @@ Test recursive evaluation:
   > text.{rev} = red
   > text.1 = green
   > EOF
-  $ hg log --color=always -l 1 --template '{label(branch, "text\n")}'
+  $ hg log --color=always -l 1 --template '{label(bookmarks, "text\n")}'
   \x1b[0;31mtext\x1b[0m (esc)
   $ hg log --color=always -l 1 --template '{label("text.{rev}", "text\n")}'
   \x1b[0;32mtext\x1b[0m (esc)
@@ -3700,11 +3680,6 @@ label should be no-op if color is disabled:
   text
   $ hg log --config extensions.color=! -l 1 --template '{label(red, "text\n")}'
   text
-
-Test branches inside if statement:
-
-  $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'
-  no
 
 Test dict constructor:
 
@@ -3781,15 +3756,15 @@ Test shortest(node) function:
   $ echo b > b
   $ hg ci -qAm b
   $ hg log --template '{shortest(node)}\n'
-  e777
-  bcc7
+  21c1
+  ea4c
   f776
   $ hg log --template '{shortest(node, 10)}\n'
-  e777603221
-  bcc7ff960b
+  21c1b7ca5a
+  ea4c094848
   f7769ec2ab
   $ hg log --template '{node|shortest}\n' -l1
-  e777
+  21c1
 
   $ hg log -r 0 -T '{shortest(node, "1{"0"}")}\n'
   f7769ec2ab
@@ -3944,8 +3919,8 @@ Test separate function
 
   $ hg log -r 0 -T '{separate("-", "", "a", "b", "", "", "c", "")}\n'
   a-b-c
-  $ hg log -r 0 -T '{separate(" ", "{rev}:{node|short}", author|user, branch)}\n'
-  0:f7769ec2ab97 test default
+  $ hg log -r 0 -T '{separate(" ", "{rev}:{node|short}", author|user, bookmarks)}\n'
+  0:f7769ec2ab97 test
   $ hg log -r 0 --color=always -T '{separate(" ", "a", label(red, "b"), "c", label(red, ""), "d")}\n'
   a \x1b[0;31mb\x1b[0m c d (esc)
 
@@ -4039,12 +4014,12 @@ Test revset function
  a list template is evaluated for each item of revset/parents
 
   $ hg log -T '{rev} p: {revset("p1(%s)", rev) % "{rev}:{node|short}"}\n'
-  2 p: 1:bcc7ff960b8e
+  2 p: 1:ea4c0948489d
   1 p: 0:f7769ec2ab97
   0 p: 
 
   $ hg log --debug -T '{rev} p:{parents % " {rev}:{node|short}"}\n'
-  2 p: 1:bcc7ff960b8e -1:000000000000
+  2 p: 1:ea4c0948489d -1:000000000000
   1 p: 0:f7769ec2ab97 -1:000000000000
   0 p: -1:000000000000 -1:000000000000
 
@@ -4082,11 +4057,11 @@ on the other hand, parents are formatted as '{rev}:{node|formatnode}' by
 default. join() should agree with the default formatting:
 
   $ hg log -R ../a -T '{join(parents, ", ")}\n' -r6
-  5:13207e5a10d9, 4:bbe44766e73d
+  5:13207e5a10d9, 4:07fa1db10648
 
   $ hg log -R ../a -T '{join(parents, ",\n")}\n' -r6 --debug
   5:13207e5a10d9fd28ec424934298e176197f2c67f,
-  4:bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  4:07fa1db1064879a32157227401eb44b322ae53ce
 
 Test files function
 
@@ -4122,7 +4097,7 @@ Test active bookmark templating
   $ hg book foo
   $ hg book bar
   $ hg log --template "{rev} {bookmarks % '{bookmark}{ifeq(bookmark, active, \"*\")} '}\n"
-  2 bar* foo 
+  2 bar* foo text.{rev} 
   1 
   0 
   $ hg log --template "{rev} {activebookmark}\n"
@@ -4136,7 +4111,7 @@ Test active bookmark templating
   0 
   $ hg book -r1 baz
   $ hg log --template "{rev} {join(bookmarks, ' ')}\n"
-  2 bar foo
+  2 bar foo text.{rev}
   1 baz
   0 
   $ hg log --template "{rev} {ifcontains('foo', bookmarks, 't', 'f')}\n"
@@ -4149,11 +4124,11 @@ Test namespaces dict
   $ hg --config extensions.revnamesext=$TESTDIR/revnamesext.py log -T '{rev}\n{namespaces % " {namespace} color={colorname} builtin={builtin}\n  {join(names, ",")}\n"}\n'
   2
    bookmarks color=bookmark builtin=True
-    bar,foo
+    bar,foo,text.{rev}
    tags color=tag builtin=True
     tip
    branches color=branch builtin=True
-    text.{rev}
+    default
    revnames color=revname builtin=False
     r2
   
@@ -4163,7 +4138,7 @@ Test namespaces dict
    tags color=tag builtin=True
     
    branches color=branch builtin=True
-    text.{rev}
+    default
    revnames color=revname builtin=False
     r1
   
@@ -4178,23 +4153,26 @@ Test namespaces dict
     r0
   
   $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
-  bookmarks: bar foo
+  bookmarks: bar foo text.{rev}
   tags: tip
-  branches: text.{rev}
+  branches: default
   $ hg log -r2 -T '{namespaces % "{namespace}:\n{names % " {name}\n"}"}'
   bookmarks:
    bar
    foo
+   text.{rev}
   tags:
    tip
   branches:
-   text.{rev}
+   default
   $ hg log -r2 -T '{get(namespaces, "bookmarks") % "{name}\n"}'
   bar
   foo
+  text.{rev}
   $ hg log -r2 -T '{namespaces.bookmarks % "{bookmark}\n"}'
   bar
   foo
+  text.{rev}
 
 Test stringify on sub expressions
 
@@ -4480,9 +4458,8 @@ Otherwise, our stock styles and web templates could be corrupted:
 
 Aliases in formatter:
 
-  $ hg branches -T '{pad(branch, 7)} {rn}\n'
-  default 6:d41e714fe50d
-  foo     4:bbe44766e73d
+  $ hg bookmarks -T '{pad(bookmark, 7)} {rn}\n'
+  foo     4:07fa1db10648
 
 Aliases should honor HGPLAIN:
 
@@ -4512,13 +4489,13 @@ Set up repository for non-ascii encoding tests:
   > open('latin1', 'w').write('\xe9')
   > open('utf-8', 'w').write('\xc3\xa9')
   > EOF
-  $ HGENCODING=utf-8 hg branch -q `cat utf-8`
+  $ HGENCODING=utf-8 hg bookmark -q `cat utf-8`
   $ HGENCODING=utf-8 hg ci -qAm "non-ascii branch: `cat utf-8`" utf-8
 
 json filter should try round-trip conversion to utf-8:
 
-  $ HGENCODING=ascii hg log -T "{branch|json}\n" -r0
-  "\u00e9"
+  $ HGENCODING=ascii hg log -T "{bookmarks|json}\n" -r0
+  ["\u00e9"]
   $ HGENCODING=ascii hg log -T "{desc|json}\n" -r0
   "non-ascii branch: \u00e9"
 
@@ -4531,7 +4508,7 @@ json filter takes input as utf-8b:
 
 utf8 filter:
 
-  $ HGENCODING=ascii hg log -T "round-trip: {branch|utf8|hex}\n" -r0
+  $ HGENCODING=ascii hg log -T "round-trip: {bookmarks % '{bookmark|utf8|hex}'}\n" -r0
   round-trip: c3a9
   $ HGENCODING=latin1 hg log -T "decoded: {'`cat latin1`'|utf8|hex}\n" -l1
   decoded: c3a9
