@@ -10,7 +10,7 @@
 #pragma once
 #include <iosfwd>
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/service/gen-cpp2/EdenService.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 
 namespace folly {
 template <typename T>
