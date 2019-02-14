@@ -5,7 +5,7 @@
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::{fs::Permissions, path::PathBuf};
+use std::{fs::Permissions, io::ErrorKind, path::PathBuf};
 
 use failure::Fallible;
 use tempfile::NamedTempFile;
@@ -19,6 +19,23 @@ fn make_readonly(perms: &mut Permissions) {
 #[cfg(unix)]
 fn make_readonly(perms: &mut Permissions) {
     perms.set_mode(0o444);
+}
+
+/// Persist the temporary file.
+///
+/// Since packfiles are named based on their content, a rename failure due to an already existing
+/// file isn't an error, as both files have effectively the same content.
+fn persist(file: NamedTempFile, path: PathBuf) -> Fallible<()> {
+    match file.persist_noclobber(path) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            if e.error.kind() != ErrorKind::AlreadyExists {
+                Err(e.into())
+            } else {
+                Ok(())
+            }
+        }
+    }
 }
 
 pub trait MutablePack {
@@ -47,8 +64,11 @@ pub trait MutablePack {
         packfile.as_file().set_permissions(perms.clone())?;
         indexfile.as_file().set_permissions(perms)?;
 
-        packfile.persist(base_filepath.with_extension(pack_extension))?;
-        indexfile.persist(base_filepath.with_extension(index_extension))?;
+        let packfile_path = base_filepath.with_extension(pack_extension);
+        let indexfile_path = base_filepath.with_extension(index_extension);
+
+        persist(packfile, packfile_path)?;
+        persist(indexfile, indexfile_path)?;
 
         Ok(base_filepath)
     }
