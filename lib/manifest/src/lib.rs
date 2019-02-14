@@ -1,3 +1,8 @@
+// Copyright 2019 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 //! manifest - The contents of the repository at a specific commit.
 //!
 //! The history of the repository is recorded in the commit graph. Each commit has a manifest
