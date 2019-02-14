@@ -524,7 +524,7 @@ test some other failure modes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 this should proceed as if there's no merge driver
   $ hg merge 1 --config experimental.mergedriver=python:fail
-  loading preprocess hook failed:
+  loading preprocess hook failed: [Errno 2] $ENOENT$: '$TESTTMP/repo1/fail'
   merging bar.txt
   merging foo.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
@@ -539,7 +539,7 @@ this should proceed as if there's no merge driver
   $ cd ..
 ensure the right path to load the merge driver hook
   $ hg -R repo1 merge 1 --config experimental.mergedriver=python:fail
-  loading preprocess hook failed:
+  loading preprocess hook failed: [Errno 2] $ENOENT$: '$TESTTMP/repo1/fail'
   merging repo1/bar.txt
   merging repo1/foo.txt
   warning: 1 conflicts while merging repo1/bar.txt! (edit, then use 'hg resolve --mark')

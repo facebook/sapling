@@ -682,12 +682,12 @@ test python hook configured with python:[file]:[hook] syntax
   $ echo "pre-identify.npmd = python:`pwd`/:no_python_module_dir" >> .hg/hgrc
 
   $ hg up null
-  loading update.ne hook failed:
+  loading update.ne hook failed: [Errno 2] $ENOENT$: '$TESTTMP/d/repo/nonexistent.py'
   abort: $ENOENT$: $TESTTMP/d/repo/nonexistent.py
   [255]
 
   $ hg id
-  loading pre-identify.npmd hook failed:
+  loading pre-identify.npmd hook failed: No module named repo
   abort: No module named repo!
   [255]
 

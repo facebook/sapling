@@ -260,8 +260,8 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                         path = os.path.join(repo.root, path)
                     try:
                         mod = extensions.loadpath(path, "hghook.%s" % hname)
-                    except Exception:
-                        ui.write(_("loading %s hook failed:\n") % hname)
+                    except Exception as e:
+                        ui.write(_("loading %s hook failed: %s\n") % (hname, e))
                         raise
                     hookfn = getattr(mod, cmd)
                 else:
