@@ -84,44 +84,48 @@ extern crate mononoke_types;
 extern crate mononoke_types_thrift;
 
 pub mod bdiff;
-pub mod delta_apply;
-pub mod delta;
-pub mod errors;
-pub mod fsencode;
-pub mod hash;
-pub mod nodehash;
-pub mod utils;
-pub mod manifest;
-pub mod manifest_utils;
 pub mod blob;
 pub mod blobnode;
 pub mod changeset;
-pub mod sql_types;
-pub mod flags;
-pub mod phase;
-mod node;
+pub mod delta;
+pub mod delta_apply;
 mod envelope;
+pub mod errors;
+pub mod flags;
+pub mod fsencode;
+pub mod hash;
+pub mod manifest;
+pub mod manifest_utils;
+mod node;
+pub mod nodehash;
+pub mod phase;
+pub mod remotefilelog;
+pub mod sql_types;
+pub mod utils;
 
 pub use blob::HgBlob;
 pub use blobnode::{HgBlobNode, HgParents};
 pub use changeset::Changeset;
 pub use delta::Delta;
-pub use envelope::{HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,
-                   HgManifestEnvelope, HgManifestEnvelopeMut};
+pub use envelope::{
+    HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,
+    HgManifestEnvelope, HgManifestEnvelopeMut,
+};
+pub use errors::{Error, ErrorKind};
 pub use flags::{parse_rev_flags, RevFlags};
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
-pub use node::Node;
-pub use nodehash::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
-                   NULL_CSID, NULL_HASH};
-pub use phase::HgPhase;
-pub use utils::percent_encode;
-
 // Re-exports from mononoke-types. Eventually these should go away and everything should depend
 // directly on mononoke-types;
 pub use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
-
-pub use errors::{Error, ErrorKind};
+pub use node::Node;
+pub use nodehash::{
+    HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey, NULL_CSID,
+    NULL_HASH,
+};
+pub use phase::HgPhase;
+pub use remotefilelog::HgFileHistoryEntry;
+pub use utils::percent_encode;
 
 #[cfg(test)]
 mod test;

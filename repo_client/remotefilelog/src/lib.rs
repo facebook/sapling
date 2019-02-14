@@ -22,7 +22,7 @@ use filenodes::FilenodeInfo;
 use context::CoreContext;
 use mercurial::file::File;
 use mercurial_types::{
-    HgBlobNode, HgChangesetId, HgFileNodeId, HgParents, MPath, RepoPath, RevFlags, NULL_CSID,
+    HgBlobNode, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, RevFlags, NULL_CSID,
     NULL_HASH,
 };
 use tracing::trace_args;
@@ -46,61 +46,6 @@ pub enum ErrorKind {
         expected: HgFileNodeId,
         actual: HgFileNodeId,
     },
-}
-
-/// Represents a file history entry in Mercurial's loose file format.
-pub struct HgFileHistoryEntry {
-    node: HgFileNodeId,
-    parents: HgParents,
-    linknode: HgChangesetId,
-    copyfrom: Option<(MPath, HgFileNodeId)>,
-}
-
-impl HgFileHistoryEntry {
-    fn new(
-        node: HgFileNodeId,
-        parents: HgParents,
-        linknode: HgChangesetId,
-        copyfrom: Option<(MPath, HgFileNodeId)>,
-    ) -> Self {
-        Self {
-            node,
-            parents,
-            linknode,
-            copyfrom,
-        }
-    }
-
-    /// Serialize this entry into Mercurial's loose file format and write
-    /// the resulting bytes to the given writer (most likely representing
-    /// partially written loose file contents).
-    fn serialize<W: Write>(&self, writer: &mut W) -> Fallible<()> {
-        let (p1, p2) = match self.parents {
-            HgParents::None => (NULL_HASH, NULL_HASH),
-            HgParents::One(p) => (p, NULL_HASH),
-            HgParents::Two(p1, p2) => (p1, p2),
-        };
-
-        let (p1, p2, copied_from) = if let Some((ref copied_from, copied_rev)) = self.copyfrom {
-            // Mercurial has a complicated copy/renames logic.
-            // If (path1, filenode1) is copied/renamed from (path2, filenode2),
-            // filenode1's p1 is set to filenode2, and copy_from path is set to path2
-            // filenode1's p2 is null for non-merge commits. It might be non-null for merges.
-            (copied_rev.into_nodehash(), p1, Some(copied_from))
-        } else {
-            (p1, p2, None)
-        };
-
-        writer.write_all(self.node.clone().into_nodehash().as_bytes())?;
-        writer.write_all(p1.as_bytes())?;
-        writer.write_all(p2.as_bytes())?;
-        writer.write_all(self.linknode.clone().into_nodehash().as_bytes())?;
-        if let Some(copied_from) = copied_from {
-            writer.write_all(&copied_from.to_vec())?;
-        }
-
-        Ok(write!(writer, "\0")?)
-    }
 }
 
 /// Remotefilelog blob consists of file content in `node` revision and all the history
@@ -369,7 +314,7 @@ fn serialize_history(history: Vec<HgFileHistoryEntry>) -> Fallible<Vec<u8>> {
     ));
 
     for entry in history {
-        entry.serialize(&mut writer)?;
+        entry.write_to_loose_file(&mut writer)?;
     }
 
     Ok(writer.into_inner())
