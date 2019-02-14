@@ -115,7 +115,7 @@ class Single : public KeyIterator {
  public:
   Key* _k;
   Single(Key* k) : _k(k) {}
-  Key* next() {
+  Key* next() override {
     Key* tmp = _k;
     _k = NULL;
     return tmp;
