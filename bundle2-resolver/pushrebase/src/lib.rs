@@ -76,6 +76,10 @@ pub enum ErrorKind {
         _0
     )]
     PushrebaseNoCommonRoot(Bookmark, HashSet<ChangesetId>),
+    #[fail(display = "Internal error: root changeset {} not found", _0)]
+    RootNotFound(ChangesetId),
+    #[fail(display = "No pushrebase roots found")]
+    NoRoots,
 }
 
 #[derive(Debug)]
@@ -105,9 +109,21 @@ impl From<Error> for PushrebaseError {
     }
 }
 
+impl From<ErrorKind> for PushrebaseError {
+    fn from(error: ErrorKind) -> Self {
+        PushrebaseError::Error(error.into())
+    }
+}
+
 pub struct PushrebaseSuccessResult {
     pub head: ChangesetId,
     pub retry_num: usize,
+}
+
+#[derive(Clone)]
+pub struct OntoBookmarkParams {
+    pub bookmark: Bookmark,
+    pub create_if_not_exists: bool,
 }
 
 /// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
@@ -117,7 +133,7 @@ pub fn do_pushrebase(
     ctx: CoreContext,
     repo: BlobRepo,
     config: PushrebaseParams,
-    onto_bookmark: Bookmark,
+    onto_bookmark: OntoBookmarkParams,
     pushed_set: Vec<HgChangesetId>,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
@@ -171,7 +187,7 @@ fn rebase_in_loop(
     ctx: CoreContext,
     repo: BlobRepo,
     config: PushrebaseParams,
-    onto_bookmark: Bookmark,
+    onto_bookmark: OntoBookmarkParams,
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
@@ -181,50 +197,55 @@ fn rebase_in_loop(
     loop_fn(
         (root.clone(), 0),
         move |(latest_rebase_attempt, retry_num)| {
-            get_bookmark_value(ctx.clone(), &repo, &onto_bookmark).and_then({
+            get_onto_bookmark_value(ctx.clone(), &repo, onto_bookmark.clone()).and_then({
                 cloned!(ctx, client_cf, client_bcs, onto_bookmark, repo, config);
                 move |bookmark_val| {
-                    fetch_bonsai_range(ctx.clone(), &repo, latest_rebase_attempt, bookmark_val)
-                        .and_then(move |server_bcs| {
-                            match check_case_conflicts(
-                                server_bcs.iter().rev().chain(client_bcs.iter().rev()),
-                            ) {
-                                Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
-                                None => Ok(()),
-                            }
-                        })
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |()| {
-                                find_changed_files(
-                                    ctx.clone(),
-                                    &repo,
-                                    latest_rebase_attempt.clone(),
-                                    bookmark_val,
-                                    /* reject_merges */ true,
-                                )
-                            }
-                        })
-                        .and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
-                        .and_then(move |()| {
-                            do_rebase(
+                    fetch_bonsai_range(
+                        ctx.clone(),
+                        &repo,
+                        latest_rebase_attempt,
+                        bookmark_val.unwrap_or(root),
+                    )
+                    .and_then(move |server_bcs| {
+                        match check_case_conflicts(
+                            server_bcs.iter().rev().chain(client_bcs.iter().rev()),
+                        ) {
+                            Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
+                            None => Ok(()),
+                        }
+                    })
+                    .and_then({
+                        cloned!(ctx, repo);
+                        move |()| {
+                            find_changed_files(
                                 ctx.clone(),
-                                repo,
-                                config,
-                                root.clone(),
-                                head,
-                                bookmark_val,
-                                onto_bookmark,
-                                maybe_raw_bundle2_id,
+                                &repo,
+                                latest_rebase_attempt.clone(),
+                                bookmark_val.unwrap_or(root),
+                                /* reject_merges */ true,
                             )
-                            .map(move |update_res| match update_res {
-                                Some(result) => Loop::Break(PushrebaseSuccessResult {
-                                    head: result,
-                                    retry_num,
-                                }),
-                                None => Loop::Continue((bookmark_val, retry_num + 1)),
-                            })
+                        }
+                    })
+                    .and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
+                    .and_then(move |()| {
+                        do_rebase(
+                            ctx.clone(),
+                            repo,
+                            config,
+                            root.clone(),
+                            head,
+                            bookmark_val,
+                            onto_bookmark.bookmark,
+                            maybe_raw_bundle2_id,
+                        )
+                        .map(move |update_res| match update_res {
+                            Some(result) => Loop::Break(PushrebaseSuccessResult {
+                                head: result,
+                                retry_num,
+                            }),
+                            None => Loop::Continue((bookmark_val.unwrap_or(root), retry_num + 1)),
                         })
+                    })
                 }
             })
         },
@@ -238,24 +259,31 @@ fn do_rebase(
     config: PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
-    bookmark_val: ChangesetId,
+    bookmark_val: Option<ChangesetId>,
     onto_bookmark: Bookmark,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
-    create_rebased_changesets(ctx.clone(), repo.clone(), config, root, head, bookmark_val).and_then(
-        {
-            move |new_head| {
-                try_update_bookmark(
-                    ctx,
-                    &repo,
-                    &onto_bookmark,
-                    bookmark_val,
-                    new_head,
-                    maybe_raw_bundle2_id,
-                )
-            }
-        },
+    create_rebased_changesets(
+        ctx.clone(),
+        repo.clone(),
+        config,
+        root,
+        head,
+        bookmark_val.unwrap_or(root),
     )
+    .and_then({
+        move |new_head| match bookmark_val {
+            Some(bookmark_val) => try_update_bookmark(
+                ctx,
+                &repo,
+                &onto_bookmark,
+                bookmark_val,
+                new_head,
+                maybe_raw_bundle2_id,
+            ),
+            None => try_create_bookmark(ctx, &repo, &onto_bookmark, new_head, maybe_raw_bundle2_id),
+        }
+    })
 }
 
 fn fetch_bonsai_changesets(
@@ -320,45 +348,77 @@ fn find_closest_root(
     ctx: CoreContext,
     repo: &BlobRepo,
     config: PushrebaseParams,
-    bookmark: Bookmark,
+    bookmark: OntoBookmarkParams,
     roots: Vec<ChangesetId>,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
     let roots: HashSet<_> = roots.into_iter().collect();
-    get_bookmark_value(ctx.clone(), repo, &bookmark)
-        .from_err()
-        .and_then({
-            cloned!(repo);
-            move |id| {
-                let mut queue = VecDeque::new();
-                queue.push_back(id);
-
-                loop_fn((queue, 0), move |(mut queue, depth)| {
-                    if depth >= config.recursion_limit {
-                        return err(PushrebaseError::RootTooFarBehind).left_future();
-                    }
-                    match queue.pop_front() {
-                        None => err(PushrebaseError::Error(
-                            ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone())
-                                .into(),
-                        ))
-                        .left_future(),
-                        Some(id) => {
-                            if roots.contains(&id) {
-                                ok(Loop::Break(id)).left_future()
-                            } else {
-                                repo.get_bonsai_changeset(ctx.clone(), id)
-                                    .map(move |bcs| {
-                                        queue.extend(bcs.parents());
-                                        Loop::Continue((queue, depth + 1))
-                                    })
-                                    .from_err()
-                                    .right_future()
-                            }
-                        }
-                    }
-                })
+    get_bookmark_value(ctx.clone(), repo, &bookmark.bookmark).and_then({
+        cloned!(repo);
+        move |maybe_id| match maybe_id {
+            Some(id) => {
+                find_closest_ancestor_root(ctx.clone(), repo, config, bookmark.bookmark, roots, id)
             }
-        })
+            None => {
+                if bookmark.create_if_not_exists {
+                    join_all(roots.into_iter().map(move |root| {
+                        repo.get_generation_number_by_bonsai(ctx.clone(), root)
+                            .and_then(move |maybe_gen_num| {
+                                maybe_gen_num.ok_or(ErrorKind::RootNotFound(root).into())
+                            })
+                            .map(move |gen_num| (root, gen_num))
+                    }))
+                    .and_then(|roots_with_gen_nums| {
+                        roots_with_gen_nums
+                            .into_iter()
+                            .max_by_key(|(_, gen_num)| gen_num.clone())
+                            .ok_or(ErrorKind::NoRoots.into())
+                    })
+                    .map(|(cs_id, _)| cs_id)
+                    .from_err()
+                    .boxify()
+                } else {
+                    err(ErrorKind::PushrebaseBookmarkNotFound(bookmark.bookmark).into()).boxify()
+                }
+            }
+        }
+    })
+}
+
+fn find_closest_ancestor_root(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    config: PushrebaseParams,
+    bookmark: Bookmark,
+    roots: HashSet<ChangesetId>,
+    onto_bookmark_cs_id: ChangesetId,
+) -> BoxFuture<ChangesetId, PushrebaseError> {
+    let mut queue = VecDeque::new();
+    queue.push_back(onto_bookmark_cs_id);
+    loop_fn((queue, 0), move |(mut queue, depth)| {
+        if depth >= config.recursion_limit {
+            return err(PushrebaseError::RootTooFarBehind).left_future();
+        }
+        match queue.pop_front() {
+            None => err(PushrebaseError::Error(
+                ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone()).into(),
+            ))
+            .left_future(),
+            Some(id) => {
+                if roots.contains(&id) {
+                    ok(Loop::Break(id)).left_future()
+                } else {
+                    repo.get_bonsai_changeset(ctx.clone(), id)
+                        .map(move |bcs| {
+                            queue.extend(bcs.parents());
+                            Loop::Continue((queue, depth + 1))
+                        })
+                        .from_err()
+                        .right_future()
+                }
+            }
+        }
+    })
+    .boxify()
 }
 
 /// find changed files by comparing manifests of `ancestor` and `descendant`
@@ -551,21 +611,34 @@ fn intersect_changed_files(
     }
 }
 
+/// Returns Some(ChangesetId) if bookmarks exists.
+/// Returns None if bookmarks does not exists, but create_if_not_exists is set to true
+fn get_onto_bookmark_value(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    onto_bookmark: OntoBookmarkParams,
+) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
+    get_bookmark_value(ctx.clone(), &repo, &onto_bookmark.bookmark).and_then(
+        move |maybe_bookmark_value| match maybe_bookmark_value {
+            Some(bookmark_value) => ok(Some(bookmark_value)).left_future(),
+            None => {
+                if onto_bookmark.create_if_not_exists {
+                    ok(None).left_future()
+                } else {
+                    err(ErrorKind::PushrebaseBookmarkNotFound(onto_bookmark.bookmark).into())
+                        .right_future()
+                }
+            }
+        },
+    )
+}
+
 fn get_bookmark_value(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_name: &Bookmark,
-) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    repo.get_bonsai_bookmark(ctx, bookmark_name)
-        .and_then({
-            cloned!(bookmark_name);
-            move |bookmark| {
-                bookmark.ok_or(ErrorKind::PushrebaseBookmarkNotFound(bookmark_name).into())
-            }
-        })
-        .with_context(move |_| format!("While getting bookmark value"))
-        .map_err(Error::from)
-        .from_err()
+) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
+    repo.get_bonsai_bookmark(ctx, bookmark_name).from_err()
 }
 
 fn create_rebased_changesets(
@@ -691,6 +764,26 @@ fn try_update_bookmark(
         .boxify()
 }
 
+fn try_create_bookmark(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    bookmark_name: &Bookmark,
+    new_value: ChangesetId,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    // TODO (ikostia): also pass new timestamps of the rebased changeset
+) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
+    let mut txn = repo.update_bookmark_transaction(ctx);
+    let reason = BookmarkUpdateReason::Pushrebase {
+        // TODO (ikostia): record changeset timestamps
+        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
+    };
+    try_boxfuture!(txn.create(bookmark_name, new_value, reason));
+    txn.commit()
+        .map(move |success| if success { Some(new_value) } else { None })
+        .from_err()
+        .boxify()
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -728,6 +821,15 @@ mod tests {
         paths.unwrap()
     }
 
+    fn master_bookmark() -> OntoBookmarkParams {
+        let book = Bookmark::new("master").unwrap();
+        let book = OntoBookmarkParams {
+            bookmark: book,
+            create_if_not_exists: false,
+        };
+        book
+    }
+
     #[test]
     fn pushrebase_one_commit() {
         async_unit::tokio_unit_test(|| {
@@ -757,11 +859,11 @@ mod tests {
                 .wait()
                 .unwrap();
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -811,11 +913,11 @@ mod tests {
                 make_paths(&["file", "file2"]),
             );
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -881,11 +983,11 @@ mod tests {
                 make_paths(&["file", "file_renamed"]),
             );
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -972,11 +1074,11 @@ mod tests {
                 store_files(ctx.clone(), btreemap! {"f2" => Some("f2")}, repo.clone()),
             );
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
             let bcs_id_master = repo
@@ -1091,11 +1193,11 @@ mod tests {
                 store_files(ctx.clone(), btreemap! {"f1" => Some("f1")}, repo.clone()),
             );
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -1187,11 +1289,11 @@ mod tests {
                     .unwrap(),
             ];
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -1244,11 +1346,11 @@ mod tests {
                     .unwrap(),
             ];
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -1298,11 +1400,11 @@ mod tests {
             )
             .wait()
             .unwrap();
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
             let repo_arc = repo.clone();
@@ -1374,7 +1476,7 @@ mod tests {
                 .wait()
                 .unwrap()
                 .unwrap();
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             let bcs = create_commit(
                 ctx.clone(),
                 repo.clone(),
@@ -1393,7 +1495,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
             let config = PushrebaseParams {
@@ -1414,7 +1516,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
             let config = PushrebaseParams {
@@ -1470,11 +1572,11 @@ mod tests {
                 .wait()
                 .unwrap()];
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "2f866e7e549760934e31bf0420a873f65100ad63",
             );
 
@@ -1569,11 +1671,11 @@ mod tests {
                 .wait()
                 .unwrap()];
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -1619,6 +1721,36 @@ mod tests {
         })
     }
 
+    fn count_commits_between(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        ancestor: HgChangesetId,
+        descendant: Bookmark,
+    ) -> impl Future<Item = usize, Error = Error> {
+        let ancestor = repo
+            .get_bonsai_from_hg(ctx.clone(), ancestor)
+            .and_then(|val| val.ok_or(err_msg("ancestor not found")));
+
+        let descendant = repo
+            .get_bookmark(ctx.clone(), &descendant)
+            .and_then(|val| val.ok_or(err_msg("bookmark not found")));
+        let descendant = descendant.and_then({
+            cloned!(ctx, repo);
+            move |descendant| {
+                repo.get_bonsai_from_hg(ctx.clone(), descendant)
+                    .and_then(|bonsai| bonsai.ok_or(err_msg("bonsai not found")))
+            }
+        });
+
+        ancestor
+            .join(descendant)
+            .and_then(move |(ancestor, descendant)| {
+                RangeNodeStream::new(ctx, repo.get_changeset_fetcher(), ancestor, descendant)
+                    .collect()
+                    .map(|v| v.len())
+            })
+    }
+
     #[test]
     fn pushrebase_simultaneously() {
         async_unit::tokio_unit_test(|| {
@@ -1633,11 +1765,11 @@ mod tests {
                 .unwrap();
             let parents = vec![p];
 
-            let book = Bookmark::new("master").unwrap();
+            let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book,
+                &book.bookmark,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
@@ -1685,33 +1817,153 @@ mod tests {
 
             let previous_master =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
-            let previous_master = repo
-                .get_bonsai_from_hg(ctx.clone(), previous_master)
+            let commits_between = count_commits_between(ctx, repo, previous_master, book.bookmark)
                 .wait()
-                .unwrap()
                 .unwrap();
-
-            let new_master = repo
-                .get_bookmark(ctx.clone(), &book)
-                .wait()
-                .unwrap()
-                .unwrap();
-            let new_master = repo
-                .get_bonsai_from_hg(ctx.clone(), new_master)
-                .wait()
-                .unwrap()
-                .unwrap();
-            let res = RangeNodeStream::new(
-                ctx,
-                repo.get_changeset_fetcher(),
-                previous_master,
-                new_master,
-            )
-            .collect()
-            .wait()
-            .unwrap();
             // `- 1` because RangeNodeStream is inclusive
-            assert_eq!(res.len() - 1, num_pushes);
+            assert_eq!(commits_between - 1, num_pushes);
         })
     }
+
+    fn run_future<F, I, E>(
+        runtime: &mut tokio::runtime::Runtime,
+        future: F,
+    ) -> std::result::Result<I, E>
+    where
+        F: Future<Item = I, Error = E> + Send + 'static,
+        I: Send + 'static,
+        E: Send + 'static,
+    {
+        runtime.block_on(future)
+    }
+
+    #[test]
+    fn pushrebase_create_new_bookmark() {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(None);
+        // Bottom commit of the repo
+        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+        let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
+            .unwrap()
+            .unwrap();
+        let parents = vec![p];
+
+        let bcs_id = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            parents,
+            store_files(
+                ctx.clone(),
+                btreemap! {"file" => Some("content")},
+                repo.clone(),
+            ),
+        );
+        let hg_cs = run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id),
+        )
+        .unwrap();
+
+        let book = Bookmark::new("newbook").unwrap();
+        let book = OntoBookmarkParams {
+            bookmark: book,
+            create_if_not_exists: false,
+        };
+        assert!(run_future(
+            &mut runtime,
+            do_pushrebase(
+                ctx.clone(),
+                repo.clone(),
+                Default::default(),
+                book,
+                vec![hg_cs],
+                None
+            ),
+        )
+        .is_err());
+
+        let book = Bookmark::new("newbook").unwrap();
+        let book = OntoBookmarkParams {
+            bookmark: book,
+            create_if_not_exists: true,
+        };
+        assert!(run_future(
+            &mut runtime,
+            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs], None),
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn pushrebase_simultaneously_and_create_new() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+            let repo = linear::getrepo(None);
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .wait()
+                .unwrap()
+                .unwrap();
+            let parents = vec![p];
+
+            let book = Bookmark::new("newbook").unwrap();
+            let book = OntoBookmarkParams {
+                bookmark: book,
+                create_if_not_exists: true,
+            };
+
+            let num_pushes = 10;
+            let mut futs = vec![];
+            for i in 0..num_pushes {
+                let f = format!("file{}", i);
+                let bcs_id = create_commit(
+                    ctx.clone(),
+                    repo.clone(),
+                    parents.clone(),
+                    store_files(
+                        ctx.clone(),
+                        btreemap! { f.as_ref() => Some("content")},
+                        repo.clone(),
+                    ),
+                );
+                let hg_cs = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                    .wait()
+                    .unwrap();
+
+                let fut = spawn_future(
+                    do_pushrebase(
+                        ctx.clone(),
+                        repo.clone(),
+                        Default::default(),
+                        book.clone(),
+                        vec![hg_cs],
+                        None,
+                    )
+                    .map_err(|err| err_msg(format!("error while pushrebasing {:?}", err))),
+                );
+                futs.push(fut);
+            }
+            let res = join_all(futs).wait().expect("pushrebase failed");
+            let mut has_retry_num_bigger_1 = false;
+            for r in res {
+                if r.retry_num > 1 {
+                    has_retry_num_bigger_1 = true;
+                }
+            }
+
+            assert!(has_retry_num_bigger_1);
+
+
+            let commits_between = count_commits_between(ctx, repo, root, book.bookmark)
+                .wait()
+                .unwrap();
+            // `- 1` because RangeNodeStream is inclusive
+            assert_eq!(commits_between - 1, num_pushes);
+        })
+    }
+
 }

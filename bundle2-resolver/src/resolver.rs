@@ -264,6 +264,11 @@ fn resolve_pushrebase(
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
                     let onto_bookmark = Bookmark::new(onto_bookmark)?;
+                    let create_if_not_exists = cg_push.mparams.get("newhead").is_some();
+                    let onto_bookmark = pushrebase::OntoBookmarkParams {
+                        bookmark: onto_bookmark,
+                        create_if_not_exists,
+                    };
                     Ok((onto_bookmark, cg_push, manifests, bundle2))
                 }
                 None => Err(err_msg("onto is not specified")),
@@ -271,16 +276,16 @@ fn resolve_pushrebase(
         )
         .and_then({
             cloned!(ctx, resolver);
-            move |(onto, cg_push, manifests, bundle2)| {
+            move |(onto_params, cg_push, manifests, bundle2)| {
                 let changesets = cg_push.changesets.clone();
                 resolver
                     .upload_changesets(ctx, cg_push, manifests)
-                    .map(move |()| (changesets, onto, bundle2))
+                    .map(move |()| (changesets, onto_params, bundle2))
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, onto, bundle2)| {
+            move |(changesets, onto_params, bundle2)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
                     .and_then({
@@ -303,10 +308,10 @@ fn resolve_pushrebase(
                             }
 
                             let bookmark_push_part_id = match bookmark_pushes.get(0) {
-                                Some(bk_push) if bk_push.name != onto => {
+                                Some(bk_push) if bk_push.name != onto_params.bookmark => {
                                     return future::err(format_err!(
                                         "allowed only pushes of {} bookmark: {:?}",
-                                        onto,
+                                        onto_params.bookmark,
                                         bookmark_pushes
                                     ))
                                     .boxify();
@@ -321,7 +326,7 @@ fn resolve_pushrebase(
                                     (
                                         changesets,
                                         bookmark_push_part_id,
-                                        onto,
+                                        onto_params,
                                         maybe_raw_bundle2_id,
                                     )
                                 })
@@ -332,9 +337,9 @@ fn resolve_pushrebase(
         })
         .and_then({
             cloned!(ctx, resolver);
-            move |(changesets, bookmark_push_part_id, onto, maybe_raw_bundle2_id)| {
+            move |(changesets, bookmark_push_part_id, onto_params, maybe_raw_bundle2_id)| {
                 resolver
-                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto)
+                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto_params.bookmark)
                     .map_err(|err| match err {
                         RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
                             let mut err_msgs = vec![];
@@ -360,19 +365,19 @@ fn resolve_pushrebase(
                     })
                     .and_then(move |()| {
                         resolver
-                            .pushrebase(ctx, changesets.clone(), &onto, maybe_raw_bundle2_id)
+                            .pushrebase(ctx, changesets.clone(), &onto_params, maybe_raw_bundle2_id)
                             .map(move |pushrebased_rev| {
-                                (pushrebased_rev, onto, bookmark_push_part_id)
+                                (pushrebased_rev, onto_params, bookmark_push_part_id)
                             })
                     })
             }
         })
-        .and_then(move |(pushrebased_rev, onto, bookmark_push_part_id)| {
+        .and_then(move |(pushrebased_rev, onto_params, bookmark_push_part_id)| {
             resolver.prepare_pushrebase_response(
                 ctx,
                 commonheads,
                 pushrebased_rev,
-                onto,
+                onto_params.bookmark,
                 lca_hint,
                 phases_hint,
                 bookmark_push_part_id,
@@ -1194,7 +1199,7 @@ impl Bundle2Resolver {
         &self,
         ctx: CoreContext,
         changesets: Changesets,
-        onto_bookmark: &Bookmark,
+        onto_bookmark: &pushrebase::OntoBookmarkParams,
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
     ) -> impl Future<Item = ChangesetId, Error = Error> {
         pushrebase::do_pushrebase(
