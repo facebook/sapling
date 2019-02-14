@@ -129,29 +129,7 @@ class basepackstore(object):
         # failure.
         self.lastrefresh = 0
 
-        packs = []
-        for filepath, __, __ in self._getavailablepackfilessorted():
-            try:
-                pack = self.getpack(filepath)
-            except Exception as ex:
-                # An exception may be thrown if the pack file is corrupted
-                # somehow.  Log a warning but keep going in this case, just
-                # skipping this pack file.
-                #
-                # If this is an ENOENT error then don't even bother logging.
-                # Someone could have removed the file since we retrieved the
-                # list of paths.
-                if getattr(ex, "errno", None) != errno.ENOENT:
-                    if self.deletecorruptpacks:
-                        self.ui.warn(_("deleting corrupt pack '%s'\n") % filepath)
-                        util.tryunlink(filepath + self.PACKSUFFIX)
-                        util.tryunlink(filepath + self.INDEXSUFFIX)
-                    else:
-                        ui.warn(_("unable to load pack %s: %s\n") % (filepath, ex))
-                continue
-            packs.append(pack)
-
-        self.packs = _cachebackedpacks(packs, self.DEFAULTCACHESIZE)
+        self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
 
     def _getavailablepackfiles(self):
         """For each pack file (a index/data file combo), yields:
@@ -242,6 +220,10 @@ class basepackstore(object):
         if options and options.get(constants.OPTION_LOOSEONLY):
             return
 
+        # Since the packs are initialized lazily, self.packs might be empty. To
+        # be sure, let's manually refresh.
+        self.refresh()
+
         # Stop deleting packs if they are corrupt.  If we discover corruption
         # then we'll handle it via the ledger.
         deletecorruptpacks = self.deletecorruptpacks
@@ -305,17 +287,26 @@ class basepackstore(object):
                     try:
                         newpack = self.getpack(filepath)
                         newpacks.append(newpack)
-                    except Exception:
-                        # The pack file is likely corrupt
-                        if self.deletecorruptpacks:
-                            self.ui.warn(_("deleting corrupt pack '%s'\n") % filepath)
-                            util.tryunlink(filepath + self.PACKSUFFIX)
-                            util.tryunlink(filepath + self.INDEXSUFFIX)
-                        else:
-                            self.ui.warn(
-                                _("detected corrupt pack '%s' - ignoring it\n")
-                                % filepath
-                            )
+                    except Exception as ex:
+                        # An exception may be thrown if the pack file is corrupted
+                        # somehow.  Log a warning but keep going in this case, just
+                        # skipping this pack file.
+                        #
+                        # If this is an ENOENT error then don't even bother logging.
+                        # Someone could have removed the file since we retrieved the
+                        # list of paths.
+                        if getattr(ex, "errno", None) != errno.ENOENT:
+                            if self.deletecorruptpacks:
+                                self.ui.warn(
+                                    _("deleting corrupt pack '%s'\n") % filepath
+                                )
+                                util.tryunlink(filepath + self.PACKSUFFIX)
+                                util.tryunlink(filepath + self.INDEXSUFFIX)
+                            else:
+                                self.ui.warn(
+                                    _("detected corrupt pack '%s' - ignoring it\n")
+                                    % filepath
+                                )
 
             self.lastrefresh = time.time()
 
