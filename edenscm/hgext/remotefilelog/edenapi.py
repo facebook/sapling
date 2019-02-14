@@ -22,16 +22,10 @@ from __future__ import absolute_import
 
 from edenscm.mercurial import error, httpconnection, registrar
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.rust.bindings import edenapi
 
 from . import shallowutil
 
-
-try:
-    from edenscm.mercurial.rust.bindings import edenapi
-except ImportError:
-    # Eden API bindings are not available on some platforms. As such,
-    # we need to check if this module is available before usage.
-    raise
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -59,12 +53,7 @@ def getcreds(ui, url):
 
 
 def initclient(ui, repo):
-    """Initialize a new PyEdenApiHttpClient using the user's config."""
-    try:
-        edenapi
-    except NameError:
-        raise error.Abort(_("edenapi module is not loaded"))
-
+    """Initialize a new Eden API client using the user's config."""
     if not ui.configbool("edenapi", "enabled"):
         raise error.Abort(_("HTTP data fetching is not enabled for this repository"))
 
