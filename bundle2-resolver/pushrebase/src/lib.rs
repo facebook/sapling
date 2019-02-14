@@ -115,6 +115,8 @@ impl From<ErrorKind> for PushrebaseError {
     }
 }
 
+type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, DateTime)>;
+
 pub struct PushrebaseSuccessResult {
     pub head: ChangesetId,
     pub retry_num: usize,
@@ -239,10 +241,7 @@ fn rebase_in_loop(
                             maybe_raw_bundle2_id,
                         )
                         .map(move |update_res| match update_res {
-                            Some(result) => Loop::Break(PushrebaseSuccessResult {
-                                head: result,
-                                retry_num,
-                            }),
+                            Some(head) => Loop::Break(PushrebaseSuccessResult { head, retry_num }),
                             None => Loop::Continue((bookmark_val.unwrap_or(root), retry_num + 1)),
                         })
                     })
@@ -272,7 +271,7 @@ fn do_rebase(
         bookmark_val.unwrap_or(root),
     )
     .and_then({
-        move |new_head| match bookmark_val {
+        move |(new_head, rebased_changesets)| match bookmark_val {
             Some(bookmark_val) => try_update_bookmark(
                 ctx,
                 &repo,
@@ -280,8 +279,16 @@ fn do_rebase(
                 bookmark_val,
                 new_head,
                 maybe_raw_bundle2_id,
+                rebased_changesets,
             ),
-            None => try_create_bookmark(ctx, &repo, &onto_bookmark, new_head, maybe_raw_bundle2_id),
+            None => try_create_bookmark(
+                ctx,
+                &repo,
+                &onto_bookmark,
+                new_head,
+                maybe_raw_bundle2_id,
+                rebased_changesets,
+            ),
         }
     })
 }
@@ -648,7 +655,7 @@ fn create_rebased_changesets(
     root: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
-) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
+) -> impl Future<Item = (ChangesetId, RebasedChangesets), Error = PushrebaseError> {
     find_rebased_set(ctx.clone(), repo.clone(), root, head.clone()).and_then(move |rebased_set| {
         let date = if config.rewritedates {
             Some(DateTime::now())
@@ -658,7 +665,9 @@ fn create_rebased_changesets(
 
         // rebased_set already sorted in reverse topological order, which guarantees
         // that all required nodes will be updated by the time they are needed
-        let mut remapping = hashmap! { root => onto };
+
+        // Create a fake timestamp, it doesn't matter what timestamp root has
+        let mut remapping = hashmap! { root => (onto, DateTime::now()) };
         let mut rebased = Vec::new();
         for bcs_old in rebased_set {
             let id_old = bcs_old.get_changeset_id();
@@ -666,12 +675,25 @@ fn create_rebased_changesets(
                 Ok(bcs_new) => bcs_new,
                 Err(e) => return err(e.into()).left_future(),
             };
-            remapping.insert(id_old, bcs_new.get_changeset_id());
+            remapping.insert(id_old, (bcs_new.get_changeset_id(), *bcs_new.author_date()));
             rebased.push(bcs_new);
         }
 
         save_bonsai_changesets(rebased, ctx, repo)
-            .map(move |_| remapping.get(&head).cloned().unwrap_or(head))
+            .map(move |_| {
+                (
+                    remapping
+                        .get(&head)
+                        .map(|(cs, _)| cs)
+                        .cloned()
+                        .unwrap_or(head),
+                    // `root` wasn't rebased, so let's remove it
+                    remapping
+                        .into_iter()
+                        .filter(|(id_old, _)| *id_old != root)
+                        .collect(),
+                )
+            })
             .from_err()
             .right_future()
     })
@@ -679,14 +701,14 @@ fn create_rebased_changesets(
 
 fn rebase_changeset(
     bcs: BonsaiChangeset,
-    remapping: &HashMap<ChangesetId, ChangesetId>,
+    remapping: &HashMap<ChangesetId, (ChangesetId, DateTime)>,
     date: Option<&DateTime>,
 ) -> Result<BonsaiChangeset> {
     let mut bcs = bcs.into_mut();
     bcs.parents = bcs
         .parents
         .into_iter()
-        .map(|p| remapping.get(&p).cloned().unwrap_or(p))
+        .map(|p| remapping.get(&p).map(|(cs, _)| cs).cloned().unwrap_or(p))
         .collect();
 
     match date {
@@ -708,7 +730,10 @@ fn rebase_changeset(
                         file_change.file_type(),
                         file_change.size(),
                         file_change.copy_from().map(|(path, cs)| {
-                            (path.clone(), remapping.get(cs).cloned().unwrap_or(*cs))
+                            (
+                                path.clone(),
+                                remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
+                            )
                         }),
                     )
                 }),
@@ -750,17 +775,23 @@ fn try_update_bookmark(
     old_value: ChangesetId,
     new_value: ChangesetId,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    // TODO (ikostia): also pass new timestamps of the rebased changeset
+    rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
-    let mut txn = repo.update_bookmark_transaction(ctx);
-    let reason = BookmarkUpdateReason::Pushrebase {
-        // TODO (ikostia): record changeset timestamps
-        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-    };
-    try_boxfuture!(txn.update(bookmark_name, new_value, old_value, reason));
-    txn.commit()
-        .map(move |success| if success { Some(new_value) } else { None })
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    let bookmark_update_reason =
+        create_bookmark_update_reason(ctx, repo.clone(), maybe_raw_bundle2_id, rebased_changesets);
+    bookmark_update_reason
         .from_err()
+        .and_then({
+            cloned!(bookmark_name);
+            move |reason| {
+                try_boxfuture!(txn.update(&bookmark_name, new_value, old_value, reason));
+                txn.commit()
+                    .map(move |success| if success { Some(new_value) } else { None })
+                    .from_err()
+                    .boxify()
+            }
+        })
         .boxify()
 }
 
@@ -770,18 +801,60 @@ fn try_create_bookmark(
     bookmark_name: &Bookmark,
     new_value: ChangesetId,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    // TODO (ikostia): also pass new timestamps of the rebased changeset
+    rebased_changesets: RebasedChangesets,
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
-    let mut txn = repo.update_bookmark_transaction(ctx);
-    let reason = BookmarkUpdateReason::Pushrebase {
-        // TODO (ikostia): record changeset timestamps
-        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-    };
-    try_boxfuture!(txn.create(bookmark_name, new_value, reason));
-    txn.commit()
-        .map(move |success| if success { Some(new_value) } else { None })
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    let bookmark_update_reason =
+        create_bookmark_update_reason(ctx, repo.clone(), maybe_raw_bundle2_id, rebased_changesets);
+
+    bookmark_update_reason
         .from_err()
+        .and_then({
+            cloned!(bookmark_name);
+            move |reason| {
+                try_boxfuture!(txn.create(&bookmark_name, new_value, reason));
+                txn.commit()
+                    .map(move |success| if success { Some(new_value) } else { None })
+                    .from_err()
+                    .boxify()
+            }
+        })
         .boxify()
+}
+
+fn create_bookmark_update_reason(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    rebased_changesets: RebasedChangesets,
+) -> BoxFuture<BookmarkUpdateReason, Error> {
+    match maybe_raw_bundle2_id {
+        Some(id) => {
+            let bundle_replay_data = BundleReplayData::new(id);
+            let timestamps = rebased_changesets
+                .into_iter()
+                .map(|(id_old, (_, datetime))| (id_old, datetime.into()))
+                .map({
+                    cloned!(ctx, repo);
+                    move |(id_old, timestamp)| {
+                        repo.get_hg_from_bonsai_changeset(ctx.clone(), id_old)
+                            .map(move |hg_cs_id| (hg_cs_id, timestamp))
+                    }
+                });
+            join_all(timestamps)
+                .map(move |timestamps| {
+                    let timestamps = timestamps.into_iter().collect();
+                    BookmarkUpdateReason::Pushrebase {
+                        bundle_replay_data: Some(bundle_replay_data.with_timestamps(timestamps)),
+                    }
+                })
+                .boxify()
+        }
+        None => ok(BookmarkUpdateReason::Pushrebase {
+            bundle_replay_data: None,
+        })
+        .boxify(),
+    }
 }
 
 #[cfg(test)]
@@ -794,6 +867,7 @@ mod tests {
     use futures::future::join_all;
     use futures_ext::spawn_future;
     use maplit::{btreemap, hashset};
+    use mononoke_types_mocks::hash::AS;
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files, store_rename};
 
@@ -1957,13 +2031,63 @@ mod tests {
 
             assert!(has_retry_num_bigger_1);
 
-
             let commits_between = count_commits_between(ctx, repo, root, book.bookmark)
                 .wait()
                 .unwrap();
             // `- 1` because RangeNodeStream is inclusive
             assert_eq!(commits_between - 1, num_pushes);
         })
+    }
+
+    #[test]
+    fn pushrebase_one_commit_with_bundle_id() {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+
+        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(None);
+        // Bottom commit of the repo
+        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+        let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
+            .unwrap()
+            .unwrap();
+        let parents = vec![p];
+
+        let bcs_id = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            parents,
+            store_files(
+                ctx.clone(),
+                btreemap! {"file" => Some("content")},
+                repo.clone(),
+            ),
+        );
+        let hg_cs = run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id),
+        )
+        .unwrap();
+
+        let book = master_bookmark();
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+        );
+
+        run_future(
+            &mut runtime,
+            do_pushrebase(
+                ctx,
+                repo,
+                Default::default(),
+                book,
+                vec![hg_cs],
+                Some(RawBundle2Id::new(AS)),
+            ),
+        )
+        .expect("pushrebase failed");
     }
 
 }
