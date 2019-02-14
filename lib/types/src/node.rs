@@ -115,6 +115,13 @@ impl Node {
         }
         nodes
     }
+
+    #[cfg(any(test, feature = "for-tests"))]
+    pub fn from_u8(x: u8) -> Self {
+        let mut bytes = [0; 20];
+        bytes[0] = x;
+        Node::from(&bytes)
+    }
 }
 
 impl Display for Node {
