@@ -1,0 +1,16 @@
+[package]
+name = "scratch"
+version = "0.1.0"
+authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
+
+[dependencies]
+clap = "2.31.2"
+dirs = "1.0"
+failure = "0.1"
+libc = "0.2" # version taken from fbcode/third-party2/.../crates.io/..
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4"
+
+[dependencies.telemetry]
+path = "../../../telemetry/telemetry"
