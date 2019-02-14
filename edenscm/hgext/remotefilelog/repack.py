@@ -616,6 +616,7 @@ def _cleanuptemppacks(ui, packpath):
         datapack.INDEXSUFFIX + "-tmp",
         historypack.PACKSUFFIX + "-tmp",
         historypack.INDEXSUFFIX + "-tmp",
+        "to-delete",
     ]
 
     def _shouldhold(f):

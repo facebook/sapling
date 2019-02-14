@@ -8,6 +8,7 @@ mod fanouttable;
 mod historyindex;
 mod sliceext;
 mod unionstore;
+mod vfs;
 
 pub mod c_api;
 pub mod datapack;

@@ -76,7 +76,7 @@
 use std::{
     cell::RefCell,
     fmt,
-    fs::{remove_file, File},
+    fs::File,
     io::{Cursor, Read},
     mem::drop,
     path::{Path, PathBuf},
@@ -96,6 +96,7 @@ use crate::datastore::{DataStore, Delta, Metadata};
 use crate::key::Key;
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
+use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]
@@ -687,6 +688,27 @@ pub mod tests {
             tempdir.path().read_dir().unwrap().collect::<Vec<_>>().len(),
             0
         );
+    }
+
+    #[test]
+    fn test_delete_while_open() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let revisions = vec![(
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: None,
+                key: Key::new(vec![0], Node::random(&mut rng)),
+            },
+            None,
+        )];
+
+        let pack = make_datapack(&tempdir, &revisions);
+        let pack2 = DataPack::new(pack.base_path()).unwrap();
+        assert!(pack.delete().is_ok());
+        assert!(!pack2.pack_path().exists());
+        assert!(!pack2.index_path().exists());
     }
 
     quickcheck! {
