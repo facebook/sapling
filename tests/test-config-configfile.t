@@ -41,5 +41,4 @@ Order relative to --config
 
 Attribution works
   $ hg config --configfile $TESTTMP/simple.rc mysection --debug
-  read config from: * (glob)
   $TESTTMP/simple.rc:2: mysection.myname=myvalue

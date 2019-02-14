@@ -119,7 +119,6 @@ Test empty config source:
   > EOF
 
   $ hg config --debug empty.source
-  read config from: * (glob)
   ui.setconfig: value
   $ hg config empty.source -Tjson
   [

@@ -163,7 +163,6 @@ HGPLAIN
 customized hgrc
 
   $ hg showconfig
-  read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:13: alias.log=log -g
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:11: defaults.identify=-n
@@ -180,7 +179,6 @@ plain hgrc
 
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
-  read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   --config: ui.traceback=True
   --verbose: ui.verbose=False
@@ -190,10 +188,6 @@ plain hgrc
 with environment variables
 
   $ PAGER=p1 EDITOR=e1 VISUAL=e2 hg showconfig --debug
-  set config by: $EDITOR
-  set config by: $VISUAL
-  set config by: $PAGER
-  read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $VISUAL: ui.editor=e2
   --verbose: ui.verbose=False
@@ -215,7 +209,6 @@ plain mode with exceptions
   $ HGPLAINEXCEPT=; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
-  read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   --config: ui.traceback=True
@@ -225,7 +218,6 @@ plain mode with exceptions
   $ unset HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
-  read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   --config: ui.traceback=True
@@ -235,7 +227,6 @@ plain mode with exceptions
   $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
-  read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   --config: ui.traceback=True
@@ -251,5 +242,4 @@ source of paths is not mangled
   > EOF
   $ hg showconfig --debug paths
   plain: True
-  read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:17: paths.foo=$TESTTMP/bar
