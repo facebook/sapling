@@ -259,7 +259,7 @@ fn test_create_already_existing() {
         },
     )
     .unwrap();
-    assert!(txn.commit().wait().is_err());
+    assert!(!txn.commit().wait().unwrap());
 }
 
 #[test]

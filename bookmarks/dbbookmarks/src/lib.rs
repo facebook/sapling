@@ -57,8 +57,8 @@ queries! {
     write InsertBookmarks(
         values: (repo_id: RepositoryId, name: Bookmark, changeset_id: ChangesetId)
     ) {
-        none,
-        "INSERT INTO bookmarks (repo_id, name, changeset_id) VALUES {values}"
+        insert_or_ignore,
+        "{insert_or_ignore} INTO bookmarks (repo_id, name, changeset_id) VALUES {values}"
     }
 
     write UpdateBookmark(
@@ -497,9 +497,20 @@ impl Transaction for SqlBookmarksTransaction {
                     ref_rows.push((&repo_id, &creates_vec[idx].0, to_changeset_id))
                 }
 
-                InsertBookmarks::query_with_transaction(transaction, &ref_rows[..]).map_err(Some)
+                let rows_to_insert = creates_vec.len() as u64;
+                InsertBookmarks::query_with_transaction(transaction, &ref_rows[..])
+                    .then(move |res| match res {
+                        Err(err) => Err(Some(err)),
+                        Ok((transaction, result)) => {
+                            if result.affected_rows() == rows_to_insert {
+                                Ok(transaction)
+                            } else {
+                                Err(None)
+                            }
+                        }
+                    })
             })
-            .and_then(move |(transaction, _)| {
+            .and_then(move |transaction| {
                 loop_fn(
                     (transaction, sets.into_iter()),
                     move |(transaction, mut updates)| match updates.next() {
