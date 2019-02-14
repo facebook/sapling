@@ -32,6 +32,11 @@
   $ hg commit -m 'create test branch'
   $ echo branch_commit_2 > foo
   $ hg commit -m 'another commit in test-branch'
+ (To stabilize `hg debugsetparents && hg commit`)
+  $ hg up -qC null
+  $ hg up -qC test-branch
+  $ sleep 1
+  $ hg status
   $ hg debugsetparents bookmark2 test-branch
  (Make dirstate detect "M status" after hacky debugsetparents)
   $ echo 1 >> foo
