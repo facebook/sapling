@@ -2,10 +2,39 @@
 
 from __future__ import absolute_import
 
+import shlex
+import subprocess
 import os
 import sys
 
 os.chdir(os.getenv('TESTTMP'))
+
+def parse(cmd):
+    """
+    matches hg-ssh-wrapper
+    """
+    try:
+        return shlex.split(cmd)
+    except ValueError as e:
+        eprint('Illegal command "%s": %s\n' % (cmd, e))
+        sys.exit(255)
+
+def parse_repo_path(path):
+    """
+    matches hg-ssh-wrapper
+    """
+    path = path.split("?")
+    if len(path) == 1:
+        repo = path[0]
+        marker = None
+    elif len(path) == 2:
+        repo = path[0]
+        marker = path[1]
+    else:
+        eprint("Illegal repo name: %s\n" % "?".join(path))
+        sys.exit(255)
+
+    return repo, marker
 
 # Skipping SSH options
 host_index = 1
@@ -27,5 +56,12 @@ hgcmd = sys.argv[host_index + 1]
 if os.name == 'nt':
     # hack to make simple unix single quote quoting work on windows
     hgcmd = hgcmd.replace("'", '"')
+
+cmdargv = parse(hgcmd)
+if cmdargv[:2] == ["hg", "-R"] and cmdargv[3:] == ["serve", "--stdio"]:
+    path, marker = parse_repo_path(cmdargv[2])
+    cmdargv[2] = path
+    hgcmd = subprocess.list2cmdline(cmdargv)
+
 r = os.system(hgcmd)
 sys.exit(bool(r))
