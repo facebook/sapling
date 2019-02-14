@@ -31,6 +31,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("edenapi", "enabled", default=False)
+configitem("edenapi", "url", default=None)
 
 
 def getbaseurl(ui):
