@@ -10,6 +10,7 @@ members = [
     "hg_watchman_client",
     "indexedlog",
     "lz4-pyframe",
+    "manifest",
     "minibench",
     "mpatch-sys",
     "mpatch",

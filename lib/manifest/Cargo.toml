@@ -1,0 +1,9 @@
+[package]
+name = "manifest"
+version = "0.1.0"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1.3"
+types = { path = "../types" }
