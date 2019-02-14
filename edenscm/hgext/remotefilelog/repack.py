@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 import os
 import time
+import traceback
 from contextlib import contextmanager
 
 from edenscm.mercurial import (
@@ -102,6 +103,7 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
             _("warning: rust repack failed for: %s, fallback to python: %s\n")
             % (packpath, e)
         )
+        repo.ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
         pythonrepack(repo, options, packpath, incremental)
 
 

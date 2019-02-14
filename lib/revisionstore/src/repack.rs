@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use failure::Fallible;
+use failure::{Fail, Fallible};
 
 use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::DataStore;
@@ -107,6 +107,10 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fall
     Ok(())
 }
 
+#[derive(Debug, Fail)]
+#[fail(display = "Repack failure: {:?}", _0)]
+struct RepackFailure(Vec<(PathBuf, Vec<Key>)>);
+
 pub fn repack_datapacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
@@ -127,14 +131,32 @@ pub fn repack_datapacks<'a>(
     }
 
     let new_pack_path = mut_pack.close()?;
+    let new_pack = DataPack::new(&new_pack_path)?;
+
+    let mut errors = vec![];
     for path in paths {
         let datapack = DataPack::new(&path)?;
+
         if datapack.base_path() != new_pack_path {
-            datapack.delete()?;
+            let keys = datapack
+                .iter()
+                .filter_map(|res| res.ok())
+                .collect::<Vec<Key>>();
+            let missing = new_pack.get_missing(&keys)?;
+
+            if missing.len() == 0 {
+                datapack.delete()?;
+            } else {
+                errors.push((path.clone(), missing));
+            }
         }
     }
 
-    Ok(new_pack_path)
+    if errors.len() != 0 {
+        Err(RepackFailure(errors).into())
+    } else {
+        Ok(new_pack_path)
+    }
 }
 
 fn repack_historypack(
@@ -170,14 +192,31 @@ pub fn repack_historypacks<'a>(
     }
 
     let new_pack_path = mut_pack.close()?;
+    let new_pack = HistoryPack::new(&new_pack_path)?;
+
+    let mut errors = vec![];
     for path in paths {
         let history_pack = HistoryPack::new(path)?;
         if history_pack.base_path() != new_pack_path {
-            history_pack.delete()?;
+            let keys = history_pack
+                .iter()
+                .filter_map(|res| res.ok())
+                .collect::<Vec<Key>>();
+            let missing = new_pack.get_missing(&keys)?;
+
+            if missing.len() == 0 {
+                history_pack.delete()?;
+            } else {
+                errors.push((path.clone(), missing));
+            }
         }
     }
 
-    Ok(new_pack_path)
+    if errors.len() != 0 {
+        Err(RepackFailure(errors).into())
+    } else {
+        Ok(new_pack_path)
+    }
 }
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
