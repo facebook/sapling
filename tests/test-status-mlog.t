@@ -14,13 +14,12 @@ Test logging of "M" entries
   *> M a: size changed (2 -> 4) (glob)
 
   $ sleep 1
-  $ rm .hg/blackbox*
-  $ echo 3 > a
+  $ rm a .hg/blackbox*
+  $ touch a
   $ hg status
   M a
   $ hg blackbox | grep 'a:'
-  *> L a: mtime changed (* -> *) (glob)
-  *> M a: checked in filesystem (glob)
+  *> M a: size changed (2 -> 0), os.stat size = 0 (glob)
 
   $ sleep 1
   $ rm .hg/blackbox*

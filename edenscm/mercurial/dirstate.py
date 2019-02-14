@@ -1253,6 +1253,17 @@ class dirstate(object):
                             reasons.append(
                                 "size changed (%s -> %s)" % (size, st.st_size)
                             )
+                            # See T39234759. Sometimes watchman returns 0 size
+                            # (st.st_size) and we suspect it's incorrect.
+                            # Do a double check with os.stat and log it.
+                            if st.st_size == 0:
+                                path = self._join(fn)
+                                try:
+                                    reasons.append(
+                                        "os.stat size = %s" % os.stat(path).st_size
+                                    )
+                                except Exception as ex:
+                                    reasons.append("os.stat failed (%s)" % ex)
                         if mode != st.st_mode:
                             reasons.append(
                                 "mode changed (%s -> %s)" % (mode, st.st_mode)
