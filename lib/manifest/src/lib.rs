@@ -82,3 +82,6 @@ impl FileMetadata {
         Self::new(node, FileType::Symlink)
     }
 }
+
+mod tree;
+pub use crate::tree::Tree;
