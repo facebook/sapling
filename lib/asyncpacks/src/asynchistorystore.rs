@@ -15,7 +15,7 @@ pub struct AsyncHistoryStore<T: HistoryStore> {
 }
 
 impl<T: HistoryStore + Send> AsyncHistoryStore<T> {
-    pub(crate) fn new(store: T) -> Self {
+    pub(crate) fn new_(store: T) -> Self {
         AsyncHistoryStore {
             history: AsyncWrapper::new(store),
         }

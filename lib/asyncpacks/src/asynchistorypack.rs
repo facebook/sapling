@@ -12,16 +12,15 @@ use revisionstore::HistoryPack;
 use crate::asynchistorystore::AsyncHistoryStore;
 
 pub type AsyncHistoryPack = AsyncHistoryStore<HistoryPack>;
-pub struct AsyncHistoryPackBuilder {}
 
-impl AsyncHistoryPackBuilder {
+impl AsyncHistoryPack {
     pub fn new(
         path: PathBuf,
     ) -> impl Future<Item = AsyncHistoryPack, Error = Error> + Send + 'static {
         poll_fn({ move || blocking(|| HistoryPack::new(&path)) })
             .from_err()
             .and_then(|res| res)
-            .map(move |historypack| AsyncHistoryStore::new(historypack))
+            .map(move |historypack| AsyncHistoryStore::new_(historypack))
     }
 }
 
@@ -53,7 +52,7 @@ mod tests {
         }
 
         let path = mutpack.close().unwrap();
-        AsyncHistoryPackBuilder::new(path)
+        AsyncHistoryPack::new(path)
     }
 
     // XXX: copy/pasted from historypack.rs

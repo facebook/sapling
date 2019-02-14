@@ -12,15 +12,14 @@ use revisionstore::DataPack;
 use crate::asyncdatastore::AsyncDataStore;
 
 pub type AsyncDataPack = AsyncDataStore<DataPack>;
-pub struct AsyncDataPackBuilder {}
 
-impl AsyncDataPackBuilder {
+impl AsyncDataPack {
     /// Opens the datapack at `path`.
     pub fn new(path: PathBuf) -> impl Future<Item = AsyncDataPack, Error = Error> + Send + 'static {
         poll_fn({ move || blocking(|| DataPack::new(&path)) })
             .from_err()
             .and_then(|res| res)
-            .map(move |datapack| AsyncDataStore::new(datapack))
+            .map(move |datapack| AsyncDataStore::new_(datapack))
     }
 }
 
@@ -48,7 +47,7 @@ mod tests {
 
         let path = mutdatapack.close().unwrap();
 
-        AsyncDataPackBuilder::new(path)
+        AsyncDataPack::new(path)
     }
 
     #[test]

@@ -15,7 +15,7 @@ pub struct AsyncDataStore<T: DataStore> {
 }
 
 impl<T: DataStore + Send> AsyncDataStore<T> {
-    pub(crate) fn new(store: T) -> Self {
+    pub(crate) fn new_(store: T) -> Self {
         AsyncDataStore {
             data: AsyncWrapper::new(store),
         }
