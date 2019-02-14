@@ -134,7 +134,7 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
     threadLocalImporter.reset(importer);
   }
 
-  ~HgImporterTestExecutor() {
+  ~HgImporterTestExecutor() override {
     threadLocalImporter.release();
   }
 };

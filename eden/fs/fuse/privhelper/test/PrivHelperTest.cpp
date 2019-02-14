@@ -167,7 +167,7 @@ class PrivHelperTest : public ::testing::Test {
         [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
   }
 
-  ~PrivHelperTest() {
+  ~PrivHelperTest() override {
     cleanup();
   }
 

@@ -49,7 +49,7 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
   MononokeCallback(const proxygen::URL& url, IOBufPromise&& promise)
       : promise_(std::move(promise)), url_(url) {}
 
-  virtual void connectSuccess(proxygen::HTTPUpstreamSession* session) override {
+  void connectSuccess(proxygen::HTTPUpstreamSession* session) override {
     auto txn = session->newTransaction(this);
     HTTPMessage message;
     message.setMethod(proxygen::HTTPMethod::GET);

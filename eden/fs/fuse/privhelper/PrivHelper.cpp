@@ -57,7 +57,7 @@ class PrivHelperClientImpl : public PrivHelper,
   PrivHelperClientImpl(File&& conn, pid_t helperPid)
       : helperPid_(helperPid),
         conn_(UnixSocket::makeUnique(nullptr, std::move(conn))) {}
-  ~PrivHelperClientImpl() {
+  ~PrivHelperClientImpl() override {
     cleanup();
     DCHECK_EQ(sendPending_, 0);
   }

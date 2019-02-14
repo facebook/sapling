@@ -91,7 +91,7 @@ class RocksDbWriteBatch : public LocalStore::WriteBatch {
       folly::ByteRange key,
       std::vector<folly::ByteRange> valueSlices) override;
   void flush() override;
-  ~RocksDbWriteBatch();
+  ~RocksDbWriteBatch() override;
   // Use LocalStore::beginWrite() to create a write batch
   RocksDbWriteBatch(RocksHandles& dbHandles, size_t bufferSize);
 
