@@ -186,6 +186,8 @@ impl ConfigSetHgExt for ConfigSet {
             {
                 errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
                 errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
+                // TODO(T40519286): Remove this after the tupperware overrides move out of hgrc.d
+                errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/tupperware_overrides.rc", &opts));
                 // TODO(quark): Remove this after packages using system.rc are rolled out
                 errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/include.rc", &opts));
             }
