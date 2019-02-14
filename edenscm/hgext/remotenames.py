@@ -1428,6 +1428,19 @@ def displayremotebookmarks(ui, repo, opts, fm):
         )
         fm.plain("\n")
 
+def _normalizeremote(remote):
+    """
+    Normalises a remote for grouping
+
+    Remote URL can have QueryStrings or Fragments which we consider to be
+    parameters, rather then being part of the repo path. So normalization strips
+    away the QueryString and Fragments and returns the stripped remote.
+    """
+    u = util.url(remote)
+    u.query = None
+    u.fragment = None
+    return bytes(u)
+
 
 def activepath(ui, remote):
     local = None
@@ -1446,9 +1459,10 @@ def activepath(ui, remote):
             rpath = getattr(getattr(remote, "_repo", None), "root", None)
     elif not isinstance(remote, str):
         try:
-            rpath = remote._url
+            rpath = _normalizeremote(remote._url)
         except AttributeError:
-            rpath = remote.url
+            rpath = _normalizeremote(remote.url)
+
 
     candidates = []
     for path, uri in ui.configitems("paths"):
@@ -1456,6 +1470,7 @@ def activepath(ui, remote):
         if local:
             uri = os.path.realpath(uri)
         else:
+            uri = _normalizeremote(uri)
             if uri.startswith("http"):
                 try:
                     uri = util.url(uri).authinfo()[0]
