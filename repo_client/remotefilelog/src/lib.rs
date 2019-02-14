@@ -49,7 +49,7 @@ pub enum ErrorKind {
 }
 
 /// Represents a file history entry in Mercurial's loose file format.
-struct HgFileHistoryEntry {
+pub struct HgFileHistoryEntry {
     node: HgFileNodeId,
     parents: HgParents,
     linknode: HgChangesetId,
@@ -134,9 +134,15 @@ pub fn create_remotefilelog_blob(
         .and_then({
             cloned!(ctx, node, path, repo, trace_args);
             move |prefetched_filenodes| {
-                get_file_history(ctx.clone(), repo, node, path, prefetched_filenodes)
-                    .collect()
-                    .traced(ctx.trace(), "fetching non-prefetched history", trace_args)
+                get_file_history_using_prefetched(
+                    ctx.clone(),
+                    repo,
+                    node,
+                    path,
+                    prefetched_filenodes,
+                )
+                .collect()
+                .traced(ctx.trace(), "fetching non-prefetched history", trace_args)
             }
         })
         .and_then(serialize_history)
@@ -264,6 +270,20 @@ fn get_raw_content(
         })
 }
 
+/// Get the history of the file corresponding to the given filenode and path.
+pub fn get_file_history(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    filenode: HgFileNodeId,
+    path: MPath,
+) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
+    prefetch_history(ctx.clone(), repo.clone(), path.clone())
+        .map(move |prefetched| {
+            get_file_history_using_prefetched(ctx, repo, filenode, path, prefetched)
+        })
+        .flatten_stream()
+}
+
 /// Prefetch and cache filenode information. Performing these fetches in bulk upfront
 /// prevents an excessive number of DB roundtrips when constructing file history.
 fn prefetch_history(
@@ -280,8 +300,9 @@ fn prefetch_history(
         })
 }
 
-/// Get the history of the file at the specified path.
-fn get_file_history(
+/// Get the history of the file at the specified path, using the given
+/// prefetched history map as a cache to speed up the operation.
+fn get_file_history_using_prefetched(
     ctx: CoreContext,
     repo: BlobRepo,
     startnode: HgFileNodeId,
