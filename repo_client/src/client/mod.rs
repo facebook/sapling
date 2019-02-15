@@ -33,6 +33,7 @@ use mercurial_types::{
     percent_encode, Entry, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
     MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
+use percent_encoding;
 use phases::Phases;
 use rand;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -331,6 +332,22 @@ impl RepoClient {
     fn create_bundle(&self, args: GetbundleArgs) -> Result<BoxStream<Bytes, Error>> {
         let blobrepo = self.repo.blobrepo();
         let mut bundle2_parts = vec![];
+
+        let mut use_phases = args.phases;
+        if use_phases {
+            for cap in args.bundlecaps {
+                if let Some((cap_name, caps)) = parse_utf8_getbundle_caps(&cap) {
+                    if cap_name != "bundle2" {
+                        continue;
+                    }
+                    if let Some(phases) = caps.get("phases") {
+                        use_phases = phases.contains("heads");
+                        break;
+                    }
+                }
+            }
+        }
+
         bundle2_parts.append(&mut bundle2_resolver::create_getbundle_response(
             self.ctx.clone(),
             blobrepo.clone(),
@@ -343,9 +360,7 @@ impl RepoClient {
                 .map(|head| HgChangesetId::new(head))
                 .collect(),
             self.lca_hint.clone(),
-            // TODO (liubovd): We will need to check that common phases exchange method is supported
-            // T38356449
-            if args.phases {
+            if use_phases {
                 Some(self.phases_hint.clone())
             } else {
                 None
@@ -1218,4 +1233,105 @@ fn fetch_treepack_part_input(
             }
         })
         .boxify()
+}
+
+/// getbundle capabilities have tricky format.
+/// It has a few layers of encoding. Upper layer is a key value pair in format `key=value`,
+/// value can be empty and '=' may not be there. If it's not empty then it's urlencoded list
+/// of chunks separated with '\n'. Each chunk is in a format 'key=value1,value2...' where both
+/// `key` and `value#` are url encoded. Again, values can be empty, '=' might not be there
+fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, HashSet<String>>)> {
+    match caps.iter().position(|&x| x == b'=') {
+        Some(pos) => {
+            let (name, urlencodedcap) = caps.split_at(pos);
+            // Skip the '='
+            let urlencodedcap = &urlencodedcap[1..];
+            let name = String::from_utf8(name.to_vec()).ok()?;
+
+            let mut ans = HashMap::new();
+            let caps = percent_encoding::percent_decode(urlencodedcap)
+                .decode_utf8()
+                .ok()?;
+            for cap in caps.split('\n') {
+                let split = cap.splitn(2, '=').collect::<Vec<_>>();
+                let urlencoded_cap_name = split.get(0)?;
+                let cap_name = percent_encoding::percent_decode(urlencoded_cap_name.as_bytes())
+                    .decode_utf8()
+                    .ok()?;
+                let mut values = HashSet::new();
+
+                if let Some(urlencoded_values) = split.get(1) {
+                    for urlencoded_value in urlencoded_values.split(',') {
+                        let value = percent_encoding::percent_decode(urlencoded_value.as_bytes());
+                        let value = value.decode_utf8().ok()?;
+                        values.insert(value.to_string());
+                    }
+                }
+                ans.insert(cap_name.to_string(), values);
+            }
+
+            Some((name, ans))
+        }
+        None => String::from_utf8(caps.to_vec())
+            .map(|cap| (cap, HashMap::new()))
+            .ok(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parsing_caps_simple() {
+        assert_eq!(
+            parse_utf8_getbundle_caps(b"cap"),
+            Some((String::from("cap"), HashMap::new())),
+        );
+
+        let caps = b"bundle2=HG20";
+
+        assert_eq!(
+            parse_utf8_getbundle_caps(caps),
+            Some((
+                String::from("bundle2"),
+                hashmap! { "HG20".to_string() => hashset!{} }
+            )),
+        );
+
+        let caps = b"bundle2=HG20%0Ab2x%253Ainfinitepush%0Ab2x%253Ainfinitepushscratchbookmarks\
+        %0Ab2x%253Arebase%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0A\
+        error%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0A\
+        pushkey%0Aremote-changegroup%3Dhttp%2Chttps%0Aremotefilelog%3DTrue%0Atreemanifest%3DTrue%0Atreeonly%3DTrue";
+
+        assert_eq!(
+            parse_utf8_getbundle_caps(caps),
+            Some((
+                String::from("bundle2"),
+                hashmap! {
+                    "HG20".to_string() => hashset!{},
+                    "b2x:rebase".to_string() => hashset!{},
+                    "digests".to_string() => hashset!{"md5".to_string(), "sha512".to_string(), "sha1".to_string()},
+                    "listkeys".to_string() => hashset!{},
+                    "remotefilelog".to_string() => hashset!{"True".to_string()},
+                    "hgtagsfnodes".to_string() => hashset!{},
+                    "bookmarks".to_string() => hashset!{},
+                    "b2x:infinitepushscratchbookmarks".to_string() => hashset!{},
+                    "treeonly".to_string() => hashset!{"True".to_string()},
+                    "pushkey".to_string() => hashset!{},
+                    "error".to_string() => hashset!{
+                        "pushraced".to_string(),
+                        "pushkey".to_string(),
+                        "unsupportedcontent".to_string(),
+                        "abort".to_string(),
+                    },
+                    "b2x:infinitepush".to_string() => hashset!{},
+                    "changegroup".to_string() => hashset!{"01".to_string(), "02".to_string()},
+                    "remote-changegroup".to_string() => hashset!{"http".to_string(), "https".to_string()},
+                    "treemanifest".to_string() => hashset!{"True".to_string()},
+                }
+            )),
+        );
+    }
+
 }
