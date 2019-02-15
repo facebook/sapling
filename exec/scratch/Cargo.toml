@@ -1,5 +1,5 @@
 [package]
-name = "scratch"
+name = "mkscratch"
 version = "0.1.0"
 authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
 

@@ -250,6 +250,15 @@ fn get_file_owner(path: &Path) -> Result<String, Error> {
     }
 }
 
+/// This should return the owner of a path, but for now it just returns
+/// the current user name on Windows systems.  This is probably correct
+/// and good enough for the moment, and we can add support for the real
+/// thing in a later diff.
+#[cfg(windows)]
+fn get_file_owner(_path: &Path) -> Result<String, Error> {
+    Ok(get_current_user())
+}
+
 /// Resolves the root directory to use as the scratch space for a given
 /// repository path.  This is the function that performs expansion of
 /// the $USER and $HOME placeholder tokens in the configured template.
