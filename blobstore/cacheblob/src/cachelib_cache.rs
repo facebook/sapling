@@ -47,7 +47,7 @@ where
 {
     let cache_ops = CachelibOps::new(blob_pool, presence_pool);
     CountedBlobstore::new(
-        "cachelib",
+        "cachelib".to_string(),
         CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
     )
 }
@@ -62,7 +62,7 @@ where
 {
     let cache_ops = CachelibOps::new(blob_pool, presence_pool);
     CountedBlobstore::new(
-        "cachelib",
+        "cachelib".to_string(),
         CacheBlobstore::new(cache_ops, InProcessLease::new(), blobstore),
     )
 }

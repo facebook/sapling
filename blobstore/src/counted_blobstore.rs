@@ -5,45 +5,47 @@
 // GNU General Public License version 2 or any later version.
 
 use std::ops::Deref;
+use std::sync::Arc;
 
 use failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use stats::DynamicTimeseries;
+use stats::Timeseries;
 
 use context::CoreContext;
 
 use crate::{Blobstore, BlobstoreBytes};
 
-define_stats! {
-    prefix = "mononoke.blobstore";
-    get: dynamic_timeseries("{}.get", (name: &'static str); RATE, SUM),
-    get_miss: dynamic_timeseries("{}.get.miss", (name: &'static str); RATE, SUM),
-    get_hit: dynamic_timeseries("{}.get.hit", (name: &'static str); RATE, SUM),
-    get_err: dynamic_timeseries("{}.get.err", (name: &'static str); RATE, SUM),
-    put: dynamic_timeseries("{}.put", (name: &'static str); RATE, SUM),
-    put_ok: dynamic_timeseries("{}.put.ok", (name: &'static str); RATE, SUM),
-    put_err: dynamic_timeseries("{}.put.err", (name: &'static str); RATE, SUM),
-    is_present: dynamic_timeseries("{}.is_present", (name: &'static str); RATE, SUM),
-    is_present_miss: dynamic_timeseries("{}.is_present.miss", (name: &'static str); RATE, SUM),
-    is_present_hit: dynamic_timeseries("{}.is_present.hit", (name: &'static str); RATE, SUM),
-    is_present_err: dynamic_timeseries("{}.is_present.err", (name: &'static str); RATE, SUM),
-    assert_present: dynamic_timeseries("{}.assert_present", (name: &'static str); RATE, SUM),
-    assert_present_ok: dynamic_timeseries(
-        "{}.assert_present.ok", (name: &'static str); RATE, SUM),
-    assert_present_err: dynamic_timeseries(
-        "{}.assert_present.err", (name: &'static str); RATE, SUM),
+define_stats_struct! {
+    CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),
+    get: timeseries(RATE, SUM),
+    get_miss: timeseries(RATE, SUM),
+    get_hit: timeseries(RATE, SUM),
+    get_err: timeseries(RATE, SUM),
+    put: timeseries(RATE, SUM),
+    put_ok: timeseries(RATE, SUM),
+    put_err: timeseries(RATE, SUM),
+    is_present: timeseries(RATE, SUM),
+    is_present_miss: timeseries(RATE, SUM),
+    is_present_hit: timeseries(RATE, SUM),
+    is_present_err: timeseries(RATE, SUM),
+    assert_present: timeseries(RATE, SUM),
+    assert_present_ok: timeseries(RATE, SUM),
+    assert_present_err: timeseries(RATE, SUM),
 }
 
 #[derive(Clone, Debug)]
 pub struct CountedBlobstore<T: Blobstore> {
-    name: &'static str,
     blobstore: T,
+    stats: Arc<CountedBlobstoreStats>,
 }
 
 impl<T: Blobstore> CountedBlobstore<T> {
-    pub fn new(name: &'static str, blobstore: T) -> Self {
-        Self { name, blobstore }
+    pub fn new(name: String, blobstore: T) -> Self {
+        Self {
+            blobstore,
+            stats: Arc::new(CountedBlobstoreStats::new(name)),
+        }
     }
 
     pub fn into_inner(self) -> T {
@@ -57,15 +59,15 @@ impl<T: Blobstore> CountedBlobstore<T> {
 
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        let name = self.name;
-        STATS::get.add_value(1, (name,));
+        let stats = self.stats.clone();
+        stats.get.add_value(1);
         self.blobstore
             .get(ctx, key)
             .then(move |res| {
                 match res {
-                    Ok(Some(_)) => STATS::get_hit.add_value(1, (name,)),
-                    Ok(None) => STATS::get_miss.add_value(1, (name,)),
-                    Err(_) => STATS::get_err.add_value(1, (name,)),
+                    Ok(Some(_)) => stats.get_hit.add_value(1),
+                    Ok(None) => stats.get_miss.add_value(1),
+                    Err(_) => stats.get_err.add_value(1),
                 }
                 res
             })
@@ -73,14 +75,14 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        let name = self.name;
-        STATS::put.add_value(1, (name,));
+        let stats = self.stats.clone();
+        stats.put.add_value(1);
         self.blobstore
             .put(ctx, key, value)
             .then(move |res| {
                 match res {
-                    Ok(()) => STATS::put_ok.add_value(1, (name,)),
-                    Err(_) => STATS::put_err.add_value(1, (name,)),
+                    Ok(()) => stats.put_ok.add_value(1),
+                    Err(_) => stats.put_err.add_value(1),
                 }
                 res
             })
@@ -88,15 +90,15 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        let name = self.name;
-        STATS::is_present.add_value(1, (name,));
+        let stats = self.stats.clone();
+        stats.is_present.add_value(1);
         self.blobstore
             .is_present(ctx, key)
             .then(move |res| {
                 match res {
-                    Ok(true) => STATS::is_present_hit.add_value(1, (name,)),
-                    Ok(false) => STATS::is_present_miss.add_value(1, (name,)),
-                    Err(_) => STATS::is_present_err.add_value(1, (name,)),
+                    Ok(true) => stats.is_present_hit.add_value(1),
+                    Ok(false) => stats.is_present_miss.add_value(1),
+                    Err(_) => stats.is_present_err.add_value(1),
                 }
                 res
             })
@@ -104,14 +106,14 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     }
 
     fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
-        let name = self.name;
-        STATS::assert_present.add_value(1, (name,));
+        let stats = self.stats.clone();
+        stats.assert_present.add_value(1);
         self.blobstore
             .assert_present(ctx, key)
             .then(move |res| {
                 match res {
-                    Ok(()) => STATS::assert_present_ok.add_value(1, (name,)),
-                    Err(_) => STATS::assert_present_err.add_value(1, (name,)),
+                    Ok(()) => stats.assert_present_ok.add_value(1),
+                    Err(_) => stats.assert_present_err.add_value(1),
                 }
                 res
             })

@@ -158,7 +158,7 @@ where
 {
     let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
-        "memcache",
+        "memcache".to_string(),
         CacheBlobstore::new(cache_ops.clone(), cache_ops, blobstore),
     ))
 }
@@ -173,7 +173,7 @@ where
 {
     let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
-        "memcache",
+        "memcache".to_string(),
         CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
     ))
 }
