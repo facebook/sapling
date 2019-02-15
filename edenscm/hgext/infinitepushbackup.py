@@ -810,13 +810,8 @@ def _dobackup(ui, repo, dest, **opts):
     backedupheads = set(bkpstate.heads)
     removedheads = backedupheads - headstobackup
 
-    # We don't need to backup heads that have already been backed up.
-    headstobackup -= backedupheads
-
-    if (
-        (bkpstate.empty() or localbookmarks == bkpstate.localbookmarks)
-        and not headstobackup
-        and not localbookmarks
+    if (bkpstate.empty() and not headstobackup and not localbookmarks) or (
+        headstobackup == backedupheads and localbookmarks == bkpstate.localbookmarks
     ):
         # There is nothing to backup, and either no previous backup state, or
         # the local bookmarks match the backed up ones.  Exit now to save
@@ -824,6 +819,9 @@ def _dobackup(ui, repo, dest, **opts):
         # previous backup from the same location.
         ui.status(_("nothing to backup\n"))
         return
+
+    # We don't need to backup heads that have already been backed up.
+    headstobackup -= backedupheads
 
     # Push bundles for all of the commits, one stack at a time.
     path = _getremotepath(repo, ui, dest)

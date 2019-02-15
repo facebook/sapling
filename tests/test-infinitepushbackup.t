@@ -190,11 +190,10 @@ Backup only bookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/f79c5017def3b9af9928edbb52cc620c74b4b291 f79c5017def3b9af9928edbb52cc620c74b4b291 (re)
 
-Nothing changed, make sure no backup happens
-  $ hg pushbackup
+Nothing changed, make sure no backup and no connection to the server happens
+  $ hg pushbackup --debug
   starting backup .* (re)
   nothing to backup
-  finished in \d+\.(\d+)? seconds (re)
 
 Obsolete a head, make sure backup happens
   $ hg prune .
@@ -299,7 +298,6 @@ Make a few public commits. Make sure we don't backup them
   $ hg pushbackup
   starting backup .* (re)
   nothing to backup
-  finished in \d+\.(\d+)? seconds (re)
 
 Backup bookmark that has '/bookmarks/' in the name. Make sure it was escaped
   $ hg book new/bookmarks/book
