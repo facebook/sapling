@@ -71,11 +71,17 @@ DEFINE_string(
     "",
     "The path to the mercurial import helper script");
 
-DEFINE_string(hgPath, "hg", "The path to the mercurial executable");
+DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
 
 DEFINE_bool(
     hgImportUseDebugSubcommand,
+// Once we swing through releasing some changes in debugedenimporthelper
+// we can make this default to true everywhere
+#ifdef __APPLE__
+    true,
+#else
     false,
+#endif
     "Use `hg debugedenimporthelper` rather than hgImportHelper");
 
 DEFINE_string(
@@ -222,14 +228,15 @@ HgImporter::HgImporter(
     : repoPath_{repoPath}, store_{store} {
   std::vector<string> cmd;
 
-  if (FLAGS_hgImportUseDebugSubcommand) {
+  // importHelperScript takes precedence if it was specified; this is used
+  // primarily in our integration tests.
+  if (importHelperScript.has_value()) {
+    cmd.push_back(importHelperScript.value().value());
+  } else if (FLAGS_hgImportUseDebugSubcommand) {
     cmd.push_back(FLAGS_hgPath);
     cmd.push_back("debugedenimporthelper");
   } else {
-    auto importHelper = importHelperScript.has_value()
-        ? importHelperScript.value()
-        : getImportHelperPath();
-    cmd.push_back(importHelper.value());
+    cmd.push_back(getImportHelperPath().value());
   }
 
   cmd.push_back(repoPath.value().str());
@@ -246,6 +253,13 @@ HgImporter::HgImporter(
   // Receive output on HELPER_PIPE_FD.
   opts.stdinFd(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
 
+  // Ensure that we run the helper process with cwd set to the repo.
+  // This is important for `hg debugedenimporthelper` to pick up the
+  // correct configuration in the currently available versions of
+  // that subcommand.  In particular, without this, the tests may
+  // fail when run in our CI environment.
+  opts.chdir(repoPath.value().str());
+
   // If argv[0] isn't an absolute path then we need to search $PATH.
   // Ideally we'd just tell Subprocess to usePath, but it doesn't
   // allow us to do so when we are also overriding the environment.
@@ -260,6 +274,13 @@ HgImporter::HgImporter(
   }
   // HACK(T33686765): Work around LSAN reports for hg_importer_helper.
   (*env)["LSAN_OPTIONS"] = "detect_leaks=0";
+  // If we're using `hg debugedenimporthelper`, don't allow the user
+  // configuration to change behavior away from the system defaults.
+  // This is harmless even if we're using hg_import_helper.py, so
+  // it is done unconditionally.
+  (*env)["HGPLAIN"] = "1";
+  (*env)["CHGDISABLE"] = "1";
+
   auto envVector = env.toVector();
   helper_ = Subprocess{cmd, opts, nullptr, &envVector};
   SCOPE_FAIL {

@@ -187,9 +187,6 @@ class EdenFS(object):
             typing.cast(str, FindExe.EDEN_HG_IMPORT_HELPER),  # T38947910
             "--hgPath",
             typing.cast(str, FindExe.HG_REAL),  # T38947910
-            # FIXME: find a way to introduce this into the test matrix so
-            # that we can test the old and the new way of using the importer
-            "--hgImportUseDebugSubcommand",
             # Disable falling back to importing mercurial data using
             # flatmanifest when the repository supports treemanifest.
             # If an error occurs importing treemanifest data in a test this is
