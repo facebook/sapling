@@ -141,6 +141,19 @@ class TestMount {
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
 
   /**
+   * Like initialize, except EdenMount::initialize is not called.
+   *
+   * This should only be used if the TestMount was default-constructed.
+   */
+  void createMountWithoutInitializing(
+      Hash initialCommitHash,
+      FakeTreeBuilder& rootBuilder,
+      bool startReady = true);
+  void createMountWithoutInitializing(
+      FakeTreeBuilder& rootBuilder,
+      bool startReady = true);
+
+  /**
    * Perform FUSE initialization on the EdenMount.
    *
    * This function calls registerFakeFuse on your behalf.
@@ -255,7 +268,11 @@ class TestMount {
   /** Convenience method for getting the Tree for the root of the mount. */
   std::shared_ptr<const Tree> getRootTree() const;
 
-  const std::shared_ptr<EdenMount>& getEdenMount() const {
+  std::shared_ptr<EdenMount>& getEdenMount() & noexcept {
+    return edenMount_;
+  }
+
+  const std::shared_ptr<EdenMount>& getEdenMount() const& {
     return edenMount_;
   }
 
@@ -264,6 +281,10 @@ class TestMount {
   }
 
   void registerFakeFuse(std::shared_ptr<FakeFuse> fuse);
+
+  const std::shared_ptr<ServerState>& getServerState() const {
+    return serverState_;
+  }
 
   /**
    * Get a hash to use for the next commit.

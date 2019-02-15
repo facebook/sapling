@@ -9,10 +9,15 @@
  */
 #include "eden/fs/inodes/EdenMount.h"
 
+#include <folly/File.h>
 #include <folly/Range.h>
+#include <folly/ScopeGuard.h>
 #include <folly/chrono/Conv.h>
+#include <folly/futures/Promise.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <stdexcept>
+#include <utility>
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -22,6 +27,7 @@
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -30,6 +36,47 @@
 using namespace std::chrono_literals;
 using std::optional;
 using namespace facebook::eden;
+
+namespace {
+constexpr folly::Duration kTimeout =
+    std::chrono::duration_cast<folly::Duration>(60s);
+constexpr folly::Duration kMicroTimeout =
+    std::chrono::duration_cast<folly::Duration>(10ms);
+
+template <class Func>
+void logAndSwallowExceptions(Func&&);
+
+/**
+ * Detect whether an EdenMount object is destructed and deallocated.
+ */
+class EdenMountDestroyDetector {
+ public:
+  explicit EdenMountDestroyDetector(TestMount&);
+
+  testing::AssertionResult mountIsAlive();
+
+  testing::AssertionResult mountIsDeleted();
+
+ private:
+  std::weak_ptr<EdenMount> weakMount_;
+  std::weak_ptr<ServerState> weakServerState_;
+  long originalServerStateUseCount_;
+};
+
+/**
+ * Control the result of PrivHelper::fuseMount using a folly::Promise.
+ */
+class MountPromiseDelegate : public FakePrivHelper::MountDelegate {
+ public:
+  folly::Future<folly::File> fuseMount() override;
+
+  template <class Exception>
+  void setException(Exception&& exception);
+
+ private:
+  folly::Promise<folly::File> promise_;
+};
+} // namespace
 
 TEST(EdenMount, initFailure) {
   // Test initializing an EdenMount with a commit hash that does not exist.
@@ -492,3 +539,162 @@ TEST_F(ChownTest, LoadedInode) {
 
   expectChownSucceeded();
 }
+
+TEST(EdenMountState, mountIsUninitializedAfterConstruction) {
+  auto testMount = TestMount{};
+  auto builder = FakeTreeBuilder{};
+  testMount.createMountWithoutInitializing(builder);
+  EXPECT_EQ(
+      testMount.getEdenMount()->getState(), EdenMount::State::UNINITIALIZED);
+}
+
+TEST(EdenMountState, mountIsInitializedAfterInitializationCompletes) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  EXPECT_EQ(
+      testMount.getEdenMount()->getState(), EdenMount::State::INITIALIZED);
+}
+
+TEST(EdenMountState, mountIsStartingBeforeMountCompletes) {
+  class MountFailed : public std::exception {};
+
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto mountDelegate = std::make_shared<MountPromiseDelegate>();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount.getPath(), mountDelegate);
+
+  auto startFuseFuture = mount.startFuse();
+  SCOPE_EXIT {
+    mountDelegate->setException(MountFailed{});
+    logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
+  };
+  EXPECT_FALSE(startFuseFuture.wait(kMicroTimeout).isReady())
+      << "startFuse should not finish before FUSE mounting completes";
+  EXPECT_EQ(mount.getState(), EdenMount::State::STARTING);
+}
+
+TEST(EdenMountState, mountIsStartingBeforeFuseInitializationCompletes) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto fuse = std::make_shared<FakeFuse>();
+  testMount.registerFakeFuse(fuse);
+
+  auto startFuseFuture = mount.startFuse();
+  SCOPE_EXIT {
+    fuse->close();
+    logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
+  };
+  EXPECT_FALSE(startFuseFuture.wait(kMicroTimeout).isReady())
+      << "startFuse should not finish before FUSE initialization completes";
+  EXPECT_EQ(mount.getState(), EdenMount::State::STARTING);
+}
+
+TEST(EdenMountState, mountIsRunningAfterFuseInitializationCompletes) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto fuse = std::make_shared<FakeFuse>();
+  testMount.startFuseAndWait(fuse);
+  EXPECT_EQ(testMount.getEdenMount()->getState(), EdenMount::State::RUNNING);
+}
+
+TEST(EdenMountState, mountIsFuseErrorAfterFuseInitializationFails) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto fuse = std::make_shared<FakeFuse>();
+  testMount.registerFakeFuse(fuse);
+
+  auto startFuseFuture = mount.startFuse();
+  EXPECT_FALSE(startFuseFuture.wait(kMicroTimeout).isReady())
+      << "startFuse should not finish before FUSE mounting completes";
+
+  fuse->close();
+  logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
+
+  EXPECT_EQ(testMount.getEdenMount()->getState(), EdenMount::State::FUSE_ERROR);
+}
+
+TEST(EdenMountState, mountIsShuttingDownWhileInodeIsReferencedDuringShutdown) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+
+  auto inode = mount.getInodeMap()->getRootInode();
+
+  auto shutdownFuture =
+      mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true);
+  SCOPE_EXIT {
+    inode.reset();
+    std::move(shutdownFuture).get(kTimeout);
+  };
+  EXPECT_FALSE(shutdownFuture.wait(kMicroTimeout).isReady())
+      << "shutdown should not finish while inode is referenced";
+  EXPECT_EQ(mount.getState(), EdenMount::State::SHUTTING_DOWN);
+}
+
+TEST(EdenMountState, mountIsShutDownAfterShutdownCompletes) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true)
+      .get(kTimeout);
+  EXPECT_EQ(testMount.getEdenMount()->getState(), EdenMount::State::SHUT_DOWN);
+}
+
+TEST(EdenMountState, mountIsDestroyingWhileInodeIsReferencedDuringDestroy) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto mountDestroyDetector = EdenMountDestroyDetector{testMount};
+
+  auto inode = mount.getInodeMap()->getRootInode();
+  testMount.getEdenMount().reset();
+  ASSERT_TRUE(mountDestroyDetector.mountIsAlive())
+      << "Eden mount should be alive during EdenMount::destroy";
+  EXPECT_EQ(mount.getState(), EdenMount::State::DESTROYING);
+}
+
+namespace {
+template <class Func>
+void logAndSwallowExceptions(Func&& function) {
+  try {
+    std::forward<Func>(function)();
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Ignoring exception: " << e.what();
+  }
+}
+
+EdenMountDestroyDetector::EdenMountDestroyDetector(TestMount& testMount)
+    : weakMount_{testMount.getEdenMount()},
+      weakServerState_{testMount.getServerState()},
+      originalServerStateUseCount_{weakServerState_.use_count()} {}
+
+testing::AssertionResult EdenMountDestroyDetector::mountIsAlive() {
+  auto serverStateUseCount = weakServerState_.use_count();
+  if (serverStateUseCount > originalServerStateUseCount_) {
+    return testing::AssertionFailure()
+        << "Current ServerState shared_ptr use count: " << serverStateUseCount
+        << "\nOriginal ServerState shared_ptr use count: "
+        << originalServerStateUseCount_;
+  }
+  return testing::AssertionSuccess();
+}
+
+testing::AssertionResult EdenMountDestroyDetector::mountIsDeleted() {
+  if (!weakMount_.expired()) {
+    return testing::AssertionFailure() << "EdenMount shared_ptr is not expired";
+  }
+  auto serverStateUseCount = weakServerState_.use_count();
+  if (serverStateUseCount >= originalServerStateUseCount_) {
+    return testing::AssertionFailure()
+        << "Current ServerState shared_ptr use count: " << serverStateUseCount
+        << "\nOriginal ServerState shared_ptr use count: "
+        << originalServerStateUseCount_;
+  }
+  return testing::AssertionSuccess();
+}
+
+folly::Future<folly::File> MountPromiseDelegate::fuseMount() {
+  return promise_.getFuture();
+}
+
+template <class Exception>
+void MountPromiseDelegate::setException(Exception&& exception) {
+  promise_.setException(std::forward<Exception>(exception));
+}
+} // namespace

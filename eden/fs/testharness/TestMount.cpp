@@ -156,6 +156,15 @@ void TestMount::initialize(
     Hash initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady) {
+  createMountWithoutInitializing(
+      initialCommitHash, rootBuilder, /*startReady=*/startReady);
+  edenMount_->initialize().get();
+}
+
+void TestMount::createMountWithoutInitializing(
+    Hash initialCommitHash,
+    FakeTreeBuilder& rootBuilder,
+    bool startReady) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -168,7 +177,6 @@ void TestMount::initialize(
 
   // Create edenMount_
   createMount();
-  edenMount_->initialize().get();
 }
 
 void TestMount::createMount() {
@@ -189,6 +197,12 @@ Hash TestMount::nextCommitHash() {
 
 void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
   initialize(nextCommitHash(), rootBuilder, startReady);
+}
+
+void TestMount::createMountWithoutInitializing(
+    FakeTreeBuilder& rootBuilder,
+    bool startReady) {
+  createMountWithoutInitializing(nextCommitHash(), rootBuilder, startReady);
 }
 
 void TestMount::initTestDirectory() {
