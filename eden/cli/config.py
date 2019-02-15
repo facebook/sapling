@@ -654,7 +654,7 @@ Do you want to run `eden mount %s` instead?"""
     def _build_eden_environment(self) -> Dict[str, str]:
         # Reset $PATH to the following contents, so that everyone has the
         # same consistent settings.
-        path_dirs = ["/usr/local/bin", "/bin", "/usr/bin"]
+        path_dirs = ["/opt/facebook/hg/bin", "/usr/local/bin", "/bin", "/usr/bin"]
 
         eden_env = {"PATH": ":".join(path_dirs)}
 

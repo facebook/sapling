@@ -188,6 +188,28 @@ AbsolutePath getImportHelperPath() {
   return helperPath;
 }
 
+#ifndef EDEN_WIN
+std::string findInPath(folly::StringPiece executable) {
+  auto path = getenv("PATH");
+  if (!path) {
+    throw std::runtime_error(folly::to<std::string>(
+        "unable to resolve ", executable, " in PATH because PATH is not set"));
+  }
+  std::vector<folly::StringPiece> dirs;
+  folly::split(":", path, dirs);
+
+  for (auto& dir : dirs) {
+    auto candidate = folly::to<std::string>(dir, "/", executable);
+    if (access(candidate.c_str(), X_OK) == 0) {
+      return candidate;
+    }
+  }
+
+  throw std::runtime_error(folly::to<std::string>(
+      "unable to resolve ", executable, " in PATH ", path));
+}
+#endif
+
 } // unnamed namespace
 
 namespace facebook {
@@ -223,6 +245,14 @@ HgImporter::HgImporter(
   // Send commands to the child on its stdin.
   // Receive output on HELPER_PIPE_FD.
   opts.stdinFd(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
+
+  // If argv[0] isn't an absolute path then we need to search $PATH.
+  // Ideally we'd just tell Subprocess to usePath, but it doesn't
+  // allow us to do so when we are also overriding the environment.
+  if (!boost::filesystem::path(cmd[0]).is_absolute()) {
+    cmd[0] = findInPath(cmd[0]);
+  }
+
   auto env = folly::experimental::EnvironmentState::fromCurrentEnvironment();
   if (!FLAGS_hgPythonPath.empty()) {
     env->erase("PYTHONPATH");
