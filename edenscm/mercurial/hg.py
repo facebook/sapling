@@ -518,7 +518,6 @@ def clone(
     rev=None,
     update=True,
     stream=False,
-    branch=None,
     shareopts=None,
 ):
     """Make a copy of an existing repository.
@@ -554,8 +553,6 @@ def clone(
     destination is local repository (True means update to default rev,
     anything else is treated as a revision)
 
-    branch: branches to clone
-
     shareopts: dict of options to control auto sharing behavior. The "pool" key
     activates auto sharing mode and defines the directory for stores. The
     "mode" key determines how to construct the directory name of the shared
@@ -566,12 +563,14 @@ def clone(
 
     if isinstance(source, bytes):
         origsource = ui.expandpath(source)
-        source, branch = parseurl(origsource, branch)
+        source, mayberevs = parseurl(origsource)
+        if len(mayberevs) == 1:
+            rev = rev or mayberevs[0]
         srcpeer = peer(ui, peeropts, source)
     else:
         srcpeer = source.peer()  # in case we were called with a localrepo
-        branch = (None, branch or [])
         origsource = source = srcpeer.url()
+    branch = (None, [])
     rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
 
     if dest is None:

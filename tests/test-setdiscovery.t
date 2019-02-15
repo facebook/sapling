@@ -436,15 +436,10 @@ One with >200 heads, which used to use up all of the sample:
   $ hg heads -t --template . | wc -c
   \s*261 (re)
 
-  $ hg clone -b a . a
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1340 changesets with 0 changes to 0 files (+259 heads)
-  new changesets 1ea73414a91b:1c51e2c80832
-  updating to branch a
+  $ hg clone . a
+  updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg clone -b b . b
+  $ hg clone -r b . b
   adding changesets
   adding manifests
   adding file changes
@@ -457,37 +452,16 @@ One with >200 heads, which used to use up all of the sample:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
-  query 2; still undecided: 1240, sample size is: 100
-  sampling from both directions
-  progress: searching: 3 queries
-  query 3; still undecided: 1140, sample size is: 200
-  sampling from both directions
-  progress: searching: 4 queries
-  query 4; still undecided: \d+, sample size is: 200 (re)
-  sampling from both directions
-  progress: searching: 5 queries
-  query 5; still undecided: \d+, sample size is: 200 (re)
-  sampling from both directions
-  progress: searching: 6 queries
-  query 6; still undecided: \d+, sample size is: \d+ (re)
-  progress: searching (end)
-  6 total queries in *.????s (glob)
-  common heads: 3ee37d65064a
+  all remote heads known locally
+  common heads: 513314ca8b3a
+  remote is subset
   $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true --rev tip
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
-  query 2; still undecided: 303, sample size is: 9
-  sampling from both directions
-  progress: searching: 3 queries
-  query 3; still undecided: 3, sample size is: 3
-  progress: searching (end)
-  3 total queries in *.????s (glob)
-  common heads: 3ee37d65064a
+  all remote heads known locally
+  common heads: 513314ca8b3a
+  remote is subset
 
 Test actual protocol when pulling one new head in addition to common heads
 

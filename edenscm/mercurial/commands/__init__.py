@@ -1494,7 +1494,6 @@ def cat(ui, repo, file1, *pats, **opts):
         ),
         ("u", "updaterev", "", _("revision, tag, or branch to check out"), _("REV")),
         ("r", "rev", [], _("include the specified changeset"), _("REV")),
-        ("b", "branch", [], _("clone only the specified branch"), _("BRANCH")),
         ("", "pull", None, _("use pull protocol to copy metadata")),
         ("", "uncompressed", None, _("an alias to --stream (DEPRECATED)")),
         ("", "stream", None, _("clone with minimal data processing")),
@@ -1525,10 +1524,9 @@ def clone(ui, source, dest=None, **opts):
     -U/--noupdate to create a clone with no working directory.
 
     To pull only a subset of changesets, specify one or more revisions
-    identifiers with -r/--rev or branches with -b/--branch. The
-    resulting clone will contain only the specified changesets and
-    their ancestors. These options (or 'clone src#rev dest') imply
-    --pull, even for local source repositories.
+    identifiers with -r/--rev. The resulting clone will contain only the
+    specified changesets and their ancestors. These options (or 'clone src#rev
+    dest') imply --pull, even for local source repositories.
 
     In normal clone mode, the remote normalizes repository data into a common
     exchange format and the receiving end translates this data into its local
@@ -1628,7 +1626,6 @@ def clone(ui, source, dest=None, **opts):
         stream=opts.get("stream") or opts.get("uncompressed"),
         rev=opts.get("rev"),
         update=opts.get("updaterev") or not opts.get("noupdate"),
-        branch=opts.get("branch"),
         shareopts=shareopts,
     )
 

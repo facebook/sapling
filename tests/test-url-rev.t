@@ -10,11 +10,6 @@ Test basic functionality of url#rev syntax
   $ cd ..
 
   $ hg clone 'repo#foo' clone
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 1 files
-  new changesets 1f0dee641bb7:17d330177ee9
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

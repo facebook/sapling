@@ -243,7 +243,7 @@ Show all commands + options
   $ hg debugcommands
   add: include, exclude, subrepos, dry-run
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
-  clone: noupdate, updaterev, rev, branch, pull, uncompressed, stream, ssh, remotecmd, insecure
+  clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user, subrepos
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude, subrepos
   export: output, switch-parent, rev, text, git, binary, nodates

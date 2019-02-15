@@ -346,26 +346,26 @@ Repo ua has both heads:
   $ rm -r ua
 
 
-Testing #<bookmark>:
+Testing #<bookmark> (no longer works):
 
   $ hg clone -u . a#stable ua
-  adding changesets
-  adding manifests
-  adding file changes
-  added 14 changesets with 14 changes to 3 files
-  new changesets acb14030fe0a:7b0a8591eda2
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:7b0a8591eda2
+  changeset:   15:7b0a8591eda2
   bookmark:    stable
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
+  
+  changeset:   12:f21241060d6a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     hacked default
   
 
 Same revision checked out in repo a and ua:
