@@ -35,6 +35,8 @@ extern crate futures;
 extern crate futures_ext;
 extern crate hlua;
 extern crate hlua_futures;
+extern crate hyper;
+extern crate hyper_tls;
 #[macro_use]
 extern crate lazy_static;
 extern crate linked_hash_map;
@@ -884,8 +886,7 @@ impl FileContentStore for InMemoryFileContentStore {
         changesetid: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<u64>, Error> {
-        let opt = self
-            .map
+        let opt = self.map
             .get(&(changesetid, path.clone()))
             .map(|(_, bytes)| bytes.len() as u64);
         finished(opt).boxify()

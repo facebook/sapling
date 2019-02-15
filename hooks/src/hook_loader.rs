@@ -11,6 +11,7 @@
 use super::lua_hook::LuaHook;
 use super::{Hook, HookChangeset, HookManager};
 use errors::*;
+use facebook::rust_hooks::check_unittests::CheckUnittestsHook;
 use facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
 use facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use failure::Error;
@@ -28,6 +29,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                     let rust_name = &name[5..];
                     let rust_name = rust_name.to_string();
                     let rust_hook: Arc<Hook<HookChangeset>> = match rust_name.as_ref() {
+                        "check_unittests" => Arc::new(CheckUnittestsHook::new(&hook.config)?),
                         "verify_integrity" => Arc::new(VerifyIntegrityHook::new()),
                         "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(&hook.config)),
                         _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
