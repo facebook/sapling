@@ -1288,13 +1288,6 @@ def branch(ui, repo, label=None, **opts):
             _("REV"),
         ),
         (
-            "b",
-            "branch",
-            [],
-            _("a specific branch you would like to bundle"),
-            _("BRANCH"),
-        ),
-        (
             "",
             "base",
             [],
@@ -1384,7 +1377,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         outgoing = discovery.outgoing(repo, common, heads)
     else:
         dest = ui.expandpath(dest or "default-push", dest or "default")
-        dest, branches = hg.parseurl(dest, opts.get("branch"))
+        dest, branches = hg.parseurl(dest)
         other = hg.peer(repo, opts, dest)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
         heads = revs and map(repo.lookup, revs) or revs

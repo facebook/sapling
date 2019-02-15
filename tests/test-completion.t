@@ -267,7 +267,7 @@ Show all commands + options
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
   bookmarks: force, rev, delete, strip, rename, inactive, template
   branch: force, clean, new
-  bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
+  bundle: force, rev, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude, template
   config: untrusted, edit, local, global, template
   copy: after, force, include, exclude, dry-run
