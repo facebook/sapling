@@ -49,8 +49,7 @@ class InodePtrTestHelper {
 static constexpr size_t kRootRefCount = 3;
 
 TEST(InodePtr, constructionAndAssignment) {
-  FakeTreeBuilder emptyBuilder;
-  TestMount testMount{emptyBuilder};
+  TestMount testMount{FakeTreeBuilder{}};
 
   // Get the root inode
   auto rootPtr = testMount.getEdenMount()->getRootInode();
@@ -152,8 +151,7 @@ TEST(InodePtr, constructionAndAssignment) {
 }
 
 TEST(InodePtr, baseConstructionAndAssignment) {
-  FakeTreeBuilder emptyBuilder;
-  TestMount testMount{emptyBuilder};
+  TestMount testMount{FakeTreeBuilder{}};
   auto rootPtr = testMount.getEdenMount()->getRootInode();
   EXPECT_REFCOUNT(kRootRefCount, rootPtr);
 
@@ -207,8 +205,7 @@ TEST(InodePtr, baseConstructionAndAssignment) {
 }
 
 TEST(InodePtr, baseCasting) {
-  FakeTreeBuilder emptyBuilder;
-  TestMount testMount{emptyBuilder};
+  TestMount testMount{FakeTreeBuilder{}};
   auto rootPtr = testMount.getEdenMount()->getRootInode();
   EXPECT_REFCOUNT(kRootRefCount, rootPtr);
 

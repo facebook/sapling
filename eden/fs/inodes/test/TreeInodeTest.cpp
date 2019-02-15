@@ -144,8 +144,7 @@ TEST(TreeInode, readdirRespectsOffset) {
 }
 
 TEST(TreeInode, readdirIgnoresWildOffsets) {
-  FakeTreeBuilder builder;
-  TestMount mount{builder};
+  TestMount mount{FakeTreeBuilder{}};
 
   auto root = mount.getEdenMount()->getRootInode();
 

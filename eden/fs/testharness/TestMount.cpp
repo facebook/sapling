@@ -107,6 +107,9 @@ TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
   initialize(rootBuilder, startReady);
 }
 
+TestMount::TestMount(FakeTreeBuilder&& rootBuilder)
+    : TestMount(rootBuilder, /*startReady=*/true) {}
+
 TestMount::TestMount(
     Hash initialCommitHash,
     FakeTreeBuilder& rootBuilder,

@@ -21,8 +21,7 @@ using namespace folly::string_piece_literals;
 
 namespace {
 struct EdenDispatcherTest : ::testing::Test {
-  EdenDispatcherTest() : mount{builder} {}
-  FakeTreeBuilder builder;
+  EdenDispatcherTest() : mount{FakeTreeBuilder{}} {}
   TestMount mount;
 };
 

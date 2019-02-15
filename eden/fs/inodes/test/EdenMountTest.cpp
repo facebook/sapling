@@ -351,8 +351,7 @@ TEST(EdenMount, ensureDirectoryExists) {
 }
 
 TEST(EdenMount, concurrentDeepEnsureDirectoryExists) {
-  auto builder = FakeTreeBuilder{};
-  TestMount testMount{builder};
+  auto testMount = TestMount{FakeTreeBuilder{}};
   auto edenMount = testMount.getEdenMount();
 
   auto dirPath = "foo/bar/baz/this/should/be/very/long"_relpath;

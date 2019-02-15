@@ -89,6 +89,7 @@ class TestMount {
    * will be used.
    */
   explicit TestMount(FakeTreeBuilder& rootBuilder, bool startReady = true);
+  explicit TestMount(FakeTreeBuilder&& rootBuilder);
   TestMount(
       Hash initialCommitHash,
       FakeTreeBuilder& rootBuilder,
