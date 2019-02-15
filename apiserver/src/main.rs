@@ -318,81 +318,75 @@ struct HttpServerState {
 fn main() -> Result<()> {
     panichandler::set_panichandler(Fate::Abort);
 
-    let matches = cmdlib::args::add_cachelib_args(
-        clap::App::new("Mononoke API Server")
-            .version("0.0.1")
-            .about("An API server serves requests for Mononoke")
-            .arg(
-                Arg::with_name("http-host")
-                    .short("H")
-                    .long("http-host")
-                    .value_name("HOST")
-                    .default_value("127.0.0.1")
-                    .help("HTTP host to listen to"),
-            )
-            .arg(
-                Arg::with_name("http-port")
-                    .short("p")
-                    .long("http-port")
-                    .value_name("PORT")
-                    .default_value("8000")
-                    .help("HTTP port to listen to"),
-            )
-            .arg(
-                Arg::with_name("thrift-port")
-                    .long("thrift-port")
-                    .value_name("PORT")
-                    .help("Thrift port"),
-            )
-            .arg(Arg::with_name("with-scuba").long("with-scuba"))
-            .arg(Arg::with_name("debug").short("p").long("debug"))
-            .arg(Arg::with_name("without-skiplist").long("without-skiplist"))
-            .arg(
-                Arg::with_name("stdlog")
-                    .long("stdlog")
-                    .help("print logs from third-party crates"),
-            )
-            .arg(
-                Arg::with_name("mononoke-config-path")
-                    .long("mononoke-config-path")
-                    .value_name("PATH")
-                    .required(true)
-                    .help("directory of the config repository"),
-            )
-            .arg(
-                Arg::with_name("ssl-certificate")
-                    .long("ssl-certificate")
-                    .value_name("PATH")
-                    .help("path to the ssl certificate file"),
-            )
-            .arg(
-                Arg::with_name("ssl-private-key")
-                    .long("ssl-private-key")
-                    .value_name("PATH")
-                    .help("path to the ssl private key file")
-                    .requires("ssl-ca"),
-            )
-            .arg(
-                Arg::with_name("ssl-ca")
-                    .long("ssl-ca")
-                    .value_name("PATH")
-                    .help("path to the ssl ca file"),
-            )
-            .arg(
-                Arg::with_name("ssl-ticket-seeds")
-                    .long("ssl-ticket-seeds")
-                    .value_name("PATH")
-                    .help("path to the ssl ticket seeds"),
-            )
-            .arg(
-                Arg::with_name("myrouter-port")
-                    .long("myrouter-port")
-                    .value_name("PORT")
-                    .help("port for local myrouter instance"),
-            ),
-        false, /* hide_advanced_args */
-    )
-    .get_matches();
+    let app = clap::App::new("Mononoke API Server")
+        .version("0.0.1")
+        .about("An API server serves requests for Mononoke")
+        .arg(
+            Arg::with_name("http-host")
+                .short("H")
+                .long("http-host")
+                .value_name("HOST")
+                .default_value("127.0.0.1")
+                .help("HTTP host to listen to"),
+        )
+        .arg(
+            Arg::with_name("http-port")
+                .short("p")
+                .long("http-port")
+                .value_name("PORT")
+                .default_value("8000")
+                .help("HTTP port to listen to"),
+        )
+        .arg(
+            Arg::with_name("thrift-port")
+                .long("thrift-port")
+                .value_name("PORT")
+                .help("Thrift port"),
+        )
+        .arg(Arg::with_name("with-scuba").long("with-scuba"))
+        .arg(Arg::with_name("debug").short("p").long("debug"))
+        .arg(Arg::with_name("without-skiplist").long("without-skiplist"))
+        .arg(
+            Arg::with_name("stdlog")
+                .long("stdlog")
+                .help("print logs from third-party crates"),
+        )
+        .arg(
+            Arg::with_name("mononoke-config-path")
+                .long("mononoke-config-path")
+                .value_name("PATH")
+                .required(true)
+                .help("directory of the config repository"),
+        )
+        .arg(
+            Arg::with_name("ssl-certificate")
+                .long("ssl-certificate")
+                .value_name("PATH")
+                .help("path to the ssl certificate file"),
+        )
+        .arg(
+            Arg::with_name("ssl-private-key")
+                .long("ssl-private-key")
+                .value_name("PATH")
+                .help("path to the ssl private key file")
+                .requires("ssl-ca"),
+        )
+        .arg(
+            Arg::with_name("ssl-ca")
+                .long("ssl-ca")
+                .value_name("PATH")
+                .help("path to the ssl ca file"),
+        )
+        .arg(
+            Arg::with_name("ssl-ticket-seeds")
+                .long("ssl-ticket-seeds")
+                .value_name("PATH")
+                .help("path to the ssl ticket seeds"),
+        );
+
+    let app = cmdlib::args::add_myrouter_args(app);
+    let matches =
+        cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
     cmdlib::args::init_cachelib(&matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
@@ -405,13 +399,7 @@ fn main() -> Result<()> {
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
     let with_skiplist = !matches.is_present("without-skiplist");
-    let myrouter_port = match matches.value_of("myrouter-port") {
-        Some(port) => Some(
-            port.parse::<u16>()
-                .expect("Provided --myrouter-port is not u16"),
-        ),
-        None => None,
-    };
+    let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
 
     let address = format!("{}:{}", host, port);
 

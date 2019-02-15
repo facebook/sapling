@@ -39,19 +39,17 @@ extern crate repo_listener;
 
 mod monitoring;
 
-use std::io;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use clap::{App, ArgMatches};
 use failure::SlogKVError;
 use futures::Future;
+use metaconfig_parser::RepoConfigs;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
+use std::io;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::runtime::Runtime;
-
-use metaconfig_parser::RepoConfigs;
 
 mod errors {
     pub use failure::{Error, Result};
@@ -63,7 +61,7 @@ lazy_static! {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    cmdlib::args::add_cachelib_args(App::new("mononoke server")
+    let app = App::new("mononoke server")
         .version("0.0.0")
         .about("serve repos")
         .args_from_usage(
@@ -80,11 +78,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             [ticket_seed] --ssl-ticket-seeds [PATH]             'path to a file with encryption keys for SSL tickets'
 
             -d, --debug                                          'print debug level output'
-            --myrouter-port=[PORT]                               'port for local myrouter instance'
             "#,
-        ),
-        false /* hide_advanced_args */
-    )
+        );
+    let app = cmdlib::args::add_myrouter_args(app);
+    cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */)
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
@@ -151,13 +148,7 @@ fn main() {
             ca_pem,
         };
 
-        let myrouter_port = match matches.value_of("myrouter-port") {
-            Some(port) => Some(
-                port.parse::<u16>()
-                    .expect("Provided --myrouter-port is not u16"),
-            ),
-            None => None,
-        };
+        let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
 
         let mut acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
             .expect("failed to build tls acceptor");

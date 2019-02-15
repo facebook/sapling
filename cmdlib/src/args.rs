@@ -98,12 +98,6 @@ impl MononokeApp {
                     .help("numeric ID of repository")
             )
             .arg(
-                Arg::with_name("myrouter-port")
-                    .long("myrouter-port")
-                    .value_name("PORT")
-                    .help("port for local myrouter instance")
-            )
-            .arg(
                 Arg::with_name("log-style")
                     .short("l")
                     .long("log-style")
@@ -170,6 +164,7 @@ impl MononokeApp {
                 .long("filenode-shards").value_name("SHARD_COUNT").help("number of shards to spread filenodes across")
             );
 
+        app = add_myrouter_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
 
         if self.local_instances {
@@ -506,6 +501,10 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         ),
     )
     .unwrap();
+}
+
+pub fn add_myrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.args_from_usage(r"--myrouter-port=[PORT]    'port for local myrouter instance'")
 }
 
 pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {

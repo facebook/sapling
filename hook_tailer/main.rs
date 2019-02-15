@@ -96,13 +96,7 @@ fn main() -> Result<()> {
 
     cmdlib::args::init_cachelib(&matches);
 
-    let myrouter_port = match matches.value_of("myrouter-port") {
-        Some(port) => Some(
-            port.parse::<u16>()
-                .expect("Provided --myrouter-port is not u16"),
-        ),
-        None => None,
-    };
+    let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
 
     let post_commit_category = matches
         .value_of("post-commit-category")
@@ -268,7 +262,8 @@ impl fmt::Display for HookExecutionStat {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    cmdlib::args::add_cachelib_args(App::new("mononoke hook server")
+    let app =
+    App::new("mononoke hook server")
         .version("0.0.0")
         .about("run hooks against repo")
         .args_from_usage(
@@ -285,11 +280,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --continuous                                         'continuously run hooks on new commits'
             --limit=[LIMIT]                                      'limit number of commits to process (non-continuous only). Default: 1000'
             -d, --debug                                          'print debug level output'
-            -p, --myrouter-port=[PORT]                           'port for local myrouter instance'
         "#,
-    ),
-        false /* hide_advanced_args */
-)
+    );
+    let app = cmdlib::args::add_myrouter_args(app);
+    cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */)
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {

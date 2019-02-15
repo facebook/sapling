@@ -68,20 +68,20 @@ fn run_hook(
     repo_creator: fn(&Logger, &ArgMatches) -> BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<HookExecution, Error> {
     // Define command line args and parse command line
-    let matches = cmdlib::args::add_cachelib_args(
-        App::new("runhook")
-            .version("0.0.0")
-            .about("run a hook")
-            .args_from_usage(concat!(
-                "<REPO_NAME>               'name of repository\n",
-                "<HOOK_FILE>               'file containing hook code\n",
-                "<HOOK_TYPE>               'the type of the hook (perfile, percs)\n",
-                "<REV>                     'revision hash'\n",
-                "-p, --myrouter-port=[PORT] 'port for local myrouter instance'\n",
-            )),
-        false, /* hide_advanced_args */
-    )
-    .get_matches_from(args);
+    let app = App::new("runhook")
+        .version("0.0.0")
+        .about("run a hook")
+        .args_from_usage(concat!(
+            "<REPO_NAME>               'name of repository\n",
+            "<HOOK_FILE>               'file containing hook code\n",
+            "<HOOK_TYPE>               'the type of the hook (perfile, percs)\n",
+            "<REV>                     'revision hash'\n",
+        ));
+
+    let app = cmdlib::args::add_myrouter_args(app);
+
+    let matches =
+        cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches_from(args);
 
     cmdlib::args::init_cachelib(&matches);
 
@@ -163,11 +163,7 @@ fn run_hook(
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
     let blobstore_args = cmdlib::args::parse_blobstore_args(matches);
-    let myrouter_port = matches
-        .value_of("myrouter-port")
-        .expect("missing myrouter port")
-        .parse::<u16>()
-        .expect("myrouter port is not a valid u16");
+    let myrouter_port = cmdlib::args::parse_myrouter_port(&matches).expect("missing myrouter port");
 
     let db_address = matches.value_of("db-address").unwrap().to_string();
     let filenode_shards = matches.value_of("filenode-shards").map(|shard_count| {
