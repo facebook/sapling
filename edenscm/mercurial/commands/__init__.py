@@ -3374,7 +3374,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
         ("r", "rev", "", _("identify the specified revision"), _("REV")),
         ("n", "num", None, _("show local revision number")),
         ("i", "id", None, _("show global revision id")),
-        ("b", "branch", None, _("show branch")),
+        ("b", "branch", None, _("print 'default' (DEPRECATED)")),
         ("t", "tags", None, _("show tags")),
         ("B", "bookmarks", None, _("show bookmarks")),
     ]
@@ -3400,8 +3400,7 @@ def identify(
 
     Print a summary identifying the repository state at REV using one or
     two parent hash identifiers, followed by a "+" if the working
-    directory has uncommitted changes, the branch name (if not default),
-    a list of tags, and a list of bookmarks.
+    directory has uncommitted changes, a list of tags, and a list of bookmarks.
 
     When REV is not given, print a summary of the current state of the
     repository.
@@ -3532,10 +3531,6 @@ def identify(
             taglist = ctx.tags()
 
         if default and not ui.quiet:
-            b = ctx.branch()
-            if b != "default":
-                output.append("(%s)" % b)
-
             # multiple tags for a single parent separated by '/'
             t = "/".join(taglist)
             if t:
@@ -3556,7 +3551,6 @@ def identify(
                 output.extend(ctx.bookmarks())
 
         fm.data(node=ctx.hex())
-        fm.data(branch=ctx.branch())
         fm.data(tags=fm.formatlist(taglist, name="tag", sep=":"))
         fm.data(bookmarks=fm.formatlist(ctx.bookmarks(), name="bookmark"))
         fm.context(ctx=ctx)

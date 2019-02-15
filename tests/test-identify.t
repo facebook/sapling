@@ -47,7 +47,6 @@ with options
   [
    {
     "bookmarks": [],
-    "branch": "default",
     "dirty": "",
     "id": "cb9a9f314b8b",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
@@ -72,7 +71,6 @@ with modifications
   [
    {
     "bookmarks": [],
-    "branch": "default",
     "dirty": "+",
     "id": "cb9a9f314b8b+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",

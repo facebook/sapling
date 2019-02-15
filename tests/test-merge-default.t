@@ -53,7 +53,6 @@ Should succeed:
   [
    {
     "bookmarks": [],
-    "branch": "default",
     "dirty": "+",
     "id": "f25cbe84d8b3+2d95304fed5d+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
@@ -81,7 +80,6 @@ Should succeed - 2 heads:
   [
    {
     "bookmarks": [],
-    "branch": "default",
     "id": "1846eede8b68",
     "node": "1846eede8b6886d8cc8a88c96a687b7fe8f3b9d1",
     "tags": []
