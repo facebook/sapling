@@ -12,6 +12,7 @@
 #include <folly/Conv.h>
 #include <folly/File.h>
 #include <folly/futures/Future.h>
+#include <utility>
 #include "eden/fs/testharness/FakeFuse.h"
 
 using folly::File;
@@ -24,12 +25,48 @@ using std::string;
 namespace facebook {
 namespace eden {
 
+namespace {
+class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
+ public:
+  explicit FakeFuseMountDelegate(
+      AbsolutePath mountPath,
+      std::shared_ptr<FakeFuse> fuse) noexcept
+      : mountPath_{std::move(mountPath)}, fuse_{std::move(fuse)} {}
+
+  folly::Future<folly::File> fuseMount() override {
+    if (fuse_->isStarted()) {
+      throw std::runtime_error(folly::to<string>(
+          "got request to create FUSE mount ",
+          mountPath_,
+          ", but this mount is already running"));
+    }
+    return fuse_->start();
+  }
+
+ private:
+  AbsolutePath mountPath_;
+  std::shared_ptr<FakeFuse> fuse_;
+};
+} // namespace
+
+FakePrivHelper::MountDelegate::~MountDelegate() = default;
+
 FakePrivHelper::FakePrivHelper() {}
 
 void FakePrivHelper::registerMount(
     AbsolutePathPiece mountPath,
     std::shared_ptr<FakeFuse> fuse) {
-  auto ret = mounts_.emplace(mountPath.stringPiece().str(), std::move(fuse));
+  registerMountDelegate(
+      mountPath,
+      std::make_shared<FakeFuseMountDelegate>(
+          AbsolutePath{mountPath}, std::move(fuse)));
+}
+
+void FakePrivHelper::registerMountDelegate(
+    AbsolutePathPiece mountPath,
+    std::shared_ptr<MountDelegate> mountDelegate) {
+  auto ret = mountDelegates_.emplace(
+      mountPath.stringPiece().str(), std::move(mountDelegate));
   if (!ret.second) {
     throw std::range_error(
         folly::to<string>("mount ", mountPath, " already defined"));
@@ -41,22 +78,14 @@ void FakePrivHelper::attachEventBase(folly::EventBase* /* eventBase */) {}
 void FakePrivHelper::detachEventBase() {}
 
 Future<File> FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
-  auto iter = mounts_.find(mountPath.str());
-  if (iter == mounts_.end()) {
+  auto it = mountDelegates_.find(mountPath.str());
+  if (it == mountDelegates_.end()) {
     throw std::range_error(folly::to<string>(
         "got request to create FUSE mount ",
         mountPath,
         ", but no test FUSE endpoint defined for this path"));
   }
-  auto& fakeFuse = iter->second;
-  if (fakeFuse->isStarted()) {
-    throw std::runtime_error(folly::to<string>(
-        "got request to create FUSE mount ",
-        mountPath,
-        ", but this mount is already running"));
-  }
-
-  return fakeFuse->start();
+  return it->second->fuseMount();
 }
 
 Future<Unit> FakePrivHelper::fuseUnmount(folly::StringPiece /* mountPath */) {

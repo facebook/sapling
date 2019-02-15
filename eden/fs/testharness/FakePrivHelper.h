@@ -9,9 +9,11 @@
  */
 #pragma once
 
+#include <folly/futures/Future.h>
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -29,11 +31,22 @@ class FakeFuse;
  */
 class FakePrivHelper : public PrivHelper {
  public:
+  class MountDelegate {
+   public:
+    virtual ~MountDelegate();
+
+    virtual folly::Future<folly::File> fuseMount() = 0;
+  };
+
   FakePrivHelper();
 
   void registerMount(
       AbsolutePathPiece mountPath,
       std::shared_ptr<FakeFuse> fuse);
+
+  void registerMountDelegate(
+      AbsolutePathPiece mountPath,
+      std::shared_ptr<MountDelegate>);
 
   // PrivHelper functions
   void attachEventBase(folly::EventBase* eventBase) override;
@@ -55,7 +68,8 @@ class FakePrivHelper : public PrivHelper {
   FakePrivHelper(FakePrivHelper const&) = delete;
   FakePrivHelper& operator=(FakePrivHelper const&) = delete;
 
-  std::unordered_map<std::string, std::shared_ptr<FakeFuse>> mounts_;
+  std::unordered_map<std::string, std::shared_ptr<MountDelegate>>
+      mountDelegates_;
 };
 } // namespace eden
 } // namespace facebook
