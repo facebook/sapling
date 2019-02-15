@@ -1790,10 +1790,6 @@ help/ shows help topics
         "topic": "branch"
       },
       {
-        "summary": "list repository named branches",
-        "topic": "branches"
-      },
-      {
         "summary": "create a bundle file",
         "topic": "bundle"
       },

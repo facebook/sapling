@@ -42,9 +42,3 @@ Test disabling the `hg branch` commands:
   abort: named branches are disabled in this repository
   (use bookmarks instead! see docs)
   [255]
-  $ hg branches
-  abort: named branches are disabled in this repository
-  (use bookmarks instead! see docs)
-  [255]
-  $ hg branch
-  default

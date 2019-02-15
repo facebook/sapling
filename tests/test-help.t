@@ -2389,13 +2389,6 @@ Dish up an empty repo; serve it cold.
   set or show the current branch name
   </td></tr>
   <tr><td>
-  <a href="/help/branches">
-  branches
-  </a>
-  </td><td>
-  list repository named branches
-  </td></tr>
-  <tr><td>
   <a href="/help/bundle">
   bundle
   </a>
