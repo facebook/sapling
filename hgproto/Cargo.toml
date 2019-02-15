@@ -12,6 +12,5 @@ nom = "3.2.1"
 slog = "2.0.12"
 tokio-io = "0.1.4"
 tokio-proto = "0.1.1"
-percent-encoding = "1.0.1"
 
 futures-ext = { path = "../futures-ext" }
