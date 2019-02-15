@@ -36,7 +36,7 @@ don't show "(+1 heads)" message when pulling closed head
   $ hg up -q 0
   $ echo hello >> foo
   $ hg ci -mx1
-  $ hg ci -mx2 --close-branch
+  $ hg ci -mx2 --config ui.allowemptycommit=1
   $ cd ../repo3
   $ hg heads -q --closed
   2:effea6de0384
@@ -47,11 +47,11 @@ don't show "(+1 heads)" message when pulling closed head
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 1 files
-  new changesets 8c900227dd5d:00cfe9073916
-  (run 'hg update' to get a working copy)
+  added 2 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 8c900227dd5d:1a1aa123db21
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg heads -q --closed
-  4:00cfe9073916
+  4:1a1aa123db21
   2:effea6de0384
   1:ed1b79f46b9a
 

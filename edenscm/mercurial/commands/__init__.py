@@ -1651,7 +1651,6 @@ def clone(ui, source, dest=None, **opts):
             None,
             _("mark new/missing files as added/removed before committing"),
         ),
-        ("", "close-branch", None, _("mark a branch head as closed")),
         ("", "amend", None, _("amend the parent of the working directory")),
         ("e", "edit", None, _("invoke editor on commit messages")),
         ("i", "interactive", None, _("use interactive mode")),
@@ -1681,10 +1680,6 @@ def commit(ui, repo, *pats, **opts):
     configured editor where you can enter a message. In case your
     commit fails, you will find a backup of your message in
     ``.hg/last-message.txt``.
-
-    The --close-branch flag can be used to mark the current branch
-    head closed. When all heads of a branch are closed, the branch
-    will be considered closed and no longer listed.
 
     The --amend flag can be used to amend the parent of the
     working directory with a new commit that contains the changes
@@ -1763,19 +1758,6 @@ def _docommit(ui, repo, *pats, **opts):
     branch = repo[None].branch()
 
     extra = {}
-    if opts.get("close_branch"):
-        bheads = repo.branchheads(branch)
-        extra["close"] = 1
-
-        if not bheads:
-            raise error.Abort(_("can only close branch heads"))
-        elif opts.get("amend"):
-            if (
-                repo[None].parents()[0].p1().branch() != branch
-                and repo[None].parents()[0].p2().branch() != branch
-            ):
-                raise error.Abort(_("can only close branch heads"))
-
     if opts.get("amend"):
         if ui.configbool("ui", "commitsubrepos"):
             raise error.Abort(_("cannot amend with ui.commitsubrepos enabled"))

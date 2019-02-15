@@ -207,11 +207,11 @@ modified files should survive the abort when we've moved away already
 aborting and not changing files can skip mentioning updating (no) files
   $ hg up
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg commit --close-branch -m 'closebranch'
+  $ hg commit -m 'closebranch' --config ui.allowemptycommit=1
   $ startediting 1 1 "(not changing anything)" # edit the 3rd of 3 changesets
   % start editing the history (not changing anything)
-  | edit 292aec348d9e 6 closebranch
-  Editing (292aec348d9e), you may commit or record as needed now.
+  | edit 663c31f74acc 6 closebranch
+  Editing (663c31f74acc), you may commit or record as needed now.
   (hg histedit --continue to resume)
   $ hg histedit --abort
 
