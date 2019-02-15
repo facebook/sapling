@@ -129,7 +129,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-externals.py it has no-che?k-code (glob)
-  Skipping tests/test-hgsubversion-fetch-branches.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-fetch-command-regexes.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-fetch-command.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-fetch-exec.py it has no-che?k-code (glob)
