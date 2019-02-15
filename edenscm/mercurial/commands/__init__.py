@@ -1304,42 +1304,10 @@ def branch(ui, repo, label=None, **opts):
         ui.write("%s\n" % repo.dirstate.branch())
         return
 
-    if not ui.configbool("ui", "allowbranches"):
-        raise error.Abort(
-            _("named branches are disabled in this repository"),
-            hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
-        )
-
-    with repo.wlock():
-        if opts.get("clean"):
-            label = repo[None].p1().branch()
-            repo.dirstate.setbranch(label)
-            ui.status(_("reset working directory to branch %s\n") % label)
-        elif label:
-            if not opts.get("force") and label in repo.branchmap():
-                if label not in [p.branch() for p in repo[None].parents()]:
-                    raise error.Abort(
-                        _("a branch of the same name already" " exists"),
-                        # i18n: "it" refers to an existing branch
-                        hint=_("use 'hg update' to switch to it"),
-                    )
-            scmutil.checknewlabel(repo, label, "branch")
-            repo.dirstate.setbranch(label)
-            ui.status(_("marked working directory as branch %s\n") % label)
-
-            # find any open named branches aside from default
-            others = [
-                n
-                for n, h, t, c in repo.branchmap().iterbranches()
-                if n != "default" and not c
-            ]
-            if not others:
-                ui.status(
-                    _(
-                        "(branches are permanent and global, "
-                        "did you want a bookmark?)\n"
-                    )
-                )
+    raise error.Abort(
+        _("named branches are disabled in this repository"),
+        hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
+    )
 
 
 @command(
