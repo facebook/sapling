@@ -410,16 +410,9 @@ class ChownTest : public ::testing::Test {
   void SetUp() override {
     builder_.setFile("file.txt", "contents");
     testMount_ = std::make_unique<TestMount>(builder_);
-    fuse_ = std::make_shared<FakeFuse>();
-    testMount_->registerFakeFuse(fuse_);
     edenMount_ = testMount_->getEdenMount();
-    auto initFuture = edenMount_->startFuse();
-
-    fuse_->sendInitRequest();
-    fuse_->recvResponse();
-    // Wait for the mount to complete
-    testMount_->drainServerExecutor();
-    std::move(initFuture).get(10s);
+    fuse_ = std::make_shared<FakeFuse>();
+    testMount_->startFuseAndWait(fuse_);
   }
 
   InodeNumber load() {

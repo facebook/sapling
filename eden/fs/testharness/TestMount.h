@@ -140,6 +140,16 @@ class TestMount {
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
 
   /**
+   * Perform FUSE initialization on the EdenMount.
+   *
+   * This function calls registerFakeFuse on your behalf.
+   *
+   * Preconditions:
+   * - initialize() was called.
+   */
+  void startFuseAndWait(std::shared_ptr<FakeFuse>);
+
+  /**
    * Get the ClientConfig object.
    *
    * The ClientConfig object provides methods to get the paths to the mount

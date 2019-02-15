@@ -216,6 +216,17 @@ Dispatcher* TestMount::getDispatcher() const {
   return edenMount_->getDispatcher();
 }
 
+void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
+  constexpr auto kTimeout = 10s;
+  CHECK(edenMount_) << "Call initialize() before calling " << __func__;
+  registerFakeFuse(fuse);
+  auto startFuseFuture = edenMount_->startFuse();
+  fuse->sendInitRequest();
+  fuse->recvResponse();
+  drainServerExecutor();
+  std::move(startFuseFuture).get(kTimeout);
+}
+
 void TestMount::remount() {
   // Create a new copy of the ClientConfig
   auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
