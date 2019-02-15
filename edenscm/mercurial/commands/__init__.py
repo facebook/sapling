@@ -1250,56 +1250,22 @@ def bookmark(ui, repo, *names, **opts):
 @command(
     "branch",
     [
-        (
-            "f",
-            "force",
-            None,
-            _("set branch name even if it shadows an existing branch"),
-        ),
-        ("C", "clean", None, _("reset branch name to parent branch name")),
+        ("f", "force", None, _("do nothing (DEPRECATED)")),
+        ("C", "clean", None, _("raise an exception (DEPRECATED)")),
         # Note: for compatibility for tweakdefaults users
-        (
-            "",
-            "new",
-            None,
-            _("allow branch creation (no longer  required) (DEPRECATED)"),
-        ),
+        ("", "new", None, _("do nothing (DEPRECATED)")),
     ],
     _("[-fC] [NAME]"),
 )
 def branch(ui, repo, label=None, **opts):
-    """set or show the current branch name
+    """(deprecated. use 'hg bookmark' instead)
 
-    .. note::
+    This command does nothing meaningful and will be removed in the future.
 
-       Branch names are permanent and global. Use :hg:`bookmark` to create a
-       light-weight bookmark instead. See :hg:`help glossary` for more
-       information about named branches and bookmarks.
-
-    With no argument, show the current branch name. With one argument,
-    set the working directory branch name (the branch will not exist
-    in the repository until the next commit). Standard practice
-    recommends that primary development take place on the 'default'
-    branch.
-
-    Unless -f/--force is specified, branch will not let you set a
-    branch name that already exists.
-
-    Use -C/--clean to reset the working directory branch to that of
-    the parent of the working directory, negating a previous branch
-    change.
-
-    Use the command :hg:`update` to switch to an existing branch. Use
-    :hg:`commit --close-branch` to mark this branch head as closed.
-    When all heads of a branch are closed, the branch will be
-    considered closed.
-
-    Returns 0 on success.
+    For now, it always prints "default" or raise an exception if NAME or -C is
+    provided.
     """
-    opts = pycompat.byteskwargs(opts)
-    if label:
-        label = label.strip()
-
+    hintutil.trigger("branch-command-deprecate")
     if not opts.get("clean") and not label:
         ui.write("%s\n" % repo.dirstate.branch())
         return

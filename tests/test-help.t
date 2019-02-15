@@ -2386,7 +2386,7 @@ Dish up an empty repo; serve it cold.
   branch
   </a>
   </td><td>
-  set or show the current branch name
+  (deprecated. use 'hg bookmark' instead)
   </td></tr>
   <tr><td>
   <a href="/help/bundle">

@@ -1786,7 +1786,7 @@ help/ shows help topics
         "topic": "bookmarks"
       },
       {
-        "summary": "set or show the current branch name",
+        "summary": "(deprecated. use 'hg bookmark' instead)",
         "topic": "branch"
       },
       {

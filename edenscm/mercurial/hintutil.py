@@ -21,7 +21,12 @@ hinttable = {
             "Check fburl.com/gitignore to learn more."
         )
         % path
-    )
+    ),
+    "branch-command-deprecate": lambda: _(
+        "'hg branch' command does not do what you want, and is being removed. "
+        "It always prints 'default' for now. "
+        "Check fburl.com/why-no-named-branches for details."
+    ),
 }
 messages = []
 triggered = set()

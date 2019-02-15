@@ -164,8 +164,6 @@ Test filemap
   2 nice day
   1 second letter
   0 work in progress
-  $ hg -R fmap branch -q
-  default
   $ hg log -G -R fmap --template '{rev} {desc|firstline} files: {files}\n'
   o  1 work in progress files: letter2.txt
   |
@@ -209,8 +207,6 @@ Test stop revision
   sorting...
   converting...
   0 init projB
-  $ hg -R stoprev branch -q
-  default
 
 Check convert_revision extra-records.
 This is also the only place testing more than one extra field in a revision.
