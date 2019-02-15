@@ -1,9 +1,31 @@
   $ . helpers-usechg.sh
 
+  $ enable commitextras
+  $ setconfig ui.allowemptycommit=1
+
   $ HGENCODING=utf-8
   $ export HGENCODING
+  $ cat > testrevset.py << EOF
+  > import edenscm.mercurial.revset
+  > 
+  > baseset = edenscm.mercurial.revset.baseset
+  > 
+  > def r3232(repo, subset, x):
+  >     """"simple revset that return [3,2,3,2]
+  > 
+  >     revisions duplicated on purpose.
+  >     """
+  >     if 3 not in subset:
+  >        if 2 in subset:
+  >            return baseset([2,2])
+  >        return baseset()
+  >     return baseset([3,3,2,2])
+  > 
+  > edenscm.mercurial.revset.symbols['r3232'] = r3232
+  > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > testrevset=$TESTTMP/testrevset.py
   > EOF
 
   $ try() {
@@ -14,24 +36,80 @@
   >   hg log --template '{rev}\n' -r "$1"
   > }
 
+  $ setbranch() {
+  >   BRANCH="$1"
+  >   # "hg tag" reads this file. Ideally the in-repo tag feature goes way too.
+  >   echo "$1" > .hg/branch
+  > }
+
+  $ commit() {
+  >   if [ -n "$BRANCH" ]; then
+  >     hg commit --extra "branch=$BRANCH" "$@"
+  >     # silent warnings about conflicted names
+  >     hg tag -q --local --remove -- "$BRANCH" 2>/dev/null
+  >     hg tag -q --local -- "$BRANCH" 2>/dev/null
+  >   else
+  >     hg commit "$@"
+  >   fi
+  > }
+
+extension to build '_intlist()' and '_hexlist()', which is necessary because
+these predicates use '\0' as a separator:
+
+  $ cat <<EOF > debugrevlistspec.py
+  > from __future__ import absolute_import
+  > from edenscm.mercurial import (
+  >     node as nodemod,
+  >     registrar,
+  >     revset,
+  >     revsetlang,
+  >     smartset,
+  > )
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command(b'debugrevlistspec',
+  >     [('', 'optimize', None, 'print parsed tree after optimizing'),
+  >      ('', 'bin', None, 'unhexlify arguments')])
+  > def debugrevlistspec(ui, repo, fmt, *args, **opts):
+  >     if opts['bin']:
+  >         args = map(nodemod.bin, args)
+  >     expr = revsetlang.formatspec(fmt, list(args))
+  >     if ui.verbose:
+  >         tree = revsetlang.parse(expr, lookup=repo.__contains__)
+  >         ui.note(revsetlang.prettyformat(tree), "\n")
+  >         if opts["optimize"]:
+  >             opttree = revsetlang.optimize(revsetlang.analyze(tree))
+  >             ui.note("* optimized:\n", revsetlang.prettyformat(opttree),
+  >                     "\n")
+  >     func = revset.match(ui, expr, repo)
+  >     revs = func(repo)
+  >     if ui.verbose:
+  >         ui.note("* set:\n", smartset.prettyformat(revs), "\n")
+  >     for c in revs:
+  >         ui.write("%s\n" % c)
+  > EOF
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > debugrevlistspec = $TESTTMP/debugrevlistspec.py
+  > EOF
+  $ trylist() {
+  >   hg debugrevlistspec --debug "$@"
+  > }
+
   $ hg init repo
   $ cd repo
 
   $ echo a > a
-  $ hg branch a
-  marked working directory as branch a
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg ci -Aqm0
+  $ setbranch a
+  $ commit -Aqm0
 
   $ echo b > b
-  $ hg branch b
-  marked working directory as branch b
-  $ hg ci -Aqm1
+  $ setbranch b
+  $ commit -Aqm1
 
   $ rm a
-  $ hg branch a-b-c-
-  marked working directory as branch a-b-c-
-  $ hg ci -Aqm2 -u Bob
+  $ setbranch a-b-c-
+  $ commit -Aqm2 -u Bob
 
   $ hg log -r "extra('branch', 'a-b-c-')" --template '{rev}\n'
   2
@@ -45,44 +123,37 @@
 
   $ hg co 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch +a+b+c+
-  marked working directory as branch +a+b+c+
-  $ hg ci -Aqm3
+  $ setbranch +a+b+c+
+  $ commit -Aqm3
 
-  $ hg co 2  # interleave
+  $ hg co -C 2  # interleave
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo bb > b
-  $ hg branch -- -a-b-c-
-  marked working directory as branch -a-b-c-
-  $ hg ci -Aqm4 -d "May 12 2005"
+  $ setbranch -a-b-c-
+  $ commit -Aqm4 -d "May 12 2005"
 
-  $ hg co 3
+  $ hg co -C 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch !a/b/c/
-  marked working directory as branch !a/b/c/
-  $ hg ci -Aqm"5 bug"
+  $ setbranch !a/b/c/
+  $ commit -Aqm"5 bug"
 
   $ hg merge 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg branch _a_b_c_
-  marked working directory as branch _a_b_c_
-  $ hg ci -Aqm"6 issue619"
+  $ setbranch _a_b_c_
+  $ commit -Aqm"6 issue619"
 
-  $ hg branch .a.b.c.
-  marked working directory as branch .a.b.c.
-  $ hg ci -Aqm7
+  $ setbranch .a.b.c.
+  $ commit -Aqm7
 
-  $ hg branch all
-  marked working directory as branch all
+  $ setbranch all
 
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch é
-  marked working directory as branch \xc3\xa9 (esc)
-  $ hg ci -Aqm9
+  $ setbranch é
+  $ commit -Aqm9
 
-  $ hg tag -r6 1.0
+  $ hg tag -fr6 1.0
   $ hg bookmark -r6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
   $ hg clone --quiet -U -r 7 . ../remote1
@@ -662,11 +733,6 @@ matching() should preserve the order of the input set:
   [255]
   $ log 'present(named("unknown"))'
   $ log 'present(named("re:unknown"))'
-
-  $ log 'tag()'
-  6
-  $ log 'named("tags")'
-  6
 
 issue2437
 
@@ -1478,11 +1544,11 @@ prepare repository that has "default" branches of multiple roots
   $ echo default1 >> a
   $ hg ci -m1
 
-  $ hg branch -q stable
+  $ setbranch stable
   $ echo stable2 >> a
-  $ hg ci -m2
+  $ commit -m2
   $ echo stable3 >> a
-  $ hg ci -m3
+  $ commit -m3
 
   $ hg update -q null
   $ echo default4 >> a

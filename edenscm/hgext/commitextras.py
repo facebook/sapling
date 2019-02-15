@@ -21,7 +21,6 @@ testedwith = "ships-with-hg-core"
 
 usedinternally = {
     "amend_source",
-    "branch",
     "close",
     "histedit_source",
     "topic",

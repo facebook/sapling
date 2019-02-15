@@ -1,5 +1,8 @@
   $ . helpers-usechg.sh
 
+  $ enable commitextras
+  $ setconfig ui.allowemptycommit=1
+
   $ HGENCODING=utf-8
   $ export HGENCODING
   $ cat > testrevset.py << EOF
@@ -31,6 +34,22 @@
 
   $ log() {
   >   hg log --template '{rev}\n' -r "$1"
+  > }
+
+  $ setbranch() {
+  >   BRANCH="$1"
+  >   # "hg tag" reads this file. Ideally the in-repo tag feature goes way too.
+  >   echo "$1" > .hg/branch
+  > }
+
+  $ commit() {
+  >   if [ -n "$BRANCH" ]; then
+  >     hg commit --extra "branch=$BRANCH" "$@"
+  >     # silent warnings about conflicted names
+  >     hg tag -q --local -- "$BRANCH" 2>/dev/null
+  >   else
+  >     hg commit "$@"
+  >   fi
   > }
 
 extension to build '_intlist()' and '_hexlist()', which is necessary because
@@ -80,20 +99,16 @@ these predicates use '\0' as a separator:
   $ cd repo
 
   $ echo a > a
-  $ hg branch a
-  marked working directory as branch a
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg ci -Aqm0
+  $ setbranch a
+  $ commit -Aqm0
 
   $ echo b > b
-  $ hg branch b
-  marked working directory as branch b
-  $ hg ci -Aqm1
+  $ setbranch b
+  $ commit -Aqm1
 
   $ rm a
-  $ hg branch a-b-c-
-  marked working directory as branch a-b-c-
-  $ hg ci -Aqm2 -u Bob
+  $ setbranch a-b-c-
+  $ commit -Aqm2 -u Bob
 
   $ hg log -r "extra('branch', 'a-b-c-')" --template '{rev}\n'
   2
@@ -107,44 +122,37 @@ these predicates use '\0' as a separator:
 
   $ hg co 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch +a+b+c+
-  marked working directory as branch +a+b+c+
-  $ hg ci -Aqm3
+  $ setbranch +a+b+c+
+  $ commit -Aqm3
 
-  $ hg co 2  # interleave
+  $ hg co -C 2  # interleave
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo bb > b
-  $ hg branch -- -a-b-c-
-  marked working directory as branch -a-b-c-
-  $ hg ci -Aqm4 -d "May 12 2005"
+  $ setbranch -a-b-c-
+  $ commit -Aqm4 -d "May 12 2005"
 
-  $ hg co 3
+  $ hg co -C 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch !a/b/c/
-  marked working directory as branch !a/b/c/
-  $ hg ci -Aqm"5 bug"
+  $ setbranch !a/b/c/
+  $ commit -Aqm"5 bug"
 
   $ hg merge 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg branch _a_b_c_
-  marked working directory as branch _a_b_c_
-  $ hg ci -Aqm"6 issue619"
+  $ setbranch _a_b_c_
+  $ commit -Aqm"6 issue619"
 
-  $ hg branch .a.b.c.
-  marked working directory as branch .a.b.c.
-  $ hg ci -Aqm7
+  $ setbranch .a.b.c.
+  $ commit -Aqm7
 
-  $ hg branch all
-  marked working directory as branch all
+  $ setbranch all
 
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch é
-  marked working directory as branch \xc3\xa9 (esc)
-  $ hg ci -Aqm9
+  $ setbranch é
+  $ commit -Aqm9
 
-  $ hg tag -r6 1.0
+  $ hg tag -fr6 1.0
   $ hg bookmark -r6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
   $ hg clone --quiet -U -r 7 . ../remote1
@@ -311,8 +319,8 @@ names that should be caught by fallback mechanism
   $ try é
   (symbol '\xc3\xa9')
   * set:
-  <baseset [9]>
-  9
+  <baseset [8]>
+  8
 
 no quoting needed
 
@@ -1969,9 +1977,25 @@ itself isn't returned unless it is explicitly populated.
   5
   4
   $ log 'tagged()'
+  0
+  1
+  2
+  3
+  4
+  5
   6
+  7
+  8
   $ log 'tag()'
+  0
+  1
+  2
+  3
+  4
+  5
   6
+  7
+  8
   $ log 'tag(1.0)'
   6
   $ log 'tag(tip)'
@@ -2586,16 +2610,14 @@ test sorting by multiple keys including variable-length strings
   > [templatealias]
   > p5(s) = pad(s, 5)
   > EOF
-  $ hg branch -qf b12
-  $ hg ci -m m111 -u u112 -d '111 10800'
-  $ hg branch -qf b11
-  $ hg ci -m m12 -u u111 -d '112 7200'
-  $ hg branch -qf b111
-  $ hg ci -m m11 -u u12 -d '111 3600'
-  $ hg branch -qf b112
-  $ hg ci -m m111 -u u11 -d '120 0'
-  $ hg branch -qf b111
-  $ hg ci -m m112 -u u111 -d '110 14400'
+  $ setbranch b12
+  $ commit -m m111 -u u112 -d '111 10800'
+  $ setbranch b11
+  $ commit -m m12 -u u111 -d '112 7200'
+  $ setbranch b111
+  $ commit -m m11 -u u12 -d '111 3600'
+  $ setbranch b112
+  $ commit -m m111 -u u11 -d '120 0'
 
  compare revisions (has fast path):
 
@@ -2604,10 +2626,8 @@ test sorting by multiple keys including variable-length strings
   1 b11  m12  u111 112 7200
   2 b111 m11  u12  111 3600
   3 b112 m111 u11  120 0
-  4 b111 m112 u111 110 14400
 
   $ hg log -r 'sort(all(), -rev)'
-  4 b111 m112 u111 110 14400
   3 b112 m111 u11  120 0
   2 b111 m11  u12  111 3600
   1 b11  m12  u111 112 7200
@@ -2618,7 +2638,6 @@ test sorting by multiple keys including variable-length strings
   $ hg log -r 'sort(all(), branch)'
   1 b11  m12  u111 112 7200
   2 b111 m11  u12  111 3600
-  4 b111 m112 u111 110 14400
   3 b112 m111 u11  120 0
   0 b12  m111 u112 111 10800
 
@@ -2626,19 +2645,16 @@ test sorting by multiple keys including variable-length strings
   0 b12  m111 u112 111 10800
   3 b112 m111 u11  120 0
   2 b111 m11  u12  111 3600
-  4 b111 m112 u111 110 14400
   1 b11  m12  u111 112 7200
 
   $ hg log -r 'sort(all(), desc)'
   2 b111 m11  u12  111 3600
   0 b12  m111 u112 111 10800
   3 b112 m111 u11  120 0
-  4 b111 m112 u111 110 14400
   1 b11  m12  u111 112 7200
 
   $ hg log -r 'sort(all(), -desc)'
   1 b11  m12  u111 112 7200
-  4 b111 m112 u111 110 14400
   0 b12  m111 u112 111 10800
   3 b112 m111 u11  120 0
   2 b111 m11  u12  111 3600
@@ -2646,7 +2662,6 @@ test sorting by multiple keys including variable-length strings
   $ hg log -r 'sort(all(), user)'
   3 b112 m111 u11  120 0
   1 b11  m12  u111 112 7200
-  4 b111 m112 u111 110 14400
   0 b12  m111 u112 111 10800
   2 b111 m11  u12  111 3600
 
@@ -2654,13 +2669,11 @@ test sorting by multiple keys including variable-length strings
   2 b111 m11  u12  111 3600
   0 b12  m111 u112 111 10800
   1 b11  m12  u111 112 7200
-  4 b111 m112 u111 110 14400
   3 b112 m111 u11  120 0
 
  compare dates (tz offset should have no effect):
 
   $ hg log -r 'sort(all(), date)'
-  4 b111 m112 u111 110 14400
   0 b12  m111 u112 111 10800
   2 b111 m11  u12  111 3600
   1 b11  m12  u111 112 7200
@@ -2671,7 +2684,6 @@ test sorting by multiple keys including variable-length strings
   1 b11  m12  u111 112 7200
   0 b12  m111 u112 111 10800
   2 b111 m11  u12  111 3600
-  4 b111 m112 u111 110 14400
 
  be aware that 'sort(x, -k)' is not exactly the same as 'reverse(sort(x, k))'
  because '-k' reverses the comparison, not the list itself:
@@ -2692,21 +2704,18 @@ test sorting by multiple keys including variable-length strings
 
   $ hg log -r 'sort(all(), "branch -rev")'
   1 b11  m12  u111 112 7200
-  4 b111 m112 u111 110 14400
   2 b111 m11  u12  111 3600
   3 b112 m111 u11  120 0
   0 b12  m111 u112 111 10800
 
   $ hg log -r 'sort(all(), "-desc -date")'
   1 b11  m12  u111 112 7200
-  4 b111 m112 u111 110 14400
   3 b112 m111 u11  120 0
   0 b12  m111 u112 111 10800
   2 b111 m11  u12  111 3600
 
   $ hg log -r 'sort(all(), "user -branch date rev")'
   3 b112 m111 u11  120 0
-  4 b111 m112 u111 110 14400
   1 b11  m12  u111 112 7200
   0 b12  m111 u112 111 10800
   2 b111 m11  u12  111 3600
@@ -2723,19 +2732,17 @@ test sorting by multiple keys including variable-length strings
   $ hg ci -m 't2' -u 'tu' -d '130 0'
   $ hg book book1
   $ hg up 4
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark book1)
   $ touch a
   $ hg addremove
-  adding a
   $ hg ci -m 't3' -u 'tu' -d '130 0'
 
   $ hg log -r 'sort(all(), topo)'
-  7 b111 t3   tu   130 0
-  4 b111 m112 u111 110 14400
+  6 b111 t3   tu   130 0
+  5 b111 t2   tu   130 0
+  4 b111 t1   tu   130 0
   3 b112 m111 u11  120 0
-  6 b111 t2   tu   130 0
-  5 b111 t1   tu   130 0
   2 b111 m11  u12  111 3600
   1 b11  m12  u111 112 7200
   0 b12  m111 u112 111 10800
@@ -2744,17 +2751,15 @@ test sorting by multiple keys including variable-length strings
   0 b12  m111 u112 111 10800
   1 b11  m12  u111 112 7200
   2 b111 m11  u12  111 3600
-  5 b111 t1   tu   130 0
-  6 b111 t2   tu   130 0
   3 b112 m111 u11  120 0
-  4 b111 m112 u111 110 14400
-  7 b111 t3   tu   130 0
+  4 b111 t1   tu   130 0
+  5 b111 t2   tu   130 0
+  6 b111 t3   tu   130 0
 
   $ hg log -r 'sort(all(), topo, topo.firstbranch=book1)'
-  6 b111 t2   tu   130 0
-  5 b111 t1   tu   130 0
-  7 b111 t3   tu   130 0
-  4 b111 m112 u111 110 14400
+  5 b111 t2   tu   130 0
+  6 b111 t3   tu   130 0
+  4 b111 t1   tu   130 0
   3 b112 m111 u11  120 0
   2 b111 m11  u12  111 3600
   1 b11  m12  u111 112 7200
