@@ -5,6 +5,7 @@
 
 //! Common types used by sibling crates
 
+pub mod api;
 pub mod errors;
 pub mod key;
 pub mod node;

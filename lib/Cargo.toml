@@ -6,7 +6,6 @@ members = [
     "cpython-ext",
     "cpython-failure",
     "edenapi",
-    "edenapi-types",
     "encoding",
     "hg_watchman_client",
     "indexedlog",

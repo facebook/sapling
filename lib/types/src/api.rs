@@ -1,8 +1,8 @@
 // Copyright Facebook, Inc. 2019.
 
-//! edenapi-types: common types shared between Mercurial and Mononoke
+//! api: common types shared between Mercurial and Mononoke
 //!
-//! This crate contains types that are shared between the Mercurial and
+//! This module contains types that are shared between the Mercurial and
 //! Mononoke codebases for the purpose of data interchange. It is
 //! necessary to put these types here because Mercurial cannot depend
 //! on anything outside of the fbcode/scm/hg directory, and thus cannot
@@ -12,7 +12,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use types::{Key, NodeInfo};
+use crate::{key::Key, nodeinfo::NodeInfo};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HistoryEntry {
