@@ -147,6 +147,7 @@
       <AdditionalIncludeDirectories>D:\edenwin64\stubs;$(SolutionDir)\build\thrift;D:\edenwin64\pklib\include;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

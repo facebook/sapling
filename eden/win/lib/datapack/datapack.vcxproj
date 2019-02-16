@@ -99,6 +99,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\edenwin64\pklib\include;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/DEDEN_WIN /D_CRT_SECURE_NO_WARNING %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
