@@ -17,7 +17,13 @@
 #endif
 #include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+DEFINE_bool(
+    enable_fault_injection,
+    false,
+    "Enable the fault injection framework.");
 
 namespace facebook {
 namespace eden {
@@ -43,6 +49,7 @@ ServerState::ServerState(
       threadPool_{std::move(threadPool)},
       clock_{std::move(clock)},
       processNameCache_{std::move(processNameCache)},
+      faultInjector_{new FaultInjector(FLAGS_enable_fault_injection)},
       configState_{ConfigState{edenConfig}},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->getUserIgnoreFile(),

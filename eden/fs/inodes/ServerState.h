@@ -29,6 +29,7 @@ namespace eden {
 
 class Clock;
 class EdenConfig;
+class FaultInjector;
 class PrivHelper;
 class ProcessNameCache;
 class TopLevelIgnores;
@@ -127,6 +128,10 @@ class ServerState : public ReloadableConfig {
     return processNameCache_;
   }
 
+  FaultInjector& getFaultInjector() {
+    return *faultInjector_;
+  }
+
  private:
   struct ConfigState {
     explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
@@ -150,6 +155,7 @@ class ServerState : public ReloadableConfig {
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;
   std::shared_ptr<ProcessNameCache> processNameCache_;
+  std::unique_ptr<FaultInjector> const faultInjector_;
 
   folly::Synchronized<ConfigState> configState_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
