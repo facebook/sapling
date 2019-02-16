@@ -98,7 +98,9 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataPack, DataStore, Key};
+    use revisionstore::{DataPack, DataStore};
+    use types::Key;
+
 
     #[test]
     fn test_add() {

@@ -14,7 +14,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::node::Node;
+use types::Node;
 
 use crate::error::KeyError;
 use crate::fanouttable::FanoutTable;

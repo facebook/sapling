@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-revisionstore = { path = "../revisionstore" }
 serde = "1.0.87"
 serde_derive = "1.0.87"
+types = { path = "../types" }

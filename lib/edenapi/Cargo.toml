@@ -14,6 +14,7 @@ log = "0.4.6"
 revisionstore = { path = "../revisionstore" }
 rustls = "0.14.0"
 tokio = "0.1.11"
+types = { path = "../types" }
 url = "1.7.2"
 url-ext = { path = "../url-ext" }
 webpki-roots = "0.15.0"

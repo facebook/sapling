@@ -12,7 +12,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use revisionstore::{Key, NodeInfo};
+use types::{Key, NodeInfo};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HistoryEntry {

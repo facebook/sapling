@@ -10,8 +10,9 @@ use std::{
 
 use failure::{Fail, Fallible};
 
-use crate::historystore::{Ancestors, NodeInfo};
-use crate::key::Key;
+use types::{Key, NodeInfo};
+
+use crate::historystore::Ancestors;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Ancestor Iterator Error: {:?}", _0)]

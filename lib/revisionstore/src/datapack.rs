@@ -89,11 +89,10 @@ use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use lz4_pyframe::decompress;
-use types::node::Node;
+use types::{Key, Node};
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
-use crate::key::Key;
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
 use crate::vfs::remove_file;

@@ -12,11 +12,12 @@ use std::{
 
 use failure::{Fail, Fallible};
 
+use types::Key;
+
 use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::DataStore;
 use crate::historypack::{HistoryPack, HistoryPackVersion};
 use crate::historystore::HistoryStore;
-use crate::key::Key;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;

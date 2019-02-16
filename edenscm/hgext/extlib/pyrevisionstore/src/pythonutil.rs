@@ -3,14 +3,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::{exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Python,
-              PythonObject, ToPyObject};
+use cpython::{
+    exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
+    ToPyObject,
+};
 use failure::{Error, Fallible};
 use pyerror::pyerr_to_error;
 use revisionstore::datastore::Delta;
 use revisionstore::error::KeyError;
-use revisionstore::key::Key;
-use types::node::Node;
+use types::{Key, Node};
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     if error.downcast_ref::<KeyError>().is_some() {

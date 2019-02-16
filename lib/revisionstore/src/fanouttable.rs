@@ -16,7 +16,7 @@ use std::{
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{Fail, Fallible};
 
-use types::node::Node;
+use types::Node;
 
 const SMALL_FANOUT_FACTOR: u8 = 1;
 const LARGE_FANOUT_FACTOR: u8 = 2;

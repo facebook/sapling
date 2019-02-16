@@ -16,11 +16,12 @@ use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
 use tempfile::NamedTempFile;
 
+use types::{Key, NodeInfo};
+
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
-use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
-use crate::key::Key;
+use crate::historystore::{Ancestors, HistoryStore};
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 

@@ -37,10 +37,8 @@ mod tests {
 
     use cloned::cloned;
     use futures_ext::FutureExt;
-    use revisionstore::{
-        Ancestors, HistoryPackVersion, Key, MutableHistoryPack, MutablePack, NodeInfo,
-    };
-    use types::node::Node;
+    use revisionstore::{Ancestors, HistoryPackVersion, MutableHistoryPack, MutablePack};
+    use types::{Key, Node, NodeInfo};
 
     fn make_historypack(
         tempdir: &TempDir,

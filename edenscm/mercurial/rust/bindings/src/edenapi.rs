@@ -9,9 +9,8 @@ use cpython::*;
 use cpython_failure::ResultPyErrExt;
 
 use ::edenapi::{EdenApi, EdenApiHttpClient};
-use ::revisionstore::Key;
 use encoding::{local_bytes_to_path, path_to_local_bytes};
-use types::node::Node;
+use types::{Key, Node};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");

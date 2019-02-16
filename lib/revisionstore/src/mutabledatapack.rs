@@ -17,12 +17,11 @@ use failure::{format_err, Error, Fail, Fallible};
 use tempfile::NamedTempFile;
 
 use lz4_pyframe::compress;
-use types::node::Node;
+use types::{Key, Node};
 
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata};
-use crate::key::Key;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
@@ -207,17 +206,17 @@ impl DataStore for MutableDataPack {
 mod tests {
     use super::*;
 
-    use bytes::Bytes;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
-    use tempfile::tempdir;
-
     use std::{
         fs::{self, File},
         io::Read,
     };
 
-    use crate::key::Key;
+    use bytes::Bytes;
+    use rand::SeedableRng;
+    use rand_chacha::ChaChaRng;
+    use tempfile::tempdir;
+
+    use types::Key;
 
     #[test]
     fn test_basic_creation() {

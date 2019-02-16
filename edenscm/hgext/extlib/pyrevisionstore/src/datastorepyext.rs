@@ -6,11 +6,12 @@
 use cpython::{PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, Python,
               PythonObject, ToPyObject};
 
-use pythonutil::{from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key,
-                 to_pyerr};
 use revisionstore::datastore::DataStore;
-use revisionstore::key::Key;
-use types::node::Node;
+use types::{Key, Node};
+
+use pythonutil::{
+    from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr,
+};
 
 pub trait DataStorePyExt {
     fn get(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes>;

@@ -25,7 +25,6 @@ lz4-pyframe = { path = "../../../../lib/lz4-pyframe" }
 mutationstore = { path = "../../../../lib/mutationstore" }
 nodemap = { path = "../../../../lib/nodemap" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
-revisionstore = { path = "../../../../lib/revisionstore" }
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
 vlqencoding = { path = "../../../../lib/vlqencoding" }

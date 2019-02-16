@@ -5,7 +5,8 @@ use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
 use cloned::cloned;
-use revisionstore::{key::Key, DataStore, Delta, IterableStore, Metadata};
+use revisionstore::{DataStore, Delta, IterableStore, Metadata};
+use types::Key;
 
 use crate::util::AsyncWrapper;
 

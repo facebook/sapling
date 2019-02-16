@@ -20,12 +20,11 @@ use std::{
 
 use failure::Fallible;
 
-use types::node::Node;
+use types::{Key, Node};
 
 use crate::datapack::DataPack;
 use crate::datastore::DataStore;
 use crate::error::KeyError;
-use crate::key::Key;
 use crate::uniondatastore::UnionDataStore;
 
 pub struct DataPackUnion {

@@ -15,12 +15,11 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::node::Node;
+use types::{Key, Node, NodeInfo};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
-use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
-use crate::key::Key;
+use crate::historystore::{Ancestors, HistoryStore};
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
 

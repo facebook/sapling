@@ -5,7 +5,8 @@ use std::{slice::Iter, vec::IntoIter};
 
 use failure::Fallible;
 
-use crate::key::Key;
+use types::Key;
+
 use crate::repack::IterableStore;
 
 pub struct UnionStore<T> {

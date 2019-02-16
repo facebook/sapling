@@ -7,10 +7,11 @@ use cpython::{ObjectProtocol, PyBytes, PyDict, PyErr, PyObject, PyResult, Python
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+use revisionstore::repack::{RepackOutputType, RepackResult, Repackable};
+use types::Key;
+
 use encoding;
 use pythonutil::{from_key, from_tuple_to_key, to_pyerr};
-use revisionstore::key::Key;
-use revisionstore::repack::{RepackOutputType, RepackResult, Repackable};
 
 pub trait RepackablePyExt {
     fn mark_ledger(&self, py: Python, py_store: &PyObject, ledger: &PyObject) -> PyResult<()>;

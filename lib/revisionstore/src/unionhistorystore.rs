@@ -2,10 +2,11 @@
 // Union history store
 use failure::{Fail, Fallible};
 
+use types::{Key, NodeInfo};
+
 use crate::ancestors::{AncestorTraversal, BatchedAncestorIterator};
 use crate::error::KeyError;
-use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
-use crate::key::Key;
+use crate::historystore::{Ancestors, HistoryStore};
 use crate::unionstore::UnionStore;
 
 pub type UnionHistoryStore<T> = UnionStore<T>;

@@ -11,7 +11,8 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::{HistoryPackVersion, Key, MutableHistoryPack, MutablePack, NodeInfo};
+use revisionstore::{HistoryPackVersion, MutableHistoryPack, MutablePack};
+use types::{Key, NodeInfo};
 
 pub struct AsyncMutableHistoryPackInner {
     data: MutableHistoryPack,
@@ -100,7 +101,7 @@ mod tests {
     use tokio::runtime::Runtime;
 
     use revisionstore::{HistoryPack, HistoryStore};
-    use types::node::Node;
+    use types::Node;
 
     #[test]
     fn test_close() {

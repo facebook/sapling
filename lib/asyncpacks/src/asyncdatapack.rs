@@ -33,8 +33,8 @@ mod tests {
     use tempfile::TempDir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataPackVersion, Delta, Key, Metadata, MutableDataPack, MutablePack};
-    use types::node::Node;
+    use revisionstore::{DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack};
+    use types::{Key, Node};
 
     fn make_datapack(
         tempdir: &TempDir,

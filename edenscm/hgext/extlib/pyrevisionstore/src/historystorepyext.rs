@@ -6,9 +6,10 @@
 use cpython::{PyBytes, PyDict, PyErr, PyIterator, PyList, PyResult, PyTuple, Python, PythonObject,
               ToPyObject};
 
+use revisionstore::historystore::HistoryStore;
+use types::{Key, NodeInfo};
+
 use pythonutil::{from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
-use revisionstore::historystore::{HistoryStore, NodeInfo};
-use revisionstore::key::Key;
 
 pub trait HistoryStorePyExt {
     fn get_ancestors(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;

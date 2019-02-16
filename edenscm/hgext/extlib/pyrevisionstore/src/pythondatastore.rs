@@ -3,14 +3,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
-              PythonObject};
+use cpython::{
+    FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python, PythonObject,
+};
 use failure::Fallible;
-use pyerror::pyerr_to_error;
-use pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key,
-                 to_key};
+
 use revisionstore::datastore::{DataStore, Delta, Metadata};
-use revisionstore::key::Key;
+use types::Key;
+
+use pyerror::pyerr_to_error;
+use pythonutil::{
+    bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, to_key,
+};
 
 pub struct PythonDataStore {
     py_store: PyObject,

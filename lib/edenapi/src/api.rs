@@ -13,7 +13,8 @@ use log::debug;
 use tokio::runtime::Runtime;
 use url::Url;
 
-use revisionstore::{DataPackVersion, Delta, Key, Metadata, MutableDataPack, MutablePack};
+use revisionstore::{DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack};
+use types::Key;
 use url_ext::UrlExt;
 
 use crate::client::{EdenApiHttpClient, HyperClient};

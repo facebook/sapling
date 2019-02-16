@@ -8,11 +8,10 @@ use std::{fs::File, io::prelude::*};
 use bytes::Bytes;
 use failure::{Fail, Fallible};
 
-use types::node::Node;
+use types::{Key, Node, NodeInfo};
 
 use crate::error::KeyError;
-use crate::historystore::{Ancestors, NodeInfo};
-use crate::key::Key;
+use crate::historystore::Ancestors;
 
 #[derive(Debug, Fail)]
 #[fail(display = "LooseFile Error: {:?}", _0)]

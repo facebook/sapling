@@ -4,9 +4,10 @@ use failure::{err_msg, Fail, Fallible};
 
 use mpatch::mpatch::get_full_text;
 
+use types::Key;
+
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::error::KeyError;
-use crate::key::Key;
 use crate::unionstore::UnionStore;
 
 pub type UnionDataStore<T> = UnionStore<T>;

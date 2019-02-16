@@ -17,12 +17,11 @@ use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::node::Node;
+use types::{Key, Node};
 
 use crate::error::KeyError;
 use crate::fanouttable::FanoutTable;
 use crate::historypack::HistoryPackVersion;
-use crate::key::Key;
 use crate::sliceext::SliceExt;
 
 #[derive(Debug, Fail)]

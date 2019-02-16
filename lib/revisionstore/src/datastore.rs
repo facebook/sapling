@@ -14,7 +14,7 @@ use bytes::Bytes;
 use failure::{format_err, Fallible};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::key::Key;
+use types::Key;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
