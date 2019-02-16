@@ -184,6 +184,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void disableTracing() override;
   void getTracePoints(std::vector<TracePoint>& result) override;
 
+  void injectFault(std::unique_ptr<FaultDefinition> fault) override;
+  bool removeFault(std::unique_ptr<RemoveFaultArg> fault) override;
+  int64_t unblockFault(std::unique_ptr<UnblockFaultArg> info) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.  We prefer that external

@@ -58,6 +58,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/tracing/Tracing.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/StatTimes.h"
 
@@ -1344,6 +1345,94 @@ void EdenServiceHandler::getTracePoints(std::vector<TracePoint>& result) {
       tp.set_event(TracePointEvent::STOP);
     }
     result.emplace_back(std::move(tp));
+  }
+}
+
+namespace {
+std::optional<folly::exception_wrapper> getFaultError(
+    apache::thrift::optional_field_ref<std::string&> errorType,
+    apache::thrift::optional_field_ref<std::string&> errorMessage) {
+  if (!errorType.has_value() && !errorMessage.has_value()) {
+    return std::nullopt;
+  }
+
+  auto createException =
+      [](StringPiece type, const std::string& msg) -> folly::exception_wrapper {
+    if (type == "runtime_error") {
+      return std::runtime_error(msg);
+    } else if (type.startsWith("errno:")) {
+      auto errnum = folly::to<int>(type.subpiece(6));
+      return std::system_error(errnum, std::generic_category(), msg);
+    }
+    // If we want to support other error types in the future they should
+    // be added here.
+    throw newEdenError("unknown error type {}", type);
+  };
+
+  return createException(
+      errorType.value_or("runtime_error"),
+      errorMessage.value_or("injected error"));
+}
+} // namespace
+
+void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
+  auto& injector = server_->getServerState()->getFaultInjector();
+  if (fault->block) {
+    injector.injectBlock(fault->keyClass, fault->keyValueRegex, fault->count);
+    return;
+  }
+
+  auto error = getFaultError(fault->errorType_ref(), fault->errorMessage_ref());
+  std::chrono::milliseconds delay(fault->delayMilliseconds);
+  if (error.has_value()) {
+    if (delay.count() > 0) {
+      injector.injectDelayedError(
+          fault->keyClass,
+          fault->keyValueRegex,
+          delay,
+          error.value(),
+          fault->count);
+    } else {
+      injector.injectError(
+          fault->keyClass, fault->keyValueRegex, error.value(), fault->count);
+    }
+  } else {
+    if (delay.count() > 0) {
+      injector.injectDelay(
+          fault->keyClass, fault->keyValueRegex, delay, fault->count);
+    } else {
+      injector.injectNoop(fault->keyClass, fault->keyValueRegex, fault->count);
+    }
+  }
+}
+
+bool EdenServiceHandler::removeFault(unique_ptr<RemoveFaultArg> fault) {
+  auto& injector = server_->getServerState()->getFaultInjector();
+  return injector.removeFault(fault->keyClass, fault->keyValueRegex);
+}
+
+int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
+  auto& injector = server_->getServerState()->getFaultInjector();
+  auto error = getFaultError(info->errorType_ref(), info->errorMessage_ref());
+
+  if (!info->keyClass_ref().has_value()) {
+    if (info->keyValueRegex_ref().has_value()) {
+      throw newEdenError(
+          "cannot specify a key value regex without a key class");
+    }
+    if (error.has_value()) {
+      return injector.unblockAllWithError(error.value());
+    } else {
+      return injector.unblockAll();
+    }
+  }
+
+  const auto& keyClass = info->keyClass_ref().value();
+  std::string keyValueRegex = info->keyValueRegex_ref().value_or(".*");
+  if (error.has_value()) {
+    return injector.unblockWithError(keyClass, keyValueRegex, error.value());
+  } else {
+    return injector.unblock(keyClass, keyValueRegex);
   }
 }
 
