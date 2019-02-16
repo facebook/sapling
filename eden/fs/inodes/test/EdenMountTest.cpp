@@ -76,6 +76,16 @@ class MountPromiseDelegate : public FakePrivHelper::MountDelegate {
  private:
   folly::Promise<folly::File> promise_;
 };
+
+/**
+ * Unconditionally cause Privhelper::fuseMount to fail.
+ */
+class FailingMountDelegate : public FakePrivHelper::MountDelegate {
+ public:
+  class MountFailed : public std::exception {};
+
+  folly::Future<folly::File> fuseMount() override;
+};
 } // namespace
 
 TEST(EdenMount, initFailure) {
@@ -596,6 +606,16 @@ TEST(EdenMountState, mountIsRunningAfterFuseInitializationCompletes) {
   EXPECT_EQ(testMount.getEdenMount()->getState(), EdenMount::State::RUNNING);
 }
 
+TEST(EdenMountState, mountIsFuseErrorAfterMountFails) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount.getPath(), std::make_shared<FailingMountDelegate>());
+
+  logAndSwallowExceptions([&] { mount.startFuse().get(kTimeout); });
+  EXPECT_EQ(mount.getState(), EdenMount::State::FUSE_ERROR);
+}
+
 TEST(EdenMountState, mountIsFuseErrorAfterFuseInitializationFails) {
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto& mount = *testMount.getEdenMount();
@@ -696,5 +716,9 @@ folly::Future<folly::File> MountPromiseDelegate::fuseMount() {
 template <class Exception>
 void MountPromiseDelegate::setException(Exception&& exception) {
   promise_.setException(std::forward<Exception>(exception));
+}
+
+folly::Future<folly::File> FailingMountDelegate::fuseMount() {
+  return folly::makeFuture<folly::File>(MountFailed{});
 }
 } // namespace

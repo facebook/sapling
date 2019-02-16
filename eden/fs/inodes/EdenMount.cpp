@@ -825,11 +825,11 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
           return channel_->initialize()
               .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
                 fuseInitSuccessful(std::move(fuseCompleteFuture));
-              })
-              .thenError([this](folly::exception_wrapper&& ew) {
-                unconditionallySetState(State::FUSE_ERROR);
-                return makeFuture<folly::Unit>(std::move(ew));
               });
+        })
+        .thenError([this](folly::exception_wrapper&& ew) {
+          unconditionallySetState(State::FUSE_ERROR);
+          return makeFuture<folly::Unit>(std::move(ew));
         });
   });
 }
