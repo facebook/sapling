@@ -3,7 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{key::Key, node::Node};
@@ -24,6 +23,10 @@ pub struct NodeInfo {
     pub linknode: Node,
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
+#[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for NodeInfo {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         NodeInfo {

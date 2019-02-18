@@ -3,7 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::node::Node;
@@ -41,6 +40,10 @@ impl Key {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
+#[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Key {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Key::new(Vec::arbitrary(g), Node::arbitrary(g))
