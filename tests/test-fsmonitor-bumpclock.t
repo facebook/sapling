@@ -2,8 +2,8 @@
 
   $ newrepo
   $ enable fsmonitor
-  $ touch a b c d
-  $ hg ci -m init -A a b c d
+  $ touch a b c d e f
+  $ hg ci -m init -A a b c d e f
 
 The fsmonitor extension should bump clock even if there are nothing changed for
 treestate, but too many results returned by watchman.
@@ -17,10 +17,10 @@ treestate, but too many results returned by watchman.
 In this case, treestate has 0 files marked NEED_CHECK, but fsmonitor returns
 many files:
 
-  $ touch a b c d
+  $ touch a b c d e f
 
   $ hg debugstatus
-  len(dirstate) = 4
+  len(dirstate) = 6
   len(nonnormal) = 0
   len(filtered nonnormal) = 0
 
@@ -32,7 +32,7 @@ many files:
   clock = 'c:x' len(nonnormal) = 0
   setlastclock: 'c:x'
   setlastisfresh: False
-  watchman returned ['a', 'b', 'c', 'd']
+  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
   getlastclock: 'c:x'
   set clock, notefiles = 'c:x', []
   status exited 0 after 0.00 seconds
@@ -43,21 +43,22 @@ means the "status" command could still be slow.
   $ rm .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned ['a', 'b', 'c', 'd']
+  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
 
 With watchman-changed-file-threshold set, clock is bumped and watchman can
 return an empty list:
 
-  $ setconfig fsmonitor.watchman-changed-file-threshold=2
+  $ hg status
+  $ setconfig fsmonitor.watchman-changed-file-threshold=5
 
   $ rm .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned ['a', 'b', 'c', 'd']
+  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
 
   $ sleep 1
 
   $ rm .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned []
+  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
