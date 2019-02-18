@@ -335,6 +335,17 @@ def serverextsetup(ui):
 
     wrapfunction(bundle2, "processparts", processparts)
 
+    if util.safehasattr(wireproto, "_capabilities"):
+        extensions.wrapfunction(wireproto, "_capabilities", _capabilities)
+    else:
+        extensions.wrapfunction(wireproto, "capabilities", _capabilities)
+
+
+def _capabilities(orig, repo, proto):
+    caps = orig(repo, proto)
+    caps.append("listkeyspatterns")
+    return caps
+
 
 def clientextsetup(ui):
     entry = wrapcommand(commands.table, "push", _push)
