@@ -16,10 +16,7 @@ use context::CoreContext;
 use failure::Error;
 use futures::{future::join_all, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use tracing::TraceContext;
-use uuid::Uuid;
 
 use metaconfig_parser::RepoConfigs;
 
@@ -32,8 +29,6 @@ pub use self::response::MononokeRepoResponse;
 
 pub struct Mononoke {
     repos: HashMap<String, MononokeRepo>,
-    logger: Logger,
-    scuba_builder: ScubaSampleBuilder,
 }
 
 impl Mononoke {
@@ -41,10 +36,8 @@ impl Mononoke {
         logger: Logger,
         config: RepoConfigs,
         myrouter_port: Option<u16>,
-        scuba_builder: ScubaSampleBuilder,
         with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
-        let log = logger.clone();
         join_all(
             config
                 .repos
@@ -52,32 +45,21 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        MononokeRepo::new(log.clone(), config, myrouter_port, with_skiplist)
+                        MononokeRepo::new(logger.clone(), config, myrouter_port, with_skiplist)
                             .map(|repo| (name, repo))
                     }
                 }),
         )
         .map(move |repos| Self {
             repos: repos.into_iter().collect(),
-            logger: logger.clone(),
-            scuba_builder,
         })
     }
 
     pub fn send_query(
         &self,
+        ctx: CoreContext,
         MononokeQuery { repo, kind, .. }: MononokeQuery,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let session_uuid = Uuid::new_v4();
-
-        let ctx = CoreContext::new(
-            session_uuid,
-            self.logger.clone(),
-            self.scuba_builder.clone(),
-            None,
-            TraceContext::default(),
-        );
-
         match self.repos.get(&repo) {
             Some(repo) => repo.send_query(ctx, kind),
             None => match kind {

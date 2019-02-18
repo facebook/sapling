@@ -72,29 +72,30 @@ mod from_string;
 mod middleware;
 mod thrift;
 
-use std::sync::Arc;
-
 use bytes::Bytes;
+use std::sync::Arc;
+use tracing::TraceContext;
+use uuid::Uuid;
 
 use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, State};
+use actor::{
+    BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
+};
 use clap::Arg;
+use context::CoreContext;
+use errors::ErrorKind;
 use failure::Result;
 use futures::Future;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
+use metaconfig_parser::RepoConfigs;
+use middleware::ScubaMiddleware;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
+use scuba_ext::ScubaSampleBuilder;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
-
-use actor::{
-    BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
-};
-use errors::ErrorKind;
-use metaconfig_parser::RepoConfigs;
-use middleware::ScubaMiddleware;
-use scuba_ext::ScubaSampleBuilder;
 
 mod config {
     pub const SCUBA_TABLE: &str = "mononoke_apiserver";
@@ -137,6 +138,19 @@ struct LfsBatchInfo {
     repo: String,
 }
 
+//Currently logging and scuba is handled using the middleware service
+//so we pass on a fake context
+fn prepare_fake_ctx(state: &State<HttpServerState>) -> CoreContext {
+    let session_uuid = Uuid::new_v4();
+
+    CoreContext::new(
+        session_uuid,
+        state.logger.clone(),
+        ScubaSampleBuilder::with_discard(),
+        None,
+        TraceContext::default(),
+    )
+}
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
 // for tuple (A, B, ...) (up to 9 elements) [1]. These arguments must implement
 // `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
@@ -145,24 +159,30 @@ struct LfsBatchInfo {
 fn get_raw_file(
     (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::GetRawFile {
-            revision: Revision::CommitHash(info.changeset.clone()),
-            path: info.path.clone(),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::GetRawFile {
+                revision: Revision::CommitHash(info.changeset.clone()),
+                path: info.path.clone(),
+            },
         },
-    })
+    )
 }
 
 fn get_hg_file(
     (state, info): (State<HttpServerState>, actix_web::Path<GetHgFileQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::GetHgFile {
-            filenode: info.filenode.clone(),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::GetHgFile {
+                filenode: info.filenode.clone(),
+            },
         },
-    })
+    )
 }
 
 fn is_ancestor(
@@ -174,69 +194,87 @@ fn is_ancestor(
     let descendant_parsed = percent_decode(info.descendant.as_bytes())
         .decode_utf8_lossy()
         .to_string();
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::IsAncestor {
-            ancestor: Revision::CommitHash(ancestor_parsed),
-            descendant: Revision::CommitHash(descendant_parsed),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::IsAncestor {
+                ancestor: Revision::CommitHash(ancestor_parsed),
+                descendant: Revision::CommitHash(descendant_parsed),
+            },
         },
-    })
+    )
 }
 
 fn list_directory(
     (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::ListDirectory {
-            revision: Revision::CommitHash(info.changeset.clone()),
-            path: info.path.clone(),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::ListDirectory {
+                revision: Revision::CommitHash(info.changeset.clone()),
+                path: info.path.clone(),
+            },
         },
-    })
+    )
 }
 
 fn get_blob_content(
     (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::GetBlobContent {
-            hash: info.hash.clone(),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::GetBlobContent {
+                hash: info.hash.clone(),
+            },
         },
-    })
+    )
 }
 
 fn get_tree(
     (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::GetTree {
-            hash: info.hash.clone(),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::GetTree {
+                hash: info.hash.clone(),
+            },
         },
-    })
+    )
 }
 
 fn get_changeset(
     (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::GetChangeset {
-            revision: Revision::CommitHash(info.hash.clone()),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::GetChangeset {
+                revision: Revision::CommitHash(info.hash.clone()),
+            },
         },
-    })
+    )
 }
 
 fn download_large_file(
     (state, info): (State<HttpServerState>, actix_web::Path<OidQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::DownloadLargeFile {
-            oid: info.oid.clone(),
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::DownloadLargeFile {
+                oid: info.oid.clone(),
+            },
         },
-    })
+    )
 }
 
 fn lfs_batch(
@@ -267,27 +305,33 @@ fn lfs_batch(
             Uri::from_parts(parts).ok()
         });
 
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::LfsBatch {
-            req: req_json.into_inner(),
-            repo_name: info.repo.clone(),
-            lfs_url,
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::LfsBatch {
+                req: req_json.into_inner(),
+                repo_name: info.repo.clone(),
+                lfs_url,
+            },
         },
-    })
+    )
 }
 
 // TODO(anastasiyaz): T32937714 Bytes -> Streaming
 fn upload_large_file(
     (state, body, info): (State<HttpServerState>, Bytes, actix_web::Path<OidQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    state.mononoke.send_query(MononokeQuery {
-        repo: info.repo.clone(),
-        kind: MononokeRepoQuery::UploadLargeFile {
-            oid: info.oid.clone(),
-            body,
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: info.repo.clone(),
+            kind: MononokeRepoQuery::UploadLargeFile {
+                oid: info.oid.clone(),
+                body,
+            },
         },
-    })
+    )
 }
 
 fn setup_logger(debug: bool) -> Logger {
@@ -312,6 +356,7 @@ fn setup_logger(debug: bool) -> Logger {
 struct HttpServerState {
     mononoke: Arc<Mononoke>,
     logger: Logger,
+    scuba_builder: ScubaSampleBuilder,
     use_ssl: bool,
 }
 
@@ -468,7 +513,6 @@ fn main() -> Result<()> {
         mononoke_logger.clone(),
         repo_configs,
         myrouter_port,
-        scuba_builder.clone(),
         with_skiplist,
     ))?;
     let mononoke = Arc::new(mononoke);
@@ -486,6 +530,7 @@ fn main() -> Result<()> {
     let state = HttpServerState {
         mononoke,
         logger: actix_logger.clone(),
+        scuba_builder: scuba_builder.clone(),
         use_ssl,
     };
 
