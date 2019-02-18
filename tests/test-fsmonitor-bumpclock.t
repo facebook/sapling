@@ -61,4 +61,4 @@ return an empty list:
   $ rm .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
+  watchman returned []

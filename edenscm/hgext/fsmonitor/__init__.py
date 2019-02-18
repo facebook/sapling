@@ -467,7 +467,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             self._ui.log(
                 "fsmonitor_details", "watchman returned %s" % _reprshort(filelist)
             )
-        state.setwatchmanchangedfilecount(len(result))
+        state.setwatchmanchangedfilecount(len(result["files"]))
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap
