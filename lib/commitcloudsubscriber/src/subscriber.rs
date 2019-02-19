@@ -307,7 +307,7 @@ impl WorkspaceSubscriberService {
         Ok(thread::spawn(move || {
             info!("{} Thread started...", sid);
 
-            let fire = |reason: &'static str, version: Option<u64>, try_direct_fetching: bool| {
+            let fire = |reason: &'static str, version: Option<u64>| {
                 if service_url.to_socket_addrs().is_err() {
                     warn!(
                         "{} Skip CloudSyncTrigger: failed to lookup address information {}",
@@ -328,7 +328,6 @@ impl WorkspaceSubscriberService {
                         repo_root,
                         cloudsync_retries,
                         version,
-                        try_direct_fetching,
                     );
                     if interrupt.load(Ordering::Relaxed) {
                         break;
@@ -336,7 +335,7 @@ impl WorkspaceSubscriberService {
                 }
             };
 
-            fire("before starting subscription", None, false);
+            fire("before starting subscription", None);
             if interrupt.load(Ordering::Relaxed) {
                 return;
             }
@@ -375,7 +374,7 @@ impl WorkspaceSubscriberService {
                     );
                     throttler_error.reset();
                     if last_error {
-                        fire("after recover from error", None, false);
+                        fire("after recover from error", None);
                         if interrupt.load(Ordering::Relaxed) {
                             return;
                         }
@@ -412,12 +411,9 @@ impl WorkspaceSubscriberService {
                         info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
                     }
                 }
-                let try_direct_fetching = notification.new_heads.map(|s| s.len())
-                    == notification.removed_heads.map(|s| s.len());
                 fire(
                     "on new version notification",
                     Some(notification.version),
-                    try_direct_fetching,
                 );
                 if interrupt.load(Ordering::Relaxed) {
                     return;

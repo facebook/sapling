@@ -17,7 +17,6 @@ impl CloudSyncTrigger {
         path: P,
         retries: u32,
         version: Option<u64>,
-        try_direct_fetching: bool,
     ) -> Fallible<()> {
         let mut version_args = vec![];
         if let Some(version) = version {
@@ -35,11 +34,6 @@ impl CloudSyncTrigger {
                 .arg("--check-autosync-enabled")
                 .arg("--use-bgssh")
                 .args(&version_args)
-                .arg(if i == 0 && try_direct_fetching {
-                    "--direct-fetching"
-                } else {
-                    ""
-                })
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()?; // do not retry if failed to start
@@ -76,7 +70,8 @@ impl CloudSyncTrigger {
                     return Err(ErrorKind::CommitCloudHgCloudSyncError(format!(
                         "process exited with: {}, retry later",
                         output.status
-                    )).into());
+                    ))
+                    .into());
                 }
             } else {
                 info!("{} Cloud Sync was successful", sid);
