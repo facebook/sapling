@@ -779,7 +779,7 @@ void EdenServiceHandler::glob(
                            /*fileBlobsToPrefetch=*/nullptr)
                        .get();
     for (auto& fileName : matches) {
-      out.emplace_back(fileName.stringPiece().toString());
+      out.emplace_back(fileName.name.stringPiece().toString());
     }
   } catch (const std::system_error& exc) {
     throw newEdenError(exc);
@@ -823,18 +823,23 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               rootInode,
               fileBlobsToPrefetch)
           .thenValue([edenMount,
+                      wantDtype = params->wantDtype,
                       fileBlobsToPrefetch,
                       suppressFileList = params->suppressFileList](
-                         std::vector<RelativePath>&& paths) {
+                         std::vector<GlobNode::GlobResult>&& results) {
             auto out = std::make_unique<Glob>();
 
             if (!suppressFileList) {
               std::unordered_set<RelativePathPiece> seenPaths;
-              for (auto& fileName : paths) {
-                auto ret = seenPaths.insert(fileName);
+              for (auto& entry : results) {
+                auto ret = seenPaths.insert(entry.name);
                 if (ret.second) {
                   out->matchingFiles.emplace_back(
-                      fileName.stringPiece().toString());
+                      entry.name.stringPiece().toString());
+
+                  if (wantDtype) {
+                    out->dtypes.emplace_back(static_cast<DType>(entry.dtype));
+                  }
                 }
               }
             }

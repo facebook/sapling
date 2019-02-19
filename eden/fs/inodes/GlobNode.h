@@ -9,11 +9,13 @@
  */
 #pragma once
 #include <folly/futures/Future.h>
+#include <ostream>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GlobMatcher.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -38,6 +40,24 @@ class GlobNode {
 
   GlobNode(folly::StringPiece pattern, bool includeDotfiles, bool hasSpecials);
 
+  struct GlobResult {
+    RelativePath name;
+    dtype_t dtype;
+
+    // Comparison operator for testing purposes
+    bool operator==(const GlobResult& other) const noexcept {
+      return name == other.name && dtype == other.dtype;
+    }
+    bool operator!=(const GlobResult& other) const noexcept {
+      return !(*this == other);
+    }
+    GlobResult(RelativePathPiece name, dtype_t dtype)
+        : name(name.copy()), dtype(dtype) {}
+
+    GlobResult(RelativePath&& name, dtype_t dtype) noexcept
+        : name(std::move(name)), dtype(dtype) {}
+  };
+
   // Compile and add a new glob pattern to the tree.
   // Compilation splits the pattern into nodes, with one node for each
   // directory separator separated path component.
@@ -52,14 +72,14 @@ class GlobNode {
   // prefetched via the ObjectStore layer.  This will not change the
   // materialization or overlay state for children that already have
   // inodes assigned.
-  folly::Future<std::vector<RelativePath>> evaluate(
+  folly::Future<std::vector<GlobResult>> evaluate(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       TreeInodePtr root,
       PrefetchList fileBlobsToPrefetch);
 
   // This is the Tree version of the method above
-  folly::Future<std::vector<RelativePath>> evaluate(
+  folly::Future<std::vector<GlobResult>> evaluate(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       const std::shared_ptr<const Tree>& tree,
@@ -90,14 +110,14 @@ class GlobNode {
   // The difference is because a pattern like "**/foo" must be recursively
   // matched against all the children of the inode.
   template <typename ROOT>
-  folly::Future<std::vector<RelativePath>> evaluateRecursiveComponentImpl(
+  folly::Future<std::vector<GlobResult>> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch);
 
   template <typename ROOT>
-  folly::Future<std::vector<RelativePath>> evaluateImpl(
+  folly::Future<std::vector<GlobResult>> evaluateImpl(
       const ObjectStore* store,
       RelativePathPiece rootPath,
       ROOT&& root,
@@ -127,5 +147,15 @@ class GlobNode {
   // - it was created with includeDotfiles=true.
   bool alwaysMatch_{false};
 };
+
+// Streaming operators for logging and printing
+inline std::ostream& operator<<(
+    std::ostream& stream,
+    const GlobNode::GlobResult& a) {
+  stream << "GlobResult{\"" << a.name.stringPiece()
+         << "\", dtype=" << static_cast<int>(a.dtype) << "}";
+  return stream;
+}
+
 } // namespace eden
 } // namespace facebook

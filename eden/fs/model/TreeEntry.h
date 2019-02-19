@@ -10,6 +10,7 @@
 #pragma once
 
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
@@ -78,6 +79,20 @@ class TreeEntry {
 
   TreeEntryType getType() const {
     return type_;
+  }
+
+  dtype_t getDType() const {
+    switch (type_) {
+      case TreeEntryType::TREE:
+        return dtype_t::Dir;
+      case TreeEntryType::REGULAR_FILE:
+      case TreeEntryType::EXECUTABLE_FILE:
+        return dtype_t::Regular;
+      case TreeEntryType::SYMLINK:
+        return dtype_t::Symlink;
+      default:
+        return dtype_t::Unknown;
+    }
   }
 
   std::string toLogString() const;
