@@ -1735,16 +1735,32 @@ def pushbackupbundlewithdiscovery(ui, repo, other, heads, bookmarks):
     return pushbackupbundle(ui, repo, other, outgoing, bookmarks)
 
 
-def isbackedup(getconnection, node):
+def isbackedupnodes(getconnection, nodes):
     """
-    check on the server side if the head is backed up
+    check on the server side if the nodes are backed up using 'lookup'
+
+    TODO: deprecate this after supporting 'known' in infinitepush.
     """
-    try:
-        with getconnection() as conn:
-            conn.peer.lookup(node)
-            return True
-    except error.RepoError:
-        return False
+
+    def isbackedup(node):
+        try:
+            with getconnection() as conn:
+                conn.peer.lookup(node)
+                return True
+        except error.RepoError:
+            return False
+
+    return [isbackedup(node) for node in nodes]
+
+
+def isbackedupnodes2(getconnection, nodes):
+    """
+    check on the server side if the nodes are backed up using 'known'
+
+    TODO: support 'known' in infinitepush.
+    """
+    with getconnection() as conn:
+        return conn.peer.known([nodemod.bin(n) for n in nodes])
 
 
 def pushbackupbundledraftheads(ui, repo, getconnection, heads):

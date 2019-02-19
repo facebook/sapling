@@ -564,11 +564,23 @@ def isbackedup(ui, repo, dest=None, **opts):
     def getconnection():
         return repo.connectionpool.get(path, opts)
 
-    for r in scmutil.revrange(unfi, revs):
+    revs = scmutil.revrange(unfi, revs)
+    nodestocheck = [unfi[r].hex() for r in revs if r in backeduprevs]
+
+    if remote and nodestocheck:
+        isbackedupremote = {
+            nodestocheck[i]: res
+            for i, res in enumerate(
+                infinitepush.isbackedupnodes(getconnection, nodestocheck)
+            )
+        }
+
+    for r in revs:
         backedup = r in backeduprevs
+        node = unfi[r].hex()
         if remote and backedup:
-            backedup = infinitepush.isbackedup(getconnection, unfi[r].hex())
-        ui.write(_(unfi[r].hex() + " "))
+            backedup = isbackedupremote[node]
+        ui.write(_(node + " "))
         ui.write(_("backed up" if backedup else "not backed up"))
         ui.write(_("\n"))
 
@@ -841,13 +853,18 @@ def _dobackup(ui, repo, dest, **opts):
     def getconnection():
         return repo.connectionpool.get(path, opts)
 
+    # If there are too many heads to backup,
+    # it is faster to check with the server first
     backuplimitnocheck = ui.configint("infinitepushbackup", "backuplimitnocheck")
     backedupheadsremote = set()
     if len(headstobackup) > backuplimitnocheck:
         backedupheadsremote = {
             head
-            for head in headstobackup
-            if infinitepush.isbackedup(getconnection, head)
+            for head, backedup in zip(
+                headstobackup,
+                infinitepush.isbackedupnodes(getconnection, headstobackup),
+            )
+            if backedup
         }
 
     newheads, failedheads = infinitepush.pushbackupbundlestacks(

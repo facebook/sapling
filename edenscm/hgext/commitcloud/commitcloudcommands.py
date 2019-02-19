@@ -555,10 +555,9 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             # it is faster to check with the server first
             backuplimitnocheck = ui.configint("commitcloud", "backuplimitnocheck")
             if len(newheads) > backuplimitnocheck:
+                isbackedupremote = infinitepush.isbackedupnodes(getconnection, newheads)
                 newheads = [
-                    head
-                    for head in newheads
-                    if not infinitepush.isbackedup(getconnection, head)
+                    head for i, head in enumerate(newheads) if not isbackedupremote[i]
                 ]
 
             # all pushed to the server except maybe obsmarkers
