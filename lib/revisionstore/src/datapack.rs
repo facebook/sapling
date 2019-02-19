@@ -95,6 +95,7 @@ use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
+use crate::store::Store;
 use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
@@ -348,6 +349,12 @@ impl DataStore for DataPack {
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         let index_entry = self.index.get_entry(key.node())?;
         Ok(self.read_entry(index_entry.pack_entry_offset())?.metadata)
+    }
+}
+
+impl Store for DataPack {
+    fn from_path(path: &Path) -> Fallible<Self> {
+        DataPack::new(path)
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {

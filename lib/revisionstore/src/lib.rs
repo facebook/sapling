@@ -22,6 +22,7 @@ pub mod mutablehistorypack;
 pub mod mutablepack;
 pub mod packwriter;
 pub mod repack;
+pub mod store;
 pub mod uniondatastore;
 pub mod unionhistorystore;
 
@@ -33,3 +34,4 @@ pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::mutablepack::MutablePack;
 pub use crate::repack::IterableStore;
+pub use crate::store::Store;

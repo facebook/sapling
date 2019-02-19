@@ -15,6 +15,8 @@ use serde_derive::{Deserialize, Serialize};
 
 use types::Key;
 
+use crate::store::Store;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
     pub data: Bytes,
@@ -28,16 +30,11 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
-pub trait DataStore {
+pub trait DataStore: Store {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>>;
     fn get_delta(&self, key: &Key) -> Fallible<Delta>;
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;
     fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>>;
-
-    fn contains(&self, key: &Key) -> Fallible<bool> {
-        Ok(self.get_missing(&[key.clone()])?.is_empty())
-    }
 }
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
@@ -54,9 +51,6 @@ impl<T: DataStore, U: Deref<Target = T>> DataStore for U {
     }
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         T::get_meta(self, key)
-    }
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        T::get_missing(self, keys)
     }
 }
 

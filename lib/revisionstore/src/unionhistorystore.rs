@@ -51,15 +51,6 @@ impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
         .collect()
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        let initial_keys = Ok(keys.iter().cloned().collect());
-        self.into_iter()
-            .fold(initial_keys, |missing_keys, store| match missing_keys {
-                Ok(missing_keys) => store.get_missing(&missing_keys),
-                Err(e) => Err(e),
-            })
-    }
-
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         for store in self {
             match store.get_node_info(key) {
@@ -85,6 +76,8 @@ mod tests {
 
     use quickcheck::quickcheck;
 
+    use crate::store::Store;
+
     struct BadHistoryStore;
 
     #[derive(Debug, Fail)]
@@ -108,12 +101,14 @@ mod tests {
             Err(KeyError::from(EmptyHistoryStoreError).into())
         }
 
-        fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-            Ok(keys.iter().cloned().collect())
-        }
-
         fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
             Err(KeyError::from(EmptyHistoryStoreError).into())
+        }
+    }
+
+    impl Store for EmptyHistoryStore {
+        fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+            Ok(keys.iter().cloned().collect())
         }
     }
 
@@ -122,11 +117,13 @@ mod tests {
             Err(BadHistoryStoreError.into())
         }
 
-        fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
+        fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
             Err(BadHistoryStoreError.into())
         }
+    }
 
-        fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
+    impl Store for BadHistoryStore {
+        fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
             Err(BadHistoryStoreError.into())
         }
     }

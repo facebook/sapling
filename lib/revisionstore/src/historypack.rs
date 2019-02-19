@@ -22,6 +22,7 @@ use crate::historyindex::HistoryIndex;
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
+use crate::store::Store;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]
@@ -254,17 +255,23 @@ impl HistoryStore for HistoryPack {
         .collect()
     }
 
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+        let node_location = self.index.get_node_entry(key)?;
+        self.read_node_info(key, node_location.offset)
+    }
+}
+
+impl Store for HistoryPack {
+    fn from_path(path: &Path) -> Fallible<Self> {
+        HistoryPack::new(path)
+    }
+
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
             .filter(|k| self.index.get_node_entry(k).is_err())
             .map(|k| k.clone())
             .collect())
-    }
-
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        let node_location = self.index.get_node_entry(key)?;
-        self.read_node_info(key, node_location.offset)
     }
 }
 

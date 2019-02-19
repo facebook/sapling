@@ -8,6 +8,7 @@ use failure::Fallible;
 use types::Key;
 
 use crate::repack::IterableStore;
+use crate::store::Store;
 
 pub struct UnionStore<T> {
     stores: Vec<T>,
@@ -20,6 +21,17 @@ impl<T> UnionStore<T> {
 
     pub fn add(&mut self, item: T) {
         self.stores.push(item)
+    }
+}
+
+impl<T: Store> Store for UnionStore<T> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let initial_keys = Ok(keys.iter().cloned().collect());
+        self.into_iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => store.get_missing(&missing_keys),
+                Err(e) => Err(e),
+            })
     }
 }
 

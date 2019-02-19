@@ -24,6 +24,7 @@ use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
+use crate::store::Store;
 
 pub struct MutableDataPack {
     version: DataPackVersion,
@@ -192,7 +193,9 @@ impl DataStore for MutableDataPack {
         let (_, metadata) = self.read_entry(&key)?;
         Ok(metadata)
     }
+}
 
+impl Store for MutableDataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()

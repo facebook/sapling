@@ -8,13 +8,12 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::datastore::{DataStore, Delta, Metadata};
-use types::Key;
-
 use pyerror::pyerr_to_error;
 use pythonutil::{
     bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, to_key,
 };
+use revisionstore::{DataStore, Delta, Metadata, Store};
+use types::Key;
 
 pub struct PythonDataStore {
     py_store: PyObject,
@@ -38,7 +37,8 @@ impl DataStore for PythonDataStore {
         let py_name = PyBytes::new(py, key.name());
         let py_node = PyBytes::new(py, key.node().as_ref());
 
-        let py_data = self.py_store
+        let py_data = self
+            .py_store
             .call_method(py, "get", (py_name, py_node), None)
             .map_err(|e| pyerr_to_error(py, e))?;
 
@@ -52,7 +52,8 @@ impl DataStore for PythonDataStore {
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
         let py_node = PyBytes::new(py, key.node().as_ref());
-        let py_delta = self.py_store
+        let py_delta = self
+            .py_store
             .call_method(py, "getdelta", (py_name, py_node), None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_tuple = PyTuple::extract(py, &py_delta).map_err(|e| pyerr_to_error(py, e))?;
@@ -80,7 +81,8 @@ impl DataStore for PythonDataStore {
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
         let py_node = PyBytes::new(py, key.node().as_ref());
-        let py_chain = self.py_store
+        let py_chain = self
+            .py_store
             .call_method(py, "getdeltachain", (py_name, py_node), None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_list = PyList::extract(py, &py_chain).map_err(|e| pyerr_to_error(py, e))?;
@@ -96,7 +98,8 @@ impl DataStore for PythonDataStore {
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
         let py_node = PyBytes::new(py, key.node().as_ref());
-        let py_meta = self.py_store
+        let py_meta = self
+            .py_store
             .call_method(py, "getmeta", (py_name, py_node), None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_dict = PyDict::extract(py, &py_meta).map_err(|e| pyerr_to_error(py, e))?;
@@ -112,7 +115,9 @@ impl DataStore for PythonDataStore {
             },
         })
     }
+}
 
+impl Store for PythonDataStore {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

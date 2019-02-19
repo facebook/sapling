@@ -116,15 +116,6 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
         )))
         .into())
     }
-
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        let initial_keys = Ok(keys.iter().cloned().collect());
-        self.into_iter()
-            .fold(initial_keys, |missing_keys, store| match missing_keys {
-                Ok(missing_keys) => store.get_missing(&missing_keys),
-                Err(e) => Err(e),
-            })
-    }
 }
 
 #[cfg(test)]
@@ -132,6 +123,8 @@ mod tests {
     use super::*;
 
     use quickcheck::quickcheck;
+
+    use crate::store::Store;
 
     struct BadDataStore;
 
@@ -167,7 +160,9 @@ mod tests {
         fn get_meta(&self, _key: &Key) -> Fallible<Metadata> {
             Err(KeyError::from(EmptyDataStoreError).into())
         }
+    }
 
+    impl Store for EmptyDataStore {
         fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
@@ -189,7 +184,9 @@ mod tests {
         fn get_meta(&self, _key: &Key) -> Fallible<Metadata> {
             Err(BadDataStoreError.into())
         }
+    }
 
+    impl Store for BadDataStore {
         fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
             Err(BadDataStoreError.into())
         }

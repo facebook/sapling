@@ -21,6 +21,7 @@ use crate::historystore::HistoryStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;
+use crate::store::Store;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepackOutputType {

@@ -24,6 +24,7 @@ use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use crate::historystore::{Ancestors, HistoryStore};
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
+use crate::store::Store;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Mutable History Pack Error: {:?}", _0)]
@@ -265,7 +266,9 @@ impl HistoryStore for MutableHistoryPack {
             )))?
             .clone())
     }
+}
 
+impl Store for MutableHistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()

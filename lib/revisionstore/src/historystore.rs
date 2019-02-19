@@ -7,13 +7,14 @@ use std::{collections::HashMap, ops::Deref};
 
 use failure::Fallible;
 
-use types::{Key, Node, NodeInfo};
+use types::{Key, NodeInfo};
+
+use crate::store::Store;
 
 pub type Ancestors = HashMap<Key, NodeInfo>;
 
-pub trait HistoryStore {
+pub trait HistoryStore: Store {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors>;
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>>;
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo>;
 }
 
@@ -21,9 +22,6 @@ pub trait HistoryStore {
 impl<T: HistoryStore, U: Deref<Target = T>> HistoryStore for U {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         T::get_ancestors(self, key)
-    }
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        T::get_missing(self, keys)
     }
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         T::get_node_info(self, key)
