@@ -73,15 +73,17 @@ DEFINE_string(
 
 DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
 
+#ifdef __APPLE__
+constexpr bool kEnableHgImportSubcommand = true;
+#else
+constexpr bool kEnableHgImportSubcommand = false;
+#endif
+
 DEFINE_bool(
     hgImportUseDebugSubcommand,
-// Once we swing through releasing some changes in debugedenimporthelper
-// we can make this default to true everywhere
-#ifdef __APPLE__
-    true,
-#else
-    false,
-#endif
+    // Once we swing through releasing some changes in debugedenimporthelper
+    // we can make this default to true everywhere
+    kEnableHgImportSubcommand,
     "Use `hg debugedenimporthelper` rather than hgImportHelper");
 
 DEFINE_string(
