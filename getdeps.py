@@ -282,7 +282,13 @@ def get_projects(opts):
             "rsocket-cpp",
             opts,
             GitUpdater("https://github.com/rsocket/rsocket-cpp.git"),
-            CMakeBuilder(defines={"BUILD_EXAMPLES": "OFF", "BUILD_BENCHMARKS": "OFF"}),
+            CMakeBuilder(
+                defines={
+                    "BUILD_EXAMPLES": "OFF",
+                    "BUILD_BENCHMARKS": "OFF",
+                    "BUILD_TESTS": "OFF",
+                }
+            ),
         ),
         Project(
             "fbthrift",
