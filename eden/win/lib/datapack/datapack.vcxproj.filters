@@ -15,37 +15,37 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\cstore\datapackstore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\cstore\deltachain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\cstore\uniondatapackstore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest_entry.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest_fetcher.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest_ptr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\treemanifest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\scm\hg\lib\cdatapack\cdatapack.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\mercurial\mpatch.c">
+    <ClCompile Include="..\..\..\..\scm\hg\lib\clib\buffer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\scm\hg\lib\clib\buffer.c">
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\cstore\datapackstore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\cstore\deltachain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest_entry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest_fetcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest_ptr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\treemanifest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\cstore\uniondatapackstore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\mercurial\mpatch.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

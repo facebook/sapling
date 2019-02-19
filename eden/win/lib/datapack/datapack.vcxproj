@@ -160,17 +160,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\cstore\datapackstore.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\cstore\deltachain.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\cstore\uniondatapackstore.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest_entry.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest_fetcher.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\manifest_ptr.cpp" />
-    <ClCompile Include="..\..\..\..\scm\hg\hgext\extlib\ctreemanifest\treemanifest.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\cstore\datapackstore.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\cstore\deltachain.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\cstore\uniondatapackstore.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest_entry.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest_fetcher.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\manifest_ptr.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\hgext\extlib\ctreemanifest\treemanifest.cpp" />
+    <ClCompile Include="..\..\..\..\scm\hg\edenscm\mercurial\mpatch.c" />
     <ClCompile Include="..\..\..\..\scm\hg\lib\cdatapack\cdatapack.c" />
     <ClCompile Include="..\..\..\..\scm\hg\lib\clib\buffer.c" />
-    <ClCompile Include="..\..\..\..\scm\hg\mercurial\mpatch.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\scm\hg\hgext\extlib\cstore\datapackstore.h" />
