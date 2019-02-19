@@ -364,6 +364,8 @@ Test extension help:
                      revision
        sampling      (no help text available)
        schemes       extend schemes with shortcuts to repository swarms
+       sendunbundlereplay
+                     (no help text available)
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal

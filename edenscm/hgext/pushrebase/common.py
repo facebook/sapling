@@ -25,8 +25,10 @@ def getdatefromfile(definedcommitdates, ui, commithash, commitdate):
         raise error.Abort(_("%s not found in commitdatesfile") % commithash)
 
 
-def commitdategenerator(ui):
-    commitdatesfile = ui.config("pushrebase", "commitdatesfile")
+def commitdategenerator(bundleoperation):
+    if bundleoperation.replaydata is not None:
+        return bundleoperation.replaydata.getcommitdate
+    commitdatesfile = bundleoperation.ui.config("pushrebase", "commitdatesfile")
     if commitdatesfile:
         try:
             with open(commitdatesfile) as f:

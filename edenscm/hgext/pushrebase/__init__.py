@@ -295,7 +295,7 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
     return orig(ui, path, create, **kwargs)
 
 
-def unbundle(orig, repo, cg, heads, source, url):
+def unbundle(orig, repo, cg, heads, source, url, replaydata=None):
     # Preload the manifests that the client says we'll need. This happens
     # outside the lock, thus cutting down on our lock time and increasing commit
     # throughput.
@@ -307,7 +307,7 @@ def unbundle(orig, repo, cg, heads, source, url):
 
     try:
         start_time = time.time()
-        result = orig(repo, cg, heads, source, url)
+        result = orig(repo, cg, heads, source, url, replaydata=replaydata)
         recording.recordpushrebaserequest(
             repo, conflicts=None, pushrebase_errmsg=None, start_time=start_time
         )
@@ -1114,7 +1114,9 @@ def bundle2rebase(op, part):
 
             if usestackpush:
                 try:
-                    pushrequest = stackpush.pushrequest.fromrevset(bundle, "bundle()")
+                    pushrequest = stackpush.pushrequest.fromrevset(
+                        bundle, "bundle()", op
+                    )
                 except StackPushUnsupportedError as ex:
                     # stackpush is unsupported. Fallback to old code path.
                     if verbose:
@@ -1398,7 +1400,7 @@ def runrebase(op, revs, oldonto, onto):
 
     while revs:
         rev = revs.pop()
-        getcommitdate = common.commitdategenerator(op.ui)
+        getcommitdate = common.commitdategenerator(op)
         newrev = _graft(op, rev, mapping, lastdestnode, getcommitdate)
 
         new = op.repo[newrev]

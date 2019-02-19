@@ -37,11 +37,11 @@ as the getfile method it offers doesn't work with http.
   $ get-with-headers.py localhost:$HGPORT '?cmd=capabilities'
   200 Script output follows
   
-  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred streamreqs=generaldelta,revlogv1 stream_option bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%2C03%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Aphases%3Dheads%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=* getflogheads getfile (no-eol) (glob)
+  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch stream-preferred streamreqs=generaldelta,revlogv1 stream_option bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%2C03%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Aphases%3Dheads%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=zstd,zlib getflogheads getfile (no-eol)
   $ get-with-headers.py localhost:$HGPORT '?cmd=hello'
   200 Script output follows
   
-  capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred streamreqs=generaldelta,revlogv1 stream_option bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%2C03%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Aphases%3Dheads%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=* getflogheads getfile (glob)
+  capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch stream-preferred streamreqs=generaldelta,revlogv1 stream_option bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%2C03%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Aphases%3Dheads%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=zstd,zlib getflogheads getfile
 
   $ get-with-headers.py localhost:$HGPORT '?cmd=this-command-does-not-exist' | head -n 1
   400 no such method: this-command-does-not-exist

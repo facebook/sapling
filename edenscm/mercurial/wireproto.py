@@ -25,6 +25,7 @@ from . import (
     peer,
     pushkey as pushkeymod,
     pycompat,
+    replay,
     repository,
     streamclone,
     util,
@@ -412,6 +413,28 @@ class wirepeer(repository.legacypeer):
             # bundle2 push. Send a stream, fetch a stream.
             stream = self._calltwowaystream("unbundle", cg, heads=heads)
             ret = bundle2.getunbundler(self.ui, stream)
+        return ret
+
+    def unbundlereplay(self, cg, heads, url, replaydata):
+        """Experimental command for replaying preserved bundles onto hg
+
+        Intended to be used for mononoke->hg sync
+        The idea is to send:
+            - unbundle itself
+            - a `replay.ReplayData` instance with override commit dates
+              and expected resulting head hash
+        """
+        if heads != ["force"] and self.capable("unbundlehash"):
+            heads = encodelist(
+                ["hashed", hashlib.sha1("".join(sorted(heads))).digest()]
+            )
+        else:
+            heads = encodelist(heads)
+
+        stream = self._calltwowaystream(
+            "unbundlereplay", cg, heads=heads, replaydata=replaydata.serialize()
+        )
+        ret = bundle2.getunbundler(self.ui, stream)
         return ret
 
     # End of basewirepeer interface.
@@ -874,6 +897,7 @@ wireprotocaps = [
     "known",
     "getbundle",
     "unbundlehash",
+    "unbundlereplay",
     "batch",
 ]
 
@@ -1134,8 +1158,32 @@ def streamoption(repo, proto, options):
     return stream(repo, proto)
 
 
+@wireprotocommand("unbundlereplay", "heads replaydata")
+def unbundlereplay(repo, proto, heads, replaydata):
+    """Replay the unbunlde content and check if the result matches the
+    expectations, supplied in the `replaydata`
+
+    Note that the goal is to apply the bundle exactly as we
+    captured it on the wire + change commit timestamps, therefore
+    I don't want to add any parts to the unbundle, so
+    additional data (timestamps, expected hashes) needs to
+    go on wireprotocol args.
+    """
+    proto.redirect()
+    replaydata = replay.ReplayData.deserialize(replaydata)
+
+    # TODO(ikostia): currently, we're producing reply parts on the server
+    #                side. Can we avoid doing so?
+    res = unbundleimpl(repo, proto, heads, replaydata=replaydata)
+    return res
+
+
 @wireprotocommand("unbundle", "heads")
 def unbundle(repo, proto, heads):
+    return unbundleimpl(repo, proto, heads)
+
+
+def unbundleimpl(repo, proto, heads, replaydata=None):
     their_heads = decodelist(heads)
 
     try:
@@ -1165,7 +1213,9 @@ def unbundle(repo, proto, heads):
                     return ooberror(bundle2required)
                 raise error.Abort(bundle2requiredmain, hint=bundle2requiredhint)
 
-            r = exchange.unbundle(repo, gen, their_heads, "serve", proto._client())
+            r = exchange.unbundle(
+                repo, gen, their_heads, "serve", proto._client(), replaydata=replaydata
+            )
             if util.safehasattr(r, "addpart"):
                 # The return looks streamable, we are in the bundle2 case and
                 # should return a stream.

@@ -303,7 +303,7 @@ class bundleoperation(object):
     * a way to construct a bundle response when applicable.
     """
 
-    def __init__(self, repo, transactiongetter, captureoutput=True):
+    def __init__(self, repo, transactiongetter, captureoutput=True, replaydata=None):
         self.repo = repo
         self.ui = repo.ui
         self.records = unbundlerecords()
@@ -313,6 +313,16 @@ class bundleoperation(object):
         self._gettransaction = transactiongetter
         # carries value that can modify part behavior
         self.modes = {}
+        self.replaydata = replaydata
+        self._addreplyhookargs()
+
+    def _addreplyhookargs(self):
+        if self.replaydata is None:
+            return
+        if self.replaydata.rebasedhead is not None:
+            self.hookargs["EXPECTED_REBASEDHEAD"] = self.replaydata.rebasedhead
+        if self.replaydata.ontobook is not None:
+            self.hookargs["EXPECTED_ONTOBOOK"] = self.replaydata.ontobook
 
     def gettransaction(self):
         transaction = self._gettransaction()

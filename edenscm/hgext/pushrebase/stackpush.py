@@ -91,13 +91,14 @@ class pushcommit(object):
 
 
 class pushrequest(object):
-    def __init__(self, stackparentnode, pushcommits, fileconditions):
+    def __init__(self, stackparentnode, pushcommits, fileconditions, op):
         self.stackparentnode = stackparentnode
         self.pushcommits = pushcommits
         self.fileconditions = fileconditions  # {path: None | filenode}
+        self.bundleoperation = op
 
     @classmethod
-    def fromrevset(cls, repo, spec):
+    def fromrevset(cls, repo, spec, op):
         """Construct a pushrequest from revset"""
         # No merge commits allowed.
         revs = list(repo.revs(spec))
@@ -130,7 +131,7 @@ class pushrequest(object):
                 filenodemode = None
             fileconditions[path] = filenodemode
 
-        return cls(parentctx.node(), pushcommits, fileconditions)
+        return cls(parentctx.node(), pushcommits, fileconditions, op)
 
     def pushonto(self, ctx):
         """Push the stack onto ctx
@@ -161,7 +162,7 @@ class pushrequest(object):
         added = []
         replacements = {}
         repo = ctx.repo()
-        getcommitdate = commitdategenerator(repo.ui)
+        getcommitdate = commitdategenerator(self.bundleoperation)
         for commit in self.pushcommits:
             newnode = self._pushsingleunchecked(ctx, commit, getcommitdate)
             added.append(newnode)
