@@ -314,9 +314,9 @@ class bundleoperation(object):
         # carries value that can modify part behavior
         self.modes = {}
         self.replaydata = replaydata
-        self._addreplyhookargs()
+        self._addreplayhookargs()
 
-    def _addreplyhookargs(self):
+    def _addreplayhookargs(self):
         if self.replaydata is None:
             return
         if self.replaydata.rebasedhead is not None:
