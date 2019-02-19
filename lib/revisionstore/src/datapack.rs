@@ -426,6 +426,8 @@ impl<'a> Iterator for DataPackIterator<'a> {
 pub mod tests {
     use super::*;
 
+    use std::rc::Rc;
+
     use quickcheck::quickcheck;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -708,6 +710,25 @@ pub mod tests {
         assert!(pack.delete().is_ok());
         assert!(!pack2.pack_path().exists());
         assert!(!pack2.index_path().exists());
+    }
+
+    #[test]
+    fn test_rc() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let revisions = vec![(
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: None,
+                key: Key::new(vec![0], Node::random(&mut rng)),
+            },
+            None,
+        )];
+
+        let pack = Rc::new(make_datapack(&tempdir, &revisions));
+        let delta = pack.get_delta(&revisions[0].0.key).unwrap();
+        assert_eq!(delta.data, revisions[0].0.data);
     }
 
     quickcheck! {

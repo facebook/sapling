@@ -5,8 +5,7 @@
 
 use std::{
     io::{Cursor, Write},
-    rc::Rc,
-    sync::Arc,
+    ops::Deref,
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -41,43 +40,9 @@ pub trait DataStore {
     }
 }
 
-impl<T: DataStore> DataStore for Rc<T> {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
-        T::get(self, key)
-    }
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        T::get_delta(self, key)
-    }
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
-        T::get_delta_chain(self, key)
-    }
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        T::get_meta(self, key)
-    }
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        T::get_missing(self, keys)
-    }
-}
-
-impl<T: DataStore> DataStore for Box<T> {
-    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
-        T::get(self, key)
-    }
-    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        T::get_delta(self, key)
-    }
-    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
-        T::get_delta_chain(self, key)
-    }
-    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        T::get_meta(self, key)
-    }
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        T::get_missing(self, keys)
-    }
-}
-
-impl<T: DataStore> DataStore for Arc<T> {
+/// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
+/// the smart pointers like `Box`, `Rc`, `Arc`.
+impl<T: DataStore, U: Deref<Target = T>> DataStore for U {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         T::get(self, key)
     }

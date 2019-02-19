@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{collections::HashMap, rc::Rc, sync::Arc};
+use std::{collections::HashMap, ops::Deref};
 
 use failure::Fallible;
 
@@ -17,31 +17,8 @@ pub trait HistoryStore {
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo>;
 }
 
-impl<T: HistoryStore> HistoryStore for Rc<T> {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
-        T::get_ancestors(self, key)
-    }
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        T::get_missing(self, keys)
-    }
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        T::get_node_info(self, key)
-    }
-}
-
-impl<T: HistoryStore> HistoryStore for Arc<T> {
-    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
-        T::get_ancestors(self, key)
-    }
-    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        T::get_missing(self, keys)
-    }
-    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        T::get_node_info(self, key)
-    }
-}
-
-impl<T: HistoryStore> HistoryStore for Box<T> {
+/// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.
+impl<T: HistoryStore, U: Deref<Target = T>> HistoryStore for U {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         T::get_ancestors(self, key)
     }
