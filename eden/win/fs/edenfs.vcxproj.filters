@@ -311,6 +311,12 @@
     <ClCompile Include="mount\Enumerator.cpp">
       <Filter>Win\fs\Mount</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\utils\IDGen.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\utils\FaultInjector.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
@@ -561,6 +567,9 @@
     </ClInclude>
     <ClInclude Include="utils\Guid.h">
       <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\FaultInjector.h">
+      <Filter>fs\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
