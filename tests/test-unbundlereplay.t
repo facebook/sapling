@@ -260,3 +260,14 @@ Send correct unbundlereplay to hgsql server
   remote: [ReplayVerification] Everything seems in order
   bundle2-input-part: total payload size 309
   bundle2-input-part: total payload size 85
+
+What is the new hgsql server state?
+  $ log -r "all()"
+  o  1 [public;rev=3;c2e526aacb51] master_bookmark
+  |
+  o  C [public;rev=2;26805aba1e60]
+  |
+  o  B [public;rev=1;112478962961]
+  |
+  o  A [public;rev=0;426bada5c675]
+  
