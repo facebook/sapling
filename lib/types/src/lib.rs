@@ -15,4 +15,4 @@ pub mod path;
 pub use crate::key::Key;
 pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
-pub use crate::path::{RepoPath, RepoPathBuf};
+pub use crate::path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
