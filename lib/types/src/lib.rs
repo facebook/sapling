@@ -10,7 +10,9 @@ pub mod errors;
 pub mod key;
 pub mod node;
 pub mod nodeinfo;
+pub mod path;
 
 pub use crate::key::Key;
 pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
+pub use crate::path::{RepoPath, RepoPathBuf};
