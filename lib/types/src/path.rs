@@ -3,6 +3,32 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+//! Here we have types for working with paths specialized for source control internals.
+//! They are akin to str and String in high level behavior. `RepoPath` is an unsized type wrapping
+//! a str so it can't be instantiated directly. `RepoPathBuf` represents the owned version of a
+//! RepoPath and wraps a String.
+//!
+//! The inspiration for `RepoPath` and `RepoPathBuf` comes from the std::path crate however
+//! we know that the internal representation of a path is consistently a utf8 string where
+//! directories are delimited by the `SEPARATOR` (`/`) so our types can have a simpler
+//! representation. It is because of the same reason that we can't use the abstractions in
+//! `std::path` for internal uses where we need to apply the same algorithm for blobs we get from
+//! the server across all systems.
+//!
+//! We could use `String` and `&str` directly however these types are inexpressive and have few
+//! guarantees. Rust has a strong type system so we can leverage it to provide more safety.
+//!
+//! `PathComponent` and `PathComponentBuf` can be seen as specializations of `RepoPath` and
+//! `RepoPathBuf` that do not have any `SEPARATOR` characters. The main operation that is done on
+//! paths is iterating over its components. `PathComponents` are names of files or directories.
+//! For the path: `foo/bar/baz.txt` we have 3 components: `foo`, `bar` and `baz.txt`.
+//!
+//! A lot of algorithms used in source control management operate on directories so having an
+//! abstraction for individual components is going to increase readability in the long run.
+//! A clear example for where we may want to use `PathComponentBuf` is in the treemanifest logic
+//! where all indexing is done using components. The index in those cases must be able to own
+//! component. Writing it in terms of `RepoPathBuf` would probably be less readable that
+//! writing it in terms of `String`.
 use failure::{bail, Fallible};
 use std::borrow::{Borrow, ToOwned};
 use std::convert::AsRef;
@@ -10,30 +36,57 @@ use std::fmt;
 use std::mem;
 use std::ops::Deref;
 
+/// An owned version of a `RepoPath`.
 #[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct RepoPathBuf(String);
 
+/// A normalized path starting from the root of the repository. Paths can be broken into
+/// components by using `SEPARATOR`. Normalized means that it following the following rules:
+///  * unicode is normalized
+///  * does not end with a `SEPARATOR`
+///  * does not contain:
+///    * \0, null character - it is an illegal file name character on unix
+///    * \1, CTRL-A - used as metadata separator
+///    * \10, newline - used as metadata separator
+///  * does not contain the following components:
+///    * ``, empty, implies that paths can't start with, end or contain consecutive `SEPARATOR`s
+///    * `.`, dot/period, unix current directory
+///    * `..`, double dot, unix parent directory
+/// TODO: There is more validation that could be done here. Windows has a broad list of illegal
+/// characters and reseved words.
+///
+/// It should be noted that `RepoPathBuf` and `RepoPath` implement `AsRef<RepoPath>`.
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct RepoPath(str);
 
+/// An owned version of a `PathComponent`. Not intended for mutation. RepoPathBuf is probably
+/// more appropriate for mutation.
 #[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct PathComponentBuf(String);
 
+/// A `RepoPath` is a series of `PathComponent`s joined together by a separator (`/`).
+/// Names for directories or files.
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct PathComponent(str);
 
-const SEPARATOR: char = '/';
+/// The One. The One Character We Use To Separate Paths Into Components.
+pub const SEPARATOR: char = '/';
 
 impl RepoPathBuf {
+    /// Constructs an empty RepoPathBuf
     pub fn new() -> RepoPathBuf {
         Default::default()
     }
 
+    /// Constructs a `RepoPathBuf` from a `String`. It can fail when the contents of String is
+    /// deemed invalid. See `RepoPath` for validation rules.
     pub fn from_string(s: String) -> Fallible<Self> {
         validate_path(&s)?;
         Ok(RepoPathBuf(s))
     }
 
+    /// Append a `RepoPath` to the end of `RepoPathBuf`. This function will add the `SEPARATOR`
+    /// required by concatenation.
     pub fn push<P: AsRef<RepoPath>>(&mut self, path: P) {
         self.append(&path.as_ref().0);
     }
@@ -72,16 +125,21 @@ impl fmt::Display for RepoPathBuf {
 }
 
 impl RepoPath {
+    /// Constructs a `RepoPath` from a byte slice. It will fail when the bytes are are not valid
+    /// utf8 or when the string does not respect the `RepoPath` rules.
     pub fn from_utf8(s: &[u8]) -> Fallible<&RepoPath> {
         let utf8_str = std::str::from_utf8(s)?;
         RepoPath::from_str(utf8_str)
     }
 
+    /// Constructs a `RepoPath` from a `str` slice. It will fail when the string does not respect
+    /// the `RepoPath` rules.
     pub fn from_str(s: &str) -> Fallible<&RepoPath> {
         validate_path(s)?;
         Ok(unsafe { mem::transmute(s) })
     }
 
+    /// Returns an iterator over the components of the path.
     pub fn components(&self) -> impl Iterator<Item = &PathComponent> {
         self.0
             .split(SEPARATOR)
@@ -109,6 +167,8 @@ impl fmt::Display for RepoPath {
 }
 
 impl PathComponentBuf {
+    /// Constructs an from a `String`. It can fail when the contents of `String` is deemed invalid.
+    /// See `PathComponent` for validation rules.
     pub fn from_string(s: String) -> Fallible<Self> {
         validate_component(&s)?;
         Ok(PathComponentBuf(s))
@@ -141,11 +201,15 @@ impl fmt::Display for PathComponentBuf {
 }
 
 impl PathComponent {
+    /// Constructs a `PathComponent` from a byte slice. It will fail when the bytes are are not
+    /// valid utf8 or when the string does not respect the `PathComponent` rules.
     pub fn from_utf8(s: &[u8]) -> Fallible<&PathComponent> {
         let utf8_str = std::str::from_utf8(s)?;
         PathComponent::from_str(utf8_str)
     }
 
+    /// Constructs a `PathComponent` from a `str` slice. It will fail when the string does not
+    /// respect the `PathComponent` rules.
     pub fn from_str(s: &str) -> Fallible<&PathComponent> {
         validate_component(s)?;
         Ok(PathComponent::from_str_unchecked(s))
