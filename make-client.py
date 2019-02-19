@@ -115,6 +115,11 @@ def move_site_packages_to_root(instdir):
             os.rename(os.path.join(sp, child), os.path.join(instdir, child))
 
 
+if len(sys.argv) > 1:
+    PYTHON = sys.argv[1]
+else:
+    PYTHON = "/usr/bin/env python3"
+
 with tempfile.TemporaryDirectory() as instdir:
     generate_thrift_code(instdir)
 
@@ -135,8 +140,5 @@ with tempfile.TemporaryDirectory() as instdir:
     # that we'll keep running, but it seems more likely that we will than if we
     # hard coded it.
     zipapp.create_archive(
-        instdir,
-        target="eden.zip",
-        interpreter="/usr/bin/env python3",
-        main="eden.cli.main:main",
+        instdir, target="eden.zip", interpreter=PYTHON, main="eden.cli.main:main"
     )

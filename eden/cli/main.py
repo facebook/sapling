@@ -1407,7 +1407,11 @@ def create_parser() -> argparse.ArgumentParser:
 def prompt_confirmation(prompt: str) -> bool:
     # Import readline lazily here because it conflicts with ncurses's resize support.
     # https://bugs.python.org/issue2675
-    import readline  # noqa: F401 Importing readline improves the behavior of input()
+    try:
+        import readline  # noqa: F401 Importing readline improves the behavior of input()
+    except ImportError:
+        # We don't strictly need readline
+        pass
 
     prompt_str = f"{prompt} [y/N] "
     while True:
