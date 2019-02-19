@@ -1735,6 +1735,18 @@ def pushbackupbundlewithdiscovery(ui, repo, other, heads, bookmarks):
     return pushbackupbundle(ui, repo, other, outgoing, bookmarks)
 
 
+def isbackedup(getconnection, node):
+    """
+    check on the server side if the head is backed up
+    """
+    try:
+        with getconnection() as conn:
+            conn.peer.lookup(node)
+            return True
+    except error.RepoError:
+        return False
+
+
 def pushbackupbundledraftheads(ui, repo, getconnection, heads):
     """
     push a backup bundle containing draft heads to the server

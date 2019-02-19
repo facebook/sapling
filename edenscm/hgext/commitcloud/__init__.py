@@ -70,11 +70,10 @@ Configs::
     # update to a new revision if the current revision has been moved
     updateonmove = true
 
-    # number of heads (stacks) allowed to push without checking what the server has backuped up
+    # max number of heads allowed to push without checking what the server has backed up
     # cloud sync can partially fail and manage to push some of the stacks
     # this will prevent repush of that stacks
-    # this will not be needed with mononoke as server should optimize repush attempts
-    nocheckbackeduplimit = 4
+    backuplimitnocheck = 4
 
     # option to print incoming and outgoing requests to
     # commit cloud http endpoint in json format (with --debug option only)
@@ -153,7 +152,7 @@ configitem("commitcloud", "servicetype", default="remote")
 configitem("commitcloud", "remote_port", default=443)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
-configitem("commitcloud", "nocheckbackeduplimit", default=4)
+configitem("commitcloud", "backuplimitnocheck", default=4)
 configitem("commitcloud", "autocloudjoin", default=False)
 
 

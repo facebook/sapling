@@ -197,7 +197,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 if self.debugrequests:
                     self.ui.debug("%s\n" % json.dumps(cleandict(data), indent=4))
                 return data
-            except httplib.HTTPException as e:
+            except httplib.HTTPException:
                 self.connection.close()
                 self.connection.connect()
             except (socket.timeout, socket.gaierror) as e:
@@ -393,21 +393,6 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
 
         return response["data"]["handles"]
-
-    def filterpushedheads(self, reponame, heads):
-        """Filter heads that have already been pushed to Commit Cloud backend
-
-        Current way to filter that is to check bundles on the server side
-        """
-        notbackeduphandles = set(
-            [i for i, s in enumerate(self._getbundleshandles(reponame, heads)) if not s]
-        )
-
-        highlightdebug(
-            self.ui, "%d heads are not backed up\n" % len(notbackeduphandles)
-        )
-
-        return [h for i, h in enumerate(heads) if i in notbackeduphandles]
 
     def getbundles(self, reponame, heads, unbundlefn):
         """Downloading and applying mercurial bundles directly

@@ -140,7 +140,7 @@ def cloudjoin(ui, repo, **opts):
         )
         % (workspacename, commitcloudutil.getreponame(repo)),
     )
-    cloudsync(ui, repo, checkbackedup=True, **opts)
+    cloudsync(ui, repo, **opts)
 
 
 @subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts + pushopts)
@@ -187,7 +187,7 @@ def cloudrejoin(ui, repo, **opts):
             else:
                 workspace.setworkspace(repo, workspacename)
                 highlightstatus(ui, _("the repository is now reconnected\n"))
-                cloudsync(ui, repo, checkbackedup=True, cloudrefs=cloudrefs, **opts)
+                cloudsync(ui, repo, cloudrefs=cloudrefs, **opts)
             return
         except commitcloudcommon.RegistrationError:
             pass
@@ -368,7 +368,7 @@ def checkauthenticated(ui, repo, tokenlocator):
     + pullopts
     + pushopts,
 )
-def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
+def cloudsync(ui, repo, cloudrefs=None, **opts):
     """synchronize commits with the commit cloud service
     """
     # external services can run cloud sync and require to check if
@@ -416,7 +416,7 @@ def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
             spinnermsg=_("waiting for background process to complete"),
         ):
             currentnode = repo["."].node()
-            _docloudsync(ui, repo, checkbackedup, cloudrefs, **opts)
+            _docloudsync(ui, repo, cloudrefs, **opts)
             return _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -426,7 +426,7 @@ def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
             raise
 
 
-def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
+def _docloudsync(ui, repo, cloudrefs=None, **opts):
     start = time.time()
 
     tokenlocator = commitcloudutil.TokenLocator(ui)
@@ -551,12 +551,15 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             # Push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
 
-            # if we are pushing too much it makes sense to check with the server first
-            nocheckbackeduplimit = ui.configint("commitcloud", "nocheckbackeduplimit")
-
-            # Fast server-side check of what hasn't been pushed yet
-            if checkbackedup or len(newheads) > nocheckbackeduplimit:
-                newheads = serv.filterpushedheads(reponame, newheads)
+            # If there are too many heads to backup,
+            # it is faster to check with the server first
+            backuplimitnocheck = ui.configint("commitcloud", "backuplimitnocheck")
+            if len(newheads) > backuplimitnocheck:
+                newheads = [
+                    head
+                    for head in newheads
+                    if not infinitepush.isbackedup(getconnection, head)
+                ]
 
             # all pushed to the server except maybe obsmarkers
             allpushed = (not newheads) and (localbookmarks == localsyncedbookmarks)
@@ -733,7 +736,7 @@ def cloudrecover(ui, repo, **opts):
     if workspacename is None:
         raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
     state.SyncState.erasestate(repo, workspacename)
-    cloudsync(ui, repo, checkbackedup=True, **opts)
+    cloudsync(ui, repo, **opts)
 
 
 def _applycloudchanges(

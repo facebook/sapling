@@ -41,6 +41,12 @@ Configs::
 
     # Number of backups to list by default in getavailablebackups
     backuplistlimit = 10
+
+    # max number of heads allowed to push without checking what the server has backuped up
+    # pushbackup can partially fail and manage to push some of the stacks
+    # this will prevent repush of that stacks
+    # the option only works if the server supports discovery for draft commits
+    backuplimitnocheck = 4
 """
 from __future__ import absolute_import
 
@@ -75,6 +81,11 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("infinitepushbackup", "backuplimitnocheck", default=4)
 
 osutil = policy.importmod(r"osutil")
 infinitepush = None
@@ -547,16 +558,17 @@ def isbackedup(ui, repo, dest=None, **opts):
     bkpstate = _readlocalbackupstate(ui, repo)
     unfi = repo.unfiltered()
     backeduprevs = unfi.revs("draft() and ::%ls", bkpstate.heads)
-    if remote:
-        other = _getremote(repo, ui, dest, **opts)
+
+    path = _getremotepath(repo, ui, dest)
+
+    def getconnection():
+        return repo.connectionpool.get(path, opts)
+
     for r in scmutil.revrange(unfi, revs):
-        ui.write(_(unfi[r].hex() + " "))
         backedup = r in backeduprevs
         if remote and backedup:
-            try:
-                other.lookup(unfi[r].hex())
-            except error.RepoError:
-                backedup = False
+            backedup = infinitepush.isbackedup(getconnection, unfi[r].hex())
+        ui.write(_(unfi[r].hex() + " "))
         ui.write(_("backed up" if backedup else "not backed up"))
         ui.write(_("\n"))
 
@@ -829,9 +841,19 @@ def _dobackup(ui, repo, dest, **opts):
     def getconnection():
         return repo.connectionpool.get(path, opts)
 
+    backuplimitnocheck = ui.configint("infinitepushbackup", "backuplimitnocheck")
+    backedupheadsremote = set()
+    if len(headstobackup) > backuplimitnocheck:
+        backedupheadsremote = {
+            head
+            for head in headstobackup
+            if infinitepush.isbackedup(getconnection, head)
+        }
+
     newheads, failedheads = infinitepush.pushbackupbundlestacks(
-        ui, repo, getconnection, headstobackup
+        ui, repo, getconnection, headstobackup - backedupheadsremote
     )
+    newheads |= backedupheadsremote
 
     for head in failedheads:
         # We failed to push this head.  Don't remove any backup heads that

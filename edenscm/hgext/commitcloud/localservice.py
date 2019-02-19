@@ -131,11 +131,6 @@ class LocalService(baseservice.BaseService):
         except Exception as e:
             raise commitcloudcommon.UnexpectedError(self._ui, e)
 
-    def filterpushedheads(self, reponame, heads):
-        """Filter heads that have already been pushed to Commit Cloud backend
-        """
-        return heads
-
     def getbundles(self, reponame, heads):
         """Fetch bundles directly
         """
