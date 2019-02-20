@@ -28,6 +28,9 @@ def sendunbundlereplay(ui, **opts):
     Takes `rebasedhook` and `ontobook` arguments on the commmand
     line, and commit dates in stdin. The commit date format is:
     <commithash>=<hg-parseable-date>
+
+    ``sendunbundlereplay.respondlightly`` config option instructs the server
+    to avoid sending large bundle2 parts back.
     """
     fname = opts["file"]
     path = opts["path"]
@@ -43,6 +46,7 @@ def sendunbundlereplay(ui, **opts):
         ["force"],
         remote.url(),
         replay.ReplayData(commitdates, rebasedhead, ontobook),
+        ui.configbool("sendunbundlereplay", "respondlightly", True),
     )
 
     for part in reply.iterparts():

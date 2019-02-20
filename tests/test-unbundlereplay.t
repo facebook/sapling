@@ -1,4 +1,6 @@
   $ . "$TESTDIR/hgsql/library.sh"
+#testcases respondlightly respondfully
+
 Do some initial setup
   $ CACHEDIR=`pwd`/hgcache
   $ cat >> $HGRCPATH <<CONFIG
@@ -85,7 +87,6 @@ Send unbundlereplay with incorrect expected hash
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Expected: (master_bookmark, d2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
@@ -102,7 +103,6 @@ Send unbundlereplay with incorrect expected bookmark
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Expected: (master_bookmark_2, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
@@ -119,7 +119,6 @@ Send unbundlereplay with incorrect commit timestamp
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Expected: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, 893d83f11bf81ce2b895a93d51638d4049d56ce2)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
@@ -136,10 +135,7 @@ Send Unbundlereplay
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
-  bundle2-input-part: total payload size 309
-  bundle2-input-part: total payload size 85
 
 What is the new server state?
   $ log -r "all()"
@@ -205,7 +201,6 @@ Send unbundlereplay with incorrect expected hash to hgsql server
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Expected: (master_bookmark, d2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
@@ -222,7 +217,6 @@ Send unbundlereplay with incorrect expected bookmark to hgsql server
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Expected: (master_bookmark_2, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
@@ -239,14 +233,46 @@ Send unbundlereplay with incorrect commit timestamp to hgsql server
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
-  remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Expected: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, 893d83f11bf81ce2b895a93d51638d4049d56ce2)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
 
+#if respondlightly
 Send correct unbundlereplay to hgsql server
-  $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg --path ssh://user@dummy/server-hgsql --debug --traceback -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark <$TESTTMP/goodcommitdates
+  $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg \
+  > --path ssh://user@dummy/server-hgsql --debug --traceback \
+  > -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark \
+  > --config devel.bundle2.debug=on <$TESTTMP/goodcommitdates
+  running * 'user@dummy' 'hg -R server-hgsql serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: 544
+  remote: capabilities:* unbundlereplay* (glob)
+  remote: 1
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     a0c9c5791058  1
+  remote: [ReplayVerification] Everything seems in order
+  bundle2-input: start processing of HG20 stream
+  bundle2-input: reading bundle2 stream parameters
+  bundle2-input: start extraction of bundle2 parts
+  bundle2-input: part header size: 43
+  bundle2-input: part type: "REPLY:PUSHKEY"
+  bundle2-input: part id: "0"
+  bundle2-input: part parameters: 2
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 0
+  bundle2-input: end of bundle2 stream
+#endif
+
+#if respondfully
+Send correct unbundlereplay to hgsql server
+  $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg \
+  > --path ssh://user@dummy/server-hgsql --debug --traceback \
+  > -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark \
+  > --config devel.bundle2.debug=on \
+  > --config sendunbundlereplay.respondlightly=off <$TESTTMP/goodcommitdates
   running * 'user@dummy' 'hg -R server-hgsql serve --stdio' (glob)
   sending hello command
   sending between command
@@ -258,8 +284,32 @@ Send correct unbundlereplay to hgsql server
   remote:     a0c9c5791058  1
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
+  bundle2-input: start processing of HG20 stream
+  bundle2-input: reading bundle2 stream parameters
+  bundle2-input: start extraction of bundle2 parts
+  bundle2-input: part header size: 29
+  bundle2-input: part type: "CHANGEGROUP"
+  bundle2-input: part id: "0"
+  bundle2-input: part parameters: 1
+  bundle2-input: payload chunk size: 309
+  bundle2-input: payload chunk size: 0
   bundle2-input-part: total payload size 309
+  bundle2-input: part header size: 17
+  bundle2-input: part type: "OBSMARKERS"
+  bundle2-input: part id: "1"
+  bundle2-input: part parameters: 0
+  bundle2-input: payload chunk size: 85
+  bundle2-input: payload chunk size: 0
   bundle2-input-part: total payload size 85
+  bundle2-input: part header size: 43
+  bundle2-input: part type: "REPLY:PUSHKEY"
+  bundle2-input: part id: "2"
+  bundle2-input: part parameters: 2
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 0
+  bundle2-input: end of bundle2 stream
+#endif
+
 
 What is the new hgsql server state?
   $ log -r "all()"

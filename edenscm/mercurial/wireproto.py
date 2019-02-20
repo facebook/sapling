@@ -415,7 +415,7 @@ class wirepeer(repository.legacypeer):
             ret = bundle2.getunbundler(self.ui, stream)
         return ret
 
-    def unbundlereplay(self, cg, heads, url, replaydata):
+    def unbundlereplay(self, cg, heads, url, replaydata, respondlightly):
         """Experimental command for replaying preserved bundles onto hg
 
         Intended to be used for mononoke->hg sync
@@ -431,8 +431,13 @@ class wirepeer(repository.legacypeer):
         else:
             heads = encodelist(heads)
 
+        respondlightly = "1" if respondlightly else "0"
         stream = self._calltwowaystream(
-            "unbundlereplay", cg, heads=heads, replaydata=replaydata.serialize()
+            "unbundlereplay",
+            cg,
+            heads=heads,
+            replaydata=replaydata.serialize(),
+            respondlightly=respondlightly,
         )
         ret = bundle2.getunbundler(self.ui, stream)
         return ret
@@ -1158,8 +1163,8 @@ def streamoption(repo, proto, options):
     return stream(repo, proto)
 
 
-@wireprotocommand("unbundlereplay", "heads replaydata")
-def unbundlereplay(repo, proto, heads, replaydata):
+@wireprotocommand("unbundlereplay", "heads replaydata respondlightly")
+def unbundlereplay(repo, proto, heads, replaydata, respondlightly):
     """Replay the unbunlde content and check if the result matches the
     expectations, supplied in the `replaydata`
 
@@ -1171,10 +1176,10 @@ def unbundlereplay(repo, proto, heads, replaydata):
     """
     proto.redirect()
     replaydata = replay.ReplayData.deserialize(replaydata)
-
-    # TODO(ikostia): currently, we're producing reply parts on the server
-    #                side. Can we avoid doing so?
-    res = unbundleimpl(repo, proto, heads, replaydata=replaydata)
+    respondlightly = True if respondlightly == "1" else False
+    res = unbundleimpl(
+        repo, proto, heads, replaydata=replaydata, respondlightly=respondlightly
+    )
     return res
 
 
@@ -1183,7 +1188,7 @@ def unbundle(repo, proto, heads):
     return unbundleimpl(repo, proto, heads)
 
 
-def unbundleimpl(repo, proto, heads, replaydata=None):
+def unbundleimpl(repo, proto, heads, replaydata=None, respondlightly=False):
     their_heads = decodelist(heads)
 
     try:
@@ -1214,7 +1219,13 @@ def unbundleimpl(repo, proto, heads, replaydata=None):
                 raise error.Abort(bundle2requiredmain, hint=bundle2requiredhint)
 
             r = exchange.unbundle(
-                repo, gen, their_heads, "serve", proto._client(), replaydata=replaydata
+                repo,
+                gen,
+                their_heads,
+                "serve",
+                proto._client(),
+                replaydata=replaydata,
+                respondlightly=respondlightly,
             )
             if util.safehasattr(r, "addpart"):
                 # The return looks streamable, we are in the bundle2 case and

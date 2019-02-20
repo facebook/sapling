@@ -301,9 +301,23 @@ class bundleoperation(object):
     * a way to retrieve a transaction to add changes to the repo,
     * a way to record the result of processing each part,
     * a way to construct a bundle response when applicable.
+    * an indication whether to minimize the response size (`respondlightly`)
+
+    Note that `respondlightly` exists independently of `reply.capabilities`.
+    The latter is built form the `replycaps` bundle2 part and in case of
+    `unbundlereplay` we don't construct the bundle2, but rather just replay
+    the saved one, so we can't change this part. Thus the need for another
+    way of indicating the need to mininize response.
     """
 
-    def __init__(self, repo, transactiongetter, captureoutput=True, replaydata=None):
+    def __init__(
+        self,
+        repo,
+        transactiongetter,
+        captureoutput=True,
+        replaydata=None,
+        respondlightly=False,
+    ):
         self.repo = repo
         self.ui = repo.ui
         self.records = unbundlerecords()
@@ -313,6 +327,8 @@ class bundleoperation(object):
         self._gettransaction = transactiongetter
         # carries value that can modify part behavior
         self.modes = {}
+        # whether to produce response parts
+        self.respondlightly = respondlightly
         self.replaydata = replaydata
         self._addreplayhookargs()
 

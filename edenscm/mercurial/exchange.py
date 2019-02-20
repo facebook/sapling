@@ -2079,7 +2079,7 @@ def check_heads(repo, their_heads, context):
         )
 
 
-def unbundle(repo, cg, heads, source, url, replaydata=None):
+def unbundle(repo, cg, heads, source, url, replaydata=None, respondlightly=False):
     """Apply a bundle to a repo.
 
     this function makes sure the repo is locked during the application and have
@@ -2131,6 +2131,7 @@ def unbundle(repo, cg, heads, source, url, replaydata=None):
                     gettransaction,
                     captureoutput=captureoutput,
                     replaydata=replaydata,
+                    respondlightly=respondlightly,
                 )
                 try:
                     op = bundle2.processbundle(repo, cg, op=op)

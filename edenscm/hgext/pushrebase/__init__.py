@@ -295,7 +295,7 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
     return orig(ui, path, create, **kwargs)
 
 
-def unbundle(orig, repo, cg, heads, source, url, replaydata=None):
+def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly=False):
     # Preload the manifests that the client says we'll need. This happens
     # outside the lock, thus cutting down on our lock time and increasing commit
     # throughput.
@@ -307,7 +307,15 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None):
 
     try:
         start_time = time.time()
-        result = orig(repo, cg, heads, source, url, replaydata=replaydata)
+        result = orig(
+            repo,
+            cg,
+            heads,
+            source,
+            url,
+            replaydata=replaydata,
+            respondlightly=respondlightly,
+        )
         recording.recordpushrebaserequest(
             repo, conflicts=None, pushrebase_errmsg=None, start_time=start_time
         )
@@ -974,6 +982,7 @@ def _addpushbackparts(op, replacements, markers, markerdate, clientobsmarkervers
         op.records[commonheadsparttype]
         and op.reply
         and "pushback" in op.reply.capabilities
+        and not op.respondlightly
     ):
         outgoing = discovery.outgoing(
             op.repo,
