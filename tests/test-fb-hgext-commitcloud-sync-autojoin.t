@@ -48,6 +48,7 @@ But we can manually reconnect
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ cat .hg/store/commitcloudrc
   [commitcloud]
   current_workspace=user/test/default

@@ -417,13 +417,26 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         ):
             currentnode = repo["."].node()
             _docloudsync(ui, repo, cloudrefs, **opts)
-            return _maybeupdateworkingcopy(ui, repo, currentnode)
+            ret = _maybeupdateworkingcopy(ui, repo, currentnode)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
             ui.warn(_("timeout waiting %d sec on backup lock expired\n") % timeout)
             return 2
         else:
             raise
+
+    other = "infinitepush-other"
+    try:
+        path = ui.paths.getpath(other)
+    except error.RepoError:
+        path = None
+
+    if infinitepushbackup and path:
+        highlightdebug(ui, _("starting background backup to %s\n") % path.loc)
+        infinitepushbackup._dobackgroundbackup(
+            ui, repo, other, ["hg", "pushbackup"], **opts
+        )
+    return ret
 
 
 def _docloudsync(ui, repo, cloudrefs=None, **opts):
@@ -670,8 +683,6 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
                     commitcloudutil.clearsyncingobsmarkers(repo)
 
     commitcloudutil.writesyncprogress(repo)
-    elapsed = time.time() - start
-    highlightdebug(ui, _("cloudsync completed in %0.2f sec\n") % elapsed)
     if pushfailures:
         raise commitcloudcommon.SynchronizationError(
             ui, _("%d heads could not be pushed") % len(pushfailures)
@@ -679,6 +690,8 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
     highlightstatus(ui, _("commits synchronized\n"))
     # check that Scm Service is running and a subscription exists
     commitcloudutil.SubscriptionManager(repo).checksubscription()
+    elapsed = time.time() - start
+    ui.status(_("finished in %0.2f sec\n") % elapsed)
 
 
 def _maybeupdateworkingcopy(ui, repo, currentnode):

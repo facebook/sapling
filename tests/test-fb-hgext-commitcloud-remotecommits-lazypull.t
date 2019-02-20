@@ -76,6 +76,7 @@ Make a commit in the first client, and sync it
   remote: pushing 1 commit:
   remote:     1cf4a5a0e8fc  feature1
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ hg amend -m "feature1 renamed"
   $ hg cloud sync
@@ -84,6 +85,7 @@ Make a commit in the first client, and sync it
   remote: pushing 1 commit:
   remote:     b68dd726c6c6  feature1 renamed
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ cd ..
 
@@ -100,6 +102,7 @@ Sync from the second client and `hg unamend` there
   new changesets b68dd726c6c6
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglog
   o  1: b68dd726c6c6 'feature1 renamed'
@@ -137,6 +140,7 @@ Sync from the second client and `hg unamend` there
   remote: pushing 1 commit:
   remote:     1cf4a5a0e8fc  feature1
   #commitcloud commits synchronized
+  finished in * (glob)
   obs-cycle detected (happens for "divergence" cases like A obsoletes B; B obsoletes A)
   #commitcloud current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
   Please run `hg update` to go to the desired revision
@@ -148,6 +152,7 @@ Sync from the second client and `hg unamend` there
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   obs-cycle detected (happens for "divergence" cases like A obsoletes B; B obsoletes A)
   #commitcloud current revision b68dd726c6c6 has been replaced remotely with multiple revisions
   Please run `hg update` to go to the desired revision

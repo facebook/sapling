@@ -81,6 +81,7 @@ Connect the first client
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Make some stacks with various dates.  We will use Feb 1990 for these tests.
 
@@ -128,6 +129,7 @@ Sync these to commit cloud - they all get pushed even though they are old
   remote:     56a352317b67  newstack-feb13
   remote:     7f958333fe84  newstack-feb15
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglogp
   @  6: 7f958333fe84 draft 'newstack-feb15'
@@ -180,6 +182,7 @@ Connect to commit cloud
   new changesets 1c1b7955142c:7f958333fe84
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglogp
   o  4: 7f958333fe84 draft 'newstack-feb15'
@@ -206,6 +209,7 @@ Create a new commit
   remote: pushing 1 commit:
   remote:     ff52de2f760c  client2-feb28
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Sync these commits to the first client - it has everything
   $ cd ../client1
@@ -220,6 +224,7 @@ Sync these commits to the first client - it has everything
   new changesets ff52de2f760c
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  7: ff52de2f760c draft 'client2-feb28'
   |
@@ -243,6 +248,7 @@ Second client can still sync
   $ hgfakedate 1990-02-28T01:22Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   @  5: ff52de2f760c draft 'client2-feb28'
   |
@@ -284,6 +290,7 @@ Add a new commit to a stack on the first client
   remote:     7f958333fe84  newstack-feb15
   remote:     46f8775ee5d4  newstack-feb28
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 4
@@ -310,6 +317,7 @@ Second client syncs that in, but still leaves the old commits missing
   new changesets 46f8775ee5d4
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  6: 46f8775ee5d4 draft 'newstack-feb28'
   |
@@ -359,6 +367,7 @@ First client add a new commit to the old stack
   remote:     d16408588b2d  oldstack-feb4
   remote:     2b8dce7bd745  oldstack-mar4
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 5
@@ -385,6 +394,7 @@ Second client syncs the old stack in, and now has the bookmark
   new changesets 1f9ebd6d1390:2b8dce7bd745
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  9: 2b8dce7bd745 draft 'oldstack-mar4'
   |
@@ -446,6 +456,7 @@ Connect to commit cloud
   new changesets ff52de2f760c:2b8dce7bd745
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ hgfakedate 1990-03-05T12:00Z smartlog -T '{rev}: {node|short} {desc} {bookmarks}' --config infinitepushbackup.autobackup=true
   o  7: 2b8dce7bd745 oldstack-mar4
@@ -477,6 +488,7 @@ Move one of these bookmarks in the first client.
   $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Do a sync in the new client - the bookmark is left where it was
 
@@ -485,6 +497,7 @@ Do a sync in the new client - the bookmark is left where it was
   #commitcloud synchronizing 'server' with 'user/test/default'
   d133b886da6874fe25998d26ae1b2b8528b07c59 not found, omitting oldbook bookmark
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  7: 2b8dce7bd745 draft 'oldstack-mar4'
   |
@@ -525,11 +538,13 @@ Move the bookmark locally - this still gets synced ok.
   $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ cd ../client1
   $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   @  9: 2b8dce7bd745 draft 'oldstack-mar4'
   |
@@ -565,6 +580,7 @@ A full sync pulls the old commits in
   new changesets 1c1b7955142c:d133b886da68
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglogp
   o  9: d133b886da68 draft 'midstack-feb9'
@@ -601,6 +617,7 @@ A part sync omitting everything
   * not found, omitting * bookmark (glob)
   * not found, omitting * bookmark (glob)
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   @  0: df4f53cec30a public 'base'
   
@@ -611,12 +628,14 @@ Remove some of the bookmarks
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Check that it doesn't break cloud sync
   $ cd ../client4
   $ hgfakedate 1990-04-01T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Pull in some of the commits by setting max age manually
   $ hgfakedate 1990-04-01T12:01Z cloud sync --config commitcloud.max_sync_age=30
@@ -630,6 +649,7 @@ Pull in some of the commits by setting max age manually
   new changesets 1f9ebd6d1390:2b8dce7bd745
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  3: 2b8dce7bd745 draft 'oldstack-mar4'
   |
@@ -645,6 +665,7 @@ Create a bookmark with the same name as an omitted bookmark
   $ hgfakedate 1990-04-01T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Sync these changes to client3 - the deleted bookmarks are removed and the
 other bookmark is treated like a move.
@@ -652,6 +673,7 @@ other bookmark is treated like a move.
   $ hgfakedate 1990-04-01T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  9: d133b886da68 draft 'midstack-feb9'
   |

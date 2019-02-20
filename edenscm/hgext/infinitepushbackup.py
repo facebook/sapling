@@ -810,9 +810,12 @@ def _filterbadnodes(ui, repo, heads):
 
 
 def _dobackup(ui, repo, dest, **opts):
-    ui.status(_("starting backup %s\n") % time.strftime("%H:%M:%S %d %b %Y %Z"))
-    start = time.time()
     path = _getremotepath(repo, ui, dest)
+    ui.status(
+        _("starting backup to '%s' at %s\n")
+        % (path, time.strftime("%H:%M:%S %d %b %Y %Z"))
+    )
+    start = time.time()
     # to handle multiple working copies correctly
     currentbkpgenerationvalue = _readbackupgenerationfile(repo.sharedvfs, path)
     newbkpgenerationvalue = ui.configint("infinitepushbackup", "backupgeneration", 0)

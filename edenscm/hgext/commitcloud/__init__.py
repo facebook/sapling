@@ -168,7 +168,9 @@ def _smartlogbackupmessagemap(orig, ui, repo):
 
 
 def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
-    if workspace.currentworkspace(repo):
+    if command:
+        return orig(ui, repo, dest, command, **opts)
+    elif workspace.currentworkspace(repo):
         return orig(ui, repo, dest, ["hg", "cloud", "sync"], **opts)
     elif ui.configbool("commitcloud", "autocloudjoin") and not workspace.disconnected(
         repo
@@ -177,7 +179,7 @@ def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
         # deliberately disconnected, don't automatically rejoin.
         return orig(ui, repo, dest, ["hg", "cloud", "join"], **opts)
     else:
-        return orig(ui, repo, dest, command, **opts)
+        return orig(ui, repo, dest, **opts)
 
 
 def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):

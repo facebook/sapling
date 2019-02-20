@@ -110,6 +110,7 @@ Test for `hg diff --since-last-submit`
   remote: pushing 1 commit:
   remote:     a8080066a666  Differential Revision: https://phabricator.fb.com/
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [{
@@ -138,6 +139,7 @@ Test for `hg diff --since-last-submit`
   remote: pushing 1 commit:
   remote:     95847be64d6a  Differential Revision: https://phabricator.fb.com/
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ cd ..
 
@@ -154,6 +156,7 @@ Test for `hg diff --since-last-submit`
   new changesets 95847be64d6a
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ hg up 95847be64d6a
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -192,6 +195,7 @@ Test for `hg diff --since-last-submit`
   new changesets 95847be64d6a
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ hg up 95847be64d6a
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

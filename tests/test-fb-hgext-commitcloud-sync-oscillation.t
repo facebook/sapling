@@ -68,6 +68,7 @@ Connect the first client
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Make some commits
   $ hg debugdrawdag <<EOS
@@ -91,6 +92,7 @@ Make some commits
   remote:     27ad02806080  E
   remote:     878302dcadc7  G
   #commitcloud commits synchronized
+  finished in * (glob)
   $ tglogp
   o  7: 878302dcadc7 draft 'G'
   |
@@ -158,6 +160,7 @@ Connect to commit cloud
   new changesets 64b4d9634423:878302dcadc7
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
 
 Syncing in the two repos causes the commits to be revived, and the cloud
 workspace does not oscillate between the two views.
@@ -166,6 +169,7 @@ workspace does not oscillate between the two views.
   $ hg -R client1 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ python dumpcommitcloudmetadata.py
   version: 2
   bookmarks:
@@ -176,6 +180,7 @@ workspace does not oscillate between the two views.
   $ hg -R client2 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ python dumpcommitcloudmetadata.py
   version: 2
   bookmarks:
@@ -186,6 +191,7 @@ workspace does not oscillate between the two views.
   $ hg -R client1 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ python dumpcommitcloudmetadata.py
   version: 2
   bookmarks:
@@ -196,6 +202,7 @@ workspace does not oscillate between the two views.
   $ hg -R client2 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ python dumpcommitcloudmetadata.py
   version: 2
   bookmarks:
