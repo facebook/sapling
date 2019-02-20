@@ -65,6 +65,7 @@ start mononoke
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'client1' repo
   #commitcloud synchronizing 'client1' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ hgmn up master_bookmark -q
   $ cd ../client2
   $ hgmn cloud auth -t xxxxxx
@@ -74,6 +75,7 @@ start mononoke
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'client2' repo
   #commitcloud synchronizing 'client2' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ hgmn up master_bookmark -q
 
 
@@ -87,6 +89,7 @@ Make commits in the first client, and sync it
   backing up stack rooted at 660cb078da57
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglogp
   @  3: 44641a2b1a42 draft 'commit3'
@@ -112,6 +115,7 @@ Sync from the second client - the commits should appear
   new changesets 660cb078da57:44641a2b1a42
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglogp
   o  3: 44641a2b1a42 draft 'commit3'
@@ -132,6 +136,7 @@ Make commits from the second client and sync it
   backing up stack rooted at 15f040cf571c
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   #commitcloud commits synchronized
+  finished in * (glob)
 
 
 On the first client, make a bookmark, then sync - the bookmark and the new commits should be synced
@@ -149,6 +154,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   new changesets 15f040cf571c:58508421158d
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
 
   $ tglogp
   o  6: 58508421158d draft 'commit6'
@@ -177,6 +183,7 @@ On the first client rebase the stack
   backing up stack rooted at 660cb078da57
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   #commitcloud commits synchronized
+  finished in * (glob)
 
 
 On the second client sync it
@@ -194,6 +201,7 @@ On the second client sync it
   new changesets f0345b3976c9:8e3f03f8d9db
   (run 'hg update' to get a working copy)
   #commitcloud commits synchronized
+  finished in * (glob)
   #commitcloud current revision 58508421158d has been moved remotely to 8e3f03f8d9db
   updating to 8e3f03f8d9db
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -228,6 +236,7 @@ On the second client hide all draft commits
   $ hgmn cloud sync
   #commitcloud synchronizing 'client2' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ hgmn up master_bookmark -q
 
   $ tglogp
@@ -239,6 +248,7 @@ On the first client check that all commits were hidden
   $ hgmn cloud sync
   #commitcloud synchronizing 'client1' with 'user/test/default'
   #commitcloud commits synchronized
+  finished in * (glob)
   $ hgmn up master_bookmark -q
 
   $ tglogp
@@ -292,6 +302,7 @@ Make one of the commits public when it shouldn't be.
   searching for changes
   backing up stack rooted at 77a917e6c3a5
   #commitcloud commits synchronized
+  finished in * (glob)
 
 
 Commit still becomes available in the other repo
@@ -308,6 +319,7 @@ Commit still becomes available in the other repo
   new changesets * (glob)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
+  finished in * (glob)
 
 # Mononoke order is not stable, so the stacks print stacks separately
   $ tglogpnr -r "::ec61bf312a03 - ::master_bookmark"
