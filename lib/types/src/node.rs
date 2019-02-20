@@ -62,6 +62,10 @@ impl Node {
         Ok(Node(fixed_bytes))
     }
 
+    pub fn from_byte_array(bytes: [u8; 20]) -> Self {
+        Node(bytes)
+    }
+
     // Taken from Mononoke
     pub fn from_str(s: &str) -> Fallible<Self> {
         if s.len() != 40 {
