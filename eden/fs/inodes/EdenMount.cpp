@@ -379,10 +379,6 @@ void EdenMount::transitionState(State expected, State newState) {
   }
 }
 
-void EdenMount::unconditionallySetState(State newState) noexcept {
-  state_.store(newState, std::memory_order_release);
-}
-
 void EdenMount::transitionToFuseInitializationErrorState() {
   auto oldState = State::STARTING;
   auto newState = State::FUSE_ERROR;
@@ -426,9 +422,7 @@ void EdenMount::destroy() {
         delete this;
       } else {
         // Call shutdownImpl() to destroy all loaded inodes.
-        shutdownImpl(/*doTakeover=*/false).thenValue([this](auto&&) {
-          delete this;
-        });
+        shutdownImpl(/*doTakeover=*/false);
       }
       return;
     }
@@ -436,11 +430,8 @@ void EdenMount::destroy() {
     case State::RUNNING:
     case State::STARTING:
     case State::FUSE_ERROR: {
-      // Call shutdownImpl() to destroy all loaded inodes,
-      // and delete ourselves when it completes.
-      shutdownImpl(/*doTakeover=*/false).thenValue([this](auto&&) {
-        delete this;
-      });
+      // Call shutdownImpl() to destroy all loaded inodes.
+      shutdownImpl(/*doTakeover=*/false);
       return;
     }
     case State::SHUTTING_DOWN:
@@ -491,7 +482,11 @@ Future<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
         // released the lock before the new edenfs process begins to take over
         // the mount point.
         overlay_->close();
-        unconditionallySetState(State::SHUT_DOWN);
+        auto oldState =
+            state_.exchange(State::SHUT_DOWN, std::memory_order_acq_rel);
+        if (oldState == State::DESTROYING) {
+          delete this;
+        }
         return inodeMap;
       });
 }

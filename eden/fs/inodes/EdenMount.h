@@ -546,13 +546,6 @@ class EdenMount {
   void transitionState(State expected, State newState);
 
   /**
-   * Unconditionally transition to a new state, regardless of the current state.
-   *
-   * This is primarily used for transitioning to error states.
-   */
-  void unconditionallySetState(State newState) noexcept;
-
-  /**
    * Transition from the STARTING state to the FUSE_ERROR state.
    *
    * Preconditions:

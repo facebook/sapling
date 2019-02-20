@@ -86,6 +86,32 @@ class FailingMountDelegate : public FakePrivHelper::MountDelegate {
 
   folly::Future<folly::File> fuseMount() override;
 };
+
+class EdenMountShutdownBlocker {
+ public:
+  /**
+   * Mark the EdenMount as 'in use', preventing the Future returned by
+   * EdenMount::shutdown() from becoming ready with a value.
+   */
+  static EdenMountShutdownBlocker preventShutdownFromCompleting(EdenMount&);
+
+  /**
+   * Allow the Future returned by EdenMount::shutdown() to becoming ready with a
+   * value.
+   *
+   * When this function returns, there is no guarantee that the Future will be
+   * ready. (Something else might prevent the shutdown process from completing.)
+   */
+  void allowShutdownToComplete();
+
+ private:
+  explicit EdenMountShutdownBlocker(InodePtr inode) noexcept;
+
+  EdenMountShutdownBlocker(const EdenMountShutdownBlocker&) = delete;
+  EdenMountShutdownBlocker& operator=(const EdenMountShutdownBlocker&) = delete;
+
+  InodePtr inode;
+};
 } // namespace
 
 TEST(EdenMount, initFailure) {
@@ -550,25 +576,53 @@ TEST_F(ChownTest, LoadedInode) {
   expectChownSucceeded();
 }
 
+TEST(EdenMount, destroyDeletesObjectAfterInProgressShutdownCompletes) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto mountDestroyDetector = EdenMountDestroyDetector{testMount};
+  std::shared_ptr<EdenMount>& mount = testMount.getEdenMount();
+
+  auto shutdownBlocker =
+      EdenMountShutdownBlocker::preventShutdownFromCompleting(*mount);
+
+  auto shutdownFuture =
+      mount->shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true);
+  mount.reset();
+  EXPECT_TRUE(mountDestroyDetector.mountIsAlive())
+      << "EdenMount object should be alive during EdenMount::shutdown";
+
+  shutdownBlocker.allowShutdownToComplete();
+  std::move(shutdownFuture).get(kTimeout);
+  EXPECT_TRUE(mountDestroyDetector.mountIsDeleted())
+      << "EdenMount object should be deleted during EdenMount::shutdown";
+}
+
 TEST(
     EdenMount,
-    destroyDoesNotCrashIfInProgressFuseConnectionIsCancelledAfterShutdown) {
-  // TODO(strager): Delete this test after refactoring EdenMount::destroy.
-
+    destroyDeletesObjectIfInProgressFuseConnectionIsCancelledDuringShutdown) {
   auto testMount = TestMount{FakeTreeBuilder{}};
+  auto mountDestroyDetector = EdenMountDestroyDetector{testMount};
   std::shared_ptr<EdenMount>& mount = testMount.getEdenMount();
+
+  auto shutdownBlocker =
+      EdenMountShutdownBlocker::preventShutdownFromCompleting(*mount);
 
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
   auto startFuseFuture = mount->startFuse();
 
-  mount->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)
-      .get(kTimeout);
-
+  mount.reset();
   fuse->close();
-  logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
 
-  EXPECT_NO_THROW({ mount.reset(); });
+  // TODO(strager): Ensure mount is only destroyed after startFuseFuture is
+  // ready. (I.e. if FuseChannel::initialize is in progress,
+  // EdenMount::~EdenMount should not be called.)
+
+  logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
+  EXPECT_TRUE(mountDestroyDetector.mountIsAlive())
+      << "Eden mount should be alive during EdenMount::destroy despite failure in startFuse";
+
+  shutdownBlocker.allowShutdownToComplete();
+  EXPECT_TRUE(mountDestroyDetector.mountIsDeleted());
 }
 
 TEST(EdenMountState, mountIsUninitializedAfterConstruction) {
@@ -742,4 +796,18 @@ void MountPromiseDelegate::setException(Exception&& exception) {
 folly::Future<folly::File> FailingMountDelegate::fuseMount() {
   return folly::makeFuture<folly::File>(MountFailed{});
 }
+
+EdenMountShutdownBlocker
+EdenMountShutdownBlocker::preventShutdownFromCompleting(EdenMount& mount) {
+  auto inode = mount.getInodeMap()->getRootInode();
+  CHECK(inode);
+  return EdenMountShutdownBlocker{std::move(inode)};
+}
+
+void EdenMountShutdownBlocker::allowShutdownToComplete() {
+  inode.reset();
+}
+
+EdenMountShutdownBlocker::EdenMountShutdownBlocker(InodePtr inode) noexcept
+    : inode{std::move(inode)} {}
 } // namespace
