@@ -1520,6 +1520,13 @@ Setting used to control when to paginate and with what external tool. See
       [pager]
       ignore = version, help, update
 
+``stderr``
+    Whether to redirect error messages to the pager.
+
+    If set to false, Mercurial will continue to output error messages and
+    progress bars to stderr while the pager is running.  Depending on the
+    pager, this may overlay the pager display.
+
 ``patch``
 ---------
 

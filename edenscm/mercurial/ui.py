@@ -1018,7 +1018,7 @@ class ui(object):
         stderrfd = os.dup(util.stderr.fileno())
 
         os.dup2(pager.stdin.fileno(), util.stdout.fileno())
-        if self._isatty(util.stderr):
+        if self._isatty(util.stderr) and self.configbool("pager", "stderr"):
             os.dup2(pager.stdin.fileno(), util.stderr.fileno())
 
         @self.atexit
