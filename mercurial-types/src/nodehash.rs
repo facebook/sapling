@@ -16,6 +16,9 @@ use serde;
 use slog;
 use thrift;
 
+/// The node type from Mercurial's Rust code.
+use types::node::Node as HgTypesNode;
+
 use errors::*;
 use hash::{self, Sha1};
 use RepoPath;
@@ -113,6 +116,12 @@ impl From<Option<HgNodeHash>> for HgNodeHash {
             None => NULL_HASH,
             Some(h) => h,
         }
+    }
+}
+
+impl From<HgNodeHash> for HgTypesNode {
+    fn from(node: HgNodeHash) -> Self {
+        HgTypesNode::from_byte_array(node.0.into_byte_array())
     }
 }
 

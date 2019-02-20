@@ -83,6 +83,9 @@ extern crate mercurial_thrift;
 extern crate mononoke_types;
 extern crate mononoke_types_thrift;
 
+// Types from Mercurial client.
+extern crate types;
+
 pub mod bdiff;
 pub mod blob;
 pub mod blobnode;

@@ -61,6 +61,12 @@ impl Sha1 {
         Sha1(arr)
     }
 
+    /// Extract this hash's underlying byte array.
+    #[inline]
+    pub(crate) fn into_byte_array(self) -> [u8; 20] {
+        self.0
+    }
+
     /// Construct a `Sha1` from a hex-encoded `AsciiStr`.
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<Sha1> {
