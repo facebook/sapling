@@ -72,7 +72,7 @@ Create a server with different name that connects to the same db
 
 Go to client, delete backup state and run pushbackup. Make sure that it doesn't delete entries from another repo
   $ cd ../client
-  $ rm .hg/infinitepushbackupstate
+  $ rm -r .hg/infinitepushbackups
   $ hg pushbackup
   starting backup .* (re)
   backing up stack rooted at 67145f466344

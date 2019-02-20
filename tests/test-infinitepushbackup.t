@@ -320,6 +320,14 @@ Backup to different path
   $ hg book somebook
   $ hg --config paths.default=brokenpath pushbackup
   starting backup .* (re)
+  backing up stack rooted at 94a60f5ad8b2
+  push failed: repository $TESTTMP/client/brokenpath not found
+  retrying push with discovery
+  push of head d5609f7fa633 failed: repository $TESTTMP/client/brokenpath not found
+  backing up stack rooted at 3a30e220fe42
+  push failed: repository $TESTTMP/client/brokenpath not found
+  retrying push with discovery
+  push of head 3a30e220fe42 failed: repository $TESTTMP/client/brokenpath not found
   finished in \d+\.(\d+)? seconds (re)
   abort: repository $TESTTMP/client/brokenpath not found!
   [255]
@@ -449,7 +457,7 @@ Local state still shows it as backed up, but can check the remote
   6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
 
 Delete backup state file and try again
-  $ rm .hg/infinitepushbackupstate
+  $ rm -r .hg/infinitepushbackups
   $ hg isbackedup -r . -r 630839011471e17
   6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
   630839011471e17f808b92ab084bedfaca33b110 not backed up
@@ -490,18 +498,18 @@ Next backup with the same backup generation value should not trigger full backup
   starting backup .* (re)
   nothing to backup
   finished in \d+\.(\d+)? seconds (re)
-  $ cat .hg/infinitepushbackupgeneration
+  $ cat .hg/infinitepushbackups/infinitepushbackupgeneration*
   1 (no-eol)
 
 Print garbage to infinitepushbackupgeneration file, make sure backup works fine
-  $ echo 'garbage' > .hg/infinitepushbackupgeneration
+  $ echo 'garbage' > .hg/infinitepushbackups/infinitepushbackupgeneration*
   $ hg pushbackup
   starting backup .* (re)
   nothing to backup
   finished in \d+\.(\d+)? seconds (re)
 
 Delete infinitepushbackupstate and set backupgeneration. Make sure it doesn't fail
-  $ rm .hg/infinitepushbackupstate
+  $ rm -r .hg/infinitepushbackups
   $ hg pushbackup --config infinitepushbackup.backupgeneration=2
   starting backup * (glob)
   backing up stack rooted at cf2adfba1469
@@ -510,7 +518,7 @@ Delete infinitepushbackupstate and set backupgeneration. Make sure it doesn't fa
   finished in * seconds (glob)
 
 Test hostname option
-  $ rm .hg/infinitepushbackupstate
+  $ rm -r .hg/infinitepushbackups
   $ hg pushbackup --config infinitepushbackup.hostname=hostname
   starting backup * (glob)
   backing up stack rooted at cf2adfba1469
@@ -522,10 +530,10 @@ Test hostname option
   infinitepush/backups/test/hostname$TESTTMP/client/heads/cf2adfba146909529bcca8c1626de6b4d9e73846 cf2adfba146909529bcca8c1626de6b4d9e73846
 
 Malformed backup state file
-  $ echo rubbish > .hg/infinitepushbackupstate
+  $ echo rubbish > .hg/infinitepushbackups/infinitepushbackupstate*
   $ hg pushbackup
   starting backup * (glob)
-  corrupt file: infinitepushbackupstate (No JSON object could be decoded)
+  corrupt file: infinitepushbackups/infinitepushbackupstate* (No JSON object could be decoded) (glob)
   backing up stack rooted at cf2adfba1469
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone

@@ -53,6 +53,7 @@ from __future__ import absolute_import
 import collections
 import ConfigParser
 import errno
+import hashlib
 import json
 import os
 import re
@@ -160,9 +161,7 @@ def extsetup(ui):
     infinitepush = infinitepushmod
 
     # Allow writing backup files outside the normal lock
-    localrepo.localrepository._wlockfreeprefix.update(
-        [_backupstatefile, _backupgenerationfile]
-    )
+    localrepo.localrepository._wlockfreeprefix.add("infinitepushbackups/")
 
     if autobackupenabled(ui):
         extensions.wrapfunction(dispatch, "runcommand", _autobackupruncommandwrapper)
@@ -340,6 +339,7 @@ def restore(ui, repo, dest=None, **opts):
     options are used to disambiguate.
     """
 
+    path = _getremotepath(repo, ui, dest)
     other = _getremote(repo, ui, dest, **opts)
 
     sourcereporoot = opts.get("reporoot")
@@ -386,7 +386,7 @@ def restore(ui, repo, dest=None, **opts):
     # manually write local backup state and flag to not autobackup
     # just after we restored, which would be pointless
     _writelocalbackupstate(
-        repo.sharedvfs, backupstate.heads.values(), backupstate.localbookmarks
+        repo.sharedvfs, path, backupstate.heads.values(), backupstate.localbookmarks
     )
     repo.ignoreautobackup = True
 
@@ -555,11 +555,11 @@ def isbackedup(ui, repo, dest=None, **opts):
     remote = opts.get("remote")
     if not revs:
         revs = ["."]
-    bkpstate = _readlocalbackupstate(ui, repo)
-    unfi = repo.unfiltered()
-    backeduprevs = unfi.revs("draft() and ::%ls", bkpstate.heads)
 
     path = _getremotepath(repo, ui, dest)
+    bkpstate = _readlocalbackupstate(ui, repo, path)
+    unfi = repo.unfiltered()
+    backeduprevs = unfi.revs("draft() and ::%ls", bkpstate.heads)
 
     def getconnection():
         return repo.connectionpool.get(path, opts)
@@ -589,14 +589,14 @@ def isbackedup(ui, repo, dest=None, **opts):
 def backedup(repo, subset, x):
     """Draft changesets that have been backed up by infinitepush"""
     unfi = repo.unfiltered()
-    bkpstate = _readlocalbackupstate(repo.ui, repo)
+    bkpstate = _readlocalbackupstate(repo.ui, repo, _getremotepath(repo, repo.ui, None))
     return subset & unfi.revs("draft() and ::%ls and not hidden()", bkpstate.heads)
 
 
 @revsetpredicate("notbackedup")
 def notbackedup(repo, subset, x):
     """Changesets that have not yet been backed up by infinitepush"""
-    bkpstate = _readlocalbackupstate(repo.ui, repo)
+    bkpstate = _readlocalbackupstate(repo.ui, repo, _getremotepath(repo, repo.ui, None))
     bkpheads = set(bkpstate.heads)
     candidates = set(_backupheads(repo.ui, repo))
     notbackeduprevs = set()
@@ -812,14 +812,16 @@ def _filterbadnodes(ui, repo, heads):
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_("starting backup %s\n") % time.strftime("%H:%M:%S %d %b %Y %Z"))
     start = time.time()
+    path = _getremotepath(repo, ui, dest)
     # to handle multiple working copies correctly
-    currentbkpgenerationvalue = _readbackupgenerationfile(repo.sharedvfs)
+    currentbkpgenerationvalue = _readbackupgenerationfile(repo.sharedvfs, path)
     newbkpgenerationvalue = ui.configint("infinitepushbackup", "backupgeneration", 0)
     if currentbkpgenerationvalue != newbkpgenerationvalue:
         # Unlinking local backup state will trigger re-backuping
-        _deletebackupstate(repo)
-        _writebackupgenerationfile(repo.sharedvfs, newbkpgenerationvalue)
-    bkpstate = _readlocalbackupstate(ui, repo)
+        _deletebackupstate(repo, path)
+        _writebackupgenerationfile(repo.sharedvfs, path, newbkpgenerationvalue)
+
+    bkpstate = _readlocalbackupstate(ui, repo, path)
 
     # Work out what the heads and bookmarks to backup are.
     headstobackup = _backupheads(ui, repo)
@@ -848,7 +850,6 @@ def _dobackup(ui, repo, dest, **opts):
     headstobackup -= backedupheads
 
     # Push bundles for all of the commits, one stack at a time.
-    path = _getremotepath(repo, ui, dest)
 
     def getconnection():
         return repo.connectionpool.get(path, opts)
@@ -905,6 +906,7 @@ def _dobackup(ui, repo, dest, **opts):
                 ui.debug("heads removed: %s\n" % ", ".join(removedheads))
                 _writelocalbackupstate(
                     repo.sharedvfs,
+                    path,
                     list((set(bkpstate.heads) | newheads) - removedheads),
                     backupbookmarks,
                 )
@@ -1258,19 +1260,38 @@ def _getinfinitepushbookmarks(
     return infinitepushbookmarks
 
 
-def _localbackupstateexists(repo):
-    return repo.sharedvfs.exists(_backupstatefile)
+def _localbackupstatepath(remotepath):
+    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
+    return os.path.join("infinitepushbackups", _backupstatefile + "_" + hash)
 
 
-def _deletebackupstate(repo):
-    return repo.sharedvfs.tryunlink(_backupstatefile)
+def _localbackupgenerationpath(remotepath):
+    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
+    return os.path.join("infinitepushbackups", _backupgenerationfile + "_" + hash)
 
 
-def _readlocalbackupstate(ui, repo):
-    if not _localbackupstateexists(repo):
+def _localbackupstateexists(repo, remotepath):
+    # migration
+    if repo.sharedvfs.exists(_backupstatefile):
+        with repo.sharedvfs(_backupstatefile) as old:
+            with repo.sharedvfs(_localbackupstatepath(remotepath), "w") as new:
+                new.write(old.read())
+        repo.sharedvfs.tryunlink(_backupstatefile)
+
+    return repo.sharedvfs.exists(_localbackupstatepath(remotepath))
+
+
+def _deletebackupstate(repo, remotepath):
+    return repo.sharedvfs.tryunlink(_localbackupstatepath(remotepath))
+
+
+def _readlocalbackupstate(ui, repo, remotepath):
+    if not _localbackupstateexists(repo, remotepath):
         return backupstate()
 
-    with repo.sharedvfs(_backupstatefile) as f:
+    backupstatefile = _localbackupstatepath(remotepath)
+
+    with repo.sharedvfs(backupstatefile) as f:
         try:
             state = json.loads(f.read())
             if not isinstance(state["bookmarks"], dict) or not isinstance(
@@ -1283,26 +1304,38 @@ def _readlocalbackupstate(ui, repo):
             result.localbookmarks = state["bookmarks"]
             return result
         except (ValueError, KeyError, TypeError) as e:
-            ui.warn(_("corrupt file: %s (%s)\n") % (_backupstatefile, e))
+            ui.warn(_("corrupt file: %s (%s)\n") % (backupstatefile, e))
             return backupstate()
     return backupstate()
 
 
-def _writelocalbackupstate(vfs, heads, bookmarks):
-    with vfs(_backupstatefile, "w") as f:
+def _writelocalbackupstate(vfs, remotepath, heads, bookmarks):
+    # migration
+    if vfs.exists(_backupstatefile):
+        with vfs(_backupstatefile) as old:
+            with vfs(_localbackupstatepath(remotepath), "w") as new:
+                new.write(old.read())
+        vfs.tryunlink(_backupstatefile)
+    with vfs(_localbackupstatepath(remotepath), "w") as f:
         f.write(json.dumps({"heads": list(heads), "bookmarks": bookmarks}))
 
 
-def _readbackupgenerationfile(vfs):
+def _readbackupgenerationfile(vfs, remotepath):
     try:
-        with vfs(_backupgenerationfile) as f:
+        # migration
+        if vfs.exists(_backupgenerationfile):
+            with vfs(_backupgenerationfile) as old:
+                with vfs(_localbackupgenerationpath(remotepath), "w") as new:
+                    new.write(old.read())
+            vfs.tryunlink(_backupgenerationfile)
+        with vfs(_localbackupgenerationpath(remotepath)) as f:
             return int(f.read())
     except (IOError, OSError, ValueError):
         return 0
 
 
-def _writebackupgenerationfile(vfs, backupgenerationvalue):
-    with vfs(_backupgenerationfile, "w", atomictemp=True) as f:
+def _writebackupgenerationfile(vfs, remotepath, backupgenerationvalue):
+    with vfs(_localbackupgenerationpath(remotepath), "w", atomictemp=True) as f:
         f.write(str(backupgenerationvalue))
 
 

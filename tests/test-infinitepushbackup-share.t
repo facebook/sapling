@@ -27,7 +27,8 @@ Clone client
 
 Write smth to backup state file in the shared working copy to check that
 it's not read by infinitepush backup client
-  $ echo 'rubbish' > .hg/infinitepushbackupstate
+  $ mkdir .hg/infinitepushbackups
+  $ echo 'rubbish' > .hg/infinitepushbackups/infinitepushbackupstate_f6bce706
   $ hg pushbackup
   starting backup .* (re)
   backing up stack rooted at b75a450e74d5
@@ -38,9 +39,9 @@ it's not read by infinitepush backup client
   infinitepush/backups/test/*$TESTTMP/client/heads/b75a450e74d5a7708da8c3144fbeb4ac88694044 b75a450e74d5a7708da8c3144fbeb4ac88694044 (glob)
 
 Make sure that backup state is saved only on the "main" repo
-  $ cat .hg/infinitepushbackupstate
+  $ cat .hg/infinitepushbackups/infinitepushbackupstate_f6bce706
   rubbish
-  $ [ -f ../client/.hg/infinitepushbackupstate ]
+  $ [ -f ../client/.hg/infinitepushbackups/infinitepushbackupstate_f6bce706 ]
 
 Make sure that isbackedup references the main repo
   $ hg isbackedup -r :

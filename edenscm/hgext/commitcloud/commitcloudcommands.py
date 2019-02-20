@@ -462,6 +462,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
                 )
 
     lastsyncstate = state.SyncState(repo, workspacename)
+    path = commitcloudutil.getremotepath(repo, ui, None)
 
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
@@ -488,7 +489,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
     pushfailures = set()
     while not synced:
         if cloudrefs.version != fetchversion:
-            _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, pullfn, maxage)
+            _applycloudchanges(ui, repo, path, lastsyncstate, cloudrefs, pullfn, maxage)
 
         # Check if any omissions are now included in the repo
         _checkomissions(ui, repo, lastsyncstate)
@@ -543,7 +544,6 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
         if not synced:
             # The local repo has changed.  We must send these changes to the
             # cloud.
-            path = commitcloudutil.getremotepath(repo, ui, None)
 
             def getconnection():
                 return repo.connectionpool.get(path, opts)
@@ -619,7 +619,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             # referenced commits have been pushed to the server.
             if not allpushed:
                 pushbackupbookmarks(
-                    ui, repo, getconnection, localheads, localbookmarks, **opts
+                    ui, repo, path, getconnection, localheads, localbookmarks, **opts
                 )
 
             # Work out the new cloud heads and bookmarks by merging in the
@@ -739,7 +739,7 @@ def cloudrecover(ui, repo, **opts):
 
 
 def _applycloudchanges(
-    ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None, maxage=None
+    ui, repo, remotepath, lastsyncstate, cloudrefs, directfetchingfn=None, maxage=None
 ):
     pullcmd, pullopts = _getcommandandoptions("^pull")
 
@@ -832,7 +832,7 @@ def _applycloudchanges(
 
     # Also update infinitepush state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
-    recordbackup(ui, repo, newheads)
+    recordbackup(ui, repo, remotepath, newheads)
 
 
 def _checkomissions(ui, repo, lastsyncstate):
@@ -1048,7 +1048,9 @@ def finddestinationnode(repo, node, visited=set()):
     return None
 
 
-def pushbackupbookmarks(ui, repo, getconnection, localheads, localbookmarks, **opts):
+def pushbackupbookmarks(
+    ui, repo, remotepath, getconnection, localheads, localbookmarks, **opts
+):
     """
     Push a backup bundle to the server that updates the infinitepush backup
     bookmarks.
@@ -1080,19 +1082,19 @@ def pushbackupbookmarks(ui, repo, getconnection, localheads, localbookmarks, **o
 
         # Update the infinitepush local state.
         infinitepushbackup._writelocalbackupstate(
-            repo.sharedvfs, list(localheads), localbookmarks
+            repo.sharedvfs, remotepath, list(localheads), localbookmarks
         )
 
 
-def recordbackup(ui, repo, newheads):
+def recordbackup(ui, repo, remotepath, newheads):
     """Record that the given heads are already backed up."""
     if infinitepushbackup is None:
         return
 
-    backupstate = infinitepushbackup._readlocalbackupstate(ui, repo)
+    backupstate = infinitepushbackup._readlocalbackupstate(ui, repo, remotepath)
     backupheads = set(backupstate.heads) | set(newheads)
     infinitepushbackup._writelocalbackupstate(
-        repo.sharedvfs, list(backupheads), backupstate.localbookmarks
+        repo.sharedvfs, remotepath, list(backupheads), backupstate.localbookmarks
     )
 
 

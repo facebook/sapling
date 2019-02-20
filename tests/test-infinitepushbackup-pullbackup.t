@@ -58,7 +58,7 @@ Restore
 Check that autobackup doesn't happen on pullbackup. Logs should be empty and backupstate should be correct
   $ test -f $TESTTMP/logs/test/*
   [1]
-  $ python -c "import sys; import json; bst = json.loads(sys.stdin.read()); print(bst['bookmarks'], bst['heads'])" < restored/.hg/infinitepushbackupstate
+  $ python -c "import sys; import json; bst = json.loads(sys.stdin.read()); print(bst['bookmarks'], bst['heads'])" < restored/.hg/infinitepushbackups/infinitepushbackupstate_f6bce706
   ({u'abook': u'89ecc969c0ac7d7344728f1255250df7c54a56af'}, [u'89ecc969c0ac7d7344728f1255250df7c54a56af'])
 
 
@@ -159,6 +159,10 @@ Check that correct path is used in pushbackup
   $ hg book badpathbookmark
   $ hg --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo pushbackup
   starting backup .* (re)
+  backing up stack rooted at 89ecc969c0ac
+  push failed: repository $TESTTMP/backupsource/badpath not found
+  retrying push with discovery
+  push of head 89ecc969c0ac failed: repository $TESTTMP/backupsource/badpath not found
   finished in \d+\.(\d+)? seconds (re)
   abort: repository $TESTTMP/backupsource/badpath not found!
   [255]
