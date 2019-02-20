@@ -36,11 +36,13 @@ use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use slog::Logger;
 use stats::*;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
-use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
+use hooks::HookManager;
+use hooks_run_result_logging::log_results_of_hooks;
 use phases::{Phase, Phases};
 use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
@@ -339,28 +341,14 @@ fn resolve_pushrebase(
             cloned!(ctx, resolver);
             move |(changesets, bookmark_push_part_id, onto_params, maybe_raw_bundle2_id)| {
                 resolver
-                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto_params.bookmark)
+                    .run_hooks(
+                        ctx.clone(),
+                        changesets.clone(),
+                        maybe_pushvars,
+                        &onto_params.bookmark,
+                    )
                     .map_err(|err| match err {
-                        RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
-                            let mut err_msgs = vec![];
-                            for (exec_id, exec_info) in cs_hook_failures {
-                                if let HookExecution::Rejected(info) = exec_info {
-                                    err_msgs.push(format!(
-                                        "{} for {}: {}",
-                                        exec_id.hook_name, exec_id.cs_id, info.description
-                                    ));
-                                }
-                            }
-                            for (exec_id, exec_info) in file_hook_failures {
-                                if let HookExecution::Rejected(info) = exec_info {
-                                    err_msgs.push(format!(
-                                        "{} for {}: {}",
-                                        exec_id.hook_name, exec_id.cs_id, info.description
-                                    ));
-                                }
-                            }
-                            err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
-                        }
+                        RunHooksError::Failures => err_msg("hooks failed"),
                         RunHooksError::Error(err) => err,
                     })
                     .and_then(move |()| {
@@ -372,17 +360,19 @@ fn resolve_pushrebase(
                     })
             }
         })
-        .and_then(move |(pushrebased_rev, onto_params, bookmark_push_part_id)| {
-            resolver.prepare_pushrebase_response(
-                ctx,
-                commonheads,
-                pushrebased_rev,
-                onto_params.bookmark,
-                lca_hint,
-                phases_hint,
-                bookmark_push_part_id,
-            )
-        })
+        .and_then(
+            move |(pushrebased_rev, onto_params, bookmark_push_part_id)| {
+                resolver.prepare_pushrebase_response(
+                    ctx,
+                    commonheads,
+                    pushrebased_rev,
+                    onto_params.bookmark,
+                    lca_hint,
+                    phases_hint,
+                    bookmark_push_part_id,
+                )
+            },
+        )
         .boxify()
 }
 
@@ -1239,7 +1229,7 @@ impl Bundle2Resolver {
     ) -> BoxFuture<(), RunHooksError> {
         // TODO: should we also accept the Option<BookmarkPush> and run hooks on that?
         let mut futs = stream::FuturesUnordered::new();
-        for (hg_cs_id, _) in changesets {
+        for (hg_cs_id, revlog_cs) in changesets {
             futs.push(
                 self.hook_manager
                     .run_changeset_hooks_for_bookmark(
@@ -1253,37 +1243,35 @@ impl Bundle2Resolver {
                         hg_cs_id,
                         onto_bookmark,
                         pushvars.clone(),
-                    )),
+                    ))
+                    .map(move |(cs_res, files_res)| (hg_cs_id, revlog_cs, cs_res, files_res)),
             )
         }
         futs.collect()
             .from_err()
-            .and_then(|res| {
-                let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) =
-                    res.into_iter().unzip();
-                let cs_hook_failures: Vec<(ChangesetHookExecutionID, HookExecution)> =
-                    cs_hook_results
-                        .into_iter()
-                        .flatten()
-                        .filter(|(_, exec)| match exec {
-                            HookExecution::Accepted => false,
-                            HookExecution::Rejected(_) => true,
-                        })
-                        .collect();
-                let file_hook_failures: Vec<(FileHookExecutionID, HookExecution)> =
-                    file_hook_results
-                        .into_iter()
-                        .flatten()
-                        .filter(|(_, exec)| match exec {
-                            HookExecution::Accepted => false,
-                            HookExecution::Rejected(_) => true,
-                        })
-                        .collect();
-                if cs_hook_failures.len() > 0 || file_hook_failures.len() > 0 {
-                    Err(RunHooksError::Failures((
-                        cs_hook_failures,
-                        file_hook_failures,
-                    )))
+            .and_then(move |res| {
+                let logger = Logger::new(ctx.logger(), o!("remote" => "remote_only"));
+
+                let any_hooks_to_report = res
+                    .iter()
+                    .any(|(_, _, cs_res, files_res)| !cs_res.is_empty() || !files_res.is_empty());
+
+                if any_hooks_to_report {
+                    info!(logger, "Results of running hooks");
+                }
+
+                let mut failed_hooks = false;
+                for (hg_cs_id, revlog_cs, cs_res, files_res) in res {
+                    if any_hooks_to_report {
+                        log_results_of_hooks(&logger, hg_cs_id, &revlog_cs, &cs_res, &files_res);
+                    }
+
+                    failed_hooks |= cs_res.iter().any(|(_, exec)| !exec.is_accepted())
+                        || files_res.iter().any(|(_, exec)| !exec.is_accepted());
+                }
+
+                if failed_hooks {
+                    Err(RunHooksError::Failures)
                 } else {
                     Ok(())
                 }
@@ -1294,12 +1282,7 @@ impl Bundle2Resolver {
 
 #[derive(Debug)]
 pub enum RunHooksError {
-    Failures(
-        (
-            Vec<(ChangesetHookExecutionID, HookExecution)>,
-            Vec<(FileHookExecutionID, HookExecution)>,
-        ),
-    ),
+    Failures,
     Error(Error),
 }
 

@@ -106,6 +106,14 @@ Delete a file, make sure that file_size_hook is not called on deleted files
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 8ecfb5e6aa64 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   8ecfb5e6 delete a file
+  remote:     OK changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars
+  remote:       - no_owners_file_deletes
+  remote:     0 of 2 changeset hooks failed
+  remote:     no file hooks to run
+  remote:     ACCEPTED
   adding changesets
   adding manifests
   adding file changes
@@ -121,13 +129,21 @@ Add OWNERS file, then delete it. Make sure deletion is not allowed
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 2d1a0bcf73ee to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   2d1a0bcf remove OWNERS
+  remote:     OK changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars
+  remote:     FAILED changeset hooks:
+  remote:       - no_owners_file_deletes: Deletion of OWNERS files is not allowed
+  remote:     1 of 2 changeset hooks failed
+  remote:     no file hooks to run
+  remote:     REJECTED
   remote: Command failed
   remote:   Error:
-  remote:     hooks failed:
-  remote:     no_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed
+  remote:     hooks failed
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nno_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed"
+  remote:         msg: "hooks failed"
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -142,6 +158,13 @@ Bypass owners check
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 67730b0d6122 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   67730b0d remove OWNERS\n@allow_delete_owners
+  remote:     OK changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars
+  remote:     0 of 1 changeset hooks failed
+  remote:     no file hooks to run
+  remote:     ACCEPTED
   adding changesets
   adding manifests
   adding file changes
@@ -157,13 +180,21 @@ Add OWNERS2 file. This time bypass it with pushvars
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   55334cb4 remove OWNERS2
+  remote:     OK changeset hooks:
+  remote:       - no_owners_file_deletes
+  remote:     FAILED changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars: Deletion of OWNERS files is not allowed
+  remote:     1 of 2 changeset hooks failed
+  remote:     no file hooks to run
+  remote:     REJECTED
   remote: Command failed
   remote:   Error:
-  remote:     hooks failed:
-  remote:     no_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed
+  remote:     hooks failed
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nno_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed"
+  remote:         msg: "hooks failed"
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -171,6 +202,13 @@ Add OWNERS2 file. This time bypass it with pushvars
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   55334cb4 remove OWNERS2
+  remote:     OK changeset hooks:
+  remote:       - no_owners_file_deletes
+  remote:     0 of 1 changeset hooks failed
+  remote:     no file hooks to run
+  remote:     ACCEPTED
   adding changesets
   adding manifests
   adding file changes
@@ -185,13 +223,22 @@ Send large file
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 3e0db158edcc to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   3e0db158 largefile
+  remote:     OK changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars
+  remote:       - no_owners_file_deletes
+  remote:     FAILED file hooks:
+  remote:       - file_size_hook on largefile: File is too large
+  remote:     0 of 2 changeset hooks failed
+  remote:     1 of 1 file hooks failed
+  remote:     REJECTED
   remote: Command failed
   remote:   Error:
-  remote:     hooks failed:
-  remote:     file_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large
+  remote:     hooks failed
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nfile_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large"
+  remote:         msg: "hooks failed"
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -202,6 +249,14 @@ Bypass large file hook
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 51fea0e7527d to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   51fea0e7 @allow_large_files
+  remote:     OK changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars
+  remote:       - no_owners_file_deletes
+  remote:     0 of 2 changeset hooks failed
+  remote:     no file hooks to run
+  remote:     ACCEPTED
   adding changesets
   adding manifests
   adding file changes
@@ -217,13 +272,22 @@ Send large file inside a directory
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev cbc62a724366 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  remote: Results of running hooks
+  remote:   cbc62a72 dir/largefile
+  remote:     OK changeset hooks:
+  remote:       - no_owners2_file_deletes_pushvars
+  remote:       - no_owners_file_deletes
+  remote:     FAILED file hooks:
+  remote:       - file_size_hook on dir/largefile: File is too large
+  remote:     0 of 2 changeset hooks failed
+  remote:     1 of 1 file hooks failed
+  remote:     REJECTED
   remote: Command failed
   remote:   Error:
-  remote:     hooks failed:
-  remote:     file_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large
+  remote:     hooks failed
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nfile_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large"
+  remote:         msg: "hooks failed"
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
