@@ -210,30 +210,27 @@ def readfsmonitorstate(repo):
     Based on file format version 4. See hgext/fsmonitor/state.py for real
     implementation.
     """
-    f = repo.localvfs("fsmonitor.state", "rb")
-    versionbytes = f.read(4)
-    version = struct.unpack(">I", versionbytes)[0]
-    data = f.read()
-    state = data.split("\0")
-    hostname, clock, ignorehash = state[0:3]
-    files = state[3:-1]  # discard empty entry after final file
-    numfiles = len(files)
-    prettyfiles = "\n".join(files[:20])
-    return """\
-version: %d
-hostname: %s
-clock: %s
-ignorehash: %s
-files (first 20 of %d):
-%s
-""" % (
-        version,
-        hostname,
-        clock,
-        ignorehash,
-        numfiles,
-        prettyfiles,
-    )
+    lines = []
+    if "treestate" in repo.requirements:
+        lines.append("from treestate")
+        clock = repo.dirstate.getclock()
+        lines.append("clock: %s" % clock)
+    else:
+        f = repo.localvfs("fsmonitor.state", "rb")
+        versionbytes = f.read(4)
+        version = struct.unpack(">I", versionbytes)[0]
+        data = f.read()
+        state = data.split("\0")
+        hostname, clock, ignorehash = state[0:3]
+        files = state[3:-1]  # discard empty entry after final file
+        numfiles = len(files)
+        lines.append("version: %d" % version)
+        lines.append("hostname: %s" % hostname)
+        lines.append("clock: %s" % clock)
+        lines.append("ignorehash: %s" % ignorehash)
+        lines.append("files (first 20 of %d):" % numfiles)
+        lines.extend(files[:20])
+    return "\n".join(lines) + "\n"
 
 
 def _makerage(ui, repo, **opts):
