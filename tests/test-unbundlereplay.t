@@ -70,10 +70,10 @@ Setup a server repo
   > CONFIG
 
   $ cat >>$TESTTMP/goodcommitdates <<EOF
-  > a0c9c57910584da709d7f4ed9852d66693a45ba7=0 0
+  > a0c9c57910584da709d7f4ed9852d66693a45ba7=0
   > EOF
   $ cat >>$TESTTMP/badcommitdates <<EOF
-  > a0c9c57910584da709d7f4ed9852d66693a45ba7=1 0
+  > a0c9c57910584da709d7f4ed9852d66693a45ba7=1
   > EOF
 
 Send unbundlereplay with incorrect expected hash

@@ -45,4 +45,7 @@ class ReplayData(object):
         return cls(commitdates, rebasedhead, ontobook)
 
     def getcommitdate(self, ui, commithash, commitdate):
-        return self.commitdates.get(commithash, commitdate)
+        saveddate = self.commitdates.get(commithash)
+        if saveddate:
+            return (int(saveddate), commitdate[1])
+        return commitdate
