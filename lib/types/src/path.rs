@@ -143,6 +143,9 @@ impl RepoPath {
     pub fn components(&self) -> impl Iterator<Item = &PathComponent> {
         self.0
             .split(SEPARATOR)
+            // TODO: this filter is a hack to account for an empty path
+            // We expect the root of the repository denoted as "" to have no components
+            .filter(|s| !s.is_empty())
             .map(|s| PathComponent::from_str_unchecked(s))
     }
 }
@@ -246,6 +249,9 @@ impl fmt::Display for PathComponent {
 }
 
 fn validate_path(s: &str) -> Fallible<()> {
+    if s.is_empty() {
+        return Ok(());
+    }
     if s.bytes().next_back() == Some(b'/') {
         bail!("Invalid path: ends with `/`.");
     }
@@ -455,5 +461,11 @@ mod tests {
             format!("{}", validate_component("").unwrap_err()),
             "Invalid component: empty."
         );
+    }
+
+    #[test]
+    fn test_empty_path() {
+        let path_buf = RepoPathBuf::from_string(String::from("")).unwrap();
+        assert_eq!(path_buf.components().next(), None);
     }
 }
