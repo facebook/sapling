@@ -18,7 +18,6 @@ Check help text for new options and removal of unsupported options.
   
   Options:
   
-      --clean                discard uncommitted changes (no backup)
       --newest               always pick the newest parent when a changeset has
                              multiple parents
       --bottom               update to the lowest non-public ancestor of the
@@ -26,8 +25,9 @@ Check help text for new options and removal of unsupported options.
       --bookmark             update to the first ancestor with a bookmark
       --no-activate-bookmark do not activate the bookmark on the destination
                              changeset
+   -C --clean                discard uncommitted changes (no backup)
    -B --move-bookmark        move active bookmark
-      --merge                merge uncommitted changes
+   -m --merge                merge uncommitted changes
   
   (some details hidden, use --verbose to show complete help)
 

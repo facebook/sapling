@@ -28,15 +28,15 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 moveopts = [
+    ("C", "clean", False, _("discard uncommitted changes (no backup)")),
     ("B", "move-bookmark", False, _("move active bookmark")),
-    ("", "merge", False, _("merge uncommitted changes")),
+    ("m", "merge", False, _("merge uncommitted changes")),
 ]
 
 
 @command(
     "^previous",
     [
-        ("", "clean", False, _("discard uncommitted changes (no backup)")),
         (
             "",
             "newest",
@@ -68,7 +68,6 @@ def previous(ui, repo, *args, **opts):
 @command(
     "^next",
     [
-        ("", "clean", False, _("discard uncommitted changes (no backup)")),
         (
             "",
             "newest",

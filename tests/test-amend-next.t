@@ -13,7 +13,6 @@ Check help text for new options and removal of unsupported options.
   
   Options:
   
-      --clean                discard uncommitted changes (no backup)
       --newest               always pick the newest child when a changeset has
                              multiple children
       --rebase               rebase each changeset if necessary
@@ -22,8 +21,9 @@ Check help text for new options and removal of unsupported options.
       --no-activate-bookmark do not activate the bookmark on the destination
                              changeset
       --towards VALUE        move linearly towards the specified head
+   -C --clean                discard uncommitted changes (no backup)
    -B --move-bookmark        move active bookmark
-      --merge                merge uncommitted changes
+   -m --merge                merge uncommitted changes
   
   (some details hidden, use --verbose to show complete help)
 
