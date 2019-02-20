@@ -33,6 +33,7 @@ Config::
   port = 11101
 """
 
+import hashlib
 import json
 import os
 import random
@@ -294,7 +295,7 @@ cachefuncs = {"local": (localget, localset), "memcache": (mcget, mcset)}
 
 
 def _adjust_key(key, ui):
-    version = ui.config("simplecache", "version", default="1")
+    version = ui.config("simplecache", "version", default="2")
     key = "%s:v%s" % (key, version)
     if pycompat.iswindows:
         # : is prohibited in Windows filenames, while ! is allowed
@@ -325,6 +326,7 @@ def cacheget(key, serializer, ui, default=None, _adjusted=False):
             cacheval = get(key, ui)
             if cacheval is not None:
                 _debug(ui, "got value for key %s from %s\n" % (key, name))
+                cacheval = verifychecksum(key, cacheval)
                 value = serializer.deserialize(cacheval)
                 return value
         except Exception as inst:
@@ -340,10 +342,32 @@ def cacheset(key, value, serializer, ui, _adjusted=False):
     for name in cachelist:
         get, set = cachefuncs[name]
         try:
-            set(key, serializer.serialize(value), ui)
+            serialized = serializer.serialize(value)
+            checksummed = addchecksum(key, serialized)
+            set(key, checksummed, ui)
             _debug(ui, "set value for key %s to %s\n" % (key, name))
         except Exception as inst:
             _debug(ui, "error setting key %s: %s\n" % (key, inst))
+
+
+def checksum(key, value):
+    s = hashlib.sha1(key)
+    s.update(value)
+    return node.hex(s.digest())
+
+
+def addchecksum(key, value):
+    return checksum(key, value) + value
+
+
+def verifychecksum(key, value):
+    if len(value) < 40:
+        raise ValueError("simplecache value too short to contain a checksum")
+
+    sha, payload = value[:40], value[40:]
+    if checksum(key, payload) != sha:
+        raise ValueError("invalid hash from simplecache for key '%s'" % key)
+    return payload
 
 
 def _runningintests():

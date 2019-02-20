@@ -342,7 +342,7 @@ Test fetching from the server populates the cache
 - Corrupt the cache with the wrong value for a key and verify it notices
 - (by going past the cache and failing to access the revlog)
 #if simplecachestore
-  $ cp ../master/.hg/hgsimplecache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6:v1 ../master/.hg/hgsimplecache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa:v1
+  $ cp ../master/.hg/hgsimplecache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6:v2 ../master/.hg/hgsimplecache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa:v2
 #else
   $ cp ../master/.hg/cache/trees/v2/get/0b/0fa4abc415aa6a46e003c61283b182ccc989b6 ../master/.hg/cache/trees/v2/get/d4/395b5ffa18499864439ac2b1a731ff7b7491fa
 #endif
