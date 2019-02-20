@@ -1109,31 +1109,35 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         if scratchpush:
             ui.setconfig(experimental, configscratchpush, True)
             oldphasemove = wrapfunction(exchange, "_localphasemove", _phasemove)
+            path = ui.paths.getpath(
+                dest, default=("infinitepush", "default-push", "default")
+            )
+        else:
+            path = ui.paths.getpath(dest, default=("default-push", "default"))
         # Copy-paste from `push` command
-        path = ui.paths.getpath(dest, default=("default-push", "default"))
         if not path:
             raise error.Abort(
                 _("default repository not configured!"),
                 hint=_("see 'hg help config.paths'"),
             )
-        destpath = path.pushloc or path.loc
-        if destpath.startswith("svn+") and scratchpush:
+        dest = path.pushloc or path.loc
+        if dest.startswith("svn+") and scratchpush:
             raise error.Abort(
                 "infinite push does not work with svn repo",
                 hint="did you forget to `hg push default`?",
             )
         # Remote scratch bookmarks will be deleted because remotenames doesn't
         # know about them. Let's save it before push and restore after
-        remotescratchbookmarks = _readscratchremotebookmarks(ui, repo, destpath)
+        remotescratchbookmarks = _readscratchremotebookmarks(ui, repo, dest)
         result = orig(ui, repo, dest, *args, **opts)
         if common.isremotebooksenabled(ui):
             if bookmark and scratchpush:
-                other = hg.peer(repo, opts, destpath)
+                other = hg.peer(repo, opts, dest)
                 fetchedbookmarks = other.listkeyspatterns(
                     "bookmarks", patterns=[bookmark]
                 )
                 remotescratchbookmarks.update(fetchedbookmarks)
-            _saveremotebookmarks(repo, remotescratchbookmarks, destpath)
+            _saveremotebookmarks(repo, remotescratchbookmarks, dest)
     if oldphasemove:
         exchange._localphasemove = oldphasemove
     return result
