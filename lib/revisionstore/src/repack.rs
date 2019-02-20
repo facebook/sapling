@@ -113,12 +113,13 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fall
 #[fail(display = "Repack failure: {:?}", _0)]
 struct RepackFailure(Vec<(PathBuf, Vec<Key>)>);
 
-pub fn repack_datapacks<'a>(
+/// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
+/// from the filesystem.
+fn repack_packs<'a, T: MutablePack, U: Store + Repackable>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
-    outdir: &Path,
+    mut mut_pack: T,
+    repack_pack: impl Fn(&U, &mut T) -> Fallible<()>,
 ) -> Fallible<PathBuf> {
-    let mut mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
-
     if paths.clone().into_iter().count() <= 1 {
         if let Some(path) = paths.into_iter().next() {
             return Ok(path.to_path_buf());
@@ -128,26 +129,22 @@ pub fn repack_datapacks<'a>(
     }
 
     for path in paths.clone() {
-        let data_pack = DataPack::new(&path)?;
-        repack_datapack(&data_pack, &mut mut_pack)?;
+        let pack = U::from_path(&path)?;
+        repack_pack(&pack, &mut mut_pack)?;
     }
 
     let new_pack_path = mut_pack.close()?;
-    let new_pack = DataPack::new(&new_pack_path)?;
+    let new_pack = U::from_path(&new_pack_path)?;
 
     let mut errors = vec![];
     for path in paths {
-        let datapack = DataPack::new(&path)?;
-
-        if datapack.base_path() != new_pack_path {
-            let keys = datapack
-                .iter()
-                .filter_map(|res| res.ok())
-                .collect::<Vec<Key>>();
+        if *path != new_pack_path {
+            let pack = U::from_path(&path)?;
+            let keys = pack.iter().filter_map(|res| res.ok()).collect::<Vec<Key>>();
             let missing = new_pack.get_missing(&keys)?;
 
             if missing.len() == 0 {
-                datapack.delete()?;
+                pack.delete()?;
             } else {
                 errors.push((path.clone(), missing));
             }
@@ -159,6 +156,15 @@ pub fn repack_datapacks<'a>(
     } else {
         Ok(new_pack_path)
     }
+}
+
+pub fn repack_datapacks<'a>(
+    paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
+    outdir: &Path,
+) -> Fallible<PathBuf> {
+    let mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
+
+    repack_packs(paths, mut_pack, repack_datapack)
 }
 
 fn repack_historypack(
@@ -178,47 +184,9 @@ pub fn repack_historypacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
 ) -> Fallible<PathBuf> {
-    let mut mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
+    let mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
 
-    if paths.clone().into_iter().count() <= 1 {
-        if let Some(path) = paths.into_iter().next() {
-            return Ok(path.to_path_buf());
-        } else {
-            return Ok(PathBuf::new());
-        }
-    }
-
-    for path in paths.clone() {
-        let history_pack = HistoryPack::new(path)?;
-        repack_historypack(&history_pack, &mut mut_pack)?;
-    }
-
-    let new_pack_path = mut_pack.close()?;
-    let new_pack = HistoryPack::new(&new_pack_path)?;
-
-    let mut errors = vec![];
-    for path in paths {
-        let history_pack = HistoryPack::new(path)?;
-        if history_pack.base_path() != new_pack_path {
-            let keys = history_pack
-                .iter()
-                .filter_map(|res| res.ok())
-                .collect::<Vec<Key>>();
-            let missing = new_pack.get_missing(&keys)?;
-
-            if missing.len() == 0 {
-                history_pack.delete()?;
-            } else {
-                errors.push((path.clone(), missing));
-            }
-        }
-    }
-
-    if errors.len() != 0 {
-        Err(RepackFailure(errors).into())
-    } else {
-        Ok(new_pack_path)
-    }
+    repack_packs(paths, mut_pack, repack_historypack)
 }
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
