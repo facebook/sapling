@@ -12,7 +12,7 @@ extern crate futures;
 extern crate slog;
 
 mod slogkv;
-pub use slogkv::SlogKVError;
+pub use slogkv::{SlogKVError, SlogKVErrorKey};
 
 pub mod chain;
 
