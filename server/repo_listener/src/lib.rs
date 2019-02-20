@@ -30,6 +30,7 @@ extern crate maplit;
 extern crate openssl;
 #[macro_use]
 extern crate slog;
+extern crate slog_ext;
 extern crate slog_kvfilter;
 extern crate slog_term;
 extern crate sql;

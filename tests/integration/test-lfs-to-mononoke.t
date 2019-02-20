@@ -136,9 +136,19 @@
   uncompressed size of bundle content:
        176 (changelog)
        270  f
-  remote: * ERRO Command failed, remote: true, error: While resolving Changegroup, root_cause: MissingTypedKeyEntry( (glob)
-  remote:     "alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7"
-  remote: ), backtrace: , cause: While uploading File Blobs, cause: While decoding delta cache for file id c9d07fd7e2ec8a7a84ffa605085c8d98012cae47, path f, cause: Missing typed key entry for key: alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7, session_uuid: * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     While resolving Changegroup
+  remote:   Root cause:
+  remote:     MissingTypedKeyEntry(
+  remote:         "alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7"
+  remote:     )
+  remote:   Caused by:
+  remote:     While uploading File Blobs
+  remote:   Caused by:
+  remote:     While decoding delta cache for file id c9d07fd7e2ec8a7a84ffa605085c8d98012cae47, path f
+  remote:   Caused by:
+  remote:     Missing typed key entry for key: alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -213,18 +223,24 @@
   uncompressed size of bundle content:
        201 (changelog)
        286  inconsistent_file
-  remote: * ERRO Command failed, remote: true, error: Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf)))], root_cause: SharedError { (glob)
-  remote:     error: Compat {
-  remote:         error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("inconsistent_file")), HgNodeHash(Sha1(6179aa960f78800a0b879d461ea56c5bb17f468c)), HgNodeHash(Sha1(1c509d1a5c8ac7f7b8ac25dc417fca3acb882258))) } }
-  remote:          (re)
-  remote:         While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(1c03a06531d93ba681c1a01604921b1cb40361af)))
-  remote:          (re)
-  remote:         While uploading child entries
-  remote:          (re)
-  remote:         While processing entries
-  remote:          (re)
-  remote:         While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf)))]
+  remote:   Root cause:
+  remote:     SharedError {
+  remote:         error: Compat {
+  remote:             error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("inconsistent_file")), HgNodeHash(Sha1(6179aa960f78800a0b879d461ea56c5bb17f468c)), HgNodeHash(Sha1(1c509d1a5c8ac7f7b8ac25dc417fca3acb882258))) } }
+  remote:             
+  remote:             While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(1c03a06531d93ba681c1a01604921b1cb40361af)))
+  remote:             
+  remote:             While uploading child entries
+  remote:             
+  remote:             While processing entries
+  remote:             
+  remote:             While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: * (glob)
+  remote:         }
   remote:     }
-  remote: }, backtrace: , cause: While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: *, session_uuid: * (glob)
+  remote:   Caused by:
+  remote:     While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

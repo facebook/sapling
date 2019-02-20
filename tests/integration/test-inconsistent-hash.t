@@ -60,18 +60,24 @@ filenode won't be send at all
   uncompressed size of bundle content:
        182 (changelog)
        140  file
-  remote: * ERRO Command failed, remote: true, error: Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b)))], root_cause: SharedError { (glob)
-  remote:     error: Compat {
-  remote:         error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("file")), HgNodeHash(Sha1(979d39e9dea4d1f3f1fea701fd4d3bae43eef76b)), HgNodeHash(Sha1(d159b93d975921924ad128d6a46ef8b1b8f28ba5))) } }
-  remote:          (re)
-  remote:         While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(314550e1ace48fe6245515c137b38ea8aeb04c7d)))
-  remote:          (re)
-  remote:         While uploading child entries
-  remote:          (re)
-  remote:         While processing entries
-  remote:          (re)
-  remote:         While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b)))]
+  remote:   Root cause:
+  remote:     SharedError {
+  remote:         error: Compat {
+  remote:             error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("file")), HgNodeHash(Sha1(979d39e9dea4d1f3f1fea701fd4d3bae43eef76b)), HgNodeHash(Sha1(d159b93d975921924ad128d6a46ef8b1b8f28ba5))) } }
+  remote:             
+  remote:             While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(314550e1ace48fe6245515c137b38ea8aeb04c7d)))
+  remote:             
+  remote:             While uploading child entries
+  remote:             
+  remote:             While processing entries
+  remote:             
+  remote:             While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
+  remote:         }
   remote:     }
-  remote: }, backtrace: , cause: While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: *, session_uuid: * (glob)
+  remote:   Caused by:
+  remote:     While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

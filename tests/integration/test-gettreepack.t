@@ -99,12 +99,16 @@ because everything has been already downloaded.
 
   $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  remote: * ERRO Command failed, remote: true, error: Manifest id 1111111111111111111111111111111111111111 is missing, root_cause: ManifestMissing( (glob)
-  remote:     HgManifestId(
-  remote:         HgNodeHash(
-  remote:             Sha1(1111111111111111111111111111111111111111)
+  remote: Command failed
+  remote:   Error:
+  remote:     Manifest id 1111111111111111111111111111111111111111 is missing
+  remote:   Root cause:
+  remote:     ManifestMissing(
+  remote:         HgManifestId(
+  remote:             HgNodeHash(
+  remote:                 Sha1(1111111111111111111111111111111111111111)
+  remote:             )
   remote:         )
   remote:     )
-  remote: ), backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

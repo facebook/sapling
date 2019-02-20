@@ -269,15 +269,23 @@ Make one of the commits public when it shouldn't be.
   #commitcloud synchronizing 'client1' with 'user/test/default'
   backing up stack rooted at ec61bf312a03
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  remote: * ERRO Command failed, remote: true, error: bundle2-resolver error, root_cause: SharedError { (glob)
-  remote:     error: Compat {
-  remote:         error: SharedError { error: Compat { error: BonsaiMappingNotFound(HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874)))) } }
-  remote:         
-  remote:         While waiting for parents to complete
-  remote:         
-  remote:         While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2-resolver error
+  remote:   Root cause:
+  remote:     SharedError {
+  remote:         error: Compat {
+  remote:             error: SharedError { error: Compat { error: BonsaiMappingNotFound(HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874)))) } }
+  remote:             
+  remote:             While waiting for parents to complete
+  remote:             
+  remote:             While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
+  remote:         }
   remote:     }
-  remote: }, backtrace: , cause: Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))], cause: While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: *, session_uuid: * (glob)
+  remote:   Caused by:
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
+  remote:   Caused by:
+  remote:     While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
   push failed: stream ended unexpectedly (got 0 bytes, expected 4)
   retrying push with discovery
   remote: * DEBG Session with Mononoke started with uuid: * (glob)

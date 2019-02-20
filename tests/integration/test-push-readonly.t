@@ -76,7 +76,11 @@ create new commit in repo2 and check that push fails
   bundle2-output-part: "replycaps" 229 bytes payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  remote: * ERRO Command failed, remote: true, error: Repo is marked as read-only, root_cause: RepoReadOnly, backtrace: , session_uuid: * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     Repo is marked as read-only
+  remote:   Root cause:
+  remote:     RepoReadOnly
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

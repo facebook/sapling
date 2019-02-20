@@ -13,6 +13,7 @@ use failure::{prelude::*, SlogKVError};
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
 use slog::{self, Drain, Level, Logger};
+use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
 use slog_term;
 use stats::Histogram;
@@ -84,7 +85,7 @@ pub fn request_handler(
             chan: stderr.wait(),
         };
         let client_drain = slog_term::PlainSyncDecorator::new(stderr_write);
-        let client_drain = slog_term::FullFormat::new(client_drain).build();
+        let client_drain = SimpleFormatWithError::new(client_drain);
         let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(
             (hashmap! {
                 "remote".into() => hashset!["true".into(), "remote_only".into()],

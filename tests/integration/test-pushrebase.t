@@ -89,9 +89,13 @@ Push rebase fails with conflict in the bottom of the stack
   remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
+  remote: Command failed
+  remote:   Error:
   remote: * pushrebase failed * (glob)
-  remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
-  remote: * backtrace* (glob)
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote:     }
   abort: * (glob)
   [255]
   $ hg hide -r ".^ + ." -q
@@ -105,9 +109,13 @@ Push rebase fails with conflict in the top of the stack
   remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
+  remote: Command failed
+  remote:   Error:
   remote: * pushrebase failed * (glob)
-  remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
-  remote: * backtrace* (glob)
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote:     }
   abort: * (glob)
   [255]
   $ hg hide -r ".^ + ." -q
@@ -250,9 +258,13 @@ Push-Rebase over merge is not allowed
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev e0f0824ca6a6 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  remote: * ERRO Command failed, remote: true, error: pushrebase failed RebaseOverMerge, root_cause: ErrorMessage { (glob)
-  remote:     msg: "pushrebase failed RebaseOverMerge"
-  remote: }, backtrace: , session_uuid: * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     pushrebase failed RebaseOverMerge
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "pushrebase failed RebaseOverMerge"
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn up master_bookmark -q
