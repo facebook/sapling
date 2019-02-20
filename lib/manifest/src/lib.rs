@@ -10,7 +10,7 @@
 //! repository. The file path and file revision are then used to retrieve the contents of the
 //! file thus achieving the reconstruction of the entire repository state.
 use failure::Fallible;
-use types::node::Node;
+use types::{Node, RepoPath, RepoPathBuf};
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.
@@ -25,15 +25,15 @@ use types::node::Node;
 pub trait Manifest {
     /// Retrieve the FileMetadata that is associated with a path.
     /// Paths that were not set will return None.
-    fn get(&self, file_path: &str) -> Fallible<Option<&FileMetadata>>;
+    fn get(&self, file_path: &RepoPath) -> Fallible<Option<&FileMetadata>>;
 
     /// Associates a file path with specific file metadata.
     /// A call with a file path that already exists results in an override or the old metadata.
-    fn insert(&mut self, file_path: String, file_metadata: FileMetadata) -> Fallible<()>;
+    fn insert(&mut self, file_path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()>;
 
     /// Removes a file from the manifest (equivalent to removing it from the repository).
     /// A call with a file path that does not exist in the manifest is a no-op.
-    fn remove(&mut self, file_path: &str) -> Fallible<()>;
+    fn remove(&mut self, file_path: &RepoPath) -> Fallible<()>;
 }
 
 /// The contents of the Manifest for a file.
