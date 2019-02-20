@@ -9,7 +9,15 @@ from __future__ import absolute_import
 
 from itertools import count
 
-from edenscm.mercurial import bookmarks, cmdutil, commands, error, phases, registrar, scmutil
+from edenscm.mercurial import (
+    bookmarks,
+    cmdutil,
+    commands,
+    error,
+    phases,
+    registrar,
+    scmutil,
+)
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullrev, short
 
@@ -159,13 +167,19 @@ def _moverelative(ui, repo, args, opts, reverse=False):
                 tr.close()
                 raise
 
-            # Move the active bookmark if neccesary. Needs to happen before
+            # Move the active bookmark if necessary. Needs to happen before
             # we update to avoid getting a 'leaving bookmark X' message.
             if movebookmark and bookmark is not None:
                 _setbookmark(repo, tr, bookmark, target)
 
             # Update to the target changeset.
-            commands.update(ui, repo, rev=target, clean=opts.get("clean", False))
+            commands.update(
+                ui,
+                repo,
+                rev=target,
+                clean=opts.get("clean", False),
+                merge=opts.get("merge", False),
+            )
 
             # Print out the changeset we landed on.
             _showchangesets(ui, repo, revs=[target])

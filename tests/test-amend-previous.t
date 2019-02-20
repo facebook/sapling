@@ -32,9 +32,9 @@ Check help text for new options and removal of unsupported options.
   (some details hidden, use --verbose to show complete help)
 
 Create stack of commits and go to the top.
-  $ hg debugbuilddag +6
-  $ hg up c8d03c
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugbuilddag --mergeable-file +6
+  $ hg up tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book top
 
 Test invalid argument combinations.
@@ -50,79 +50,79 @@ Test invalid argument combinations.
 
 Test basic usage.
   $ hg previous
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
-  [bebd16] r4
+  [*] r4 (glob)
 
 With positional argument.
   $ hg previous 2
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [012414] r2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [*] r2 (glob)
 
 Overshoot bottom of repo.
   $ hg previous 5
   reached root changeset
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [1ea734] r0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [*] r0 (glob)
 
 Test --bottom flag.
   $ hg up top
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark top)
   $ hg previous --bottom
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
-  [1ea734] r0
+  [*] r0 (glob)
 
 Test bookmark navigation.
-  $ hg book -r 1ea734 root
-  $ hg book -r 012414 bookmark
+  $ hg book -r 0 root
+  $ hg book -r 2 bookmark
   $ hg up top
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark top)
   $ hg previous --bookmark
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
-  [012414] (bookmark) r2
+  [*] (bookmark) r2 (glob)
   (activating bookmark bookmark)
   $ hg previous --bookmark
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bookmark)
-  [1ea734] (root) r0
+  [*] (root) r0 (glob)
   (activating bookmark root)
 
 Test bookmark activation.
   $ hg up top
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark top)
   $ hg previous 3
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
-  [012414] (bookmark) r2
+  [*] (bookmark) r2 (glob)
   (activating bookmark bookmark)
   $ hg previous 2 --no-activate-bookmark
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bookmark)
-  [1ea734] (root) r0
+  [*] (root) r0 (glob)
 
 Test dirty working copy and --merge.
   $ hg up top
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark top)
-  $ touch test
-  $ hg add test
+  $ echo "test" >> mf
   $ hg st
-  A test
+  M mf
   $ hg previous
   abort: uncommitted changes
   (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg previous --merge
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  merging mf
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
-  [bebd16] r4
+  [*] r4 (glob)
   $ hg st
-  A test
+  M mf
 
 Test dirty working copy and --clean.
   $ hg previous
@@ -130,7 +130,6 @@ Test dirty working copy and --clean.
   (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg previous --clean
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [2dc09a] r3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [*] r3 (glob)
   $ hg st
-  ? test
