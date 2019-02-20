@@ -552,6 +552,18 @@ class EdenMount {
    */
   void unconditionallySetState(State newState) noexcept;
 
+  /**
+   * Transition from the STARTING state to the FUSE_ERROR state.
+   *
+   * Preconditions:
+   * - `getState()` is STARTING or DESTROYING or SHUTTING_DOWN or SHUT_DOWN.
+   *
+   * Postconditions:
+   * - If `getState()` was STARTING, `getState()` is now FUSE_ERROR.
+   * - If `getState()` was not STARTING, `getState()` is unchanged.
+   */
+  void transitionToFuseInitializationErrorState();
+
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::shared_ptr<ObjectStore> objectStore,

@@ -550,6 +550,27 @@ TEST_F(ChownTest, LoadedInode) {
   expectChownSucceeded();
 }
 
+TEST(
+    EdenMount,
+    destroyDoesNotCrashIfInProgressFuseConnectionIsCancelledAfterShutdown) {
+  // TODO(strager): Delete this test after refactoring EdenMount::destroy.
+
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  std::shared_ptr<EdenMount>& mount = testMount.getEdenMount();
+
+  auto fuse = std::make_shared<FakeFuse>();
+  testMount.registerFakeFuse(fuse);
+  auto startFuseFuture = mount->startFuse();
+
+  mount->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)
+      .get(kTimeout);
+
+  fuse->close();
+  logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
+
+  EXPECT_NO_THROW({ mount.reset(); });
+}
+
 TEST(EdenMountState, mountIsUninitializedAfterConstruction) {
   auto testMount = TestMount{};
   auto builder = FakeTreeBuilder{};

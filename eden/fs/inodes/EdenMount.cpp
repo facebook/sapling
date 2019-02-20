@@ -383,6 +383,36 @@ void EdenMount::unconditionallySetState(State newState) noexcept {
   state_.store(newState, std::memory_order_release);
 }
 
+void EdenMount::transitionToFuseInitializationErrorState() {
+  auto oldState = State::STARTING;
+  auto newState = State::FUSE_ERROR;
+  if (!state_.compare_exchange_strong(
+          oldState, newState, std::memory_order_acq_rel)) {
+    switch (oldState) {
+      case State::DESTROYING:
+      case State::SHUTTING_DOWN:
+      case State::SHUT_DOWN:
+        break;
+
+      case State::FUSE_ERROR:
+      case State::INITIALIZED:
+      case State::INITIALIZING:
+      case State::RUNNING:
+      case State::UNINITIALIZED:
+        XLOG(ERR)
+            << "FUSE initialization error occurred for an EdenMount in the unexpected "
+            << oldState << " state";
+        break;
+
+      case State::STARTING:
+        XLOG(FATAL)
+            << "compare_exchange_strong failed when transitioning EdenMount's state from "
+            << oldState << " to " << newState;
+        break;
+    }
+  }
+}
+
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
   switch (oldState) {
@@ -828,7 +858,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
               });
         })
         .thenError([this](folly::exception_wrapper&& ew) {
-          unconditionallySetState(State::FUSE_ERROR);
+          transitionToFuseInitializationErrorState();
           return makeFuture<folly::Unit>(std::move(ew));
         });
   });
@@ -844,7 +874,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
         channel_->initializeFromTakeover(takeoverData.connInfo);
     fuseInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception& ex) {
-    unconditionallySetState(State::FUSE_ERROR);
+    transitionToFuseInitializationErrorState();
     throw;
   }
 }
