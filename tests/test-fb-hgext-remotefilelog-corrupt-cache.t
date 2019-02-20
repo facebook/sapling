@@ -30,9 +30,13 @@ Verify corrupt cache handling repairs by default
 Verify corrupt cache error message
 
   $ hg up -q null
+
+Enable delaywrite to avoid races when checking for corruption.
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > validatecache=off
+  > [debug]
+  > dirstate.delaywrite=1
   > EOF
   $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ echo x > $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
@@ -67,14 +71,10 @@ Verify that hashes are checked
 
 Verify that hashes are checked
   $ hg up -C -q null
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
-  $ printf 'z' | dd of=$CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 bs=1 seek=2 count=1 conv=notrunc 2> /dev/null
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cat .hg/remotefilelog_cache.log
-  corrupt $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 during contains
   corrupt $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 during contains
   $ cat x
   x
