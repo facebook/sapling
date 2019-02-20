@@ -23,6 +23,7 @@ many files:
   len(dirstate) = 6
   len(nonnormal) = 0
   len(filtered nonnormal) = 0
+  clock = * (glob)
 
   $ enable blackbox
   $ setconfig blackbox.track=fsmonitor_status,fsmonitor_details,fsmonitor
