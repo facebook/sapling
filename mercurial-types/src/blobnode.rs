@@ -9,6 +9,9 @@ use nodehash::HgNodeHash;
 
 use blob::HgBlob;
 
+/// Equivalent type from Mercurial's Rust code representing parents.
+use types::Parents as HgTypesParents;
+
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub enum HgParents {
@@ -32,6 +35,20 @@ impl HgParents {
             &HgParents::None => (None, None),
             &HgParents::One(p1) => (Some(p1), None),
             &HgParents::Two(p1, p2) => (Some(p1), Some(p2)),
+        }
+    }
+}
+
+/// [HgTypesParents] (an alias for [types::Parents] from Mercurial's `types` crate) is
+/// the Mercurial client's Rust representation of parents. It is an enum almost identical
+/// to the [HgParents] enum in this crate. As such, this conversion is only useful when
+/// interacting with the Mercurial client's Rust code.
+impl From<HgParents> for HgTypesParents {
+    fn from(parents: HgParents) -> Self {
+        match parents {
+            HgParents::None => HgTypesParents::None,
+            HgParents::One(p1) => HgTypesParents::One(p1.into()),
+            HgParents::Two(p1, p2) => HgTypesParents::Two(p1.into(), p2.into()),
         }
     }
 }
