@@ -10,9 +10,11 @@ pub mod errors;
 pub mod key;
 pub mod node;
 pub mod nodeinfo;
+pub mod parents;
 pub mod path;
 
 pub use crate::key::Key;
 pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
+pub use crate::parents::Parents;
 pub use crate::path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
