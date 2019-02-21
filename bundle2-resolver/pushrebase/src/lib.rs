@@ -63,6 +63,8 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 
+const MAX_REBASE_ATTEMPTS: usize = 100;
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]
@@ -80,6 +82,8 @@ pub enum ErrorKind {
     RootNotFound(ChangesetId),
     #[fail(display = "No pushrebase roots found")]
     NoRoots,
+    #[fail(display = "Pushrebase failed after too many unsuccessful rebases")]
+    TooManyRebaseAttempts,
 }
 
 #[derive(Debug)]
@@ -240,9 +244,20 @@ fn rebase_in_loop(
                             onto_bookmark.bookmark,
                             maybe_raw_bundle2_id,
                         )
-                        .map(move |update_res| match update_res {
-                            Some(head) => Loop::Break(PushrebaseSuccessResult { head, retry_num }),
-                            None => Loop::Continue((bookmark_val.unwrap_or(root), retry_num + 1)),
+                        .and_then(move |update_res| match update_res {
+                            Some(head) => {
+                                ok(Loop::Break(PushrebaseSuccessResult { head, retry_num }))
+                            }
+                            None => {
+                                if retry_num < MAX_REBASE_ATTEMPTS {
+                                    ok(Loop::Continue((
+                                        bookmark_val.unwrap_or(root),
+                                        retry_num + 1,
+                                    )))
+                                } else {
+                                    err(ErrorKind::TooManyRebaseAttempts.into())
+                                }
+                            }
                         })
                     })
                 }
