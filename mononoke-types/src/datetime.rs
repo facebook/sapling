@@ -135,6 +135,10 @@ impl Timestamp {
     pub fn timestamp_nanos(&self) -> i64 {
         self.0
     }
+
+    pub fn timestamp_seconds(&self) -> i64 {
+        self.0 / 1_000_000_000
+    }
 }
 
 impl From<DateTime> for Timestamp {
@@ -145,7 +149,7 @@ impl From<DateTime> for Timestamp {
 
 impl From<Timestamp> for DateTime {
     fn from(ts: Timestamp) -> Self {
-        let ts_secs = ts.0 / 1_000_000_000;
+        let ts_secs = ts.timestamp_seconds();
         let ts_nsecs = (ts.0 % 1_000_000_000) as u32;
         DateTime::new(ChronoDateTime::<FixedOffset>::from_utc(
             NaiveDateTime::from_timestamp(ts_secs, ts_nsecs),

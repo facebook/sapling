@@ -56,6 +56,7 @@ use mercurial_types::{Changeset, HgChangesetId, MPath};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{
     check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
+    Timestamp,
 };
 
 use revset::RangeNodeStream;
@@ -119,7 +120,7 @@ impl From<ErrorKind> for PushrebaseError {
     }
 }
 
-type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, DateTime)>;
+type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
 pub struct PushrebaseSuccessResult {
     pub head: ChangesetId,
@@ -673,7 +674,7 @@ fn create_rebased_changesets(
 ) -> impl Future<Item = (ChangesetId, RebasedChangesets), Error = PushrebaseError> {
     find_rebased_set(ctx.clone(), repo.clone(), root, head.clone()).and_then(move |rebased_set| {
         let date = if config.rewritedates {
-            Some(DateTime::now())
+            Some(Timestamp::now())
         } else {
             None
         };
@@ -682,7 +683,7 @@ fn create_rebased_changesets(
         // that all required nodes will be updated by the time they are needed
 
         // Create a fake timestamp, it doesn't matter what timestamp root has
-        let mut remapping = hashmap! { root => (onto, DateTime::now()) };
+        let mut remapping = hashmap! { root => (onto, Timestamp::now()) };
         let mut rebased = Vec::new();
         for bcs_old in rebased_set {
             let id_old = bcs_old.get_changeset_id();
@@ -690,7 +691,8 @@ fn create_rebased_changesets(
                 Ok(bcs_new) => bcs_new,
                 Err(e) => return err(e.into()).left_future(),
             };
-            remapping.insert(id_old, (bcs_new.get_changeset_id(), *bcs_new.author_date()));
+            let timestamp = Timestamp::from(*bcs_new.author_date());
+            remapping.insert(id_old, (bcs_new.get_changeset_id(), timestamp));
             rebased.push(bcs_new);
         }
 
@@ -716,8 +718,8 @@ fn create_rebased_changesets(
 
 fn rebase_changeset(
     bcs: BonsaiChangeset,
-    remapping: &HashMap<ChangesetId, (ChangesetId, DateTime)>,
-    date: Option<&DateTime>,
+    remapping: &HashMap<ChangesetId, (ChangesetId, Timestamp)>,
+    timestamp: Option<&Timestamp>,
 ) -> Result<BonsaiChangeset> {
     let mut bcs = bcs.into_mut();
     bcs.parents = bcs
@@ -726,8 +728,12 @@ fn rebase_changeset(
         .map(|p| remapping.get(&p).map(|(cs, _)| cs).cloned().unwrap_or(p))
         .collect();
 
-    match date {
-        Some(date) => bcs.author_date = *date,
+    match timestamp {
+        Some(timestamp) => {
+            let tz_offset_secs = bcs.author_date.tz_offset_secs();
+            let newdate = DateTime::from_timestamp(timestamp.timestamp_seconds(), tz_offset_secs)?;
+            bcs.author_date = newdate;
+        }
         None => (),
     }
 
@@ -884,7 +890,7 @@ mod tests {
     use maplit::{btreemap, hashset};
     use mononoke_types_mocks::hash::AS;
     use std::str::FromStr;
-    use tests_utils::{create_commit, store_files, store_rename};
+    use tests_utils::{create_commit, create_commit_with_date, store_files, store_rename};
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
@@ -2105,4 +2111,72 @@ mod tests {
         .expect("pushrebase failed");
     }
 
+    #[test]
+    fn pushrebase_timezone() {
+        // We shouldn't change timezone even if timestamp changes
+
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+
+        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(None);
+        // Bottom commit of the repo
+        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+        let p = run_future(&mut runtime, repo.get_bonsai_from_hg(ctx.clone(), root))
+            .unwrap()
+            .unwrap();
+        let parents = vec![p];
+
+        let tz_offset_secs = 100;
+        let bcs_id = create_commit_with_date(
+            ctx.clone(),
+            repo.clone(),
+            parents,
+            store_files(
+                ctx.clone(),
+                btreemap! {"file" => Some("content")},
+                repo.clone(),
+            ),
+            DateTime::from_timestamp(0, 100).unwrap(),
+        );
+        let hg_cs = run_future(
+            &mut runtime,
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id),
+        )
+        .unwrap();
+
+        let book = master_bookmark();
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+        );
+
+        let config = PushrebaseParams {
+            rewritedates: true,
+            ..Default::default()
+        };
+        let bcs_rewrite_date = run_future(
+            &mut runtime,
+            do_pushrebase(
+                ctx.clone(),
+                repo.clone(),
+                config,
+                book,
+                vec![hg_cs],
+                Some(RawBundle2Id::new(AS)),
+            ),
+        )
+        .expect("pushrebase failed");
+
+        let bcs_rewrite_date = run_future(
+            &mut runtime,
+            repo.get_bonsai_changeset(ctx.clone(), bcs_rewrite_date.head),
+        )
+        .unwrap();
+        assert_eq!(
+            bcs_rewrite_date.author_date().tz_offset_secs(),
+            tz_offset_secs
+        );
+    }
 }

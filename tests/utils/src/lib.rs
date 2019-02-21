@@ -89,3 +89,30 @@ pub fn create_commit(
         .unwrap();
     bcs_id
 }
+
+pub fn create_commit_with_date(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    parents: Vec<ChangesetId>,
+    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    author_date: DateTime,
+) -> ChangesetId {
+    let bcs = BonsaiChangesetMut {
+        parents,
+        author: "author".to_string(),
+        author_date,
+        committer: None,
+        committer_date: None,
+        message: "message".to_string(),
+        extra: btreemap! {},
+        file_changes,
+    }
+    .freeze()
+    .unwrap();
+
+    let bcs_id = bcs.get_changeset_id();
+    save_bonsai_changesets(vec![bcs], ctx, repo.clone())
+        .wait()
+        .unwrap();
+    bcs_id
+}
