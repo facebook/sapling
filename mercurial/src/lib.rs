@@ -26,12 +26,12 @@ extern crate bitflags;
 #[macro_use]
 extern crate assert_matches;
 extern crate itertools;
+extern crate lz4_pyframe;
 extern crate memmap;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 extern crate mononoke_types_thrift;
-extern crate pylz4;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
 extern crate serde;

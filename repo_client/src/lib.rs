@@ -23,7 +23,6 @@ extern crate itertools;
 #[cfg(test)]
 extern crate maplit;
 extern crate percent_encoding;
-extern crate pylz4;
 extern crate rand;
 extern crate scribe;
 extern crate scribe_cxx;
@@ -45,6 +44,7 @@ extern crate context;
 extern crate filenodes;
 extern crate hgproto;
 extern crate hooks;
+extern crate lz4_pyframe;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;

@@ -14,13 +14,13 @@ use failure::{Error, Fail, Fallible};
 use filenodes::FilenodeInfo;
 use futures::{future::ok, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use lz4_pyframe;
 use mercurial::file::File;
 use mercurial_types::{
     HgBlobNode, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, RevFlags, NULL_CSID,
     NULL_HASH,
 };
 use metaconfig_types::LfsParams;
-use pylz4;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Write};
 use tracing::trace_args;
@@ -103,7 +103,7 @@ pub fn create_remotefilelog_blob(
                     raw_content.extend(file_history);
                     raw_content
                 })
-                .and_then(|content| pylz4::compress(&content))
+                .and_then(|content| lz4_pyframe::compress(&content))
                 .map(|bytes| Bytes::from(bytes))
         })
         .boxify()
