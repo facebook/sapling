@@ -593,7 +593,7 @@ class _helpdispatch(object):
 
     def _helpcmddoc(self, cmd, doc):
         if util.safehasattr(cmd, "aliasdoc") and cmd.aliasdoc is not None:
-            return gettext(cmd.aliasdoc)
+            return gettext(templater.unquotestring(cmd.aliasdoc.splitlines()[0]))
         doc = gettext(doc)
         if doc:
             doc = doc.splitlines()[0].rstrip()
