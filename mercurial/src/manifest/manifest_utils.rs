@@ -14,8 +14,8 @@ use futures_ext::{BoxStream, StreamExt};
 
 use mercurial_types::{MPath, MPathElement, Type};
 
-use super::{RevlogEntry, RevlogManifest};
 use super::revlog::EntryContent;
+use super::{RevlogEntry, RevlogManifest};
 
 use errors::*;
 
@@ -201,7 +201,8 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
                             MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
                             &to_manifest,
                             &from_manifest,
-                        ).map(recursive_changed_entry_stream)
+                        )
+                        .map(recursive_changed_entry_stream)
                     })
                     .flatten_stream()
                     .flatten();

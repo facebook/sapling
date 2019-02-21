@@ -10,8 +10,9 @@ use std::str::{self, FromStr};
 
 use bytes::Bytes;
 use errors::*;
-use mercurial_types::{HgBlob, HgBlobNode, HgChangesetEnvelope, HgManifestId, HgNodeHash,
-                      HgParents, MPath, NULL_HASH};
+use mercurial_types::{
+    HgBlob, HgBlobNode, HgChangesetEnvelope, HgManifestId, HgNodeHash, HgParents, MPath, NULL_HASH,
+};
 use mononoke_types::DateTime;
 
 #[cfg(test)]

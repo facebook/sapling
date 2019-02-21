@@ -6,8 +6,8 @@
 
 extern crate bytes;
 
-use std::collections::HashSet;
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::HashSet;
 use std::fmt::{self, Display};
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -15,13 +15,15 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use futures::{Async, IntoFuture, Poll, Stream};
 use futures::future;
 use futures::stream;
+use futures::{Async, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId, HgNodeHash,
-                      MPath, MPathElement, RepoPath};
+use mercurial_types::{
+    fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId, HgNodeHash, MPath,
+    MPathElement, RepoPath,
+};
 use stockbookmarks::StockBookmarks;
 
 pub use changeset::RevlogChangeset;
@@ -106,8 +108,7 @@ impl FromStr for Required {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum StoreRequired {
-}
+pub enum StoreRequired {}
 
 impl Display for StoreRequired {
     fn fmt(&self, _fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -163,7 +164,8 @@ struct RevlogInner {
 
 impl PartialEq<Self> for RevlogRepo {
     fn eq(&self, other: &Self) -> bool {
-        self.basepath == other.basepath && self.requirements == other.requirements
+        self.basepath == other.basepath
+            && self.requirements == other.requirements
             && Arc::ptr_eq(&self.inner, &other.inner)
     }
 }
@@ -198,8 +200,8 @@ impl RevlogRepo {
             let store_requirements_file = store.join("requires");
             // A missing store/requires files is the same as an empty one.
             if store_requirements_file.exists() {
-                let file =
-                    fs::File::open(store_requirements_file).context("Can't open `store/requires`")?;
+                let file = fs::File::open(store_requirements_file)
+                    .context("Can't open `store/requires`")?;
                 for line in BufReader::new(file).lines() {
                     store_requirements.insert(line.context("Line read failed")?.parse()?);
                 }

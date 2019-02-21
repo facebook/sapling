@@ -20,19 +20,19 @@ use failure;
 use memmap::Mmap;
 use nom::IResult;
 
-pub use mercurial_types::{delta, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents};
 pub use mercurial_types::bdiff::{self, Delta};
+pub use mercurial_types::{delta, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents};
 
 // Submodules
+mod lz4;
 mod parser;
 mod revidx;
-mod lz4;
 
 #[cfg(test)]
 mod test;
 
-use self::parser::{Header, IdxFlags, Version};
 pub use self::parser::Entry;
+use self::parser::{Header, IdxFlags, Version};
 pub use self::revidx::RevIdx;
 
 #[derive(Debug)]
@@ -117,8 +117,8 @@ impl Revlog {
 
         let mut inner = RevlogInner {
             header: hdr,
-            idx: idx,
-            data: data,
+            idx,
+            data,
             idxoff: BTreeMap::new(),
             nodeidx: HashMap::new(),
         };

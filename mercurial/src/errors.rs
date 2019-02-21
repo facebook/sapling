@@ -8,11 +8,18 @@ pub use failure::{Error, Result, ResultExt};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "Bundle2Decode: {}", _0)] Bundle2Decode(String),
-    #[fail(display = "Revlog: {}", _0)] Revlog(String),
-    #[fail(display = "Repo: {}", _0)] Repo(String),
-    #[fail(display = "Path: {}", _0)] Path(String),
-    #[fail(display = "Unknown requirement: {}", _0)] UnknownReq(String),
-    #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
-    #[fail(display = "Incorrect LFS file content {}", _0)] IncorrectLfsFileContent(String),
+    #[fail(display = "Bundle2Decode: {}", _0)]
+    Bundle2Decode(String),
+    #[fail(display = "Revlog: {}", _0)]
+    Revlog(String),
+    #[fail(display = "Repo: {}", _0)]
+    Repo(String),
+    #[fail(display = "Path: {}", _0)]
+    Path(String),
+    #[fail(display = "Unknown requirement: {}", _0)]
+    UnknownReq(String),
+    #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)]
+    InvalidThrift(String, String),
+    #[fail(display = "Incorrect LFS file content {}", _0)]
+    IncorrectLfsFileContent(String),
 }

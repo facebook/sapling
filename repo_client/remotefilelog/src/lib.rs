@@ -6,28 +6,24 @@
 
 #![deny(warnings)]
 
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::io::{Cursor, Write};
-
+use blobrepo::BlobRepo;
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
+use context::CoreContext;
 use failure::{Error, Fail, Fallible};
+use filenodes::FilenodeInfo;
 use futures::{future::ok, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use pylz4;
-
-use blobrepo::BlobRepo;
-use filenodes::FilenodeInfo;
-
-use context::CoreContext;
 use mercurial::file::File;
 use mercurial_types::{
     HgBlobNode, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, RevFlags, NULL_CSID,
     NULL_HASH,
 };
-use tracing::trace_args;
-
 use metaconfig_types::LfsParams;
+use pylz4;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::io::{Cursor, Write};
+use tracing::trace_args;
 use tracing::Traced;
 
 const METAKEYFLAG: &str = "f";

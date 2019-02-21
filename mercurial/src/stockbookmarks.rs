@@ -10,18 +10,19 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
-use failure::{Error, Result, chain::*};
+use failure::{chain::*, Error, Result};
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 
 use mercurial_types::HgChangesetId;
 
-
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "invalid bookmarks line: {}", _0)] InvalidBookmarkLine(String),
-    #[fail(display = "invalid hash: {}", _0)] InvalidHash(String),
+    #[fail(display = "invalid bookmarks line: {}", _0)]
+    InvalidBookmarkLine(String),
+    #[fail(display = "invalid hash: {}", _0)]
+    InvalidHash(String),
 }
 
 /// Implementation of bookmarks as they exist in stock Mercurial inside `.hg/bookmarks`.
@@ -104,8 +105,9 @@ impl StockBookmarks {
                 .keys()
                 .map(|k| Ok(k.to_vec()))
                 .collect::<Vec<_>>(),
-        ).and_then(|x| x)
-            .boxify()
+        )
+        .and_then(|x| x)
+        .boxify()
     }
 }
 

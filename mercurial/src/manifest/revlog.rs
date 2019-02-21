@@ -9,16 +9,17 @@ use std::io::{self, Write};
 use std::str;
 use std::vec;
 
-use futures::{Async, Poll};
 use futures::future::{self, Future, IntoFuture};
 use futures::stream::{self, Stream};
+use futures::{Async, Poll};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use errors::*;
 use file;
-use mercurial_types::{FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath,
-                      MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
+use mercurial_types::{
+    FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath,
+};
 use mononoke_types::FileContents;
 
 use RevlogRepo;
@@ -172,7 +173,8 @@ impl RevlogManifest {
             Some(ref repo) => repo.clone(),
             None => return future::ok(None).boxify(),
         };
-        let res = self.content
+        let res = self
+            .content
             .files
             .get(path)
             .map(|details| RevlogEntry::new(repo, path.clone(), *details));
@@ -188,7 +190,8 @@ impl RevlogManifest {
             Some(ref repo) => repo.clone(),
             None => return stream::empty().boxify(),
         };
-        let v: Vec<_> = self.manifest()
+        let v: Vec<_> = self
+            .manifest()
             .into_iter()
             .map(|(p, d)| (p.clone(), *d))
             .collect();
@@ -224,10 +227,7 @@ impl Details {
             }
         };
 
-        Ok(Details {
-            entryid: entryid,
-            flag: flag,
-        })
+        Ok(Details { entryid, flag })
     }
 
     fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
@@ -488,17 +488,15 @@ mod test {
         ) {
             Ok(m) => {
                 assert_eq!(m.parents(), &HgParents::One(THREES_HASH));
-                let expect = vec![
-                    (
-                        MPath::new(b"hello123").unwrap(),
-                        Details {
-                            entryid: HgEntryId::new(
-                                "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
-                            ),
-                            flag: Type::File(FileType::Symlink),
-                        },
-                    ),
-                ];
+                let expect = vec![(
+                    MPath::new(b"hello123").unwrap(),
+                    Details {
+                        entryid: HgEntryId::new(
+                            "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
+                        ),
+                        flag: Type::File(FileType::Symlink),
+                    },
+                )];
                 assert_eq!(m.content.files.into_iter().collect::<Vec<_>>(), expect);
             }
             Err(e) => println!("got expected error: {}", e),
