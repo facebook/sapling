@@ -24,8 +24,9 @@ extern crate futures;
 extern crate futures_ext;
 extern crate futures_stats;
 extern crate heapsize;
+#[cfg(test)]
 extern crate itertools;
-#[allow(unused_imports)] // workaround for macro_use
+#[allow(unused_imports)]// workaround for macro_use
 #[macro_use]
 extern crate lazy_static;
 #[cfg(not(test))]
@@ -64,7 +65,6 @@ extern crate wirepack;
 mod changegroup;
 pub mod errors;
 mod getbundle_response;
-mod hooks_run_result_logging;
 mod resolver;
 mod stats;
 mod upload_blobs;

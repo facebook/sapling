@@ -730,15 +730,6 @@ pub enum HookExecution {
     Rejected(HookRejectionInfo),
 }
 
-impl HookExecution {
-    pub fn is_accepted(&self) -> bool {
-        match self {
-            HookExecution::Accepted => true,
-            _ => false,
-        }
-    }
-}
-
 impl Weight for HookExecution {
     fn get_weight(&self) -> usize {
         match self {
@@ -882,7 +873,8 @@ impl FileContentStore for InMemoryFileContentStore {
         changesetid: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<FileType>, Error> {
-        let opt = self.map
+        let opt = self
+            .map
             .get(&(changesetid, path.clone()))
             .map(|(file_type, _)| file_type.clone());
         finished(opt).boxify()
