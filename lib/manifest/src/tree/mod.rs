@@ -3,29 +3,36 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+mod store;
+
+use self::store::{Store, TestStore};
 use crate::{FileMetadata, Manifest};
 use failure::{bail, Fallible};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
-pub struct Tree {
+pub struct Tree<S> {
+    store: Arc<S>,
     // TODO: root can't be a Leaf
     root: Link,
 }
 
-impl Tree {
+impl Tree<TestStore> {
     /// Creates a new Tree without any history
-    pub fn new() -> Tree {
+    pub fn new() -> Self {
         Tree {
+            store: Arc::new(TestStore::new()),
             root: Link::Ephemeral(BTreeMap::new()),
         }
     }
 }
 
 /// `Link` describes the type of nodes that tree manifest operates on.
-enum Link {
+#[derive(Clone)]
+pub enum Link {
     /// `Leaf` nodes store FileMetadata. They are terminal nodes and don't have any other
     /// information.
     Leaf(FileMetadata),
@@ -38,7 +45,7 @@ enum Link {
 }
 use self::Link::*;
 
-impl Manifest for Tree {
+impl<S: Store> Manifest for Tree<S> {
     fn get(&self, path: &RepoPath) -> Fallible<Option<&FileMetadata>> {
         let mut cursor = &self.root;
         for component in path.components() {
