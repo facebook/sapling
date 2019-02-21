@@ -1793,6 +1793,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         extraactions = ms.actions()
         if extraactions:
+            # A same file might exist both in extraactions["r"] (to remove)
+            # list, and actions["g"] (to create) list. Remove them from
+            # actions["g"] to avoid conflicts.
+            extraremoved = {item[0] for item in extraactions["r"]}
+            if extraremoved:
+                actions["g"] = [
+                    item for item in actions["g"] if item[0] not in extraremoved
+                ]
+
             mfiles = set(a[0] for a in actions["m"])
             for k, acts in extraactions.iteritems():
                 actions[k].extend(acts)

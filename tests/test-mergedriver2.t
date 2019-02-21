@@ -63,9 +63,6 @@ Do the merge:
 Status should be clean:
 
   $ hg status
-  ! C_del
-
-BUG: C_del does not exist in working parents.
 
 Working copy and commit made should have expected changes:
 
