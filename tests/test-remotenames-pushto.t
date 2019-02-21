@@ -80,9 +80,6 @@ Test that --to limits other options
   $ hg push --to @ --bookmark foo
   abort: do not specify --to/-t and --bookmark/-B at the same time
   [255]
-  $ hg push --to @ --branch foo
-  abort: do not specify --to/-t and --branch/-b at the same time
-  [255]
 
 Test that --create is required to create new bookmarks
 

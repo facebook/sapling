@@ -3791,7 +3791,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         ("", "bundle", "", _("file to store the bundles into"), _("FILE")),
         ("r", "rev", [], _("a remote changeset intended to be added"), _("REV")),
         ("B", "bookmarks", False, _("compare bookmarks")),
-        ("b", "branch", [], _("a specific branch you would like to pull"), _("BRANCH")),
     ]
     + logopts
     + remoteopts
@@ -3872,7 +3871,7 @@ def incoming(ui, repo, source="default", **opts):
         raise error.Abort(_("cannot combine --bundle and --subrepos"))
 
     if opts.get("bookmarks"):
-        source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
+        source, branches = hg.parseurl(ui.expandpath(source))
         other = hg.peer(repo, opts, source)
         if "bookmarks" not in other.listkeys("namespaces"):
             ui.warn(_("remote doesn't support bookmarks\n"))
@@ -3995,13 +3994,6 @@ def locate(ui, repo, *pats, **opts):
         ("", "removed", None, _("include revisions where files were removed")),
         ("m", "only-merges", None, _("show only merges (DEPRECATED)")),
         ("u", "user", [], _("revisions committed by user"), _("USER")),
-        (
-            "",
-            "only-branch",
-            [],
-            _("show only changesets within the given named branch (DEPRECATED)"),
-            _("BRANCH"),
-        ),
         (
             "b",
             "branch",
@@ -4394,7 +4386,6 @@ def merge(ui, repo, node=None, **opts):
         ),
         ("n", "newest-first", None, _("show newest record first")),
         ("B", "bookmarks", False, _("compare bookmarks")),
-        ("b", "branch", [], _("a specific branch you would like to push"), _("BRANCH")),
     ]
     + logopts
     + remoteopts
@@ -4457,7 +4448,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     if opts.get("bookmarks"):
         dest = ui.expandpath(dest or "default-push", dest or "default")
-        dest, branches = hg.parseurl(dest, opts.get("branch"))
+        dest, branches = hg.parseurl(dest)
         other = hg.peer(repo, opts, dest)
         if "bookmarks" not in other.listkeys("namespaces"):
             ui.warn(_("remote doesn't support bookmarks\n"))
@@ -4747,13 +4738,6 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
         ("f", "force", None, _("run even when remote repository is unrelated")),
         ("r", "rev", [], _("a remote commit to pull"), _("REV")),
         ("B", "bookmark", [], _("a bookmark to pull"), _("BOOKMARK")),
-        (
-            "b",
-            "branch",
-            [],
-            _("a specific branch you want to pull (DEPRECATED)"),
-            _("BRANCH"),
-        ),
     ]
     + remoteopts,
     _("[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"),
@@ -4782,7 +4766,7 @@ def pull(ui, repo, source="default", **opts):
         hint = _("use hg pull followed by hg update DEST")
         raise error.Abort(msg, hint=hint)
 
-    source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
+    source, branches = hg.parseurl(ui.expandpath(source))
     ui.status(_("pulling from %s\n") % util.hidepassword(source))
 
     with repo.connectionpool.get(source, opts=opts) as conn:
@@ -4848,8 +4832,6 @@ def pull(ui, repo, source="default", **opts):
             # because 'checkout' is determined without it.
             if opts.get("rev"):
                 brev = opts["rev"][0]
-            elif opts.get("branch"):
-                brev = opts["branch"][0]
             else:
                 brev = branches[0]
         repo._subtoppath = source
@@ -4874,7 +4856,6 @@ def pull(ui, repo, source="default", **opts):
             _("REV"),
         ),
         ("B", "bookmark", [], _("bookmark to push"), _("BOOKMARK")),
-        ("b", "branch", [], _("a specific branch you would like to push"), _("BRANCH")),
         ("", "new-branch", False, _("allow pushing a new branch")),
         ("", "pushvars", [], _("variables that can be sent to server (ADVANCED)")),
     ]
@@ -4958,7 +4939,7 @@ def push(ui, repo, dest=None, **opts):
             hint=_("see 'hg help config.paths'"),
         )
     dest = path.pushloc or path.loc
-    branches = (path.branch, opts.get("branch") or [])
+    branches = (path.branch, [])
     ui.status(_("pushing to %s\n") % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get("rev"))
     other = hg.peer(repo, opts, dest)
@@ -5026,7 +5007,6 @@ def push(ui, repo, dest=None, **opts):
             None,
             _("mark new/missing files as added/removed before committing"),
         ),
-        ("", "close-branch", None, _("mark a branch head as closed")),
         ("", "amend", None, _("amend the parent of the working directory")),
         ("s", "secret", None, _("use the secret phase for committing")),
         ("e", "edit", None, _("invoke editor on commit messages")),

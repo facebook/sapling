@@ -250,11 +250,11 @@ Show all commands + options
   forget: include, exclude
   githelp: 
   init: ssh, remotecmd, insecure
-  log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
+  log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   merge: force, rev, preview, tool
-  pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
-  push: force, rev, bookmark, branch, new-branch, pushvars, ssh, remotecmd, insecure
-  record: addremove, close-branch, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, subrepos, include, exclude
+  pull: update, force, rev, bookmark, ssh, remotecmd, insecure
+  push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd, insecure
+  record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, subrepos, include, exclude
   remove: after, force, subrepos, include, exclude
   serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only, subrepos
   show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
@@ -339,10 +339,10 @@ Show all commands + options
   histgrep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
-  incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
+  incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
   locate: rev, print0, fullpath, include, exclude
   manifest: rev, all, template
-  outgoing: force, rev, newest-first, bookmarks, branch, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
+  outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
   parents: rev, style, template
   paths: template
   phase: public, draft, secret, force, rev
