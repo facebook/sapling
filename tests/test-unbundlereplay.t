@@ -91,6 +91,7 @@ Send unbundlereplay with incorrect expected hash
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  [1]
 
 Send unbundlereplay with incorrect expected bookmark
   $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg --path ssh://user@dummy/server --debug -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark_2 <$TESTTMP/goodcommitdates
@@ -107,6 +108,7 @@ Send unbundlereplay with incorrect expected bookmark
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  [1]
 
 Send unbundlereplay with incorrect commit timestamp
   $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg --path ssh://user@dummy/server --debug -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark <$TESTTMP/badcommitdates
@@ -123,6 +125,7 @@ Send unbundlereplay with incorrect commit timestamp
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  [1]
 
 Send Unbundlereplay
   $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg --path ssh://user@dummy/server --debug -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark <$TESTTMP/goodcommitdates
@@ -205,6 +208,7 @@ Send unbundlereplay with incorrect expected hash to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  [1]
 
 Send unbundlereplay with incorrect expected bookmark to hgsql server
   $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg --path ssh://user@dummy/server-hgsql --debug -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark_2 <$TESTTMP/goodcommitdates
@@ -221,6 +225,7 @@ Send unbundlereplay with incorrect expected bookmark to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  [1]
 
 Send unbundlereplay with incorrect commit timestamp to hgsql server
   $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle.test.hg --path ssh://user@dummy/server-hgsql --debug -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda -b master_bookmark <$TESTTMP/badcommitdates
@@ -237,6 +242,7 @@ Send unbundlereplay with incorrect commit timestamp to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  [1]
 
 #if respondlightly
 Send correct unbundlereplay to hgsql server

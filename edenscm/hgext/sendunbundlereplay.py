@@ -51,3 +51,7 @@ def sendunbundlereplay(ui, **opts):
 
     for part in reply.iterparts():
         part.read()
+        if part.type == "error:pushkey":
+            # Updating a bookmark failed, return non-zero error code
+            # stderr should contain the reason for the error
+            return 1
