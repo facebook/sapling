@@ -47,14 +47,16 @@ from .errors import ConflictsError, StackPushUnsupportedError
 
 
 class pushcommit(object):
-    def __init__(self, orignode, user, date, desc, extra, filechanges, examinepaths):
-        self.orignode = orignode
+    def __init__(
+        self, user, date, desc, extra, filechanges, examinepaths, orignode=None
+    ):
         self.user = user
         self.date = date
         self.desc = desc
         self.extra = extra
         self.filechanges = filechanges  # {path: (mode, content, copysource) | None}
         self.examinepaths = examinepaths  # {path}
+        self.orignode = orignode
 
     @classmethod
     def fromctx(cls, ctx):
@@ -76,13 +78,13 @@ class pushcommit(object):
                     copysource = None
                 filechanges[path] = (fctx.flags(), fctx.data(), copysource)
         return cls(
-            ctx.node(),
             ctx.user(),
             ctx.date(),
             ctx.description(),
             ctx.extra(),
             filechanges,
             examinepaths,
+            orignode=ctx.node(),
         )
 
 
@@ -162,7 +164,9 @@ class pushrequest(object):
         for commit in self.pushcommits:
             newnode = self._pushsingleunchecked(ctx, commit, getcommitdate)
             added.append(newnode)
-            replacements[commit.orignode] = newnode
+            orignode = commit.orignode
+            if orignode:
+                replacements[orignode] = newnode
             ctx = repo[newnode]
         return added, replacements
 
@@ -170,8 +174,6 @@ class pushrequest(object):
     def _pushsingleunchecked(ctx, commit, getcommitdate):
         """Return newly pushed node"""
         repo = ctx.repo()
-
-        date = getcommitdate(repo.ui, hex(commit.orignode), commit.date)
 
         def getfilectx(repo, memctx, path):
             assert path in commit.filechanges
@@ -193,7 +195,12 @@ class pushrequest(object):
                 )
 
         extra = commit.extra.copy()
-        mutation.record(repo, extra, [commit.orignode], "pushrebase")
+        date = commit.date
+
+        orignode = commit.orignode
+        if orignode:
+            date = getcommitdate(repo.ui, hex(orignode), commit.date)
+            mutation.record(repo, extra, [orignode], "pushrebase")
 
         return context.memctx(
             repo,
