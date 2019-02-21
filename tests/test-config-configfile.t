@@ -4,7 +4,7 @@
 Empty
   $ hg log --configfile | head -1
   hg log: option --configfile requires argument
-  hg log [OPTION]... [FILE]
+  (use 'hg log -h' to get help)
 
 Simple file
   $ cat >> $TESTTMP/simple.rc <<EOF

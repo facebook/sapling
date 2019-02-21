@@ -15,27 +15,14 @@ Missing arg:
 
   $ hg cat
   hg cat: invalid arguments
-  hg cat [OPTION]... FILE...
-  
-  output the current or given revision of files
-  
-  Options ([+] can be repeated):
-  
-   -o --output FORMAT       print output to file with formatted name
-   -r --rev REV             print the given revision
-      --decode              apply any matching decode filter
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
-  
-  (use 'hg cat -h' to show more help)
+  (use 'hg cat -h' to get help)
   [255]
 
 Missing parameter for early option:
 
   $ hg log -R 2>&1 | grep 'hg log'
   hg log: option -R requires argument
-  hg log [OPTION]... [FILE]
-  (use 'hg log -h' to show more help)
+  (use 'hg log -h' to get help)
 
 "--" may be an option value:
 
@@ -113,8 +100,7 @@ applied before the command name is resolved:
 
   $ hg log -b '--config=alias.log=log --config=hooks.pre-log=false'
   hg log: option -b not recognized
-  error in definition for alias 'log': --config may only be given on the command
-  line
+  (use 'hg log -h' to get help)
   [255]
 
   $ hg log -b '--config=defaults.log=--config=hooks.pre-log=false'

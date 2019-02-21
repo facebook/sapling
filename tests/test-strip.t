@@ -600,23 +600,7 @@ Make sure no one adds back a -b option:
 
   $ hg strip -b tip
   hg strip: option -b not recognized
-  hg strip [-k] [-f] [-B bookmark] [-r] REV...
-  
-  strip changesets and all their descendants from the repository
-  
-  (use 'hg help -e strip' to show help for the strip extension)
-  
-  Options ([+] can be repeated):
-  
-   -r --rev REV [+]        strip specified revision (optional, can specify
-                           revisions without this option)
-   -f --force              force removal of changesets, discard uncommitted
-                           changes (no backup)
-      --no-backup          no backups
-   -k --keep               do not modify working directory during strip
-   -B --bookmark VALUE [+] remove revs only reachable from given bookmark
-  
-  (use 'hg strip -h' to show more help)
+  (use 'hg strip -h' to get help)
   [255]
 
   $ cd ..

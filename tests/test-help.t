@@ -518,18 +518,7 @@ Test help option with version option
 
   $ hg add --skjdfks
   hg add: option --skjdfks not recognized
-  hg add [OPTION]... [FILE]...
-  
-  start tracking the specified files
-  
-  Options ([+] can be repeated):
-  
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
-   -n --dry-run             do not perform actions, just print output
-  
-  (use 'hg add -h' to show more help)
+  (use 'hg add -h' to get help)
   [255]
 
 Test ambiguous command help

@@ -839,11 +839,7 @@ Test help topic with same name as extension
 
   $ hg multirevs
   hg multirevs: invalid arguments
-  hg multirevs ARG
-  
-  multirevs command
-  
-  (use 'hg multirevs -h' to show more help)
+  (use 'hg multirevs -h' to get help)
   [255]
 
 

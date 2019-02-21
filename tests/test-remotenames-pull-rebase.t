@@ -29,6 +29,7 @@ Make sure to enable tracking
   $ hg book bmtrackingremote --track default/bookmarkonremote
   $ hg pull --rebase > /dev/null
   hg pull: option --rebase not recognized
+  (use 'hg pull -h' to get help)
   [255]
 
 Tests 'hg pull --rebase' rebases from the active tracking bookmark onto the appropriate remote changes.

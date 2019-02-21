@@ -126,33 +126,13 @@
 
   $ hg othertest
   hg othertest: invalid arguments
-  hg othertest [SUBCOMMAND]
-  
-  other test command
-  
-  Subcommands:
-  
-   alpha         other test subcommand alpha
-  
-  (use 'hg help othertest SUBCOMMAND' to show complete subcommand help)
-  
-  (use 'hg othertest -h' to show more help)
+  (use 'hg othertest -h' to get help)
   [255]
   $ hg othertest foo
   other test command called with 'foo'
   $ hg othertest alpha
   hg othertest alpha: invalid arguments
-  hg othertest alpha
-  
-  other test subcommand alpha
-  
-  Subcommands:
-  
-   beta          other test subcommand alpha subcommand beta
-  
-  (use 'hg help othertest alpha SUBCOMMAND' to show complete subcommand help)
-  
-  (use 'hg othertest alpha -h' to show more help)
+  (use 'hg othertest alpha -h' to get help)
   [255]
   $ hg othertest alfa foo
   other test command alpha called with 'foo'
@@ -160,17 +140,7 @@
   other test command alpha/beta called
   $ hg yt
   hg yt: invalid arguments
-  hg yt [SUBCOMMAND]
-  
-  alias for: hg othertest
-  
-  Subcommands:
-  
-   alpha         other test subcommand alpha
-  
-  (use 'hg help yt SUBCOMMAND' to show complete subcommand help)
-  
-  (use 'hg yt -h' to show more help)
+  (use 'hg yt -h' to get help)
   [255]
   $ hg yta foo
   other test command alpha called with 'foo'
