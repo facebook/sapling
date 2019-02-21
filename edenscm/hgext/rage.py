@@ -90,7 +90,7 @@ def _tail(userlogdir, userlogfiles, nlines=100):
 
 
 rageopts = [
-    ("p", "preview", None, _("print diagnostic information without doing arc paste"))
+    ("p", "preview", None, _("print diagnostic information without uploading paste"))
 ]
 
 
@@ -439,7 +439,7 @@ def rage(ui, repo, *pats, **opts):
     with progress.spinner(ui, "saving paste"):
         try:
             p = subprocess.Popen(
-                ["arc", "paste", "--lang", "hgrage", "--title", "hgrage"],
+                ["pastry", "--lang", "hgrage", "--title", "hgrage"],
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -448,7 +448,7 @@ def rage(ui, repo, *pats, **opts):
             out, err = p.communicate(input=msg + "\n")
             ret = p.returncode
         except OSError:
-            ui.write(_("Failed calling arc. (is it in your PATH?)\n"))
+            ui.write(_("Failed calling pastry. (is it in your PATH?)\n"))
             ret = 1
 
     if ret:
