@@ -46,6 +46,13 @@ function mononoke {
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
 
+function mononoke_hg_sync {
+  $MONONOKE_HG_SYNC \
+    --do-not-init-cachelib \
+    --mononoke-config-path mononoke-config --mode sync-once \
+    ssh://user@dummy/"$1" --start-id "$2"
+}
+
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
   # MONONOKE_START_TIMEOUT is set in seconds
@@ -121,6 +128,22 @@ function create_pushrebaserecording_sqlite3_db {
   );
 SQL
   sqlite3 "$TESTTMP"/pushrebaserecording "$(cat "$TESTTMP"/pushrebaserecording.sql)"
+}
+
+function init_pushrebaserecording_sqlite3_db {
+  sqlite3 "$TESTTMP/pushrebaserecording" \
+  "insert into pushrebaserecording \
+  (id, repo_id, bundlehandle, ontorev, onto, timestamps, recorded_manifest_hashes, real_manifest_hashes)  \
+  values(1, 0, 'handle', 'add0c792bfce89610d277fd5b1e32f5287994d1d', 'master_bookmark', '', '', '')";
+}
+
+function init_bookmark_log_sqlite3_db {
+  sqlite3 "$TESTTMP/repo/books" \
+  "insert into bookmarks_update_log \
+  (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp) \
+  values(0, 'master_bookmark', NULL, X'04C1EA537B01FFF207445E043E310807F9059572DD3087A0FCE458DEC005E4BD', 'pushrebase', 0)";
+
+  sqlite3 "$TESTTMP/repo/books" "select * from bookmarks_update_log";
 }
 
 function setup_mononoke_config {
@@ -467,4 +490,23 @@ function mkcommit() {
    echo "$1" > "$1"
    hg add "$1"
    hg ci -m "$1"
+}
+
+function pushrebase_replay() {
+  DB_INDICES=$1
+
+  REPLAY_CA_PEM="$TESTDIR/testcert.crt" \
+  THRIFT_TLS_CL_CERT_PATH="$TESTDIR/testcert.crt" \
+  THRIFT_TLS_CL_KEY_PATH="$TESTDIR/testcert.key" $PUSHREBASE_REPLAY \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --reponame repo \
+    --hgcli "$MONONOKE_HGCLI" \
+    --mononoke-admin "$MONONOKE_ADMIN" \
+    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
+    --mononoke-server-common-name localhost \
+    --db-indices "$DB_INDICES" \
+    --repoid 0 \
+    --bundle-provider filesystem \
+    --filesystem-bundles-storage-path "$TESTTMP" \
+    --sqlite3-path "$TESTTMP/pushrebaserecording"
 }

@@ -35,6 +35,9 @@ MONONOKE_SERVER_TARGET = "//scm/mononoke:mononoke"
 FACEBOOK_HOOKS_TARGET = "//scm/mononoke/facebook/hooks:hooks"
 PUSHREBASE_REPLAY_TARGET = "//scm/mononoke/facebook/pushrebase_replay:pushrebase_replay"
 VERIFY_INTEGRITY_TARGET = "//security/source_control:verify_integrity"
+MONONOKE_HG_SYNC_TARGET = (
+    "//scm/mononoke/facebook/mononoke_hg_sync_job:mononoke_hg_sync_job"
+)
 
 
 @click.command()
@@ -125,6 +128,7 @@ def run(
     add_to_environ(
         "FACEBOOK_HOOKS", FACEBOOK_HOOKS_TARGET, pathutils.BuildRuleTypes.FILEGROUP
     )
+    add_to_environ("MONONOKE_HG_SYNC", MONONOKE_HG_SYNC_TARGET)
     add_to_environ(
         "PUSHREBASE_REPLAY",
         PUSHREBASE_REPLAY_TARGET,

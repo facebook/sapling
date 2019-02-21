@@ -213,6 +213,21 @@ pub enum BookmarkUpdateReason {
     },
 }
 
+impl std::fmt::Display for BookmarkUpdateReason {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use BookmarkUpdateReason::*;
+
+        let s = match self {
+            Pushrebase { .. } => "pushrebase",
+            Push { .. } => "push",
+            Blobimport => "blobimport",
+            ManualMove => "manualmove",
+            TestMove { .. } => "testmove",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 impl BookmarkUpdateReason {
     pub fn update_bundle_replay_data(
         self,
