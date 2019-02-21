@@ -20,7 +20,7 @@ def generatedate(ui, commithash, commitdate):
 
 def getdatefromfile(definedcommitdates, ui, commithash, commitdate):
     try:
-        return (definedcommitdates[commithash], commitdate[0])
+        return (definedcommitdates[commithash], commitdate[1])
     except KeyError:
         raise error.Abort(_("%s not found in commitdatesfile") % commithash)
 

@@ -222,3 +222,30 @@ Apply stack
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     stack push 1
   
+Create and push a commit with different timezone
+  $ cd ..
+  $ rm -rf server2
+  $ rm -rf server3
+  $ hg clone ssh://user@dummy/server server2 -q
+  $ hg clone ssh://user@dummy/server server3 -q
+  $ cp server/.hg/hgrc server2/.hg/hgrc
+  $ cp server/.hg/hgrc server3/.hg/hgrc
+  $ cd client
+  $ echo newfile > newfile && hg add newfile
+  $ hg commit -d "0 5" -A -m "another timezone"
+  $ hg push -r . --to default
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     f8e54def88a9  another timezone
+
+  $ cd ../server2
+  $ hg unbundle $TESTTMP/bundle
+  new changesets f8e54def88a9
+  (run 'hg update' to get a working copy)
+
+  $ cd ../server3
+  $ python $TESTTMP/encode_json.py  f8e54def88a9cc429ae2077991fdc80e3f4ab5b7  0 > $TESTTMP/commitdatesfile
+  $ hg unbundle $TESTTMP/bundle --config pushrebase.commitdatesfile=$TESTTMP/commitdatesfile
+  new changesets f8e54def88a9
+  (run 'hg update' to get a working copy)
