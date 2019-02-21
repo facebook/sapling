@@ -280,10 +280,10 @@ void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
         AbsolutePathPiece{argument->edenClientPath});
     server_->mount(std::move(initialConfig)).get();
   } catch (const EdenError& ex) {
-    XLOG(ERR) << "Error :" << ex.what();
+    XLOG(ERR) << "Error: " << ex.what();
     throw;
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "Error :" << ex.what();
+    XLOG(ERR) << "Error: " << ex.what();
     throw newEdenError(ex);
   }
 }
