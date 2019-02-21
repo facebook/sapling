@@ -20,7 +20,7 @@ impl Tree {
     /// Creates a new Tree without any history
     pub fn new() -> Tree {
         Tree {
-            root: Link::ephemeral(),
+            root: Link::Ephemeral(BTreeMap::new()),
         }
     }
 }
@@ -39,71 +39,47 @@ enum Link {
 }
 use self::Link::*;
 
-impl Link {
-    fn leaf(file_metadata: FileMetadata) -> Link {
-        Leaf(file_metadata)
-    }
-
-    fn ephemeral() -> Link {
-        Ephemeral(BTreeMap::new())
-    }
-
-    fn child(&self, component: &PathComponent) -> Fallible<Option<&Link>> {
-        match self {
-            Leaf(_) => bail!("Encountered file where a directory was expected."),
-            Ephemeral(links) => Ok(links.get(component)),
-        }
-    }
-
-    fn child_mut_or_insert(&mut self, component: PathComponentBuf) -> Fallible<&mut Link> {
-        match self {
-            Leaf(_) => bail!("Encountered file where a directory was expected."),
-            Ephemeral(links) => Ok(links.entry(component).or_insert(Link::ephemeral())),
-        }
-    }
-
-    fn set_metadata(&mut self, file_metadata: FileMetadata) -> Fallible<()> {
-        match self {
-            Leaf(content) => {
-                *content = file_metadata;
-                Ok(())
-            }
-            Ephemeral(links) => {
-                if !links.is_empty() {
-                    bail!("Asked to set file metadata on a directory.");
-                }
-                *self = Link::leaf(file_metadata);
-                Ok(())
-            }
-        }
-    }
-
-    fn file_metadata(&self) -> Fallible<&FileMetadata> {
-        match self {
-            Leaf(file_metadata) => Ok(file_metadata),
-            Ephemeral(_) => bail!("Encountered directory where file was expected"),
-        }
-    }
-}
-
 impl Manifest for Tree {
     fn get(&self, path: &RepoPath) -> Fallible<Option<&FileMetadata>> {
         let mut cursor = &self.root;
         for component in path.components() {
-            match cursor.child(component)? {
+            let child = match cursor {
+                Leaf(_) => bail!("Encountered file where a directory was expected."),
+                Ephemeral(links) => links.get(component),
+            };
+            match child {
                 None => return Ok(None),
                 Some(link) => cursor = link,
             }
         }
-        Ok(Some(cursor.file_metadata()?))
+        match cursor {
+            Leaf(file_metadata) => Ok(Some(file_metadata)),
+            Ephemeral(_) => bail!("Encountered directory where file was expected"),
+        }
     }
 
     fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()> {
         let mut cursor = &mut self.root;
         for component in path.components() {
-            cursor = cursor.child_mut_or_insert(component.to_owned())?;
+            cursor = match cursor {
+                Leaf(_) => bail!("Encountered file where a directory was expected."),
+                Ephemeral(links) => links
+                    .entry(component.to_owned())
+                    .or_insert(Ephemeral(BTreeMap::new())),
+            };
         }
-        cursor.set_metadata(file_metadata)
+        match cursor {
+            Leaf(current_metadata) => {
+                *current_metadata = file_metadata;
+            }
+            Ephemeral(links) => {
+                if !links.is_empty() {
+                    bail!("Asked to set file metadata on a directory.");
+                }
+                *cursor = Leaf(file_metadata);
+            }
+        }
+        Ok(())
     }
 
     fn remove(&mut self, _path: &RepoPath) -> Fallible<()> {
