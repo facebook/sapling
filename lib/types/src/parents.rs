@@ -1,5 +1,7 @@
 // Copyright Facebook, Inc. 2019.
 
+use std::iter::FromIterator;
+
 use serde_derive::{Deserialize, Serialize};
 
 use crate::node::{Node, NULL_ID};
@@ -74,6 +76,54 @@ impl Default for Parents {
     }
 }
 
+impl FromIterator<Node> for Parents {
+    fn from_iter<I: IntoIterator<Item = Node>>(iter: I) -> Self {
+        let mut iter = iter.into_iter();
+        let p1 = iter.next().unwrap_or(NULL_ID);
+        let p2 = iter.next().unwrap_or(NULL_ID);
+        Parents::new(p1, p2)
+    }
+}
+
+impl IntoIterator for Parents {
+    type IntoIter = ParentIter;
+    type Item = Node;
+
+    fn into_iter(self) -> ParentIter {
+        ParentIter(self)
+    }
+}
+
+impl IntoIterator for &Parents {
+    type IntoIter = ParentIter;
+    type Item = Node;
+
+    fn into_iter(self) -> ParentIter {
+        ParentIter(self.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct ParentIter(Parents);
+
+impl Iterator for ParentIter {
+    type Item = Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.0 {
+            Parents::None => None,
+            Parents::One(p1) => {
+                self.0 = Parents::None;
+                Some(p1)
+            }
+            Parents::Two(p1, p2) => {
+                self.0 = Parents::One(p2);
+                Some(p1)
+            }
+        }
+    }
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 
@@ -86,5 +136,48 @@ impl Arbitrary for Parents {
             2 => Parents::Two(Node::arbitrary(g), Node::arbitrary(g)),
             _ => unreachable!(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_iter() {
+        let none = Parents::from_iter(vec![NULL_ID, NULL_ID]);
+        assert_eq!(none, Parents::None);
+
+        let p1 = Node::from_byte_array([0xAA; 20]);
+        let one = Parents::from_iter(vec![p1, NULL_ID]);
+        assert_eq!(one, Parents::One(p1));
+
+        let p2 = Node::from_byte_array([0xBB; 20]);
+        let two = Parents::from_iter(vec![p1, p2]);
+        assert_eq!(two, Parents::Two(p1, p2));
+    }
+
+    #[test]
+    #[should_panic]
+    fn from_iter_invalid() {
+        let p2 = Node::from_byte_array([0xAA; 20]);
+        let _ = Parents::from_iter(vec![NULL_ID, p2]);
+    }
+
+    #[test]
+    fn into_iter() {
+        let parents = Parents::None;
+        let none = parents.into_iter().collect::<Vec<_>>();
+        assert_eq!(none, Vec::new());
+
+        let p1 = Node::from_byte_array([0xAA; 20]);
+        let parents = Parents::One(p1);
+        let one = parents.into_iter().collect::<Vec<_>>();
+        assert_eq!(one, vec![p1]);
+
+        let p2 = Node::from_byte_array([0xBB; 20]);
+        let parents = Parents::Two(p1, p2);
+        let two = parents.into_iter().collect::<Vec<_>>();
+        assert_eq!(two, vec![p1, p2]);
     }
 }
