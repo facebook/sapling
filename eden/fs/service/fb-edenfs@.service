@@ -6,7 +6,7 @@
 Description=EdenFS FUSE filesystem
 
 [Service]
-Environment=EDENFS_EXECUTABLE_PATH=/usr/local/bin/edenfs
+Environment=EDENFS_EXECUTABLE_PATH=/usr/local/libexec/eden/edenfs
 Environment=EDENFS_EXTRA_ARGUMENTS=
 Environment=EDENFS_SYSTEM_CONFIG_DIR=/etc/eden
 Environment=EDENFS_USER_CONFIG_DIR=%h/.edenrc

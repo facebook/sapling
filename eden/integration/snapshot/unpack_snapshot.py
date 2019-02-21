@@ -18,7 +18,7 @@ RUN_EDEN_SCRIPT = """\
 #!/bin/bash
 
 # Find the Eden binary to use.
-DEV_EDEN="buck-out/gen/eden/cli/eden.par"
+DEV_EDEN="buck-out/gen/eden/cli/edenfsctl.par"
 if [[ -n "$EDEN" ]]; then
   # $EDEN is defined in the environment, so use that
   :

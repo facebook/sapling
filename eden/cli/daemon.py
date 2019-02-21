@@ -141,9 +141,10 @@ def did_process_exit(pid: int) -> bool:
 
 
 def _find_default_daemon_binary() -> Optional[str]:
-    # By default, we look for the daemon executable alongside this file.
+    # By default, we look for the daemon executable in the corresponding libexec
+    # directory.
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    candidate = os.path.join(script_dir, "edenfs")
+    candidate = os.path.normpath(os.path.join(script_dir, "../libexec/eden/edenfs"))
     permissions = os.R_OK | os.X_OK
     if os.access(candidate, permissions):
         return candidate
