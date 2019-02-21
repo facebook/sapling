@@ -3,11 +3,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::FileMetadata;
-use crate::Manifest;
+use crate::{FileMetadata, Manifest};
 use failure::{bail, Fallible};
 use std::collections::BTreeMap;
-use types::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
