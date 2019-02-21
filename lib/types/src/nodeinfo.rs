@@ -10,6 +10,7 @@ use crate::{key::Key, node::Node};
 #[derive(
     Clone,
     Debug,
+    Default,
     Eq,
     Hash,
     Ord,
