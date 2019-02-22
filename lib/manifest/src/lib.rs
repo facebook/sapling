@@ -41,8 +41,8 @@ pub trait Manifest {
 /// * file_type: determines the type of the file.
 #[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct FileMetadata {
-    node: Node,
-    file_type: FileType,
+    pub node: Node,
+    pub file_type: FileType,
 }
 
 /// The types of files that are supported.
