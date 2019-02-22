@@ -17,7 +17,6 @@ use std::collections::HashSet;
 #[fail(display = "Node Error: {:?}", _0)]
 struct NodeError(String);
 
-const NODE_LEN: usize = 20;
 const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
@@ -33,11 +32,11 @@ const HEX_CHARS: &[u8] = b"0123456789abcdef";
     Serialize,
     Deserialize
 )]
-pub struct Node([u8; 20]);
+pub struct Node([u8; Node::len()]);
 
 /// The nullid (0x00) is used throughout Mercurial to represent "None".
 /// (For example, a commit will have a nullid p2, if it has no second parent).
-pub const NULL_ID: Node = Node([0; 20]);
+pub const NULL_ID: Node = Node([0; Node::len()]);
 
 impl Node {
     pub fn null_id() -> &'static Self {
@@ -48,31 +47,35 @@ impl Node {
         self == &NULL_ID
     }
 
-    pub fn len() -> usize {
+    pub const fn len() -> usize {
         20
     }
 
+    pub const fn hex_len() -> usize {
+        40
+    }
+
     pub fn from_slice(bytes: &[u8]) -> Fallible<Self> {
-        if bytes.len() != NODE_LEN {
+        if bytes.len() != Node::len() {
             return Err(NodeError(format!("invalid node length {:?}", bytes.len())).into());
         }
 
-        let mut fixed_bytes = [0u8; 20];
+        let mut fixed_bytes = [0u8; Node::len()];
         fixed_bytes.copy_from_slice(bytes);
         Ok(Node(fixed_bytes))
     }
 
-    pub fn from_byte_array(bytes: [u8; 20]) -> Self {
+    pub fn from_byte_array(bytes: [u8; Node::len()]) -> Self {
         Node(bytes)
     }
 
     // Taken from Mononoke
     pub fn from_str(s: &str) -> Fallible<Self> {
-        if s.len() != 40 {
+        if s.len() != Node::hex_len() {
             return Err(NodeError(format!("invalid string length {:?}", s.len())).into());
         }
 
-        let mut ret = Node([0u8; 20]);
+        let mut ret = Node([0u8; Node::len()]);
 
         for idx in 0..ret.0.len() {
             ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
@@ -85,7 +88,7 @@ impl Node {
     }
 
     pub fn to_hex(&self) -> String {
-        let mut v = Vec::with_capacity(40);
+        let mut v = Vec::with_capacity(Node::hex_len());
         for &byte in self.as_ref() {
             v.push(HEX_CHARS[(byte >> 4) as usize]);
             v.push(HEX_CHARS[(byte & 0xf) as usize]);
@@ -96,7 +99,7 @@ impl Node {
 
     #[cfg(any(test, feature = "for-tests"))]
     pub fn random(rng: &mut RngCore) -> Self {
-        let mut bytes = [0; 20];
+        let mut bytes = [0; Node::len()];
         rng.fill_bytes(&mut bytes);
         loop {
             let node = Node::from(&bytes);
@@ -122,7 +125,7 @@ impl Node {
 
     #[cfg(any(test, feature = "for-tests"))]
     pub fn from_u8(x: u8) -> Self {
-        let mut bytes = [0; 20];
+        let mut bytes = [0; Node::len()];
         bytes[0] = x;
         Node::from(&bytes)
     }
@@ -146,8 +149,8 @@ impl Default for Node {
     }
 }
 
-impl<'a> From<&'a [u8; 20]> for Node {
-    fn from(bytes: &[u8; 20]) -> Node {
+impl<'a> From<&'a [u8; Node::len()]> for Node {
+    fn from(bytes: &[u8; Node::len()]) -> Node {
         Node(bytes.clone())
     }
 }
@@ -170,7 +173,7 @@ pub trait WriteNodeExt {
     /// let n = Node::null_id();
     /// v.write_node(&n).expect("writing a node to a vec should work");
     ///
-    /// assert_eq!(v, vec![0; 20]);
+    /// assert_eq!(v, vec![0; Node::len()]);
     /// ```
     fn write_node(&mut self, value: &Node) -> io::Result<()>;
 }
@@ -189,7 +192,7 @@ pub trait ReadNodeExt {
     /// ```
     /// use std::io::Cursor;
     /// use types::node::{Node, ReadNodeExt};
-    /// let mut v = vec![0; 20];
+    /// let mut v = vec![0; Node::len()];
     /// let mut c = Cursor::new(v);
     ///
     /// let n = c.read_node().expect("reading a node from a vec should work");
@@ -201,7 +204,7 @@ pub trait ReadNodeExt {
 
 impl<R: Read + ?Sized> ReadNodeExt for R {
     fn read_node(&mut self) -> io::Result<Node> {
-        let mut node = Node([0u8; NODE_LEN]);
+        let mut node = Node([0u8; Node::len()]);
         self.read_exact(&mut node.0)?;
         Ok(node)
     }
@@ -213,7 +216,7 @@ use quickcheck::quickcheck;
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for Node {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut bytes = [0u8; 20];
+        let mut bytes = [0u8; Node::len()];
         g.fill_bytes(&mut bytes);
         Node::from(&bytes)
     }
