@@ -139,6 +139,11 @@ impl RepoPath {
         Ok(unsafe { mem::transmute(s) })
     }
 
+    /// Returns the underlying bytes of the `RepoPath`.
+    pub fn as_byte_slice(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
     /// Returns an iterator over the components of the path.
     pub fn components(&self) -> impl Iterator<Item = &PathComponent> {
         self.0
@@ -153,6 +158,12 @@ impl RepoPath {
 impl AsRef<RepoPath> for RepoPath {
     fn as_ref(&self) -> &RepoPath {
         self
+    }
+}
+
+impl AsRef<[u8]> for RepoPath {
+    fn as_ref(&self) -> &[u8] {
+        self.as_byte_slice()
     }
 }
 
@@ -221,6 +232,11 @@ impl PathComponent {
     fn from_str_unchecked(s: &str) -> &PathComponent {
         unsafe { mem::transmute(s) }
     }
+
+    /// Returns the underlying bytes of the `PathComponent`.
+    pub fn as_byte_slice(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
 }
 
 impl AsRef<PathComponent> for PathComponent {
@@ -232,6 +248,12 @@ impl AsRef<PathComponent> for PathComponent {
 impl AsRef<RepoPath> for PathComponent {
     fn as_ref(&self) -> &RepoPath {
         unsafe { mem::transmute(&self.0) }
+    }
+}
+
+impl AsRef<[u8]> for PathComponent {
+    fn as_ref(&self) -> &[u8] {
+        self.as_byte_slice()
     }
 }
 
