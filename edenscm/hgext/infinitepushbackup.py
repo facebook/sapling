@@ -80,13 +80,17 @@ from edenscm.mercurial import (
     templater,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _n
 
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+# defaults
+configitem("infinitepushbackup", "backupgeneration", default=0)
 configitem("infinitepushbackup", "backuplimitnocheck", default=4)
+configitem("infinitepushbackup", "backuplistlimit", default=5)
+configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 
 osutil = policy.importmod(r"osutil")
 infinitepush = None
@@ -767,12 +771,21 @@ def _transaction(orig, self, *args, **kwargs):
 
 def _backupheads(ui, repo):
     """Returns the set of heads that should be backed up in this repo."""
-    maxheadstobackup = ui.configint("infinitepushbackup", "maxheadstobackup", -1)
+    maxheadstobackup = ui.configint("infinitepushbackup", "maxheadstobackup")
 
     revset = "heads(draft()) & not obsolete()"
 
     backupheads = [ctx.hex() for ctx in repo.set(revset)]
     if maxheadstobackup > 0:
+        if len(backupheads) > maxheadstobackup:
+            ui.status(
+                _n(
+                    "backing up only recent %d head\n",
+                    "backing up only recent %d heads\n",
+                    maxheadstobackup,
+                )
+                % maxheadstobackup
+            )
         backupheads = backupheads[-maxheadstobackup:]
     elif maxheadstobackup == 0:
         backupheads = []
@@ -818,7 +831,7 @@ def _dobackup(ui, repo, dest, **opts):
     start = time.time()
     # to handle multiple working copies correctly
     currentbkpgenerationvalue = _readbackupgenerationfile(repo.sharedvfs, path)
-    newbkpgenerationvalue = ui.configint("infinitepushbackup", "backupgeneration", 0)
+    newbkpgenerationvalue = ui.configint("infinitepushbackup", "backupgeneration")
     if currentbkpgenerationvalue != newbkpgenerationvalue:
         # Unlinking local backup state will trigger re-backuping
         _deletebackupstate(repo, path)
@@ -1115,7 +1128,7 @@ def _printbackupstates(ui, username, allbackupstates, all=False):
         % (username, len(allbackupstates))
     )
 
-    limit = ui.configint("infinitepushbackup", "backuplistlimit", 5)
+    limit = ui.configint("infinitepushbackup", "backuplistlimit")
     for i, (hostname, reporoot) in enumerate(allbackupstates.keys()):
         if not all and i == limit:
             ui.write(
