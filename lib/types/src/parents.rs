@@ -25,6 +25,7 @@ use crate::node::{Node, NULL_ID};
     Serialize,
     Deserialize
 )]
+#[serde(untagged)]
 pub enum Parents {
     None,
     One(Node),
@@ -143,6 +144,9 @@ impl Arbitrary for Parents {
 mod tests {
     use super::*;
 
+    use serde_cbor;
+    use serde_json::{self, json};
+
     #[test]
     fn from_iter() {
         let none = Parents::from_iter(vec![NULL_ID, NULL_ID]);
@@ -179,5 +183,42 @@ mod tests {
         let parents = Parents::Two(p1, p2);
         let two = parents.into_iter().collect::<Vec<_>>();
         assert_eq!(two, vec![p1, p2]);
+    }
+
+    #[test]
+    fn untagged_serializtaion() {
+        let parents = Parents::None;
+        let none = serde_json::to_value(&parents).unwrap();
+        assert_eq!(none, json!(null));
+
+        let p1 = Node::from_byte_array([0x1; 20]);
+        let parents = Parents::One(p1);
+        let one = serde_json::to_value(&parents).unwrap();
+        let expected = json!([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+        assert_eq!(one, expected);
+
+        let p2 = Node::from_byte_array([0x2; 20]);
+        let parents = Parents::Two(p1, p2);
+        let two = serde_json::to_value(&parents).unwrap();
+        let p1_json = json!([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+        let p2_json = json!([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]);
+        assert_eq!(two, json!([p1_json, p2_json]));
+    }
+
+    #[test]
+    fn serialized_size_cbor() {
+        let parents = Parents::None;
+        let none = serde_cbor::to_vec(&parents).unwrap();
+        assert_eq!(none.len(), 1);
+
+        let p1 = Node::from_byte_array([0x1; 20]);
+        let parents = Parents::One(p1);
+        let one = serde_cbor::to_vec(&parents).unwrap();
+        assert_eq!(one.len(), 21);
+
+        let p2 = Node::from_byte_array([0x2; 20]);
+        let parents = Parents::Two(p1, p2);
+        let two = serde_cbor::to_vec(&parents).unwrap();
+        assert_eq!(two.len(), 43);
     }
 }
