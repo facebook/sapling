@@ -1277,12 +1277,12 @@ def _getinfinitepushbookmarks(
 
 
 def _localbackupstatepath(remotepath):
-    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
+    hash = hashlib.sha256(remotepath.split("?")[0]).hexdigest()[0:8]
     return os.path.join("infinitepushbackups", _backupstatefile + "_" + hash)
 
 
 def _localbackupgenerationpath(remotepath):
-    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
+    hash = hashlib.sha256(remotepath.split("?")[0]).hexdigest()[0:8]
     return os.path.join("infinitepushbackups", _backupgenerationfile + "_" + hash)
 
 
