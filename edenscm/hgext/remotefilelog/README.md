@@ -39,10 +39,11 @@ An example server configuration:
 * `cachelimit` - the maximum size of the cachepath. By default it's 1000 GB.
 * `cachegroup` - the default unix group for the cachepath. Useful on shared systems so multiple users can read and write to the same cache.
 * `cacheprocess` - the external process that will handle the remote caching layer. If not set, all requests will go to the Mercurial server.
-* `fallbackpath` - the Mercurial repo path to fetch file revisions from. By default it uses the paths.default repo. This setting is useful for cloning from shallow clones and still talking to the central server for file revisions.
+* `fallbackpath` - the Mercurial repo path to fetch file revisions from. By default it uses the paths.default repo. This setting is useful for cloning from shallow clones and still talking to the central server for file revisions. By default this is overridden with the push path when doing a push (see stickypushpath).
 * `includepattern` - a list of regex patterns matching files that should be kept remotely. Defaults to all files.
 * `excludepattern` - a list of regex patterns matching files that should not be kept remotely and should always be downloaded.
 * `pullprefetch` - a revset of commits whose file content should be prefetched after every pull. The most common value for this will be '(bookmark() + head()) & public()'. This is useful in environments where offline work is common, since it will enable offline updating to, rebasing to, and committing on every head and bookmark.
+* `stickypushpath` (default=True) - wether to fetch file revisions from the server that was just pushed from, this overrides fallbackpath in the case of a push and is used in cases where the read server might be lagging behind from the write master.
 
 An example client configuration:
 

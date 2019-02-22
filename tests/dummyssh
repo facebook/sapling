@@ -60,6 +60,8 @@ if os.name == 'nt':
 cmdargv = parse(hgcmd)
 if cmdargv[:2] == ["hg", "-R"] and cmdargv[3:] == ["serve", "--stdio"]:
     path, marker = parse_repo_path(cmdargv[2])
+    if marker == "read_copy":
+        path = path + "_copy"
     cmdargv[2] = path
     hgcmd = subprocess.list2cmdline(cmdargv)
 

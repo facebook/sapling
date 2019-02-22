@@ -140,6 +140,7 @@ from edenscm.mercurial import (
     error,
     exchange,
     extensions,
+    hg,
     localrepo,
     manifest,
     mdiff,
@@ -211,6 +212,7 @@ configitem("treemanifest", "cacheserverstore", default=True)
 configitem("treemanifest", "servermaxcachesize", default=1000000)
 configitem("treemanifest", "servercacheevictionpercent", default=50)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
+configitem("treemanifest", "stickypushpath", default=True)
 
 PACK_CATEGORY = "manifests"
 
@@ -233,7 +235,38 @@ def treeenabled(ui):
     return ui.config("extensions", "treemanifest") not in (None, "!")
 
 
+def hgupdate(orig, repo, node, quietempty=False, updatecheck=None):
+    oldfallbackpath = getattr(repo, "fallbackpath", None)
+    if util.safehasattr(repo, "stickypushpath"):
+        repo.fallbackpath = repo.stickypushpath
+
+    try:
+        return orig(repo, node, quietempty, updatecheck)
+    finally:
+        repo.fallbackpath = oldfallbackpath
+
+
+def expush(orig, repo, remote, *args, **kwargs):
+    if repo.ui.configbool(
+        "treemanifest", "stickypushpath", True
+    ) and "gettreepack" in shallowutil.peercapabilities(remote):
+        # In case of pushrebase using paths.default-push, the pushback bundle
+        # part does not contain trees. The client might prefetch trees from
+        # paths.default, which could be lagging and cause tree prefetch to
+        # fail. Set fallbackpath explicitly so the client pulls from the same
+        # server as it pushes to.
+        #
+        # This assumes the server supporting pushrebase also supports
+        # treemanifest, which is true for now.
+        repo.stickypushpath = remote.url()
+
+    return orig(repo, remote, *args, **kwargs)
+
+
 def uisetup(ui):
+    extensions.wrapfunction(exchange, "push", expush)
+    extensions.wrapfunction(hg, "update", hgupdate)
+
     extensions.wrapfunction(
         changegroup.cg1unpacker, "_unpackmanifests", _unpackmanifestscg1
     )
