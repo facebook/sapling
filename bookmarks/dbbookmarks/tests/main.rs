@@ -483,6 +483,44 @@ fn test_simple_update_bookmark() {
 }
 
 #[test]
+fn test_noop_update() {
+    let ctx = CoreContext::test_mock();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
+    let name_1 = create_bookmark("book");
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.create(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().unwrap());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        ONES_CSID,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().unwrap());
+
+    assert_eq!(
+        bookmarks
+            .get(ctx.clone(), &name_1, REPO_ZERO)
+            .wait()
+            .unwrap(),
+        Some(ONES_CSID)
+    );
+}
+
+#[test]
 fn test_update_non_existent_bookmark() {
     let ctx = CoreContext::test_mock();
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();

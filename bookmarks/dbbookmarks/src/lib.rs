@@ -514,6 +514,29 @@ impl Transaction for SqlBookmarksTransaction {
                 loop_fn(
                     (transaction, sets.into_iter()),
                     move |(transaction, mut updates)| match updates.next() {
+                        Some((ref name, (BookmarkSetData { ref new_cs, ref old_cs }, ref _reason))) if new_cs == old_cs => {
+                            // no-op update. If bookmark points to a correct update then
+                            // let's continue the transaction, otherwise revert it
+                            SelectBookmark::query_with_transaction(
+                                transaction,
+                                &repo_id,
+                                &name,
+                            )
+                            .then({
+                                let new_cs = new_cs.clone();
+                                move |res| match res {
+                                Err(err) => Err(Some(err)),
+                                Ok((transaction, result)) => {
+                                    if result.get(0).map(|b| b.0) == Some(new_cs) {
+                                        Ok((transaction, updates))
+                                    } else {
+                                        Err(None)
+                                    }
+                                }
+                            }})
+                            .map(Loop::Continue)
+                            .boxify()
+                        }
                         Some((name, (BookmarkSetData { new_cs, old_cs }, _reason))) => {
                             UpdateBookmark::query_with_transaction(
                                 transaction,
@@ -533,9 +556,9 @@ impl Transaction for SqlBookmarksTransaction {
                                 }
                             })
                             .map(Loop::Continue)
-                            .left_future()
+                            .boxify()
                         }
-                        None => Ok(Loop::Break(transaction)).into_future().right_future(),
+                        None => Ok(Loop::Break(transaction)).into_future().boxify(),
                     },
                 )
             })
