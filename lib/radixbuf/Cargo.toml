@@ -9,7 +9,7 @@ vlqencoding = { path = "../vlqencoding" }
 [dev-dependencies]
 minibench = { path = "../minibench" }
 quickcheck = "0.6"
-rand = "0.3"
+rand = "0.5.5"
 
 [[bench]]
 name = "bench"

@@ -126,8 +126,11 @@ impl VariantKey {
 
 #[cfg(test)]
 mod tests {
+    extern crate rand;
+
     use super::*;
-    use quickcheck::rand::{thread_rng, Rng};
+
+    use self::rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
 
     #[test]
     fn test_variant_key_round_trip() {
@@ -135,7 +138,7 @@ mod tests {
         let mut buf = Vec::<u8>::new();
         let keys: Vec<Vec<u8>> = (0..1000usize)
             .map(|i| {
-                rng.gen_ascii_chars()
+                rng.sample_iter(&Alphanumeric)
                     .take(i % 40)
                     .map(|ch| ch as u8)
                     .collect()
