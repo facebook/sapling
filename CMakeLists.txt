@@ -34,6 +34,14 @@ include(FBMercurialFeatures)
 
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
+set_property(
+  DIRECTORY
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  APPEND
+  PROPERTY
+  COMPILE_DEFINITIONS
+  "FOLLY_XLOG_STRIP_PREFIXES=\"${CMAKE_SOURCE_DIR}:${CMAKE_BINARY_DIR}\""
+)
 add_subdirectory(common)
 add_subdirectory(eden/fs)
 
@@ -41,4 +49,3 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.h
 )
-
