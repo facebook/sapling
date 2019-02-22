@@ -88,5 +88,23 @@ impl FileMetadata {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for FileType {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        g.choose(&[FileType::Regular, FileType::Executable, FileType::Symlink])
+            .unwrap()
+            .to_owned()
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for FileMetadata {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let node = Node::arbitrary(g);
+        let file_type = FileType::arbitrary(g);
+        FileMetadata::new(node, file_type)
+    }
+}
+
 mod tree;
 pub use crate::tree::Tree;
