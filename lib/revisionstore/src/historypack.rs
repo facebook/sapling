@@ -374,7 +374,7 @@ pub mod tests {
 
     use std::{
         collections::HashMap,
-        fs::{File, OpenOptions},
+        fs::{set_permissions, File, OpenOptions},
     };
 
     use crate::mutablehistorypack::MutableHistoryPack;
@@ -537,7 +537,9 @@ pub mod tests {
             // corrupt it, let's make it writable.
             let mut perms = file.metadata().unwrap().permissions();
             perms.set_readonly(false);
-            file.set_permissions(perms).unwrap();
+
+            drop(file);
+            set_permissions(&pack_path, perms).unwrap();
         }
         buf[0] = 0;
         OpenOptions::new()
