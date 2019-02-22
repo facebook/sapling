@@ -12,7 +12,6 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/mononoke/MononokeBackingStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
 #include "scm/hg/lib/revisionstore/RevisionStore.h"
@@ -161,7 +160,7 @@ class HgBackingStore : public BackingStore {
   bool useDatapackGetBlob_{false};
 
 #ifndef EDEN_WIN_NOMONONOKE
-  std::unique_ptr<MononokeBackingStore> mononoke_;
+  std::unique_ptr<BackingStore> mononoke_;
 #endif // EDEN_WIN_NOMONONOKE
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;

@@ -24,7 +24,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/mononoke/MononokeBackingStore.h"
+#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 
 using namespace facebook::eden;
 using namespace proxygen;
@@ -90,7 +90,7 @@ class Handler {
 
 } // namespace
 
-class MononokeBackingStoreTest : public ::testing::Test {
+class MononokeHttpBackingStoreTest : public ::testing::Test {
  protected:
   std::unique_ptr<ScopedHTTPServer> createServer() {
     return ScopedHTTPServer::start(Handler(getBlobs()));
@@ -126,12 +126,12 @@ class MononokeBackingStoreTest : public ::testing::Test {
   folly::EventBase mainEventBase;
 };
 
-TEST_F(MononokeBackingStoreTest, testGetBlob) {
+TEST_F(MononokeHttpBackingStoreTest, testGetBlob) {
   auto server = createServer();
   auto blobs = getBlobs();
 
   ScopedEventBaseThread evbThread;
-  MononokeBackingStore store(
+  MononokeHttpBackingStore store(
       "localhost",
       server->getAddresses()[0].address,
       "repo",
@@ -143,7 +143,7 @@ TEST_F(MononokeBackingStoreTest, testGetBlob) {
   EXPECT_EQ(blobs[kZeroHash.toString()], buf.moveToFbString());
 }
 
-TEST_F(MononokeBackingStoreTest, testConnectFailed) {
+TEST_F(MononokeHttpBackingStoreTest, testConnectFailed) {
   // To get a port that is guaranteed to reject connections,
   // bind to an ephemeral port but never call listen()
   SocketAddress address;
@@ -155,7 +155,7 @@ TEST_F(MononokeBackingStoreTest, testConnectFailed) {
   auto blobs = getBlobs();
 
   ScopedEventBaseThread evbThread;
-  MononokeBackingStore store(
+  MononokeHttpBackingStore store(
       "localhost",
       address,
       "repo",
@@ -170,12 +170,12 @@ TEST_F(MononokeBackingStoreTest, testConnectFailed) {
   }
 }
 
-TEST_F(MononokeBackingStoreTest, testEmptyBuffer) {
+TEST_F(MononokeHttpBackingStoreTest, testEmptyBuffer) {
   auto server = createServer();
   auto blobs = getBlobs();
 
   ScopedEventBaseThread evbThread;
-  MononokeBackingStore store(
+  MononokeHttpBackingStore store(
       "localhost",
       server->getAddresses()[0].address,
       "repo",
@@ -187,12 +187,12 @@ TEST_F(MononokeBackingStoreTest, testEmptyBuffer) {
   EXPECT_EQ(blobs[emptyhash.toString()], buf.moveToFbString());
 }
 
-TEST_F(MononokeBackingStoreTest, testGetTree) {
+TEST_F(MononokeHttpBackingStoreTest, testGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
 
   ScopedEventBaseThread evbThread;
-  MononokeBackingStore store(
+  MononokeHttpBackingStore store(
       "localhost",
       server->getAddresses()[0].address,
       "repo",
@@ -229,12 +229,12 @@ TEST_F(MononokeBackingStoreTest, testGetTree) {
   EXPECT_TRUE(expected_tree == *tree);
 }
 
-TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
+TEST_F(MononokeHttpBackingStoreTest, testMalformedGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
 
   ScopedEventBaseThread evbThread;
-  MononokeBackingStore store(
+  MononokeHttpBackingStore store(
       "localhost",
       server->getAddresses()[0].address,
       "repo",
@@ -244,13 +244,13 @@ TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
   EXPECT_THROW(store.getTree(malformedhash).get(), std::exception);
 }
 
-TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
+TEST_F(MononokeHttpBackingStoreTest, testGetTreeForCommit) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto commithash = this->commithash;
 
   ScopedEventBaseThread evbThread;
-  MononokeBackingStore store(
+  MononokeHttpBackingStore store(
       "localhost",
       server->getAddresses()[0].address,
       "repo",

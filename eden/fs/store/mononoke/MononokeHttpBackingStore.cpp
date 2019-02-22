@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "MononokeBackingStore.h"
+#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 
 #include <eden/fs/model/Blob.h>
 #include <eden/fs/model/Hash.h>
@@ -211,7 +211,7 @@ std::unique_ptr<Tree> convertBufToTree(
 
 } // namespace
 
-MononokeBackingStore::MononokeBackingStore(
+MononokeHttpBackingStore::MononokeHttpBackingStore(
     folly::StringPiece hostName,
     const folly::SocketAddress& socketAddress,
     const std::string& repo,
@@ -225,7 +225,7 @@ MononokeBackingStore::MononokeBackingStore(
       executor_(executor),
       sslContext_(sslContext) {}
 
-MononokeBackingStore::MononokeBackingStore(
+MononokeHttpBackingStore::MononokeHttpBackingStore(
     folly::StringPiece tierName,
     const std::string& repo,
     const std::chrono::milliseconds& timeout,
@@ -239,9 +239,9 @@ MononokeBackingStore::MononokeBackingStore(
       executor_(executor),
       sslContext_(sslContext) {}
 
-MononokeBackingStore::~MononokeBackingStore() {}
+MononokeHttpBackingStore::~MononokeHttpBackingStore() {}
 
-folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
+folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
     const Hash& id) {
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("tree", id); })
@@ -250,7 +250,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
       });
 }
 
-folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
+folly::Future<std::unique_ptr<Blob>> MononokeHttpBackingStore::getBlob(
     const Hash& id) {
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("blob", id); })
@@ -259,7 +259,7 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
       });
 }
 
-folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
+folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTreeForCommit(
     const Hash& commitID) {
   return folly::via(executor_)
       .thenValue([this, commitID](auto&&) {
@@ -273,7 +273,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
       });
 }
 
-folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
+folly::Future<folly::SocketAddress> MononokeHttpBackingStore::getAddress(
     folly::EventBase* eventBase) {
   if (socketAddress_.has_value()) {
     return folly::makeFuture(socketAddress_.value());
@@ -298,9 +298,9 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
               return;
             }
             auto selected = folly::Random::rand32(selection.hosts.size());
-            auto host = selection.hosts[selected];
-            auto addr =
-                folly::SocketAddress(host->location().getIpAddress(), host->location().getPort());
+            const auto& host = selection.hosts[selected];
+            const auto& addr = folly::SocketAddress(
+                host->location().getIpAddress(), host->location().getPort());
             promise.setValue(addr);
           }),
       eventBase,
@@ -310,7 +310,7 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
   return future;
 }
 
-folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
+folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequest(
     folly::StringPiece endpoint,
     const Hash& id) {
   auto eventBase = folly::EventBaseManager::get()->getEventBase();
@@ -320,7 +320,7 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
   });
 }
 
-folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequestImpl(
+folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequestImpl(
     folly::SocketAddress addr,
     folly::StringPiece endpoint,
     const Hash& id) {
@@ -348,7 +348,8 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequestImpl(
   auto connector =
       std::make_unique<proxygen::HTTPConnector>(callback, timer.get());
 
-  const folly::AsyncSocket::OptionMap opts{{{SOL_SOCKET, SO_REUSEADDR}, 1}};
+  static const folly::AsyncSocket::OptionMap opts{
+      {{SOL_SOCKET, SO_REUSEADDR}, 1}};
 
   if (sslContext_ != nullptr) {
     connector->connectSSL(

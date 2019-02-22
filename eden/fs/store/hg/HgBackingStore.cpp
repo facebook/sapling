@@ -27,6 +27,7 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 #include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
@@ -399,7 +400,7 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
   auto hostName = edenConfig->getMononokeHostName();
   if (hostName) {
     auto port = edenConfig->getMononokePort();
-    mononoke_ = std::make_unique<MononokeBackingStore>(
+    mononoke_ = std::make_unique<MononokeHttpBackingStore>(
         *hostName,
         folly::SocketAddress(hostName->c_str(), port, /*allowNameLookup=*/true),
         options.repoName,
@@ -410,8 +411,8 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
     XLOG(DBG2) << "mononoke enabled for repository " << options.repoName
                << ", using host " << *hostName << ":" << port;
   } else {
-    auto tierName = edenConfig->getMononokeTierName();
-    mononoke_ = std::make_unique<MononokeBackingStore>(
+    const auto& tierName = edenConfig->getMononokeTierName();
+    mononoke_ = std::make_unique<MononokeHttpBackingStore>(
         tierName,
         options.repoName,
         std::chrono::milliseconds(FLAGS_mononoke_timeout),
@@ -513,7 +514,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
         })
         .thenError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
                        const folly::exception_wrapper& ex) mutable {
-          XLOG(WARN) << "got exception from MononokeBackingStore: "
+          XLOG(WARN) << "got exception from MononokeHttpBackingStore: "
                      << ex.what();
           return fetchTreeFromHgCacheOrImporter(
               manifestNode,

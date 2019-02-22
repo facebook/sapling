@@ -39,9 +39,9 @@ class Tree;
  * A BackingStore implementation that loads data out of a remote Mononoke
  * server over HTTP.
  */
-class MononokeBackingStore : public BackingStore {
+class MononokeHttpBackingStore : public BackingStore {
  public:
-  MononokeBackingStore(
+  MononokeHttpBackingStore(
       folly::StringPiece tierName,
       const std::string& repo,
       const std::chrono::milliseconds& timeout,
@@ -49,7 +49,7 @@ class MononokeBackingStore : public BackingStore {
       const std::shared_ptr<folly::SSLContext> sslContext);
 
   // This constructor should only be used in testing.
-  MononokeBackingStore(
+  MononokeHttpBackingStore(
       folly::StringPiece hostName,
       const folly::SocketAddress& socketAddress,
       const std::string& repo,
@@ -57,7 +57,7 @@ class MononokeBackingStore : public BackingStore {
       folly::Executor* executor,
       const std::shared_ptr<folly::SSLContext> sslContext);
 
-  virtual ~MononokeBackingStore();
+  virtual ~MononokeHttpBackingStore() override;
 
   virtual folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
   virtual folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
@@ -66,8 +66,8 @@ class MononokeBackingStore : public BackingStore {
 
  private:
   // Forbidden copy constructor and assignment operator
-  MononokeBackingStore(MononokeBackingStore const&) = delete;
-  MononokeBackingStore& operator=(MononokeBackingStore const&) = delete;
+  MononokeHttpBackingStore(MononokeHttpBackingStore const&) = delete;
+  MononokeHttpBackingStore& operator=(MononokeHttpBackingStore const&) = delete;
 
   folly::Future<folly::SocketAddress> getAddress(folly::EventBase*);
   folly::Future<std::unique_ptr<folly::IOBuf>> sendRequest(
