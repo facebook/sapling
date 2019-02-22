@@ -290,7 +290,7 @@ mod tests {
     use super::*;
 
     use quickcheck::quickcheck;
-    use rand::Rng;
+    use rand::seq::SliceRandom;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
@@ -345,7 +345,7 @@ mod tests {
         }
 
         // Add them in random order, so we can verify they get sorted correctly
-        rng.shuffle(&mut entries);
+        entries.shuffle(&mut rng);
         for (key, info) in entries.iter() {
             muthistorypack.add(&key, &info).unwrap();
         }
@@ -384,12 +384,12 @@ mod tests {
                 let available_parents = chains.keys().map(|k| k.clone()).collect::<Vec<Key>>();
 
                 if !chains.is_empty() {
-                    p1 = rng.choose(&available_parents[..])
+                    p1 = available_parents.choose(&mut rng)
                         .expect("choose p1")
                         .clone();
 
                     if *has_p2 {
-                        p2 = rng.choose(&available_parents[..])
+                        p2 = available_parents.choose(&mut rng)
                             .expect("choose p2")
                             .clone();
                     }
