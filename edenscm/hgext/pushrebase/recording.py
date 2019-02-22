@@ -16,7 +16,7 @@ from edenscm.mercurial.node import hex
 from ..extlib import mysqlutil
 
 
-def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
+def recordpushrebaserequest(repo, conflicts, pushrebaseerrmsg, starttime):
     """Uploads bundle parts to a bundlestore, and then inserts the parameters
     in the mysql table
     """
@@ -30,24 +30,22 @@ def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
         return
 
     try:
-        return _dorecordpushrebaserequest(
-            repo, conflicts, pushrebase_errmsg, start_time
-        )
+        return _dorecordpushrebaserequest(repo, conflicts, pushrebaseerrmsg, starttime)
     except Exception as ex:
         # There is no need to fail the push, but at least let's log
         # the problem
         repo.ui.warn(_("error while recording pushrebase request %s") % ex)
 
 
-def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
-    durationms = (time.time() - start_time) * 1000
-    # Limit pushrebase_errmsg to protect from too long messages
-    if pushrebase_errmsg:
-        pushrebase_errmsg = pushrebase_errmsg[:1000]
+def _dorecordpushrebaserequest(repo, conflicts, pushrebaseerrmsg, starttime):
+    durationms = (time.time() - starttime) * 1000
+    # Limit pushrebaseerrmsg to protect from too long messages
+    if pushrebaseerrmsg:
+        pushrebaseerrmsg = pushrebaseerrmsg[:1000]
 
     logparams = {
         "conflicts": conflicts,
-        "pushrebase_errmsg": pushrebase_errmsg,
+        "pushrebase_errmsg": pushrebaseerrmsg,
         "duration_ms": durationms,
     }
     uploaderrmsg = None
@@ -65,7 +63,7 @@ def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
     logparams.update(repo.pushrebaserecordingparams)
 
     # Collect timestamps and manifest hashes (but only if there were no errors)
-    if not pushrebase_errmsg and getattr(repo, "pushrebaseaddedchangesets", None):
+    if not pushrebaseerrmsg and getattr(repo, "pushrebaseaddedchangesets", None):
         # We want to record mappings from old commit hashes to timestamps
         # of new commits and manifest hashes of new commits. To do this, we
         # need to revert replacements dict

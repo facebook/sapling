@@ -306,7 +306,7 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
                 repo.manifestlog[bin(mfnode)].read()
 
     try:
-        start_time = time.time()
+        starttime = time.time()
         result = orig(
             repo,
             cg,
@@ -317,15 +317,15 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
             respondlightly=respondlightly,
         )
         recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebase_errmsg=None, start_time=start_time
+            repo, conflicts=None, pushrebaseerrmsg=None, starttime=starttime
         )
         return result
     except ConflictsError as ex:
         recording.recordpushrebaserequest(
             repo,
             conflicts="\n".join(sorted(ex.conflicts)),
-            pushrebase_errmsg=None,
-            start_time=start_time,
+            pushrebaseerrmsg=None,
+            starttime=starttime,
         )
         raise
     except error.HookAbort as ex:
@@ -334,12 +334,12 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
         else:
             errmsg = "%s" % ex
         recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebase_errmsg=errmsg, start_time=start_time
+            repo, conflicts=None, pushrebaseerrmsg=errmsg, starttime=starttime
         )
         raise
     except Exception as ex:
         recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebase_errmsg="%s" % ex, start_time=start_time
+            repo, conflicts=None, pushrebaseerrmsg="%s" % ex, starttime=starttime
         )
         raise
 
