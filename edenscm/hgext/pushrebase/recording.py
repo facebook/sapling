@@ -41,6 +41,10 @@ def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
 
 def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
     durationms = (time.time() - start_time) * 1000
+    # Limit pushrebase_errmsg to protect from too long messages
+    if pushrebase_errmsg:
+        pushrebase_errmsg = pushrebase_errmsg[:1000]
+
     logparams = {
         "conflicts": conflicts,
         "pushrebase_errmsg": pushrebase_errmsg,
