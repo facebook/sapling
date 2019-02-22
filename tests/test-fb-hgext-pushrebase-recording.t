@@ -272,3 +272,36 @@ Enable prepushrebase hooks and make sure we record failed pushes in that case
   42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
   42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
   42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	prepushrebase hook exited with status 1
+
+Run python hook that records hook failure reason
+  $ cd ../server
+  $ cat >> $TESTTMP/hook.py <<EOF
+  > from edenscm.mercurial import error
+  > def fail(ui, repo, *args, **kwargs):
+  >   e = error.HookAbort("failure")
+  >   e.reason = "reason for failure"
+  >   raise e
+  > EOF
+  $ setconfig hooks.prepushrebase=python:$TESTTMP/hook.py:fail
+  $ cd -
+  $TESTTMP/client
+  $ hg up -q tip
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
+  count(*)
+  6
+  $ hg push -r . --to master
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: error: prepushrebase hook failed: failure
+  remote: failure
+  abort: push failed on remote
+  [255]
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	038f4259f9592754a8b7089b921e2df9d50bbf95	default	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	prepushrebase hook exited with status 1
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	failure reason: reason for failure

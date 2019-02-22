@@ -108,7 +108,13 @@ class HookLoadError(Abort):
 class HookAbort(Abort):
     """raised when a validation hook fails, aborting an operation
 
+    `reason` can be set to provide additional information
+    about the failure
     Exists to allow more specialized catching."""
+
+    def __init__(self, *args, **kwargs):
+        self.reason = kwargs.pop("reason", None)
+        Abort.__init__(self, *args, **kwargs)
 
 
 class ConfigError(Abort):

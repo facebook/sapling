@@ -328,6 +328,15 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
             start_time=start_time,
         )
         raise
+    except error.HookAbort as ex:
+        if ex.reason:
+            errmsg = "%s reason: %s" % (ex, ex.reason)
+        else:
+            errmsg = "%s" % ex
+        recording.recordpushrebaserequest(
+            repo, conflicts=None, pushrebase_errmsg=errmsg, start_time=start_time
+        )
+        raise
     except Exception as ex:
         recording.recordpushrebaserequest(
             repo, conflicts=None, pushrebase_errmsg="%s" % ex, start_time=start_time
