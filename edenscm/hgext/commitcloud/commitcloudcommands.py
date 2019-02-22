@@ -431,7 +431,11 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
     except error.RepoError:
         path = None
 
-    if infinitepushbackup and path:
+    if (
+        infinitepushbackup
+        and path
+        and path.loc != commitcloudutil.getremotepath(repo, ui, None)
+    ):
         highlightdebug(ui, _("starting background backup to %s\n") % path.loc)
         infinitepushbackup._dobackgroundbackup(
             ui, repo, other, ["hg", "pushbackup"], **opts
