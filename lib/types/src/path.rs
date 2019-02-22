@@ -276,6 +276,41 @@ fn validate_component(s: &str) -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for RepoPathBuf {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let size = g.gen_range(0, 16);
+        let mut path_buf = RepoPathBuf::new();
+        for _ in 0..size {
+            path_buf.push(PathComponentBuf::arbitrary(g).as_ref());
+        }
+        path_buf
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for PathComponentBuf {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        // Most strings should be valid `PathComponent` so it is reasonable to loop until a valid
+        // string is found. To note that generating Arbitrary Unicode on `char` is implemented
+        // using a loop where random bytes are validated against the `char` constructor.
+        loop {
+            let s = String::arbitrary(g);
+            if let Ok(component) = PathComponentBuf::from_string(s) {
+                return component;
+            }
+        }
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item = PathComponentBuf>> {
+        Box::new(
+            self.0
+                .shrink()
+                .filter_map(|s| PathComponentBuf::from_string(s).ok()),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
