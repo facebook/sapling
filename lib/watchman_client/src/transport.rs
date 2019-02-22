@@ -38,6 +38,7 @@ pub trait Transport {
 
 /// Implementations:
 
+#[cfg(unix)]
 pub mod unix_socket_transport {
     /// local unix domain socket transport */
     use self::command_line_transport::CommandLineTransport;
@@ -91,7 +92,8 @@ pub mod unix_socket_transport {
                             return Err(ErrorKind::UnixSocketTransportError(
                                 "get_sock_name",
                                 "can't get sockname".into(),
-                            ).into());
+                            )
+                            .into());
                         }
                     }
                     match self.sockname {
@@ -167,6 +169,7 @@ pub mod unix_socket_transport {
     }
 }
 
+#[cfg(unix)]
 pub mod command_line_transport {
     /// command line transport, required installed watchman client
     use std::process::{Command, Stdio};
