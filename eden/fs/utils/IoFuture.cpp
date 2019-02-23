@@ -22,7 +22,7 @@ namespace facebook {
 namespace eden {
 
 IoFuture::IoFuture(folly::EventBase* eventBase, int socket)
-    : EventHandler{eventBase, socket},
+    : EventHandler{eventBase, folly::NetworkSocket::fromFd(socket)},
       AsyncTimeout{eventBase},
       promise_{Promise<int>::makeEmpty()} {}
 

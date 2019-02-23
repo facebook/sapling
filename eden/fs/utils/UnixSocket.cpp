@@ -66,7 +66,7 @@ constexpr size_t kMaxFDs = 253;
 class UnixSocket::Connector : private folly::EventHandler, folly::AsyncTimeout {
  public:
   Connector(ConnectCallback* callback, EventBase* eventBase, File socket)
-      : EventHandler{eventBase, socket.fd()},
+      : EventHandler{eventBase, folly::NetworkSocket::fromFd(socket.fd())},
         AsyncTimeout{eventBase},
         callback_{callback},
         eventBase_{eventBase},
@@ -107,7 +107,7 @@ class UnixSocket::Connector : private folly::EventHandler, folly::AsyncTimeout {
 };
 
 UnixSocket::UnixSocket(EventBase* eventBase, File socket)
-    : EventHandler{eventBase, socket.fd()},
+    : EventHandler{eventBase, folly::NetworkSocket::fromFd(socket.fd())},
       AsyncTimeout{eventBase},
       eventBase_{eventBase},
       socket_{std::move(socket)},
