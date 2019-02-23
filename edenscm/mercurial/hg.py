@@ -484,18 +484,6 @@ def clonewithshare(
     return srcpeer, peer(ui, peeropts, dest)
 
 
-# Recomputing branch cache might be slow on big repos,
-# so just copy it
-def _copycache(srcrepo, dstcachedir, fname):
-    """copy a cache from srcrepo to destcachedir (if it exists)"""
-    srcbranchcache = srcrepo.localvfs.join("cache/%s" % fname)
-    dstbranchcache = os.path.join(dstcachedir, fname)
-    if os.path.exists(srcbranchcache):
-        if not os.path.exists(dstcachedir):
-            os.mkdir(dstcachedir)
-        util.copyfile(srcbranchcache, dstbranchcache)
-
-
 def _cachetocopy(srcrepo):
     """return the list of cache file valuable to copy during a clone"""
     # In local clones we're copying all nodes, not just served
@@ -690,10 +678,6 @@ def clone(
             dstbookmarks = os.path.join(destpath, "bookmarks")
             if os.path.exists(srcbookmarks):
                 util.copyfile(srcbookmarks, dstbookmarks)
-
-            dstcachedir = os.path.join(destpath, "cache")
-            for cache in _cachetocopy(srcrepo):
-                _copycache(srcrepo, dstcachedir, cache)
 
             # we need to re-init the repo after manually copying the data
             # into it

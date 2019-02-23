@@ -172,7 +172,6 @@ class statichttprepository(localrepo.localrepository):
         self._tags = None
         self.nodetagscache = None
         self._branchcaches = {}
-        self._revbranchcache = None
         self.encodepats = None
         self.decodepats = None
         self._transref = None

@@ -94,8 +94,6 @@ def setupdirectaccess():
     """
     repoview.filtertable.update({"visible-directaccess-nowarn": _computehidden})
     repoview.filtertable.update({"visible-directaccess-warn": _computehidden})
-    branchmap.subsettable["visible-directaccess-nowarn"] = "visible"
-    branchmap.subsettable["visible-directaccess-warn"] = "visible"
 
     for warn, ext, cmd in directaccesslevel:
         try:

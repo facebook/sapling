@@ -357,24 +357,6 @@ def safeattrsetter(obj, name, ignoremissing=False):
 # utilities to examine each internal API changes
 
 
-def getbranchmapsubsettable():
-    # for "historical portability":
-    # subsettable is defined in:
-    # - branchmap since 2.9 (or 175c6fd8cacc)
-    # - repoview since 2.5 (or 59a9f18d4587)
-    for mod in (branchmap, repoview):
-        subsettable = getattr(mod, "subsettable", None)
-        if subsettable:
-            return subsettable
-
-    # bisecting in bcee63733aad::59a9f18d4587 can reach here (both
-    # branchmap and repoview modules exist, but subsettable attribute
-    # doesn't)
-    raise error.Abort(
-        ("perfbranchmap not available with this Mercurial"), hint="use 2.5 or later"
-    )
-
-
 def getsvfs(repo):
     """Return appropriate object to access files under .hg/store
     """
@@ -1703,73 +1685,6 @@ def perfvolatilesets(ui, repo, *names, **opts):
 
     for name in allfilter:
         timer(getfiltered(name), title=name)
-    fm.end()
-
-
-@command(
-    "perfbranchmap",
-    [
-        ("f", "full", False, "Includes build time of subset"),
-        ("", "clear-revbranch", False, "purge the revbranch cache between computation"),
-    ]
-    + formatteropts,
-)
-def perfbranchmap(ui, repo, full=False, clear_revbranch=False, **opts):
-    """benchmark the update of a branchmap
-
-    This benchmarks the full repo.branchmap() call with read and write disabled
-    """
-    timer, fm = gettimer(ui, opts)
-
-    def getbranchmap(filtername):
-        """generate a benchmark function for the filtername"""
-        if filtername is None:
-            view = repo
-        else:
-            view = repo.filtered(filtername)
-
-        def d():
-            if clear_revbranch:
-                repo.revbranchcache()._clear()
-            if full:
-                view._branchcaches.clear()
-            else:
-                view._branchcaches.pop(filtername, None)
-            view.branchmap()
-
-        return d
-
-    # add filter in smaller subset to bigger subset
-    possiblefilters = set(repoview.filtertable)
-    subsettable = getbranchmapsubsettable()
-    allfilters = []
-    while possiblefilters:
-        for name in possiblefilters:
-            subset = subsettable.get(name)
-            if subset not in possiblefilters:
-                break
-        else:
-            assert False, "subset cycle %s!" % possiblefilters
-        allfilters.append(name)
-        possiblefilters.remove(name)
-
-    # warm the cache
-    if not full:
-        for name in allfilters:
-            repo.filtered(name).branchmap()
-    # add unfiltered
-    allfilters.append(None)
-
-    branchcacheread = safeattrsetter(branchmap, "read")
-    branchcachewrite = safeattrsetter(branchmap.branchcache, "write")
-    branchcacheread.set(lambda repo: None)
-    branchcachewrite.set(lambda bc, repo: None)
-    try:
-        for name in allfilters:
-            timer(getbranchmap(name), title=str(name))
-    finally:
-        branchcacheread.restore()
-        branchcachewrite.restore()
     fm.end()
 
 

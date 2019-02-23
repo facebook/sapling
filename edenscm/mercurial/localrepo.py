@@ -551,7 +551,6 @@ class localrepository(object):
         self._dirstatevalidatewarned = False
 
         self._branchcaches = {}
-        self._revbranchcache = None
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
@@ -667,8 +666,6 @@ class localrepository(object):
 
     @unfilteredmethod
     def close(self):
-        self._writecaches()
-
         if util.safehasattr(self, "connectionpool"):
             self.connectionpool.close()
 
@@ -681,10 +678,6 @@ class localrepository(object):
 
     def _loadextensions(self):
         extensions.loadall(self.ui)
-
-    def _writecaches(self):
-        if self._revbranchcache:
-            self._revbranchcache.write()
 
     def _restrictcapabilities(self, caps):
         if self.ui.configbool("experimental", "bundle2-advertise"):
@@ -1118,12 +1111,6 @@ class localrepository(object):
         ordered by increasing revision number"""
         branchmap.updatecache(self)
         return self._branchcaches[self.filtername]
-
-    @unfilteredmethod
-    def revbranchcache(self):
-        if not self._revbranchcache:
-            self._revbranchcache = branchmap.revbranchcache(self.unfiltered())
-        return self._revbranchcache
 
     def branchtip(self, branch, ignoremissing=False):
         """return the tip node for a given branch

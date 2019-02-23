@@ -53,8 +53,6 @@ perfstatus
    perfbdiff     benchmark a bdiff between revisions
    perfbookmarks
                  benchmark parsing bookmarks from disk to memory
-   perfbranchmap
-                 benchmark the update of a branchmap
    perfbundleread
                  Benchmark reading of bundle files.
    perfcca       (no help text available)
@@ -126,7 +124,6 @@ perfstatus
   $ hg perfbdiff -c 1
   $ hg perfbdiff --alldata 1
   $ hg perfbookmarks
-  $ hg perfbranchmap
   $ hg perfcca
   $ hg perfchangegroupchangelog
   $ hg perfchangeset 2
