@@ -126,7 +126,7 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
 
   $ hg clone --pull -q --config phases.publish=False ../a limit
   $ hg clone --pull -q --config phases.publish=False ../a segv
-  $ rm -R limit/.hg/cache segv/.hg/cache
+  $ rm -Rf limit/.hg/cache segv/.hg/cache
 
   $ $PYTHON <<EOF
   > data = open("limit/.hg/store/00changelog.i", "rb").read()

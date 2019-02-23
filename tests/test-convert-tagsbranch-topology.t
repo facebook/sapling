@@ -10,7 +10,7 @@
   > [extensions]
   > convert =
   > [convert]
-  > hg.usebranchnames = True
+  > hg.usebranchnames = False
   > hg.tagsbranch = tags-update
   > EOF
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
@@ -95,11 +95,11 @@ Print the log
   $ cd hg-repo
   $ glog
   o  3 "update tags" files: .hgtags
+  
+  o  2 "rev2" files: a
   |
-  | o  2 "rev2" files: a
-  | |
-  o |  1 "update tags" files: .hgtags
-   /
+  | o  1 "update tags" files: .hgtags
+  |
   o  0 "rev1" files: a
   
 

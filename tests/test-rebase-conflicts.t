@@ -154,9 +154,10 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding file changes
   added 11 changesets with 8 changes to 3 files (+1 heads)
   new changesets 24797d4f68de:2f2496ddf49d
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updating to branch f1
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd issue4041
+  $ hg up -q 'head() - merge()'
   $ hg log -G
   o    changeset:   10:2f2496ddf49d
   |\   branch:      f1
@@ -259,7 +260,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   f1.txt
   committing manifest
   committing changelog
-  updating the branch cache
   rebased as 19c888675e13
   rebasing 10:2f2496ddf49d "merge" (tip)
    future parents are 11 and 7
@@ -279,7 +279,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   f1.txt
   committing manifest
   committing changelog
-  updating the branch cache
   rebased as 2a7f09cac94c
   rebase merging completed
   update back to initial working directory parent
@@ -321,11 +320,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   bundle2-input-part: "phase-heads" supported
   bundle2-input-part: total payload size 24
   bundle2-input-bundle: 1 parts total
-  updating the branch cache
-  invalid branchheads cache (served): tip differs
-  history modification detected - truncating revision branch cache to revision 9
   rebase completed
-  truncating cache/rbc-revs-v1 to 72
 
 Test minimization of merge conflicts
   $ hg up -q null

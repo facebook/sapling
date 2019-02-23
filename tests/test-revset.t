@@ -1225,19 +1225,6 @@ test author
   7
   8
   9
-  $ log 'branch(é)'
-  8
-  9
-  $ log 'branch(a)'
-  0
-  $ hg log -r 'branch("re:a")' --template '{rev} {branch}\n'
-  0 a
-  2 a-b-c-
-  3 +a+b+c+
-  4 -a-b-c-
-  5 !a/b/c/
-  6 _a_b_c_
-  7 .a.b.c.
   $ log 'children(ancestor(4,5))'
   2
   3
@@ -1320,13 +1307,6 @@ test author
           ^ here)
   [255]
   $ log 'head()'
-  0
-  1
-  2
-  3
-  4
-  5
-  6
   7
   9
   $ log 'heads(6::)'
@@ -1338,7 +1318,7 @@ test author
 Test first (=limit) and last
 
   $ log 'limit(head(), 1)'
-  0
+  7
   $ log 'limit(author("re:bob|test"), 3, 5)'
   5
   6
@@ -1368,20 +1348,20 @@ Test smartset.slice() by first/last()
 
  (using unoptimized set, filteredset as example)
 
-  $ hg debugrevspec --no-show-revs -s '0:7 & branch("re:")'
+  $ hg debugrevspec --no-show-revs -s '0:7 & all()'
   * set:
   <filteredset
     <spanset+ 0:8>,
-    <branch 're:'>>
-  $ log 'limit(0:7 & branch("re:"), 3, 4)'
+    <spanset+ 0:10>>
+  $ log 'limit(0:7 & all(), 3, 4)'
   4
   5
   6
-  $ log 'limit(7:0 & branch("re:"), 3, 4)'
+  $ log 'limit(7:0 & all(), 3, 4)'
   3
   2
   1
-  $ log 'last(0:7 & branch("re:"), 2)'
+  $ log 'last(0:7 & all(), 2)'
   6
   7
 
@@ -1884,36 +1864,7 @@ BROKEN should be '2' (node lookup uses unfiltered repo since dc25ed84bee8)
 
   $ cd ..
 
-Test branch() with wdir()
-
   $ cd repo
-
-  $ log '0:wdir() & branch("literal:é")'
-  8
-  9
-  2147483647
-  $ log '0:wdir() & branch("re:é")'
-  8
-  9
-  2147483647
-  $ log '0:wdir() & branch("re:^a")'
-  0
-  2
-  $ log '0:wdir() & branch(8)'
-  8
-  9
-  2147483647
-
-branch(wdir()) returns all revisions belonging to the working branch. The wdir
-itself isn't returned unless it is explicitly populated.
-
-  $ log 'branch(wdir())'
-  8
-  9
-  $ log '0:wdir() & branch(wdir())'
-  8
-  9
-  2147483647
 
   $ log 'outgoing()'
   8
@@ -2017,10 +1968,9 @@ ordering defined by it.
 
  'head()' combines sets in right order:
 
-  $ log '2:0 & head()'
-  2
-  1
-  0
+  $ log '9:7 & head()'
+  9
+  7
 
  'x:y' takes ordering parameter into account:
 

@@ -17,8 +17,6 @@ File node could be reused during commit --amend
   reusing a filelog node (exact match)
   committing manifest
   committing changelog
-  updating the branch cache
-  invalid branchheads cache (served): tip differs
   committed changeset 2:92bc7a9d76f010337ece134e095054c094d44760
 
 #if execbit
@@ -34,7 +32,5 @@ File node is reused for mode-only change
   b
   committing manifest
   committing changelog
-  updating the branch cache
-  invalid branchheads cache (served): tip differs
   committed changeset 3:ba954a28eb454eb63e7348349f8e87e7b1be3601
 #endif

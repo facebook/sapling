@@ -121,7 +121,6 @@ Stack of non-conflicting commits should be accepted
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 15 bytes
-  updating the branch cache
 
 Check that we did not generate any check:heads parts
 

@@ -70,9 +70,9 @@ clone, commit, pull
   new changesets d02f48003e62
   (run 'hg update' to get a working copy)
   $ hg blackbox -l 6
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> perftweaks updated served branch cache
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> clone . ../blackboxtest2 exited 0 after 0.00 seconds
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pull
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> updated served branch cache in * seconds (glob)
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> wrote served branch cache with 1 labels and 2 nodes
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> 1 incoming changes - new heads: d02f48003e62
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pull exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> blackbox -l 6
@@ -132,10 +132,10 @@ backup bundles get logged
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
   $ hg blackbox -l 6
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> commit -Amd
+  1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> commit -Amd exited 0 after 0.00 seconds
   1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> strip tip
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> updated base branch cache in * seconds (glob)
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> wrote base branch cache with 1 labels and 2 nodes
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> strip tip exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> blackbox -l 6
 
@@ -158,12 +158,11 @@ extension and python hooks - use the eol extension for a pythonhook
   > eol=!
   > EOF
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> update (no-chg !)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> perftweaks updated visible branch cache
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> writing .hg/cache/tags2-visible with 0 tags
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pythonhook-preupdate: *hgext.eol.preupdate finished in * seconds (glob)
   1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> exthook-update: echo hooked finished in * seconds (glob)
   1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> update exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> serve --cmdserver chgunix --address $TESTTMP.chgsock/server.* --daemon-postexec 'chdir:/' (glob) (chg !)
   1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> blackbox -l 6
 
 log rotation
@@ -215,9 +214,9 @@ log rotation
   
   result: 0
   $ hg blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox exited 0 after 0.00 seconds
   1970/01/01 00:00:00 bob @0e46349438790c460c5c9f7546bfcd39b267bbd2 (5000)> commit -m commit2 -d 2000-01-02 foo
-  1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> updated served branch cache in * seconds (glob)
-  1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> wrote served branch cache with 1 labels and 1 nodes
   1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> commit -m commit2 -d 2000-01-02 foo exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> log -r 0
   1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> writing .hg/cache/tags2-visible with 0 tags
@@ -297,10 +296,10 @@ when using chg, blackbox.log should get rotated correctly
 
 With chg, blackbox should not create the log file if the repo is gone
 
-  $ hg init repo1
-  $ hg --config extensions.a=! -R repo1 log
-  $ rm -rf $TESTTMP/repo1
-  $ hg --config extensions.a=! init repo1
+  $ hg init repo0
+  $ hg --config extensions.a=! -R repo0 log
+  $ rm -rf $TESTTMP/repo0
+  $ hg --config extensions.a=! init repo0
 
 #endif
 
@@ -329,7 +328,7 @@ blackbox should work if repo.ui.log is not called (issue5518)
 #if chg
  (chg exits 255 because it fails to receive an exit code)
   $ hg raise 2>/dev/null
-  [255]
+  [1]
 #else
  (hg exits 1 because Python default exit code for uncaught exception is 1)
   $ hg raise 2>/dev/null

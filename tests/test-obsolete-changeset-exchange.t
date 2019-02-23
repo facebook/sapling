@@ -170,5 +170,4 @@ client only pulls down 1 changeset
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
   new changesets bec0734cd68e
-  updating the branch cache
   (run 'hg heads' to see heads, 'hg merge' to merge)

@@ -28,23 +28,6 @@ class TestSingleDirClone(test_hgsubversion_util.TestBase):
             ],
         )
 
-    def test_auto_detect_single(self):
-        repo = self._load_fixture_and_fetch("branch_from_tag.svndump", layout="auto")
-        self.assertEqual(
-            compathacks.branchset(repo), set(["default", "branch_from_tag"])
-        )
-        oldmanifest = test_hgsubversion_util.filtermanifest(
-            repo["default"].manifest().keys()
-        )
-        # remove standard layout
-        shutil.rmtree(self.wc_path)
-        # try again with subdir to get single dir clone
-        repo = self._load_fixture_and_fetch(
-            "branch_from_tag.svndump", layout="auto", subdir="trunk"
-        )
-        self.assertEqual(compathacks.branchset(repo), set(["default"]))
-        self.assertEqual(repo["default"].manifest().keys(), oldmanifest)
-
     def test_clone_subdir_is_file_prefix(self):
         FIXTURE = "subdir_is_file_prefix.svndump"
         repo = self._load_fixture_and_fetch(

@@ -49,38 +49,6 @@ Test disabling the case conflict check (only fails on case sensitive systems)
   $ cd ..
 #endif
 
-Test disabling the branchcache
-  $ hg init branchcache
-  $ cd branchcache
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > blackbox=
-  > strip=
-  > EOF
-  $ echo a > a
-  $ hg commit -Aqm a
-#if no-fsmonitor
-  $ hg blackbox
-  *> commit -Aqm a (glob)
-  *> updated served branch cache in * seconds (glob)
-  *> wrote served branch cache with 1 labels and 1 nodes (glob)
-  *> commit -Aqm a exited 0 after * seconds (glob)
-  *> blackbox (glob)
-#endif
-  $ hg strip -q -r . -k
-  $ rm .hg/blackbox.log
-  $ rm -rf .hg/cache
-  $ hg commit -Aqm a --config perftweaks.disablebranchcache=True --config perftweaks.disablebranchcache2=True
-#if no-fsmonitor
-  $ hg blackbox
-  *> commit -Aqm a* (glob)
-  *> perftweaks updated served branch cache (glob)
-  *> commit -Aqm a * exited 0 after * seconds (glob)
-  *> blackbox (glob)
-#endif
-
-  $ cd ..
-
 Test avoiding calculating head changes during commit
 
   $ hg init branchatcommit
@@ -97,21 +65,3 @@ Test avoiding calculating head changes during commit
   $ echo D > D
   $ hg commit -m D -A D
 
-Test disabling updating branchcache during commit
-
-  $ $TESTDIR/ls-l.py .hg/cache | grep branch
-  -rw-r--r--     196 branch2-served
-
-  $ rm -f .hg/cache/branch*
-  $ echo D >> D
-  $ hg commit -m D2
-  $ $TESTDIR/ls-l.py .hg/cache | grep branch
-  -rw-r--r--     196 branch2-served
-
-  $ rm -f .hg/cache/branch*
-  $ echo D >> D
-  $ hg commit -m D3 --config perftweaks.disableupdatebranchcacheoncommit=1 --config perftweaks.disableheaddetection=1
-  $ $TESTDIR/ls-l.py .hg/cache | grep branch
-  [1]
-
-  $ cd ..

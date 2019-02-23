@@ -55,25 +55,21 @@ committing files:
 reusing 1 filelog rawdata
 committing manifest
 committing changelog
-updating the branch cache
 copying rev 1 from test1 to test3
 committing files:
 2
 reusing 2 filelog rawdata
 committing manifest
 committing changelog
-updating the branch cache
 copying rev 2 from test1 to test3
 committing files:
 3
 reusing 3 filelog rawdata
 committing manifest
 committing changelog
-updating the branch cache
 copying rev 3 from test1 to test3
 committing files:
 4
 reusing 4 filelog rawdata
 committing manifest
 committing changelog
-updating the branch cache

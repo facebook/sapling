@@ -34,13 +34,6 @@ Default operation:
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../b
 
-Ensure branchcache got copied over:
-
-  $ ls .hg/cache | grep -v check
-  branch2-served
-  rbc-names-v1
-  rbc-revs-v1
-
   $ cat a
   a
   $ hg verify
@@ -83,13 +76,6 @@ No update, with debug option:
   copied 8 files
 #endif
   $ cd ../c
-
-Ensure branchcache got copied over:
-
-  $ ls .hg/cache
-  branch2-served
-  rbc-names-v1
-  rbc-revs-v1
 
   $ cat a 2>/dev/null || echo "a not present"
   a not present

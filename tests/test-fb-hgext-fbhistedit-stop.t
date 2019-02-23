@@ -146,7 +146,6 @@ stop on a commit
 check histedit_source
 
   $ hg log --debug --rev '.^'
-  invalid branchheads cache (served): tip differs
   changeset:   9:d51720eb7a133e2dabf74a445e509a3900e9c0b5
   phase:       draft
   parent:      3:055a42cdd88768532f9cf79daa407fc8d138de9b

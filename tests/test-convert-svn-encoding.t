@@ -56,7 +56,6 @@ Convert while testing all possible outputs
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@1
   progress: converting: 0/6 revisions (0.00%)
   committing changelog
-  updating the branch cache
   4 hello
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   progress: converting: 1/6 revisions (16.67%)
@@ -72,7 +71,6 @@ Convert while testing all possible outputs
   progress: getting files: \xc3\xa9 2/2 files (100.00%) (esc)
   committing manifest
   committing changelog
-  updating the branch cache
   progress: getting files (end)
   3 copy files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@3
@@ -101,7 +99,6 @@ Convert while testing all possible outputs
    \xc3\xb9/e\xcc\x81: copy \xc3\xa0/e\xcc\x81:a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
   committing manifest
   committing changelog
-  updating the branch cache
   progress: getting files (end)
   2 remove files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@4
@@ -120,7 +117,6 @@ Convert while testing all possible outputs
   committing files:
   committing manifest
   committing changelog
-  updating the branch cache
   progress: getting files (end)
   1 branch to branch?
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
@@ -129,7 +125,6 @@ Convert while testing all possible outputs
   progress: scanning paths: /branches/branch\xc3\xa9 0/1 paths (0.00%) (esc)
   progress: scanning paths (end)
   committing changelog
-  updating the branch cache
   0 branch to branch?e
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
   progress: converting: 5/6 revisions (83.33%)
@@ -137,7 +132,6 @@ Convert while testing all possible outputs
   progress: scanning paths: /branches/branch\xc3\xa9e 0/1 paths (0.00%) (esc)
   progress: scanning paths (end)
   committing changelog
-  updating the branch cache
   progress: converting (end)
   reparent to file:/*/$TESTTMP/svn-repo (glob)
   reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
@@ -148,7 +142,6 @@ Convert while testing all possible outputs
   .hgtags
   committing manifest
   committing changelog
-  updating the branch cache
   run hg sink post-conversion action
   $ cd A-hg
   $ hg up

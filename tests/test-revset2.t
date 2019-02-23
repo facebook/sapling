@@ -666,15 +666,6 @@ we can use patterns when searching for tags
   $ log 'tag("re:unknown")'
   $ log 'present(tag("unknown"))'
   $ log 'present(tag("re:unknown"))'
-  $ log 'branch(unknown)'
-  abort: unknown revision 'unknown'!
-  [255]
-  $ log 'branch("literal:unknown")'
-  abort: branch 'unknown' does not exist!
-  [255]
-  $ log 'branch("re:unknown")'
-  $ log 'present(branch("unknown"))'
-  $ log 'present(branch("re:unknown"))'
   $ log 'user(bob)'
   2
 
@@ -708,13 +699,6 @@ we can use patterns when searching for tags
   $ log 'sort(head(), -rev)'
   9
   7
-  6
-  5
-  4
-  3
-  2
-  1
-  0
   $ log '4::8 - 8'
   4
 
@@ -748,10 +732,6 @@ issue2437
   0
   $ hg debugrevspec 'roots(all()) or roots(all())'
   0
-  $ log 'heads(branch(é)) or heads(branch(é))'
-  9
-  $ log 'ancestors(8) and (heads(branch("-a-b-c-")) or heads(branch(é)))'
-  4
 
 issue2654: report a parse error if the revset was not completely parsed
 
@@ -1477,7 +1457,6 @@ tests for 'remote()' predicate:
   $ log 'remote("a-b-c-")'
   2
   $ cd ../repo
-  $ log 'remote(".a.b.c.", "../remote3")'
 
 tests for concatenation of strings/symbols by "##"
 
@@ -1555,22 +1534,6 @@ prepare repository that has "default" branches of multiple roots
   $ hg ci -Aqm4
   $ echo default5 >> a
   $ hg ci -m5
-
-"null" revision belongs to "default" branch (issue4683)
-
-  $ log 'branch(null)'
-  0
-  1
-  4
-  5
-
-"null" revision belongs to "default" branch, but it shouldn't appear in set
-unless explicitly specified (issue4682)
-
-  $ log 'children(branch(default))'
-  1
-  2
-  5
 
   $ cd ..
 

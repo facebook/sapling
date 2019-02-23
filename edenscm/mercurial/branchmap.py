@@ -27,53 +27,9 @@ def _filename(repo):
 
 
 def read(repo):
-    # developer config: perftweaks.disablebranchcache2
     # Don't bother reading branchmap since branchcache.update() will be called
     # anyway and that is O(changelog).
-    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        return None
-
-    try:
-        f = repo.cachevfs(_filename(repo))
-        lines = f.read().split("\n")
-        f.close()
-    except (IOError, OSError):
-        return None
-
-    try:
-        cachekey = lines.pop(0).split(" ", 2)
-        last, lrev = cachekey[:2]
-        last, lrev = bin(last), int(lrev)
-        filteredhash = None
-        if len(cachekey) > 2:
-            filteredhash = bin(cachekey[2])
-        partial = branchcache(tipnode=last, tiprev=lrev, filteredhash=filteredhash)
-        if not partial.validfor(repo):
-            # invalidate the cache
-            raise ValueError("tip differs")
-        cl = repo.changelog
-        for l in lines:
-            if not l:
-                continue
-            node, state, label = l.split(" ", 2)
-            if state not in "oc":
-                raise ValueError("invalid branch state")
-            label = encoding.tolocal(label.strip())
-            node = bin(node)
-            if not cl.hasnode(node):
-                raise ValueError("node %s does not exist" % hex(node))
-            partial.setdefault(label, []).append(node)
-            if state == "c":
-                partial._closednodes.add(node)
-    except Exception as inst:
-        if repo.ui.debugflag:
-            msg = "invalid branchheads cache"
-            if repo.filtername is not None:
-                msg += " (%s)" % repo.filtername
-            msg += ": %s\n"
-            repo.ui.debug(msg % inst)
-        partial = None
-    return partial
+    return None
 
 
 ### Nearest subset relation
@@ -92,39 +48,16 @@ subsettable = {
 
 def updatecache(repo):
     # Don't write the branchmap if it's disabled.
-    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        # The original logic has unnecessary steps, ex. it calculates the "served"
-        # repoview as an attempt to build branchcache for "visible". And then
-        # calculates "immutable" for calculating "served", recursively.
-        #
-        # Just use a shortcut path that construct the branchcache directly.
-        partial = repo._branchcaches.get(repo.filtername)
-        if partial is None:
-            partial = branchcache()
-        partial.update(repo, None)
-        repo._branchcaches[repo.filtername] = partial
-    else:
-        cl = repo.changelog
-        filtername = repo.filtername
-        partial = repo._branchcaches.get(filtername)
-        revs = []
-        if partial is None or not partial.validfor(repo):
-            partial = read(repo)
-            if partial is None:
-                subsetname = subsettable.get(filtername)
-                if subsetname is None:
-                    partial = branchcache()
-                else:
-                    subset = repo.filtered(subsetname)
-                    partial = subset.branchmap().copy()
-                    extrarevs = subset.changelog.filteredrevs - cl.filteredrevs
-                    revs.extend(r for r in extrarevs if r <= partial.tiprev)
-        revs.extend(cl.revs(start=partial.tiprev + 1))
-        if revs:
-            partial.update(repo, revs)
-            partial.write(repo)
-        assert partial.validfor(repo), filtername
-        repo._branchcaches[repo.filtername] = partial
+    # The original logic has unnecessary steps, ex. it calculates the "served"
+    # repoview as an attempt to build branchcache for "visible". And then
+    # calculates "immutable" for calculating "served", recursively.
+    #
+    # Just use a shortcut path that construct the branchcache directly.
+    partial = repo._branchcaches.get(repo.filtername)
+    if partial is None:
+        partial = branchcache()
+    partial.update(repo, None)
+    repo._branchcaches[repo.filtername] = partial
 
 
 def replacecache(repo, bm):
@@ -133,30 +66,7 @@ def replacecache(repo, bm):
     This is likely only called during clone with a branch map from a remote.
     """
     # Don't write the branchmap if it's disabled.
-    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        return
-    rbheads = []
-    closed = []
-    for bheads in bm.itervalues():
-        rbheads.extend(bheads)
-        for h in bheads:
-            r = repo.changelog.rev(h)
-            b, c = repo.changelog.branchinfo(r)
-            if c:
-                closed.append(h)
-
-    if rbheads:
-        rtiprev = max((int(repo.changelog.rev(node)) for node in rbheads))
-        cache = branchcache(bm, repo[rtiprev].node(), rtiprev, closednodes=closed)
-
-        # Try to stick it as low as possible
-        # filter above served are unlikely to be fetch from a clone
-        for candidate in ("base", "immutable", "served"):
-            rview = repo.filtered(candidate)
-            if cache.validfor(rview):
-                repo._branchcaches[candidate] = cache
-                cache.write(rview)
-                break
+    return
 
 
 class branchcache(dict):
@@ -252,36 +162,7 @@ class branchcache(dict):
 
     def write(self, repo):
         # Don't bother writing the branchcache if it's disabled.
-        if repo.ui.configbool("perftweaks", "disablebranchcache2"):
-            return None
-        try:
-            f = repo.cachevfs(_filename(repo), "w", atomictemp=True)
-            cachekey = [hex(self.tipnode), "%d" % self.tiprev]
-            if self.filteredhash is not None:
-                cachekey.append(hex(self.filteredhash))
-            f.write(" ".join(cachekey) + "\n")
-            nodecount = 0
-            for label, nodes in sorted(self.iteritems()):
-                for node in nodes:
-                    nodecount += 1
-                    if node in self._closednodes:
-                        state = "c"
-                    else:
-                        state = "o"
-                    f.write(
-                        "%s %s %s\n" % (hex(node), state, encoding.fromlocal(label))
-                    )
-            f.close()
-            repo.ui.log(
-                "branchcache",
-                "wrote %s branch cache with %d labels and %d nodes\n",
-                repo.filtername,
-                len(self),
-                nodecount,
-            )
-        except (IOError, OSError, error.Abort) as inst:
-            # Abort may be raised by read only opener, so log and continue
-            repo.ui.debug("couldn't write branch cache: %s\n" % inst)
+        return None
 
     def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be
@@ -289,92 +170,29 @@ class branchcache(dict):
         heads missing, this function updates self to be correct.
         """
         # Behave differently if the cache is disabled.
-        if repo.ui.configbool("perftweaks", "disablebranchcache"):
-            cl = repo.changelog
-            tonode = cl.node
+        cl = repo.changelog
+        tonode = cl.node
 
-            if self.tiprev == len(cl) - 1 and self.validfor(repo):
-                return
-
-            # Since we have no branches, the default branch heads are equal to
-            # cl.headrevs(). Note: cl.headrevs() is already sorted and it may return
-            # -1.
-            branchheads = [i for i in cl.headrevs() if i >= 0]
-
-            if not branchheads:
-                if "default" in self:
-                    del self["default"]
-                tiprev = -1
-            else:
-                self["default"] = [tonode(rev) for rev in branchheads]
-                tiprev = branchheads[-1]
-            self.tipnode = cl.node(tiprev)
-            self.tiprev = tiprev
-            self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
-            repo.ui.log(
-                "branchcache", "perftweaks updated %s branch cache\n", repo.filtername
-            )
+        if self.tiprev == len(cl) - 1 and self.validfor(repo):
             return
 
-        starttime = util.timer()
-        cl = repo.changelog
-        # collect new branch entries
-        newbranches = {}
-        getbranchinfo = repo.revbranchcache().branchinfo
-        for r in revgen:
-            branch, closesbranch = getbranchinfo(r)
-            newbranches.setdefault(branch, []).append(r)
-            if closesbranch:
-                self._closednodes.add(cl.node(r))
+        # Since we have no branches, the default branch heads are equal to
+        # cl.headrevs(). Note: cl.headrevs() is already sorted and it may return
+        # -1.
+        branchheads = [i for i in cl.headrevs() if i >= 0]
 
-        # fetch current topological heads to speed up filtering
-        topoheads = set(cl.headrevs())
-
-        # if older branchheads are reachable from new ones, they aren't
-        # really branchheads. Note checking parents is insufficient:
-        # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
-        for branch, newheadrevs in newbranches.iteritems():
-            bheads = self.setdefault(branch, [])
-            bheadset = set(cl.rev(node) for node in bheads)
-
-            # This have been tested True on all internal usage of this function.
-            # run it again in case of doubt
-            # assert not (set(bheadrevs) & set(newheadrevs))
-            newheadrevs.sort()
-            bheadset.update(newheadrevs)
-
-            # This prunes out two kinds of heads - heads that are superseded by
-            # a head in newheadrevs, and newheadrevs that are not heads because
-            # an existing head is their descendant.
-            uncertain = bheadset - topoheads
-            if uncertain:
-                floorrev = min(uncertain)
-                ancestors = set(cl.ancestors(newheadrevs, floorrev))
-                bheadset -= ancestors
-            bheadrevs = sorted(bheadset)
-            self[branch] = [cl.node(rev) for rev in bheadrevs]
-            tiprev = bheadrevs[-1]
-            if tiprev > self.tiprev:
-                self.tipnode = cl.node(tiprev)
-                self.tiprev = tiprev
-
-        if not self.validfor(repo):
-            # cache key are not valid anymore
-            self.tipnode = nullid
-            self.tiprev = nullrev
-            for heads in self.values():
-                tiprev = max(cl.rev(node) for node in heads)
-                if tiprev > self.tiprev:
-                    self.tipnode = cl.node(tiprev)
-                    self.tiprev = tiprev
+        if not branchheads:
+            if "default" in self:
+                del self["default"]
+            tiprev = -1
+        else:
+            self["default"] = [tonode(rev) for rev in branchheads]
+            tiprev = branchheads[-1]
+        self.tipnode = cl.node(tiprev)
+        self.tiprev = tiprev
         self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
-
-        duration = util.timer() - starttime
         repo.ui.log(
-            "branchcache",
-            "updated %s branch cache in %.4f seconds\n",
-            repo.filtername,
-            duration,
+            "branchcache", "perftweaks updated %s branch cache\n", repo.filtername
         )
 
 

@@ -1748,16 +1748,6 @@ class localrepository(object):
             # later call to `destroyed` will refresh them.
             return
 
-        # Disable updating the branch cache if it is disabled.
-        # (`updatecache` checks this config too, but `repo.filtered('served')`
-        # itself can be expensive).
-        # developer config: perftweaks.disableupdatebranchcacheoncommit
-        if not self.ui.configbool("perftweaks", "disableupdatebranchcacheoncommit"):
-            if tr is None or tr.changes["revs"]:
-                # updating the unfiltered branchmap should refresh all the others,
-                self.ui.debug("updating the branch cache\n")
-                branchmap.updatecache(self.filtered("served"))
-
     def invalidatecaches(self):
 
         if "_tagscache" in vars(self):

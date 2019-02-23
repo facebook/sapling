@@ -724,9 +724,6 @@ check strip behavior
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/6625a5168474-345bb43d-backup.hg
-  updating the branch cache
-  invalid branchheads cache (served): tip differs
-  truncating cache/rbc-revs-v1 to 24
   $ hg log -G
   o  changeset:   2:5c51d8d6557d
   |  tag:         tip

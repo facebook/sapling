@@ -101,7 +101,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: infinitepush.bundle-stream (bool)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
-  undocumented: perftweaks.disablebranchcache (bool)
   undocumented: perftweaks.disablecasecheck (bool)
   undocumented: perftweaks.disabletags (bool)
   undocumented: phabricator.arcrc_host (str)

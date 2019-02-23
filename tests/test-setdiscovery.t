@@ -436,10 +436,37 @@ One with >200 heads, which used to use up all of the sample:
   $ hg heads -t --template . | wc -c
   \s*261 (re)
 
+The graph looks like:
+
+>  b a  (b is tip)
+>  | |
+>  b a
+>  | |
+>  b a
+>  | |
+>  b a
+>  |/
+>  :   (many other a-a-a-a branches)
+>  | a
+>  | |
+>  | a
+>  | |
+>  | a
+>  | |
+>  | a
+>  |/
+>  |
+>  default  (is also 'ancestor(head())')
+>  |
+>  default
+>  |
+>  :  (many other default commits)
+
   $ hg clone . a
-  updating to branch default
+  updating to branch b
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg clone -r b . b
+  $ hg -R a up -q 'ancestor(head())'
+  $ hg clone -r tip . b
   adding changesets
   adding manifests
   adding file changes
@@ -472,7 +499,7 @@ Test actual protocol when pulling one new head in addition to common heads
   $ touch c/f
   $ hg -R c ci -Aqm "extra head"
   $ hg -R c id -i
-  e64a39e7da8b
+  ecb0e2f146b3
 
   $ hg serve -R c -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
   $ HGPORT=`cat $TESTTMP/.port`
@@ -481,13 +508,13 @@ Test actual protocol when pulling one new head in addition to common heads
   $ hg -R b incoming http://localhost:$HGPORT/ -T '{node|short}\n'
   comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
-  e64a39e7da8b
+  ecb0e2f146b3
 
   $ killdaemons.py
   $ cut -d' ' -f6- access.log | grep -v cmd=known # cmd=known uses random sampling
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D513314ca8b3ae4dac8eec56966265b00fcf866db x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:$USUAL_BUNDLE_CAPS$&cg=1&common=513314ca8b3ae4dac8eec56966265b00fcf866db&heads=e64a39e7da8b0d54bc63e81169aff001c13b3477 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
+  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:$USUAL_BUNDLE_CAPS$&cg=1&common=513314ca8b3ae4dac8eec56966265b00fcf866db&heads=ecb0e2f146b32093fe33ffb1754570ae15c706b9 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   $ cat errors.log
 

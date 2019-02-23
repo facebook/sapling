@@ -85,10 +85,6 @@ Non store repo:
   .hg
   .hg/00changelog.i
   .hg/00manifest.i
-  .hg/cache
-  .hg/cache/branch2-served
-  .hg/cache/rbc-names-v1
-  .hg/cache/rbc-revs-v1
   .hg/data
   .hg/data/tst.d.hg
   .hg/data/tst.d.hg/foo.i
@@ -119,10 +115,6 @@ Non fncache repo:
   $ find .hg | sort
   .hg
   .hg/00changelog.i
-  .hg/cache
-  .hg/cache/branch2-served
-  .hg/cache/rbc-names-v1
-  .hg/cache/rbc-revs-v1
   .hg/dirstate
   .hg/last-message.txt
   .hg/requires

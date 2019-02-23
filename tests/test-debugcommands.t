@@ -163,11 +163,8 @@ Test cache warming command
 
   $ rm -rf .hg/cache/
   $ hg debugupdatecaches --debug
-  updating the branch cache
-  $ ls -r .hg/cache/*
-  .hg/cache/rbc-revs-v1
-  .hg/cache/rbc-names-v1
-  .hg/cache/branch2-served
+  $ [ -d .hg/cache/ ]
+  [1]
 
   $ cd ..
 
