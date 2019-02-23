@@ -752,6 +752,13 @@ class fetchbuilddeps(Command):
 
     assets = re2assets + pyassets
 
+    if iswindows:
+        # The file was created by installing vcpkg (4ad78224) to C:\vcpkg,
+        # running `vcpkg install openssl:x64-windows`, then zipping the
+        # `C:\vcpkg\packages\openssl-windows_x64-windows` directory.
+        opensslwinasset = asset(name="openssl-windows_x64-windows.zip")
+        assets += [opensslwinasset]
+
     def initialize_options(self):
         pass
 
@@ -761,6 +768,9 @@ class fetchbuilddeps(Command):
     def run(self):
         for item in self.assets:
             item.ensureready()
+        if iswindows:
+            # See https://docs.rs/openssl/0.10.18/openssl/
+            os.environ["OPENSSL_DIR"] = pjoin(builddir, self.opensslwinasset.destdir)
 
 
 class hgbuild(build):
