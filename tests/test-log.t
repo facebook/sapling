@@ -12,8 +12,6 @@ Log on empty repository: checking consistency
   abort: unknown revision '-1'!
   [255]
   $ hg log -r 'branch(name)'
-  abort: unknown revision 'name'!
-  [255]
   $ hg log -r null -q
   -1:000000000000
 

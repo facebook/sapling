@@ -26,7 +26,8 @@ Add log alias to and make sure show still works
   abort: unknown revision '1'!
   [255]
   $ hg show 'branch(name)'
-  abort: unknown revision 'name'!
+  abort: unknown revision branch(name)
+  (if branch(name) is a file, try `hg show . branch(name)`)
   [255]
   $ hg show null -q
   changeset:   -1:000000000000
