@@ -63,7 +63,6 @@ Clone with background file closing enabled
   $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U http://localhost:$HGPORT clone-background | grep -v adding
   using http://localhost:$HGPORT/ (glob)
   sending capabilities command
-  sending branchmap command
   streaming all changes
   sending stream_out_option command
   1027 files to transfer, * of data (glob)

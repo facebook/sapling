@@ -294,7 +294,6 @@ test http authentication
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=capabilities HTTP/1.1" 200 -
-  "GET /?cmd=branchmap HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=stream_out_option HTTP/1.1" 200 - x-hgarg-1:fullclone=False x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$

@@ -60,15 +60,6 @@ def updatecache(repo):
     repo._branchcaches[repo.filtername] = partial
 
 
-def replacecache(repo, bm):
-    """Replace the branchmap cache for a repo with a branch mapping.
-
-    This is likely only called during clone with a branch map from a remote.
-    """
-    # Don't write the branchmap if it's disabled.
-    return
-
-
 class branchcache(dict):
     """A dict like object that hold branches heads cache.
 

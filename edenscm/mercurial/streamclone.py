@@ -129,12 +129,6 @@ def maybeperformlegacystreamclone(pullop):
     repo = pullop.repo
     remote = pullop.remote
 
-    # Save remote branchmap. We will use it later to speed up branchcache
-    # creation.
-    rbranchmap = None
-    if remote.capable("branchmap"):
-        rbranchmap = remote.branchmap()
-
     repo.ui.status(_("streaming all changes\n"))
 
     fp = remote.stream_out()
@@ -165,9 +159,6 @@ def maybeperformlegacystreamclone(pullop):
         repo.requirements = requirements | (repo.requirements - repo.supportedformats)
         repo._applyopenerreqs()
         repo._writerequirements()
-
-        if rbranchmap:
-            branchmap.replacecache(repo, rbranchmap)
 
         repo.invalidate()
 

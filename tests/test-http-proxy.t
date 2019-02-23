@@ -109,7 +109,6 @@ do not use the proxy if it is in the no list
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat proxy.log
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
-  $LOCALIP - - [$LOGDATE$] "GET http://localhost:$HGPORT/?cmd=branchmap HTTP/1.1" - - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$ (glob)
   $LOCALIP - - [$LOGDATE$] "GET http://localhost:$HGPORT/?cmd=stream_out_option HTTP/1.1" - - x-hgarg-1:fullclone=False x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$ (glob)
   $LOCALIP - - [$LOGDATE$] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D83180e7845de420a1bb46896fd5fe05294f8d629 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$ (glob)
   $LOCALIP - - [$LOGDATE$] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bookmarks=1&$USUAL_BUNDLE_CAPS$&cg=0&common=83180e7845de420a1bb46896fd5fe05294f8d629&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$ (glob)

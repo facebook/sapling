@@ -283,7 +283,6 @@ test http authentication
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=capabilities HTTP/1.1" 200 -
-  "GET /?cmd=branchmap HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=stream_out_option HTTP/1.1" 200 - x-hgarg-1:fullclone=False x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D5fed3813f7f5e1824344fdc9cf8f63bb662c292d x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=getbundle HTTP/1.1" 401 - x-hgarg-1:bookmarks=1&$USUAL_BUNDLE_CAPS$&cg=0&common=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
