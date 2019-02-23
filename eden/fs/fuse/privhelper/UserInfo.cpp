@@ -20,7 +20,7 @@
 #include "eden/fs/eden-config.h"
 
 #ifdef EDEN_HAVE_SELINUX
-#include <selinux/selinux.h>
+#include <selinux/selinux.h> // @manual
 #endif // EDEN_HAVE_SELINUX
 
 using folly::checkUnixError;
