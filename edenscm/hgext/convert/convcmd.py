@@ -13,18 +13,7 @@ import shutil
 from edenscm.mercurial import encoding, error, hg, progress, scmutil, util
 from edenscm.mercurial.i18n import _
 
-from . import (
-    bzr,
-    common,
-    cvs,
-    darcs,
-    filemap,
-    git,
-    gnuarch,
-    hg as hgconvert,
-    p4,
-    subversion,
-)
+from . import bzr, common, darcs, filemap, git, gnuarch, hg as hgconvert, p4, subversion
 
 
 mapfile = common.mapfile
@@ -33,7 +22,6 @@ NoRepo = common.NoRepo
 SKIPREV = common.SKIPREV
 
 bzr_source = bzr.bzr_source
-convert_cvs = cvs.convert_cvs
 convert_git = git.convert_git
 darcs_source = darcs.darcs_source
 gnuarch_source = gnuarch.gnuarch_source
@@ -88,7 +76,6 @@ def mapbranch(branch, branchmap):
 
 
 source_converters = [
-    ("cvs", convert_cvs, "branchsort"),
     ("git", convert_git, "branchsort"),
     ("svn", svn_source, "branchsort"),
     ("hg", mercurial_source, "sourcesort"),

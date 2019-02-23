@@ -14,11 +14,9 @@
       Accepted source formats [identifiers]:
   
       - Mercurial [hg]
-      - CVS [cvs]
       - Darcs [darcs]
       - git [git]
       - Subversion [svn]
-      - Monotone [mtn]
       - GNU Arch [gnuarch]
       - Bazaar [bzr]
       - Perforce [p4]
@@ -149,66 +147,6 @@
                     specify the initial Mercurial revision. The default is 0.
       convert.hg.revs
                     revset specifying the source revisions to convert.
-  
-      CVS Source
-      ##########
-  
-      CVS source will use a sandbox (i.e. a checked-out copy) from CVS to
-      indicate the starting point of what will be converted. Direct access to
-      the repository files is not needed, unless of course the repository is
-      ":local:". The conversion uses the top level directory in the sandbox to
-      find the CVS repository, and then uses CVS rlog commands to find files to
-      convert. This means that unless a filemap is given, all files under the
-      starting directory will be converted, and that any directory
-      reorganization in the CVS sandbox is ignored.
-  
-      The following options can be used with "--config":
-  
-      convert.cvsps.cache
-                    Set to False to disable remote log caching, for testing and
-                    debugging purposes. Default is True.
-      convert.cvsps.fuzz
-                    Specify the maximum time (in seconds) that is allowed
-                    between commits with identical user and log message in a
-                    single changeset. When very large files were checked in as
-                    part of a changeset then the default may not be long enough.
-                    The default is 60.
-      convert.cvsps.logencoding
-                    Specify encoding name to be used for transcoding CVS log
-                    messages. Multiple encoding names can be specified as a list
-                    (see 'hg help config.Syntax'), but only the first acceptable
-                    encoding in the list is used per CVS log entries. This
-                    transcoding is executed before cvslog hook below.
-      convert.cvsps.mergeto
-                    Specify a regular expression to which commit log messages
-                    are matched. If a match occurs, then the conversion process
-                    will insert a dummy revision merging the branch on which
-                    this log message occurs to the branch indicated in the
-                    regex. Default is "{{mergetobranch ([-\w]+)}}"
-      convert.cvsps.mergefrom
-                    Specify a regular expression to which commit log messages
-                    are matched. If a match occurs, then the conversion process
-                    will add the most recent revision on the branch indicated in
-                    the regex as the second parent of the changeset. Default is
-                    "{{mergefrombranch ([-\w]+)}}"
-      convert.localtimezone
-                    use local time (as determined by the TZ environment
-                    variable) for changeset date/times. The default is False
-                    (use UTC).
-      hooks.cvslog  Specify a Python function to be called at the end of
-                    gathering the CVS log. The function is passed a list with
-                    the log entries, and can modify the entries in-place, or add
-                    or delete them.
-      hooks.cvschangesets
-                    Specify a Python function to be called after the changesets
-                    are calculated from the CVS log. The function is passed a
-                    list with the changeset entries, and can modify the
-                    changesets in-place, or add or delete them.
-  
-      An additional "debugcvsps" Mercurial command allows the builtin changeset
-      merging code to be run without doing a conversion. Its parameters and
-      output are similar to that of cvsps 2.1. Please see the command help for
-      more details.
   
       Subversion Source
       #################
@@ -478,7 +416,6 @@ running from a devel copy, not a temp installation
   $ PATH="$BINDIR" $PYTHON "$BINDIR"/hg convert emptydir
   assuming destination emptydir-hg
   initializing destination emptydir-hg repository
-  emptydir does not look like a CVS checkout
   $TESTTMP/emptydir does not look like a Git repository
   emptydir does not look like a Subversion repository
   emptydir is not a local Mercurial repository

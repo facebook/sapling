@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
 
-from . import convcmd, cvsps, subversion
+from . import convcmd, subversion
 
 
 cmdtable = {}
@@ -58,11 +58,9 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     Accepted source formats [identifiers]:
 
     - Mercurial [hg]
-    - CVS [cvs]
     - Darcs [darcs]
     - git [git]
     - Subversion [svn]
-    - Monotone [mtn]
     - GNU Arch [gnuarch]
     - Bazaar [bzr]
     - Perforce [p4]
@@ -203,68 +201,6 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         The default is 0.
 
     :convert.hg.revs: revset specifying the source revisions to convert.
-
-    CVS Source
-    ##########
-
-    CVS source will use a sandbox (i.e. a checked-out copy) from CVS
-    to indicate the starting point of what will be converted. Direct
-    access to the repository files is not needed, unless of course the
-    repository is ``:local:``. The conversion uses the top level
-    directory in the sandbox to find the CVS repository, and then uses
-    CVS rlog commands to find files to convert. This means that unless
-    a filemap is given, all files under the starting directory will be
-    converted, and that any directory reorganization in the CVS
-    sandbox is ignored.
-
-    The following options can be used with ``--config``:
-
-    :convert.cvsps.cache: Set to False to disable remote log caching,
-        for testing and debugging purposes. Default is True.
-
-    :convert.cvsps.fuzz: Specify the maximum time (in seconds) that is
-        allowed between commits with identical user and log message in
-        a single changeset. When very large files were checked in as
-        part of a changeset then the default may not be long enough.
-        The default is 60.
-
-    :convert.cvsps.logencoding: Specify encoding name to be used for
-        transcoding CVS log messages. Multiple encoding names can be
-        specified as a list (see :hg:`help config.Syntax`), but only
-        the first acceptable encoding in the list is used per CVS log
-        entries. This transcoding is executed before cvslog hook below.
-
-    :convert.cvsps.mergeto: Specify a regular expression to which
-        commit log messages are matched. If a match occurs, then the
-        conversion process will insert a dummy revision merging the
-        branch on which this log message occurs to the branch
-        indicated in the regex. Default is ``{{mergetobranch
-        ([-\\w]+)}}``
-
-    :convert.cvsps.mergefrom: Specify a regular expression to which
-        commit log messages are matched. If a match occurs, then the
-        conversion process will add the most recent revision on the
-        branch indicated in the regex as the second parent of the
-        changeset. Default is ``{{mergefrombranch ([-\\w]+)}}``
-
-    :convert.localtimezone: use local time (as determined by the TZ
-        environment variable) for changeset date/times. The default
-        is False (use UTC).
-
-    :hooks.cvslog: Specify a Python function to be called at the end of
-        gathering the CVS log. The function is passed a list with the
-        log entries, and can modify the entries in-place, or add or
-        delete them.
-
-    :hooks.cvschangesets: Specify a Python function to be called after
-        the changesets are calculated from the CVS log. The
-        function is passed a list with the changeset entries, and can
-        modify the changesets in-place, or add or delete them.
-
-    An additional "debugcvsps" Mercurial command allows the builtin
-    changeset merging code to be run without doing a conversion. Its
-    parameters and output are similar to that of cvsps 2.1. Please see
-    the command help for more details.
 
     Subversion Source
     #################
@@ -445,45 +381,6 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 @command("debugsvnlog", [], "hg debugsvnlog", norepo=True)
 def debugsvnlog(ui, **opts):
     return subversion.debugsvnlog(ui, **opts)
-
-
-@command(
-    "debugcvsps",
-    [
-        # Main options shared with cvsps-2.1
-        ("b", "branches", [], _("only return changes on specified branches")),
-        ("p", "prefix", "", _("prefix to remove from file names")),
-        (
-            "r",
-            "revisions",
-            [],
-            _("only return changes after or between specified tags"),
-        ),
-        ("u", "update-cache", None, _("update cvs log cache")),
-        ("x", "new-cache", None, _("create new cvs log cache")),
-        ("z", "fuzz", 60, _("set commit time fuzz in seconds")),
-        ("", "root", "", _("specify cvsroot")),
-        # Options specific to builtin cvsps
-        ("", "parents", "", _("show parent changesets")),
-        ("", "ancestors", "", _("show current changeset in ancestor branches")),
-        # Options that are ignored for compatibility with cvsps-2.1
-        ("A", "cvs-direct", None, _("ignored for compatibility")),
-    ],
-    _("hg debugcvsps [OPTION]... [PATH]..."),
-    norepo=True,
-)
-def debugcvsps(ui, *args, **opts):
-    """create changeset information from CVS
-
-    This command is intended as a debugging tool for the CVS to
-    Mercurial converter, and can be used as a direct replacement for
-    cvsps.
-
-    Hg debugcvsps reads the CVS rlog for current directory (or any
-    named directory) in the CVS repository, and converts the log to a
-    series of changesets based on matching commit log entries and
-    dates."""
-    return cvsps.debugcvsps(ui, *args, **opts)
 
 
 def kwconverted(ctx, name):
