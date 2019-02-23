@@ -146,19 +146,30 @@ AbsolutePath findImportHelperPath() {
     return access(path.value().c_str(), X_OK) == 0;
   };
 
-  // Check in the same directory as the edenfs binary.
-  // This is where we expect to find the helper script in normal
-  // deployments.
 #ifdef EDEN_WIN
 
   // TODO EDENWIN: Remove the hardcoded path and use isHelper to find
-  PathComponentPiece helperName{"hg_import_helper.exe"};
   AbsolutePath dir{"C:\\eden\\hg_import_helper\\hg_import_helper.exe"};
 
   return dir;
 #else
-  PathComponentPiece helperName{"hg_import_helper.py"};
-  auto path = programDir + helperName;
+  // Check in ../../bin/ relative to the directory containing the edenfs binary.
+  // This is where we expect to find the helper script in normal
+  // deployments.
+  auto path = programDir.dirname().dirname() +
+      RelativePathPiece{"bin/hg_import_helper.py"};
+  if (isHelper(path)) {
+    return path;
+  }
+
+  // Check in the directory containing the edenfs binary as well.
+  // edenfs and hg_import_helper.py used to be installed in the same directory
+  // in the past.  We don't normally expect them to be kept in the same
+  // directory any more, but continue searching here just in case.  This may
+  // also make it easier to move hg_import_helper.py in the future if we ever
+  // want to do so.  (However we will likely just switch to invoking
+  // "hg debugedenimporthelper" instead.)
+  path = programDir + PathComponentPiece{"hg_import_helper.py"};
   if (isHelper(path)) {
     return path;
   }
