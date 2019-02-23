@@ -1870,17 +1870,6 @@ Controls generic server settings.
     are highly recommended. Partial clones will still be allowed.
     (default: False)
 
-``concurrent-push-mode``
-    Level of allowed race condition between two pushing clients.
-
-    - 'strict': push is abort if another client touched the repository
-      while the push was preparing. (default)
-    - 'check-related': push is only aborted if it affects head that got also
-      affected while the push was preparing.
-
-    This requires compatible client (version 4.3 and later). Old client will
-    use 'strict'.
-
 ``validate``
     Whether to validate the completeness of pushed changesets by
     checking that all new file revisions specified in manifests are
@@ -2117,15 +2106,6 @@ User interface controls.
     be prompted to enter a username. If no username is entered, the
     default ``USER@HOST`` is used instead.
     (default: False)
-
-``checkheads``
-    Whether to forbid pushing new heads to the server.
-
-    The feature is subject to race conditions and conflicts with high-level
-    goal of some extensions (ex. commit cloud). It might be removed in a
-    future release.
-
-    (default: True)
 
 ``clonebundles``
     Whether the "clone bundles" feature is enabled.

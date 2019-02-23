@@ -466,9 +466,6 @@ Setting up
   >         bundler.newpart('test:abort')
   >     if reason == 'unknown':
   >         bundler.newpart('test:unknown')
-  >     if reason == 'race':
-  >         # 20 Bytes of crap
-  >         bundler.newpart('check:heads', data='01234567890123456789')
   > 
   > @bundle2.parthandler("test:abort")
   > def handleabort(op, part):
@@ -557,34 +554,6 @@ Doing the actual push: unknown mandatory parts
   pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   abort: missing support for test:unknown
-  [255]
-
-Doing the actual push: race
-
-  $ cat << EOF >> $HGRCPATH
-  > [failpush]
-  > reason = race
-  > EOF
-
-  $ hg -R main push other -r e7ec4e813ba6
-  pushing to other
-  searching for changes
-  abort: push failed:
-  'repository changed while pushing - please try again'
-  [255]
-
-  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
-  pushing to ssh://user@dummy/other
-  searching for changes
-  abort: push failed:
-  'repository changed while pushing - please try again'
-  [255]
-
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  abort: push failed:
-  'repository changed while pushing - please try again'
   [255]
 
 Doing the actual push: hook abort

@@ -653,12 +653,6 @@ diverging a remote bookmark fails
   $ HGPORT2=`cat $TESTTMP/.port`
   $ cat ../hg2.pid >> $DAEMON_PIDS
 
-  $ hg push http://localhost:$HGPORT2/
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  abort: push creates new remote head c922c0139ca0 with bookmark 'Y'!
-  (merge or see 'hg help push' for details about pushing new heads)
-  [255]
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
@@ -669,12 +663,6 @@ diverging a remote bookmark fails
 Unrelated marker does not alter the decision
 
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-  $ hg push http://localhost:$HGPORT2/
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  abort: push creates new remote head c922c0139ca0 with bookmark 'Y'!
-  (merge or see 'hg help push' for details about pushing new heads)
-  [255]
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
@@ -962,13 +950,6 @@ pushing an existing but divergent bookmark with -B still requires -f
   $ hg up -q X
   $ echo 2 > f2
   $ hg ci -qAmr
-  $ hg push -B X --config ui.traceback=0
-  pushing to $TESTTMP/addmarks
-  searching for changes
-  remote has heads on branch 'default' that are not known locally: a2a606d9ff1b
-  abort: push creates new remote head 54694f811df9 with bookmark 'X'!
-  (pull and merge or see 'hg help push' for details about pushing new heads)
-  [255]
   $ cd ../addmarks
 
 Check summary output for incoming/outgoing bookmarks

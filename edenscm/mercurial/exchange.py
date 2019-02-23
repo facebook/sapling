@@ -733,7 +733,6 @@ def _pushcheckoutgoing(pushop):
                     # message
                     raise error.Abort(mst[ctx.instabilities()[0]] % ctx)
 
-        discovery.checkheads(pushop)
     return True
 
 
@@ -766,31 +765,6 @@ def b2partsgenerator(stepname, idx=None):
         return func
 
     return dec
-
-
-def _pushb2ctxcheckheads(pushop, bundler):
-    """Generate race condition checking parts
-
-    Exists as an independent function to aid extensions
-    """
-    # * 'force' do not check for push race,
-    # * if we don't push anything, there are nothing to check.
-    if not pushop.force and pushop.outgoing.missingheads:
-        allowunrelated = "related" in bundler.capabilities.get("checkheads", ())
-        emptyremote = pushop.pushbranchmap is None
-        if not allowunrelated or emptyremote:
-            bundler.newpart("check:heads", data=iter(pushop.remoteheads))
-        else:
-            affected = set()
-            for branch, heads in pushop.pushbranchmap.iteritems():
-                remoteheads, newheads, unsyncedheads, discardedheads = heads
-                if remoteheads is not None:
-                    remote = set(remoteheads)
-                    affected |= set(discardedheads) & remote
-                    affected |= remote - set(newheads)
-            if affected:
-                data = iter(sorted(affected))
-                bundler.newpart("check:updated-heads", data=data)
 
 
 def _pushing(pushop):
@@ -833,8 +807,6 @@ def _pushb2ctx(pushop, bundler):
     if not _pushcheckoutgoing(pushop):
         return
     pushop.repo.prepushoutgoinghooks(pushop)
-
-    _pushb2ctxcheckheads(pushop, bundler)
 
     b2caps = bundle2.bundle2caps(pushop.remote)
     version = "01"

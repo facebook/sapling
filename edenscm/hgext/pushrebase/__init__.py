@@ -195,16 +195,8 @@ def extsetup(ui):
         # we can't push to a bookmark if it's changed in the meantime
         partorder.pop(partorder.index("check-bookmarks"))
 
-    wrapfunction(discovery, "checkheads", _checkheads)
     # we want to disable the heads check because in pushrebase repos, we
     # expect the heads to change during the push and we should not abort.
-
-    # The check heads functions are used to verify that the heads haven't
-    # changed since the client did the initial discovery. Pushrebase is meant
-    # to allow concurrent pushes, so the heads may have very well changed.
-    # So let's not do this check.
-    wrapfunction(exchange, "check_heads", _exchangecheckheads)
-    wrapfunction(exchange, "_pushb2ctxcheckheads", _skipcheckheads)
 
     origpushkeyhandler = bundle2.parthandlermapping["pushkey"]
     newpushkeyhandler = lambda *args, **kwargs: bundle2pushkey(
@@ -432,39 +424,6 @@ def createrebasepart(repo, peer, outgoing, onto, newhead):
         }.items(),
         data=cg,
     )
-
-
-def _checkheads(orig, pushop):
-    repo = pushop.repo
-    onto = repo.ui.config(experimental, configonto)
-    if onto:  # This is a rebasing push
-        # If remotenames is enabled, we don't want to abort if the user uses
-        # --to, even if the server doesn't support pushrebase.
-        if checkremotenames():
-            return
-
-        # The rest of the checks are performed during bundle2 part processing;
-        # we need to bypass the regular push checks because it will look like
-        # we're pushing a new head, which isn't normally allowed
-        if not repo.ui.configbool("experimental", "bundle2-exp", False):
-            raise error.Abort(_("bundle2 needs to be enabled on client"))
-        if not pushop.remote.capable("bundle2-exp"):
-            raise error.Abort(_("bundle2 needs to be enabled on server"))
-        return
-    else:
-        return orig(pushop)
-
-
-def _exchangecheckheads(orig, repo, *args, **kwargs):
-    onto = repo.ui.config(experimental, configonto)
-    if not onto:
-        # Only do this work if it's not a rebasing push
-        return orig(repo, *args, **kwargs)
-
-
-def _skipcheckheads(orig, pushop, bundler):
-    if not pushop.ui.config(experimental, configonto):  # no check if we rebase
-        return orig(pushop, bundler)
 
 
 def _push(orig, ui, repo, *args, **opts):

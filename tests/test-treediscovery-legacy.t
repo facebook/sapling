@@ -290,12 +290,6 @@ Local is superset:
   pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
-  $ hg push $remote
-  pushing to http://localhost:$HGPORT/ (glob)
-  searching for changes
-  abort: push creates new remote branches: both, name1!
-  (use 'hg push --new-branch' to create new remote branches)
-  [255]
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes

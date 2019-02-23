@@ -1001,12 +1001,6 @@ appear on the remote side.
   $ hg -R ../mu phase --secret --force 967b449fbc94
   test-debug-phase: move rev 9: 0 -> 2
   test-debug-phase: move rev 10: 1 -> 2
-  $ hg push -r 435b5d83910c ../mu
-  pushing to ../mu
-  searching for changes
-  abort: push creates new remote head 435b5d83910c!
-  (merge or see 'hg help push' for details about pushing new heads)
-  [255]
   $ hg push -fr 435b5d83910c ../mu # because the push will create new visible head
   pushing to ../mu
   searching for changes

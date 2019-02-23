@@ -51,35 +51,12 @@ Without server extension
   $ echo 'baz' > b
   $ hg add b
   $ commit 'b => baz'
-  $ hg push
-  pushing to ssh://user@dummy/server
-  searching for changes
-  remote has heads on branch 'default' that are not known locally: add0c792bfce
-  abort: push creates new remote head 0e3997dc0733!
-  (pull and merge or see 'hg help push' for details about pushing new heads)
-  [255]
-
-  $ hg --config experimental.bundle2-exp=False push --to default
-  pushing to ssh://user@dummy/server
-  searching for changes
-  abort: no server support for 'b2x:rebase'
-  [255]
 
   $ echo "[experimental]" >> .hg/hgrc
   $ echo "bundle2-exp = True" >> .hg/hgrc
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
-  searching for changes
-  abort: no server support for 'b2x:rebase'
-  [255]
 
   $ echo "[experimental]" >> ../server/.hg/hgrc
   $ echo "bundle2-exp = True" >> ../server/.hg/hgrc
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
-  searching for changes
-  abort: no server support for 'b2x:rebase'
-  [255]
 
 Stack of non-conflicting commits should be accepted
 

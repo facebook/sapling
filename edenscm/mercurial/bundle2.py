@@ -1570,9 +1570,6 @@ def getrepocaps(repo, allowpushback=False):
         caps["obsmarkers"] = supportedformat
     if allowpushback:
         caps["pushback"] = ()
-    cpmode = repo.ui.config("server", "concurrent-push-mode")
-    if cpmode == "check-related":
-        caps["checkheads"] = ("related",)
     if "phases" in repo.ui.configlist("devel", "legacy.exchange"):
         caps.pop("phases")
     return caps
@@ -1929,56 +1926,6 @@ def handlecheckbookmarks(op, inpart):
                     nodemod.short(currentnode),
                 )
             raise error.PushRaced(finalmsg)
-
-
-@parthandler("check:heads")
-def handlecheckheads(op, inpart):
-    """check that head of the repo did not change
-
-    This is used to detect a push race when using unbundle.
-    This replaces the "heads" argument of unbundle."""
-    h = inpart.read(20)
-    heads = []
-    while len(h) == 20:
-        heads.append(h)
-        h = inpart.read(20)
-    assert not h
-    # Trigger a transaction so that we are guaranteed to have the lock now.
-    if op.ui.configbool("experimental", "bundle2lazylocking"):
-        op.gettransaction()
-    if sorted(heads) != sorted(op.repo.heads()):
-        raise error.PushRaced("repository changed while pushing - " "please try again")
-
-
-@parthandler("check:updated-heads")
-def handlecheckupdatedheads(op, inpart):
-    """check for race on the heads touched by a push
-
-    This is similar to 'check:heads' but focus on the heads actually updated
-    during the push. If other activities happen on unrelated heads, it is
-    ignored.
-
-    This allow server with high traffic to avoid push contention as long as
-    unrelated parts of the graph are involved."""
-    h = inpart.read(20)
-    heads = []
-    while len(h) == 20:
-        heads.append(h)
-        h = inpart.read(20)
-    assert not h
-    # trigger a transaction so that we are guaranteed to have the lock now.
-    if op.ui.configbool("experimental", "bundle2lazylocking"):
-        op.gettransaction()
-
-    currentheads = set()
-    for ls in op.repo.branchmap().itervalues():
-        currentheads.update(ls)
-
-    for h in heads:
-        if h not in currentheads:
-            raise error.PushRaced(
-                "repository changed while pushing - " "please try again"
-            )
 
 
 @parthandler("check:phases")

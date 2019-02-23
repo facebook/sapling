@@ -78,7 +78,6 @@ Create an extension to test bundle2 API
   >           (b'', b'unknownparams', False, b'include an unknown part parameters in the bundle'),
   >           (b'', b'parts', False, b'include some arbitrary parts to the bundle'),
   >           (b'', b'reply', False, b'produce a reply bundle'),
-  >           (b'', b'pushrace', False, b'includes a check:head part with unknown nodes'),
   >           (b'', b'genraise', False, b'includes a part that raise an exception during generation'),
   >           (b'', b'timeout', False, b'emulate a timeout during bundle generation'),
   >           (b'r', b'rev', [], b'includes those changeset in the bundle'),
@@ -100,11 +99,6 @@ Create an extension to test bundle2 API
   >     if opts['reply']:
   >         capsstring = b'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
   >         bundler.newpart(b'replycaps', data=capsstring)
-  > 
-  >     if opts['pushrace']:
-  >         # also serve to test the assignement of data outside of init
-  >         part = bundler.newpart(b'check:heads')
-  >         part.data = b'01234567890123456789'
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -820,15 +814,6 @@ Unbundle the reply to get the output:
   remote: received ping request (id 7)
   remote: replying to ping request (id 7)
   0 unread bytes
-
-Test push race detection
-
-  $ hg bundle2 --pushrace ../part-race.hg2
-
-  $ hg unbundle2 < ../part-race.hg2
-  0 unread bytes
-  abort: push race: repository changed while pushing - please try again
-  [255]
 
 Support for changegroup
 ===================================

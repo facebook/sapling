@@ -278,12 +278,6 @@ Local is superset:
   pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
-  $ hg push $remote
-  pushing to http://localhost:$HGPORT/ (glob)
-  searching for changes
-  abort: push creates new remote branches: both, name1!
-  (use 'hg push --new-branch' to create new remote branches)
-  [255]
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
@@ -563,9 +557,6 @@ Both have new stuff in existing named branches:
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=heads HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  "GET /?cmd=branchmap HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  "GET /?cmd=branchmap HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
   "POST /?cmd=unbundle HTTP/1.1" 200 - x-hgarg-1:heads=686173686564+1827a5bb63e602382eb89dd58f2ac9f3b007ad91* (glob)
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$

@@ -186,7 +186,6 @@ Test traditional push with subrepo
   pushing to ssh://user@dummy/repo1
   no changes made to subrepo nested since last push to ssh://user@dummy/repo1/nested
   searching for changes
-  remote has heads on branch 'default' that are not known locally: 2d95304fed5d
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes

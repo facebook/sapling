@@ -393,7 +393,6 @@ def clientextsetup(ui):
     wrapcommand(commands.table, "pull", _pull)
     wrapcommand(commands.table, "update", _update)
 
-    wrapfunction(discovery, "checkheads", _checkheads)
     wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)
 
     wireproto.wirepeer.listkeyspatterns = listkeyspatterns
@@ -457,12 +456,6 @@ def exbookmarks(orig, ui, repo, *names, **opts):
             return orig(ui, repo, *other_bms, **opts)
     else:
         return orig(ui, repo, *names, **opts)
-
-
-def _checkheads(orig, pushop):
-    if pushop.ui.configbool(experimental, configscratchpush, False):
-        return
-    return orig(pushop)
 
 
 def _addpartsfromopts(orig, ui, repo, bundler, *args, **kwargs):
