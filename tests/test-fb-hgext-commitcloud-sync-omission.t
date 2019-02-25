@@ -696,3 +696,33 @@ other bookmark is treated like a move.
   @  0: df4f53cec30a public 'base'
   
 
+In client1 (which hasn't synced yet), make the midbook commit obsolete.
+  $ cd ../client1
+  $ hg up -q 2b8dce7bd745
+  $ hg amend -m "oldstack-mar4 amended"
+
+Attempt to sync.  The midbook bookmark should make it visible again.
+  $ hg cloud sync -q
+  $ tglog
+  @  10: 2ace67ee4791 'oldstack-mar4 amended'
+  |
+  | x  9: 2b8dce7bd745 'oldstack-mar4' midbook
+  |/
+  | o  8: 46f8775ee5d4 'newstack-feb28'
+  | |
+  | | o  7: ff52de2f760c 'client2-feb28'
+  | | |
+  | o |  6: 7f958333fe84 'newstack-feb15'
+  | | |
+  | o |  5: 56a352317b67 'newstack-feb13'
+  | |/
+  | | o  4: d133b886da68 'midstack-feb9'
+  | | |
+  | | o  3: 1c1b7955142c 'midstack-feb7'
+  | |/
+  o |  2: d16408588b2d 'oldstack-feb4'
+  | |
+  o |  1: 1f9ebd6d1390 'oldstack-feb1'
+  |/
+  o  0: df4f53cec30a 'base'
+  

@@ -934,6 +934,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
 
     Returns a list of the omitted bookmark names.
     """
+    unfi = repo.unfiltered()
     localbookmarks = _getbookmarks(repo)
     omittedbookmarks = set(lastsyncstate.omittedbookmarks)
     changes = []
@@ -974,7 +975,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
             if cloudnode != lastcloudnode:
                 if cloudnode is not None:
                     # The cloud bookmark has been set to point to a new commit.
-                    if cloudnode in repo:
+                    if cloudnode in unfi:
                         # The commit is available locally, so update the
                         # bookmark.
                         changes.append((name, nodemod.bin(cloudnode)))
