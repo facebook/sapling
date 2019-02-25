@@ -91,6 +91,7 @@ Send unbundlereplay with incorrect expected hash
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   [1]
 
 Send unbundlereplay with incorrect expected bookmark
@@ -108,6 +109,7 @@ Send unbundlereplay with incorrect expected bookmark
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   [1]
 
 Send unbundlereplay with incorrect commit timestamp
@@ -125,6 +127,7 @@ Send unbundlereplay with incorrect commit timestamp
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   [1]
 
 Send Unbundlereplay
@@ -208,6 +211,7 @@ Send unbundlereplay with incorrect expected hash to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   [1]
 
 Send unbundlereplay with incorrect expected bookmark to hgsql server
@@ -225,6 +229,7 @@ Send unbundlereplay with incorrect expected bookmark to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   [1]
 
 Send unbundlereplay with incorrect commit timestamp to hgsql server
@@ -242,6 +247,7 @@ Send unbundlereplay with incorrect commit timestamp to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   [1]
 
 #if respondlightly
