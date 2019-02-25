@@ -13,7 +13,7 @@ use chrono::{DateTime, FixedOffset};
 use failure::{err_msg, Error};
 
 use apiserver_thrift::types::{
-    MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash,
+    MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
 };
 use blobrepo::HgBlobChangeset;
 use context::CoreContext;
@@ -211,6 +211,9 @@ impl From<Changeset> for MononokeChangeset {
             author: changeset.author,
             parents: changeset.parents,
             extra: changeset.extra,
+            manifest: MononokeTreeHash {
+                hash: changeset.manifest,
+            },
         }
     }
 }

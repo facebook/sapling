@@ -73,6 +73,7 @@ struct MononokeChangeset {
   4: string author,
   5: list<string> parents
   6: map<string, binary> extra,
+  7: MononokeTreeHash manifest,
 }
 
 struct MononokeBranches {
