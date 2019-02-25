@@ -21,6 +21,10 @@ union MononokeRevision {
   2: string bookmark,
 }
 
+struct MononokeNodeHash {
+  1: string hash,
+}
+
 struct MononokeGetRawParams {
   1: string repo,
   2: MononokeRevision revision,
@@ -48,6 +52,11 @@ struct MononokeIsAncestorParams {
   3: MononokeRevision descendant,
 }
 
+struct MononokeGetBlobParams {
+  1: string repo,
+  2: MononokeNodeHash blob_hash,
+}
+
 struct MononokeChangeset {
   1: string commit_hash,
   2: string message,
@@ -68,6 +77,10 @@ struct MononokeDirectory {
 struct MononokeFile {
   1: string name,
   2: MononokeFileType file_type,
+}
+
+struct MononokeBlob {
+  1: binary content,
 }
 
 enum MononokeFileType {
@@ -91,5 +104,8 @@ service MononokeAPIService extends fb303.FacebookService {
     throws (1: MononokeAPIException e),
 
   bool is_ancestor(1: MononokeIsAncestorParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeBlob get_blob(1: MononokeGetBlobParams params)
     throws (1: MononokeAPIException e),
 }

@@ -15,9 +15,9 @@ use futures_ext::BoxFuture;
 
 use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
-    MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
-    MononokeGetChangesetParams, MononokeGetRawParams, MononokeIsAncestorParams,
-    MononokeListDirectoryParams, MononokeRevision,
+    MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBlobParams,
+    MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
+    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeNodeHash, MononokeRevision,
 };
 use srclient::SRChannelBuilder;
 
@@ -93,6 +93,13 @@ impl MononokeAPIClient {
             repo: self.repo.clone(),
             ancestor: MononokeRevision::commit_hash(ancestor),
             descendant: MononokeRevision::commit_hash(descendant),
+        })
+    }
+
+    pub fn get_blob(&self, hash: String) -> BoxFuture<MononokeBlob, failure_ext::Error> {
+        self.inner.get_blob(&MononokeGetBlobParams {
+            repo: self.repo.clone(),
+            blob_hash: MononokeNodeHash { hash },
         })
     }
 }

@@ -9,12 +9,12 @@ use std::sync::Arc;
 
 use apiserver_thrift::server::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
-    GetBranchesExn, GetChangesetExn, GetRawExn, IsAncestorExn, ListDirectoryExn,
+    GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, IsAncestorExn, ListDirectoryExn,
 };
 use apiserver_thrift::types::{
-    MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
-    MononokeGetChangesetParams, MononokeGetRawParams, MononokeIsAncestorParams,
-    MononokeListDirectoryParams, MononokeRevision,
+    MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBlobParams,
+    MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
+    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
 };
 use apiserver_thrift::MononokeRevision::UnknownField;
 use context::CoreContext;
@@ -52,7 +52,7 @@ impl MononokeAPIServiceImpl {
         &self,
         method: &str,
         params_json: &K,
-        path: Vec<u8>,
+        path: Option<Vec<u8>>,
         revision: Option<MononokeRevision>,
     ) -> ScubaSampleBuilder {
         let mut scuba = self.scuba_builder.clone();
@@ -64,11 +64,14 @@ impl MononokeAPIServiceImpl {
                 "params",
                 serde_json::to_string(params_json)
                     .unwrap_or_else(|_| "Error converting request to json".to_string()),
-            )
-            .add(
+            );
+
+        if let Some(path) = path {
+            scuba.add(
                 "path",
                 String::from_utf8(path).unwrap_or("Invalid UTF-8 in path".to_string()),
             );
+        }
 
         if let Some(rev) = revision {
             let rev = match rev {
@@ -125,7 +128,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         let mut scuba = self.create_scuba_logger(
             "get_raw",
             &params,
-            params.path.clone(),
+            Some(params.path.clone()),
             Some(params.revision.clone()),
         );
 
@@ -167,7 +170,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         let mut scuba = self.create_scuba_logger(
             "get_changeset",
             &params,
-            Vec::new(),
+            None,
             Some(params.revision.clone()),
         );
 
@@ -214,7 +217,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     ) -> BoxFuture<MononokeBranches, GetBranchesExn> {
         let ctx = self.create_ctx();
 
-        let mut scuba = self.create_scuba_logger("get_branches", &params, Vec::new(), None);
+        let mut scuba = self.create_scuba_logger("get_branches", &params, None, None);
 
         params
             .try_into()
@@ -260,7 +263,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         let mut scuba = self.create_scuba_logger(
             "get_branches",
             &params,
-            params.path.clone(),
+            Some(params.path.clone()),
             Some(params.revision.clone()),
         );
 
@@ -306,18 +309,18 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
     fn is_ancestor(&self, params: MononokeIsAncestorParams) -> BoxFuture<bool, IsAncestorExn> {
         let ctx = self.create_ctx();
 
+        let mut scuba = self.create_scuba_logger(
+            "is_ancestor",
+            &params,
+            None,
+            Some(params.descendant.clone()),
+        );
         let ancestor = match params.ancestor.clone() {
             MononokeRevision::commit_hash(hash) => hash,
             MononokeRevision::bookmark(bookmark) => bookmark,
             UnknownField(_) => "Not a valid MononokeRevision".to_string(),
         };
 
-        let mut scuba = self.create_scuba_logger(
-            "is_ancestor",
-            &params,
-            Vec::new(),
-            Some(params.descendant.clone()),
-        );
         scuba.add("ancestor", ancestor);
 
         params
@@ -338,6 +341,42 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .timed({
                 move |stats, resp| {
                     log_time(&mut scuba, &stats, resp, resp.map(|_| 0).unwrap_or(0));
+
+                    Ok(())
+                }
+            })
+    }
+
+    fn get_blob(&self, params: MononokeGetBlobParams) -> BoxFuture<MononokeBlob, GetBlobExn> {
+        let ctx = self.create_ctx();
+
+        let mut scuba = self.create_scuba_logger("get_blob", &params, None, None);
+
+        params
+            .try_into()
+            .into_future()
+            .from_err()
+            .and_then({
+                cloned!(self.addr);
+                move |param| addr.send_query(ctx, param)
+            })
+            .and_then(|resp: MononokeRepoResponse| match resp {
+                MononokeRepoResponse::GetBlobContent { content } => Ok(MononokeBlob {
+                    content: content.to_vec(),
+                }),
+                _ => Err(ErrorKind::InternalError(err_msg(
+                    "Actor returned wrong response type to query".to_string(),
+                ))),
+            })
+            .map_err(move |e| GetBlobExn::e(e.into()))
+            .timed({
+                move |stats, resp| {
+                    log_time(
+                        &mut scuba,
+                        &stats,
+                        resp,
+                        resp.map(|resp| resp.content.len()).unwrap_or(0),
+                    );
 
                     Ok(())
                 }

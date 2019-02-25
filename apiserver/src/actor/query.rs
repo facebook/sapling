@@ -13,8 +13,8 @@ use failure::Error;
 use http::uri::Uri;
 
 use apiserver_thrift::types::{
-    MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
-    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
+    MononokeGetBlobParams, MononokeGetBranchesParams, MononokeGetChangesetParams,
+    MononokeGetRawParams, MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
 };
 
 use super::lfs::BatchRequest;
@@ -140,6 +140,19 @@ impl TryFrom<MononokeIsAncestorParams> for MononokeQuery {
                     descendant,
                 },
             })
+        })
+    }
+}
+
+impl TryFrom<MononokeGetBlobParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeGetBlobParams) -> Result<MononokeQuery, Self::Error> {
+        Ok(MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::GetBlobContent {
+                hash: params.blob_hash.hash,
+            },
         })
     }
 }
