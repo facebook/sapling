@@ -167,6 +167,7 @@ Sync with incorrect timestamps, make sure replay fails
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  error:pushkey
   '
 
   $ cd repo-hg-2
