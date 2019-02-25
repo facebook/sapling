@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from edenscm.mercurial import hg, replay, util
+from edenscm.mercurial import error, hg, replay, util
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
 
@@ -17,6 +17,12 @@ from edenscm.mercurial.i18n import _
         ("", "file", "", _("file to read bundle from"), ""),
         ("", "path", "", _("hg server remotepath (ssh)"), ""),
         ("r", "rebasedhead", "", _("expected rebased head hash"), ""),
+        (
+            "",
+            "deleted",
+            False,
+            _("bookmark was deleted, can't be used with `--rebasedhead`"),
+        ),
         ("b", "ontobook", "", _("expected onto bookmark for pushrebase"), ""),
     ],
     _("[OPTION]..."),
@@ -35,7 +41,14 @@ def sendunbundlereplay(ui, **opts):
     fname = opts["file"]
     path = opts["path"]
     rebasedhead = opts["rebasedhead"]
+    deleted = opts["deleted"]
     ontobook = opts["ontobook"]
+    if rebasedhead and deleted:
+        raise error.Abort("can't use `--rebasedhead` and `--deleted`")
+
+    if not (rebasedhead or deleted):
+        raise error.Abort("either `--rebasedhead` or `--deleted` should be used")
+
     commitdates = dict(map(lambda s: s.split("="), ui.fin))
     with open(fname, "rb") as f:
         stream = util.chunkbuffer([f.read()])

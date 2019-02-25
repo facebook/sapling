@@ -31,9 +31,11 @@ Implement a basic verification hook
   > expected_head = os.environ["HG_EXPECTED_REBASEDHEAD"]
   > actual_book = os.environ["HG_KEY"]
   > actual_head = os.environ["HG_NEW"]
-  > if expected_book == actual_book and expected_head == actual_head:
-  >     print "[ReplayVerification] Everything seems in order"
-  >     sys.exit(0)
+  > if expected_book == actual_book:
+  >     if ((expected_head is None and actual_head is None) or
+  >           (expected_head == actual_head)):
+  >       print "[ReplayVerification] Everything seems in order"
+  >       sys.exit(0)
   > print "[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)" % (expected_book, expected_head, actual_book, actual_head)
   > sys.exit(1)
   > EOF
@@ -142,6 +144,26 @@ Send Unbundlereplay
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Everything seems in order
+
+Send Unbundlereplay to delete a bookmark
+  $ hg book newbook -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
+  $ hg book
+     master_bookmark           3:c2e526aacb51
+     newbook                   3:c2e526aacb51
+  $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle_delete_bookmark.test.hg --path ssh://user@dummy/server -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda --deleted -b newbook --debug
+  abort: can't use `--rebasedhead` and `--deleted`
+  [255]
+  $ hg sendunbundlereplay --file $TESTDIR/bundles/sendunbundle_delete_bookmark.test.hg --path ssh://user@dummy/server --deleted -b newbook --debug
+  running * 'user@dummy' 'hg -R server serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: 527
+  remote: capabilities:* unbundlereplay* (glob)
+  remote: 1
+  sending unbundlereplay command
+  remote: [ReplayVerification] Everything seems in order
+  $ hg book
+     master_bookmark           3:c2e526aacb51
 
 What is the new server state?
   $ log -r "all()"
