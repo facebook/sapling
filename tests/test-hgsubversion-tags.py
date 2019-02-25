@@ -44,37 +44,6 @@ rename a tag
 """
         self._test_tags("rename_tag_test.svndump", expected)
 
-    def test_branch_from_tag(self):
-        repo = self._load_fixture_and_fetch("branch_from_tag.svndump")
-        self.assert_("branch_from_tag" in compathacks.branchset(repo))
-        self.assertEqual(repo[1], repo["tag_r3"])
-        self.assertEqual(repo["branch_from_tag"].parents()[0], repo["copied_tag"])
-
-    def test_tag_by_renaming_branch(self):
-        repo = self._load_fixture_and_fetch("tag_by_rename_branch.svndump")
-        branches = set(repo[h] for h in repo.heads())
-        self.assert_("dummy" not in branches)
-        self.assertEqual(
-            repo["dummy"],
-            repo["tip"].parents()[0],
-            "%r != %r[0]" % (repo["dummy"], repo["tip"].parents()),
-        )
-        extra = repo["tip"].extra().copy()
-        extra.pop("convert_revision", None)
-        self.assertEqual(extra, {"branch": "dummy", "close": "1"})
-
-    def test_deletion_of_tag_on_trunk_after_branching(self):
-        repo = self._load_fixture_and_fetch("tag_deletion_tag_branch.svndump")
-        branches = set(repo[h].extra()["branch"] for h in repo.heads())
-        self.assertEqual(branches, set(["default", "from_2"]))
-        self.assertEqual(
-            repo.tags(),
-            {
-                "tip": "g\xdd\xcd\x93\x03g\x1e\x7f\xa6-[V%\x99\x07\xd3\x9d>(\x94",
-                "new_tag": "=\xb8^\xb5\x18\xa9M\xdb\xf9\xb62Z\xa0\xb5R6+\xfe6.",
-            },
-        )
-
     def test_tags_in_unusual_location(self):
         repo = self._load_fixture_and_fetch("unusual_tags.svndump")
         branches = set(repo[h].extra()["branch"] for h in repo.heads())
@@ -109,63 +78,6 @@ rename a tag
         srctags.pop("tip")
         self.assertEqual(dtags, srctags)
         self.assertEqual(dest.heads(), self.repo.heads())
-
-    def test_edited_tag(self):
-        repo = self._load_fixture_and_fetch("commit-to-tag.svndump")
-        headcount = 6
-        self.assertEqual(len(repo.heads()), headcount)
-        heads = repo.heads()
-        openheads = [h for h in heads if not repo[h].extra().get("close", False)]
-        closedheads = set(heads) - set(openheads)
-        self.assertEqual(len(openheads), 1)
-        self.assertEqual(len(closedheads), headcount - 1)
-        closedheads = sorted(
-            list(closedheads), cmp=lambda x, y: cmp(repo[x].rev(), repo[y].rev())
-        )
-
-        # closeme has no open heads
-        for h in openheads:
-            self.assertNotEqual("closeme", repo[openheads[0]].branch())
-
-        self.assertEqual(1, len(self.repo.branchheads("magic")))
-
-        alsoedit, editlater, closeme, willedit, editcreate, = closedheads
-        self.assertEqual(
-            repo[willedit].extra(),
-            {
-                "close": "1",
-                "branch": "magic",
-                "convert_revision": "svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/will-edit@19",
-            },
-        )
-        self.assertEqual(willedit, repo.tags()["will-edit"])
-        self.assertEqual(
-            sorted(repo["will-edit"].manifest().keys()), ["alpha", "beta", "gamma"]
-        )
-        self.assertEqual(
-            repo[alsoedit].extra(),
-            {
-                "close": "1",
-                "branch": "magic",
-                "convert_revision": "svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/also-edit@14",
-            },
-        )
-        self.assertEqual(repo[alsoedit].parents()[0].node(), repo.tags()["also-edit"])
-        self.assertEqual(
-            sorted(repo["also-edit"].manifest().keys()),
-            [".hgtags", "alpha", "beta", "delta", "gamma", "iota", "lambda", "omega"],
-        )
-
-        self.assertEqual(editlater, repo["edit-later"].node())
-        self.assertEqual(
-            repo[closeme].extra(),
-            {
-                "close": "1",
-                "branch": "closeme",
-                "convert_revision": "svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/branches/closeme@17",
-            },
-        )
-        self.assertEqual("alpha\nalpha\n", repo["edit-at-create"]["alpha"].data())
 
     def test_tags_in_unusual_location(self):
         repo = self._load_fixture_and_fetch("tag_name_same_as_branch.svndump")

@@ -95,7 +95,7 @@ class TestSingleDirPush(test_hgsubversion_util.TestBase):
             filectxfn,
             "an_author",
             "2009-10-19 18:49:30 -0500",
-            {"branch": "localhacking"},
+            {},
         )
         # Why is this here? Revisit! T24862348
         repo.commitctx(ctx)
@@ -143,61 +143,6 @@ class TestSingleDirPush(test_hgsubversion_util.TestBase):
         self.pushrevisions(expected_extra_back=1)
         self.assertTrue("trunk/one" in test_hgsubversion_util.svnls(repo_path, ""))
         self.assertTrue("trunk/two" in test_hgsubversion_util.svnls(repo_path, ""))
-
-    def test_push_single_dir_branch(self):
-        # Tests local branches pushing to a single dir repo. Creates a fork at
-        # tip. The default branch adds a file called default, while branch foo
-        # adds a file called foo, then tries to push the foo branch and default
-        # branch in that order.
-        repo, repo_path = self.load_and_fetch(
-            "branch_from_tag.svndump", layout="single", subdir=""
-        )
-
-        def file_callback(data):
-            def cb(repo, memctx, path):
-                if path == data:
-                    return compathacks.makememfilectx(
-                        repo,
-                        memctx=memctx,
-                        path=path,
-                        data=data,
-                        islink=False,
-                        isexec=False,
-                        copied=False,
-                    )
-                raise IOError(errno.EINVAL, "Invalid operation: " + path)
-
-            return cb
-
-        def commit_to_branch(name, parent):
-            repo.commitctx(
-                context.memctx(
-                    repo,
-                    (parent, node.nullid),
-                    "automated test (%s)" % name,
-                    [name],
-                    file_callback(name),
-                    "an_author",
-                    "2009-10-19 18:49:30 -0500",
-                    {"branch": name},
-                )
-            )
-
-        parent = repo["tip"].node()
-        commit_to_branch("default", parent)
-        commit_to_branch("foo", parent)
-        hg.update(repo, repo["foo"].node())
-        self.pushrevisions()
-        repo = self.repo  # repo is outdated after the rebase happens, refresh
-        self.assertTrue("foo" in test_hgsubversion_util.svnls(repo_path, ""))
-        self.assertEqual(compathacks.branchset(repo), set(["default"]))
-        # Have to cross to another branch head, so hg.update doesn't work
-        commands.update(
-            self.ui(), self.repo, self.repo.branchheads("default")[1], clean=True
-        )
-        self.pushrevisions()
-        self.assertTrue("default" in test_hgsubversion_util.svnls(repo_path, ""))
-        self.assertEquals(len(self.repo.branchheads("default")), 1)
 
     @test_hgsubversion_util.requiresoption("branch")
     def test_push_single_dir_renamed_branch(self):

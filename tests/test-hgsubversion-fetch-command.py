@@ -37,73 +37,6 @@ class TestBasicRepoLayout(test_hgsubversion_util.TestBase):
         )
         self.assertEqual(repo["tip"], repo[1])
 
-    def test_branches(self):
-        repo = self._load_fixture_and_fetch("simple_branch.svndump")
-        self.assertEqual(
-            node.hex(repo[0].node()), "a1ff9f5d90852ce7f8e607fa144066b0a06bdc57"
-        )
-        self.assertEqual(
-            node.hex(repo["tip"].node()), "545e36ed13615e39c5c8fb0c325109d8cb8e00c3"
-        )
-        self.assertEqual(len(repo["tip"].parents()), 1)
-        self.assertEqual(repo["tip"].parents()[0], repo["default"])
-        self.assertEqual(
-            repo["tip"].extra()["convert_revision"],
-            "svn:3cd547df-371e-4add-bccf-aba732a2baf5/branches/the_branch@4",
-        )
-        self.assertEqual(
-            repo["default"].extra()["convert_revision"],
-            "svn:3cd547df-371e-4add-bccf-aba732a2baf5/trunk@3",
-        )
-        self.assertEqual(len(repo.heads()), 1)
-
-    def test_two_branches_with_heads(self):
-        repo = self._load_fixture_and_fetch("two_heads.svndump")
-        self.assertEqual(
-            node.hex(repo[0].node()), "434ed487136c1b47c1e8f952edb4dc5a8e6328df"
-        )
-        self.assertEqual(
-            node.hex(repo["tip"].node()), "1083037b18d85cd84fa211c5adbaeff0fea2cd9f"
-        )
-        self.assertEqual(
-            node.hex(repo["the_branch"].node()),
-            "4e256962fc5df545e2e0a51d0d1dc61c469127e6",
-        )
-        self.assertEqual(
-            node.hex(repo["the_branch"].parents()[0].node()),
-            "f1ff5b860f5dbb9a59ad0921a79da77f10f25109",
-        )
-        self.assertEqual(len(repo["tip"].parents()), 1)
-        self.assertEqual(repo["tip"], repo["default"])
-        self.assertEqual(len(repo.heads()), 2)
-
-    def test_many_special_cases(self):
-        repo = self._load_fixture_and_fetch("many_special_cases.svndump")
-
-        self.assertEquals(
-            node.hex(repo[0].node()), "434ed487136c1b47c1e8f952edb4dc5a8e6328df"
-        )
-        # two possible hashes for bw compat to hg < 1.5, since hg 1.5
-        # sorts entries in extra()
-        self.assertTrue(
-            node.hex(repo["tip"].node())
-            in (
-                "e92012d8c170a0236c84166167f149c2e28548c6",
-                "b7bdc73041b1852563deb1ef3f4153c2fe4484f2",
-            )
-        )
-        self.assertEqual(
-            node.hex(repo["the_branch"].node()),
-            "4e256962fc5df545e2e0a51d0d1dc61c469127e6",
-        )
-        self.assertEqual(
-            node.hex(repo["the_branch"].parents()[0].node()),
-            "f1ff5b860f5dbb9a59ad0921a79da77f10f25109",
-        )
-        self.assertEqual(len(repo["tip"].parents()), 1)
-        self.assertEqual(repo["tip"], repo["default"])
-        self.assertEqual(len(repo.heads()), 2)
-
     def test_file_mixed_with_branches(self):
         repo = self._load_fixture_and_fetch("file_mixed_with_branches.svndump")
         self.assertEqual(
@@ -136,18 +69,6 @@ class TestBasicRepoLayout(test_hgsubversion_util.TestBase):
         self.assert_("foo" in repo["tip"])
         self.assert_("bar/alpha" not in repo["tip"].parents()[0])
         self.assert_("foo" in repo["tip"].parents()[0])
-
-    def test_oldest_not_trunk_and_tag_vendor_branch(self):
-        repo = self._load_fixture_and_fetch(
-            "tagged_vendor_and_oldest_not_trunk.svndump"
-        )
-        self.assertEqual(
-            node.hex(repo["oldest"].node()), "926671740dec045077ab20f110c1595f935334fa"
-        )
-        self.assertEqual(repo["tip"].parents()[0].parents()[0], repo["oldest"])
-        self.assertEqual(
-            node.hex(repo["tip"].node()), "1a6c3f30911d57abb67c257ec0df3e7bc44786f7"
-        )
 
     def test_propedit_with_nothing_else(self):
         repo = self._load_fixture_and_fetch("branch_prop_edit.svndump")
@@ -209,46 +130,6 @@ class TestBasicRepoLayout(test_hgsubversion_util.TestBase):
 
 class TestStupidPull(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
-
-    def test_stupid(self):
-        repo = self._load_fixture_and_fetch("two_heads.svndump")
-        self.assertEqual(
-            node.hex(repo[0].node()), "434ed487136c1b47c1e8f952edb4dc5a8e6328df"
-        )
-        self.assertEqual(
-            node.hex(repo["tip"].node()), "1083037b18d85cd84fa211c5adbaeff0fea2cd9f"
-        )
-        self.assertEqual(
-            node.hex(repo["the_branch"].node()),
-            "4e256962fc5df545e2e0a51d0d1dc61c469127e6",
-        )
-        self.assertEqual(
-            repo["the_branch"].extra()["convert_revision"],
-            "svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/branches/the_branch@5",
-        )
-        self.assertEqual(
-            node.hex(repo["the_branch"].parents()[0].node()),
-            "f1ff5b860f5dbb9a59ad0921a79da77f10f25109",
-        )
-        self.assertEqual(len(repo["tip"].parents()), 1)
-        self.assertEqual(
-            repo["default"].extra()["convert_revision"],
-            "svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/trunk@6",
-        )
-        self.assertEqual(repo["tip"], repo["default"])
-        self.assertEqual(len(repo.heads()), 2)
-
-    def test_oldest_not_trunk_and_tag_vendor_branch(self):
-        repo = self._load_fixture_and_fetch(
-            "tagged_vendor_and_oldest_not_trunk.svndump"
-        )
-        self.assertEqual(
-            node.hex(repo["oldest"].node()), "926671740dec045077ab20f110c1595f935334fa"
-        )
-        self.assertEqual(repo["tip"].parents()[0].parents()[0], repo["oldest"])
-        self.assertEqual(
-            node.hex(repo["tip"].node()), "1a6c3f30911d57abb67c257ec0df3e7bc44786f7"
-        )
 
     def test_empty_repo(self):
         # This used to crash HgEditor because it could be closed without

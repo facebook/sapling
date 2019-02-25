@@ -241,7 +241,7 @@ def push(repo, dest, force, revs):
             ui.status("Cowardly refusing to push branch merge\n")
             return 0  # results in nonzero exit status, see hg's commands.py
         workingrev = repo[None].parents()[0]
-        workingbranch = workingrev.branch()
+        workingbranch = "default"
         ui.status("searching for changes\n")
         hashes = meta.revmap.hashes()
         outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())

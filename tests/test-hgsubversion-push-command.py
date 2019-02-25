@@ -250,7 +250,6 @@ class PushTests(test_hgsubversion_util.TestBase):
             self.assertNotEqual(tip.node(), old_tip)
             self.assertEqual(tip.parents()[0].node(), expected_parent)
             self.assertEqual(tip["adding_file"].data(), "foo")
-            self.assertEqual(tip.branch(), "default")
             # unintended behaviour:
             self.assertNotEqual("an_author", tip.user())
             self.assertEqual("(no author)", tip.user().rsplit("@", 1)[0])
@@ -303,53 +302,6 @@ class PushTests(test_hgsubversion_util.TestBase):
         self.assertNotEqual(tip.node(), old_tip)
         self.assertEqual(node.hex(tip.parents()[0].node()), node.hex(expected_parent))
         self.assertEqual(tip["adding_file"].data(), "foo")
-        self.assertEqual(tip.branch(), "default")
-
-    def test_push_two_revs_different_local_branch(self):
-        def filectxfn(repo, memctx, path):
-            return compathacks.makememfilectx(
-                repo,
-                memctx=memctx,
-                path=path,
-                data=path,
-                islink=False,
-                isexec=False,
-                copied=False,
-            )
-
-        oldtiphash = self.repo["default"].node()
-        lr = self.repo
-        ctx = context.memctx(
-            lr,
-            (lr[0].node(), revlog.nullid),
-            "automated test",
-            ["gamma"],
-            filectxfn,
-            "testy",
-            "2008-12-21 16:32:00 -0500",
-            {"branch": "localbranch"},
-        )
-        newhash = lr.commitctx(ctx)
-        ctx = context.memctx(
-            lr,
-            (newhash, revlog.nullid),
-            "automated test2",
-            ["delta"],
-            filectxfn,
-            "testy",
-            "2008-12-21 16:32:00 -0500",
-            {"branch": "localbranch"},
-        )
-        newhash = lr.commitctx(ctx)
-        repo = self.repo
-        hg.update(repo, newhash)
-        commands.push(repo.ui, repo)
-        self.assertEqual(self.repo["tip"].parents()[0].parents()[0].node(), oldtiphash)
-        self.assertEqual(self.repo["tip"].files(), ("delta",))
-        self.assertEqual(
-            sorted(self.repo["tip"].manifest().keys()),
-            ["alpha", "beta", "delta", "gamma"],
-        )
 
     def test_push_two_revs(self):
         # set up some work for us
@@ -398,77 +350,6 @@ class PushTests(test_hgsubversion_util.TestBase):
             ), "this is impossible, adding_file2 should not be in this manifest."
         except revlog.LookupError:
             pass
-        self.assertEqual(tip.branch(), "default")
-
-    def test_push_to_branch(self, push=True):
-        repo = self.repo
-
-        def file_callback(repo, memctx, path):
-            if path == "adding_file":
-                return compathacks.makememfilectx(
-                    repo,
-                    memctx=memctx,
-                    path=path,
-                    data="foo",
-                    islink=False,
-                    isexec=False,
-                    copied=False,
-                )
-            raise IOError(errno.EINVAL, "Invalid operation: " + path)
-
-        ctx = context.memctx(
-            repo,
-            (repo["the_branch"].node(), node.nullid),
-            "automated test",
-            ["adding_file"],
-            file_callback,
-            "an_author",
-            "2008-10-07 20:59:48 -0500",
-            {"branch": "the_branch"},
-        )
-        new_hash = repo.commitctx(ctx)
-        hg.update(repo, repo["tip"].node())
-        if push:
-            self.pushrevisions()
-            tip = self.repo["tip"]
-            self.assertNotEqual(tip.node(), new_hash)
-            self.assertEqual(tip["adding_file"].data(), "foo")
-            self.assertEqual(tip.branch(), "the_branch")
-
-    def test_push_to_non_tip(self):
-        self.test_push_to_branch(push=False)
-        wc2path = self.wc_path + "_clone"
-        u = self.repo.ui
-        test_hgsubversion_util.hgclone(
-            self.repo.ui, self.wc_path, wc2path, update=False
-        )
-        res = self.pushrevisions()
-        self.assertEqual(0, res)
-        oldf = open(os.path.join(self.wc_path, ".hg", "hgrc"))
-        hgrc = oldf.read()
-        oldf.close()
-        shutil.rmtree(self.wc_path)
-        test_hgsubversion_util.hgclone(u, wc2path, self.wc_path, update=False)
-        oldf = open(os.path.join(self.wc_path, ".hg", "hgrc"), "w")
-        oldf.write(hgrc)
-        oldf.close()
-
-        # do a commit here
-        self.commitchanges(
-            [("foobaz", "foobaz", "This file is added on default.")],
-            parent="default",
-            message="commit to default",
-        )
-        from edenscm.hgext.hgsubversion import svncommands
-
-        svncommands.rebuildmeta(
-            u, self.repo, args=[test_hgsubversion_util.fileurl(self.repo_path)]
-        )
-
-        hg.update(self.repo, self.repo["tip"].node())
-        oldnode = self.repo["tip"].hex()
-        self.pushrevisions(expected_extra_back=1)
-        self.assertNotEqual(oldnode, self.repo["tip"].hex(), "Revision was not pushed.")
 
     def test_delete_file(self):
         repo = self.repo
@@ -901,35 +782,13 @@ class PushTests(test_hgsubversion_util.TestBase):
             "2012-12-13 20:59:48 -0500",
             {"branch": "default"},
         )
-        os.chdir(p)
         repo.commitctx(ctx)
         hg.update(repo, repo["tip"].node())
         self.pushrevisions()
         tip = self.repo["tip"]
         self.assertNotEqual(tip.node(), old_tip)
-        self.assertEqual(p, os.getcwd())
         self.assertEqual(tip["adding_file"].data(), "fooFirstFile")
         self.assertEqual(tip["newdir/new_file"].data(), "fooNewFile")
-        self.assertEqual(tip.branch(), "default")
-
-    def test_update_after_push(self):
-        repo = self.repo
-        ui = repo.ui
-
-        ui.setconfig(
-            "hooks",
-            "debug-hgsubversion-between-push-and-pull-for-tests",
-            lambda ui, repo, hooktype: self.add_svn_rev(
-                self.repo_path, {"trunk/racey_file": "race conditions suck"}
-            ),
-        )
-
-        self.test_push_to_branch(push=False)
-        commands.push(ui, repo)
-        newctx = self.repo["."]
-        self.assertNotEqual(newctx.node(), self.repo["tip"].node())
-        self.assertEqual(newctx["adding_file"].data(), "foo")
-        self.assertEqual(newctx.branch(), "the_branch")
 
 
 if __name__ == "__main__":

@@ -177,9 +177,6 @@ class MapTests(test_hgsubversion_util.TestBase):
         self.assertEqual(
             node.hex(repo[0].node()), "2c48f3525926ab6c8b8424bcf5eb34b149b61841"
         )
-        self.assertEqual(
-            node.hex(repo["default"].node()), "b37a3c0297b71f989064d9b545b5a478bbed7cc1"
-        )
 
     @test_hgsubversion_util.requiresreplay
     def test_file_map_rule_order(self):
