@@ -337,7 +337,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     p  <- cdst - rebase or merge destination, can be draft
     .
     .
-    .   d  <- csrc - commit to be rebased or merged.
+    .   d  <- csrc - commit to be rebased or merged or grafted.
     |   |
     p   d  <- base
     | /
@@ -391,6 +391,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                 amend_copies = _getamendcopies(repo, cdst, base.p1())
                 # update result[0] dict w/ amend_copies
                 result[0].update(amend_copies)
+                result[0] = _filtercopies(result[0], cdst, csrc, base)
 
         return result
 
@@ -479,7 +480,41 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                 if dst not in copies:
                     copies[dst] = src
 
-    return copies, {}, {}, {}, {}
+    return _filtercopies(copies, cdst, csrc, base), {}, {}, {}, {}
+
+
+def _filtercopies(copies, cdst, csrc, base):
+    """Remove uninteresting copies if files are not changed.
+
+    The mergecopies function is expected to report cases where one side renames
+    a file, while the other side changed the file before the rename.
+
+    In case there is only renaming without changing, do not report the copy.
+    In fact, reporting the copy can confuse other part of merge.py and cause
+    files to be deleted incorrectly.
+
+    This post-processing is currently known only necessary to the heuristics
+    algorithm, but not necessary for the original, slow "full copytracing" code
+    path.
+    """
+    newcopies = {}
+    if copies:
+        # Warm-up manifests
+        cdst.manifest()
+        csrc.manifest()
+        base.manifest()
+        for fdst, fsrc in copies.items():
+            if fsrc not in base:
+                # Should not happen. Just be graceful in case something went
+                # wrong.
+                continue
+            basenode = base[fsrc].filenode()
+            if fsrc in cdst and cdst[fsrc].filenode() == basenode:
+                continue
+            if fsrc in csrc and csrc[fsrc].filenode() == basenode:
+                continue
+            newcopies[fdst] = fsrc
+    return newcopies
 
 
 def _fastcopytraceenabled(ui):

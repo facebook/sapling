@@ -33,9 +33,6 @@ Do the merge:
   $ hg up -q $C
   $ hg graft book-B
   grafting 4:b55db8435dc2 "B2" (tip book-B)
-  unresolved: ['D', 'E']
-
-BUG: D and E should not be unresolved.
 
   $ hg status
   $ hg log -r . -T '{desc}\n' --stat

@@ -142,19 +142,16 @@ Test amend copytrace with copies
   $ hg amend
   $ hg rebase --restack
   rebasing 2:6938f0d82b23 "mod a"
-  merging b and a to b
-  merging c and a to c
   rebasing 3:df8dfcb1d237 "mod i" (test-top)
-  merging j and i to j
   $ hg up test-top
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark test-top)
   $ cat a b c i j
   b
-  b
-  b
+  a
+  a
   j
-  j
+  i
   $ cd ..
   $ rm -rf repo
 
