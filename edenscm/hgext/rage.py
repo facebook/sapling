@@ -332,6 +332,7 @@ def _makerage(ui, repo, **opts):
                 sorted(["{}={}".format(k, v) for k, v in encoding.environ.items()])
             ),
         ),
+        ("ssh config", lambda: shcmd("ssh -G hg.vip.facebook.com", check=False)),
     ]
 
     msg = ""
