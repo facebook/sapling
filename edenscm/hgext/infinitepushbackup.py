@@ -318,8 +318,8 @@ def backup(ui, repo, dest=None, **opts):
         return 0
 
     try:
-        # Wait at most 30 seconds, because that's the average backup time
-        timeout = 30
+        # Wait at most 120 seconds, because backup can take a while
+        timeout = 120
         with lockmod.lock(repo.sharedvfs, _backuplockname, timeout=timeout):
             _dobackup(ui, repo, dest, **opts)
             return 0
