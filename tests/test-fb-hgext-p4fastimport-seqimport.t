@@ -118,7 +118,6 @@ Run seqimport limiting to one changelist
   committing manifest
   committing changelog
   writing metadata to sqlite
-  updating the branch cache
 
 Assert bookmark was written
   $ hg log -r master -T '{desc}\n'
@@ -178,7 +177,6 @@ Run seqimport again for up to 50 changelists
   largefile: Main/largefile, oid: 9586437c941c1df9d22f2f2775f00af95943f9de519ee478c45d56bbd002cc95
   writing lfs metadata to sqlite
   writing metadata to sqlite
-  updating the branch cache
 
 Confirm Main/x is no longer executable and Main/symlink is no longer a symlink
   $ hg manifest -vr tip | egrep "Main/(symlink|x)"

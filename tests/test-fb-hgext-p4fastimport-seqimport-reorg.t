@@ -46,7 +46,6 @@ Import move, ensure ignore takes place
   @IMPORTER_IGNORE_REORG@ found in CL desc, ignoring no-op moves
   Ignoring //depot/foo/foo.txt => //depot/bar/foo.txt, same path in hg: foo.txt
   committing changelog
-  updating the branch cache
 
 Confirm there are no files in this commit and that changelist is correct
   $ hg log -r master -T '{files}'
@@ -98,7 +97,6 @@ Update change to ignore moves and attempt import again
   Ignoring //depot/bar/bar.txt => //depot/foo/bar.txt, same path in hg: bar.txt
   Ignoring //depot/bar/foo.txt => //depot/foo/foo.txt, same path in hg: foo.txt
   committing changelog
-  updating the branch cache
 
 Confirm repository state is sane
   $ hg log -r master -T '{extras.p4changelist}\n'

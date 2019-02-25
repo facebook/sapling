@@ -85,7 +85,6 @@ Sync Import
   file: //depot/Main/Outside/a, src: * (glob)
   committing manifest
   committing changelog
-  updating the branch cache
 
   $ hg manifest -vr tip
   644   Main/Narrow/a
@@ -149,7 +148,6 @@ Remove stuff
   committing files:
   committing manifest
   committing changelog
-  updating the branch cache
 
   $ hg manifest -vr tip
   644   Main/Narrow/a

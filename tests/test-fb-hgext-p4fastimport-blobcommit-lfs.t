@@ -70,7 +70,6 @@ Sync Commit
   committing changelog
   largefile: Main/largefile, oid: b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c
   writing lfs metadata to sqlite
-  updating the branch cache
 
 
   $ cd $p4wd
@@ -103,7 +102,6 @@ Sync Commit
   committing changelog
   largefile: Outside/anotherlargefile, oid: 9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c
   writing lfs metadata to sqlite
-  updating the branch cache
 
   $ hg manifest -vr tip
   644   Main/a

@@ -68,7 +68,6 @@ it cannot be used as source for move operation)
   file: //depot/foo/b, src: * (glob)
   committing manifest
   committing changelog
-  updating the branch cache
 
   $ hg log -r master -T 'A:\n{file_adds}\nD:\n{file_dels}\nM:{file_copies}\n'
   A:
