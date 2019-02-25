@@ -170,10 +170,17 @@ readonly=true
 CONFIG
 fi
 
+if [[ -v PUSHREBASE_REWRITE_DATES ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[pushrebase]
+rewritedates=true
+CONFIG
+else
   cat >> repos/repo/server.toml <<CONFIG
 [pushrebase]
 rewritedates=false
 CONFIG
+fi
 
 if [[ ! -v ENABLE_ACL_CHECKER ]]; then
   cat >> repos/repo/server.toml <<CONFIG
