@@ -52,6 +52,9 @@ fn main() {
     let matches = App::new("Mononoke CLI")
         .about("Provide minimally compatible CLI to Mononoke server")
         .arg(Arg::from_usage("-R, --repository=<REPO> 'repository name'"))
+        .arg(Arg::from_usage(
+            "--query-string [QUERY_STRING] 'original query string passed to repository path'",
+        ))
         .arg(Arg::from_usage("--remote-proxy 'hgcli is run as remote proxy, not locally'"))
         .arg(Arg::from_usage(
             "--scuba-table [SCUBA_TABLE] 'name of scuba table to log to'",

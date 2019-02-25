@@ -42,6 +42,7 @@ const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
+            let query_string = main.value_of("query-string").unwrap_or("");
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
 
             let cert = sub
@@ -62,6 +63,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
             return StdioRelay {
                 path: mononoke_path,
                 repo,
+                query_string,
                 cert,
                 private_key,
                 ca_pem,
@@ -79,6 +81,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
 struct StdioRelay<'a> {
     path: &'a str,
     repo: &'a str,
+    query_string: &'a str,
     cert: &'a str,
     private_key: &'a str,
     ca_pem: &'a str,
@@ -138,10 +141,21 @@ impl<'a> StdioRelay<'a> {
             Logger::root(drain.fuse(), o!())
         };
 
-        debug!(
-            client_logger,
-            "Session with Mononoke started with uuid: {}", session_uuid
-        );
+        // This message is parsed on various places by Sandcastle to determine it was served by
+        // Mononoke. This message should remain exactly like this, therefor we serve Sandcastle
+        // and use the fallback scenario for when query string is empty to show this message. Once
+        // hg-ssh-wrapper everywhere is updated to always pass along the query string, we can make
+        // this a non-optional parameter and show the user friendly message on empty query string.
+        if self.query_string.is_empty() || self.query_string.contains("sandcastle") {
+            debug!(
+                client_logger,
+                "Session with Mononoke started with uuid: {}", session_uuid
+            );
+        } else {
+            eprintln!("server: https://fburl.com/mononoke");
+            eprintln!("session: {}", session_uuid);
+        }
+
         scuba_logger.log_with_msg("Hgcli proxy - Connected", None);
 
         self.internal_run(stdio)
