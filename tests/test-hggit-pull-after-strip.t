@@ -60,7 +60,7 @@ clone a branch
 
   $ cd ..
   $ cd hgrepo-b
-  $ hg strip tip 2>&1 | grep -v saving | grep -v backup
+  $ hg debugstrip tip 2>&1 | grep -v saving | grep -v backup
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull -r beta
   pulling from $TESTTMP/gitrepo

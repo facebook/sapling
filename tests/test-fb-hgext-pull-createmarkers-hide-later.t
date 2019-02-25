@@ -16,9 +16,6 @@ Test that hg pull creates obsolescence markers for landed diffs
   > pushrebase=
   > rebase=
   > remotenames =
-  > strip=
-  > [amend]
-  > safestrip=false
   > [remotenames]
   > allownonfastforward=True
   > EOF
@@ -90,7 +87,7 @@ Strip the commits we just landed.
 
   $ hg update -r 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg strip -r 6
+  $ hg debugstrip -r 6
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/e0672eeeb97c-d1aa7ddd-backup.hg (glob)
 
 Here pull should now detect commits 2 and 3 as landed, but it won't be able to
@@ -151,7 +148,7 @@ And strip the commit we just landed.
 
   $ hg update -r 7
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg strip -r 9
+  $ hg debugstrip -r 9
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/296f9d37d5c1-9c9e6ffd-backup.hg (glob)
 
 Here pull should now detect commit 4 has been landed.  It should hide this

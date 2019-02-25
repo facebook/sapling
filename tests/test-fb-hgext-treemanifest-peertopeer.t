@@ -85,7 +85,7 @@ Pushing with treemanifest disabled does not produce trees
   $ ls ../client2/.hg/store/packs/manifests || true
   * $ENOENT$ (glob)
 
-  $ hg -R ../client2 strip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  $ hg -R ../client2 debugstrip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
   $ rm -rf ../client2/.hg/store/packs
   $ clearcache
 
@@ -116,7 +116,7 @@ cache.
   -r--r--r--     347 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histpack
   -r--r--r--    1194 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.dataidx
   -r--r--r--     437 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.datapack
-  $ hg -R ../client2 strip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  $ hg -R ../client2 debugstrip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
   $ rm -rf ../client2/.hg/store/packs
   $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ clearcache
@@ -164,7 +164,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
 Pulling between peers should send local trees but not remote trees
 # Strip back one server commit and one draft commit, so we can pull them again
   $ cd ../client2
-  $ hg strip -r 2 --no-backup
+  $ hg debugstrip -r 2 --no-backup
 # Delete the old local tree data from the draft commit, so we can verify it is
 # downloaded again during pull.
   $ rm -rf .hg/store/packs/*

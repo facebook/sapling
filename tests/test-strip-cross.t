@@ -91,7 +91,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   $ for i in 0 1 2 3 4; do
   >     hg clone -q -U --pull crossed $i
   >     echo "% Trying to strip revision $i"
-  >     hg --cwd $i strip $i
+  >     hg --cwd $i debugstrip $i
   >     echo "% Verifying"
   >     hg --cwd $i verify
   >     echo

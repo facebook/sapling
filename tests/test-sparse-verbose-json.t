@@ -1,12 +1,8 @@
 test sparse with --verbose and -T json
 
+  $ enable sparse
   $ hg init myrepo
   $ cd myrepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > strip=
-  > EOF
 
   $ echo a > show
   $ echo x > hide

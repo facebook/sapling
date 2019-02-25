@@ -177,7 +177,6 @@ Somehow problematic: With many extensions
   > sparse=
   > sshaskpass=
   > stat=
-  > strip=
   > traceprof=
   > treedirstate=
   > treemanifest=

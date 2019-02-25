@@ -123,7 +123,7 @@ even if commit message is empty
   d8804f3f5396d800812f579c8452796a5993bdb2
   $ hg --cwd b export -o ../empty-log.diff .
   $ hg --cwd b update -q -C ".^1"
-  $ hg --cwd b --config extensions.strip= strip -q tip
+  $ hg --cwd b debugstrip -q tip
   $ HGEDITOR=cat hg --cwd b import --exact ../empty-log.diff
   applying ../empty-log.diff
   $ hg --cwd b tip -T "{node}\n"
@@ -466,7 +466,7 @@ page for detail).
   parent: 1
 
   $ hg --cwd b update -q -C 0
-  $ hg --cwd b --config extensions.strip= strip -q 1
+  $ hg --cwd b debugstrip -q 1
 
 Test visibility of in-memory dirstate changes inside transaction to
 external process

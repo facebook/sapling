@@ -7,7 +7,6 @@ test sparse
   > [extensions]
   > sparse=
   > purge=
-  > strip=
   > rebase=
   > EOF
 

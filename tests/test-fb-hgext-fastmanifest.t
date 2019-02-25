@@ -34,7 +34,7 @@ Check diagnosis, debugging information
 Test usecache=False prevents cache creation
   $ mkcommit 0
   $ ls .hg/store/manifestcache
-  $ hg strip -q -r . --config extensions.strip=
+  $ hg debugstrip -q -r .
 
   $ cat >> .hg/hgrc <<EOF
   > [fastmanifest]

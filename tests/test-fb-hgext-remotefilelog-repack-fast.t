@@ -246,10 +246,10 @@
   Node          P1 Node       P2 Node       Link Node     Copy From
   577959738234  1bb2e6237e03  000000000000  c7faf2fc439a  x
   21f46f2721e7  000000000000  000000000000  d6868642b790  
-  $ hg strip -r '.^'
+  $ hg debugstrip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)
-  $ hg -R ../master strip -r '.^'
+  $ hg -R ../master debugstrip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)
 

@@ -113,7 +113,7 @@ remote or local repo
   o  0 cb9a9f314b8b
   
   $ hg boo -d foo
-  $ hg --config extensions.strip= strip . -q
+  $ hg debugstrip . -q
   $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
   @  1 1846eede8b68
   |

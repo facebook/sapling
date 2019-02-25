@@ -316,7 +316,7 @@
        * (changelog) (glob)
        * (manifests) (glob)
       * a (glob)
-  $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
+  $ hg debugstrip -r 2 --no-backup --force -q
   $ hg -R bundle.hg debugfilerev -r 'bundle()'
   5b495c34b263: a-two
    a: bin=0 lnk=0 flag=2000 size=16 copied='' chain=000000000000,4b09ab2030a1

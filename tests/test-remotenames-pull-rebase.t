@@ -70,8 +70,7 @@ Pull remote changes and rebase local changes with tracked bookmark onto them
   o  root |  |
   
 Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour when using non-tracking bookmark
-  $ echo "strip=" >> $HGRCPATH
-  $ hg strip -q -r 3 -r 2 -r 1
+  $ hg debugstrip -q -r 3 -r 2 -r 1
   $ hg book -d bmtrackingremote
   $ hg book bmnottracking
   $ mkcommit localcommit

@@ -2,10 +2,6 @@
 
   $ hg init server
   $ cd server
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > strip=
-  > EOF
 
   $ echo 1 > foo
   $ hg commit -A -m 'first'
@@ -16,7 +12,7 @@
 
 Produce a bundle to use
 
-  $ hg strip -r 1
+  $ hg debugstrip -r 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/server/.hg/strip-backup/ed602e697e0f-cc9fff6a-backup.hg
 

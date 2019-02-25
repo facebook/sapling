@@ -83,7 +83,7 @@ TODO: Make this test compatibile with obsstore enabled.
 
 # restore state for future tests
 
-  $ hg -q strip .
+  $ hg -q debugstrip .
   $ hg -q up tip
 
 # rebase
@@ -113,7 +113,7 @@ TODO: Make this test compatibile with obsstore enabled.
 
   $ clearcache
   $ hg debugrebuilddirstate # fixes dirstate non-determinism
-  $ hg strip -r .
+  $ hg debugstrip -r .
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/19edf50f4de7-df3d0f74-backup.hg (glob)
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
@@ -188,7 +188,7 @@ TODO: Make this test compatibile with obsstore enabled.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m merge
-  $ hg strip -q -r ".^"
+  $ hg debugstrip -q -r ".^"
 
 # commit without producing new node
 

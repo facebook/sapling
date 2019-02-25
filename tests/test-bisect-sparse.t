@@ -21,13 +21,9 @@
 #  0 <- known good - -
 
 test bisect-sparse
+  $ enable sparse
   $ hg init myrepo
   $ cd myrepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > strip=
-  > EOF
 
   $ echo a > sparse-included-file
   $ echo x > sparse-excluded-file

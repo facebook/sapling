@@ -5,7 +5,6 @@ Test bookmark -D
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > amend=
-  > strip=
   > tweakdefaults=
   > [experimental]
   > evolution=all
@@ -43,20 +42,6 @@ Test bookmark -D
   | |
   | x  3
   |/
-  o  2
-  |
-  o  1 master
-  |
-  o  0
-  
-  $ hg bookmark -D feature2 --config extensions.amend=!
-  saved backup bundle to $TESTTMP/book-D/.hg/strip-backup/1c4dfc7a8985-4027cf08-backup.hg (glob)
-  bookmark 'feature2' deleted
-  $ hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden
-  x  4
-  |
-  x  3
-  |
   o  2
   |
   o  1 master

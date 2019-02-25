@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-from . import debug, debugstatus, eden, uncommit
+from . import debug, debugstatus, debugstrip, eden, uncommit
 from .. import (
     archival,
     bookmarks,
@@ -72,6 +72,7 @@ readonly = registrar.command.readonly
 
 table.update(uncommit.cmdtable)
 table.update(debugstatus.command._table)
+table.update(debugstrip.command._table)
 table.update(eden.command._table)
 
 # common command options
@@ -1217,9 +1218,9 @@ def bookmark(ui, repo, *names, **opts):
                 raise error.Abort(
                     _("--strip cannot be used together with %s") % ("--%s" % name)
                 )
-            # book --strip is just an alias for strip -B.
+            # book --strip is just an alias for prune -B.
             # (it may raise UnknownCommand)
-            stripfunc = cmdutil.findcmd("strip", table)[1][0]
+            stripfunc = cmdutil.findcmd("prune", table)[1][0]
             return stripfunc(ui, repo, bookmark=names, rev=[])
 
     if delete or rename or names or inactive:

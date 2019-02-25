@@ -6,7 +6,6 @@ test sparse interaction with other extensions
   $ cat > .hg/hgrc <<EOF
   > [extensions]
   > sparse=
-  > strip=
   > # Remove once default-on:
   > simplecache=
   > [simplecache]

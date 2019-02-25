@@ -1171,7 +1171,7 @@ Test version number support in 'hg version':
   $ echo 'getversion = lambda: "1.twentythree"' >> throw.py
   $ rm -f throw.pyc throw.pyo
   $ rm -Rf __pycache__
-  $ hg version -v --config extensions.throw=throw.py --config extensions.strip= | egrep 'throw'
+  $ hg version -v --config extensions.throw=throw.py | egrep 'throw'
     throw \s* external  1.twentythree (re)
 
   $ hg version -q --config extensions.throw=throw.py
@@ -1195,20 +1195,20 @@ Test JSON output of version:
    }
   ]
 
-  $ hg version --config extensions.strip= -Tjson
+  $ hg version -Tjson
   [
    {
-    "extensions": [{"bundled": true, "name": "strip", "ver": null}, *], (glob)
+    "extensions": [{"bundled": false, "name": "conflictinfo", "ver": null}, *], (glob)
     "ver": "*" (glob)
    }
   ]
 
 Test template output of version:
 
-  $ hg version --config extensions.throw=throw.py --config extensions.strip= \
-  > -T'{extensions % "{name}  {pad(ver, 16)}  ({if(bundled, "internal", "external")})\n"}' | egrep '(throw|strip)'
-  throw  1.twentythree     (external)
-  strip                    (internal)
+  $ hg version --config extensions.throw=throw.py --config extensions.journal= \
+  > -T'{extensions % "{pad(name, 8)}  {pad(ver, 16)}  ({if(bundled, "internal", "external")})\n"}' | egrep '(throw|journal)'
+  throw     1.twentythree     (external)
+  journal                     (internal)
 
 Refuse to load extensions with minimum version requirements
 

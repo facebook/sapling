@@ -1,6 +1,3 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "strip=" >> $HGRCPATH
-
   $ tipparents() {
   > hg parents --template "{rev}:{node|short} {desc|firstline}\n" -r tip
   > }
@@ -64,7 +61,7 @@ Test without --exact and diff.p1 == workingdir.p1
   $ tipparents
   1:540395c44225 changea
   3:102a90ea7b4a addb
-  $ hg strip --no-backup tip
+  $ hg debugstrip --no-backup tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Test without --exact and diff.p1 != workingdir.p1
@@ -77,7 +74,7 @@ Test without --exact and diff.p1 != workingdir.p1
   (use --exact to import the patch as a merge)
   $ tipparents
   2:890ecaa90481 addc
-  $ hg strip --no-backup tip
+  $ hg debugstrip --no-backup tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Test with --exact
@@ -88,7 +85,7 @@ Test with --exact
   $ tipparents
   1:540395c44225 changea
   3:102a90ea7b4a addb
-  $ hg strip --no-backup tip
+  $ hg debugstrip --no-backup tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Test with --bypass and diff.p1 == workingdir.p1
@@ -100,7 +97,7 @@ Test with --bypass and diff.p1 == workingdir.p1
   $ tipparents
   1:540395c44225 changea
   3:102a90ea7b4a addb
-  $ hg strip --no-backup tip
+  $ hg debugstrip --no-backup tip
 
 Test with --bypass and diff.p1 != workingdir.p1
 
@@ -112,7 +109,7 @@ Test with --bypass and diff.p1 != workingdir.p1
   (use --exact to import the patch as a merge)
   $ tipparents
   2:890ecaa90481 addc
-  $ hg strip --no-backup tip
+  $ hg debugstrip --no-backup tip
 
 Test with --bypass and --exact
 
@@ -121,7 +118,7 @@ Test with --bypass and --exact
   $ tipparents
   1:540395c44225 changea
   3:102a90ea7b4a addb
-  $ hg strip --no-backup tip
+  $ hg debugstrip --no-backup tip
 
   $ cd ..
 

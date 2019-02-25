@@ -142,7 +142,7 @@
 # prefetch on pull when configured
 
   $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
-  $ hg strip tip
+  $ hg debugstrip tip
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-3f43405e-backup.hg (glob)
 
   $ clearcache
@@ -164,7 +164,7 @@
 
 # prefetch only fetches changes not in working copy
 
-  $ hg strip tip
+  $ hg debugstrip tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-3f43405e-backup.hg (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
@@ -189,7 +189,7 @@
 
   $ hg prefetch -r 'all()'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
-  $ hg strip -q -r 0
+  $ hg debugstrip -q -r 0
   $ echo x > x
   $ echo z > z
   $ hg commit -qAm x
@@ -200,7 +200,7 @@
 # prefetch server versions, even if local versions are available
 
   $ clearcache
-  $ hg strip -q tip
+  $ hg debugstrip -q tip
   $ hg pull
   pulling from ssh://user@dummy/master
   searching for changes

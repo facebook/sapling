@@ -3,7 +3,6 @@ Set up test environment.
   > [extensions]
   > amend=
   > rebase=
-  > strip=
   > tweakdefaults=
   > [experimental]
   > evolution = createmarkers

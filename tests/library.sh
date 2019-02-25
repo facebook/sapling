@@ -7,7 +7,6 @@ historypackv1=True
 [extensions]
 remotefilelog=
 rebase=
-strip=
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [server]

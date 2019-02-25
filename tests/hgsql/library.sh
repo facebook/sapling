@@ -63,7 +63,6 @@ configureserver() {
   cat >> $1/.hg/hgrc <<EOF
 [extensions]
 hgsql=
-strip=
 
 [hgsql]
 enabled = True
@@ -96,6 +95,5 @@ ssh=python "$TESTDIR/dummyssh"
 
 [extensions]
 hgsql=
-strip=
 EOF
 }

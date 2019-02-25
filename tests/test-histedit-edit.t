@@ -2,11 +2,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > histedit=
-  > strip=
-  > EOF
+  $ enable histedit
 
   $ initrepo ()
   > {
@@ -140,7 +136,7 @@ Go at a random point and try to continue
   [255]
 
 Try to delete necessary commit
-  $ hg strip -r 652413b
+  $ hg debugstrip -r 652413b
   abort: histedit in progress, can't strip 652413bf663e
   [255]
 
@@ -165,7 +161,7 @@ Stripping necessary commits should not break --abort
   (hg histedit --continue to resume)
 
   $ mv .hg/histedit-state .hg/histedit-state.bak
-  $ hg strip -q -r b5f70786f9b0
+  $ hg debugstrip -q -r b5f70786f9b0
   $ mv .hg/histedit-state.bak .hg/histedit-state
   $ hg histedit --abort
   adding changesets

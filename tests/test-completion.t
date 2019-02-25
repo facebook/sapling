@@ -127,6 +127,7 @@ Show debug commands if there are no other candidates
   debugshell
   debugssl
   debugstatus
+  debugstrip
   debugsub
   debugsuccessorssets
   debugtemplate
@@ -322,6 +323,7 @@ Show all commands + options
   debugshell: command
   debugssl: 
   debugstatus: nonnormal
+  debugstrip: rev, force, no-backup, keep, bookmark
   debugsub: rev
   debugsuccessorssets: closest
   debugtemplate: rev, define

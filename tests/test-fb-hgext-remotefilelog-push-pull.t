@@ -75,7 +75,7 @@ the server supports our custom getfiles method.
 
 # pull from shallow to shallow (ssh)
 
-  $ hg strip -r 1
+  $ hg debugstrip -r 1
   saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-89d325c9-backup.hg (glob)
   $ hg pull ssh://user@dummy/$TESTTMP/shallow --config remotefilelog.cachepath=${CACHEDIR}2
   pulling from ssh://user@dummy/$TESTTMP/shallow
@@ -94,8 +94,8 @@ the server supports our custom getfiles method.
   z
 
 
-  $ hg -R ../shallow strip -qr 3
-  $ hg strip -qr 3
+  $ hg -R ../shallow debugstrip -qr 3
+  $ hg debugstrip -qr 3
   $ cd ..
 
 # push from shallow to shallow

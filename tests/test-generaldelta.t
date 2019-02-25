@@ -143,7 +143,7 @@ Test format.aggressivemergedeltas
        2       120      65      1       2 2ab389a983eb 315c023f341d 8dde941edb6e
 #endif
 
-  $ hg strip -q -r . --config extensions.strip=
+  $ hg debugstrip -q -r .
 
 - Verify aggressive merge uses p2 (commit 0) as delta parent
   $ hg up -q -C 1
@@ -158,7 +158,7 @@ Test format.aggressivemergedeltas
 #endif
 
 Test that strip bundle use bundle2
-  $ hg --config extensions.strip= strip .
+  $ hg debugstrip .
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/aggressive/.hg/strip-backup/1c5d4dc9a8b8-6c68e60c-backup.hg
   $ hg debugbundle .hg/strip-backup/*

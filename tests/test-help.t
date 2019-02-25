@@ -374,7 +374,6 @@ Test extension help:
        sshaskpass    ssh-askpass implementation that works with chg
        stablerev     provide a way to expose the "stable" commit via a revset
        stat          (no help text available)
-       strip         strip changesets and their descendants from history
        treemanifest
        tweakdefaults
                      user friendly defaults
@@ -1029,6 +1028,7 @@ Test list of internal help commands
    debugshell    (no help text available)
    debugssl      test a secure connection to a server
    debugstatus   common performance issues for status
+   debugstrip    strip commits and all their descendants from the repository
    debugsub      (no help text available)
    debugsuccessorssets
                  show set of successors for revision

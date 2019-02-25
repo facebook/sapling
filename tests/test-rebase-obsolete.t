@@ -753,7 +753,7 @@ Even when the chain include missing node
   $ echo D > D
   $ hg add D
   $ hg commit -m D
-  $ hg --hidden strip -r 'desc(B1)'
+  $ hg --hidden debugstrip -r 'desc(B1)'
   saved backup bundle to $TESTTMP/obsskip/.hg/strip-backup/86f6414ccda7-b1c452ee-backup.hg
   $ hg log -G
   @  5:1a79b7535141 D
@@ -990,10 +990,6 @@ obsolete changeset which successor is in rebase set.
   $ hg init divergence
   $ cd divergence
   $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > strip =
-  > [alias]
-  > strip = strip --no-backup --quiet
   > [templates]
   > instabilities = '{rev}:{node|short} {desc|firstline}{if(instabilities," ({instabilities})")}\n'
   > EOF
@@ -1062,7 +1058,7 @@ consequence f (descendant of d) is left behind.
   |/
   o  0:b173517d0057 a
   
-  $ hg strip -r 8:
+  $ hg debugstrip --no-backup -q -r 8:
 
 If the rebase set has an obsolete (d) with a successor (d') outside the rebase
 set and none in destination, we still get the divergence warning.
@@ -1099,7 +1095,7 @@ By allowing divergence, we can perform the rebase.
   |/
   o  0:b173517d0057 a
   
-  $ hg strip -r 8:
+  $ hg debugstrip --no-backup -q -r 8:
 
 (Not skipping obsoletes means that divergence is allowed.)
 
@@ -1108,7 +1104,7 @@ By allowing divergence, we can perform the rebase.
   rebasing 4:76be324c128b "d" (d)
   rebasing 7:1143e9adc121 "f" (f tip)
 
-  $ hg strip -r 0:
+  $ hg debugstrip --no-backup -q -r 0:
 
 Similar test on a more complex graph
 

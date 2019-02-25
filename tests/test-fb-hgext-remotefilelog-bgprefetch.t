@@ -58,7 +58,7 @@ TODO: Make this test compatibile with obsstore enabled.
   > pullprefetch=bookmark()
   > backgroundprefetch=True
   > EOF
-  $ hg strip tip
+  $ hg debugstrip tip
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/6b4b6f66ef8c-b4b8bdaf-backup.hg (glob)
 
   $ clearcache
@@ -107,7 +107,7 @@ TODO: Make this test compatibile with obsstore enabled.
   > [remotefilelog]
   > backgroundrepack=True
   > EOF
-  $ hg strip tip
+  $ hg debugstrip tip
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/6b4b6f66ef8c-b4b8bdaf-backup.hg (glob)
 
   $ clearcache

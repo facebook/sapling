@@ -5,7 +5,6 @@ setup
   > [extensions]
   > blackbox=
   > mock=$TESTDIR/mockblackbox.py
-  > strip=
   > [alias]
   > confuse = log --limit 3
   > so-confusing = confuse --style compact
@@ -128,15 +127,15 @@ backup bundles get logged
   $ touch d
   $ hg commit -Amd
   adding d
-  $ hg strip tip
+  $ hg debugstrip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> commit -Amd
   1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> commit -Amd exited 0 after 0.00 seconds
-  1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> strip tip
+  1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> debugstrip tip
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> strip tip exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> debugstrip tip exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> blackbox -l 6
 
 extension and python hooks - use the eol extension for a pythonhook

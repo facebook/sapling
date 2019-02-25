@@ -88,7 +88,7 @@ def _deletebookmark(repo, repomarks, bookmarks):
 
 
 @command(
-    "^prune",
+    "^prune|strip",
     [
         ("s", "succ", [], _("successor changeset")),
         ("r", "rev", [], _("revisions to prune")),
@@ -277,25 +277,3 @@ def prune(ui, repo, *revs, **opts):
         tr.close()
     finally:
         lockmod.release(tr, lock, wlock)
-
-
-def safestrip(orig, ui, repo, *revs, **kwargs):
-    revs = list(revs) + kwargs.pop("rev", [])
-    revs = set(scmutil.revrange(repo, revs))
-    revs = repo.revs("(%ld)::", revs)
-    return prune(ui, repo, *revs, **kwargs)
-
-
-def wrapstrip(loaded):
-    try:
-        stripmod = extensions.find("strip")
-    except KeyError:
-        pass
-    else:
-        extensions.wrapcommand(stripmod.cmdtable, "strip", safestrip)
-
-
-def uisetup(ui):
-    # developer config: amend.safestrip
-    if ui.configbool("amend", "safestrip"):
-        extensions.afterloaded("strip", wrapstrip)

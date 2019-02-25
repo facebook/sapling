@@ -805,7 +805,7 @@ test stripping a non-checked-out but bookmarked revision
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark should-end-on-two)
   $ hg book four
-  $ hg --config extensions.strip= strip 3
+  $ hg debugstrip 3
   saved backup bundle to * (glob)
 should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.

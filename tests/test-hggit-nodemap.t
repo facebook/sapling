@@ -57,7 +57,7 @@ can still get the mapping without the nodemap
 git cleanup cleans nodemap
   $ hg bundle -r tip --base 'tip^' ../mybundle.hg
   1 changesets found
-  $ hg strip -r tip --no-backup
+  $ hg debugstrip -r tip --no-backup
   $ hg git-cleanup
   git commit map cleaned
   $ hg unbundle -q ../mybundle.hg

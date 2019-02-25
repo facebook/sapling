@@ -166,7 +166,7 @@ Test --strip with --bypass
   @@ -1,1 +1,2 @@
    cc
   +cc
-  $ hg -q --config extensions.strip= strip .
+  $ hg -q debugstrip .
 
 Test unsupported combinations
 
@@ -305,7 +305,7 @@ even if commit message is empty
   7bb02e5e6d9de292a9e1b1cb2af5911ed53a378f
   $ hg export -o ../empty-log.diff .
   $ hg update -q -C ".^1"
-  $ hg --config extensions.strip= strip -q tip
+  $ hg debugstrip -q tip
   $ HGEDITOR=cat hg import --exact --bypass ../empty-log.diff
   applying ../empty-log.diff
   $ hg tip -T "{node}\n"

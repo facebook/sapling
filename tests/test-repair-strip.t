@@ -7,15 +7,12 @@
   >         print(entry.split('\x00')[0])
   > EOF
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "strip=">> $HGRCPATH
-
   $ teststrip() {
   >   hg -q up -C $1
   >   echo % before update $1, strip $2
   >   hg parents
   >   chmod -$3 $4
-  >   hg strip $2 2>&1 | sed 's/\(bundle\).*/\1/' | sed 's/Permission denied.*\.hg\/store\/\(.*\)/Permission denied \.hg\/store\/\1/'
+  >   hg debugstrip $2 2>&1 | sed 's/\(bundle\).*/\1/' | sed 's/Permission denied.*\.hg\/store\/\(.*\)/Permission denied \.hg\/store\/\1/'
   >   echo % after update $1, strip $2
   >   chmod +$3 $4
   >   hg verify

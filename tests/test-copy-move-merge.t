@@ -82,7 +82,7 @@ Test disabling copy tracing
 
 - next verify copy metadata is lost when disabled
 
-  $ hg strip -r . --config extensions.strip=
+  $ hg debugstrip -r .
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/t/.hg/strip-backup/550bd84c0cd3-fc575957-backup.hg
   $ hg up -qC 2

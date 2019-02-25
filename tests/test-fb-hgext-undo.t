@@ -690,27 +690,21 @@ Check local undo works forward
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     newbranch
   
-Check local undo with facebook style strip
+Check local undo with prune
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend=
-  > strip=
   > EOF
-  $ hg strip 3ee6
+  $ hg prune 3ee6
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 75f63379f12b
   1 changesets pruned
   hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg undo -b 3532
-  undone to *, before strip 3ee6 (glob)
+  undone to *, before prune 3ee6 (glob)
   $ hg log -r . -T {node}
   3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > strip =!
-  > amend =!
-  > EOF
 
 hg undo --preview test
   $ touch prev1 && hg add prev1 && hg ci -m prev1
@@ -805,13 +799,13 @@ hg redo tests
   $ hg log -r . -T {node}
   75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
   $ hg undo -n 1
-  undone to *, before strip 3ee6 (glob)
+  undone to *, before prune 3ee6 (glob)
   $ hg redo
   undone to *, before undo -n 1 (glob)
   $ hg log -r . -T {node}
   75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
   $ hg undo -n 1
-  undone to *, before strip 3ee6 (glob)
+  undone to *, before prune 3ee6 (glob)
   $ hg redo
   undone to *, before undo -n 1 (glob)
   $ hg redo
@@ -821,7 +815,7 @@ hg redo tests
   $ hg log -r . -T {node}
   a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
   $ hg undo -fn 3
-  undone to *, before strip 3ee6 (glob)
+  undone to *, before prune 3ee6 (glob)
   $ hg undo --force --step -1
   undone to *, before undo -b 3532 (glob)
   $ hg debugundohistory -l

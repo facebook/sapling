@@ -34,7 +34,7 @@ Create two masters
 
 Stripping normally should fail
 
-  $ hg strip -r 1
+  $ hg debugstrip -r 1
   saved backup bundle to $TESTTMP/master2/.hg/strip-backup/d34c38483be9-3839604f-backup.hg (glob)
   transaction abort!
   rollback completed

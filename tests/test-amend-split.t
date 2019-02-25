@@ -3,7 +3,6 @@ Set up test environment.
   > [extensions]
   > amend=
   > rebase=
-  > strip=
   > [experimental]
   > evolution = createmarkers, allowunstable
   > [ui]
@@ -174,7 +173,7 @@ Split with multiple children and using hash.
   o  11 5a5595e342b1 add a1 and a2
 
 Split using revset.
-  $ hg strip 18
+  $ hg debugstrip 18
   saved backup bundle to * (glob)
   $ hg split "children(.)" << EOF
   > y

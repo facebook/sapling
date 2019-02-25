@@ -263,7 +263,7 @@ Test prefetching when a draft commit is marked public
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
   M dir/x
-  $ hg strip -r 3
+  $ hg debugstrip -r 3
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/b6308255e316-b2a7dcf7-backup.hg
 
@@ -374,7 +374,7 @@ Test auto prefetch during pull
   ef362f8bbe8a  000000000000  46            (missing)
   
 
-  $ hg strip -q -r 'draft()'
+  $ hg debugstrip -q -r 'draft()'
 
 - Prefetch just the top manifest (but the full one)
   $ rm -rf $CACHEDIR/master

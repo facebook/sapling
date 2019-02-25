@@ -291,8 +291,8 @@ Test push hook locking
   lock:          user *, process * (*s) (glob)
   wlock:         free
 
-  $ hg --cwd 1 --config extensions.strip= strip tip -q
-  $ hg --cwd 2 --config extensions.strip= strip tip -q
+  $ hg --cwd 1 debugstrip tip -q
+  $ hg --cwd 2 debugstrip tip -q
   $ hg --cwd 3 push ../2 # bundle2+
   pushing to ../2
   searching for changes

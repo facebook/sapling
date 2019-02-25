@@ -89,7 +89,7 @@ Pull to get remote names
 
 Strip public commits from the repo, otherwise fastheaddiscovery heuristic will
 be skipped
-  $ hg strip -q -r '1:'
+  $ hg debugstrip -q -r '1:'
   $ hg log --graph -T '{desc}'
   @  first
   

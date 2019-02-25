@@ -334,7 +334,7 @@ treemanifest data for the public commits.
   o  085784c01c08 public add x
   
 # Strip all the commits so we can pull them again.
-  $ hg strip -q -r 'all()' --no-backup
+  $ hg debugstrip -q -r 'all()' --no-backup
 
 # Clear out all the tree data, so we can see exactly what is downloaded in the
 # upcoming pull.

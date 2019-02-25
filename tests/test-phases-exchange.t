@@ -831,7 +831,7 @@ Bare push with next changeset and common changeset needing sync (issue3575)
 
 (reset some stat on remote repo to avoid confusing other tests)
 
-  $ hg -R ../alpha --config extensions.strip= strip --no-backup 967b449fbc94
+  $ hg -R ../alpha debugstrip --no-backup 967b449fbc94
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg phase --force --draft b740e3e5c05d 967b449fbc94
   test-debug-phase: move rev 8: 0 -> 1

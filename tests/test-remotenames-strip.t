@@ -1,8 +1,6 @@
-  > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=" >> $HGRCPATH
-  > echo "strip=" >> $HGRCPATH
+  $ enable remotenames
 
-Test that hg strip -B stops at remotenames
+Test that hg debugstrip -B stops at remotenames
   $ hg init server
   $ hg clone -q server client
   $ cd client
@@ -15,13 +13,13 @@ Test that hg strip -B stops at remotenames
   $ echo b > b
   $ hg commit -Aqm bb
   $ hg book foo
-  $ hg strip -qB foo
+  $ hg debugstrip -qB foo
   bookmark 'foo' deleted
   $ hg log --template "{desc}\n"
   aa
   a
 
-Test that hg strip -B deletes bookmark even if there is a remote bookmark
+Test that hg debugstrip -B deletes bookmark even if there is a remote bookmark
   $ hg init server
   $ hg clone -q server client
   $ cd client
@@ -30,7 +28,7 @@ Test that hg strip -B deletes bookmark even if there is a remote bookmark
   $ hg phase -p
   $ hg push -q --to master --create
   $ hg book foo
-  $ hg strip -qB foo
+  $ hg debugstrip -qB foo
   bookmark 'foo' deleted
   $ hg log
 

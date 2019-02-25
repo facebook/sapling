@@ -664,7 +664,7 @@ Make sure phase on the client is public.
 Strip scratchontopofpublic commit and do hg update
   $ hg log -r tip -T '{node}\n'
   c70aee6da07d7cdb9897375473690df3a8563339
-  $ hg strip -q tip
+  $ hg debugstrip -q tip
   $ hg up c70aee6da07d7cdb9897375473690df3a8563339
   'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo
@@ -680,7 +680,7 @@ Strip scratchontopofpublic commit and do hg update
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 Trying to pull from bad path
-  $ hg strip -q tip
+  $ hg debugstrip -q tip
   $ hg --config paths.default=badpath up c70aee6da07d7cdb9897375473690df3a8563339
   'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
   pulling from $TESTTMP/client2/badpath (glob)
@@ -689,7 +689,7 @@ Trying to pull from bad path
   [255]
 
 Strip commit and pull it using hg update with bookmark name
-  $ hg strip -q d8fde0ddfc96
+  $ hg debugstrip -q d8fde0ddfc96
   $ hg up scratch/mybranch
   'scratch/mybranch' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo

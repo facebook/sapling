@@ -152,8 +152,8 @@ Test doing a non-fastforward bookmark move
 
 Test a push that comes with out-of-date bookmark discovery
 
-  $ hg -R server strip -q 0 --config extensions.strip=
-  $ hg -R client strip -q 0 --config extensions.strip=
+  $ hg -R server debugstrip -q 0
+  $ hg -R client debugstrip -q 0
   $ rm server/.hg/bookmarks*
   $ rm client/.hg/bookmarks*
   $ echo a >> server/a

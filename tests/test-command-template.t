@@ -468,7 +468,7 @@ Default style should also preserve color information (issue2866):
 Remove commit with empty commit message, so as to not pollute further
 tests.
 
-  $ hg --config extensions.strip= strip -q .
+  $ hg debugstrip -q .
 
 Revision with no copies (used to print a traceback):
 

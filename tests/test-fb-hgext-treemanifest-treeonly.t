@@ -292,7 +292,7 @@ commits
   
   $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
-  $ hg strip -r . --config amend.safestrip=False
+  $ hg debugstrip -r .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/87da9865954c-3cfa5389-backup.hg (glob)
 
@@ -432,7 +432,7 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 
   $ cd ../master
 - Delete the temporary commit we made earlier
-  $ hg strip -qr 2
+  $ hg debugstrip -qr 2
 
 - Verify the received tree was written down as a flat
   $ hg debugindex -m
@@ -659,7 +659,7 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ hg -R ../master strip -q -r tip~3
+  $ hg -R ../master debugstrip -q -r tip~3
   $ hg phase -dfr tip~3
 
 Test pushing from a public treeonly client to a treeonly server *with* pushrebase
@@ -682,7 +682,7 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ hg -R ../master strip -r tip~3
+  $ hg -R ../master debugstrip -r tip~3
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-d6767557-backup.hg
   $ hg phase -dfr tip~3
 
@@ -714,7 +714,7 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
 Strip the pushed commits + the recently made commit from the server
-  $ hg -R ../master strip -r '.:'
+  $ hg -R ../master debugstrip -r '.:'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-3e715521-backup.hg
 

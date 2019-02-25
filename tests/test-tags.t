@@ -404,7 +404,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=168
 
-  $ hg -q --config extensions.strip= strip -r 6 --no-backup
+  $ hg -q debugstrip -r 6 --no-backup
 #endif
 
 Stripping doesn't truncate the tags cache until new data is available
@@ -417,7 +417,7 @@ Stripping doesn't truncate the tags cache until new data is available
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=144
 
-  $ hg -q --config extensions.strip= strip -r 5 --no-backup
+  $ hg -q debugstrip -r 5 --no-backup
   $ hg tags
   tip                                4:0c192d7d5e6b
   bar                                1:78391a272241
@@ -449,7 +449,7 @@ Stripping doesn't truncate the tags cache until new data is available
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=144
 
-  $ hg -q --config extensions.strip= strip -r 5 --no-backup
+  $ hg -q debugstrip -r 5 --no-backup
 
 Test tag removal:
 
@@ -537,7 +537,7 @@ Don't allow moving tag without -f:
 
 Strip 1: expose an old head:
 
-  $ hg --config extensions.strip= strip 5
+  $ hg debugstrip 5
   saved backup bundle to $TESTTMP/t3/.hg/strip-backup/*-backup.hg (glob)
   $ hg tags                  # partly stale cache
   tip                                5:735c3ca72986
@@ -548,7 +548,7 @@ Strip 1: expose an old head:
 
 Strip 2: destroy whole branch, no old head exposed
 
-  $ hg --config extensions.strip= strip 4
+  $ hg debugstrip 4
   saved backup bundle to $TESTTMP/t3/.hg/strip-backup/*-backup.hg (glob)
   $ hg tags                  # partly stale
   tip                                4:735c3ca72986

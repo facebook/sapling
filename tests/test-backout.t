@@ -262,7 +262,7 @@ external hook process
 == test visibility to external preupdate hook
 
   $ hg update -q -C 2
-  $ hg --config extensions.strip= strip 3
+  $ hg debugstrip 3
   saved backup bundle to * (glob)
 
   $ cat >> .hg/hgrc <<EOF
@@ -298,7 +298,7 @@ invocation of the hook to be examined)
 == test visibility to external update hook
 
   $ hg update -q -C 2
-  $ hg --config extensions.strip= strip 3
+  $ hg debugstrip 3
   saved backup bundle to * (glob)
 
   $ cat >> .hg/hgrc <<EOF

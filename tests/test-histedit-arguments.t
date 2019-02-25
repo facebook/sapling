@@ -161,7 +161,7 @@ temporarily.
   ~
 
   $ hg unbundle -q $TESTTMP/foo/.hg/strip-backup/08d98a8350f3-02594089-histedit.hg
-  $ hg strip -q -r f5ed --config extensions.strip=
+  $ hg debugstrip -q -r f5ed
   $ hg up -q 08d98a8350f3
 
 Test that missing revisions are detected
@@ -315,7 +315,7 @@ Test that trimming description using multi-byte characters
 
 Test --continue with --keep
 
-  $ hg strip -q -r . --config extensions.strip=
+  $ hg debugstrip -q -r .
   $ hg histedit '.^' -q --keep --commands - << EOF
   > edit eb57da33312f 2 three
   > pick f3cfcca30c44 4 x

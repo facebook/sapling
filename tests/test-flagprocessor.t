@@ -192,7 +192,7 @@
 
   $ hg bundle --base 1 bundle.hg
   4 changesets found
-  $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
+  $ hg debugstrip -r 2 --no-backup --force -q
   $ hg -R bundle.hg log --stat -T '{rev} {desc}\n' base64
   5 branching
    base64 |  2 +-

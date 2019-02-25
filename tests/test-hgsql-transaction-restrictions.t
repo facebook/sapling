@@ -15,7 +15,7 @@
 
 # Verify strip fails in a db repo
 
-  $ hg strip --config extensions.strip= -r tip
+  $ hg debugstrip -r tip
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/b292c1e3311f-9981e2ad-backup.hg (glob)
   transaction abort!
   rollback completed

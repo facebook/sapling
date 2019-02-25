@@ -140,7 +140,7 @@ earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
 
   $ mv .hg/rebasestate .hg/rebasestate.back
   $ hg update --quiet --clean 2
-  $ hg --config extensions.strip= strip --quiet "tip"
+  $ hg debugstrip --quiet "tip"
   $ mv .hg/rebasestate.back .hg/rebasestate
 
   $ hg rebase --continue

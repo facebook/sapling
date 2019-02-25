@@ -1,14 +1,8 @@
 test sparse
 
+  $ enable sparse purge rebase
   $ hg init myrepo
   $ cd myrepo
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > sparse=
-  > purge=
-  > strip=
-  > rebase=
-  > EOF
 
   $ echo a > index.html
   $ echo x > data.py

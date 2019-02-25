@@ -446,7 +446,7 @@ cache of non-public revisions should be invalidated on repository change
   ...     # load _phasecache._phaserevs and _phasesets
   ...     runcommand(server, ['log', '-qr', 'draft()'])
   ...     # strip cached revisions by another process
-  ...     os.system('hg --config extensions.strip= strip -q 5')
+  ...     os.system('hg debugstrip -q 5')
   ...     # shouldn't abort by "unknown revision '6'"
   ...     runcommand(server, ['log', '-qr', 'draft()'])
   ...     print('')
@@ -480,7 +480,7 @@ cache of phase roots should be invalidated on strip (issue3827):
   ...     runcommand(server, ['phase', '.'], outfilter=sep)
   ... 
   ...     # strip 1::4 outside server
-  ...     os.system('hg -q --config extensions.strip= strip 1')
+  ...     os.system('hg debugstrip -q 1')
   *** runcommand update -C 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (leaving bookmark bm3)

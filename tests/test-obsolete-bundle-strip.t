@@ -20,9 +20,6 @@ Config setup
   > # include obsmarkers in bundle
   > evolution.bundle-obsmarker = yes
   > 
-  > [extensions]
-  > # needed for some tests
-  > strip =
   > [defaults]
   > # we'll query many hidden changeset
   > debugobsolete = --hidden
@@ -84,7 +81,7 @@ obsmarkers. It also check the obsmarkers backed up during strip.
   >         poststripfile="${prefix}-post-strip.txt"
   >         strippedfile="${prefix}-stripped-markers.txt"
   >         hg debugobsolete --hidden | sort | sed 's/^/    /' > "${prestripfile}"
-  >         hg strip --hidden --rev "${revs}"
+  >         hg debugstrip --hidden --rev "${revs}"
   >         hg debugobsolete --hidden | sort | sed 's/^/    /' > "${poststripfile}"
   >         hg debugbundle --part-type obsmarkers .hg/strip-backup/* | sed 1,3d > "${stripcontentfile}"
   >         echo '### Backup markers ###'
@@ -602,7 +599,7 @@ setup
 
 (it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
 
-  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup --config devel.strip-obsmarkers=no
+  $ hg debugstrip --hidden --rev 'desc("C-A0")::' --no-backup --config devel.strip-obsmarkers=no
 
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -681,7 +678,7 @@ setup
 
 (it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
 
-  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup --config devel.strip-obsmarkers=no
+  $ hg debugstrip --hidden --rev 'desc("C-A0")::' --no-backup --config devel.strip-obsmarkers=no
 
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

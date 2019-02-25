@@ -3,14 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""strip changesets and their descendants from history
-
-This extension allows you to strip changesets and all their descendants from the
-repository. See the command help for details.
-"""
 from __future__ import absolute_import
 
-from edenscm.mercurial import (
+from .. import (
     bookmarks as bookmarksmod,
     cmdutil,
     error,
@@ -24,19 +19,13 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
+from ..i18n import _
 
 
 nullid = nodemod.nullid
 release = lockmod.release
 
-cmdtable = {}
-command = registrar.command(cmdtable)
-# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
-# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
-# be specifying the version(s) of Mercurial they are tested with, or
-# leave the attribute unspecified.
-testedwith = "ships-with-hg-core"
+command = registrar.command()
 
 
 def checksubstate(repo, baserev=None):
@@ -113,40 +102,25 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
 
 
 @command(
-    "strip",
+    "debugstrip",
     [
-        (
-            "r",
-            "rev",
-            [],
-            _(
-                "strip specified revision (optional, "
-                "can specify revisions without this "
-                "option)"
-            ),
-            _("REV"),
-        ),
+        ("r", "rev", [], _("revision to strip"), _("REV")),
         (
             "f",
             "force",
             None,
-            _(
-                "force removal of changesets, discard "
-                "uncommitted changes (no backup)"
-            ),
+            _("force removal, discarding uncommitted changes without backup"),
         ),
-        ("", "no-backup", None, _("no backups")),
-        ("", "nobackup", None, _("no backups (DEPRECATED)")),
-        ("n", "", None, _("ignored  (DEPRECATED)")),
-        ("k", "keep", None, _("do not modify working directory during " "strip")),
-        ("B", "bookmark", [], _("remove revs only reachable from given" " bookmark")),
+        ("", "no-backup", None, _("do not keep a backup of the removed commits")),
+        ("k", "keep", None, _("do not modify working directory during strip")),
+        ("B", "bookmark", [], _("remove revs only reachable from given bookmark")),
     ],
     _("hg strip [-k] [-f] [-B bookmark] [-r] REV..."),
 )
 def stripcmd(ui, repo, *revs, **opts):
-    """strip changesets and all their descendants from the repository
+    """strip commits and all their descendants from the repository
 
-    The strip command removes the specified changesets and all their
+    The debugstrip command removes the specified commits and all their
     descendants. If the working directory has uncommitted changes, the
     operation is aborted unless the --force flag is supplied, in which
     case changes will be discarded.
@@ -156,7 +130,7 @@ def stripcmd(ui, repo, *revs, **opts):
     available ancestor of the stripped parent after the operation
     completes.
 
-    Any stripped changesets are stored in ``.hg/strip-backup`` as a
+    Any stripped commits are stored in ``.hg/strip-backup`` as a
     bundle (see :hg:`help bundle` and :hg:`help unbundle`). They can
     be restored by running :hg:`unbundle .hg/strip-backup/BUNDLE`,
     where BUNDLE is the bundle file created by the strip. Note that
@@ -167,14 +141,14 @@ def stripcmd(ui, repo, *revs, **opts):
     operation completes.
 
     Strip is not a history-rewriting operation and can be used on
-    changesets in the public phase. But if the stripped changesets have
+    commits in the public phase. But if the stripped commits have
     been pushed to a remote repository you will likely pull them again.
 
     Return 0 on success.
     """
     opts = pycompat.byteskwargs(opts)
     backup = True
-    if opts.get("no_backup") or opts.get("nobackup"):
+    if opts.get("no_backup"):
         backup = False
 
     cl = repo.changelog

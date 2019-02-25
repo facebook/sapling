@@ -52,7 +52,7 @@ Verify server commits produce correct trees during the conversion
     subdir/tomove
   R subdir/tomove
   R subdir/toremove
-  $ hg strip -r '.^' --no-backup
+  $ hg debugstrip -r '.^' --no-backup
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
 
 The following will simulate the transition from flat to tree-only

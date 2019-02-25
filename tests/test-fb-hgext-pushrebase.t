@@ -140,12 +140,12 @@ Check that we did not generate any check:heads parts
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg strip -r 2
+  $ hg debugstrip -r 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/server/.hg/strip-backup/6a6d9484552c-65c69aee-backup.hg
 
   $ cd ../client
-  $ hg strip 3
+  $ hg debugstrip 3
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/add0c792bfce-c3f42717-backup.hg
   $ hg up 0e3997dc0733
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -172,7 +172,7 @@ Push using changegroup2
   added 3 changesets with 1 changes to 2 files (+1 heads)
 
   $ cd ../client
-  $ hg strip 1
+  $ hg debugstrip 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/46a2df24e272-1b034f5b-backup.hg (glob)
   $ hg pull
@@ -248,7 +248,7 @@ Stack with conflict in tail should abort
   abort: push failed on remote
   [255]
 
-  $ hg strip 5
+  $ hg debugstrip 5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/11a6a93eb344-7140e689-backup.hg (glob)
   $ cd ../server
@@ -282,7 +282,7 @@ Stack with conflict in head should abort
   abort: push failed on remote
   [255]
 
-  $ hg strip 5
+  $ hg debugstrip 5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/98788efd81b0-93572e45-backup.hg (glob)
 
@@ -305,7 +305,7 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg book master -r tip
   $ cd ../client
   $ hg pull -q > /dev/null
-  $ hg strip -q -r tip
+  $ hg debugstrip -q -r tip
   $ hg up 741fd2094512
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "tux" > other
@@ -390,9 +390,9 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg cat -r "master^" other
   tux
 
-  $ hg strip -r add5ec74853d -q
+  $ hg debugstrip -r add5ec74853d -q
   $ cd ../client
-  $ hg strip -r add5ec74853d -q
+  $ hg debugstrip -r add5ec74853d -q
   $ hg book -d master
   $ hg -R ../server book -d master
 
@@ -407,8 +407,8 @@ With evolution enabled, should set obsolescence markers
   > EOF
 
   $ cd ../client
-  $ hg strip -qr fb983dc509b6
-  $ hg strip -qr e6b7549904cd2a7991ef25bc2e0fd910801af2cd
+  $ hg debugstrip -qr fb983dc509b6
+  $ hg debugstrip -qr e6b7549904cd2a7991ef25bc2e0fd910801af2cd
   $ hg up -q 741fd2094512
   $ hg mv b k
   $ commit 'b => k'

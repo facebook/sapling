@@ -70,7 +70,7 @@ With some node gone missing during the edit.
   ? plan
   $ hg commit --amend -X . -m XXXXXX
   $ hg commit --amend -X . -m b2
-  $ hg --hidden --config extensions.strip= strip 'desc(XXXXXX)' --no-backup
+  $ hg --hidden debugstrip 'desc(XXXXXX)' --no-backup
   $ hg histedit --continue
   $ hg log -G
   @  8:273c1f3b8626 c

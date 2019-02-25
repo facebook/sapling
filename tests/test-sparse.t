@@ -1,12 +1,8 @@
 test sparse
 
+  $ enable sparse
   $ hg init myrepo
   $ cd myrepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > strip=
-  > EOF
 
   $ echo a > show
   $ echo x > hide
@@ -269,7 +265,7 @@ Verify strip -k resets dirstate correctly
    show2 |  1 +
    4 files changed, 4 insertions(+), 2 deletions(-)
   
-  $ hg strip -r . -k
+  $ hg debugstrip -r . -k
   saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/39278f7c08a9-ce59e002-backup.hg (glob)
   $ hg status
   M show

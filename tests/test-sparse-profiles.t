@@ -1,14 +1,8 @@
 test sparse
 
+  $ enable sparse purge rebase
   $ hg init myrepo
   $ cd myrepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > purge=
-  > strip=
-  > rebase=
-  > EOF
 
   $ echo a > index.html
   $ echo x > data.py
@@ -73,7 +67,7 @@ Verify error checking includes filename and line numbers
   warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
   abort: A sparse file cannot have includes after excludes in broken.sparse:5
   [255]
-  $ hg -q strip . --no-backup
+  $ hg -q debugstrip . --no-backup
 
 Verify that a profile is updated across multiple commits
 
@@ -182,7 +176,7 @@ Verify resolving the merge removes the temporarily unioned files
 
 Verify stripping refreshes dirstate
 
-  $ hg strip -q -r . --no-backup
+  $ hg debugstrip -q -r . --no-backup
   $ ls
   backend.sparse
   index.html
@@ -304,7 +298,6 @@ Test profile discovery
   $ cat > .hg/hgrc <<EOF
   > [extensions]
   > sparse=
-  > strip=
   > [hint]
   > ack-hint-ack = True
   > EOF
@@ -554,7 +547,7 @@ sparse configuration is ignored; no profile can be 'active' or 'included':
      profiles/bar/python               
      profiles/foo/new_in_later_revision  this profile is only available in a later revision, not the current.
      profiles/foo/spam                   Profile that only includes another
-  $ hg -q strip -r tip --no-backup
+  $ hg -q debugstrip -r tip --no-backup
 
 The metadata section format can have errors, but those are only listed as
 warnings:

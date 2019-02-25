@@ -217,7 +217,7 @@ Strip changes upstream and see that they get reflected in clones
 ----------------------------------------------------------------
 
   $ cd ../repo1
-  $ hg strip . -q
+  $ hg debugstrip . -q
   $ grep -v "8ea31c3efb6d2edb6d9fe608c29034e7e7ed5f91" .hg/git-mapfile > tempfile
   $ mv tempfile .hg/git-mapfile
 
@@ -261,7 +261,7 @@ Check local repo syncing
 
 Strip some more changes upstream
   $ cd ../repo1
-  $ hg strip . -q
+  $ hg debugstrip . -q
   $ grep -v "c411819f7fd6036d50b17a28d3edb7aa9121985a\|d4a59f7c570a8794e6ec20865090e7b848395b92" .hg/git-mapfile > tempfile
   $ mv tempfile .hg/git-mapfile
 
@@ -447,7 +447,7 @@ onlymapdelta.false
   $ grep -v "1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" .hg/git-mapfile > tempfile
   $ mv tempfile .hg/git-mapfile
   $ cd ../repo1
-  $ hg strip -q "tip"
+  $ hg debugstrip -q "tip"
   $ grep -v "1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" .hg/git-mapfile > tempfile
   $ mv tempfile .hg/git-mapfile
 #endif

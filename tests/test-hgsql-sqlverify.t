@@ -19,7 +19,7 @@ Run with a correct revlog
 
 Run with incorrect local revlogs
 
-  $ hg strip -r 1 --config hgsql.bypass=True
+  $ hg debugstrip -r 1 --config hgsql.bypass=True
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/7c3bad9141dc-81844e36-backup.hg (glob)
   $ hg unbundle --config hgsql.bypass=True $TESTTMP/master/.hg/strip-backup/7c3bad9141dc-81844e36-backup.hg
   adding changesets
@@ -35,7 +35,7 @@ Run with incorrect local revlogs
   $ grep Corruption $TESTTMP/sqlverify.out || cat $TESTTMP/sqlverify.out
   edenscm.hgext.hgsql.CorruptionException: * with linkrev *, disk does not match mysql (glob)
 
-  $ hg strip -q -r 1: --config hgsql.bypass=True --no-backup
+  $ hg debugstrip -q -r 1: --config hgsql.bypass=True --no-backup
   $ hg log -r tip --forcesync -T '\n'
   
 

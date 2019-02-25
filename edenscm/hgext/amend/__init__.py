@@ -107,7 +107,6 @@ configitem = registrar.configitem(configtable)
 configitem("amend", "alwaysnewest", default=False)
 configitem("amend", "date", default=None)
 configitem("amend", "education", default=None)
-configitem("amend", "safestrip", default=True)
 configitem("commands", "amend.autorebase", default=True)
 
 testedwith = "ships-with-fb-hgext"
@@ -187,7 +186,6 @@ def hintsplitphabricator(advice):
 
 def uisetup(ui):
     hiddenoverride.uisetup(ui)
-    prune.uisetup(ui)
     entry = extensions.wrapcommand(commands.table, "commit", commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])

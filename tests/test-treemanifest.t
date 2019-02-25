@@ -324,7 +324,7 @@ Stripping and recovering changes should work
 
   $ hg st --change tip
   M dir1/a
-  $ hg --config extensions.strip= strip tip
+  $ hg debugstrip tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg
 #if common-zlib
@@ -351,7 +351,7 @@ Stripping and recovering changes should work
   added 1 changesets with 1 changes to 1 files
   new changesets 51cfd7b1e13b
   (run 'hg update' to get a working copy)
-  $ hg --config extensions.strip= strip tip
+  $ hg debugstrip tip
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/*-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
 #if common-zlib
@@ -882,7 +882,7 @@ Committing a empty commit does not duplicate root treemanifest
   $ hg log -r 'tip + tip^' -T '{manifest}\n'
   1:678d3574b88c
   1:678d3574b88c
-  $ hg --config extensions.strip= strip -r . -q
+  $ hg debugstrip -r . -q
 
 Shelve works with treemanifest
   $ echo ababagalamaga >> file

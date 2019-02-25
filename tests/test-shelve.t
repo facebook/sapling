@@ -1244,7 +1244,7 @@ Unshelving a stripped commit aborts with an explanatory message
   $ hg shelve
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg strip -r 1 --config experimental.evolution=! --hidden
+  $ hg debugstrip -r 1 --config experimental.evolution=! --hidden
   obsolete feature not enabled but 1 markers found!
   saved backup bundle to .* (re)
   $ hg unshelve

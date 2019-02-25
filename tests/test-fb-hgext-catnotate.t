@@ -1,12 +1,8 @@
 Test catnotate
 
+  $ enable catnotate
   $ hg init repo1
   $ cd repo1
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > catnotate=
-  > strip=
-  > EOF
 
   $ cat > a <<EOF
   > Hell

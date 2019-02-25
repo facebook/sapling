@@ -126,7 +126,7 @@ Test pushing only flat manifests without pushrebase creates trees
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 85b359fdb09e 000000000000 000000000000
        1        50      62      0       1 54cbf534b62b 85b359fdb09e 000000000000
-  $ hg -R ../master strip -r tip
+  $ hg -R ../master debugstrip -r tip
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/15486e46ccf6-fc9a70e1-backup.hg
   $ hg phase -dfr .
 
@@ -237,7 +237,7 @@ Test stripping trees
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
        1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
-  $ hg strip -r tip
+  $ hg debugstrip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/4fd4fee9fca1-46b625db-backup.hg (glob)
   $ hg debugindex .hg/store/00manifesttree.i
@@ -266,7 +266,7 @@ Test stripping merge commits where filelogs arent affected
        2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
        3       152      54      2       4 d1018f351d1e abeda9251d1d 126c4ddee02e
 - Verify rev 3 (from the merge commit) is gone after the strip
-  $ hg strip -r tip
+  $ hg debugstrip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/a03b8b42d703-fdc98185-backup.hg
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
@@ -274,7 +274,7 @@ Test stripping merge commits where filelogs arent affected
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
        1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
        2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
-  $ hg strip -qr 'children(.^)'
+  $ hg debugstrip -qr 'children(.^)'
   $ rm -rf .hg
   $ cp -R $TESTTMP/backup.hg .hg
   $ rm -rf $TESTTMP/backup.hg
@@ -408,7 +408,7 @@ Try pulling while treemanifest.blocksendflat is True
 - Pull to a treeonly repo
   $ hg config treemanifest.treeonly
   True
-  $ hg strip -qr a30b520ebf7a
+  $ hg debugstrip -qr a30b520ebf7a
   $ hg pull
   pulling from ssh://user@dummy/master
   searching for changes
@@ -425,7 +425,7 @@ Try pulling while treemanifest.blocksendflat is True
   $ cd ../client
   $ hg config treemanifest.treeonly
   [1]
-  $ hg strip -qr a30b520ebf7a
+  $ hg debugstrip -qr a30b520ebf7a
   $ hg pull --config extension.treemanifest=! --config fastmanifest.usetree=False 1>/dev/null
   remote: abort: must produce treeonly changegroups in a treeonly repository
   transaction abort!
@@ -491,7 +491,7 @@ Stripping in a treeonly server
   * 216 * .hg/store/meta/subdir2/00manifest.i (glob)
   $ ls -l .hg/store/00manifesttree.i
   * 366 * .hg/store/00manifesttree.i (glob)
-  $ hg strip -r tip --config treemanifest.blocksendflat=False
+  $ hg debugstrip -r tip --config treemanifest.blocksendflat=False
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/ab5f5b4a91cf-cb006139-backup.hg
   $ ls -l .hg/store/meta/subdir2/00manifest.i
   * 108 * .hg/store/meta/subdir2/00manifest.i (glob)

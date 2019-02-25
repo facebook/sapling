@@ -52,6 +52,7 @@ _ignoreextensions = {
     "releasenotes",
     "relink",
     "remoteid",
+    "strip",
     "treedirstate",
     "uncommit",
     "upgradegeneraldelta",

@@ -52,7 +52,7 @@ Verify bar disappears automatically when the working copy becomes clean
 Test merging things outside of the sparse checkout that are not in the working
 copy
 
-  $ hg strip -q -r . --config extensions.strip=
+  $ hg debugstrip -q -r .
   $ hg up --inactive -q feature2
   $ touch branchonly
   $ hg ci -Aqm 'add branchonly'

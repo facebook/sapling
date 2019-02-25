@@ -70,7 +70,7 @@ Strip commit server-side
   $ cd repo
   $ hg log -r 1 -T '{node}\n'
   48acd0edbb460dec0d93314393d41f801a9797ce
-  $ hg strip 48acd0edbb460dec0d93314393d41f801a9797ce
+  $ hg debugstrip 48acd0edbb460dec0d93314393d41f801a9797ce
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/48acd0edbb46-9d7996f9-backup.hg (glob)
   $ hg log --graph -T '{desc}'

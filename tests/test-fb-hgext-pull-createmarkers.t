@@ -16,11 +16,8 @@ Test that hg pull creates obsolescence markers for landed diffs
   > pushrebase=
   > rebase=
   > remotenames =
-  > strip=
   > [remotenames]
   > allownonfastforward=True
-  > [amend]
-  > safestrip=false
   > EOF
   $ hg init server
   $ mkcommit() {
@@ -97,7 +94,7 @@ The first client works on several diffs while the second client lands one of her
 Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
 push doesn't directly go to the server
 
-  $ hg strip 6
+  $ hg debugstrip 6
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/d446b1b2be43-516f7371-backup.hg (glob)
 

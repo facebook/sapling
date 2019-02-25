@@ -103,7 +103,7 @@ TODO: Make this test compatibile with obsstore enabled.
 # system cache has invalid linknode, but .hg/store/data has valid
 
   $ cd shallow
-  $ hg strip -r 1 -q
+  $ hg debugstrip -r 1 -q
   $ rm -rf .hg/store/data/*
   $ echo x >> x
   $ hg commit -Aqm xx_local

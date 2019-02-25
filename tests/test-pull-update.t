@@ -29,7 +29,7 @@ Should respect config to disable dirty update
   new changesets 107cefe13e42
   abort: uncommitted changes
   [255]
-  $ hg --config extensions.strip= strip --no-backup tip
+  $ hg debugstrip --no-backup tip
   $ hg co -qC tip
 
 Should not update to the other topological branch:

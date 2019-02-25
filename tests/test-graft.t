@@ -270,7 +270,7 @@ Abort the graft and try committing:
   $ echo c >> e
   $ hg ci -mtest
 
-  $ hg strip . --config extensions.strip=
+  $ hg debugstrip .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 

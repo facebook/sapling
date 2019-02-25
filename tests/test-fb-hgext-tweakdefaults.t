@@ -417,11 +417,9 @@ and allowance of prune rebases
   $ cat >> .hg/hgrc << EOF
   > [experimental]
   > evolution=createmarkers
-  > prunestrip=on
   > evolution.allowdivergence=off
   > [extensions]
   > amend=
-  > strip=
   > EOF
   $ echo root > root && hg ci -Am root  # rev 0
   adding root
@@ -444,7 +442,7 @@ Test that we do not show divergence warning
   rebasing 1:09d39afb522a "a"
 
 Test that we allow pure prune rebases
-  $ hg strip 4
+  $ hg prune 4
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 1e4be0697311
   1 changesets pruned

@@ -1,9 +1,4 @@
-  $ cat >> $HGRCPATH <<EOF
-  > [experimental]
-  > bundle-phases=yes
-  > [extensions]
-  > strip=
-  > EOF
+  $ setconfig experimental.bundle-phases=yes
 
 Set up repo with linear history
   $ hg init linear
@@ -43,7 +38,7 @@ Phases are restored when unbundling
       9bc730a19041f9ec7cb33c626e811aa233efb18c
   phase-heads -- {}
       26805aba1e600a82e93661149f2313866a221a7b draft
-  $ hg strip --no-backup C
+  $ hg debugstrip --no-backup C
   $ hg unbundle -q bundle
   $ rm bundle
   $ hg log -G -T '{desc} {phase}\n'
@@ -60,7 +55,7 @@ Phases are restored when unbundling
 Root revision's phase is preserved
   $ hg bundle -a bundle
   5 changesets found
-  $ hg strip --no-backup A
+  $ hg debugstrip --no-backup A
   $ hg unbundle -q bundle
   $ rm bundle
   $ hg log -G -T '{desc} {phase}\n'
@@ -78,7 +73,7 @@ Completely public history can be restored
   $ hg phase --public E
   $ hg bundle -a bundle
   5 changesets found
-  $ hg strip --no-backup A
+  $ hg debugstrip --no-backup A
   $ hg unbundle -q bundle
   $ rm bundle
   $ hg log -G -T '{desc} {phase}\n'
@@ -96,7 +91,7 @@ Direct transition from public to secret can be restored
   $ hg phase --secret --force D
   $ hg bundle -a bundle
   5 changesets found
-  $ hg strip --no-backup A
+  $ hg debugstrip --no-backup A
   $ hg unbundle -q bundle
   $ rm bundle
   $ hg log -G -T '{desc} {phase}\n'
@@ -114,7 +109,7 @@ Revisions within bundle preserve their phase even if parent changes its phase
   $ hg phase --draft --force B
   $ hg bundle --base B -r E bundle
   3 changesets found
-  $ hg strip --no-backup C
+  $ hg debugstrip --no-backup C
   $ hg phase --public B
   $ hg unbundle -q bundle
   $ rm bundle
@@ -132,7 +127,7 @@ Revisions within bundle preserve their phase even if parent changes its phase
 Phase of ancestors of stripped node get advanced to accommodate child
   $ hg bundle --base B -r E bundle
   3 changesets found
-  $ hg strip --no-backup C
+  $ hg debugstrip --no-backup C
   $ hg phase --force --secret B
   $ hg unbundle -q bundle
   $ rm bundle
@@ -170,7 +165,7 @@ to see that secret becomes draft, but public remains public.
   o  A public
   
 Unbundling change in the middle of a stack does not affect later changes
-  $ hg strip --no-backup E
+  $ hg debugstrip --no-backup E
   $ hg phase --secret --force D
   $ hg log -G -T '{desc} {phase}\n'
   o  D secret
@@ -235,7 +230,7 @@ Restore bundle of entire repo
   phase-heads -- {}
       dc0947a82db884575bb76ea10ac97b08536bfa03 public
       03ca77807e919db8807c3749086dc36fb478cac0 draft
-  $ hg strip --no-backup A
+  $ hg debugstrip --no-backup A
   $ hg unbundle -q bundle
   $ rm bundle
   $ hg log -G -T '{node|short} {desc} {phase}\n'

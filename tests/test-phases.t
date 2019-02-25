@@ -225,7 +225,7 @@ head shadowed by the remote secret head.
 :note: The "(+1 heads)" is wrong as we do not had any visible head
 
 Restore condition prior extra insertion.
-  $ hg -q --config extensions.strip= strip .
+  $ hg -q debugstrip .
   $ hg up -q 7
   $ cd ..
 

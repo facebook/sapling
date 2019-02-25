@@ -78,7 +78,7 @@
 # prefetch on pull when configured
 
   $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
-  $ hg strip tip
+  $ hg debugstrip tip
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/730e2b7b175c-acada81e-backup.hg (glob)
 
   $ clearcache

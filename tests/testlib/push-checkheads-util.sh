@@ -9,10 +9,6 @@ logtemplate ="{node|short} ({phase}): {desc}\n"
 # non publishing server
 publish=False
 
-[extensions]
-# we need to strip some changeset for some test cases
-strip=
-
 [experimental]
 # enable evolution
 evolution=all
