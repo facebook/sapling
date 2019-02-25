@@ -105,6 +105,23 @@ fn get_blob(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()
         .boxify()
 }
 
+fn get_tree(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+    let hash = matches
+        .value_of("hash")
+        .expect("must provide hash of the tree");
+
+    client
+        .get_tree(hash.to_string())
+        .and_then(|r| {
+            Ok(serde_json::to_string(&r).unwrap_or("Error converting request to json".to_string()))
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| {
+            println!("{}", res);
+        })
+        .boxify()
+}
+
 fn main() -> Result<(), ()> {
     let matches = App::new("Mononoke API Server Thrift client")
         .about("Send requests to Mononoke API Server thrift port")
@@ -215,6 +232,18 @@ fn main() -> Result<(), ()> {
                         .required(true),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("get_tree")
+                .about("get blob content with hash")
+                .arg(
+                    Arg::with_name("hash")
+                        .short("H")
+                        .long("hash")
+                        .value_name("HASH")
+                        .help("hash of the tree")
+                        .required(true),
+                ),
+        )
         .get_matches();
 
     let tier = matches.value_of("tier").expect("must provide tier name");
@@ -235,6 +264,8 @@ fn main() -> Result<(), ()> {
         is_ancestor(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("get_blob") {
         get_blob(client, matches)
+    } else if let Some(matches) = matches.subcommand_matches("get_tree") {
+        get_tree(client, matches)
     } else {
         Ok(()).into_future().boxify()
     };

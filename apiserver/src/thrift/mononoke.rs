@@ -5,16 +5,18 @@
 // GNU General Public License version 2 or any later version.
 
 use std::convert::TryInto;
+use std::mem::size_of;
 use std::sync::Arc;
 
 use apiserver_thrift::server::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
-    GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, IsAncestorExn, ListDirectoryExn,
+    GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, GetTreeExn, IsAncestorExn,
+    ListDirectoryExn,
 };
 use apiserver_thrift::types::{
     MononokeBlob, MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBlobParams,
     MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
-    MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
+    MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
 };
 use apiserver_thrift::MononokeRevision::UnknownField;
 use context::CoreContext;
@@ -376,6 +378,54 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                         &stats,
                         resp,
                         resp.map(|resp| resp.content.len()).unwrap_or(0),
+                    );
+
+                    Ok(())
+                }
+            })
+    }
+
+    fn get_tree(&self, params: MononokeGetTreeParams) -> BoxFuture<MononokeDirectory, GetTreeExn> {
+        let ctx = self.create_ctx();
+
+        let mut scuba = self.create_scuba_logger("get_tree", &params, None, None);
+
+        params
+            .try_into()
+            .into_future()
+            .from_err()
+            .and_then({
+                cloned!(self.addr);
+                move |param| addr.send_query(ctx, param)
+            })
+            .and_then(|resp: MononokeRepoResponse| match resp {
+                MononokeRepoResponse::GetTree { files } => Ok(MononokeDirectory {
+                    files: files.into_iter().map(|f| f.into()).collect(),
+                }),
+                _ => Err(ErrorKind::InternalError(err_msg(
+                    "Actor returned wrong response type to query".to_string(),
+                ))),
+            })
+            .map_err(move |e| GetTreeExn::e(e.into()))
+            .timed({
+                move |stats, resp| {
+                    log_time(
+                        &mut scuba,
+                        &stats,
+                        resp,
+                        resp.map(|resp| {
+                            resp.files
+                                .iter()
+                                .map(|file| {
+                                    file.name.len()
+                                        + 1   // FileType
+                                        + file.hash.hash.len()
+                                        + file.size.as_ref().map(|_| size_of::<usize>()).unwrap_or(0)
+                                        + file.content_sha1.as_ref().map(|sha1| sha1.len()).unwrap_or(0)
+                                })
+                                .sum()
+                        })
+                        .unwrap_or(0),
                     );
 
                     Ok(())

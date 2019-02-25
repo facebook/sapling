@@ -12,7 +12,9 @@ use std::str;
 use chrono::{DateTime, FixedOffset};
 use failure::{err_msg, Error};
 
-use apiserver_thrift::types::{MononokeChangeset, MononokeFile, MononokeFileType};
+use apiserver_thrift::types::{
+    MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash,
+};
 use blobrepo::HgBlobChangeset;
 use context::CoreContext;
 use futures::prelude::*;
@@ -65,6 +67,7 @@ impl From<Entry> for MononokeFile {
         Self {
             name: entry.name,
             file_type: entry.ttype.into(),
+            ..Default::default()
         }
     }
 }
@@ -141,6 +144,18 @@ impl EntryWithSizeAndContentHash {
             })
         }))
         .boxify()
+    }
+}
+
+impl From<EntryWithSizeAndContentHash> for MononokeFile {
+    fn from(entry: EntryWithSizeAndContentHash) -> Self {
+        Self {
+            name: entry.name,
+            file_type: entry.ttype.into(),
+            hash: MononokeNodeHash { hash: entry.hash },
+            size: entry.size.map(|size| size as i64),
+            content_sha1: entry.content_sha1,
+        }
     }
 }
 

@@ -25,6 +25,10 @@ struct MononokeNodeHash {
   1: string hash,
 }
 
+struct MononokeTreeHash {
+  1: string hash,
+}
+
 struct MononokeGetRawParams {
   1: string repo,
   2: MononokeRevision revision,
@@ -57,6 +61,11 @@ struct MononokeGetBlobParams {
   2: MononokeNodeHash blob_hash,
 }
 
+struct MononokeGetTreeParams {
+  1: string repo,
+  2: MononokeTreeHash tree_hash,
+}
+
 struct MononokeChangeset {
   1: string commit_hash,
   2: string message,
@@ -77,6 +86,9 @@ struct MononokeDirectory {
 struct MononokeFile {
   1: string name,
   2: MononokeFileType file_type,
+  3: MononokeNodeHash hash,
+  4: optional i64 size,
+  5: optional string content_sha1,
 }
 
 struct MononokeBlob {
@@ -107,5 +119,8 @@ service MononokeAPIService extends fb303.FacebookService {
     throws (1: MononokeAPIException e),
 
   MononokeBlob get_blob(1: MononokeGetBlobParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeDirectory get_tree(1: MononokeGetTreeParams params)
     throws (1: MononokeAPIException e),
 }
