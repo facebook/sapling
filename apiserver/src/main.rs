@@ -77,7 +77,7 @@ use std::sync::Arc;
 use tracing::TraceContext;
 use uuid::Uuid;
 
-use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, State};
+use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
 use actor::{
     BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
 };
@@ -101,103 +101,85 @@ mod config {
     pub const SCUBA_TABLE: &str = "mononoke_apiserver";
 }
 
-#[derive(Deserialize)]
-struct QueryInfo {
-    repo: String,
-    changeset: String,
-    path: String,
-}
-
-#[derive(Deserialize)]
-struct IsAncestorQueryInfo {
-    repo: String,
-    ancestor: String,
-    descendant: String,
-}
-
-#[derive(Deserialize)]
-struct HashQueryInfo {
-    repo: String,
-    hash: String,
-}
-
-#[derive(Deserialize)]
-struct GetHgFileQueryInfo {
-    repo: String,
-    filenode: String,
-}
-
-#[derive(Deserialize)]
-struct OidQueryInfo {
-    repo: String,
-    oid: String,
-}
-
-#[derive(Deserialize)]
-struct LfsBatchInfo {
-    repo: String,
-}
-
-//Currently logging and scuba is handled using the middleware service
-//so we pass on a fake context
+// Currently logging and scuba is handled using the middleware service
+// so we pass on a fake context
 fn prepare_fake_ctx(state: &State<HttpServerState>) -> CoreContext {
-    let session_uuid = Uuid::new_v4();
-
     CoreContext::new(
-        session_uuid,
+        Uuid::new_v4(),
         state.logger.clone(),
         ScubaSampleBuilder::with_discard(),
         None,
         TraceContext::default(),
     )
 }
+
+#[derive(Deserialize)]
+struct GetRawFileParams {
+    repo: String,
+    changeset: String,
+    path: String,
+}
+
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
 // for tuple (A, B, ...) (up to 9 elements) [1]. These arguments must implement
 // `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
-// for us. In this case, the `State<HttpServerState>` and `Path<QueryInfo>`.
+// for us. In this case, the `State<HttpServerState>` and `Path<GetRawFileParams>`.
 // [1] https://docs.rs/actix-web/0.6.11/actix_web/trait.FromRequest.html#impl-FromRequest%3CS%3E-3
 fn get_raw_file(
-    (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
+    (state, params): (State<HttpServerState>, Path<GetRawFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::GetRawFile {
-                revision: Revision::CommitHash(info.changeset.clone()),
-                path: info.path.clone(),
+                revision: Revision::CommitHash(params.changeset.clone()),
+                path: params.path.clone(),
             },
         },
     )
+}
+
+#[derive(Deserialize)]
+struct GetHgFileParams {
+    repo: String,
+    filenode: String,
 }
 
 fn get_hg_file(
-    (state, info): (State<HttpServerState>, actix_web::Path<GetHgFileQueryInfo>),
+    (state, params): (State<HttpServerState>, Path<GetHgFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::GetHgFile {
-                filenode: info.filenode.clone(),
+                filenode: params.filenode.clone(),
             },
         },
     )
 }
 
+#[derive(Deserialize)]
+struct IsAncestorParams {
+    repo: String,
+    ancestor: String,
+    descendant: String,
+}
+
 fn is_ancestor(
-    (state, info): (State<HttpServerState>, actix_web::Path<IsAncestorQueryInfo>),
+    (state, params): (State<HttpServerState>, Path<IsAncestorParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let ancestor_parsed = percent_decode(info.ancestor.as_bytes())
+    let ancestor_parsed = percent_decode(params.ancestor.as_bytes())
         .decode_utf8_lossy()
         .to_string();
-    let descendant_parsed = percent_decode(info.descendant.as_bytes())
+    let descendant_parsed = percent_decode(params.descendant.as_bytes())
         .decode_utf8_lossy()
         .to_string();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::IsAncestor {
                 ancestor: Revision::CommitHash(ancestor_parsed),
                 descendant: Revision::CommitHash(descendant_parsed),
@@ -206,82 +188,118 @@ fn is_ancestor(
     )
 }
 
+#[derive(Deserialize)]
+struct ListDirectoryParams {
+    repo: String,
+    changeset: String,
+    path: String,
+}
+
 fn list_directory(
-    (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
+    (state, params): (State<HttpServerState>, Path<ListDirectoryParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::ListDirectory {
-                revision: Revision::CommitHash(info.changeset.clone()),
-                path: info.path.clone(),
+                revision: Revision::CommitHash(params.changeset.clone()),
+                path: params.path.clone(),
             },
         },
     )
+}
+
+#[derive(Deserialize)]
+struct GetBlobParams {
+    repo: String,
+    hash: String,
 }
 
 fn get_blob_content(
-    (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
+    (state, params): (State<HttpServerState>, Path<GetBlobParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::GetBlobContent {
-                hash: info.hash.clone(),
+                hash: params.hash.clone(),
             },
         },
     )
+}
+
+#[derive(Deserialize)]
+struct GetTreeParams {
+    repo: String,
+    hash: String,
 }
 
 fn get_tree(
-    (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
+    (state, params): (State<HttpServerState>, Path<GetTreeParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::GetTree {
-                hash: info.hash.clone(),
+                hash: params.hash.clone(),
             },
         },
     )
+}
+
+#[derive(Deserialize)]
+struct GetChangesetParams {
+    repo: String,
+    hash: String,
 }
 
 fn get_changeset(
-    (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
+    (state, params): (State<HttpServerState>, Path<GetChangesetParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::GetChangeset {
-                revision: Revision::CommitHash(info.hash.clone()),
+                revision: Revision::CommitHash(params.hash.clone()),
             },
         },
     )
+}
+
+#[derive(Deserialize)]
+struct DownloadLargeFileParams {
+    repo: String,
+    oid: String,
 }
 
 fn download_large_file(
-    (state, info): (State<HttpServerState>, actix_web::Path<OidQueryInfo>),
+    (state, params): (State<HttpServerState>, Path<DownloadLargeFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::DownloadLargeFile {
-                oid: info.oid.clone(),
+                oid: params.oid.clone(),
             },
         },
     )
 }
 
+#[derive(Deserialize)]
+struct LfsBatchParams {
+    repo: String,
+}
+
 fn lfs_batch(
-    (state, req_json, info, req): (
+    (state, req_json, params, req): (
         State<HttpServerState>,
         Json<BatchRequest>,
-        actix_web::Path<LfsBatchInfo>,
+        Path<LfsBatchParams>,
         HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
@@ -308,26 +326,32 @@ fn lfs_batch(
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::LfsBatch {
                 req: req_json.into_inner(),
-                repo_name: info.repo.clone(),
+                repo_name: params.repo.clone(),
                 lfs_url,
             },
         },
     )
 }
 
+#[derive(Deserialize)]
+struct UploadLargeFileParams {
+    repo: String,
+    oid: String,
+}
+
 // TODO(anastasiyaz): T32937714 Bytes -> Streaming
 fn upload_large_file(
-    (state, body, info): (State<HttpServerState>, Bytes, actix_web::Path<OidQueryInfo>),
+    (state, body, params): (State<HttpServerState>, Bytes, Path<UploadLargeFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: info.repo.clone(),
+            repo: params.repo.clone(),
             kind: MononokeRepoQuery::UploadLargeFile {
-                oid: info.oid.clone(),
+                oid: params.oid.clone(),
                 body,
             },
         },
