@@ -49,8 +49,8 @@ function mononoke {
 function mononoke_hg_sync {
   $MONONOKE_HG_SYNC \
     --do-not-init-cachelib \
-    --mononoke-config-path mononoke-config --mode sync-once \
-    ssh://user@dummy/"$1" --start-id "$2"
+    --mononoke-config-path mononoke-config  \
+     ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
 # Wait until a Mononoke server is available for this repo.
