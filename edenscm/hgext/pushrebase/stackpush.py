@@ -40,6 +40,7 @@ from __future__ import absolute_import
 import time
 
 from edenscm.mercurial import context, error, mutation
+from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid, nullrev
 
 from .errors import ConflictsError, StackPushUnsupportedError
@@ -139,6 +140,55 @@ class pushrequest(object):
             pushcommits,
             cls._calculatefileconditions(parentctx, examinepaths),
         )
+
+    @classmethod
+    def frommemcommit(cls, repo, commitparams):
+        changelist = commitparams.changelist
+        metadata = commitparams.metadata
+
+        files = changelist.files
+        filechanges = {}
+        examinepaths = set(files.keys())
+
+        for path, info in files.iteritems():
+            if info.deleted:
+                filechanges[path] = None
+            else:
+                copysource = info.copysource
+                if copysource:
+                    examinepaths.add(copysource)
+                filechanges[path] = (info.flags, info.content, copysource)
+
+        commit = pushcommit(
+            metadata.author,
+            None,
+            metadata.description,
+            metadata.extra,
+            filechanges,
+            examinepaths,
+        )
+
+        def resolveparentctx(repo, parents):
+            numparents = len(parents)
+
+            if numparents > 1:
+                raise error.Abort(_("merge commits are not supported"))
+
+            if numparents == 0:
+                raise error.Abort(_("parent commit must be specified"))
+
+            p1 = repo[parents[0]]
+
+            if (
+                not repo.ui.configbool("memcommit", "allowunrelatedroots")
+                and p1.node() == nullid
+            ):
+                raise error.Abort(_("commit without parents are not supported"))
+
+            return p1
+
+        p1 = resolveparentctx(repo, metadata.parents)
+        return cls(p1.node(), [commit], cls._calculatefileconditions(p1, examinepaths))
 
     @staticmethod
     def _calculatefileconditions(parentctx, examinepaths):

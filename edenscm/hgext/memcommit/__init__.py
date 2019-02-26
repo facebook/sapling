@@ -9,6 +9,11 @@ With this extension enabled, Mercurial provides a command i.e. `memcommit` to
 make commits to a repository without requiring a working copy.
 
 TODO: add the `memcommit` command.
+
+::
+    [memcommit]
+    # allow creating commits with no parents.
+    allowunrelatedroots = False
 """
 
 from __future__ import absolute_import
@@ -18,6 +23,10 @@ from edenscm.mercurial.i18n import _
 
 from . import commitdata
 
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem("memcommit", "allowunrelatedroots", default=False)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
