@@ -133,8 +133,17 @@ class pushrequest(object):
             examinepaths.update(commit.examinepaths)
             pushcommits.append(commit)
 
-        # calculate "fileconditions" - filenodes in the signal parent commit
         parentctx = repo[(parentrevs + [nullrev])[0]]
+        return cls(
+            parentctx.node(),
+            pushcommits,
+            cls._calculatefileconditions(parentctx, examinepaths),
+        )
+
+    @staticmethod
+    def _calculatefileconditions(parentctx, examinepaths):
+        """calculate 'fileconditions' - filenodes in the signal parent commit
+        """
         parentmanifest = parentctx.manifestctx()
         fileconditions = {}
         for path in examinepaths:
@@ -144,7 +153,7 @@ class pushrequest(object):
                 filenodemode = None
             fileconditions[path] = filenodemode
 
-        return cls(parentctx.node(), pushcommits, fileconditions)
+        return fileconditions
 
     def pushonto(self, ctx, getcommitdatefn=None):
         """Push the stack onto ctx
