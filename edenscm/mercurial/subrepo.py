@@ -1132,7 +1132,6 @@ class hgsubrepo(abstractsubrepo):
     @annotatesubrepoerror
     def push(self, opts):
         force = opts.get("force")
-        newbranch = opts.get("new_branch")
         ssh = opts.get("ssh")
 
         # push subrepos depth-first for coherent ordering
@@ -1152,7 +1151,7 @@ class hgsubrepo(abstractsubrepo):
                 return None
         self.ui.status(_("pushing subrepo %s to %s\n") % (subrelpath(self), dsturl))
         other = hg.peer(self._repo, {"ssh": ssh}, dsturl)
-        res = exchange.push(self._repo, other, force, newbranch=newbranch)
+        res = exchange.push(self._repo, other, force)
 
         # the repo is now clean
         self._cachestorehash(dsturl)

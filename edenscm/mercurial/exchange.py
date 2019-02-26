@@ -304,14 +304,7 @@ class pushoperation(object):
     """
 
     def __init__(
-        self,
-        repo,
-        remote,
-        force=False,
-        revs=None,
-        newbranch=False,
-        bookmarks=(),
-        pushvars=None,
+        self, repo, remote, force=False, revs=None, bookmarks=(), pushvars=None
     ):
         # repo we push from
         self.repo = repo
@@ -324,8 +317,6 @@ class pushoperation(object):
         self.revs = revs
         # bookmark explicitly pushed
         self.bookmarks = bookmarks
-        # allow push of new branch
-        self.newbranch = newbranch
         # step already performed
         # (used to check what steps have been already performed through bundle2)
         self.stepsdone = set()
@@ -434,9 +425,7 @@ bookmsgmap = {
 }
 
 
-def push(
-    repo, remote, force=False, revs=None, newbranch=False, bookmarks=(), opargs=None
-):
+def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     """Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
       - None means nothing to push
@@ -448,7 +437,7 @@ def push(
     if opargs is None:
         opargs = {}
     pushop = pushoperation(
-        repo, remote, force, revs, newbranch, bookmarks, **pycompat.strkwargs(opargs)
+        repo, remote, force, revs, bookmarks, **pycompat.strkwargs(opargs)
     )
     if pushop.remote.local():
         missing = set(pushop.repo.requirements) - pushop.remote.local().supported

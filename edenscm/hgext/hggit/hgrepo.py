@@ -1,8 +1,8 @@
 import util
-from git_handler import GitHandler
-from gitrepo import gitrepo
 from edenscm.mercurial import localrepo, util as hgutil
 from edenscm.mercurial.node import bin
+from git_handler import GitHandler
+from gitrepo import gitrepo
 
 
 try:
@@ -24,13 +24,12 @@ def generate_repo_subclass(baseclass):
 
         if hgutil.safehasattr(localrepo.localrepository, "push"):
             # Mercurial < 3.2
-            # TODO figure out something useful to do with the newbranch param
             @util.transform_notgit
-            def push(self, remote, force=False, revs=None, newbranch=False):
+            def push(self, remote, force=False, revs=None):
                 if isinstance(remote, gitrepo):
                     return self.githandler.push(remote.path, revs, force)
                 else:  # pragma: no cover
-                    return super(hgrepo, self).push(remote, force, revs, newbranch)
+                    return super(hgrepo, self).push(remote, force, revs)
 
         @util.transform_notgit
         def findoutgoing(self, remote, base=None, heads=None, force=False):

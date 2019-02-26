@@ -362,7 +362,7 @@ def validaterevset(repo, revset):
     repo.ui.note(_("validated revset for rebase\n"))
 
 
-def getrebaseparts(repo, peer, outgoing, onto, newhead):
+def getrebaseparts(repo, peer, outgoing, onto):
     parts = []
     if util.safehasattr(repo.manifestlog, "datastore"):
         try:
@@ -377,11 +377,11 @@ def getrebaseparts(repo, peer, outgoing, onto, newhead):
                 )
                 parts.append(part)
 
-    parts.append(createrebasepart(repo, peer, outgoing, onto, newhead))
+    parts.append(createrebasepart(repo, peer, outgoing, onto))
     return parts
 
 
-def createrebasepart(repo, peer, outgoing, onto, newhead):
+def createrebasepart(repo, peer, outgoing, onto):
     if not outgoing.missing:
         raise error.Abort(_("no changesets to rebase"))
 
@@ -416,7 +416,7 @@ def createrebasepart(repo, peer, outgoing, onto, newhead):
     #  handler
     return bundle2.bundlepart(
         rebaseparttype.upper(),
-        mandatoryparams={"onto": onto, "newhead": repr(newhead)}.items(),
+        mandatoryparams={"onto": onto}.items(),
         advisoryparams={
             # advisory: (old) server could ignore this without error
             "obsmarkerversions": obsmarkerversions,
@@ -609,9 +609,7 @@ def rebasepartgen(pushop, bundler):
     if pushop.force:
         onto = donotrebasemarker
 
-    rebaseparts = getrebaseparts(
-        pushop.repo, pushop.remote, pushop.outgoing, onto, pushop.newbranch
-    )
+    rebaseparts = getrebaseparts(pushop.repo, pushop.remote, pushop.outgoing, onto)
 
     for part in rebaseparts:
         bundler.addpart(part)
@@ -1031,7 +1029,9 @@ def _addbundlepacks(ui, mfl, packpaths):
 
 
 @bundle2.parthandler(
-    rebaseparttype, ("onto", "newhead", "obsmarkerversions", "cgversion")
+    # "newhead" is not used, but exists for compatibility.
+    rebaseparttype,
+    ("onto", "newhead", "obsmarkerversions", "cgversion"),
 )
 def bundle2rebase(op, part):
     """unbundle a bundle2 containing a changegroup to rebase"""
@@ -1331,10 +1331,6 @@ def syncifneeded(repo):
 
 def getontotarget(op, params, bundle):
     onto = resolveonto(op.repo, params.get("onto", donotrebasemarker))
-
-    if not params["newhead"]:
-        if not op.repo.revs("%r and head()", params["onto"]):
-            raise error.Abort(_("rebase would create a new head on server"))
 
     if onto is None:
         maxcommonanc = list(bundle.set("max(parents(bundle()) - bundle())"))

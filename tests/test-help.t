@@ -1521,7 +1521,6 @@ Test -e / -c / -k combinations
   $ hg help -e -k a |egrep '^(Topics|Extensions|Commands):'
   Extensions:
   $ hg help -e -c -k date |egrep '^(Topics|Extensions|Commands):'
-  Extensions:
   Commands:
   $ hg help -c commit > /dev/null
   $ hg help -e -c commit > /dev/null

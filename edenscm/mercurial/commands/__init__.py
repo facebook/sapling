@@ -4857,7 +4857,7 @@ def pull(ui, repo, source="default", **opts):
             _("REV"),
         ),
         ("B", "bookmark", [], _("bookmark to push"), _("BOOKMARK")),
-        ("", "new-branch", False, _("allow pushing a new branch")),
+        ("", "new-branch", False, _("allow pushing a new branch (DEPRECATED)")),
         ("", "pushvars", [], _("variables that can be sent to server (ADVANCED)")),
     ]
     + remoteopts,
@@ -4876,10 +4876,6 @@ def push(ui, repo, dest=None, **opts):
     destination, since multiple heads would make it unclear which head
     to use. In this situation, it is recommended to pull and merge
     before pushing.
-
-    Use --new-branch if you want to allow push to create a new named
-    branch that is not present at the destination. This allows you to
-    only create a new branch without forcing other changes.
 
     .. note::
 
@@ -4983,7 +4979,6 @@ def push(ui, repo, dest=None, **opts):
         other,
         opts.get("force"),
         revs=revs,
-        newbranch=opts.get("new_branch"),
         bookmarks=opts.get("bookmark", ()),
         opargs=opargs,
     )

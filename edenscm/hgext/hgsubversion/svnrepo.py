@@ -90,9 +90,8 @@ def generate_repo_class(ui, repo):
 
         if hgutil.safehasattr(localrepo.localrepository, "push"):
             # Mercurial < 3.2
-            # TODO use newbranch to allow branch creation in Subversion?
             @remotesvn
-            def push(self, remote, force=False, revs=None, newbranch=None):
+            def push(self, remote, force=False, revs=None):
                 return wrappers.push(self, remote, force, revs)
 
         if hgutil.safehasattr(localrepo.localrepository, "pull"):

@@ -212,7 +212,7 @@ def push(repo, dest, force, revs):
             # in 3.0) in mercurial
             from edenscm.mercurial.exchange import pushoperation
 
-            pushop = pushoperation(repo, dest, force, revs, False)
+            pushop = pushoperation(repo, dest, force, revs)
             checkpush(pushop)
         except (ImportError, TypeError):
             checkpush(force, revs)
@@ -415,18 +415,14 @@ def push(repo, dest, force, revs):
     return 1  # so we get a sane exit status, see hg's commands.push
 
 
-def exchangepush(
-    orig, repo, remote, force=False, revs=None, newbranch=False, bookmarks=(), **kwargs
-):
+def exchangepush(orig, repo, remote, force=False, revs=None, bookmarks=(), **kwargs):
     capable = getattr(remote, "capable", lambda x: False)
     if capable("subversion"):
-        pushop = exchange.pushoperation(
-            repo, remote, force, revs, newbranch, bookmarks=bookmarks
-        )
+        pushop = exchange.pushoperation(repo, remote, force, revs, bookmarks=bookmarks)
         pushop.cgresult = push(repo, remote, force, revs)
         return pushop
     else:
-        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks, **kwargs)
+        return orig(repo, remote, force, revs, bookmarks=bookmarks, **kwargs)
 
 
 def pull(repo, source, heads=None, force=False, meta=None):

@@ -425,14 +425,10 @@ class verifyingstatemachine(RuleBasedStateMachine):
         ):
             self.hg("pull")
 
-    @rule(newbranch=st.booleans())
-    def push(self, newbranch):
+    @rule()
+    def push(self):
         with acceptableerrors("default repository not configured", "no changes found"):
-            if newbranch:
-                self.hg("push", "--new-branch")
-            else:
-                with acceptableerrors("creates new branches"):
-                    self.hg("push")
+            self.hg("push")
 
     # Section: Simple side effect free "check" operations
     @rule()

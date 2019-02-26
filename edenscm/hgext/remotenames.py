@@ -124,12 +124,11 @@ def expushop(
     remote,
     force=False,
     revs=None,
-    newbranch=False,
     bookmarks=(),
     pushvars=None,
     **kwargs
 ):
-    orig(pushop, repo, remote, force, revs, newbranch, bookmarks, pushvars)
+    orig(pushop, repo, remote, force, revs, bookmarks, pushvars)
 
     for flag in ["to", "delete", "create", "allowanon", "nonforwardmove"]:
         setattr(pushop, flag, kwargs.pop(flag, None))
@@ -510,10 +509,7 @@ class lazyremotenamedict(UserDict.DictMixin):
         except LookupError:
             return None
         # Skip closed branches
-        if (
-            nametype == "branches"
-            and repo[binnode].closesbranch()
-        ):
+        if nametype == "branches" and repo[binnode].closesbranch():
             return None
         return [binnode]
 
@@ -1428,6 +1424,7 @@ def displayremotebookmarks(ui, repo, opts, fm):
         )
         fm.plain("\n")
 
+
 def _normalizeremote(remote):
     """
     Normalises a remote for grouping
@@ -1462,7 +1459,6 @@ def activepath(ui, remote):
             rpath = _normalizeremote(remote._url)
         except AttributeError:
             rpath = _normalizeremote(remote.url)
-
 
     candidates = []
     for path, uri in ui.configitems("paths"):
