@@ -165,9 +165,6 @@ class MapTests(test_hgsubversion_util.TestBase):
         self.assertEqual(
             node.hex(repo[0].node()), "88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d"
         )
-        self.assertEqual(
-            node.hex(repo["default"].node()), "e524296152246b3837fe9503c83b727075835155"
-        )
 
     @test_hgsubversion_util.requiresreplay
     def test_file_map_exclude(self):
