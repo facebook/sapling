@@ -414,7 +414,7 @@ Create two heads, set maxheadstobackup to 1, make sure only latest head was back
   $ mkcommit headtwo
   $ hg pushbackup --config infinitepushbackup.maxheadstobackup=1
   starting backup .* (re)
-  backing up only recent 1 head
+  backing up only the most recent 1 head
   backing up stack rooted at 6c4f4b30ae4c
   remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo

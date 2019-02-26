@@ -602,7 +602,7 @@ def notbackedup(repo, subset, x):
     """Changesets that have not yet been backed up by infinitepush"""
     bkpstate = _readlocalbackupstate(repo.ui, repo, _getremotepath(repo, repo.ui, None))
     bkpheads = set(bkpstate.heads)
-    candidates = set(_backupheads(repo.ui, repo))
+    candidates = set(_backupheads(repo.ui, repo, doingbackup=False))
     notbackeduprevs = set()
     # Find all revisions that are ancestors of the expected backup heads,
     # stopping when we reach either a public commit or a known backup head.
@@ -769,7 +769,7 @@ def _transaction(orig, self, *args, **kwargs):
     return orig(self, *args, **kwargs)
 
 
-def _backupheads(ui, repo):
+def _backupheads(ui, repo, doingbackup):
     """Returns the set of heads that should be backed up in this repo."""
     maxheadstobackup = ui.configint("infinitepushbackup", "maxheadstobackup")
 
@@ -777,11 +777,11 @@ def _backupheads(ui, repo):
 
     backupheads = [ctx.hex() for ctx in repo.set(revset)]
     if maxheadstobackup > 0:
-        if len(backupheads) > maxheadstobackup:
-            ui.status(
+        if doingbackup and len(backupheads) > maxheadstobackup:
+            ui.warn(
                 _n(
-                    "backing up only recent %d head\n",
-                    "backing up only recent %d heads\n",
+                    "backing up only the most recent %d head\n",
+                    "backing up only the most recent %d heads\n",
                     maxheadstobackup,
                 )
                 % maxheadstobackup
@@ -840,7 +840,7 @@ def _dobackup(ui, repo, dest, **opts):
     bkpstate = _readlocalbackupstate(ui, repo, path)
 
     # Work out what the heads and bookmarks to backup are.
-    headstobackup = _backupheads(ui, repo)
+    headstobackup = _backupheads(ui, repo, doingbackup=True)
     localbookmarks = (
         _getlocalbookmarks(repo) if not opts.get("delete_bookmarks") else {}
     )
