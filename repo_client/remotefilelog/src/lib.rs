@@ -6,6 +6,11 @@
 
 #![deny(warnings)]
 
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    io::{Cursor, Write},
+};
+
 use blobrepo::BlobRepo;
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
@@ -15,16 +20,14 @@ use filenodes::FilenodeInfo;
 use futures::{future::ok, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use lz4_pyframe;
+use maplit::hashset;
 use mercurial::file::File;
 use mercurial_types::{
     HgBlobNode, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, RevFlags, NULL_CSID,
     NULL_HASH,
 };
 use metaconfig_types::LfsParams;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::io::{Cursor, Write};
-use tracing::trace_args;
-use tracing::Traced;
+use tracing::{trace_args, Traced};
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
@@ -255,7 +258,7 @@ fn get_file_history_using_prefetched(
     }
     let mut startstate = VecDeque::new();
     startstate.push_back(startnode);
-    let seen_nodes: HashSet<_> = [startnode].iter().cloned().collect();
+    let seen_nodes = hashset! {startnode};
     let path = RepoPath::FilePath(path);
 
     stream::unfold(
