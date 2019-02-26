@@ -338,6 +338,7 @@ Test extension help:
                      this extension logs different pieces of information that
                      will be used
        lz4revlog     store revlog deltas using lz4 compression
+       memcommit     make commits without a working copy
        morecolors    make more output colorful
        morestatus    make status give a bit more context
        myparent
