@@ -4,13 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use actix_web;
-use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
-use bytes::Bytes;
 use std::collections::BTreeMap;
+
+use actix_web::{self, dev::BodyStream, Body, HttpRequest, HttpResponse, Json, Responder};
+use bytes::Bytes;
+use futures::Stream;
 
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
+
+type SendBodyStream = Box<Stream<Item = Bytes, Error = actix_web::Error> + Send + 'static>;
 
 pub enum MononokeRepoResponse {
     GetRawFile {
@@ -18,6 +21,9 @@ pub enum MononokeRepoResponse {
     },
     GetHgFile {
         content: Bytes,
+    },
+    GetFileHistory {
+        history: SendBodyStream,
     },
     GetBlobContent {
         content: Bytes,
@@ -52,6 +58,12 @@ fn binary_response(content: Bytes) -> HttpResponse {
         .body(Body::Binary(content.into()))
 }
 
+fn streaming_response(stream: SendBodyStream) -> HttpResponse {
+    HttpResponse::Ok()
+        .content_type("application/octet-stream")
+        .body(Body::Streaming(stream as BodyStream))
+}
+
 impl Responder for MononokeRepoResponse {
     type Item = HttpResponse;
     type Error = actix_web::Error;
@@ -60,9 +72,8 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => {
-                Ok(binary_response(content))
-            }
+            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => Ok(binary_response(content)),
+            GetFileHistory { history } => Ok(streaming_response(history)),
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),

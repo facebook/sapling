@@ -35,6 +35,10 @@ pub enum MononokeRepoQuery {
     GetHgFile {
         filenode: String,
     },
+    GetFileHistory {
+        filenode: String,
+        path: String,
+    },
     ListDirectory {
         path: String,
         revision: Revision,

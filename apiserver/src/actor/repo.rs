@@ -17,10 +17,11 @@ use failure::Error;
 use futures::future::{join_all, ok};
 use futures::Stream;
 use futures::{Future, IntoFuture};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use http::uri::Uri;
 use mercurial_types::manifest::Content;
 use mononoke_api;
+use remotefilelog;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use tracing::TraceContext;
@@ -28,6 +29,7 @@ use uuid::Uuid;
 
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
+use types::LooseHistoryEntry;
 
 use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
@@ -164,6 +166,27 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn get_file_history(
+        &self,
+        ctx: CoreContext,
+        filenode: String,
+        path: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let filenode = try_boxfuture!(FS::get_filenode_id(&filenode));
+        let path = try_boxfuture!(FS::get_mpath(path));
+
+        let history =
+            remotefilelog::get_file_history(ctx, self.repo.clone(), filenode, path.clone())
+                .and_then(move |entry| {
+                    let entry = LooseHistoryEntry::from(entry);
+                    Ok(Bytes::from(serde_json::to_vec(&entry)?))
+                })
+                .from_err()
+                .boxify();
+
+        ok(MononokeRepoResponse::GetFileHistory { history }).boxify()
+    }
+
     fn is_ancestor(
         &self,
         ctx: CoreContext,
@@ -238,7 +261,9 @@ impl MononokeRepo {
 
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
-            .and_then(move |changesetid| mononoke_api::get_content_by_path(ctx, repo, changesetid, mpath))
+            .and_then(move |changesetid| {
+                mononoke_api::get_content_by_path(ctx, repo, changesetid, mpath)
+            })
             .and_then(move |content| match content {
                 Content::Tree(tree) => Ok(tree),
                 _ => Err(ErrorKind::NotADirectory(path.to_string()).into()),
@@ -371,6 +396,7 @@ impl MononokeRepo {
         match msg {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
             GetHgFile { filenode } => self.get_hg_file(ctx, filenode),
+            GetFileHistory { filenode, path } => self.get_file_history(ctx, filenode, path),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             GetTree { hash } => self.get_tree(ctx, hash),

@@ -105,6 +105,31 @@ fn get_hg_file(
 }
 
 #[derive(Deserialize)]
+struct GetFileHistoryParams {
+    repo: String,
+    filenode: String,
+    path: String,
+}
+
+fn get_file_history(
+    (state, params): (
+        State<HttpServerState>,
+        actix_web::Path<GetFileHistoryParams>,
+    ),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: params.repo.clone(),
+            kind: MononokeRepoQuery::GetFileHistory {
+                filenode: params.filenode.clone(),
+                path: params.path.clone(),
+            },
+        },
+    )
+}
+
+#[derive(Deserialize)]
 struct IsAncestorParams {
     repo: String,
     ancestor: String,
@@ -521,6 +546,9 @@ fn main() -> Fallible<()> {
                 })
                 .resource("/gethgfile/{filenode}", |r| {
                     r.method(http::Method::GET).with_async(get_hg_file)
+                })
+                .resource("/getfilehistory/{filenode}/{path:.*}", |r| {
+                    r.method(http::Method::GET).with_async(get_file_history)
                 })
                 .resource(
                     "/is_ancestor/{ancestor}/{descendant}",
