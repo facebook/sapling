@@ -1,6 +1,17 @@
-  $ setupserver()
+#testcases hgsql.true hgsql.false
+
+  $ . "$TESTDIR/hgsql/library.sh"
+
+#if hgsql.false
+  $ initserver()
   > {
   >   hg init "$1"
+  > }
+#endif
+
+  $ setupserver()
+  > {
+  >   initserver "$1" "$1"
   >   ( cd "$1" && enable commitextras memcommit pushrebase )
   > }
 
@@ -148,13 +159,20 @@ is not the case.
 
 - Setup client for pushrebase tests.
 
-  $ setupclient()
+#if hgsql.false
+  $ initclient()
   > {
   >   hg init "$1"
+  >   ( cd "$1" && setconfig ui.ssh="python \"$TESTDIR/dummyssh\"" )
+  > }
+#endif
+
+  $ setupclient()
+  > {
+  >   initclient "$1"
   >   ( \
   >     cd "$1" && enable memcommit pushrebase remotenames && \
-  >     setconfig experimental.evolution= && \
-  >     setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+  >     setconfig experimental.evolution=
   >   )
   > }
 
