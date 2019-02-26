@@ -32,7 +32,9 @@ use blobrepo_factory::open_blobrepo;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoType};
+use metaconfig_types::{
+    ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfig, RepoType,
+};
 use mononoke_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -136,7 +138,6 @@ impl MononokeApp {
                     .default_value(default_manifold_prefix)
                     .help("manifold prefix"),
             )
-
             .arg(
                 Arg::with_name("mysql-blobstore-shardmap")
                     .long("mysql-blobstore-shardmap")
@@ -288,8 +289,8 @@ pub fn open_sql<T>(matches: &ArgMatches, name: &'static str) -> Result<T>
 where
     T: SqlConstructors,
 {
-    let (_, repo_type) = find_repo_type(matches)?;
-    match repo_type {
+    let (_, config) = get_config(matches)?;
+    match config.repotype {
         RepoType::BlobFiles(ref data_dir)
         | RepoType::BlobRocks(ref data_dir)
         | RepoType::BlobSqlite(ref data_dir) => T::with_sqlite_path(data_dir.join(name)),
@@ -514,7 +515,7 @@ pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     RepoConfigs::read_configs(config_path)
 }
 
-fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
+fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
     let repo_id = get_repo_id(matches);
 
     let configs = read_configs(matches)?;
@@ -524,7 +525,7 @@ fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
         .filter(|(_, config)| RepositoryId::new(config.repoid) == repo_id)
         .last();
     match repo_config {
-        Some((name, config)) => Ok((name, config.repotype)),
+        Some((name, config)) => Ok((name, config)),
         None => Err(err_msg(format!("uknown repoid {:?}", repo_id))),
     }
 }
@@ -536,9 +537,9 @@ fn open_repo_internal<'a>(
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let repo_id = get_repo_id(matches);
 
-    let (reponame, repotype) = try_boxfuture!(find_repo_type(matches));
+    let (reponame, config) = try_boxfuture!(get_config(matches));
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
-    let logger = match repotype {
+    let logger = match config.repotype {
         RepoType::BlobFiles(ref data_dir) => {
             setup_repo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
             logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()])
@@ -558,13 +559,12 @@ fn open_repo_internal<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
-    let post_commit_category = parse_post_commit_category(matches);
     open_blobrepo(
         logger.clone(),
-        repotype.clone(),
+        config.repotype.clone(),
         repo_id,
         myrouter_port,
-        post_commit_category,
+        config.post_commit_scribe_category,
     )
     .boxify()
 }
@@ -598,12 +598,6 @@ pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
         ),
         None => None,
     }
-}
-
-pub fn parse_post_commit_category<'a>(matches: &ArgMatches<'a>) -> Option<String> {
-    matches
-        .value_of("post-commit-category")
-        .map(|category| category.to_string())
 }
 
 pub fn parse_data_dir<'a>(matches: &ArgMatches<'a>) -> PathBuf {
