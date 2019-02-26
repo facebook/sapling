@@ -16,8 +16,13 @@ make commits to a repository without requiring a working copy.
 
 from __future__ import absolute_import
 
+import contextlib
+import json
+import sys
+
 from edenscm.mercurial import bookmarks, error, registrar, scmutil
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 from . import commitdata
 from ..pushrebase.stackpush import pushrequest
@@ -132,10 +137,48 @@ def memcommit(ui, repo, *args, **opts):
 
           After creating the commit, we move the bookmark to refer to the new
           commit.
+
+    The output of the command will be JSON based. There are two cases::
+
+        - Commit was created successfully
+
+          In this case, exit code will be zero and the output will be:
+
+            { "hash": "<commithash>" }
+
+          where '<commithash>' is the commit hash for the newly created commit.
+
+        - Commit creation failed
+
+          In this case, exit code will be non-zero and the output will be:
+
+            { "error": "<error>" }
+
+          where '<error>' will describe the error that occurred while attempting
+          to make the commit.
+
+    There will be no output if the `-q` i.e. quiet flag is specified.
     """
 
-    params = commitdata.params.deserialize(ui.fin)
-    _memcommit(repo, params)
+    @contextlib.contextmanager
+    def nooutput(ui):
+        ui.pushbuffer(error=True, subproc=True)
+        try:
+            yield
+        finally:
+            ui.popbuffer()
+
+    out = {}
+    try:
+        with nooutput(ui):
+            params = commitdata.params.deserialize(ui.fin)
+            out["hash"] = hex(_memcommit(repo, params))
+    except Exception as ex:
+        out["error"] = str(ex)
+        sys.exit(255)
+    finally:
+        if not ui.quiet:
+            ui.write(json.dumps(out))
 
 
 def _memcommit(repo, params):

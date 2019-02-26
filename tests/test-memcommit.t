@@ -24,7 +24,7 @@
 
   $ testmemcommit()
   > {
-  >   copycommit "$@"
+  >   copycommit "$@" > /dev/null
   >   testreposimilarity "$1" "$2"
   > }
 
@@ -67,22 +67,30 @@
   > }
 
 
+- Test that the `-q` results in no output.
+
+  $ cd originalrepo
+  $ hg -q memcommit
+  [255]
+
+
 - Test that we cannot make a commit without specifying a parent in the default
 configuration.
 
-  $ cd originalrepo
   $ touch x
   $ hg commit -Aqm "initial commit"
   $ copycommit . ../mirroredrepo
-  abort: commit without parents are not supported
+  {"error": "commit without parents are not supported"} (no-eol)
   [255]
 
 
 - Test that we can make a commit without specifying a parent in the
-memcommit.allowdetachedheads=true configuration.
+memcommit.allowunrelatedroots=true configuration. Also, test that we get the new
+commit hash in the output.
 
   $ hg debugserializecommit | \
   > hg -R ../mirroredrepo --config memcommit.allowunrelatedroots=true memcommit
+  {"hash": "eae37600e40b803aa5f53aa9dbf9c45eae74323c"} (no-eol)
   $ testreposimilarity . ../mirroredrepo
 
 
@@ -118,23 +126,21 @@ is not the case.
   $ hg commit -qm "renamed file"
 
   $ copycommit . ../mirroredrepo -d master
-  abort: destination parent does not match destination bookmark
+  {"error": "destination parent does not match destination bookmark"} (no-eol)
   [255]
 
 
 - Test that destination bookmark is required in case of pushrebase.
 
   $ copycommit . ../mirroredrepo --pushrebase
-  abort: must specify destination bookmark for pushrebase
+  {"error": "must specify destination bookmark for pushrebase"} (no-eol)
   [255]
 
 
 - Test that the conflicts are reported as expected in case of pushrebase.
 
   $ copycommit . ../mirroredrepo -d master --pushrebase
-  abort: conflicting changes in:
-      test
-  (pull and rebase your changes locally, then try again)
+  {"error": "conflicting changes in:\n    test"} (no-eol)
   [255]
 
   $ testmemcommit . ../mirroredrepo
@@ -164,7 +170,7 @@ destination bookmark.
   $ hg -q up "tip^"
   $ touch test2
   $ hg commit -Aqm "file without content"
-  $ copycommit . ../mirroredrepo -d master --pushrebase
+  $ copycommit . ../mirroredrepo -d master --pushrebase > /dev/null
   $ hg push -q ssh://user@dummy/originalrepo --to master
   $ testreposimilarity ../originalrepo ../mirroredrepo
 
@@ -176,17 +182,17 @@ destination bookmark.
   $ hg -q up "master"
   $ touch test3
   $ hg commit -Aqm "file without content"
-  $ copycommit . ../mirroredrepo
+  $ copycommit . ../mirroredrepo > /dev/null
   $ hg mv test3 test4
   $ hg commit -qm "renamed file"
-  $ copycommit . ../mirroredrepo
+  $ copycommit . ../mirroredrepo > /dev/null
 
   $ cd ../client
   $ hg -q pull ssh://user@dummy/originalrepo
   $ hg -q up "tip"
   $ hg rm test4
   $ hg commit -qm "deleted file"
-  $ copycommit . ../mirroredrepo -d master --pushrebase
+  $ copycommit . ../mirroredrepo -d master --pushrebase > /dev/null
   $ hg -q push ssh://user@dummy/originalrepo --to master
   $ testreposimilarity ../originalrepo ../mirroredrepo
 
@@ -206,7 +212,7 @@ descendent of destination bookmark.
   $ hg rm test5
   $ hg commit -qm "deleted file"
   $ copycommit . ../mirroredrepo -d master --pushrebase
-  abort: destination bookmark is not ancestor or descendant of commit parent
+  {"error": "destination bookmark is not ancestor or descendant of commit parent"} (no-eol)
   [255]
 
 
@@ -216,5 +222,5 @@ descendent of destination bookmark.
   $ hg -q merge "master"
   $ hg commit -qm "merge commit"
   $ copycommit . ../mirroredrepo
-  abort: merge commits are not supported
+  {"error": "merge commits are not supported"} (no-eol)
   [255]
