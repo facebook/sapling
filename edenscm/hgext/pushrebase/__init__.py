@@ -1091,9 +1091,7 @@ def bundle2rebase(op, part):
 
             if usestackpush:
                 try:
-                    pushrequest = stackpush.pushrequest.fromrevset(
-                        bundle, "bundle()", op
-                    )
+                    pushrequest = stackpush.pushrequest.fromrevset(bundle, "bundle()")
                 except StackPushUnsupportedError as ex:
                     # stackpush is unsupported. Fallback to old code path.
                     if verbose:
@@ -1158,7 +1156,9 @@ def bundle2rebase(op, part):
                     % (short(pushrequest.stackparentnode), ontoctx)
                 )
                 setrecordingparams(op.repo, ontoparam, ontoctx)
-                added, replacements = pushrequest.pushonto(ontoctx)
+                added, replacements = pushrequest.pushonto(
+                    ontoctx, getcommitdatefn=common.commitdategenerator(op)
+                )
             else:
                 # Old code path - use a bundlerepo
 

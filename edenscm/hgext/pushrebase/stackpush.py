@@ -42,7 +42,6 @@ import time
 from edenscm.mercurial import context, error, mutation
 from edenscm.mercurial.node import hex, nullid, nullrev
 
-from .common import commitdategenerator
 from .errors import ConflictsError, StackPushUnsupportedError
 
 
@@ -50,6 +49,14 @@ class pushcommit(object):
     def __init__(
         self, user, date, desc, extra, filechanges, examinepaths, orignode=None
     ):
+        """constructor for pushcommit
+
+        This class is designed to only include simple types (list, dict,
+        strings), without coupling with Mercurial internals, for maximum
+        portability.
+
+        Do not add states that are not simple types (ex. repo, ui, or bundle).
+        """
         self.user = user
         self.date = date
         self.desc = desc
@@ -89,14 +96,22 @@ class pushcommit(object):
 
 
 class pushrequest(object):
-    def __init__(self, stackparentnode, pushcommits, fileconditions, op):
+    def __init__(self, stackparentnode, pushcommits, fileconditions):
+        """constructor for pushrequest
+
+        This class is designed to only include simple types (list, dict,
+        strings), without coupling with Mercurial internals, for maximum
+        portability.
+
+        Do not add states that are not simple types (ex. repo, ui, or bundle).
+        """
+
         self.stackparentnode = stackparentnode
         self.pushcommits = pushcommits
         self.fileconditions = fileconditions  # {path: None | filenode}
-        self.bundleoperation = op
 
     @classmethod
-    def fromrevset(cls, repo, spec, op):
+    def fromrevset(cls, repo, spec):
         """Construct a pushrequest from revset"""
         # No merge commits allowed.
         revs = list(repo.revs(spec))
@@ -129,15 +144,23 @@ class pushrequest(object):
                 filenodemode = None
             fileconditions[path] = filenodemode
 
-        return cls(parentctx.node(), pushcommits, fileconditions, op)
+        return cls(parentctx.node(), pushcommits, fileconditions)
 
-    def pushonto(self, ctx):
+    def pushonto(self, ctx, getcommitdatefn=None):
         """Push the stack onto ctx
+
+        getcommitdatefn is a functor:
+
+        (ui, originalcommithash, originalcommitdate) -> replacementcommitdate
+
+        to allow rewriting replacement commit time as a function of the original
+        commit hash and time. Therefore, it is not required for creating new
+        commits.
 
         Return (added, replacements)
         """
         self.check(ctx)
-        return self._pushunchecked(ctx)
+        return self._pushunchecked(ctx, getcommitdatefn=getcommitdatefn)
 
     def check(self, ctx):
         """Check if push onto ctx can be done
@@ -156,13 +179,14 @@ class pushrequest(object):
         if conflicts:
             raise ConflictsError(conflicts)
 
-    def _pushunchecked(self, ctx):
+    def _pushunchecked(self, ctx, getcommitdatefn=None):
         added = []
         replacements = {}
         repo = ctx.repo()
-        getcommitdate = commitdategenerator(self.bundleoperation)
         for commit in self.pushcommits:
-            newnode = self._pushsingleunchecked(ctx, commit, getcommitdate)
+            newnode = self._pushsingleunchecked(
+                ctx, commit, getcommitdatefn=getcommitdatefn
+            )
             added.append(newnode)
             orignode = commit.orignode
             if orignode:
@@ -171,7 +195,7 @@ class pushrequest(object):
         return added, replacements
 
     @staticmethod
-    def _pushsingleunchecked(ctx, commit, getcommitdate):
+    def _pushsingleunchecked(ctx, commit, getcommitdatefn=None):
         """Return newly pushed node"""
         repo = ctx.repo()
 
@@ -199,8 +223,8 @@ class pushrequest(object):
 
         orignode = commit.orignode
         if orignode:
-            date = getcommitdate(repo.ui, hex(orignode), commit.date)
             mutation.record(repo, extra, [orignode], "pushrebase")
+            date = getcommitdatefn(repo.ui, hex(orignode), commit.date)
 
         return context.memctx(
             repo,
