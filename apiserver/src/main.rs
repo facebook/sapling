@@ -10,13 +10,13 @@
 extern crate actix;
 extern crate actix_web;
 extern crate apiserver_thrift;
-extern crate ascii;
+
 extern crate blobrepo;
 extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate bookmarks;
 extern crate bytes;
-extern crate cachelib;
+
 extern crate chrono;
 #[macro_use]
 extern crate clap;
@@ -40,7 +40,7 @@ extern crate mononoke_types;
 extern crate panichandler;
 extern crate percent_encoding;
 extern crate reachabilityindex;
-extern crate rust_thrift;
+
 extern crate scuba_ext;
 extern crate secure_utils;
 extern crate serde;
@@ -52,7 +52,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate slog;
 extern crate futures_stats;
-extern crate serde_json;
+
 extern crate slog_async;
 extern crate slog_glog_fmt;
 extern crate slog_logview;
@@ -60,11 +60,10 @@ extern crate slog_scope;
 extern crate slog_stats;
 extern crate slog_stdlog;
 extern crate slog_term;
-extern crate sql;
+
 extern crate srserver;
 extern crate time_ext;
 extern crate tokio;
-extern crate tokio_threadpool;
 
 mod actor;
 mod errors;
@@ -77,18 +76,18 @@ use std::sync::Arc;
 use tracing::TraceContext;
 use uuid::Uuid;
 
-use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
-use actor::{
+use crate::actor::{
     BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
 };
+use crate::errors::ErrorKind;
+use crate::failure::Result;
+use crate::middleware::ScubaMiddleware;
+use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
 use clap::Arg;
 use context::CoreContext;
-use errors::ErrorKind;
-use failure::Result;
 use futures::Future;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use metaconfig_parser::RepoConfigs;
-use middleware::ScubaMiddleware;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;

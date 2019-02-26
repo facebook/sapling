@@ -12,15 +12,15 @@ mod response;
 
 use std::collections::HashMap;
 
+use crate::failure::Error;
 use context::CoreContext;
-use failure::Error;
 use futures::{future::join_all, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
 use metaconfig_parser::RepoConfigs;
 
-use errors::ErrorKind;
+use crate::errors::ErrorKind;
 
 pub use self::lfs::BatchRequest;
 pub use self::query::{MononokeQuery, MononokeRepoQuery, Revision};

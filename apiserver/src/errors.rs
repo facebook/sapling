@@ -6,14 +6,14 @@
 
 use std::fmt;
 
+use crate::failure::{Error, Fail};
 use actix::MailboxError;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
-use failure::{Error, Fail};
 use futures::Canceled;
 
-use api::errors::ErrorKind as ApiError;
+use crate::api::errors::ErrorKind as ApiError;
 use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
 use blobrepo::ErrorKind as BlobRepoError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
@@ -48,7 +48,7 @@ pub enum ErrorKind {
 
 impl ErrorKind {
     fn status_code(&self) -> StatusCode {
-        use errors::ErrorKind::*;
+        use crate::errors::ErrorKind::*;
 
         match self {
             NotFound(..) => StatusCode::NOT_FOUND,
@@ -62,7 +62,7 @@ impl ErrorKind {
 
     #[allow(deprecated)] // self.causes()
     fn into_error_response(&self) -> ErrorResponse {
-        use errors::ErrorKind::*;
+        use crate::errors::ErrorKind::*;
 
         match &self {
             NotFound(..) | InvalidInput(..) | InternalError(_) | NotADirectory(_)
@@ -95,8 +95,8 @@ impl ErrorKind {
 }
 
 impl Fail for ErrorKind {
-    fn cause(&self) -> Option<&Fail> {
-        use errors::ErrorKind::*;
+    fn cause(&self) -> Option<&dyn Fail> {
+        use crate::errors::ErrorKind::*;
 
         match self {
             NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
@@ -107,8 +107,8 @@ impl Fail for ErrorKind {
 }
 
 impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use errors::ErrorKind::*;
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use crate::errors::ErrorKind::*;
 
         match self {
             NotFound(_0, _) => write!(f, "{} is not found", _0),
@@ -202,7 +202,7 @@ impl From<ReachabilityIndexError> for ErrorKind {
 
 impl From<ErrorKind> for MononokeAPIException {
     fn from(e: ErrorKind) -> MononokeAPIException {
-        use errors::ErrorKind::*;
+        use crate::errors::ErrorKind::*;
 
         match e.unwrap_errorkind() {
             e @ NotFound(..) => MononokeAPIException {

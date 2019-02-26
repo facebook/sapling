@@ -9,8 +9,8 @@
 use std::convert::{Into, TryFrom};
 use std::str;
 
+use crate::failure::{err_msg, Error};
 use chrono::{DateTime, FixedOffset};
-use failure::{err_msg, Error};
 
 use apiserver_thrift::types::{
     MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
@@ -80,10 +80,10 @@ pub struct Entry {
     hash: String,
 }
 
-impl TryFrom<Box<HgEntry + Sync>> for Entry {
+impl TryFrom<Box<dyn HgEntry + Sync>> for Entry {
     type Error = Error;
 
-    fn try_from(entry: Box<HgEntry + Sync>) -> Result<Entry, Self::Error> {
+    fn try_from(entry: Box<dyn HgEntry + Sync>) -> Result<Entry, Self::Error> {
         let name = entry
             .get_name()
             .map(|name| name.to_bytes())
@@ -109,7 +109,7 @@ pub struct EntryWithSizeAndContentHash {
 impl EntryWithSizeAndContentHash {
     pub fn materialize_future(
         ctx: CoreContext,
-        entry: Box<HgEntry + Sync>,
+        entry: Box<dyn HgEntry + Sync>,
     ) -> BoxFuture<Self, Error> {
         let name = try_boxfuture!(entry
             .get_name()

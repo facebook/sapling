@@ -12,7 +12,7 @@ use std::str::FromStr;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{hash::Sha256, MPath};
 
-use errors::ErrorKind;
+use crate::errors::ErrorKind;
 
 pub fn get_mpath(path: String) -> Result<MPath, ErrorKind> {
     MPath::try_from(&*path).map_err(|e| ErrorKind::InvalidInput(path, Some(e)))

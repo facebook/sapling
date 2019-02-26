@@ -25,7 +25,7 @@ pub enum MononokeRepoResponse {
         content: Bytes,
     },
     ListDirectory {
-        files: Box<Iterator<Item = Entry> + Send>,
+        files: Box<dyn Iterator<Item = Entry> + Send>,
     },
     GetTree {
         files: Vec<EntryWithSizeAndContentHash>,

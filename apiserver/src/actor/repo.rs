@@ -8,14 +8,14 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use api;
+use crate::api;
+use crate::failure::Error;
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
 use bookmarks::Bookmark;
 use bytes::Bytes;
 use context::CoreContext;
-use failure::Error;
 use futures::future::{join_all, ok};
 use futures::Stream;
 use futures::{Future, IntoFuture};
@@ -34,8 +34,8 @@ use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 
-use errors::ErrorKind;
-use from_string as FS;
+use crate::errors::ErrorKind;
+use crate::from_string as FS;
 
 use super::lfs::{build_response, BatchRequest};
 use super::model::{Entry, EntryWithSizeAndContentHash};
@@ -348,8 +348,7 @@ impl MononokeRepo {
         req: BatchRequest,
         lfs_url: Option<Uri>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let lfs_address =
-            try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
+        let lfs_address = try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
             "Lfs batch request is not allowed, host address is missing in HttpRequest header"
                 .to_string(),
             None
@@ -366,7 +365,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         msg: MononokeRepoQuery,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        use MononokeRepoQuery::*;
+        use crate::MononokeRepoQuery::*;
 
         match msg {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),

@@ -110,7 +110,7 @@ fn get_response_obj(
     repo: &String,
     file: &RequestObject,
     address: &Uri,
-    get_action_obj_func: &Fn(&str, &str, &Uri) -> Action,
+    get_action_obj_func: &dyn Fn(&str, &str, &Uri) -> Action,
 ) -> ResponseObject {
     let action_desc = get_action_obj_func(&repo, &file.oid, address);
     ResponseObject {
