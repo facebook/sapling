@@ -4,14 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-mod dispatcher;
-mod fb303;
-mod mononoke;
-
 use std::sync::Arc;
 
 use actix::Arbiter;
-use slog::Logger;
+use cloned::cloned;
+use slog::{info, Logger};
 
 use apiserver_thrift::server::make_MononokeAPIService_server;
 use fb303::server::make_FacebookService_server;
@@ -19,10 +16,14 @@ use fb303_core::server::make_BaseService_server;
 use srserver::ThriftServerBuilder;
 
 use self::dispatcher::ThriftDispatcher;
-use self::fb303::FacebookServiceImpl;
+use self::facebook::FacebookServiceImpl;
 use self::mononoke::MononokeAPIServiceImpl;
 use super::actor::Mononoke;
 use scuba_ext::ScubaSampleBuilder;
+
+mod dispatcher;
+mod facebook;
+mod mononoke;
 
 pub fn make_thrift(
     logger: Logger,

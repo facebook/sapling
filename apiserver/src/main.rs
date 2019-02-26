@@ -7,63 +7,27 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-extern crate actix;
-extern crate actix_web;
-extern crate apiserver_thrift;
+use std::sync::Arc;
 
-extern crate blobrepo;
-extern crate blobrepo_factory;
-extern crate blobstore;
-extern crate bookmarks;
-extern crate bytes;
+use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
+use bytes::Bytes;
+use clap::{value_t, Arg};
+use failure::Fallible;
+use futures::Future;
+use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
+use uuid::Uuid;
 
-extern crate chrono;
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate cloned;
-extern crate cmdlib;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate fb303;
-extern crate fb303_core;
-extern crate futures;
-#[macro_use]
-extern crate futures_ext;
-extern crate http;
-extern crate mercurial_types;
-extern crate metaconfig_parser;
-extern crate metaconfig_types;
-extern crate mononoke_api as api;
-extern crate mononoke_types;
-extern crate panichandler;
-extern crate percent_encoding;
-extern crate reachabilityindex;
-
-extern crate scuba_ext;
-extern crate secure_utils;
-extern crate serde;
-extern crate skiplist;
-extern crate tracing;
-extern crate uuid;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate slog;
-extern crate futures_stats;
-
-extern crate slog_async;
-extern crate slog_glog_fmt;
-extern crate slog_logview;
-extern crate slog_scope;
-extern crate slog_stats;
-extern crate slog_stdlog;
-extern crate slog_term;
-
-extern crate srserver;
-extern crate time_ext;
-extern crate tokio;
+use context::CoreContext;
+use metaconfig_parser::RepoConfigs;
+use panichandler::Fate;
+use percent_encoding::percent_decode;
+use scuba_ext::ScubaSampleBuilder;
+use serde_derive::Deserialize;
+use slog::{info, o, Drain, Level, Logger};
+use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
+use slog_logview::LogViewDrain;
+use tokio::runtime::Runtime;
+use tracing::TraceContext;
 
 mod actor;
 mod errors;
@@ -71,30 +35,11 @@ mod from_string;
 mod middleware;
 mod thrift;
 
-use bytes::Bytes;
-use std::sync::Arc;
-use tracing::TraceContext;
-use uuid::Uuid;
-
 use crate::actor::{
     BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
 };
 use crate::errors::ErrorKind;
-use crate::failure::Result;
 use crate::middleware::ScubaMiddleware;
-use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
-use clap::Arg;
-use context::CoreContext;
-use futures::Future;
-use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
-use metaconfig_parser::RepoConfigs;
-use panichandler::Fate;
-use percent_encoding::percent_decode;
-use scuba_ext::ScubaSampleBuilder;
-use slog::{Drain, Level, Logger};
-use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
-use slog_logview::LogViewDrain;
-use tokio::runtime::Runtime;
 
 mod config {
     pub const SCUBA_TABLE: &str = "mononoke_apiserver";
@@ -383,7 +328,7 @@ struct HttpServerState {
     use_ssl: bool,
 }
 
-fn main() -> Result<()> {
+fn main() -> Fallible<()> {
     panichandler::set_panichandler(Fate::Abort);
 
     let app = clap::App::new("Mononoke API Server")

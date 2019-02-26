@@ -4,24 +4,23 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::sync::Arc;
+use std::{collections::HashMap, convert::TryInto, sync::Arc};
 
-use crate::api;
-use crate::failure::Error;
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
 use bookmarks::Bookmark;
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
+use failure::Error;
 use futures::future::{join_all, ok};
 use futures::Stream;
 use futures::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use http::uri::Uri;
 use mercurial_types::manifest::Content;
+use mononoke_api;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use tracing::TraceContext;
@@ -131,7 +130,9 @@ impl MononokeRepo {
 
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
-            .and_then(|changesetid| api::get_content_by_path(ctx, repo, changesetid, Some(mpath)))
+            .and_then(|changesetid| {
+                mononoke_api::get_content_by_path(ctx, repo, changesetid, Some(mpath))
+            })
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
@@ -237,7 +238,7 @@ impl MononokeRepo {
 
         let repo = self.repo.clone();
         self.get_hgchangesetid_from_revision(ctx.clone(), revision)
-            .and_then(move |changesetid| api::get_content_by_path(ctx, repo, changesetid, mpath))
+            .and_then(move |changesetid| mononoke_api::get_content_by_path(ctx, repo, changesetid, mpath))
             .and_then(move |content| match content {
                 Content::Tree(tree) => Ok(tree),
                 _ => Err(ErrorKind::NotADirectory(path.to_string()).into()),

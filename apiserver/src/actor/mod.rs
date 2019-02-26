@@ -4,16 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-mod lfs;
-mod model;
-mod query;
-mod repo;
-mod response;
-
 use std::collections::HashMap;
 
-use crate::failure::Error;
 use context::CoreContext;
+use failure::Error;
 use futures::{future::join_all, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
@@ -21,6 +15,12 @@ use slog::Logger;
 use metaconfig_parser::RepoConfigs;
 
 use crate::errors::ErrorKind;
+
+mod lfs;
+mod model;
+mod query;
+mod repo;
+mod response;
 
 pub use self::lfs::BatchRequest;
 pub use self::query::{MononokeQuery, MononokeRepoQuery, Revision};

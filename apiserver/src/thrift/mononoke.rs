@@ -4,12 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::convert::TryInto;
-use std::mem::size_of;
-use std::sync::Arc;
+use std::{convert::TryInto, mem::size_of, sync::Arc};
 
 use crate::errors::ErrorKind;
-use crate::failure::err_msg;
 use apiserver_thrift::server::MononokeApiservice;
 use apiserver_thrift::services::mononoke_apiservice::{
     GetBlobExn, GetBranchesExn, GetChangesetExn, GetRawExn, GetTreeExn, IsAncestorExn,
@@ -21,7 +18,9 @@ use apiserver_thrift::types::{
     MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams, MononokeRevision,
 };
 use apiserver_thrift::MononokeRevision::UnknownField;
+use cloned::cloned;
 use context::CoreContext;
+use failure::err_msg;
 use futures::{Future, IntoFuture};
 use futures_ext::BoxFuture;
 use futures_stats::{FutureStats, Timed};

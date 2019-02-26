@@ -7,9 +7,9 @@
 use std::convert::{TryFrom, TryInto};
 
 use crate::errors::ErrorKind;
-use crate::failure::Error;
 use apiserver_thrift::MononokeRevision::UnknownField;
 use bytes::Bytes;
+use failure::Error;
 use http::uri::Uri;
 
 use apiserver_thrift::types::{

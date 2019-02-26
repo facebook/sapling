@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::result::Result;
-
 use actix_web;
 use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
@@ -62,7 +60,9 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => Ok(binary_response(content)),
+            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => {
+                Ok(binary_response(content))
+            }
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),

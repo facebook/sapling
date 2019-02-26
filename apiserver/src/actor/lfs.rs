@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use http::uri::Uri;
+use serde_derive::{Deserialize, Serialize};
 
 /* Request Example
 {

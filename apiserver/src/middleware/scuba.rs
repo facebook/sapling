@@ -4,9 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use actix_web::error::Result;
-use actix_web::middleware::{Finished, Middleware, Started};
-use actix_web::{HttpRequest, HttpResponse};
+use actix_web::{
+    error::Result,
+    middleware::{Finished, Middleware, Started},
+    HttpRequest, HttpResponse,
+};
 use scuba_ext::ScubaSampleBuilder;
 
 use super::response_time::ResponseTime;

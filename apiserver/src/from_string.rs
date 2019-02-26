@@ -6,8 +6,7 @@
 
 // This file should only contain functions that accept a String and returns an internal type
 
-use std::convert::TryFrom;
-use std::str::FromStr;
+use std::{convert::TryFrom, str::FromStr};
 
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{hash::Sha256, MPath};

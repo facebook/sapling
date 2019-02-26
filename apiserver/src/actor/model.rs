@@ -6,11 +6,15 @@
 
 // This file defines all types can be serialized into JSON
 
-use std::convert::{Into, TryFrom};
-use std::str;
+use std::{
+    collections::BTreeMap,
+    convert::{Into, TryFrom},
+    str,
+};
 
-use crate::failure::{err_msg, Error};
 use chrono::{DateTime, FixedOffset};
+use failure::{err_msg, Error};
+use serde_derive::Serialize;
 
 use apiserver_thrift::types::{
     MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
@@ -18,11 +22,11 @@ use apiserver_thrift::types::{
 use blobrepo::HgBlobChangeset;
 use context::CoreContext;
 use futures::prelude::*;
-use futures_ext::{spawn_future, BoxFuture, FutureExt};
+use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::hash::Sha1;
 use mercurial_types::manifest::Content;
 use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
-use std::collections::BTreeMap;
+
 
 #[derive(Serialize)]
 pub enum FileType {
