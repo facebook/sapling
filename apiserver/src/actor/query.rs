@@ -38,6 +38,7 @@ pub enum MononokeRepoQuery {
     GetFileHistory {
         filenode: String,
         path: String,
+        depth: Option<u32>,
     },
     ListDirectory {
         path: String,

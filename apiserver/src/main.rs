@@ -112,9 +112,10 @@ struct GetFileHistoryParams {
 }
 
 fn get_file_history(
-    (state, params): (
+    (state, req, params): (
         State<HttpServerState>,
-        actix_web::Path<GetFileHistoryParams>,
+        HttpRequest<HttpServerState>,
+        Path<GetFileHistoryParams>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     state.mononoke.send_query(
@@ -124,6 +125,7 @@ fn get_file_history(
             kind: MononokeRepoQuery::GetFileHistory {
                 filenode: params.filenode.clone(),
                 path: params.path.clone(),
+                depth: req.query().get("depth").and_then(|d| d.parse().ok()),
             },
         },
     )
