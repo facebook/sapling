@@ -98,6 +98,10 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
             else:
                 repackdatapacks(packpath, packpath)
                 repackhistpacks(packpath, packpath)
+    except error.LockHeld:
+        raise RepackAlreadyRunning(
+            _("skipping repack - another repack is already running")
+        )
     except Exception as e:
         repo.ui.warn(
             _("warning: rust repack failed for: %s, fallback to python: %s\n")
