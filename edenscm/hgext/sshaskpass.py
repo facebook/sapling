@@ -163,7 +163,7 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd, sshenv=None):
         with open(scriptpath, "w") as f:
             f.write(
                 '#!/bin/bash\nexec %s %s "$@"'
-                % (util.shellquote(sys.executable), util.shellquote(__file__))
+                % (util.shellquote("python2"), util.shellquote(__file__))
             )
         os.chmod(scriptpath, 0o755)
         env = {
