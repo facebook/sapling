@@ -141,3 +141,18 @@ Test that pushrebase hooks can access the commit data
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote
   [255]
+
+- Disable the hook
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [hooks]
+  > prepushrebase.cat=true
+  > EOF
+
+Push an empty commit with no trees
+  $ hg up -q '.^'
+  $ hg commit --config ui.allowemptycommit=True -m "Empty commit"
+  $ hg push --to master --rev . --config treemanifest.sendtrees=True
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     *  Empty commit (glob)

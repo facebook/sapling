@@ -513,7 +513,7 @@ class mutablebasepack(versionmixin):
 
     @property
     def destpath(self):
-        if self._destpath is None:
+        if not self._closed:
             raise error.ProgrammingError(
                 _("attempted to read mutabledatapack path before it was closed")
             )

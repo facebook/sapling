@@ -447,8 +447,10 @@ class fileserverclient(object):
                 # send to the memcache
                 if self.ui.configbool("remotefilelog", "updatesharedcache"):
                     if fetched:
-                        cache.setdatapack([datapackpath])
-                        cache.sethistorypack([histpackpath])
+                        if datapackpath:
+                            cache.setdatapack([datapackpath])
+                        if histpackpath:
+                            cache.sethistorypack([histpackpath])
         finally:
             os.umask(oldumask)
 
