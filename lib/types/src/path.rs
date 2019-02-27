@@ -29,12 +29,15 @@
 //! where all indexing is done using components. The index in those cases must be able to own
 //! component. Writing it in terms of `RepoPathBuf` would probably be less readable that
 //! writing it in terms of `String`.
+
+use std::{
+    borrow::{Borrow, ToOwned},
+    convert::AsRef,
+    fmt, mem,
+    ops::Deref,
+};
+
 use failure::{bail, Fallible};
-use std::borrow::{Borrow, ToOwned};
-use std::convert::AsRef;
-use std::fmt;
-use std::mem;
-use std::ops::Deref;
 
 /// An owned version of a `RepoPath`.
 #[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
