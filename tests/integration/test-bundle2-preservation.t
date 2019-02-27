@@ -77,8 +77,8 @@ Do a push, while bundle preservation is enabled
   searching for changes
   updating bookmark master_bookmark
 
-  $ ls $TESTTMP/repo/blobs | grep rawbundle2
-  blob-repo0000.rawbundle2.blake2.f549cc8c5041352d3e9cc84bd37027836dc8ec5323fbd63c17b4b4d6f2223262
+  $ ls $TESTTMP/repo/blobs | grep rawbundle2 | wc -l
+  1
 
 Do a pushrebase, while preservation is enabled
   $ hg up -q 2 && echo 3 > 3 && hg add 3 && hg ci -qm 3
@@ -91,6 +91,5 @@ Do a pushrebase, while preservation is enabled
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  $ ls $TESTTMP/repo/blobs | grep rawbundle2
-  blob-repo0000.rawbundle2.blake2.46be48908b04cb2395751ab5d75fb82cd7b5bc9ea21003326db6b413e5311029
-  blob-repo0000.rawbundle2.blake2.f549cc8c5041352d3e9cc84bd37027836dc8ec5323fbd63c17b4b4d6f2223262
+  $ ls $TESTTMP/repo/blobs | grep rawbundle2 | wc -l
+  2
