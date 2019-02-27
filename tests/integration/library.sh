@@ -53,6 +53,31 @@ function mononoke_hg_sync {
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
+
+function create_mutable_counters_sqlite3_db {
+  cat >> "$TESTTMP"/mutable_counters.sql <<SQL
+  CREATE TABLE mutable_counters (
+    repo_id INT UNSIGNED NOT NULL,
+    name VARCHAR(512) NOT NULL,
+    value BIGINT NOT NULL,
+    PRIMARY KEY (repo_id, name)
+  );
+SQL
+  sqlite3 "$TESTTMP/repo/mutable_counters" "$(cat "$TESTTMP"/mutable_counters.sql)"
+}
+
+function init_mutable_counters_sqlite3_db {
+  sqlite3 "$TESTTMP/repo/mutable_counters" \
+  "insert into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 0)";
+}
+
+function mononoke_hg_sync_loop {
+  $MONONOKE_HG_SYNC \
+    --do-not-init-cachelib \
+    --mononoke-config-path mononoke-config \
+    ssh://user@dummy/"$1" sync-loop --start-id "$2"
+}
+
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
   # MONONOKE_START_TIMEOUT is set in seconds

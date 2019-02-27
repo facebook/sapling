@@ -71,6 +71,7 @@ Sync it to another client
 
 Make a copy of it that will be used later
   $ cp -r repo-hg repo-hg-2
+  $ cp -r repo-hg repo-hg-3
 
 Try to sync blobimport bookmark move, which should fail
   $ mononoke_hg_sync repo-hg 0
@@ -170,6 +171,9 @@ Sync with incorrect timestamps, make sure replay fails
   error:pushkey
   '
 
+Set the correct timestamp back
+  $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
+
   $ cd repo-hg-2
   $ hg log -r master_bookmark
   changeset:   1:add0c792bfce
@@ -178,4 +182,45 @@ Sync with incorrect timestamps, make sure replay fails
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a => bar
+  
+Replay in a loop
+  $ cd $TESTTMP
+  $ create_mutable_counters_sqlite3_db
+  $ mononoke_hg_sync_loop repo-hg-3 0
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #1 ... (glob)
+  * sync failed for #1 (glob)
+  * caused by: unexpected bookmark move: blobimport (glob)
+  $ mononoke_hg_sync_loop repo-hg-3 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #2 ... (glob)
+  * successful sync (glob)
+  * syncing log entry #3 ... (glob)
+  * successful sync (glob)
+  * syncing log entry #4 ... (glob)
+  * successful sync (glob)
+  $ sqlite3 "$TESTTMP/repo/mutable_counters" "select * from mutable_counters";
+  0|latest-replayed-request|4
+
+Make one more push from the client
+  $ cd $TESTTMP/client-push
+  $ hg up -q master_bookmark
+  $ mkcommit onemorecommit
+  $ hgmn push -r . --to master_bookmark -q
+
+Continue replay
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop repo-hg-3 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #5 ... (glob)
+  * successful sync (glob)
+  $ cd $TESTTMP/repo-hg-3
+  $ hg log -r tip
+  changeset:   4:67d5c96d65a7
+  bookmark:    master_bookmark
+  tag:         tip
+  parent:      2:1e43292ffbb3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     onemorecommit
   
