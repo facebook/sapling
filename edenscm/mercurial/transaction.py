@@ -91,7 +91,7 @@ def _playback(
                 except (IOError, OSError) as inst:
                     if inst.errno != errno.ENOENT:
                         raise
-        except (IOError, OSError, error.Abort) as inst:
+        except (IOError, OSError, error.Abort):
             if not c:
                 raise
 
@@ -103,7 +103,7 @@ def _playback(
         for f in backupfiles:
             if opener.exists(f):
                 opener.unlink(f)
-    except (IOError, OSError, error.Abort) as inst:
+    except (IOError, OSError, error.Abort):
         # only pure backup file remains, it is sage to ignore any error
         pass
 

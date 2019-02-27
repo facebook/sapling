@@ -9,18 +9,8 @@ from __future__ import absolute_import
 
 import functools
 
-from . import (
-    bookmarks,
-    branchmap,
-    error,
-    phases,
-    scmutil,
-    setdiscovery,
-    treediscovery,
-    util,
-)
-from .i18n import _
-from .node import hex, nullid, short
+from . import bookmarks, branchmap, phases, setdiscovery, treediscovery, util
+from .node import hex, nullid
 
 
 def findcommonincoming(repo, remote, heads=None, force=False, ancestorsof=None):

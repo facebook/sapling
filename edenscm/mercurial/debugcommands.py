@@ -7,4 +7,4 @@
 
 from __future__ import absolute_import
 
-from .commands.debug import *
+from .commands.debug import *  # noqa: F401, F403

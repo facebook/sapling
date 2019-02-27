@@ -8,8 +8,7 @@
 from __future__ import absolute_import
 
 from . import _mpatch
-from ..pure.mpatch import *
-from ..pure.mpatch import mpatchError  # silence pyflakes
+from ..pure.mpatch import *  # noqa: F401, F403
 
 
 ffi = _mpatch.ffi
@@ -36,15 +35,15 @@ def patches(text, bins):
     arg = (all, bins)
     patch = lib.mpatch_fold(ffi.new_handle(arg), lib.cffi_get_next_item, 0, lgt)
     if not patch:
-        raise mpatchError("cannot decode chunk")
+        raise mpatchError("cannot decode chunk")  # noqa: F405
     outlen = lib.mpatch_calcsize(len(text), patch)
     if outlen < 0:
         lib.mpatch_lfree(patch)
-        raise mpatchError("inconsistency detected")
+        raise mpatchError("inconsistency detected")  # noqa: F405
     buf = ffi.new("char[]", outlen)
     if lib.mpatch_apply(buf, text, len(text), patch) < 0:
         lib.mpatch_lfree(patch)
-        raise mpatchError("error applying patches")
+        raise mpatchError("error applying patches")  # noqa: F405
     res = ffi.buffer(buf, outlen)[:]
     lib.mpatch_lfree(patch)
     return res

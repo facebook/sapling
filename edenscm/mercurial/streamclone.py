@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import struct
 
-from . import branchmap, error, phases, progress, store, util
+from . import error, phases, progress, store, util
 from .i18n import _
 
 

@@ -694,7 +694,7 @@ def dispatch(repo, proto, command):
 
     try:
         serializedargs = json.dumps(args)
-    except Exception as e:
+    except Exception:
         serializedargs = "Failed to serialize arguments"
 
     start_time = time.time()

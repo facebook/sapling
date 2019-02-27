@@ -11,7 +11,7 @@ import os
 import stat as statmod
 
 from .. import pycompat
-from ..pure.osutil import *
+from ..pure.osutil import *  # noqa: F401, F403
 
 
 if pycompat.isdarwin:

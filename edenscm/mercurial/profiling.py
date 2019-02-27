@@ -11,7 +11,7 @@ import contextlib
 import errno
 import time
 
-from . import encoding, error, extensions, pycompat, util
+from . import error, extensions, pycompat, util
 from .i18n import _
 
 
