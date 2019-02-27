@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 import eden.thrift
 from eden.cli import util
+from facebook.eden.ttypes import MountState
 
 from .find_executables import FindExe
 
@@ -99,7 +100,7 @@ class EdenFS(object):
         Usage example: run_cmd('mount', 'my_eden_client')
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         """
-        cmd = self._get_eden_args(command, *args)
+        cmd = self.get_eden_cli_args(command, *args)
         try:
             stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
             env = dict(os.environ)
@@ -123,10 +124,10 @@ class EdenFS(object):
         Usage example: run_cmd('mount', 'my_eden_client')
         Returns a subprocess.CompletedProcess object.
         """
-        cmd = self._get_eden_args(command, *args)
+        cmd = self.get_eden_cli_args(command, *args)
         return subprocess.run(cmd, **kwargs)
 
-    def _get_eden_args(self, command: str, *args: str) -> List[str]:
+    def get_eden_cli_args(self, command: str, *args: str) -> List[str]:
         """Combines the specified eden command args with the appropriate
         defaults.
 
@@ -217,7 +218,7 @@ class EdenFS(object):
         if self._process is not None:
             raise Exception("cannot start an already-running eden client")
 
-        args = self._get_eden_args(
+        args = self.get_eden_cli_args(
             "daemon",
             "--daemon-binary",
             typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
@@ -369,6 +370,25 @@ class EdenFS(object):
             results[path] = status_str
 
         return results
+
+    def get_mount_state(
+        self, mount: pathlib.Path, client: Optional[eden.thrift.EdenClient] = None
+    ) -> Optional[MountState]:
+        """
+        Query edenfs over thrift for the state of the specified mount.
+
+        Returns the MountState enum, or None if edenfs does not currently know about
+        this mount path.
+        """
+        if client is None:
+            with self.get_thrift_client() as client:
+                return self.get_mount_state(mount, client)
+        else:
+            for entry in client.listMounts():
+                entry_path = pathlib.Path(os.fsdecode(entry.mountPoint))
+                if entry_path == mount:
+                    return entry.state
+            return None
 
     def clone(
         self, repo: str, path: Union[str, os.PathLike], allow_empty: bool = False

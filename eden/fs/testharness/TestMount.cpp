@@ -139,7 +139,7 @@ void TestMount::initialize(
 
   // Create edenMount_
   createMount();
-  edenMount_->initialize().get();
+  edenMount_->initialize().getVia(serverExecutor_.get());
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
 
@@ -149,7 +149,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
 
   // Create edenMount_
   createMount();
-  edenMount_->initialize().get();
+  edenMount_->initialize().getVia(serverExecutor_.get());
 }
 
 void TestMount::initialize(
@@ -158,7 +158,7 @@ void TestMount::initialize(
     bool startReady) {
   createMountWithoutInitializing(
       initialCommitHash, rootBuilder, /*startReady=*/startReady);
-  edenMount_->initialize().get();
+  edenMount_->initialize().getVia(serverExecutor_.get());
 }
 
 void TestMount::createMountWithoutInitializing(
@@ -264,7 +264,7 @@ void TestMount::remount() {
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
       std::move(config), std::move(objectStore), blobCache_, serverState_);
-  edenMount_->initialize().get();
+  edenMount_->initialize().getVia(serverExecutor_.get());
 }
 
 void TestMount::remountGracefully() {
@@ -294,7 +294,7 @@ void TestMount::remountGracefully() {
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
       std::move(config), std::move(objectStore), blobCache_, serverState_);
-  edenMount_->initialize(takeoverData).get();
+  edenMount_->initialize(takeoverData).getVia(serverExecutor_.get());
 }
 
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {

@@ -46,6 +46,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::Future;
@@ -202,38 +203,35 @@ folly::Future<folly::Unit> EdenMount::initialize(
     const std::optional<SerializedInodeMap>& takeover) {
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 
-  // Open the overlay.  This acquires the overlay lock and makes sure
-  // that no other process is using this mount.
-  overlay_ = std::make_unique<Overlay>(config_->getOverlayPath());
-  overlayFileAccess_.initialize(overlay_.get());
+  return serverState_->getFaultInjector()
+      .checkAsync("mount", getPath().stringPiece())
+      .via(serverState_->getThreadPool().get())
+      .thenValue([this, doingTakeover = takeover.has_value()](auto&&) {
+        // Open the overlay.  This acquires the overlay lock and makes sure
+        // that no other process is using this mount.
+        overlay_ = std::make_unique<Overlay>(config_->getOverlayPath());
+        overlayFileAccess_.initialize(overlay_.get());
 
-  auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
-  parentInfo_.wlock()->parents.setParents(*parents);
+        auto parents =
+            std::make_shared<ParentCommits>(config_->getParentCommits());
+        parentInfo_.wlock()->parents.setParents(*parents);
 
-  // Do this before the root TreeInode is allocated in case it needs to allocate
-  // any inode numbers.
-  if (!takeover) {
-    auto maxInodeNumber = overlay_->scanForNextInodeNumber();
-    XLOG(DBG2) << "Initializing eden mount " << getPath()
-               << "; max existing inode number is " << maxInodeNumber;
-  } else {
-    XLOG(DBG2) << "Initializing eden mount " << getPath() << " from takeover";
-    if (!overlay_->hasInitializedNextInodeNumber()) {
-      XLOG(WARN) << "A clean shutdown before takeover did not leave an "
-                    "initialized inode number! Rescanning...";
-      overlay_->scanForNextInodeNumber();
-    }
-  }
-
-  CHECK(overlay_->hasInitializedNextInodeNumber());
-
-  return createRootInode(*parents)
-      .thenValue([this, parents, takeover](TreeInodePtr initTreeNode) {
-        if (takeover) {
-          inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
+        // Do this before the root TreeInode is allocated in case it needs to
+        // allocate any inode numbers.
+        if (!doingTakeover) {
+          auto maxInodeNumber = overlay_->scanForNextInodeNumber();
+          XLOG(DBG2) << "Initializing eden mount " << getPath()
+                     << "; max existing inode number is " << maxInodeNumber;
         } else {
-          inodeMap_->initialize(std::move(initTreeNode));
+          XLOG(DBG2) << "Initializing eden mount " << getPath()
+                     << " from takeover";
+          if (!overlay_->hasInitializedNextInodeNumber()) {
+            XLOG(WARN) << "A clean shutdown before takeover did not leave an "
+                          "initialized inode number! Rescanning...";
+            overlay_->scanForNextInodeNumber();
+          }
         }
+        CHECK(overlay_->hasInitializedNextInodeNumber());
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
@@ -244,6 +242,16 @@ folly::Future<folly::Unit> EdenMount::initialize(
         auto delta = std::make_unique<JournalDelta>();
         delta->toHash = parents->parent1();
         journal_.addDelta(std::move(delta));
+
+        return createRootInode(*parents);
+      })
+      .thenValue([this, takeover](TreeInodePtr initTreeNode) {
+        if (takeover) {
+          inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
+        } else {
+          inodeMap_->initialize(std::move(initTreeNode));
+        }
+
         return setupDotEden(getRootInode());
       })
       .thenValue([this](auto&&) {

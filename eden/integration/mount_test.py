@@ -8,8 +8,13 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import subprocess
 import unittest
-from typing import Set
+from pathlib import Path
+from typing import Optional, Set
+
+from eden.cli.util import poll_until
+from facebook.eden.ttypes import FaultDefinition, MountState, UnblockFaultArg
 
 from .lib import testcase
 
@@ -17,6 +22,7 @@ from .lib import testcase
 @testcase.eden_repo_test
 class MountTest(testcase.EdenRepoTest):
     expected_mount_entries: Set[str]
+    enable_fault_injection: bool = True
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -103,3 +109,46 @@ class MountTest(testcase.EdenRepoTest):
         # Surprisingly, os.close does not return an error when the mount has
         # gone away.
         os.close(fd)
+
+    def test_mount_init_state(self) -> None:
+        self.eden.run_cmd("unmount", self.mount)
+        self.assertEqual({self.mount: "NOT_RUNNING"}, self.eden.list_cmd_simple())
+
+        with self.eden.get_thrift_client() as client:
+            fault = FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
+            client.injectFault(fault)
+
+            # Run the "eden mount" CLI command.
+            # This won't succeed until we unblock the mount.
+            mount_cmd = self.eden.get_eden_cli_args("mount", self.mount)
+            mount_proc = subprocess.Popen(mount_cmd)
+
+            # Wait for the new mount to be reported by edenfs
+            def mount_started() -> Optional[bool]:
+                if self.eden.get_mount_state(Path(self.mount), client) is not None:
+                    return True
+                if mount_proc.poll() is not None:
+                    raise Exception(
+                        f"eden mount command finished (with status "
+                        f"{mount_proc.returncode}) while mounting was "
+                        f"still blocked"
+                    )
+                return None
+
+            poll_until(mount_started, timeout=30)
+            self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
+
+            # Unblock mounting and wait for the mount to transition to running
+            client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
+
+            def mount_running() -> Optional[bool]:
+                if (
+                    self.eden.get_mount_state(Path(self.mount), client)
+                    == MountState.RUNNING
+                ):
+                    return True
+                return None
+
+            poll_until(mount_running, timeout=30)
+            self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+            self.assertEqual(0, mount_proc.wait())

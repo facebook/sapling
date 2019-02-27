@@ -58,6 +58,10 @@ class EdenTestCase(
     start: float
     last_event: float
 
+    # Override enable_fault_injection to True in subclasses to enable Eden's fault
+    # injection framework when starting edenfs
+    enable_fault_injection: bool = False
+
     # The current typeshed library claims unittest.TestCase.run() returns a TestCase,
     # but it really returns Optional[TestResult].
     # We declare it to return Any here just to make the type checkers happy.
@@ -141,6 +145,10 @@ class EdenTestCase(
 
         logging_settings = self.edenfs_logging_settings()
         extra_args = self.edenfs_extra_args()
+        if self.enable_fault_injection:
+            extra_args = extra_args[:] if extra_args is not None else []
+            extra_args.append("--enable_fault_injection")
+
         storage_engine = self.select_storage_engine()
         self.eden = edenclient.EdenFS(
             self.eden_dir,
