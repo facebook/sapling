@@ -743,7 +743,29 @@ pub fn extract_parents_complete(
         (Some(p1), Some(p2)) => p1
             .completion_future
             .clone()
-            .join(p2.completion_future.clone())
+            // DO NOT replace and_then() with join() or futures_ordered()!
+            // It may result in a combinatoral explosion in mergy repos, like the following:
+            //  o
+            //  |\
+            //  | o
+            //  |/|
+            //  o |
+            //  |\|
+            //  | o
+            //  |/|
+            //  o |
+            //  |\|
+            //  ...
+            //  |/|
+            //  | ~
+            //  o
+            //  |\
+            //  ~ ~
+            //
+            .and_then({
+                let p2_completion_future = p2.completion_future.clone();
+                move |_| p2_completion_future
+            })
             .and_then(|_| future::ok(()).shared())
             .boxify(),
     }
@@ -757,7 +779,35 @@ pub fn handle_parents(
 ) -> BoxFuture<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {
     let p1 = p1.map(|cs| cs.can_be_parent);
     let p2 = p2.map(|cs| cs.can_be_parent);
-    p1.join(p2)
+    let p1 = match p1 {
+        Some(p1) => p1.map(Some).boxify(),
+        None => future::ok(None).boxify(),
+    };
+    let p2 = match p2 {
+        Some(p2) => p2.map(Some).boxify(),
+        None => future::ok(None).boxify(),
+    };
+
+    // DO NOT replace and_then() with join() or futures_ordered()!
+    // It may result in a combinatoral explosion in mergy repos, like the following:
+    //  o
+    //  |\
+    //  | o
+    //  |/|
+    //  o |
+    //  |\|
+    //  | o
+    //  |/|
+    //  o |
+    //  |\|
+    //  ...
+    //  |/|
+    //  | ~
+    //  o
+    //  |\
+    //  ~ ~
+    //
+    p1.and_then(|p1| p2.map(|p2| (p1, p2)))
         .and_then(|(p1, p2)| {
             let mut bonsai_parents = vec![];
             let p1 = match p1 {
