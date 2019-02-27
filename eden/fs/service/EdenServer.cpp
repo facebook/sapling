@@ -215,13 +215,12 @@ Future<Unit> EdenServer::unmountAll() {
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
-      const auto& mountPath = entry.first;
       auto& info = entry.second;
 
+      // TODO(strager): Keep the EdenMount shared_ptr alive during the call to
+      // unmount.
       auto future =
-          makeFutureWith([this, &mountPath] {
-            return serverState_->getPrivHelper()->fuseUnmount(mountPath);
-          })
+          info.edenMount->unmount()
               .thenValue([unmountFuture =
                               info.unmountPromise.getFuture()](auto&&) mutable {
                 return std::move(unmountFuture);
@@ -862,6 +861,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 #ifndef EDEN_WIN
   return makeFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
+           auto mount = std::shared_ptr<EdenMount>{};
            {
              const auto mountPoints = mountPoints_.wlock();
              const auto it = mountPoints->find(mountPath);
@@ -870,11 +870,13 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
                    std::out_of_range("no such mount point " + mountPath.str()));
              }
              future = it->second.unmountPromise.getFuture();
+             mount = it->second.edenMount;
            }
 
-           return serverState_->getPrivHelper()
-               ->fuseUnmount(mountPath)
-               .thenValue([f = std::move(future)](auto&&) mutable {
+           // TODO(strager): Keep the EdenMount shared_ptr alive during the call
+           // to unmount.
+           return mount->unmount().thenValue(
+               [f = std::move(future)](auto&&) mutable {
                  return std::move(f);
                });
          })

@@ -144,8 +144,8 @@ class EdenMount {
   /**
    * Shutdown the EdenMount.
    *
-   * This should be called *after* the FUSE mount point has been unmounted from
-   * the kernel.
+   * This should be called *after* calling unmount() (i.e. after the FUSE mount
+   * point has been unmounted from the kernel).
    *
    * This cleans up the in-memory data associated with the EdenMount, and waits
    * for all outstanding InodeBase objects to become unreferenced and be
@@ -161,6 +161,17 @@ class EdenMount {
   folly::Future<SerializedInodeMap> shutdown(
       bool doTakeover,
       bool allowFuseNotStarted = false);
+
+  /**
+   * Call the umount(2) syscall to tell the kernel to remove this filesystem.
+   *
+   * After umount(2) succeeds, the following operations happen independently and
+   * concurrently:
+   *
+   * * The future returned by unmount() is fulfilled successfully.
+   * * The future returned by getFuseCompletionFuture() is fulfilled.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 
   /**
    * Get the current state of this mount.

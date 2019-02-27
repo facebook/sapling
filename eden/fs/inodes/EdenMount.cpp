@@ -498,6 +498,13 @@ Future<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
         return inodeMap;
       });
 }
+
+folly::Future<folly::Unit> EdenMount::unmount() {
+  return folly::makeFutureWith([this] {
+    return serverState_->getPrivHelper()->fuseUnmount(getPath().stringPiece());
+  });
+}
+
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
   return serverState_->getThreadPool();
 }
