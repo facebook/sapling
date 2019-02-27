@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import errno
 import os
 import time
 import traceback
@@ -633,16 +634,20 @@ def _cleanuptemppacks(ui, packpath):
         return time.gmtime(stat.st_atime + 24 * 3600) > time.gmtime()
 
     with progress.spinner(ui, _("cleaning old temporary files")):
-        for f in os.listdir(packpath):
-            f = os.path.join(packpath, f)
-            if _shouldhold(f):
-                continue
-            for ext in extensions:
-                if f.endswith(ext):
-                    try:
-                        util.unlink(f)
-                    except Exception:
-                        pass
+        try:
+            for f in os.listdir(packpath):
+                f = os.path.join(packpath, f)
+                if _shouldhold(f):
+                    continue
+                for ext in extensions:
+                    if f.endswith(ext):
+                        try:
+                            util.unlink(f)
+                        except Exception:
+                            pass
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
 
 
 class repacker(object):
