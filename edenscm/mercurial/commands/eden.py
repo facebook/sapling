@@ -177,16 +177,12 @@ class HgUI(ui.ui):
 
 
 class HgServer(object):
-    def __init__(self, repo_path, ui, in_fd=None, out_fd=None):
+    def __init__(self, repo, in_fd=None, out_fd=None):
         """
         Create an HgServer.
 
-        repo_path:
-          The path to the mercurial repository
-        ui:
-          The configured UI object; this is used to access
-          --config overrides when setting up a different ui
-          object for the server which has special output requirements.
+        repo:
+          The mercurial repository object.
         in_fd:
           A file descriptor to use for receiving requests.
           If in_fd is None, stdin will be used.
@@ -194,13 +190,6 @@ class HgServer(object):
           A file descriptor to use for sending responses.
           If in_fd is None, stdout will be used.
         """
-        self.repo_path = repo_path
-
-        self.config_overrides = []
-        for section, name, value in ui.walkconfig():
-            if ui.configsource(section, name) == "--config":
-                self.config_overrides.append(ConfigOption(section, name, value))
-
         if not in_fd:
             self.in_file = sys.stdin
         else:
@@ -210,9 +199,13 @@ class HgServer(object):
         else:
             self.out_file = fdopen(int(out_fd), "wb")
 
-        # The repository will be set during initialized()
-        self.repo = None
-        self.ui = None
+        self.repo = repo.unfiltered()
+
+        try:
+            self.treemanifest = extensions.find("treemanifest")
+        except KeyError:
+            # The treemanifest extension is not present
+            self.treemanifest = None
 
         # Populate our command dictionary
         self._commands = {}
@@ -222,67 +215,7 @@ class HgServer(object):
                 continue
             self._commands[value.__COMMAND_ID__] = value
 
-    def initialize(self):
-        self.ui = HgUI.load()
-        for opt in self.config_overrides:
-            self.ui.setconfig(opt.section, opt.name, opt.value, source="--config")
-
-        # Create a fresh copy of the UI object, and load the repository's
-        # config into it.  Then load extensions specified by this config.
-        hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
-        local_ui = self.ui.copy()
-        local_ui.readconfig(hgrc, self.repo_path)
-        extensions.loadall(local_ui)
-
-        self.repo = self._open_repo()
-
-        try:
-            self.treemanifest = extensions.find("treemanifest")
-        except KeyError:
-            # The treemanifest extension is not present
-            self.treemanifest = None
-
-    def _open_repo(self):
-        # Create the repository using the original clean UI object that has not
-        # loaded the repo config yet.  This is required to ensure that
-        # secondary repository objects end up with the correct configuration,
-        # and do not have configuration settings from this repository.
-        #
-        # Secondary repo objects can be created mainly happens due to the share
-        # extension.  In general the repository we are pointing at should
-        # should not itself point to another shared repo, but it seems safest
-        # to exactly mimic mercurial's own start-up behavior here.
-        repo_ui = self.ui.copy()
-        repo = hg.repository(repo_ui, self.repo_path)
-        return repo.unfiltered()
-
-    def _reopen_repo(self):
-        # Close the current repo and make a new one.
-        # We use this to deal with invalidation related errors that are
-        # more likely to bubble to the surface with our long lived use case.
-
-        # Reset self.repo to None before we try to close and re-open it,
-        # so that if anything goes wrong it will be None rather than still pointing to a
-        # partially closed repository.
-        repo = self.repo
-        self.repo = None
-
-        try:
-            repo.close()
-        except Exception as ex:
-            logging.warning("error closing repository: %s" % (ex,))
-
-        self.repo = self._open_repo()
-
     def serve(self):
-        try:
-            self.initialize()
-        except Exception as ex:
-            # If an error occurs during initialization (say, if the repository
-            # path is invalid), send an error response.
-            self.send_exception(request=None, exc=ex)
-            return 1
-
         # Send a CMD_STARTED response to indicate we have started,
         # and include some information about the repository configuration.
         options_chunk = self._gen_options()
@@ -372,12 +305,6 @@ class HgServer(object):
             return True
 
         try:
-            # Ensure that the repository is open.  It may be None here if something
-            # went wrong previously trying to re-open the repository during a previous
-            # command.
-            if self.repo is None:
-                self.repo = self._open_repo()
-
             cmd_function(req)
         except Exception as ex:
             logging.exception("error processing command %r", command)
@@ -768,7 +695,31 @@ def always_allow_shared_pending(root, sharedroot):
     return True
 
 
-ConfigOption = collections.namedtuple("ConfigOption", ["section", "name", "value"])
+def _open_repo(orig_ui, repo_path):
+    ui = HgUI.load()
+
+    for section, name, value in orig_ui.walkconfig():
+        if orig_ui.configsource(section, name) == "--config":
+            ui.setconfig(section, name, value, source="--config")
+
+    # Create a fresh copy of the UI object, and load the repository's
+    # config into it.  Then load extensions specified by this config.
+    hgrc = os.path.join(repo_path, b".hg", b"hgrc")
+    local_ui = ui.copy()
+    local_ui.readconfig(hgrc, repo_path)
+    extensions.loadall(local_ui)
+
+    # Create the repository using the original clean UI object that has not
+    # loaded the repo config yet.  This is required to ensure that
+    # secondary repository objects end up with the correct configuration,
+    # and do not have configuration settings from this repository.
+    #
+    # Secondary repo objects can be created mainly happens due to the share
+    # extension.  In general the repository we are pointing at should
+    # should not itself point to another shared repo, but it seems safest
+    # to exactly mimic mercurial's own start-up behavior here.
+    repo_ui = ui.copy()
+    return hg.repository(repo_ui, repo_path)
 
 
 @command(
@@ -825,10 +776,10 @@ ConfigOption = collections.namedtuple("ConfigOption", ["section", "name", "value
             _("PATH:REV"),
         ),
     ],
-    _("REPO"),
-    norepo=True,
+    _("[REPO]"),
+    optionalrepo=True,
 )
-def eden_import_helper(ui, repo, **opts):
+def eden_import_helper(ui, repo, *repo_args, **opts):
     """Obtain data for edenfs"""
     logging.basicConfig(
         stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(message)s"
@@ -847,22 +798,30 @@ def eden_import_helper(ui, repo, **opts):
     txnutil.mayhavepending = always_allow_pending
     txnutil.mayhavesharedpending = always_allow_shared_pending
 
-    server = HgServer(repo, ui, in_fd=opts.get("in_fd"), out_fd=opts.get("out_fd"))
+    if len(repo_args) > 1:
+        raise error.Abort(_("only 1 repository path argument is allowed"))
+    elif len(repo_args) == 1:
+        # If a repository path is explicitly specified prefer that over the normal
+        # repository selected by the mercurial repository.  This is for backwards
+        # compatibility with old edenfs processes that didn't use the normal hg repo
+        # path arguments.
+        repo = _open_repo(ui, repo_args[0])
+    elif repo is None:
+        raise error.Abort(_("no repository specified"))
+
+    server = HgServer(repo, in_fd=opts.get("in_fd"), out_fd=opts.get("out_fd"))
 
     if opts.get("get_manifest_node"):
-        server.initialize()
         node = server.get_manifest_node(opts.get("get_manifest_node"))
         print(hex(node))
         return 0
 
     if opts.get("manifest"):
-        server.initialize()
         request = Request(0, CMD_MANIFEST, flags=0, body=opts.get("manifest"))
         server.dump_manifest(opts.get("manifest"), request)
         return 0
 
     if opts.get("cat_file"):
-        server.initialize()
         path, file_rev_str = opts.get("cat_file").rsplit(":", -1)
         path = path.encode(sys.getfilesystemencoding())
         file_rev = binascii.unhexlify(file_rev_str)
@@ -871,7 +830,6 @@ def eden_import_helper(ui, repo, **opts):
         return 0
 
     if opts.get("fetch_tree"):
-        server.initialize()
         parts = opts.get("fetch_tree").rsplit(":", -1)
         if len(parts) == 1:
             path = parts[0]
