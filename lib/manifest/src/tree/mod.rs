@@ -8,7 +8,7 @@ mod store;
 use self::store::{Store, TestStore};
 use crate::{FileMetadata, Manifest};
 use failure::{bail, format_err, Fallible};
-use lazy_init::Lazy;
+use once_cell::sync::OnceCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use types::{Node, PathComponentBuf, RepoPath, RepoPathBuf};
@@ -76,14 +76,14 @@ impl Link {
 // retries. Long story short is that caching the failure is a reasonable place to start from.
 pub struct DurableEntry {
     node: Node,
-    links: Lazy<Fallible<BTreeMap<PathComponentBuf, Link>>>,
+    links: OnceCell<Fallible<BTreeMap<PathComponentBuf, Link>>>,
 }
 
 impl DurableEntry {
     fn new(node: Node) -> Self {
         DurableEntry {
             node,
-            links: Lazy::new(),
+            links: OnceCell::new(),
         }
     }
 
@@ -94,7 +94,7 @@ impl DurableEntry {
     ) -> Fallible<&BTreeMap<PathComponentBuf, Link>> {
         // TODO: be smarter around how failures are handled when reading from the store
         // Currently this loses the stacktrace
-        match self.links.get_or_create(|| store.get(path, &self.node)) {
+        match self.links.get_or_init(|| store.get(path, &self.node)) {
             Ok(links) => Ok(links),
             Err(error) => Err(format_err!("{}", error)),
         }
