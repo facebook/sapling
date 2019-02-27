@@ -5,12 +5,11 @@
 
 mod store;
 
-use self::store::{Store, TestStore};
+use self::store::{Element as StoreElement, Entry as StoreEntry, Flag as StoreFlag, Store};
 use crate::{FileMetadata, Manifest};
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 use types::{Node, PathComponentBuf, RepoPath, RepoPathBuf};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
@@ -21,16 +20,6 @@ pub struct Tree<S> {
     root: Link,
 }
 
-impl Tree<TestStore> {
-    /// Creates a new Tree without any history
-    pub fn ephemeral() -> Self {
-        Tree {
-            store: Arc::new(TestStore::new()),
-            root: Link::Ephemeral(BTreeMap::new()),
-        }
-    }
-}
-
 impl<S: Store> Tree<S> {
     /// Instantiates a tree manifest that was stored with the specificed `Node`
     pub fn durable(store: Arc<S>, node: Node) -> Self {
@@ -39,10 +28,19 @@ impl<S: Store> Tree<S> {
             root: Link::durable(node),
         }
     }
+
+    /// Instantiates a new tree manifest with no history
+    pub fn ephemeral(store: Arc<S>) -> Self {
+        Tree {
+            store,
+            root: Link::Ephemeral(BTreeMap::new()),
+        }
+    }
 }
 
 /// `Link` describes the type of nodes that tree manifest operates on.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum Link {
     /// `Leaf` nodes store FileMetadata. They are terminal nodes and don't have any other
     /// information.
@@ -65,6 +63,34 @@ impl Link {
     }
 }
 
+fn store_entry_to_links(store_entry: StoreEntry) -> Fallible<BTreeMap<PathComponentBuf, Link>> {
+    let mut links = BTreeMap::new();
+    for element_result in store_entry.elements() {
+        let element = element_result?;
+        let link = match element.flag {
+            StoreFlag::File(file_type) => Leaf(FileMetadata::new(element.node, file_type)),
+            StoreFlag::Directory => Link::durable(element.node),
+        };
+        links.insert(element.component, link);
+    }
+    Ok(links)
+}
+
+fn links_to_store_entry(links: &BTreeMap<PathComponentBuf, Link>) -> Fallible<StoreEntry> {
+    let iter = links.iter().map(|(component, link)| {
+        let (node, flag) = match link {
+            Leaf(ref file_metadata) => (
+                &file_metadata.node,
+                StoreFlag::File(file_metadata.file_type.clone()),
+            ),
+            Durable(ref entry) => (&entry.node, StoreFlag::Directory),
+            Ephemeral(_) => return Err(format_err!("cannot store ephemeral manifest nodes")),
+        };
+        Ok(StoreElement::new(component.to_owned(), node.clone(), flag))
+    });
+    StoreEntry::from_elements(iter)
+}
+
 // TODO: Use Vec instead of BTreeMap
 /// The inner structure of a durable link. Of note is that failures are cached "forever".
 // The interesting question about this structure is what do we do when we have a failure when
@@ -74,6 +100,7 @@ impl Link {
 // is remote and we hit a network blip. On the other hand we would not want to always retry when
 // there is a failure on remote storage, we'd want to have a least an exponential backoff on
 // retries. Long story short is that caching the failure is a reasonable place to start from.
+#[derive(Debug)]
 pub struct DurableEntry {
     node: Node,
     links: OnceCell<Fallible<BTreeMap<PathComponentBuf, Link>>>,
@@ -94,9 +121,30 @@ impl DurableEntry {
     ) -> Fallible<&BTreeMap<PathComponentBuf, Link>> {
         // TODO: be smarter around how failures are handled when reading from the store
         // Currently this loses the stacktrace
-        match self.links.get_or_init(|| store.get(path, &self.node)) {
+        let result = self.links.get_or_init(|| {
+            let entry = store.get(path, &self.node)?;
+            store_entry_to_links(entry)
+        });
+        match result {
             Ok(links) => Ok(links),
             Err(error) => Err(format_err!("{}", error)),
+        }
+    }
+}
+
+// `PartialEq` can't be derived because `fallible::Error` does not implement `PartialEq`.
+// It should also be noted that `self.links.get() != self.links.get()` can evaluate to true when
+// `self.links` are being instantiated.
+#[cfg(test)]
+impl PartialEq for DurableEntry {
+    fn eq(&self, other: &DurableEntry) -> bool {
+        if self.node != other.node {
+            return false;
+        }
+        match (self.links.get(), other.links.get()) {
+            (None, None) => true,
+            (Some(Ok(a)), Some(Ok(b))) => a == b,
+            _ => false,
         }
     }
 }
@@ -178,7 +226,8 @@ impl<S: Store> Manifest for Tree<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use types::node::Node;
+
+    use self::store::TestStore;
 
     fn meta(node: u8) -> FileMetadata {
         FileMetadata::regular(Node::from_u8(node))
@@ -195,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let mut tree = Tree::ephemeral();
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar"), meta(10)).unwrap();
         assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(&meta(10)));
         assert_eq!(tree.get(repo_path("baz")).unwrap(), None);
@@ -216,13 +265,15 @@ mod tests {
         let mut root_children = BTreeMap::new();
         root_children.insert(path_component_buf("foo"), Link::durable(Node::from_u8(10)));
         root_children.insert(path_component_buf("baz"), Link::Leaf(meta(20)));
+        let root_entry = links_to_store_entry(&root_children).unwrap();
         store
-            .insert(repo_path_buf(""), Node::from_u8(1), root_children)
+            .insert(repo_path_buf(""), Node::from_u8(1), root_entry)
             .unwrap();
         let mut foo_children = BTreeMap::new();
         foo_children.insert(path_component_buf("bar"), Link::Leaf(meta(11)));
+        let foo_entry = links_to_store_entry(&foo_children).unwrap();
         store
-            .insert(repo_path_buf("foo"), Node::from_u8(10), foo_children)
+            .insert(repo_path_buf("foo"), Node::from_u8(10), foo_entry)
             .unwrap();
         let mut tree = Tree::durable(Arc::new(store), Node::from_u8(1));
 
@@ -237,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_insert_into_directory() {
-        let mut tree = Tree::ephemeral();
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar/baz"), meta(10)).unwrap();
         assert!(tree.insert(repo_path_buf("foo/bar"), meta(20)).is_err());
         assert!(tree.insert(repo_path_buf("foo"), meta(30)).is_err());
@@ -245,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_insert_with_file_parent() {
-        let mut tree = Tree::ephemeral();
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo"), meta(10)).unwrap();
         assert!(tree.insert(repo_path_buf("foo/bar"), meta(20)).is_err());
         assert!(tree.insert(repo_path_buf("foo/bar/baz"), meta(30)).is_err());
@@ -253,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_get_from_directory() {
-        let mut tree = Tree::ephemeral();
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar/baz"), meta(10)).unwrap();
         assert!(tree.get(repo_path("foo/bar")).is_err());
         assert!(tree.get(repo_path("foo")).is_err());
@@ -261,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_get_with_file_parent() {
-        let mut tree = Tree::ephemeral();
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo"), meta(10)).unwrap();
         assert!(tree.get(repo_path("foo/bar")).is_err());
         assert!(tree.get(repo_path("foo/bar/baz")).is_err());
