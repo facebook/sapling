@@ -13,6 +13,7 @@
 #include <boost/variant.hpp>
 #include <folly/experimental/StringKeyedUnorderedMap.h>
 #include <folly/futures/Future.h>
+#include <optional>
 
 namespace facebook {
 namespace eden {

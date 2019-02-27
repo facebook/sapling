@@ -21,7 +21,7 @@
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
-#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
