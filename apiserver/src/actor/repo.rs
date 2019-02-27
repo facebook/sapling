@@ -176,7 +176,7 @@ impl MononokeRepo {
         let path = try_boxfuture!(FS::get_mpath(path));
 
         let history =
-            remotefilelog::get_file_history(ctx, self.repo.clone(), filenode, path.clone())
+            remotefilelog::get_file_history(ctx, self.repo.clone(), filenode, path.clone(), None)
                 .and_then(move |entry| {
                     let entry = LooseHistoryEntry::from(entry);
                     Ok(Bytes::from(serde_json::to_vec(&entry)?))

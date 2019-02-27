@@ -83,6 +83,7 @@ pub fn create_remotefilelog_blob(
                     repo,
                     node,
                     path,
+                    None,
                     prefetched_filenodes,
                 )
                 .collect()
@@ -220,10 +221,11 @@ pub fn get_file_history(
     repo: BlobRepo,
     filenode: HgFileNodeId,
     path: MPath,
+    max_depth: Option<u32>,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
     prefetch_history(ctx.clone(), repo.clone(), path.clone())
         .map(move |prefetched| {
-            get_file_history_using_prefetched(ctx, repo, filenode, path, prefetched)
+            get_file_history_using_prefetched(ctx, repo, filenode, path, max_depth, prefetched)
         })
         .flatten_stream()
 }
@@ -251,19 +253,30 @@ fn get_file_history_using_prefetched(
     repo: BlobRepo,
     startnode: HgFileNodeId,
     path: MPath,
+    max_depth: Option<u32>,
     prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
 ) -> BoxStream<HgFileHistoryEntry, Error> {
     if startnode == HgFileNodeId::new(NULL_HASH) {
         return stream::empty().boxify();
     }
+
     let mut startstate = VecDeque::new();
     startstate.push_back(startnode);
     let seen_nodes = hashset! {startnode};
     let path = RepoPath::FilePath(path);
 
     stream::unfold(
-        (startstate, seen_nodes),
-        move |(mut nodes, mut seen_nodes): (VecDeque<HgFileNodeId>, HashSet<HgFileNodeId>)| {
+        (startstate, seen_nodes, 0),
+        move |(mut nodes, mut seen_nodes, depth): (
+            VecDeque<HgFileNodeId>,
+            HashSet<HgFileNodeId>,
+            u32,
+        )| {
+            match max_depth {
+                Some(max_depth) if depth >= max_depth => return None,
+                _ => {}
+            }
+
             let node = nodes.pop_front()?;
 
             let filenode_fut = if let Some(filenode) = prefetched_history.get(&node) {
@@ -296,7 +309,7 @@ fn get_file_history_using_prefetched(
                         .map(HgFileNodeId::new)
                         .filter(|p| seen_nodes.insert(*p)),
                 );
-                Ok((entry, (nodes, seen_nodes)))
+                Ok((entry, (nodes, seen_nodes, depth + 1)))
             });
 
             Some(history)
