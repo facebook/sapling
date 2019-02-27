@@ -37,7 +37,8 @@ pub struct MutableHistoryPack {
 }
 
 impl MutableHistoryPack {
-    pub fn new(dir: &Path, version: HistoryPackVersion) -> Fallible<Self> {
+    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Fallible<Self> {
+        let dir = dir.as_ref();
         if !dir.is_dir() {
             return Err(MutableHistoryPackError(format!(
                 "cannot create mutable historypack in non-directory '{:?}'",

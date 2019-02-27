@@ -45,7 +45,8 @@ impl MutableDataPack {
     /// when close() is called, at which point the MutableDataPack is consumed. If
     /// close() is not called, the temporary file is cleaned up when the object is
     /// release.
-    pub fn new(dir: &Path, version: DataPackVersion) -> Fallible<Self> {
+    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Fallible<Self> {
+        let dir = dir.as_ref();
         if !dir.is_dir() {
             return Err(format_err!(
                 "cannot create mutable datapack in non-directory '{:?}'",
