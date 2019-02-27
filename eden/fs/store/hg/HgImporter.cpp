@@ -234,6 +234,11 @@ std::string findInPath(folly::StringPiece executable) {
 namespace facebook {
 namespace eden {
 
+class HgImporterEofError : public HgImporterError {
+ public:
+  using HgImporterError::HgImporterError;
+};
+
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
@@ -332,7 +337,21 @@ HgImporter::HgImporter(
 ImporterOptions HgImporter::waitForHelperStart() {
   // Wait for the import helper to send the CMD_STARTED message indicating
   // that it has started successfully.
-  auto header = readChunkHeader(0, "CMD_STARTED");
+  ChunkHeader header;
+  try {
+    header = readChunkHeader(0, "CMD_STARTED");
+  } catch (const HgImporterEofError& error) {
+    // If we get EOF trying to read the initial response this generally
+    // indicates that the import helper exited with an error early on during
+    // startup, before it could send us a success or error message.
+    //
+    // It should have normally printed an error message to stderr in this case,
+    // which is normally redirected to our edenfs.log file.
+    throw HgImporterError(
+        "error starting Mercurial import helper.  "
+        "Check edenfs.log for the error messages from the import helper.");
+  }
+
   if (header.command != CMD_STARTED) {
     // This normally shouldn't happen.  If an error occurs, the
     // hg_import_helper script should send an error chunk causing
@@ -844,7 +863,7 @@ void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
   if (bytesRead != size) {
     // The helper process closed the pipe early.
     // This generally means that it exited.
-    HgImporterError err(
+    HgImporterEofError err(
         "received unexpected EOF from hg_import_helper.py after ",
         bytesRead,
         " bytes while reading ",
