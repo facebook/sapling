@@ -9,7 +9,9 @@
 //! associated with it. The manifest specifies the revision for all the files available in the
 //! repository. The file path and file revision are then used to retrieve the contents of the
 //! file thus achieving the reconstruction of the entire repository state.
+
 use failure::Fallible;
+
 use types::{Node, RepoPath, RepoPathBuf};
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).

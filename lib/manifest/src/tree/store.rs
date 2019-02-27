@@ -3,10 +3,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::FileType;
-use failure::{format_err, Fallible};
 use std::str::from_utf8;
+
+use failure::{format_err, Fallible};
+
 use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+
+use crate::FileType;
 
 /// The `Store` is an abstraction layer for the tree manifest that decouples how or where the data
 /// is stored. This allows more easy iteration on serialization format. It also simplifies writing

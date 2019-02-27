@@ -5,12 +5,15 @@
 
 mod store;
 
-use self::store::{Element as StoreElement, Entry as StoreEntry, Flag as StoreFlag, Store};
-use crate::{FileMetadata, Manifest};
+use std::{collections::BTreeMap, sync::Arc};
+
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
-use std::{collections::BTreeMap, sync::Arc};
+
 use types::{Node, PathComponentBuf, RepoPath, RepoPathBuf};
+
+use self::store::{Element as StoreElement, Entry as StoreEntry, Flag as StoreFlag, Store};
+use crate::{FileMetadata, Manifest};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
