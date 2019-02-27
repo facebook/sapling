@@ -849,6 +849,12 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
         server.fetch_tree(path, manifest_node)
         return 0
 
+    # If one of the above debug options wasn't used, require the --out-fd flag.
+    # This flag is required to ensure that other mercurial code that prints to stdout
+    # cannot interfere with our output.
+    if not opts.get("out_fd"):
+        raise error.Abort(_("the --out-fd argument is required"))
+
     try:
         return server.serve()
     except KeyboardInterrupt:
