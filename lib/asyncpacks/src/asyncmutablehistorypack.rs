@@ -12,7 +12,7 @@ use tokio_threadpool::blocking;
 
 use cloned::cloned;
 use revisionstore::{HistoryPackVersion, MutableHistoryPack, MutablePack};
-use types::{Key, NodeInfo};
+use types::{Key, NodeInfo, PackHistoryEntry};
 
 pub struct AsyncMutableHistoryPackInner {
     data: MutableHistoryPack,
@@ -71,6 +71,14 @@ impl AsyncMutableHistoryPack {
         .map(move |()| AsyncMutableHistoryPack {
             inner: Arc::clone(&self.inner),
         })
+    }
+
+    /// Convenience function for adding a `types::PackHistoryEntry`.
+    pub fn add_entry(
+        self,
+        entry: &PackHistoryEntry,
+    ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
+        self.add(&entry.key, &entry.nodeinfo)
     }
 
     /// Close the historypack. Once this Future finishes, the pack file will be written to the disk
