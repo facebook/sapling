@@ -45,8 +45,8 @@
 use bytes::BytesMut;
 use tokio_io::codec::Decoder;
 
-use {Request, Response};
 use handler::{OutputStream, ResponseEncoder};
+use {Request, Response};
 
 use errors::*;
 

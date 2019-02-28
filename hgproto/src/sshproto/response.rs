@@ -40,9 +40,9 @@ pub fn encode(response: Response) -> OutputStream {
     match response {
         Response::Batch(resps) => {
             let separator = Bytes::from(&b";"[..]);
-            let escaped_results = resps.into_iter().map(move |resp| {
-                Bytes::from(batch::escape(&encode_cmd(resp)))
-            });
+            let escaped_results = resps
+                .into_iter()
+                .map(move |resp| Bytes::from(batch::escape(&encode_cmd(resp))));
 
             let separated_results = escaped_results.intersperse(separator);
             let separated_results: Vec<_> = separated_results.collect();
@@ -53,7 +53,8 @@ pub fn encode(response: Response) -> OutputStream {
             let len = format!("{}\n", len);
             let len = stream::once(Ok(Bytes::from(len.as_bytes())));
 
-            len.chain(stream::iter_ok(separated_results.into_iter())).boxify()
+            len.chain(stream::iter_ok(separated_results.into_iter()))
+                .boxify()
         }
         Response::Single(resp) => encode_single(resp),
     }

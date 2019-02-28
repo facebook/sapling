@@ -172,11 +172,7 @@ where
     }
 }
 
-impl<R> AsyncRead for Dechunker<R>
-where
-    R: AsyncRead + BufRead,
-{
-}
+impl<R> AsyncRead for Dechunker<R> where R: AsyncRead + BufRead {}
 
 impl<R> BufRead for Dechunker<R>
 where

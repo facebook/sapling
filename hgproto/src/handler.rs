@@ -8,18 +8,18 @@ use std::io;
 use std::sync::{Arc, Mutex};
 
 use failure::FutureFailureErrorExt;
-use futures::{stream, Future, Poll, Stream};
 use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
+use futures::{stream, Future, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use tokio_io::codec::Decoder;
 
 use bytes::Bytes;
 use context::CoreContext;
 
-use {HgCommands, Request, Response};
 use commands::HgCommandHandler;
 use hooks::HookManager;
+use {HgCommands, Request, Response};
 
 use errors::*;
 
@@ -119,7 +119,8 @@ where
                                 let (bytes, _) = remainder.into_parts();
                                 err(ErrorKind::UnconsumedData(
                                     String::from_utf8_lossy(bytes.as_ref()).into_owned(),
-                                ).into())
+                                )
+                                .into())
                             }),
                             Some(req) => {
                                 let (resps, remainder) =
@@ -141,9 +142,10 @@ where
         });
 
         Some(future)
-    }).filter_map(|x| x)
-        .flatten()
-        .boxify()
+    })
+    .filter_map(|x| x)
+    .flatten()
+    .boxify()
 }
 
 /// Handles a singular request regardless if it contains multiple batched commands or a single one
@@ -185,10 +187,11 @@ where
                         }
                     })),
                 },
-            ).flatten()
-                .collect()
-                .map(Response::Batch)
-                .into_stream();
+            )
+            .flatten()
+            .collect()
+            .map(Response::Batch)
+            .into_stream();
             (
                 responses.boxify(),
                 recv.from_err()

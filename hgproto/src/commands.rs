@@ -165,7 +165,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
                     (
                         dechunker.with_full_content(full_bundle2_content.clone()),
-                        Some(full_bundle2_content)
+                        Some(full_bundle2_content),
                     )
                 } else {
                     (dechunker, None)
