@@ -78,6 +78,16 @@ Configs:
     requires flat manifests, despite blocksendflat being set. This is primarily
     used for mirroring infrastructure.
     ``remotefilelog.simplecacheserverstore`` use simplecache as cache implementation.
+
+Configs for Eden API (HTTP data fetching):
+    ``edenapi.enabled`` specifies whether HTTP data fetching should be used.
+    ``edenapi.url`` specifies the base URL of the API server.
+
+Eden API TLS credentials are configured using the auth section:
+    ``auth.edenapi.prefix``: base URL (without scheme) for which to set credentials.
+    ``auth.edenapi.schemes``: URL scheme to match; should usually be "https".
+    ``auth.edenapi.cert``: client certificate for TLS mutual authenticaton.
+    ``auth.edenapi.key``: client key for TLS mutual authentication.
 """
 from __future__ import absolute_import
 
@@ -121,6 +131,7 @@ from edenscm.mercurial.node import hex, nullrev
 
 from . import (
     debugcommands,
+    edenapi,
     fileserverclient,
     remotefilectx,
     remotefilelog,
@@ -157,6 +168,10 @@ configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
 configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
+
+# Config items for HTTP data fetching.
+configitem("edenapi", "enabled", default=False)
+configitem("edenapi", "url", default=None)
 
 testedwith = "ships-with-fb-hgext"
 
@@ -370,6 +385,9 @@ def setupclient(ui, repo):
 
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
+
+    if ui.configbool("edenapi", "enabled"):
+        repo.edenapi = edenapi.initclient(ui, repo)
 
 
 clientonetime = False
@@ -1184,13 +1202,17 @@ def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
 
 
-@command("debughttphealthcheck", [], _("hg debughttphealthcheck"))
-def debughttphealthcheck(ui, repo, **opts):
-    return debugcommands.debughttphealthcheck(ui, repo, **opts)
+@command("debughttp", [], _("hg debughttp"))
+def debughttp(ui, repo, **opts):
+    return debugcommands.debughttp(ui, repo, **opts)
 
 
 @command("debuggetfiles", [], _("hg debuggetfiles"))
 def debuggetfiles(ui, repo, **opts):
+    """download file content from the API server
+    Read filenode/path pairs from stdin, fetch the content of each file
+    from the API server, and write the results to a datapack.
+    """
     return debugcommands.debuggetfiles(ui, repo, **opts)
 
 

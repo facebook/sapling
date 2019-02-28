@@ -494,8 +494,13 @@ def debugwaitonprefetch(repo):
         pass
 
 
-def debughttphealthcheck(ui, repo, **opts):
-    edenapi.healthcheck(ui, repo)
+def debughttp(ui, repo, **opts):
+    """Perform a health check of the API server."""
+    try:
+        repo.edenapi.health_check()
+        ui.write(_("successfully connected to: %s\n") % edenapi.getbaseurl(ui))
+    except RuntimeError as e:
+        raise error.Abort(e)
 
 
 def debuggetfiles(ui, repo, **opts):
@@ -506,5 +511,5 @@ def debuggetfiles(ui, repo, **opts):
             raise error.Abort(_("invalid input"))
         keys.append(tuple(key))
 
-    outpath = edenapi.getfiles(ui, repo, keys)
-    ui.write(_("wrote datapack: %s\n") % outpath)
+    packpath = repo.edenapi.get_files(keys)
+    ui.write(_("wrote datapack: %s\n") % packpath)

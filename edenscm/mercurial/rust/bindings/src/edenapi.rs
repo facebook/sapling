@@ -3,7 +3,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, mem, str};
+use std::str;
 
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
@@ -16,7 +16,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<client>(py)?;
-    m.add_class::<getfilesrequest>(py)?;
     Ok(m)
 }
 
@@ -58,33 +57,23 @@ py_class!(class client |py| {
             .map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_files(&self, request: &getfilesrequest) -> PyResult<PyBytes> {
-        let mut keys = request.keys(py).try_borrow_mut().map_pyerr::<exc::RuntimeError>(py)?;
-        let keys = mem::replace(&mut *keys, Vec::new());
-
-        let out_path = self.inner(py).get_files(keys).map_pyerr::<exc::RuntimeError>(py)?;
-        let out_path = path_to_local_bytes(&out_path).map_pyerr::<exc::RuntimeError>(py)?;
+    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>) -> PyResult<PyBytes> {
+        let keys = keys.into_iter()
+            .map(|(node, path)| make_key(py, &node, &path))
+            .collect::<PyResult<Vec<Key>>>()?;
+        let out_path = self.inner(py)
+            .get_files(keys)
+            .map_pyerr::<exc::RuntimeError>(py)?;
+        let out_path = path_to_local_bytes(&out_path)
+            .map_pyerr::<exc::RuntimeError>(py)?;
         Ok(PyBytes::new(py, &out_path))
 
     }
 });
 
-py_class!(class getfilesrequest |py| {
-    data keys: RefCell<Vec<Key>>;
-
-    def __new__(_cls) -> PyResult<getfilesrequest> {
-        getfilesrequest::create_instance(py, RefCell::new(Vec::new()))
-    }
-
-    def push(&self, node: &PyBytes, path: &PyBytes) -> PyResult<PyObject> {
-        let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-        let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
-        let path = path.data(py).to_vec();
-        let key = Key::new(path, node);
-
-        let mut keys = self.keys(py).try_borrow_mut().map_pyerr::<exc::RuntimeError>(py)?;
-        keys.push(key);
-
-        Ok(py.None())
-    }
-});
+fn make_key(py: Python, node: &PyBytes, path: &PyBytes) -> PyResult<Key> {
+    let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
+    let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
+    let path = path.data(py).to_vec();
+    Ok(Key::new(path, node))
+}
