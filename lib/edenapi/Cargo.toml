@@ -11,8 +11,10 @@ hyper = "0.12.14"
 hyper-rustls = "0.15.0"
 lazy_static = "1.2.0"
 log = "0.4.6"
+percent-encoding = "1.0.1"
 revisionstore = { path = "../revisionstore" }
 rustls = "0.14.0"
+serde_json = "1.0.38"
 tokio = "0.1.11"
 types = { path = "../types" }
 url = "1.7.2"

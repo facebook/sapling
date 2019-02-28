@@ -14,7 +14,7 @@ pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 /// An HTTP client for the Eden API.
 ///
 /// # Example
-/// ```
+/// ```rust,ignore
 /// use failure::Fallible;
 /// use edenapi::{EdenApi, EdenApiHttpClient};
 ///
