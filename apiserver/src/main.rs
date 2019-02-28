@@ -7,14 +7,13 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-use std::sync::Arc;
-
 use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use failure::Fallible;
 use futures::Future;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use context::CoreContext;

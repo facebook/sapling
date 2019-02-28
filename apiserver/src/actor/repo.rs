@@ -11,6 +11,7 @@ use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
 use bookmarks::Bookmark;
 use bytes::Bytes;
+use cachelib::LruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -45,6 +46,7 @@ use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 pub struct MononokeRepo {
     repo: BlobRepo,
     skiplist_index: Arc<SkiplistIndex>,
+    sha1_cache: Option<LruCachePool>,
 }
 
 impl MononokeRepo {
@@ -65,6 +67,7 @@ impl MononokeRepo {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = RepositoryId::new(config.repoid);
+        let sha1_cache = cachelib::get_pool("content-sha1");
         open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port, None)
             .map(move |repo| {
                 let skiplist_index = {
@@ -94,6 +97,7 @@ impl MononokeRepo {
                 skiplist_index.map(|skiplist_index| Self {
                     repo,
                     skiplist_index,
+                    sha1_cache,
                 })
             })
             .flatten()
@@ -287,13 +291,18 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
         let treemanifestid = HgManifestId::new(treehash);
+        let repoid = self.repo.get_repoid();
+
         self.repo
             .get_manifest_by_nodeid(ctx.clone(), treemanifestid)
-            .map(move |tree| {
-                join_all(tree.list().map(move |entry| {
-                    EntryWithSizeAndContentHash::materialize_future(ctx.clone(), entry)
-                }))
-            })
+            .map({
+                cloned!(self.sha1_cache);
+                move |tree| {
+                join_all(tree.list().map(
+                    move |entry| {
+                        EntryWithSizeAndContentHash::materialize_future(ctx.clone(), repoid.clone(), entry, sha1_cache.clone())
+                    }))
+            }})
             .flatten()
             .map(|files| MononokeRepoResponse::GetTree { files })
             .from_err()

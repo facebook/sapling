@@ -55,6 +55,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
         "idmapping-cache-size",
         "override size of the bonsai/hg mapping cache",
     ),
+    (
+        "content-sha1-cache-size",
+        "override size of the content SHA1 cache",
+    )
 ];
 
 pub struct MononokeApp {
@@ -383,6 +387,9 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .arg(Arg::from_usage(
             "--min-process-size [SIZE] 'process size at which cachelib will grow back to cache-size-gb, in GiB'"
     ))
+    .arg(Arg::from_usage(
+            "--with-content-sha1-cache  '[Mononoke API Server only] enable content SHA1 cache'"
+    ))
     .args_from_usage(
         r#"
         --do-not-init-cachelib 'do not init cachelib (useful for tests)'
@@ -493,6 +500,15 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         get_usize(matches, "idmapping-cache-size", available_space / 20),
     )
     .unwrap();
+
+    if matches.is_present("with-content-sha1-cache") {
+        cachelib::get_or_create_pool(
+            "content-sha1",
+            get_usize(matches, "content-sha1-cache-size", available_space / 20),
+        )
+        .unwrap();
+    }
+
     cachelib::get_or_create_pool(
         "blobstore-blobs",
         get_usize(
