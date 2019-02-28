@@ -76,7 +76,7 @@ impl From<HgFileHistoryEntry> for LooseHistoryEntry {
         Self {
             node: entry.node.into_nodehash().into(),
             parents: entry.parents.into(),
-            linknode: entry.node.into_nodehash().into(),
+            linknode: entry.linknode.into_nodehash().into(),
             copyfrom: entry.copyfrom.map(|(path, _)| path.to_vec()),
         }
     }
