@@ -40,7 +40,7 @@ Enable Mononoke API for Mercurial client
   > EOF
 
 Check that the API server is alive
-  $ hg debughttphealthcheck
+  $ hg debughttp
   successfully connected to: http://localhost:* (glob)
 
 Test fetching single file
