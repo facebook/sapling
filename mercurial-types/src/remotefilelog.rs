@@ -9,7 +9,7 @@ use std::io::Write;
 use failure::Result;
 
 use mononoke_types::MPath;
-use types::LooseHistoryEntry;
+use types::{LooseHistoryEntry, Parents};
 
 use crate::blobnode::HgParents;
 use crate::nodehash::{HgChangesetId, HgFileNodeId, NULL_HASH};
@@ -73,11 +73,25 @@ impl From<HgFileHistoryEntry> for LooseHistoryEntry {
     /// Convert from a representation of a history entry using Mononoke's types to
     /// a representation that uses the Mercurial client's types.
     fn from(entry: HgFileHistoryEntry) -> Self {
+        let node = entry.node.into_nodehash().into();
+        let linknode = entry.linknode.into_nodehash().into();
+
+        let (parents, copyfrom) = match entry.copyfrom {
+            Some((copypath, copyrev)) => {
+                let copypath = copypath.to_vec();
+                let copyrev = copyrev.into_nodehash().into();
+                let (p1, _) = Parents::from(entry.parents).into_nodes();
+                let parents = Parents::new(copyrev, p1);
+                (parents, Some(copypath))
+            }
+            None => (entry.parents.into(), None),
+        };
+
         Self {
-            node: entry.node.into_nodehash().into(),
-            parents: entry.parents.into(),
-            linknode: entry.linknode.into_nodehash().into(),
-            copyfrom: entry.copyfrom.map(|(path, _)| path.to_vec()),
+            node,
+            parents,
+            linknode,
+            copyfrom,
         }
     }
 }
