@@ -156,25 +156,11 @@ class HttpsCommitCloudService(baseservice.BaseService):
         def _tlserror(e):
             # build tls error with all configuration details
             details = []
+            if self.client_certs:
+                details.append(_("* client cert file used '%s'") % self.client_certs)
             if self.ca_certs:
                 details.append(
-                    _(
-                        "* certificate authority (CA) file used '%s' (config option commitcloud.tls.ca_certs)"
-                    )
-                    % self.ca_certs
-                )
-            if self.client_certs:
-                details.append(
-                    _(
-                        "* client cert file used '%s' (config option commitcloud.tls.client_certs)"
-                    )
-                    % self.client_certs
-                )
-            if self.check_hostname:
-                details.append(
-                    _(
-                        "* tls hostname validation is enabled (config option commitcloud.tls.check_hostname)"
-                    )
+                    _("* certificate authority file used '%s'") % self.ca_certs
                 )
             return commitcloudcommon.TLSAccessError(self.ui, str(e), details)
 
