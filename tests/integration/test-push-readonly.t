@@ -55,7 +55,7 @@ create new commit in repo2 and check that push fails
   sending between command
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=* (glob)
+  remote: capabilities: clienttelemetry lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=* (glob)
   remote: 1
   query 1; heads
   sending batch command

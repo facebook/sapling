@@ -13,6 +13,7 @@ extern crate bytes;
 extern crate cloned;
 #[macro_use]
 extern crate failure_ext as failure;
+extern crate fbwhoami;
 #[macro_use]
 extern crate futures;
 #[macro_use]

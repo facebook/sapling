@@ -60,7 +60,7 @@ Do infinitepush (aka commit cloud) push
   sending between command
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
+  remote: capabilities: clienttelemetry lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
   remote: 1
   query 1; heads
   sending batch command
@@ -135,7 +135,7 @@ Pushbackup also works
   sending between command
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
+  remote: capabilities: clienttelemetry lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
   remote: 1
   2 changesets found
   list of changesets:
@@ -198,7 +198,7 @@ Pushbackup that pushes only bookmarks
   sending between command
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
+  remote: capabilities: clienttelemetry lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
   remote: 1
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total

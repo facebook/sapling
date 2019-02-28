@@ -13,6 +13,7 @@ use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
+use fbwhoami::FbWhoAmI;
 use futures::{future, stream, stream::empty, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt, StreamTimeoutError};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
@@ -67,6 +68,7 @@ define_stats! {
 }
 
 mod ops {
+    pub static CLIENTTELEMETRY: &str = "clienttelemetry";
     pub static HELLO: &str = "hello";
     pub static UNBUNDLE: &str = "unbundle";
     pub static HEADS: &str = "heads";
@@ -120,6 +122,7 @@ fn process_stream_timeout_error(err: StreamTimeoutError) -> Error {
 
 fn wireprotocaps() -> Vec<String> {
     vec![
+        "clienttelemetry".to_string(),
         "lookup".to_string(),
         "known".to_string(),
         "getbundle".to_string(),
@@ -570,6 +573,34 @@ impl HgCommands for RepoClient {
             .timeout(timeout_duration())
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::BETWEEN, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_future_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
+            .boxify()
+    }
+
+    // @wireprotocommand('clienttelemetry')
+    fn clienttelemetry(&self, _args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
+        info!(self.ctx.logger(), "clienttelemetry");
+
+        let fallback_hostname = "<no hostname found>";
+        let hostname = match FbWhoAmI::new() {
+            Ok(fbwhoami) => fbwhoami.get_name().unwrap_or(fallback_hostname).to_string(),
+            Err(_) => fallback_hostname.to_string(),
+        };
+
+        let mut scuba_logger = self
+            .prepared_ctx(ops::CLIENTTELEMETRY, None)
+            .scuba()
+            .clone();
+
+        future::ok(hostname)
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
+            .traced(self.ctx.trace(), ops::CLIENTTELEMETRY, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
                     .add_future_stats(&stats)

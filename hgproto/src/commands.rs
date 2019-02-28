@@ -98,6 +98,15 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
+            SingleRequest::ClientTelemetry { args } => (
+                hgcmds
+                    .clienttelemetry(args)
+                    .map(SingleResponse::ClientTelemetry)
+                    .map_err(self::Error::into)
+                    .into_stream()
+                    .boxify(),
+                ok(instream).boxify(),
+            ),
             SingleRequest::Debugwireargs { one, two, all_args } => (
                 self.debugwireargs(one, two, all_args)
                     .map(SingleResponse::Debugwireargs)
@@ -504,6 +513,11 @@ pub trait HgCommands {
     // @wireprotocommand('capabilities')
     fn capabilities(&self) -> HgCommandRes<Vec<String>> {
         unimplemented("capabilities")
+    }
+
+    // @wireprotocommand('clienttelemetry')
+    fn clienttelemetry(&self, _args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
+        unimplemented("clienttelemetry")
     }
 
     // @wireprotocommand('getbundle', '*')

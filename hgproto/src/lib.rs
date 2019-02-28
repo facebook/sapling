@@ -88,6 +88,9 @@ pub enum SingleRequest {
     },
     Branchmap,
     Capabilities,
+    ClientTelemetry {
+        args: HashMap<Vec<u8>, Vec<u8>>,
+    },
     Debugwireargs {
         one: Vec<u8>,
         two: Vec<u8>,
@@ -119,6 +122,7 @@ impl SingleRequest {
             &SingleRequest::Between { .. } => "between",
             &SingleRequest::Branchmap => "branchmap",
             &SingleRequest::Capabilities => "capabilities",
+            &SingleRequest::ClientTelemetry { .. } => "clienttelemetry",
             &SingleRequest::Debugwireargs { .. } => "debugwireargs",
             &SingleRequest::Getbundle(_) => "getbundle",
             &SingleRequest::Heads => "heads",
@@ -205,6 +209,7 @@ pub enum SingleResponse {
     Between(Vec<Vec<HgNodeHash>>),
     Branchmap(HashMap<String, HashSet<HgNodeHash>>),
     Capabilities(Vec<String>),
+    ClientTelemetry(String),
     Debugwireargs(Bytes),
     Getbundle(Bytes),
     Heads(HashSet<HgNodeHash>),
