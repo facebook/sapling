@@ -7,8 +7,6 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
-
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
@@ -23,7 +21,9 @@
 #include <chrono>
 #include <unordered_map>
 
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/fuse/privhelper/test/PrivHelperTestServer.h"
 

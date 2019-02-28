@@ -23,6 +23,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
