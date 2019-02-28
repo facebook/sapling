@@ -436,7 +436,14 @@ def dumpdeltachain(ui, deltachain, **opts):
         )
 
 
-def debughistorypack(ui, paths):
+def debughistorypack(ui, paths, **opts):
+    if opts.get("long"):
+        hashformatter = hex
+        hashlen = 42
+    else:
+        hashformatter = short
+        hashlen = 14
+
     for path in paths:
         if ".hist" in path:
             path = path[: path.index(".hist")]
@@ -450,17 +457,23 @@ def debughistorypack(ui, paths):
                 ui.write(
                     "%s%s%s%s%s\n"
                     % (
-                        "Node".ljust(14),
-                        "P1 Node".ljust(14),
-                        "P2 Node".ljust(14),
-                        "Link Node".ljust(14),
+                        "Node".ljust(hashlen),
+                        "P1 Node".ljust(hashlen),
+                        "P2 Node".ljust(hashlen),
+                        "Link Node".ljust(hashlen),
                         "Copy From",
                     )
                 )
                 lastfilename = filename
             ui.write(
                 "%s  %s  %s  %s  %s\n"
-                % (short(node), short(p1node), short(p2node), short(linknode), copyfrom)
+                % (
+                    hashformatter(node),
+                    hashformatter(p1node),
+                    hashformatter(p2node),
+                    hashformatter(linknode),
+                    copyfrom,
+                )
             )
 
 

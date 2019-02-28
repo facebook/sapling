@@ -1154,9 +1154,14 @@ def debugdatapack(ui, *paths, **opts):
     return debugcommands.debugdatapack(ui, *paths, **opts)
 
 
-@command("debughistorypack", [], _("hg debughistorypack <path>"), norepo=True)
+@command(
+    "debughistorypack",
+    [("", "long", None, _("print the long hashes"))],
+    _("hg debughistorypack <path>"),
+    norepo=True,
+)
 def debughistorypack(ui, *paths, **opts):
-    return debugcommands.debughistorypack(ui, paths)
+    return debugcommands.debughistorypack(ui, paths, **opts)
 
 
 @command("debugkeepset", [], _("hg debugkeepset"))
