@@ -69,6 +69,22 @@ py_class!(class client |py| {
         Ok(PyBytes::new(py, &out_path))
 
     }
+
+    def get_history(
+        &self,
+        keys: Vec<(PyBytes, PyBytes)>,
+        depth: Option<u32> = None
+    ) -> PyResult<PyBytes> {
+        let keys = keys.into_iter()
+            .map(|(node, path)| make_key(py, &node, &path))
+            .collect::<PyResult<Vec<Key>>>()?;
+        let out_path = self.inner(py)
+            .get_history(keys, depth)
+            .map_pyerr::<exc::RuntimeError>(py)?;
+        let out_path = path_to_local_bytes(&out_path)
+            .map_pyerr::<exc::RuntimeError>(py)?;
+        Ok(PyBytes::new(py, &out_path))
+    }
 });
 
 fn make_key(py: Python, node: &PyBytes, path: &PyBytes) -> PyResult<Key> {

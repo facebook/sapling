@@ -1216,6 +1216,19 @@ def debuggetfiles(ui, repo, **opts):
     return debugcommands.debuggetfiles(ui, repo, **opts)
 
 
+@command(
+    "debuggethistory",
+    [("d", "depth", 0, _("how many history entries to fetch per file"), _("DEPTH"))],
+    _("hg debuggethistory"),
+)
+def debuggethistory(ui, repo, **opts):
+    """download file history from the API server
+    Read filenode/path pairs from stdin, fetch the history of each file
+    from the API server, and write the results to a historypack.
+    """
+    return debugcommands.debuggethistory(ui, repo, **opts)
+
+
 def resolveprefetchopts(ui, opts):
     if not opts.get("rev"):
         revset = [".", "draft()"]

@@ -513,3 +513,16 @@ def debuggetfiles(ui, repo, **opts):
 
     packpath = repo.edenapi.get_files(keys)
     ui.write(_("wrote datapack: %s\n") % packpath)
+
+
+def debuggethistory(ui, repo, **opts):
+    keys = []
+    for line in sys.stdin.readlines():
+        key = line.split()
+        if len(key) != 2:
+            raise error.Abort(_("invalid input"))
+        keys.append(tuple(key))
+
+    depth = opts.get("depth") or None
+    packpath = repo.edenapi.get_history(keys, depth)
+    ui.write(_("wrote historypack: %s\n") % packpath)
