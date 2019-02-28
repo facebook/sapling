@@ -139,6 +139,15 @@ impl Timestamp {
     pub fn timestamp_seconds(&self) -> i64 {
         self.0 / 1_000_000_000
     }
+
+    pub fn since_nanos(&self) -> i64 {
+        let now = Self::now().timestamp_nanos();
+        now - self.0
+    }
+
+    pub fn since_seconds(&self) -> i64 {
+        self.since_nanos() / 1_000_000_000
+    }
 }
 
 impl From<DateTime> for Timestamp {

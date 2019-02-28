@@ -106,6 +106,7 @@ impl BookmarkPrefix {
 }
 
 /// Entry that describes an update to a bookmark
+#[derive(Clone)]
 pub struct BookmarkUpdateLogEntry {
     /// Number that sets a total order on single bookmark updates. It can be used to fetch
     /// new log entries
