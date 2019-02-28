@@ -202,7 +202,7 @@ class PrivHelperClientImpl : public PrivHelper,
     // already been destroyed.
     folly::Promise<UnixSocket::Message> promise;
     auto future = promise.getFuture();
-    auto scheduledSuccessfully = eventBase->runInEventBaseThread(
+    eventBase->runInEventBaseThread(
         [this,
          xid,
          msg = std::move(msg),
@@ -218,10 +218,6 @@ class PrivHelperClientImpl : public PrivHelper,
           ++sendPending_;
           conn_->send(std::move(msg), this);
         });
-    if (!scheduledSuccessfully) {
-      return folly::makeFuture<UnixSocket::Message>(std::runtime_error(
-          "failed to schedule privhelper send in EventBase thread"));
-    }
     return future;
   }
 
