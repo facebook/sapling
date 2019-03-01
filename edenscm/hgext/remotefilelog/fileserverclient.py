@@ -727,7 +727,14 @@ class fileserverclient(object):
 
     def connect(self):
         if self.cacheprocess:
-            cmd = "%s %s" % (self.cacheprocess, shallowutil.getcachepath(self.ui))
+            if self.ui.configbool("remotefilelog", "fetchpacks"):
+                cachepath = shallowutil.getcachepackpath(
+                    self.repo, constants.FILEPACK_CATEGORY
+                )
+            else:
+                cachepath = shallowutil.getcachepath(self.ui)
+
+            cmd = "%s %s" % (self.cacheprocess, cachepath)
             self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always
