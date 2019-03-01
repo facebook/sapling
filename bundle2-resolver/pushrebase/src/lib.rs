@@ -737,6 +737,11 @@ fn rebase_changeset(
         None => (),
     }
 
+    // Mutation information from the original commit must be stripped.
+    for key in &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"] {
+        bcs.extra.remove(*key);
+    }
+
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
     // copy information for all copied/moved files needs to be updated
     bcs.file_changes = bcs
