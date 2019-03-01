@@ -561,31 +561,29 @@ def isbackedup(ui, repo, dest=None, **opts):
         revs = ["."]
 
     path = _getremotepath(repo, ui, dest)
-    bkpstate = _readlocalbackupstate(ui, repo, path)
     unfi = repo.unfiltered()
-    backeduprevs = unfi.revs("draft() and ::%ls", bkpstate.heads)
+    revs = scmutil.revrange(repo, revs)
+    nodestocheck = [repo[r].hex() for r in revs]
 
-    def getconnection():
-        return repo.connectionpool.get(path, opts)
+    if remote:
 
-    revs = scmutil.revrange(unfi, revs)
-    nodestocheck = [unfi[r].hex() for r in revs if r in backeduprevs]
+        def getconnection():
+            return repo.connectionpool.get(path, opts)
 
-    if remote and nodestocheck:
-        isbackedupremote = {
+        isbackedup = {
             nodestocheck[i]: res
             for i, res in enumerate(
                 infinitepush.isbackedupnodes(getconnection, nodestocheck)
             )
         }
+    else:
+        bkpstate = _readlocalbackupstate(ui, repo, path)
+        backeduprevs = unfi.revs("draft() and ::%ls", bkpstate.heads)
+        isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
 
-    for r in revs:
-        backedup = r in backeduprevs
-        node = unfi[r].hex()
-        if remote and backedup:
-            backedup = isbackedupremote[node]
-        ui.write(_(node + " "))
-        ui.write(_("backed up" if backedup else "not backed up"))
+    for n in nodestocheck:
+        ui.write((n + " "))
+        ui.write(_("backed up") if isbackedup[n] else _("not backed up"))
         ui.write(_("\n"))
 
 

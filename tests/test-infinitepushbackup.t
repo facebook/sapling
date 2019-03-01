@@ -479,7 +479,7 @@ Prune commit and then inhibit obsmarkers. Make sure isbackedup still works
   1 changesets pruned
   hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
-  $ hg isbackedup -r 6c4f4b30ae4c2dd928d551836c70c741ee836650
+  $ hg isbackedup -r 6c4f4b30ae4c2dd928d551836c70c741ee836650 --hidden
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
 
 Test backupgeneration config option. If this config option value changes then
@@ -681,3 +681,14 @@ Test push for new bookmark, should not be pushed with --delete-bookmarks
   nothing to backup
   $ scratchbookmarks | grep booktester
   [1]
+
+Remove the infinitepush backup state file
+  $ rm .hg/infinitepushbackups/infinitepushbackupstate_f6bce706
+
+Local check fails
+  $ hg isbackedup -r .
+  b226c8ca23a2db9b70a50978c6d30658683d9e9f not backed up
+
+But remote check still succeeds
+  $ hg isbackedup -r . --remote
+  b226c8ca23a2db9b70a50978c6d30658683d9e9f backed up
