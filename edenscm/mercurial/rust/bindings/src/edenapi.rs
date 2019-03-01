@@ -59,7 +59,7 @@ py_class!(class client |py| {
 
     def get_files(&self, keys: Vec<(PyBytes, PyBytes)>) -> PyResult<PyBytes> {
         let keys = keys.into_iter()
-            .map(|(node, path)| make_key(py, &node, &path))
+            .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
         let out_path = self.inner(py)
             .get_files(keys)
@@ -76,7 +76,7 @@ py_class!(class client |py| {
         depth: Option<u32> = None
     ) -> PyResult<PyBytes> {
         let keys = keys.into_iter()
-            .map(|(node, path)| make_key(py, &node, &path))
+            .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
         let out_path = self.inner(py)
             .get_history(keys, depth)
@@ -87,9 +87,9 @@ py_class!(class client |py| {
     }
 });
 
-fn make_key(py: Python, node: &PyBytes, path: &PyBytes) -> PyResult<Key> {
+fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
+    let path = path.data(py).to_vec();
     let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
     let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
-    let path = path.data(py).to_vec();
     Ok(Key::new(path, node))
 }

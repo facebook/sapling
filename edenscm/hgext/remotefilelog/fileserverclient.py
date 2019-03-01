@@ -390,8 +390,15 @@ class fileserverclient(object):
 
     def request(self, fileids):
         if self.ui.configbool("remotefilelog", "fetchpacks"):
+            if self.ui.configbool("edenapi", "enabled"):
+                return self.httprequestpacks(fileids)
             return self.requestpacks(fileids)
         return self.requestloose(fileids)
+
+    def httprequestpacks(self, fileids):
+        """Fetch packs via HTTP using the Eden API"""
+        self.repo.edenapi.get_files(fileids)
+        self.repo.edenapi.get_history(fileids)
 
     def requestpacks(self, fileids):
         if not self.remotecache.connected:
