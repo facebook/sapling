@@ -9,8 +9,6 @@
  */
 #include "eden/fs/utils/TimeUtil.h"
 
-#include <glog/logging.h>
-
 #include <folly/Format.h>
 
 namespace facebook {

@@ -9,8 +9,6 @@
  */
 #include "eden/fs/model/git/GitIgnoreStack.h"
 
-#include <glog/logging.h>
-
 namespace facebook {
 namespace eden {
 
