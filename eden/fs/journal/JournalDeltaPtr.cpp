@@ -10,6 +10,8 @@
 #include "JournalDeltaPtr.h"
 #include "JournalDelta.h"
 
+#include <glog/logging.h>
+
 namespace facebook {
 namespace eden {
 
