@@ -12,81 +12,120 @@ them ondemand as needed.
 Configs:
 
     ``packs.maxchainlen`` specifies the maximum delta chain length in pack files
+
     ``packs.maxpacksize`` specifies the maximum pack file size
+
     ``packs.maxpackfilecount`` specifies the maximum number of packs in the
     shared cache (trees only for now)
+
     ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
+
     ``remotefilelog.bgprefetchrevs`` specifies revisions to fetch on commit and
+
     update, and on other commands that use them. Different from pullprefetch.
+
     ``remotefilelog.gcrepack`` does garbage collection during repack when True
+
     ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
     it is garbage collected
+
     ``remotefilelog.localdatarepack`` runs repack on local data loose files
+
     ``remotefilelog.packlocaldata`` use pack files to store local data instead
     of storing them as loose files
+
     ``remotefilelog.fetchpacks`` fetch data from the server and scmmemcache in
     pack files format
+
     ``remotefilelog.getfilesstep`` the number of files per batch during fetching
+
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
+
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
     days after which it is no longer prefetched.
+
     ``remotefilelog.prefetchdelay`` specifies delay between background
     prefetches in seconds after operations that change the working copy parent
+
     ``remotefilelog.data.gencountlimit`` constraints the minimum number of data
     pack files required to be considered part of a generation. In particular,
     minimum number of packs files > gencountlimit.
+
     ``remotefilelog.data.generations`` list for specifying the lower bound of
     each generation of the data pack files. For example, list ['100MB','1MB']
     or ['1MB', '100MB'] will lead to three generations: [0, 1MB), [
     1MB, 100MB) and [100MB, infinity).
+
     ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
     include in an incremental data repack.
+
     ``remotefilelog.data.repackmaxpacksize`` the maximum size of a pack file for
     it to be considered for an incremental data repack.
+
     ``remotefilelog.data.repacksizelimit`` the maximum total size of pack files
     to include in an incremental data repack.
+
     ``remotefilelog.history.gencountlimit`` constraints the minimum number of
     history pack files required to be considered part of a generation. In
     particular, minimum number of packs files > gencountlimit.
+
     ``remotefilelog.history.generations`` list for specifying the lower bound of
     each generation of the history pack files. For example, list [
     '100MB', '1MB'] or ['1MB', '100MB'] will lead to three generations: [
     0, 1MB), [1MB, 100MB) and [100MB, infinity).
+
     ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
     include in an incremental history repack.
+
     ``remotefilelog.history.repackmaxpacksize`` the maximum size of a pack file
     for it to be considered for an incremental history repack.
+
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
     files to include in an incremental history repack.
+
     ``remotefilelog.userustrepack`` use rust based repack implementation.
+
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
+
     ``remotefilelog.updatesharedcache`` is used to prevent writing data to the
     shared remotefilelog cache. This can be useful to prevent poisoning cache
     while using experimental remotefilelog store.
+
     ``remotefilelog.descendantrevfastpath`` controls whether to use the
     linkrev-fixup fastpath when creating a filectx from a descendant rev.
     The default is true, but this may make some operations cause many tree
     fetches when used in conjunction with treemanifest in treeonly mode.
+
     ``format.userustdatapack`` switches to using the rust data pack
     implementation.
+
     ``format.userusthistorypack`` switches to using the rust history pack
     implementation.
+
     ``treemanifest.blocksendflat`` causes an exception to be thrown if the
     current repository attempts to add flat manifests to a changegroup.
+
     ``treemanifest.forceallowflat`` lets a client tell the server that it
     requires flat manifests, despite blocksendflat being set. This is primarily
     used for mirroring infrastructure.
+
     ``remotefilelog.simplecacheserverstore`` use simplecache as cache implementation.
 
 Configs for Eden API (HTTP data fetching):
+
     ``edenapi.enabled`` specifies whether HTTP data fetching should be used.
+
     ``edenapi.url`` specifies the base URL of the API server.
 
 Eden API TLS credentials are configured using the auth section:
+
     ``auth.edenapi.prefix``: base URL (without scheme) for which to set credentials.
+
     ``auth.edenapi.schemes``: URL scheme to match; should usually be "https".
+
     ``auth.edenapi.cert``: client certificate for TLS mutual authenticaton.
+
     ``auth.edenapi.key``: client key for TLS mutual authentication.
 """
 from __future__ import absolute_import
