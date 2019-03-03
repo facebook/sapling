@@ -12,7 +12,7 @@ use once_cell::sync::OnceCell;
 
 use types::{Node, PathComponentBuf, RepoPath, RepoPathBuf};
 
-use self::store::{Element as StoreElement, Entry as StoreEntry, Flag as StoreFlag, Store};
+use self::store::Store;
 use crate::{FileMetadata, Manifest};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
@@ -66,32 +66,36 @@ impl Link {
     }
 }
 
-fn store_entry_to_links(store_entry: StoreEntry) -> Fallible<BTreeMap<PathComponentBuf, Link>> {
+fn store_entry_to_links(store_entry: store::Entry) -> Fallible<BTreeMap<PathComponentBuf, Link>> {
     let mut links = BTreeMap::new();
     for element_result in store_entry.elements() {
         let element = element_result?;
         let link = match element.flag {
-            StoreFlag::File(file_type) => Leaf(FileMetadata::new(element.node, file_type)),
-            StoreFlag::Directory => Link::durable(element.node),
+            store::Flag::File(file_type) => Leaf(FileMetadata::new(element.node, file_type)),
+            store::Flag::Directory => Link::durable(element.node),
         };
         links.insert(element.component, link);
     }
     Ok(links)
 }
 
-fn links_to_store_entry(links: &BTreeMap<PathComponentBuf, Link>) -> Fallible<StoreEntry> {
+fn links_to_store_entry(links: &BTreeMap<PathComponentBuf, Link>) -> Fallible<store::Entry> {
     let iter = links.iter().map(|(component, link)| {
         let (node, flag) = match link {
             Leaf(ref file_metadata) => (
                 &file_metadata.node,
-                StoreFlag::File(file_metadata.file_type.clone()),
+                store::Flag::File(file_metadata.file_type.clone()),
             ),
-            Durable(ref entry) => (&entry.node, StoreFlag::Directory),
+            Durable(ref entry) => (&entry.node, store::Flag::Directory),
             Ephemeral(_) => return Err(format_err!("cannot store ephemeral manifest nodes")),
         };
-        Ok(StoreElement::new(component.to_owned(), node.clone(), flag))
+        Ok(store::Element::new(
+            component.to_owned(),
+            node.clone(),
+            flag,
+        ))
     });
-    StoreEntry::from_elements(iter)
+    store::Entry::from_elements(iter)
 }
 
 // TODO: Use Vec instead of BTreeMap
