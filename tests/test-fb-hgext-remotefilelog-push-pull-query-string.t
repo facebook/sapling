@@ -1,8 +1,16 @@
   $ . "$TESTDIR/library.sh"
 
+  $ unset SCM_SAMPLING_FILEPATH
+  $ LOGDIR=$TESTTMP/logs
+  $ mkdir $LOGDIR
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > logginghelper=
   > remotenames=
+  > sampling=
+  > [sampling]
+  > filepath = $LOGDIR/samplingpath.txt
+  > key.logginghelper=logginghelper
   > EOF
 
   $ hg init repo
@@ -73,3 +81,18 @@ as well
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x3
   
+Verify logging uses correct repo name
+  $ cat > logverify.py << EOF
+  > import json
+  > with open("$LOGDIR/samplingpath.txt") as f:
+  >    data = f.read().strip("\0").split("\0")
+  > alldata = {}
+  > for jsonstr in data:
+  >     entry = json.loads(jsonstr)
+  >     if entry["category"] == "logginghelper":
+  >         for k in sorted(entry["data"].keys()):
+  >             if k == "repo" and entry["data"][k] != None:
+  >                 print("%s: %s" % (k, entry["data"][k]))
+  > EOF
+  $ python logverify.py | uniq
+  repo: repo

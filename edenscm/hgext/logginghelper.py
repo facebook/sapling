@@ -30,7 +30,7 @@ def _localrepoinit(orig, self, baseui, path=None, create=False):
     orig(self, baseui, path, create)
     reponame = self.ui.config("paths", "default")
     if reponame:
-        reponame = os.path.basename(reponame)
+        reponame = os.path.basename(reponame).split("?")[0]
     kwargs = {"repo": reponame}
 
     # The configs being read here are user defined, so we need to suppress
