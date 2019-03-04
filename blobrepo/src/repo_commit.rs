@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use crate::failure::{
     err_msg, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
 };
-use futures::future::{self, Future, Shared, SharedError, SharedItem};
+use futures::future::{self, ok, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
@@ -545,6 +545,39 @@ fn compute_changed_files_pair(
 /// mock Manifests I will postpone writing tests for this
 pub fn compute_changed_files(
     ctx: CoreContext,
+    repo: BlobRepo,
+    root_mf_id: HgManifestId,
+    p1_mf_id: Option<&HgManifestId>,
+    p2_mf_id: Option<&HgManifestId>,
+) -> BoxFuture<Vec<MPath>, Error> {
+    let root_mf = repo.get_manifest_by_nodeid(ctx.clone(), root_mf_id);
+
+    let p1_mf = match p1_mf_id {
+        Some(p1_mf_id) => repo
+            .get_manifest_by_nodeid(ctx.clone(), *p1_mf_id)
+            .map(Some)
+            .boxify(),
+        None => ok(None).boxify(),
+    };
+
+    let p2_mf = match p2_mf_id {
+        Some(p2_mf_id) => repo
+            .get_manifest_by_nodeid(ctx.clone(), *p2_mf_id)
+            .map(Some)
+            .boxify(),
+        None => ok(None).boxify(),
+    };
+
+    root_mf
+        .join3(p1_mf, p2_mf)
+        .and_then(move |(root_mf, p1_mf, p2_mf)| {
+            compute_changed_files_impl(ctx, &root_mf, p1_mf.as_ref(), p2_mf.as_ref())
+        })
+        .boxify()
+}
+
+fn compute_changed_files_impl(
+    ctx: CoreContext,
     root: &Box<dyn Manifest + Sync>,
     p1: Option<&Box<dyn Manifest + Sync>>,
     p2: Option<&Box<dyn Manifest + Sync>>,
@@ -665,11 +698,10 @@ fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {
 
 pub fn process_entries(
     ctx: CoreContext,
-    repo: BlobRepo,
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     new_child_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
-) -> BoxFuture<(Box<dyn Manifest + Sync>, HgManifestId), Error> {
+) -> BoxFuture<HgManifestId, Error> {
     let root_manifest_fut = root_manifest
         .context("While uploading root manifest")
         .from_err()
@@ -706,17 +738,8 @@ pub fn process_entries(
     root_manifest_fut
         .join(child_entries_fut)
         .and_then(move |(root_hash, ())| match root_hash {
-            None => future::ok((
-                manifest::EmptyManifest.boxed(),
-                HgManifestId::new(NULL_HASH),
-            ))
-            .boxify(),
-            Some(root_hash) => repo
-                .get_manifest_by_nodeid(ctx, HgManifestId::new(root_hash))
-                .context("While fetching root manifest")
-                .from_err()
-                .map(move |m| (m, HgManifestId::new(root_hash)))
-                .boxify(),
+            None => future::ok(HgManifestId::new(NULL_HASH)).boxify(),
+            Some(root_hash) => future::ok(HgManifestId::new(root_hash)).boxify(),
         })
         .timed(move |stats, result| {
             if result.is_ok() {
@@ -851,28 +874,6 @@ pub fn handle_parents(
             Ok(())
         })
         .boxify()
-}
-
-pub fn fetch_parent_manifests(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    parent_manifest_hashes: &Vec<HgManifestId>,
-) -> BoxFuture<
-    (
-        Option<Box<dyn Manifest + Sync>>,
-        Option<Box<dyn Manifest + Sync>>,
-    ),
-    Error,
-> {
-    let p1_manifest_hash = parent_manifest_hashes.get(0).cloned();
-    let p2_manifest_hash = parent_manifest_hashes.get(1).cloned();
-    let p1_manifest = p1_manifest_hash.map({
-        cloned!(ctx, repo);
-        move |m| repo.get_manifest_by_nodeid(ctx, m)
-    });
-    let p2_manifest = p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(ctx, m));
-
-    p1_manifest.join(p2_manifest).boxify()
 }
 
 pub fn make_new_changeset(

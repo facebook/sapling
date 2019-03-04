@@ -2006,7 +2006,6 @@ impl CreateChangeset {
 
         let upload_entries = process_entries(
             ctx.clone(),
-            repo.clone(),
             &entry_processor,
             self.root_manifest,
             self.sub_entries,
@@ -2035,7 +2034,7 @@ impl CreateChangeset {
                     let cs_metadata = self.cs_metadata;
 
                     move |(
-                        (root_manifest, root_mf_id),
+                        root_mf_id,
                         (parents, parent_manifest_hashes, bonsai_parents),
                     )| {
                         let files = if let Some(expected_files) = expected_files {
@@ -2045,23 +2044,13 @@ impl CreateChangeset {
                             future::ok(expected_files).boxify()
                         } else {
                             STATS::create_changeset_compute_cf.add_value(1);
-                            fetch_parent_manifests(
+                            compute_changed_files(
                                 ctx.clone(),
                                 repo.clone(),
-                                &parent_manifest_hashes,
+                                root_mf_id,
+                                parent_manifest_hashes.get(0),
+                                parent_manifest_hashes.get(1),
                             )
-                            .and_then({
-                                cloned!(ctx);
-                                move |(p1_manifest, p2_manifest)| {
-                                    compute_changed_files(
-                                        ctx.clone(),
-                                        &root_manifest,
-                                        p1_manifest.as_ref(),
-                                        p2_manifest.as_ref(),
-                                    )
-                                }
-                            })
-                            .boxify()
                         };
 
                         let p1_mf = parent_manifest_hashes.get(0).cloned();

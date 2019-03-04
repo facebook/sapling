@@ -683,13 +683,18 @@ fn test_compute_changed_files_no_parents() {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs = run_future(
-            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
-        )
-        .unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), cs.manifestid())).unwrap();
+        let cs = run_future(repo.get_changeset_by_changesetid(
+            ctx.clone(),
+            HgChangesetId::new(nodehash),
+        )).unwrap();
 
-        let diff = run_future(compute_changed_files(ctx.clone(), &mf, None, None)).unwrap();
+        let diff = run_future(compute_changed_files(
+            ctx.clone(),
+            repo.clone(),
+            cs.manifestid(),
+            None,
+            None,
+        )).unwrap();
         assert!(
             diff == expected,
             "Got {:?}, expected {:?}\n",
@@ -723,19 +728,17 @@ fn test_compute_changed_files_one_parent() {
             repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
         )
         .unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), cs.manifestid())).unwrap();
 
         let parent_cs = run_future(
             repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(parenthash)),
         )
         .unwrap();
-        let parent_mf =
-            run_future(repo.get_manifest_by_nodeid(ctx.clone(), parent_cs.manifestid())).unwrap();
 
         let diff = run_future(compute_changed_files(
             ctx.clone(),
-            &mf,
-            Some(&parent_mf),
+            repo.clone(),
+            cs.manifestid(),
+            Some(&parent_cs.manifestid()),
             None,
         ))
         .unwrap();
