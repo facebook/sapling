@@ -948,6 +948,7 @@ class EdenCheckout:
             # This is the checkout root
             return Path()
 
+        # pyre-fixme[22]: The cast is redundant.
         curdir = cast(Path, path.parent)
         path_parts = [path.name]
         while True:
@@ -963,6 +964,7 @@ class EdenCheckout:
                 )
 
             path_parts.append(curdir.name)
+            # pyre-fixme[22]: The cast is redundant.
             curdir = typing.cast(Path, curdir.parent)
 
     def get_config(self) -> CheckoutConfig:
@@ -981,6 +983,7 @@ class EdenCheckout:
             "bind-mounts": checkout_config.bind_mounts,
         }
         with self._config_path().open("w") as f:
+            # pyre-fixme[6]: Expected `_Writable` for 2nd param but got `IO[]`.
             toml.dump(config_data, f)
 
         # Update our local config cache

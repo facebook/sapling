@@ -87,11 +87,7 @@ class EdenClient(EdenService.Client):
             self._transport.open()
         except TTransportException as ex:
             self.close()
-            # pyre-fixme[20]: Call `object.__eq__` expects argument `o`.
             if ex.type == TTransportException.NOT_OPEN:
-                # pyre: Expected `str` for 1st anonymous parameter to call
-                # pyre: `eden.thrift.client.EdenNotRunningError.__init__` but
-                # pyre-fixme[6]: got `Optional[str]`.
                 raise EdenNotRunningError(self._socket_path)
             raise
 

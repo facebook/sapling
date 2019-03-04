@@ -274,11 +274,11 @@ def enumerate_directory(path: Path) -> Dict[Path, os.stat_result]:
 def _enumerate_directory_helper(
     root_path: Path, rel_path: Path, results: Dict[Path, os.stat_result]
 ) -> None:
-    # pyre-ignore[6]: T38224368
     for entry in os.scandir(root_path / rel_path):
         # Current versions of typeshed don't know about the follow_symlinks argument,
         # so ignore type errors on the next line.
         stat_info: os.stat_result = entry.stat(follow_symlinks=False)  # type: ignore
+        # pyre-fixme[6]: Expected `Union[PurePath, str]` for 1st param but got `AnyStr`.
         entry_path: Path = rel_path / entry.name
         results[entry_path] = stat_info
         if stat_mod.S_ISDIR(stat_info.st_mode):

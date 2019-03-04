@@ -207,6 +207,7 @@ class Overlay:
         return header
 
     def read_dir_inode(self, inode_number: int) -> OverlayDir:
+        # pyre-fixme[7]: Expected `OverlayDir` but got `Union[OverlayDir, OverlayHead...
         return self.read_dir_inode_tuple(inode_number)[1]
 
     def read_dir_inode_tuple(
@@ -231,6 +232,7 @@ class Overlay:
         return tree_data
 
     def open_file_inode(self, inode_number: int) -> BinaryIO:
+        # pyre-fixme[7]: Expected `BinaryIO` but got `Union[BinaryIO, OverlayHeader]`.
         return self.open_file_inode_tuple(inode_number)[1]
 
     def open_file_inode_tuple(
@@ -315,9 +317,7 @@ class Overlay:
                     f"found unexpected type {header.type!r}"
                 )
 
-            output_path.parent.mkdir(  # pyre-ignore (T36816872)
-                parents=True, exist_ok=True
-            )
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             file_type = stat.S_IFMT(mode)
             if file_type == stat.S_IFLNK:
                 contents = inf.read()

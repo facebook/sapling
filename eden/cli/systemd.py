@@ -69,7 +69,6 @@ class EdenFSSystemdServiceConfig:
                 self.__extra_edenfs_arguments
             ),
         }
-        # pyre-ignore: T32649448
         self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_file_path.write_bytes(SystemdEnvironmentFile.dumps(variables))
 
@@ -118,6 +117,7 @@ class SystemdEnvironmentFile:
     def __escape_value(value: bytes) -> bytes:
         return (
             b'"'
+            # pyre-fixme[6]: Expected `AnyStr` for 2nd param but got `Callable[[Any],...
             + re.sub(b'[\\\\"]', lambda match: b"\\" + match.group(0), value)
             + b'"'
         )

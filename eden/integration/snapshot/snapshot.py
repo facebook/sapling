@@ -76,7 +76,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         state.
         """
         # Make sure the output directory exists
-        output_path.parent.mkdir(parents=True, exist_ok=True)  # pyre-ignore (T36816872)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         cmd = [
             "gtar",
@@ -414,7 +414,7 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
     ) -> None:
         """Helper function to write a file in the checkout."""
         file_path = self.checkout_path / path
-        file_path.parent.mkdir(parents=True, exist_ok=True)  # pyre-ignore (T36816872)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         with file_path.open("wb") as f:
             os.fchmod(f.fileno(), mode)
             f.write(contents)
@@ -425,9 +425,7 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
         try:
             file_path.unlink()
         except FileNotFoundError:
-            file_path.parent.mkdir(  # pyre-ignore (T36816872)
-                parents=True, exist_ok=True
-            )
+            file_path.parent.mkdir(parents=True, exist_ok=True)
         os.symlink(contents, bytes(file_path))
 
     def chmod(self, path: Union[Path, str], mode: int) -> None:
@@ -449,7 +447,7 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
 
     def make_socket(self, path: Union[Path, str], mode: int = 0o755) -> None:
         socket_path = self.checkout_path / path
-        socket_path.parent.mkdir(parents=True, exist_ok=True)  # pyre-ignore (T36816872)
+        socket_path.parent.mkdir(parents=True, exist_ok=True)
         with socket.socket(socket.AF_UNIX) as sock:
             # Call fchmod() before we create the socket to ensure that its initial
             # permissions are not looser than requested.  The OS will still honor the
@@ -492,7 +490,6 @@ def generate(snapshot_type: Type[T]) -> Iterator[T]:
     with create_tmp_dir() as tmpdir:
         snapshot = snapshot_type(tmpdir)
         snapshot.generate()
-        # pyre-ignore[7]: T38224037
         yield snapshot
 
 

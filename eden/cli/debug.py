@@ -647,6 +647,7 @@ class UnloadInodesCmd(Subcmd):
         )
         parser.add_argument(
             "age",
+            # pyre-fixme[6]: Expected `Union[Callable[[str], _T], FileType]` for 2nd ...
             type=float,
             nargs="?",
             default=0,
