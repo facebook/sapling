@@ -13,7 +13,7 @@ use crate::asynchistorystore::AsyncHistoryStore;
 
 pub type AsyncUnionHistoryStore<T> = AsyncHistoryStore<UnionHistoryStore<T>>;
 
-fn new_store<T: HistoryStore + Send + 'static>(
+fn new_store<T: HistoryStore + Send + Sync + 'static>(
     packs: Vec<PathBuf>,
     builder: impl Fn(&Path) -> Fallible<T> + Send + 'static,
 ) -> impl Future<Item = AsyncUnionHistoryStore<T>, Error = Error> + Send + 'static {

@@ -15,7 +15,7 @@ pub struct AsyncHistoryStore<T: HistoryStore> {
     history: AsyncWrapper<T>,
 }
 
-impl<T: HistoryStore + Send> AsyncHistoryStore<T> {
+impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
     pub(crate) fn new_(store: T) -> Self {
         AsyncHistoryStore {
             history: AsyncWrapper::new(store),
@@ -43,7 +43,7 @@ impl<T: HistoryStore + Send> AsyncHistoryStore<T> {
     }
 }
 
-impl<T: HistoryStore + IterableStore + Send> AsyncHistoryStore<T> {
+impl<T: HistoryStore + IterableStore + Send + Sync> AsyncHistoryStore<T> {
     /// Iterate over all the keys of this historystore.
     pub fn iter(&self) -> impl Stream<Item = Key, Error = Error> + Send {
         let keysfut = self.history.block(move |store| store.iter().collect());

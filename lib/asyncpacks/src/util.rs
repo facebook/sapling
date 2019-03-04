@@ -1,6 +1,6 @@
 // Copyright 2019 Facebook, Inc.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use failure::{Error, Fallible};
 use futures::future::poll_fn;
@@ -15,13 +15,13 @@ struct AsyncWrapperInner<T> {
 
 /// Wraps a synchronous datastructure into an asynchronous one.
 pub struct AsyncWrapper<T> {
-    inner: Arc<Mutex<AsyncWrapperInner<T>>>,
+    inner: Arc<AsyncWrapperInner<T>>,
 }
 
-impl<T: Send> AsyncWrapper<T> {
+impl<T: Send + Sync> AsyncWrapper<T> {
     pub fn new(data: T) -> Self {
         AsyncWrapper {
-            inner: Arc::new(Mutex::new(AsyncWrapperInner { data })),
+            inner: Arc::new(AsyncWrapperInner { data }),
         }
     }
 
@@ -32,12 +32,7 @@ impl<T: Send> AsyncWrapper<T> {
     ) -> impl Future<Item = U, Error = Error> + Send {
         poll_fn({
             cloned!(self.inner);
-            move || {
-                blocking(|| {
-                    let inner = inner.lock().expect("Poisoned Mutex");
-                    callback(&inner.data)
-                })
-            }
+            move || blocking(|| callback(&inner.data))
         })
         .from_err()
         .and_then(|res| res)

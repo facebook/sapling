@@ -15,7 +15,7 @@ pub struct AsyncDataStore<T: DataStore> {
     data: AsyncWrapper<T>,
 }
 
-impl<T: DataStore + Send> AsyncDataStore<T> {
+impl<T: DataStore + Send + Sync> AsyncDataStore<T> {
     pub(crate) fn new_(store: T) -> Self {
         AsyncDataStore {
             data: AsyncWrapper::new(store),
@@ -58,7 +58,7 @@ impl<T: DataStore + Send> AsyncDataStore<T> {
     }
 }
 
-impl<T: DataStore + IterableStore + Send> AsyncDataStore<T> {
+impl<T: DataStore + IterableStore + Send + Sync> AsyncDataStore<T> {
     /// Iterate over all the keys of this datastore.
     pub fn iter(&self) -> impl Stream<Item = Key, Error = Error> + Send {
         let keysfut = self.data.block(move |store| store.iter().collect());
