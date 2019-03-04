@@ -148,20 +148,28 @@ class remotefilelogmetadatastore(basestore.basestore):
     def add(self, name, node, parents, linknode):
         raise RuntimeError("cannot add metadata only to remotefilelog " "metadatastore")
 
+    def markforrefresh(self):
+        pass
+
 
 class remotemetadatastore(object):
     def __init__(self, ui, fileservice, shared):
         self._fileservice = fileservice
         self._shared = shared
 
-    def getancestors(self, name, node, known=None):
+    def _prefetch(self, name, node):
         self._fileservice.prefetch(
             [(name, hex(node))], force=True, fetchdata=False, fetchhistory=True
         )
+        self._shared.markforrefresh()
+
+    def getancestors(self, name, node, known=None):
+        self._prefetch(name, node)
         return self._shared.getancestors(name, node, known=known)
 
     def getnodeinfo(self, name, node):
-        return self.getancestors(name, node)[node]
+        self._prefetch(name, node)
+        return self._shared.getnodeinfo(name, node)
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to a remote store")

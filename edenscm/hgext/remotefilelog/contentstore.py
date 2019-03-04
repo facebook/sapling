@@ -226,6 +226,9 @@ class remotefilelogcontentstore(basestore.basestore):
         meta = {constants.METAKEYFLAG: flags, constants.METAKEYSIZE: size}
         self._threaddata.metacache = (node, meta)
 
+    def markforrefresh(self):
+        pass
+
 
 class remotecontentstore(object):
     def __init__(self, ui, fileservice, shared):
@@ -233,24 +236,24 @@ class remotecontentstore(object):
         # type(shared) is usually remotefilelogcontentstore
         self._shared = shared
 
-    def get(self, name, node):
+    def _prefetch(self, name, node):
         self._fileservice.prefetch([(name, hex(node))], force=True, fetchdata=True)
+        self._shared.markforrefresh()
+
+    def get(self, name, node):
+        self._prefetch(name, node)
         return self._shared.get(name, node)
 
     def getdelta(self, name, node):
-        revision = self.get(name, node)
-        return revision, name, nullid, self._shared.getmeta(name, node)
+        self._prefetch(name, node)
+        return self._shared.getdelta(name, node)
 
     def getdeltachain(self, name, node):
-        # Since our remote content stores just contain full texts, we return a
-        # fake delta chain that just consists of a single full text revision.
-        # The nullid in the deltabasenode slot indicates that the revision is a
-        # fulltext.
-        revision = self.get(name, node)
-        return [(name, node, None, nullid, revision)]
+        self._prefetch(name, node)
+        return self._shared.getdeltachain(name, node)
 
     def getmeta(self, name, node):
-        self._fileservice.prefetch([(name, hex(node))], force=True, fetchdata=True)
+        self._prefetch(name, node)
         return self._shared.getmeta(name, node)
 
     def add(self, name, node, data):

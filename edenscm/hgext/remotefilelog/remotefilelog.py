@@ -558,9 +558,15 @@ class remotefileslog(filelog.fileslog):
         spackcontent, spackmetadata, lpackcontent, lpackmetadata = self.makepackstores()
         cachecontent, cachemetadata = self.makecachestores()
         localcontent, localmetadata = self.makelocalstores()
-        remotecontent, remotemetadata = self.makeremotestores(
-            cachecontent, cachemetadata
-        )
+
+        if self.ui.configbool("remotefilelog", "fetchpacks"):
+            remotecontent, remotemetadata = self.makeremotestores(
+                spackcontent, spackmetadata
+            )
+        else:
+            remotecontent, remotemetadata = self.makeremotestores(
+                cachecontent, cachemetadata
+            )
 
         mutablelocalstore = mutablestores.mutabledatahistorystore(self)
 
