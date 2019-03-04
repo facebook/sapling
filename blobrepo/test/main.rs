@@ -32,18 +32,13 @@ extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 extern crate tests_utils;
 
+use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
+use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
+use context::CoreContext;
 use failure::Error;
 use fixtures::{many_files_dirs, merge_uneven};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::marker::PhantomData;
-use std::sync::Arc;
-
-use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
-use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
-use context::CoreContext;
 use mercurial_types::{
     manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
     MPath, MPathElement, RepoPath,
@@ -53,18 +48,21 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents, MononokeId,
     RepositoryId,
 };
+use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 #[macro_use]
 mod utils;
 mod memory_manifest;
 
+use tests_utils::{create_commit, store_files};
 use utils::{
     create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
     get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
     upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent,
 };
-
-use tests_utils::{create_commit, store_files};
 
 fn upload_blob_no_parents(repo: BlobRepo) {
     let ctx = CoreContext::test_mock();
