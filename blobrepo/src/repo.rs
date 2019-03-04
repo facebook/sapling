@@ -1391,24 +1391,24 @@ impl BlobRepo {
                             cloned!(ctx, bcs, repo);
                             move |parents| {
                                 let mut parents = parents.into_iter();
-                                let p0 = parents.next();
                                 let p1 = parents.next();
+                                let p2 = parents.next();
 
-                                let p0_hash = p0.as_ref().map(|p0| p0.get_changeset_id());
                                 let p1_hash = p1.as_ref().map(|p1| p1.get_changeset_id());
+                                let p2_hash = p2.as_ref().map(|p2| p2.get_changeset_id());
 
-                                let mf_p0 = p0.map(|p| p.manifestid());
                                 let mf_p1 = p1.map(|p| p.manifestid());
+                                let mf_p2 = p2.map(|p| p.manifestid());
 
                                 assert!(
                                     parents.next().is_none(),
                                     "more than 2 parents are not supported by hg"
                                 );
                                 let hg_parents = HgParents::new(
-                                    p0_hash.map(|h| h.into_nodehash()),
                                     p1_hash.map(|h| h.into_nodehash()),
+                                    p2_hash.map(|h| h.into_nodehash()),
                                 );
-                                repo.get_manifest_from_bonsai(ctx, bcs, mf_p0, mf_p1)
+                                repo.get_manifest_from_bonsai(ctx, bcs, mf_p1, mf_p2)
                                     .map(move |(manifest_id, incomplete_filenodes)| {
                                         (manifest_id, incomplete_filenodes, hg_parents)
                                     })
@@ -2035,7 +2035,7 @@ impl CreateChangeset {
                     let cs_metadata = self.cs_metadata;
 
                     move |(
-                        (root_manifest, root_hash),
+                        (root_manifest, root_mf_id),
                         (parents, parent_manifest_hashes, bonsai_parents),
                     )| {
                         let files = if let Some(expected_files) = expected_files {
@@ -2069,7 +2069,7 @@ impl CreateChangeset {
                             check_case_conflicts(
                                 ctx.clone(),
                                 repo.clone(),
-                                root_hash.clone(),
+                                root_mf_id.clone(),
                                 p1_mf,
                             )
                             .left_future()
@@ -2081,7 +2081,7 @@ impl CreateChangeset {
                             .join(check_case_conflicts)
                             .and_then(move |(files, ())| {
                                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
-                                make_new_changeset(parents, root_hash, cs_metadata, files)
+                                make_new_changeset(parents, root_mf_id, cs_metadata, files)
                             })
                             .and_then({
                                 cloned!(ctx);
