@@ -1,9 +1,6 @@
 // Copyright 2019 Facebook, Inc.
 
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::path::PathBuf;
 
 use failure::Error;
 use futures::future::poll_fn;
@@ -32,7 +29,7 @@ pub struct AsyncMutableHistoryPackInner {
 ///     .and_then(move |historypack| historypack.close()
 /// ```
 pub struct AsyncMutableHistoryPack {
-    inner: Arc<Mutex<Option<AsyncMutableHistoryPackInner>>>,
+    inner: Option<AsyncMutableHistoryPackInner>,
 }
 
 impl AsyncMutableHistoryPack {
@@ -45,32 +42,29 @@ impl AsyncMutableHistoryPack {
             .from_err()
             .and_then(move |res| res)
             .map(move |res| AsyncMutableHistoryPack {
-                inner: Arc::new(Mutex::new(Some(AsyncMutableHistoryPackInner { data: res }))),
+                inner: Some(AsyncMutableHistoryPackInner { data: res }),
             })
     }
 
     /// Add the `NodeInfo` to this historypack.
     pub fn add(
-        self,
+        mut self,
         key: &Key,
         info: &NodeInfo,
     ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
         poll_fn({
-            cloned!(key, info, self.inner);
+            cloned!(key, info);
             move || {
                 blocking(|| {
-                    let mut inner = inner.lock().expect("Poisoned Mutex");
-                    let inner = inner.as_mut();
-                    let inner = inner.expect("The datapack is closed");
-                    inner.data.add(&key, &info)
+                    let inner = self.inner.take();
+                    let mut inner = inner.expect("The historypack is closed");
+                    inner.data.add(&key, &info).map(|()| inner)
                 })
             }
         })
         .from_err()
         .and_then(|res| res)
-        .map(move |()| AsyncMutableHistoryPack {
-            inner: Arc::clone(&self.inner),
-        })
+        .map(move |inner| AsyncMutableHistoryPack { inner: Some(inner) })
     }
 
     /// Convenience function for adding a `types::PackHistoryEntry`.
@@ -83,12 +77,11 @@ impl AsyncMutableHistoryPack {
 
     /// Close the historypack. Once this Future finishes, the pack file will be written to the disk
     /// and its path is returned.
-    pub fn close(self) -> impl Future<Item = PathBuf, Error = Error> + Send + 'static {
+    pub fn close(mut self) -> impl Future<Item = PathBuf, Error = Error> + Send + 'static {
         poll_fn({
             move || {
                 blocking(|| {
-                    let mut inner = self.inner.lock().expect("Poisoned Mutex");
-                    let inner = inner.take();
+                    let inner = self.inner.take();
                     let inner = inner.expect("The datapack is closed");
                     inner.data.close()
                 })

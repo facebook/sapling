@@ -1,9 +1,6 @@
 // Copyright 2019 Facebook, Inc.
 
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::path::PathBuf;
 
 use failure::Error;
 use futures::future::poll_fn;
@@ -31,7 +28,7 @@ struct AsyncMutableDataPackInner {
 ///     .and_then(move |datapack| datapack.close()
 /// ```
 pub struct AsyncMutableDataPack {
-    inner: Arc<Mutex<Option<AsyncMutableDataPackInner>>>,
+    inner: Option<AsyncMutableDataPackInner>,
 }
 
 impl AsyncMutableDataPack {
@@ -44,42 +41,38 @@ impl AsyncMutableDataPack {
             .from_err()
             .and_then(move |res| res)
             .map(move |res| AsyncMutableDataPack {
-                inner: Arc::new(Mutex::new(Some(AsyncMutableDataPackInner { data: res }))),
+                inner: Some(AsyncMutableDataPackInner { data: res }),
             })
     }
 
     /// Add the `Delta` to this datapack.
     pub fn add(
-        self,
+        mut self,
         delta: &Delta,
         metadata: Option<Metadata>,
     ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
         poll_fn({
-            cloned!(delta, self.inner);
+            cloned!(delta);
             move || {
                 blocking(|| {
-                    let mut inner = inner.lock().expect("Poisoned Mutex");
-                    let inner = inner.as_mut();
-                    let inner = inner.expect("The datapack is closed");
-                    inner.data.add(&delta, metadata.clone())
+                    let inner = self.inner.take();
+                    let mut inner = inner.expect("The datapack is closed");
+                    inner.data.add(&delta, metadata.clone()).map(|()| inner)
                 })
             }
         })
         .from_err()
         .and_then(|res| res)
-        .map(move |()| AsyncMutableDataPack {
-            inner: Arc::clone(&self.inner),
-        })
+        .map(move |inner| AsyncMutableDataPack { inner: Some(inner) })
     }
 
     /// Close the mutabledatapack. Once this Future finishes, the pack file is written to the disk
     /// and its path is returned.
-    pub fn close(self) -> impl Future<Item = PathBuf, Error = Error> + Send + 'static {
+    pub fn close(mut self) -> impl Future<Item = PathBuf, Error = Error> + Send + 'static {
         poll_fn({
             move || {
                 blocking(|| {
-                    let mut inner = self.inner.lock().expect("Poisoned Mutex");
-                    let inner = inner.take();
+                    let inner = self.inner.take();
                     let inner = inner.expect("The datapack is closed");
                     inner.data.close()
                 })
