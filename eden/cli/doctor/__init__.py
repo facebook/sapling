@@ -58,8 +58,7 @@ def cure_what_ails_you(
     else:
         fixer = DryRunFixer(out)
 
-    if working_directory_was_stale:
-        fixer.add_problem(StaleWorkingDirectory())
+    check_working_directory(fixer)
 
     # check OS type, kernel version etc.
     check_os.run_operating_system_checks(fixer, instance, out)
@@ -404,13 +403,64 @@ To remove the corrupted repo, run: `eden rm {self._mount_path}`"""
 
 
 class StaleWorkingDirectory(Problem):
-    def __init__(self) -> None:
+    def __init__(self, msg: str) -> None:
         remediation = f"""\
 Run "cd / && cd -" to update your shell's working directory."""
-        super().__init__(
-            f"Your current working directory appears to be a stale Eden mount point",
-            remediation,
-        )
+        super().__init__(msg, remediation)
+
+
+def check_working_directory(tracker: ProblemTracker) -> None:
+    problem = check_for_working_directory_problem()
+    if problem:
+        tracker.add_problem(problem)
+
+
+def check_for_working_directory_problem() -> Optional[Problem]:
+    # Report an issue if the working directory points to a stale mount point
+    if working_directory_was_stale:
+        msg = "Your current working directory appears to be a stale Eden mount point"
+        return StaleWorkingDirectory(msg)
+
+    # If the $PWD environment variable is set, confirm that it points our current
+    # working directory.
+    #
+    # This helps catch problems where the current working directory has been replaced
+    # with a new mount point but the user hasn't cd'ed into the new mount yet.  For
+    # instance this can happen if the user cd'ed into a checkout directory before Eden
+    # was running, and then started Eden.  The user will still need to cd again to see
+    # the Eden checkout contents.
+    pwd = os.environ.get("PWD")
+    if pwd is None:
+        # If $PWD isn't set we can't check anything else
+        return None
+
+    try:
+        pwd_stat = os.stat(pwd)
+        cwd_stat = os.stat(".")
+    except Exception:
+        # If we fail to stat either directory just ignore the error and don't report a
+        # problem for now.  If we ever see a real issue in practice hit this scenario we
+        # can add an appropriate error message at that point in time.
+        #
+        # We've already handled stale mounts above, and `os.stat()` checks normally
+        # succeed in this case anyway.
+        #
+        # Users can get into situations where they don't have permissions to
+        # stat the current working directory in some cases, but this should be very
+        # rare and they will probably be able to identify the issue themselves in this
+        # case.
+        return None
+
+    if (pwd_stat.st_dev, pwd_stat.st_ino) == (cwd_stat.st_dev, cwd_stat.st_ino):
+        # Everything looks okay
+        return None
+
+    msg = """\
+Your current working directory is out-of-date.
+This can happen if you have (re)started Eden but your shell is still pointing to
+the old directory from before the Eden checkouts were mounted.
+"""
+    return StaleWorkingDirectory(msg)
 
 
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:

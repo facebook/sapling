@@ -1063,6 +1063,68 @@ Remounting {mount}...<green>fixed<reset>
         )
         self.assertEqual(exit_code, 0)
 
+    def test_pwd_out_of_date(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(tmp_dir)
+        mount = instance.create_test_mount("path1").path
+
+        exit_code, out = self._test_with_pwd(instance, pwd=tmp_dir)
+        self.assertEqual(
+            out,
+            f"""\
+<yellow>- Found problem:<reset>
+Your current working directory is out-of-date.
+This can happen if you have (re)started Eden but your shell is still pointing to
+the old directory from before the Eden checkouts were mounted.
+
+Run "cd / && cd -" to update your shell's working directory.
+
+Checking {mount}
+<yellow>1 issue requires manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
+""",
+        )
+        self.assertEqual(1, exit_code)
+
+    def test_pwd_not_set(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(tmp_dir)
+        mount = instance.create_test_mount("path1").path
+
+        exit_code, out = self._test_with_pwd(instance, pwd=None)
+        self.assertEqual(
+            out,
+            f"""\
+Checking {mount}
+<green>No issues detected.<reset>
+""",
+        )
+        self.assertEqual(0, exit_code)
+
+    def _test_with_pwd(
+        self, instance: "FakeEdenInstance", pwd: Optional[str]
+    ) -> Tuple[int, str]:
+        if pwd is None:
+            old_pwd = os.environ.pop("PWD", None)
+        else:
+            old_pwd = os.environ.get("PWD")
+            os.environ["PWD"] = pwd
+        try:
+            out = TestOutput()
+            exit_code = doctor.cure_what_ails_you(
+                typing.cast(EdenInstance, instance),
+                dry_run=False,
+                mount_table=instance.mount_table,
+                fs_util=filesystem.LinuxFsUtil(),
+                process_finder=FakeProcessFinder(),
+                out=out,
+            )
+            return exit_code, out.getvalue()
+        finally:
+            if old_pwd is not None:
+                os.environ["PWD"] = old_pwd
+
 
 class MultipleEdenfsRunningTest(DoctorTestBase):
     maxDiff = None
