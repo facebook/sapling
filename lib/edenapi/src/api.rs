@@ -119,7 +119,7 @@ fn get_file(
     url_prefix: &Url,
     key: Key,
 ) -> impl Future<Item = (Key, Bytes), Error = Error> {
-    log::debug!("Fetching file content for key: {:#?}", &key);
+    log::debug!("Fetching file content for key: {}", &key);
     let filenode = key.node().to_hex();
     url_prefix
         .join(&filenode)
@@ -156,7 +156,7 @@ fn get_history(
     key: Key,
     max_depth: Option<u32>,
 ) -> impl Stream<Item = PackHistoryEntry, Error = Error> {
-    log::debug!("Fetching history for key: {:#?}", &key);
+    log::debug!("Fetching history for key: {}", &key);
     let filenode = key.node().to_hex();
     let filename = url_encode(&key.name());
     url_prefix
