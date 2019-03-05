@@ -764,9 +764,7 @@ Do you want to run `eden mount %s` instead?"""
 
     def get_server_build_info(self) -> Dict[str, str]:
         with self.get_thrift_client() as client:
-            return typing.cast(
-                Dict[str, str], client.getRegexExportedValues("^build_.*")
-            )
+            return client.getRegexExportedValues("^build_.*")
 
     def get_uptime(self) -> datetime.timedelta:
         now = datetime.datetime.now()
