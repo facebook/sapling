@@ -11,6 +11,7 @@ import getpass
 import io
 import socket
 import subprocess
+import traceback
 from typing import IO
 
 from . import (
@@ -72,18 +73,22 @@ def print_rpm_version(out: IO[bytes]) -> None:
 def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
     dry_run = True
     doctor_output = io.StringIO()
-    doctor_rc = doctor_mod.cure_what_ails_you(
-        instance=instance,
-        dry_run=dry_run,
-        mount_table=mtab.LinuxMountTable(),
-        fs_util=filesystem.LinuxFsUtil(),
-        process_finder=process_finder.LinuxProcessFinder(),
-        out=ui_mod.PlainOutput(doctor_output),
-    )
-    out.write(
-        b"\neden doctor --dry-run (exit code %d):\n%s\n"
-        % (doctor_rc, doctor_output.getvalue().encode())
-    )
+    try:
+        doctor_rc = doctor_mod.cure_what_ails_you(
+            instance=instance,
+            dry_run=dry_run,
+            mount_table=mtab.LinuxMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
+            out=ui_mod.PlainOutput(doctor_output),
+        )
+        out.write(
+            b"\neden doctor --dry-run (exit code %d):\n%s\n"
+            % (doctor_rc, doctor_output.getvalue().encode())
+        )
+    except Exception:
+        out.write(b"\nUnexpected exception thrown while running eden doctor checks:\n")
+        out.write(traceback.format_exc().encode("utf-8") + b"\n")
 
 
 def print_tail_of_log_file(path: str, out: IO[bytes]) -> None:
