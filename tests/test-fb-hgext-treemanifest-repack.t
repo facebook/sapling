@@ -319,3 +319,34 @@ Test hg gc with multiple repositories
   > EOF
   $ hg gc
   finished: removed 0 of 2 files (0.00 GB to 0.00 GB)
+  $ cd ..
+
+
+  $ hginit master2
+  $ cd master2
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > remotefilelog=
+  > [remotefilelog]
+  > server=True
+  > [treemanifest]
+  > treeonly=True
+  > server=True
+  > EOF
+  $ echo >> a
+  $ hg commit -Aqm 'a'
+  $ echo >> b
+  $ hg commit -Aqm 'b'
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 23dae89e9cb9 000000000000 000000000000
+       1        44      55      0       1 b6fc856d0b3b 23dae89e9cb9 000000000000
+  $ hg repack --incremental
+  $ hg debugdatapack .hg/cache/packs/manifests/e85f1090835eee2f66375fbcbac1be64ee900435.datapack
+  .hg/cache/packs/manifests/e85f1090835eee2f66375fbcbac1be64ee900435:
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  b6fc856d0b3b  000000000000  86            86
+  
+  Total:                      86            86        (0.0% bigger)

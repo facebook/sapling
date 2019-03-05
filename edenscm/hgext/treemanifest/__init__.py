@@ -1259,6 +1259,10 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
     "backfilltree", [("l", "limit", "10000000", _(""))], _("hg backfilltree [OPTIONS]")
 )
 def backfilltree(ui, repo, *args, **opts):
+    if isinstance(repo.manifestlog, treemanifestlog):
+        repo.ui.warn(_("backfilltree is not supported on a tree-only repo\n"))
+        return
+
     with repo.wlock(), repo.lock(), repo.transaction("backfilltree") as tr:
         start, end = _getbackfillrange(repo, int(opts.get("limit")))
         if start <= end:
@@ -2449,7 +2453,12 @@ def serverrepack(repo, incremental=False, options=None):
     endrev = repo.ui.configint("treemanifest", "repackendrev", len(repo.changelog) - 1)
     if startrev == 0 and incremental:
         latestpackedlinkrev = 0
-        mfrevlog = repo.manifestlog.treemanifestlog._revlog
+        mfl = repo.manifestlog
+        if isinstance(mfl, hybridmanifestlog):
+            treemfl = mfl.treemanifestlog
+        elif isinstance(mfl, treemanifestlog):
+            treemfl = mfl
+        mfrevlog = treemfl._revlog
         for i in xrange(len(mfrevlog) - 1, 0, -1):
             node = mfrevlog.node(i)
             if not fulldatapackstore.getmissing([("", node)]):
