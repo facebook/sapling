@@ -51,6 +51,7 @@ extern crate pretty_assertions;
 extern crate regex;
 #[macro_use]
 extern crate slog;
+extern crate itertools;
 extern crate tempdir;
 
 extern crate context;
@@ -61,6 +62,7 @@ pub mod errors;
 mod facebook;
 pub mod hook_loader;
 pub mod lua_hook;
+mod phabricator_message_parser;
 pub mod rust_hook;
 
 use aclchecker::{AclChecker, Identity};
