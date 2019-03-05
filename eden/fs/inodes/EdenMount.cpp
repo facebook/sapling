@@ -9,18 +9,19 @@
  */
 #include "eden/fs/inodes/EdenMount.h"
 
+#include <boost/filesystem.hpp>
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
 #include <folly/File.h>
-#ifndef EDEN_WIN
-#include <folly/Subprocess.h>
-#endif
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
+#ifndef EDEN_WIN
+#include <folly/Subprocess.h>
+#endif
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -328,8 +329,12 @@ Future<Unit> EdenMount::performBindMounts() {
 
   for (const auto& bindMount : bindMounts_) {
     futures.push_back(folly::makeFutureWith([&] {
-      // If pathInMountDir does not exist, then it must be created before
-      // the bind mount is performed.
+      // Make sure that both pathInClientDir and pathInMountDir exist before we
+      // attempt to perform the mount.
+      boost::filesystem::path boostBindMountSrc{
+          bindMount.pathInClientDir.value()};
+      boost::filesystem::create_directories(boostBindMountSrc);
+
       // pathInMountDir is absolute, rather than relative from the mount point.
       // This unfortunately is hard to change because it's baked into the
       // takeover protocol. So relativize here.
