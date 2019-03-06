@@ -99,25 +99,6 @@ fn store_entry_to_links(store_entry: store::Entry) -> Fallible<BTreeMap<PathComp
     Ok(links)
 }
 
-fn links_to_store_entry(links: &BTreeMap<PathComponentBuf, Link>) -> Fallible<store::Entry> {
-    let iter = links.iter().map(|(component, link)| {
-        let (node, flag) = match link {
-            Leaf(ref file_metadata) => (
-                &file_metadata.node,
-                store::Flag::File(file_metadata.file_type.clone()),
-            ),
-            Durable(ref entry) => (&entry.node, store::Flag::Directory),
-            Ephemeral(_) => return Err(format_err!("cannot store ephemeral manifest nodes")),
-        };
-        Ok(store::Element::new(
-            component.to_owned(),
-            node.clone(),
-            flag,
-        ))
-    });
-    store::Entry::from_elements(iter)
-}
-
 // TODO: Use Vec instead of BTreeMap
 /// The inner structure of a durable link. Of note is that failures are cached "forever".
 // The interesting question about this structure is what do we do when we have a failure when
@@ -291,6 +272,7 @@ mod tests {
     use super::*;
 
     use self::store::TestStore;
+    use crate::FileType;
 
     fn meta(node: u8) -> FileMetadata {
         FileMetadata::regular(Node::from_u8(node))
@@ -303,6 +285,13 @@ mod tests {
     }
     fn path_component_buf(s: &str) -> PathComponentBuf {
         PathComponentBuf::from_string(s.to_owned()).unwrap()
+    }
+    fn store_element(path: &str, node: u8, flag: store::Flag) -> Fallible<store::Element> {
+        Ok(store::Element::new(
+            path_component_buf(path),
+            Node::from_u8(node),
+            flag,
+        ))
     }
 
     #[test]
@@ -325,16 +314,20 @@ mod tests {
     #[test]
     fn test_durable_link() {
         let mut store = TestStore::new();
-        let mut root_children = BTreeMap::new();
-        root_children.insert(path_component_buf("foo"), Link::durable(Node::from_u8(10)));
-        root_children.insert(path_component_buf("baz"), Link::Leaf(meta(20)));
-        let root_entry = links_to_store_entry(&root_children).unwrap();
+        let root_entry = store::Entry::from_elements(vec![
+            store_element("foo", 10, store::Flag::Directory),
+            store_element("baz", 20, store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
         store
             .insert(repo_path_buf(""), Node::from_u8(1), root_entry)
             .unwrap();
-        let mut foo_children = BTreeMap::new();
-        foo_children.insert(path_component_buf("bar"), Link::Leaf(meta(11)));
-        let foo_entry = links_to_store_entry(&foo_children).unwrap();
+        let foo_entry = store::Entry::from_elements(vec![store_element(
+            "bar",
+            11,
+            store::Flag::File(FileType::Regular),
+        )])
+        .unwrap();
         store
             .insert(repo_path_buf("foo"), Node::from_u8(10), foo_entry)
             .unwrap();
@@ -413,17 +406,19 @@ mod tests {
     #[test]
     fn test_remove_from_durable() {
         let mut store = TestStore::new();
-        let mut root_children = BTreeMap::new();
-        root_children.insert(path_component_buf("a1"), Link::durable(Node::from_u8(10)));
-        root_children.insert(path_component_buf("a2"), Link::Leaf(meta(20)));
-        let root_entry = links_to_store_entry(&root_children).unwrap();
+        let root_entry = store::Entry::from_elements(vec![
+            store_element("a1", 10, store::Flag::Directory),
+            store_element("a2", 20, store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
         store
             .insert(repo_path_buf(""), Node::from_u8(1), root_entry)
             .unwrap();
-        let mut a1_children = BTreeMap::new();
-        a1_children.insert(path_component_buf("b1"), Link::Leaf(meta(11)));
-        a1_children.insert(path_component_buf("b2"), Link::Leaf(meta(12)));
-        let a1_entry = links_to_store_entry(&a1_children).unwrap();
+        let a1_entry = store::Entry::from_elements(vec![
+            store_element("b1", 11, store::Flag::File(FileType::Regular)),
+            store_element("b2", 12, store::Flag::File(FileType::Regular)),
+        ])
+        .unwrap();
         store
             .insert(repo_path_buf("a1"), Node::from_u8(10), a1_entry)
             .unwrap();
