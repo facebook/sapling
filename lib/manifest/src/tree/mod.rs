@@ -5,7 +5,10 @@
 
 mod store;
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::{btree_map::Entry, BTreeMap},
+    sync::Arc,
+};
 
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
@@ -63,6 +66,23 @@ use self::Link::*;
 impl Link {
     pub fn durable(node: Node) -> Link {
         Link::Durable(Arc::new(DurableEntry::new(node)))
+    }
+
+    pub fn mut_ephemeral_links<S: Store>(
+        &mut self,
+        store: &S,
+        parent: &RepoPath,
+    ) -> Fallible<&mut BTreeMap<PathComponentBuf, Link>> {
+        loop {
+            match self {
+                Leaf(_) => bail!("Encountered file where a directory was expected."),
+                Ephemeral(ref mut links) => return Ok(links),
+                Durable(ref entry) => {
+                    let durable_links = entry.get_links(store, parent)?;
+                    *self = Ephemeral(durable_links.clone());
+                }
+            }
+        }
     }
 }
 
@@ -184,41 +204,30 @@ impl<S: Store> Manifest for Tree<S> {
     }
 
     fn insert(&mut self, path: RepoPathBuf, file_metadata: FileMetadata) -> Fallible<()> {
+        let (parent, last_component) = match path.split_last_component() {
+            Some(v) => v,
+            None => bail!("Cannot insert file metadata for repository root"),
+        };
         let mut cursor = &mut self.root;
-        // TODO: parent_path: &RepoPath
-        let mut parent_path = RepoPathBuf::new();
-        for component in path.components() {
-            cursor = match cursor {
-                Leaf(_) => bail!("Encountered file where a directory was expected."),
-                Ephemeral(links) => links
-                    .entry(component.to_owned())
-                    .or_insert_with(|| Ephemeral(BTreeMap::new())),
-                Durable(ref entry) => {
-                    let durable_links = entry.get_links(&*self.store, &parent_path)?;
-                    *cursor = Ephemeral(durable_links.clone());
-                    if let Ephemeral(links) = cursor {
-                        links
-                            .entry(component.to_owned())
-                            .or_insert_with(|| Ephemeral(BTreeMap::new()))
-                    } else {
-                        unreachable!("Assigned ephemeral disappeared after assignment");
-                    }
-                }
-            };
-            parent_path.push(component);
+        for (cursor_parent, component) in parent.parents().zip(parent.components()) {
+            cursor = cursor
+                .mut_ephemeral_links(&*self.store, cursor_parent)?
+                .entry(component.to_owned())
+                .or_insert_with(|| Ephemeral(BTreeMap::new()));
         }
-        match cursor {
-            Leaf(current_metadata) => {
-                *current_metadata = file_metadata;
+        match cursor
+            .mut_ephemeral_links(&*self.store, parent)?
+            .entry(last_component.to_owned())
+        {
+            Entry::Vacant(entry) => {
+                entry.insert(Link::Leaf(file_metadata));
             }
-            Ephemeral(links) => {
-                if !links.is_empty() {
-                    bail!("Asked to set file metadata on a directory.");
+            Entry::Occupied(mut entry) => {
+                if let Leaf(ref mut store_ref) = entry.get_mut() {
+                    *store_ref = file_metadata;
+                } else {
+                    bail!("Encountered directory where file was expected");
                 }
-                *cursor = Leaf(file_metadata);
-            }
-            Durable(_) => {
-                bail!("Asked to set file metadata on a directory.");
             }
         }
         Ok(())
