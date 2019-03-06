@@ -172,6 +172,20 @@ impl RepoPath {
         self.0.as_bytes()
     }
 
+    /// Returns an iterator over the parents of the current path.
+    /// The `RepoPath` itself is not returned. The root of the repository represented by the empty
+    /// `RepoPath` is always returned by this iterator except if the path is empty.
+    ///
+    /// For example for the path `"foo/bar/baz"` this iterator will return three items:
+    /// `""`, `"foo"` and `"foo/bar"`.
+    ///
+    /// If you don't want to handle the empty path, then you can use `parents().skip(1)`.
+    /// It is possible to get iterate over parents with elements in paralel using:
+    /// `path.parents().zip(path.components())`.
+    pub fn parents<'a>(&'a self) -> Parents<'a> {
+        Parents::new(self)
+    }
+
     /// Returns an iterator over the components of the path.
     pub fn components(&self) -> impl Iterator<Item = &PathComponent> {
         self.0
@@ -326,6 +340,48 @@ fn validate_component(s: &str) -> Fallible<()> {
     Ok(())
 }
 
+pub struct Parents<'a> {
+    path: &'a RepoPath,
+    position: Option<usize>,
+}
+
+impl<'a> Parents<'a> {
+    pub fn new(path: &'a RepoPath) -> Self {
+        Parents {
+            path,
+            position: None,
+        }
+    }
+}
+
+impl<'a> Iterator for Parents<'a> {
+    type Item = &'a RepoPath;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(ref mut position) = self.position {
+            match self.path.0[*position..].find(SEPARATOR) {
+                Some(delta) => {
+                    let end = *position + delta;
+                    let result = RepoPath::from_str_unchecked(&self.path.0[..end]);
+                    *position = end + 1;
+                    Some(result)
+                }
+                None => {
+                    *position = self.path.0.len();
+                    None
+                }
+            }
+        } else {
+            self.position = Some(0);
+            if self.path.is_empty() {
+                None
+            } else {
+                Some(RepoPath::empty())
+            }
+        }
+    }
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for RepoPathBuf {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
@@ -364,6 +420,7 @@ impl quickcheck::Arbitrary for PathComponentBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
 
     #[test]
     fn test_repo_path_initialization_with_invalid_utf8() {
@@ -558,5 +615,55 @@ mod tests {
     fn test_empty_path_is_empty() {
         assert!(RepoPathBuf::new().is_empty());
         assert!(RepoPath::empty().is_empty());
+    }
+
+    #[test]
+    fn test_parents_on_regular_path() {
+        let path = RepoPath::from_str("foo/bar/baz/file.txt").unwrap();
+        let mut iter = path.parents();
+        assert_eq!(iter.next(), Some(RepoPath::empty()));
+        assert_eq!(iter.next(), Some(RepoPath::from_str("foo").unwrap()));
+        assert_eq!(iter.next(), Some(RepoPath::from_str("foo/bar").unwrap()));
+        assert_eq!(
+            iter.next(),
+            Some(RepoPath::from_str("foo/bar/baz").unwrap())
+        );
+        assert_eq!(iter.next(), None)
+    }
+
+    #[test]
+    fn test_parents_on_empty_path() {
+        assert_eq!(RepoPath::empty().parents().next(), None);
+    }
+
+    #[test]
+    fn test_parents_and_components_in_parallel() {
+        let path = RepoPath::from_str("foo/bar/baz").unwrap();
+        let mut iter = path.parents().zip(path.components());
+        assert_eq!(
+            iter.next(),
+            Some((RepoPath::empty(), PathComponent::from_str("foo").unwrap()))
+        );
+        assert_eq!(
+            iter.next(),
+            Some((
+                RepoPath::from_str("foo").unwrap(),
+                PathComponent::from_str("bar").unwrap()
+            ))
+        );
+        assert_eq!(
+            iter.next(),
+            Some((
+                RepoPath::from_str("foo/bar").unwrap(),
+                PathComponent::from_str("baz").unwrap()
+            ))
+        );
+        assert_eq!(iter.next(), None);
+    }
+
+    quickcheck! {
+       fn test_parents_equal_components(path: RepoPathBuf) -> bool {
+           path.deref().parents().count() == path.deref().components().count()
+        }
     }
 }
