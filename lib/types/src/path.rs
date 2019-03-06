@@ -172,6 +172,26 @@ impl RepoPath {
         self.0.as_bytes()
     }
 
+    /// Tries to split the current `RepoPath` in a parent path and a component. If the current
+    /// path is empty then None is returned. If the current path contains only one component then
+    /// the pair that is returned is the empty repo path and a path component that will match the
+    /// contents `self`.
+    pub fn split_last_component(&self) -> Option<(&RepoPath, &PathComponent)> {
+        if self.is_empty() {
+            return None;
+        }
+        match self.0.rfind(SEPARATOR) {
+            Some(pos) => Some((
+                RepoPath::from_str_unchecked(&self.0[..pos]),
+                PathComponent::from_str_unchecked(&self.0[(pos + 1)..]),
+            )),
+            None => Some((
+                RepoPath::empty(),
+                PathComponent::from_str_unchecked(&self.0),
+            )),
+        }
+    }
+
     /// Returns an iterator over the parents of the current path.
     /// The `RepoPath` itself is not returned. The root of the repository represented by the empty
     /// `RepoPath` is always returned by this iterator except if the path is empty.
@@ -666,4 +686,25 @@ mod tests {
            path.deref().parents().count() == path.deref().components().count()
         }
     }
+
+    #[test]
+    fn test_split_last_component() {
+        assert_eq!(RepoPath::empty().split_last_component(), None);
+
+        assert_eq!(
+            RepoPath::from_str("foo").unwrap().split_last_component(),
+            Some((RepoPath::empty(), PathComponent::from_str("foo").unwrap()))
+        );
+
+        assert_eq!(
+            RepoPath::from_str("foo/bar/baz")
+                .unwrap()
+                .split_last_component(),
+            Some((
+                RepoPath::from_str("foo/bar").unwrap(),
+                PathComponent::from_str("baz").unwrap()
+            ))
+        );
+    }
+
 }
