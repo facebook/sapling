@@ -219,13 +219,8 @@ impl RepoPath {
     }
 
     /// Returns an iterator over the components of the path.
-    pub fn components(&self) -> impl Iterator<Item = &PathComponent> {
-        self.0
-            .split(SEPARATOR)
-            // TODO: this filter is a hack to account for an empty path
-            // We expect the root of the repository denoted as "" to have no components
-            .filter(|s| !s.is_empty())
-            .map(|s| PathComponent::from_str_unchecked(s))
+    pub fn components<'a>(&'a self) -> Components<'a> {
+        Components::new(self)
     }
 }
 
@@ -409,6 +404,41 @@ impl<'a> Iterator for Parents<'a> {
                 None
             } else {
                 Some(RepoPath::empty())
+            }
+        }
+    }
+}
+
+pub struct Components<'a> {
+    path: &'a RepoPath,
+    position: usize,
+}
+
+impl<'a> Components<'a> {
+    pub fn new(path: &'a RepoPath) -> Self {
+        Components { path, position: 0 }
+    }
+}
+
+impl<'a> Iterator for Components<'a> {
+    type Item = &'a PathComponent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.path.0[self.position..].find(SEPARATOR) {
+            Some(delta) => {
+                let end = self.position + delta;
+                let result = PathComponent::from_str_unchecked(&self.path.0[self.position..end]);
+                self.position = end + 1;
+                Some(result)
+            }
+            None => {
+                if self.position < self.path.0.len() {
+                    let result = PathComponent::from_str_unchecked(&self.path.0[self.position..]);
+                    self.position = self.path.0.len();
+                    Some(result)
+                } else {
+                    None
+                }
             }
         }
     }
