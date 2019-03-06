@@ -86,19 +86,6 @@ impl Link {
     }
 }
 
-fn store_entry_to_links(store_entry: store::Entry) -> Fallible<BTreeMap<PathComponentBuf, Link>> {
-    let mut links = BTreeMap::new();
-    for element_result in store_entry.elements() {
-        let element = element_result?;
-        let link = match element.flag {
-            store::Flag::File(file_type) => Leaf(FileMetadata::new(element.node, file_type)),
-            store::Flag::Directory => Link::durable(element.node),
-        };
-        links.insert(element.component, link);
-    }
-    Ok(links)
-}
-
 // TODO: Use Vec instead of BTreeMap
 /// The inner structure of a durable link. Of note is that failures are cached "forever".
 // The interesting question about this structure is what do we do when we have a failure when
@@ -131,7 +118,18 @@ impl DurableEntry {
         // Currently this loses the stacktrace
         let result = self.links.get_or_init(|| {
             let entry = store.get(path, &self.node)?;
-            store_entry_to_links(entry)
+            let mut links = BTreeMap::new();
+            for element_result in entry.elements() {
+                let element = element_result?;
+                let link = match element.flag {
+                    store::Flag::File(file_type) => {
+                        Leaf(FileMetadata::new(element.node, file_type))
+                    }
+                    store::Flag::Directory => Link::durable(element.node),
+                };
+                links.insert(element.component, link);
+            }
+            Ok(links)
         });
         match result {
             Ok(links) => Ok(links),
