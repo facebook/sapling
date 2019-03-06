@@ -21,14 +21,14 @@ use crate::{FileMetadata, Manifest};
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
 pub struct Tree<S> {
-    store: Arc<S>,
+    store: S,
     // TODO: root can't be a Leaf
     root: Link,
 }
 
 impl<S: Store> Tree<S> {
     /// Instantiates a tree manifest that was stored with the specificed `Node`
-    pub fn durable(store: Arc<S>, node: Node) -> Self {
+    pub fn durable(store: S, node: Node) -> Self {
         Tree {
             store,
             root: Link::durable(node),
@@ -36,7 +36,7 @@ impl<S: Store> Tree<S> {
     }
 
     /// Instantiates a new tree manifest with no history
-    pub fn ephemeral(store: Arc<S>) -> Self {
+    pub fn ephemeral(store: S) -> Self {
         Tree {
             store,
             root: Link::Ephemeral(BTreeMap::new()),
@@ -199,12 +199,12 @@ impl<S: Store> Manifest for Tree<S> {
         for (cursor_parent, component) in parent.parents().zip(parent.components()) {
             // TODO: only convert to ephemeral when a mutation takes place.
             cursor = cursor
-                .mut_ephemeral_links(&*self.store, cursor_parent)?
+                .mut_ephemeral_links(&self.store, cursor_parent)?
                 .entry(component.to_owned())
                 .or_insert_with(|| Ephemeral(BTreeMap::new()));
         }
         match cursor
-            .mut_ephemeral_links(&*self.store, parent)?
+            .mut_ephemeral_links(&self.store, parent)?
             .entry(last_component.to_owned())
         {
             Entry::Vacant(entry) => {
@@ -257,7 +257,7 @@ impl<S: Store> Manifest for Tree<S> {
             }
         }
         do_remove(
-            &*self.store,
+            &self.store,
             &mut self.root,
             &mut path.parents().zip(path.components()),
         )?;
@@ -273,7 +273,7 @@ impl<S: Store> Tree<S> {
                 Leaf(_) => bail!("Encountered file where a directory was expected."),
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
-                    let links = entry.get_links(&*self.store, parent)?;
+                    let links = entry.get_links(&self.store, parent)?;
                     links.get(component)
                 }
             };
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = Tree::ephemeral(TestStore::new());
         tree.insert(repo_path_buf("foo/bar"), meta(10)).unwrap();
         assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(&meta(10)));
         assert_eq!(tree.get(repo_path("baz")).unwrap(), None);
@@ -338,7 +338,7 @@ mod tests {
         store
             .insert(repo_path_buf("foo"), Node::from_u8(10), foo_entry)
             .unwrap();
-        let mut tree = Tree::durable(Arc::new(store), Node::from_u8(1));
+        let mut tree = Tree::durable(store, Node::from_u8(1));
 
         assert_eq!(tree.get(repo_path("foo/bar")).unwrap(), Some(&meta(11)));
         assert_eq!(tree.get(repo_path("baz")).unwrap(), Some(&meta(20)));
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_insert_into_directory() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = Tree::ephemeral(TestStore::new());
         tree.insert(repo_path_buf("foo/bar/baz"), meta(10)).unwrap();
         assert!(tree.insert(repo_path_buf("foo/bar"), meta(20)).is_err());
         assert!(tree.insert(repo_path_buf("foo"), meta(30)).is_err());
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_insert_with_file_parent() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = Tree::ephemeral(TestStore::new());
         tree.insert(repo_path_buf("foo"), meta(10)).unwrap();
         assert!(tree.insert(repo_path_buf("foo/bar"), meta(20)).is_err());
         assert!(tree.insert(repo_path_buf("foo/bar/baz"), meta(30)).is_err());
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_get_from_directory() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = Tree::ephemeral(TestStore::new());
         tree.insert(repo_path_buf("foo/bar/baz"), meta(10)).unwrap();
         assert!(tree.get(repo_path("foo/bar")).is_err());
         assert!(tree.get(repo_path("foo")).is_err());
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_get_with_file_parent() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = Tree::ephemeral(TestStore::new());
         tree.insert(repo_path_buf("foo"), meta(10)).unwrap();
         assert!(tree.get(repo_path("foo/bar")).is_err());
         assert!(tree.get(repo_path("foo/bar/baz")).is_err());
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_remove_from_ephemeral() {
-        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        let mut tree = Tree::ephemeral(TestStore::new());
         tree.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();
         tree.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
@@ -427,7 +427,7 @@ mod tests {
         store
             .insert(repo_path_buf("a1"), Node::from_u8(10), a1_entry)
             .unwrap();
-        let mut tree = Tree::durable(Arc::new(store), Node::from_u8(1));
+        let mut tree = Tree::durable(store, Node::from_u8(1));
 
         assert!(tree.remove(repo_path("a1")).is_err());
         tree.remove(repo_path("a1/b1")).unwrap();
