@@ -14,6 +14,7 @@ revision number to each commit which is accessible through the 'globalrev'
 template.
 
 ::
+
     [format]
     # support strictly increasing revision numbers for new repositories.
     useglobalrevs = True
