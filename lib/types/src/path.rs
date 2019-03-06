@@ -102,6 +102,25 @@ impl RepoPathBuf {
         self.append(&path.as_ref().0);
     }
 
+    /// Removed the last component from the `RepoPathBuf` and return it.
+    pub fn pop(&mut self) -> Option<PathComponentBuf> {
+        if self.0.is_empty() {
+            return None;
+        }
+        match self.0.rfind(SEPARATOR) {
+            None => {
+                let result = PathComponentBuf::from_string_unchecked(self.0.clone());
+                self.0 = String::new();
+                Some(result)
+            }
+            Some(pos) => {
+                let result = PathComponentBuf::from_string_unchecked(self.0.split_off(pos + 1));
+                self.0.pop(); // remove SEPARATOR
+                Some(result)
+            }
+        }
+    }
+
     fn append(&mut self, s: &str) {
         if !self.0.is_empty() {
             self.0.push(SEPARATOR);
@@ -255,6 +274,10 @@ impl PathComponentBuf {
     pub fn from_string(s: String) -> Fallible<Self> {
         validate_component(&s)?;
         Ok(PathComponentBuf(s))
+    }
+
+    fn from_string_unchecked(s: String) -> Self {
+        PathComponentBuf(s)
     }
 }
 
@@ -544,7 +567,7 @@ mod tests {
     }
 
     #[test]
-    fn test_repo_path_push() {
+    fn test_repo_path_buf_push() {
         let mut repo_path_buf = RepoPathBuf::new();
         repo_path_buf.push(RepoPath::from_str("one").unwrap());
         assert_eq!(repo_path_buf.as_ref(), RepoPath::from_str("one").unwrap());
@@ -553,6 +576,33 @@ mod tests {
             repo_path_buf.as_ref(),
             RepoPath::from_str("one/two").unwrap()
         );
+    }
+
+    #[test]
+    fn test_repo_path_buf_pop() {
+        let mut repo_path_buf = RepoPathBuf::from_string(String::from("one/two/three")).unwrap();
+        assert_eq!(
+            repo_path_buf.pop(),
+            Some(PathComponentBuf::from_string(String::from("three")).unwrap())
+        );
+        assert_eq!(
+            repo_path_buf,
+            RepoPathBuf::from_string(String::from("one/two")).unwrap()
+        );
+        assert_eq!(
+            repo_path_buf.pop(),
+            Some(PathComponentBuf::from_string(String::from("two")).unwrap())
+        );
+        assert_eq!(
+            repo_path_buf,
+            RepoPathBuf::from_string(String::from("one")).unwrap()
+        );
+        assert_eq!(
+            repo_path_buf.pop(),
+            Some(PathComponentBuf::from_string(String::from("one")).unwrap())
+        );
+        assert_eq!(repo_path_buf, RepoPathBuf::new());
+        assert_eq!(repo_path_buf.pop(), None);
     }
 
     #[test]
