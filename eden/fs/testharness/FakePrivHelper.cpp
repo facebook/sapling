@@ -25,29 +25,20 @@ using std::string;
 namespace facebook {
 namespace eden {
 
-namespace {
-class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
- public:
-  explicit FakeFuseMountDelegate(
-      AbsolutePath mountPath,
-      std::shared_ptr<FakeFuse> fuse) noexcept
-      : mountPath_{std::move(mountPath)}, fuse_{std::move(fuse)} {}
+FakeFuseMountDelegate::FakeFuseMountDelegate(
+    AbsolutePath mountPath,
+    std::shared_ptr<FakeFuse> fuse) noexcept
+    : mountPath_{std::move(mountPath)}, fuse_{std::move(fuse)} {}
 
-  folly::Future<folly::File> fuseMount() override {
-    if (fuse_->isStarted()) {
-      throw std::runtime_error(folly::to<string>(
-          "got request to create FUSE mount ",
-          mountPath_,
-          ", but this mount is already running"));
-    }
-    return fuse_->start();
+folly::Future<folly::File> FakeFuseMountDelegate::fuseMount() {
+  if (fuse_->isStarted()) {
+    throw std::runtime_error(folly::to<string>(
+        "got request to create FUSE mount ",
+        mountPath_,
+        ", but this mount is already running"));
   }
-
- private:
-  AbsolutePath mountPath_;
-  std::shared_ptr<FakeFuse> fuse_;
-};
-} // namespace
+  return fuse_->start();
+}
 
 FakePrivHelper::MountDelegate::~MountDelegate() = default;
 

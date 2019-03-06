@@ -71,5 +71,18 @@ class FakePrivHelper : public PrivHelper {
   std::unordered_map<std::string, std::shared_ptr<MountDelegate>>
       mountDelegates_;
 };
+
+class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
+ public:
+  explicit FakeFuseMountDelegate(
+      AbsolutePath mountPath,
+      std::shared_ptr<FakeFuse>) noexcept;
+
+  folly::Future<folly::File> fuseMount() override;
+
+ private:
+  AbsolutePath mountPath_;
+  std::shared_ptr<FakeFuse> fuse_;
+};
 } // namespace eden
 } // namespace facebook
