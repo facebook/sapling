@@ -49,6 +49,7 @@ extern crate mononoke_types;
 #[macro_use]
 extern crate pretty_assertions;
 extern crate regex;
+extern crate serde_json;
 #[macro_use]
 extern crate slog;
 extern crate itertools;
@@ -694,6 +695,10 @@ impl HookFile {
                 opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
             })
             .boxify()
+    }
+
+    pub fn changed_file_type(&self) -> ChangedFileType {
+        self.ty.clone()
     }
 }
 
