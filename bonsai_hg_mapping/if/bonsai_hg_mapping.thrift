@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+include "scm/mononoke/mercurial_types/if/mercurial_thrift.thrift"
 include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
 # Memcache constants. Should be change when we want to invalidate memcache
@@ -13,12 +14,8 @@ const i32 MC_SITEVER = 0
 
 typedef i32 RepoId (hs.newtype)
 
- // Thrift does not support unsigned, so using i64 here
-typedef i64 GenerationNum (hs.newtype)
-
-struct ChangesetEntry {
+struct BonsaiHgMappingEntry {
   1: required RepoId repo_id,
-  2: required mononoke_types_thrift.ChangesetId cs_id,
-  3: required list<mononoke_types_thrift.ChangesetId> parents,
-  4: required GenerationNum gen,
+  2: required mononoke_types_thrift.ChangesetId bcs_id,
+  3: required mercurial_thrift.HgNodeHash hg_cs_id,
 }

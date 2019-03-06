@@ -1,14 +1,13 @@
 [package]
-name = "revset"
+name = "bonsai_utils"
 version = "0.0.1"
 authors = ["Facebook"]
 license = "GPLv2+"
 
 [dependencies]
-error-chain = "0.11.0"
 futures = "0.1.17"
-maplit = "1.0.0"
+itertools = "0.7.2"
 
-asyncmemo = { path = "../asyncmemo" }
+futures-ext = { path = "../futures-ext" }
 mercurial_types = { path = "../mercurial_types" }
-repoinfo = { path = "../repoinfo" }
+mononoke_types = { path = "../mononoke_types" }

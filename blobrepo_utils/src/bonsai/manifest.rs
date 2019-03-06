@@ -4,24 +4,27 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// NOTE: This isn't in `bonsai-utils` because blobrepo depends on it, while this depends on
+// NOTE: This isn't in `bonsai_utils` because blobrepo depends on it, while this depends on
 // blobrepo.
 
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 
-use futures::{Future, Stream, future::{self, Either}};
+use futures::{
+    future::{self, Either},
+    Future, Stream,
+};
 use slog::Logger;
 
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
-use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
 use blobrepo::internal::{IncompleteFilenodes, MemoryRootManifest};
+use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use context::CoreContext;
-use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
+use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mononoke_types::DateTime;
 
 use changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
@@ -59,7 +62,7 @@ impl BonsaiMFVerifyResult {
 #[derive(Clone)]
 pub struct BonsaiMFVerifyDifference {
     // Root manifests in treemanifest hybrid mode use a different ID than what's computed.
-    // See the documentation in mercurial-types/if/mercurial_thrift.thrift's HgManifestEnvelope
+    // See the documentation in mercurial_types/if/mercurial_thrift.thrift's HgManifestEnvelope
     // for more.
     pub lookup_mf_id: HgNodeHash,
     // The difference/inconsistency is that expected_mf_id is not the same as roundtrip_mf_id.

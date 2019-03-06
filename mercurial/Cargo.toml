@@ -15,5 +15,5 @@ time = "0.1.38"
 
 bookmarks = { path = "../bookmarks" }
 futures-ext = { path = "../futures-ext" }
-mercurial-types = { path = "../mercurial-types" }
+mercurial_types = { path = "../mercurial_types" }
 storage-types = { path = "../storage/types" }

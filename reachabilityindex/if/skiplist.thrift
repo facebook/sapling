@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-include "scm/mononoke/mononoke-types/if/mononoke_types_thrift.thrift"
+include "scm/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
 struct SkiplistEntry {
   1: RepoId repo_id,

@@ -146,7 +146,7 @@ pub struct BlobManifest {
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
-    // See the documentation in mercurial-types/if/mercurial.thrift for why this exists.
+    // See the documentation in mercurial_types/if/mercurial.thrift for why this exists.
     computed_node_id: HgNodeHash,
     content: ManifestContent,
 }

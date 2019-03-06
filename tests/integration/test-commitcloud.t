@@ -281,7 +281,7 @@ Make one of the commits public when it shouldn't be.
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: Command failed
   remote:   Error:
-  remote:     bundle2-resolver error
+  remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     SharedError {
   remote:         error: Compat {
