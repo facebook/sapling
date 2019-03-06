@@ -88,6 +88,12 @@ impl Entry {
     }
 }
 
+impl AsRef<[u8]> for Entry {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl Element {
     pub fn new(component: PathComponentBuf, node: Node, flag: Flag) -> Element {
         Element {

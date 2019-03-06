@@ -10,6 +10,7 @@ use std::{
     sync::Arc,
 };
 
+use crypto::{digest::Digest, sha1::Sha1};
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
 
@@ -26,7 +27,7 @@ pub struct Tree<S> {
     root: Link,
 }
 
-impl<S: Store> Tree<S> {
+impl<S> Tree<S> {
     /// Instantiates a tree manifest that was stored with the specificed `Node`
     pub fn durable(store: S, node: Node) -> Self {
         Tree {
@@ -64,11 +65,11 @@ pub enum Link {
 use self::Link::*;
 
 impl Link {
-    pub fn durable(node: Node) -> Link {
+    fn durable(node: Node) -> Link {
         Link::Durable(Arc::new(DurableEntry::new(node)))
     }
 
-    pub fn mut_ephemeral_links<S: Store>(
+    fn mut_ephemeral_links<S: Store>(
         &mut self,
         store: &S,
         parent: &RepoPath,
@@ -241,6 +242,70 @@ impl<S: Store> Manifest for Tree<S> {
             &mut path.parents().zip(path.components()),
         )?;
         Ok(())
+    }
+
+    // NOTE: incomplete implementation, currently using dummy values for parents in hash
+    // computation. Works fine for testing but hashes don't match other implementations.
+    fn flush(&mut self) -> Fallible<Node> {
+        fn compute_node<C: AsRef<[u8]>>(p1: &Node, p2: &Node, content: C) -> Node {
+            let mut hasher = Sha1::new();
+            if p1 < p2 {
+                hasher.input(p1.as_ref());
+                hasher.input(p2.as_ref());
+            } else {
+                hasher.input(p2.as_ref());
+                hasher.input(p1.as_ref());
+            }
+            hasher.input(content.as_ref());
+            let mut buf = [0u8; Node::len()];
+            hasher.result(&mut buf);
+            (&buf).into()
+        }
+        fn do_flush<'a, 'b, 'c, S: Store>(
+            store: &'a mut S,
+            pathbuf: &'b mut RepoPathBuf,
+            cursor: &'c mut Link,
+        ) -> Fallible<(&'c Node, store::Flag)> {
+            loop {
+                match cursor {
+                    Leaf(file_metadata) => {
+                        return Ok((
+                            &file_metadata.node,
+                            store::Flag::File(file_metadata.file_type.clone()),
+                        ));
+                    }
+                    Durable(entry) => return Ok((&entry.node, store::Flag::Directory)),
+                    Ephemeral(links) => {
+                        let iter = links.iter_mut().map(|(component, link)| {
+                            pathbuf.push(component.as_path_component());
+                            let (node, flag) = do_flush(store, pathbuf, link)?;
+                            pathbuf.pop();
+                            Ok(store::Element::new(
+                                component.to_owned(),
+                                node.clone(),
+                                flag,
+                            ))
+                        });
+                        let entry = store::Entry::from_elements(iter)?;
+                        // TODO: use actual parent node values
+                        let node = compute_node(Node::null_id(), Node::null_id(), &entry);
+
+                        // TODO: insert the linknode as part of the store.insert
+                        store.insert(pathbuf.clone(), node.clone(), entry)?;
+
+                        let cell = OnceCell::new();
+                        // TODO: remove clone
+                        cell.set(Ok(links.clone())).unwrap();
+
+                        let durable_entry = DurableEntry { node, links: cell };
+                        *cursor = Durable(Arc::new(durable_entry));
+                    }
+                }
+            }
+        }
+        let mut path = RepoPathBuf::new();
+        let (node, _) = do_flush(&mut self.store, &mut path, &mut self.root)?;
+        Ok(node.clone())
     }
 }
 
@@ -436,5 +501,22 @@ mod tests {
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
         assert!(tree.get_link(repo_path("")).unwrap().is_some());
+    }
+
+    #[test]
+    fn test_flush() {
+        let mut tree = Tree::ephemeral(TestStore::new());
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+
+        let node = tree.flush().unwrap();
+        let store = tree.store;
+
+        let tree = Tree::durable(store, node);
+        assert_eq!(tree.get(repo_path("a1/b1/c1/d1")).unwrap(), Some(&meta(10)));
+        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(&meta(20)));
+        assert_eq!(tree.get(repo_path("a2/b2/c2")).unwrap(), Some(&meta(30)));
+        assert_eq!(tree.get(repo_path("a2/b1")).unwrap(), None);
     }
 }
