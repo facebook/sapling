@@ -8,7 +8,7 @@
  *
  */
 #include "EdenConfig.h"
-#include <cpptoml.h>
+#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
