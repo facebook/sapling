@@ -172,6 +172,12 @@ impl RepoPath {
         self.0.as_bytes()
     }
 
+    /// Return the parent of the path. The empty path, `RepoPath::empty()` does not have a
+    /// parent so `None` is returned in that case.
+    pub fn parent(&self) -> Option<&RepoPath> {
+        self.split_last_component().map(|(parent, _)| parent)
+    }
+
     /// Tries to split the current `RepoPath` in a parent path and a component. If the current
     /// path is empty then None is returned. If the current path contains only one component then
     /// the pair that is returned is the empty repo path and a path component that will match the
@@ -635,6 +641,19 @@ mod tests {
     fn test_empty_path_is_empty() {
         assert!(RepoPathBuf::new().is_empty());
         assert!(RepoPath::empty().is_empty());
+    }
+
+    #[test]
+    fn test_parent() {
+        assert_eq!(RepoPath::empty().parent(), None);
+        assert_eq!(
+            RepoPath::from_str("foo").unwrap().parent(),
+            Some(RepoPath::empty())
+        );
+        assert_eq!(
+            RepoPath::from_str("foo/bar/baz").unwrap().parent(),
+            Some(RepoPath::from_str("foo/bar").unwrap())
+        );
     }
 
     #[test]
