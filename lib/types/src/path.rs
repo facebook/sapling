@@ -76,7 +76,8 @@ pub struct PathComponent(str);
 pub const SEPARATOR: char = '/';
 
 impl RepoPathBuf {
-    /// Constructs an empty RepoPathBuf
+    /// Constructs an empty RepoPathBuf. This path will have no
+    /// components and will be equivalent to the root of the repository.
     pub fn new() -> RepoPathBuf {
         Default::default()
     }
@@ -86,6 +87,13 @@ impl RepoPathBuf {
     pub fn from_string(s: String) -> Fallible<Self> {
         validate_path(&s)?;
         Ok(RepoPathBuf(s))
+    }
+
+    /// Returns whether the current `RepoPathBuf` has no components. Since `RepoPathBuf`
+    /// represents the relative path from the start of the repository this is equivalent to
+    /// checking whether the path is the root of the repository
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Append a `RepoPath` to the end of `RepoPathBuf`. This function will add the `SEPARATOR`
@@ -128,6 +136,19 @@ impl fmt::Display for RepoPathBuf {
 }
 
 impl RepoPath {
+    /// Returns an empty `RepoPath`. Parallel to `RepoPathBuf::new()`. This path will have no
+    /// components and will be equivalent to the root of the repository.
+    pub fn empty() -> &'static RepoPath {
+        RepoPath::from_str_unchecked("")
+    }
+
+    /// Returns whether the current `RepoPath` has no components. Since `RepoPath`
+    /// represents the relative path from the start of the repository this is equivalent to
+    /// checking whether the path is the root of the repository
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Constructs a `RepoPath` from a byte slice. It will fail when the bytes are are not valid
     /// utf8 or when the string does not respect the `RepoPath` rules.
     pub fn from_utf8(s: &[u8]) -> Fallible<&RepoPath> {
@@ -139,7 +160,11 @@ impl RepoPath {
     /// the `RepoPath` rules.
     pub fn from_str(s: &str) -> Fallible<&RepoPath> {
         validate_path(s)?;
-        Ok(unsafe { mem::transmute(s) })
+        Ok(RepoPath::from_str_unchecked(s))
+    }
+
+    fn from_str_unchecked(s: &str) -> &RepoPath {
+        unsafe { mem::transmute(s) }
     }
 
     /// Returns the underlying bytes of the `RepoPath`.
@@ -524,8 +549,14 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_path() {
-        let path_buf = RepoPathBuf::from_string(String::from("")).unwrap();
-        assert_eq!(path_buf.components().next(), None);
+    fn test_empty_path_components() {
+        assert_eq!(RepoPathBuf::new().components().next(), None);
+        assert_eq!(RepoPath::empty().components().next(), None);
+    }
+
+    #[test]
+    fn test_empty_path_is_empty() {
+        assert!(RepoPathBuf::new().is_empty());
+        assert!(RepoPath::empty().is_empty());
     }
 }
