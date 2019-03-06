@@ -179,18 +179,15 @@ impl PartialEq for DurableEntry {
 impl<S: Store> Manifest for Tree<S> {
     fn get(&self, path: &RepoPath) -> Fallible<Option<&FileMetadata>> {
         let mut cursor = &self.root;
-        // TODO: parent_path: &RepoPath
-        let mut parent_path = RepoPathBuf::new();
-        for component in path.components() {
+        for (parent, component) in path.parents().zip(path.components()) {
             let child = match cursor {
                 Leaf(_) => bail!("Encountered file where a directory was expected."),
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
-                    let links = entry.get_links(&*self.store, &parent_path)?;
+                    let links = entry.get_links(&*self.store, parent)?;
                     links.get(component)
                 }
             };
-            parent_path.push(component);
             match child {
                 None => return Ok(None),
                 Some(link) => cursor = link,
