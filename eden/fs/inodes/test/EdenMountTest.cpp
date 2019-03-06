@@ -13,6 +13,7 @@
 #include <folly/Range.h>
 #include <folly/ScopeGuard.h>
 #include <folly/chrono/Conv.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/futures/Promise.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -679,6 +680,27 @@ TEST(EdenMountState, mountIsRunningAfterFuseInitializationCompletes) {
   auto fuse = std::make_shared<FakeFuse>();
   testMount.startFuseAndWait(fuse);
   EXPECT_EQ(testMount.getEdenMount()->getState(), EdenMount::State::RUNNING);
+}
+
+TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
+  auto oldTestMount = TestMount{FakeTreeBuilder{}};
+  auto& oldMount = *oldTestMount.getEdenMount();
+  auto newTestMount = TestMount{FakeTreeBuilder{}};
+  auto& newMount = *newTestMount.getEdenMount();
+
+  auto fuse = std::make_shared<FakeFuse>();
+  oldTestMount.startFuseAndWait(fuse);
+
+  oldMount.getFuseChannel()->takeoverStop();
+
+  TakeoverData::MountInfo takeoverData =
+      oldMount.getFuseCompletionFuture().within(kTimeout).getVia(
+          oldTestMount.getServerExecutor().get());
+  oldMount.shutdown(/*doTakeover=*/true).get(kTimeout);
+  newMount.takeoverFuse(FuseChannelData{std::move(takeoverData.fuseFD), {}});
+
+  EXPECT_EQ(oldMount.getState(), EdenMount::State::SHUT_DOWN);
+  EXPECT_EQ(newMount.getState(), EdenMount::State::RUNNING);
 }
 
 TEST(EdenMountState, mountIsFuseErrorAfterMountFails) {
