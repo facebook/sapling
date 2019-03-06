@@ -13,7 +13,7 @@ use std::{
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
 
-use types::{Node, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use self::store::Store;
 use crate::{FileMetadata, Manifest};
@@ -197,6 +197,7 @@ impl<S: Store> Manifest for Tree<S> {
         };
         let mut cursor = &mut self.root;
         for (cursor_parent, component) in parent.parents().zip(parent.components()) {
+            // TODO: only convert to ephemeral when a mutation takes place.
             cursor = cursor
                 .mut_ephemeral_links(&*self.store, cursor_parent)?
                 .entry(component.to_owned())
@@ -220,9 +221,47 @@ impl<S: Store> Manifest for Tree<S> {
         Ok(())
     }
 
-    fn remove(&mut self, _path: &RepoPath) -> Fallible<()> {
-        // TODO: implement deletion
-        unimplemented!("manifest::tree::Tree::remove is not implemented")
+    // TODO: return Fallible<Option<FileMetadata>>
+    fn remove(&mut self, path: &RepoPath) -> Fallible<()> {
+        // The return value lets us know if there are no more files in the subtree and we should be
+        // removing it.
+        fn do_remove<'a, S, I>(store: &S, cursor: &mut Link, iter: &mut I) -> Fallible<bool>
+        where
+            S: Store,
+            I: Iterator<Item = (&'a RepoPath, &'a PathComponent)>,
+        {
+            match iter.next() {
+                None => {
+                    if let Leaf(_) = cursor {
+                        // We reached the file that we want to remove.
+                        Ok(true)
+                    } else {
+                        // TODO: add directory to message.
+                        // It turns out that the path we were asked to remove is a directory.
+                        Err(format_err!("Asked to remove a directory."))
+                    }
+                }
+                Some((parent, component)) => {
+                    // TODO: only convert to ephemeral if a removal took place
+                    // We are navigating the tree down following parent directories
+                    let ephemeral_links = cursor.mut_ephemeral_links(store, parent)?;
+                    // When there is no `component` subtree we behave like the file was removed.
+                    if let Some(link) = ephemeral_links.get_mut(component) {
+                        if do_remove(store, link, iter)? {
+                            // There are no files in the component subtree so we remove it.
+                            ephemeral_links.remove(component);
+                        }
+                    }
+                    Ok(ephemeral_links.is_empty())
+                }
+            }
+        }
+        do_remove(
+            &*self.store,
+            &mut self.root,
+            &mut path.parents().zip(path.components()),
+        )?;
+        Ok(())
     }
 }
 
@@ -340,5 +379,69 @@ mod tests {
         tree.insert(repo_path_buf("foo"), meta(10)).unwrap();
         assert!(tree.get(repo_path("foo/bar")).is_err());
         assert!(tree.get(repo_path("foo/bar/baz")).is_err());
+    }
+
+    #[test]
+    fn test_remove_from_ephemeral() {
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+
+        assert!(tree.remove(repo_path("a1")).is_err());
+        assert!(tree.remove(repo_path("a1/b1")).is_err());
+        assert!(tree.remove(repo_path("a1/b1/c1/d1/e1")).is_err());
+        tree.remove(repo_path("a1/b1/c1/d1")).unwrap();
+        tree.remove(repo_path("a3")).unwrap(); // does nothing
+        tree.remove(repo_path("a1/b3")).unwrap(); // does nothing
+        tree.remove(repo_path("a1/b1/c1/d2")).unwrap(); // does nothing
+        tree.remove(repo_path("a1/b1/c1/d1/e1")).unwrap(); // does nothing
+        assert!(tree.remove(repo_path("")).is_err());
+        assert_eq!(tree.get(repo_path("a1/b1/c1/d1")).unwrap(), None);
+        assert_eq!(tree.get(repo_path("a1/b1/c1")).unwrap(), None);
+        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(&meta(20)));
+        tree.remove(repo_path("a1/b2")).unwrap();
+        assert_eq!(tree.get_link(repo_path("a1")).unwrap(), None);
+
+        assert_eq!(tree.get(repo_path("a2/b2/c2")).unwrap(), Some(&meta(30)));
+        tree.remove(repo_path("a2/b2/c2")).unwrap();
+        assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
+
+        assert!(tree.get_link(repo_path("")).unwrap().is_some());
+    }
+
+    #[test]
+    fn test_remove_from_durable() {
+        let mut store = TestStore::new();
+        let mut root_children = BTreeMap::new();
+        root_children.insert(path_component_buf("a1"), Link::durable(Node::from_u8(10)));
+        root_children.insert(path_component_buf("a2"), Link::Leaf(meta(20)));
+        let root_entry = links_to_store_entry(&root_children).unwrap();
+        store
+            .insert(repo_path_buf(""), Node::from_u8(1), root_entry)
+            .unwrap();
+        let mut a1_children = BTreeMap::new();
+        a1_children.insert(path_component_buf("b1"), Link::Leaf(meta(11)));
+        a1_children.insert(path_component_buf("b2"), Link::Leaf(meta(12)));
+        let a1_entry = links_to_store_entry(&a1_children).unwrap();
+        store
+            .insert(repo_path_buf("a1"), Node::from_u8(10), a1_entry)
+            .unwrap();
+        let mut tree = Tree::durable(Arc::new(store), Node::from_u8(1));
+
+        assert!(tree.remove(repo_path("a1")).is_err());
+        tree.remove(repo_path("a1/b1")).unwrap();
+        assert_eq!(tree.get(repo_path("a1/b1")).unwrap(), None);
+        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(&meta(12)));
+        tree.remove(repo_path("a1/b2")).unwrap();
+        assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), None);
+        assert_eq!(tree.get(repo_path("a1")).unwrap(), None);
+        assert_eq!(tree.get_link(repo_path("a1")).unwrap(), None);
+
+        assert_eq!(tree.get(repo_path("a2")).unwrap(), Some(&meta(20)));
+        tree.remove(repo_path("a2")).unwrap();
+        assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
+
+        assert!(tree.get_link(repo_path("")).unwrap().is_some());
     }
 }
