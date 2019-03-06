@@ -89,6 +89,11 @@ impl RepoPathBuf {
         Ok(RepoPathBuf(s))
     }
 
+    /// Converts the `RepoPathBuf` in a `RepoPath`.
+    pub fn as_repo_path(&self) -> &RepoPath {
+        self
+    }
+
     /// Returns whether the current `RepoPathBuf` has no components. Since `RepoPathBuf`
     /// represents the relative path from the start of the repository this is equivalent to
     /// checking whether the path is the root of the repository
@@ -274,6 +279,11 @@ impl PathComponentBuf {
     pub fn from_string(s: String) -> Fallible<Self> {
         validate_component(&s)?;
         Ok(PathComponentBuf(s))
+    }
+
+    /// Converts the `PathComponentBuf` in a `PathComponent`.
+    pub fn as_path_component(&self) -> &PathComponent {
+        self
     }
 
     fn from_string_unchecked(s: String) -> Self {
