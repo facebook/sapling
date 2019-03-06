@@ -775,4 +775,16 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_to_owned() {
+        assert_eq!(RepoPath::empty().to_owned(), RepoPathBuf::new());
+        assert_eq!(
+            RepoPath::from_str("foo/bar").unwrap().to_owned(),
+            RepoPathBuf::from_string(String::from("foo/bar")).unwrap()
+        );
+        assert_eq!(
+            PathComponent::from_str("foo").unwrap().to_owned(),
+            PathComponentBuf::from_string(String::from("foo")).unwrap()
+        );
+    }
 }
