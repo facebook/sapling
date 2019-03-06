@@ -178,25 +178,15 @@ impl PartialEq for DurableEntry {
 
 impl<S: Store> Manifest for Tree<S> {
     fn get(&self, path: &RepoPath) -> Fallible<Option<&FileMetadata>> {
-        let mut cursor = &self.root;
-        for (parent, component) in path.parents().zip(path.components()) {
-            let child = match cursor {
-                Leaf(_) => bail!("Encountered file where a directory was expected."),
-                Ephemeral(links) => links.get(component),
-                Durable(ref entry) => {
-                    let links = entry.get_links(&*self.store, parent)?;
-                    links.get(component)
+        match self.get_link(path)? {
+            None => Ok(None),
+            Some(link) => {
+                if let Leaf(file_metadata) = link {
+                    Ok(Some(file_metadata))
+                } else {
+                    Err(format_err!("Encountered directory where file was expected"))
                 }
-            };
-            match child {
-                None => return Ok(None),
-                Some(link) => cursor = link,
             }
-        }
-        if let Leaf(file_metadata) = cursor {
-            Ok(Some(file_metadata))
-        } else {
-            Err(format_err!("Encountered directory where file was expected"))
         }
     }
 
@@ -233,6 +223,27 @@ impl<S: Store> Manifest for Tree<S> {
     fn remove(&mut self, _path: &RepoPath) -> Fallible<()> {
         // TODO: implement deletion
         unimplemented!("manifest::tree::Tree::remove is not implemented")
+    }
+}
+
+impl<S: Store> Tree<S> {
+    fn get_link(&self, path: &RepoPath) -> Fallible<Option<&Link>> {
+        let mut cursor = &self.root;
+        for (parent, component) in path.parents().zip(path.components()) {
+            let child = match cursor {
+                Leaf(_) => bail!("Encountered file where a directory was expected."),
+                Ephemeral(links) => links.get(component),
+                Durable(ref entry) => {
+                    let links = entry.get_links(&*self.store, parent)?;
+                    links.get(component)
+                }
+            };
+            match child {
+                None => return Ok(None),
+                Some(link) => cursor = link,
+            }
+        }
+        Ok(Some(cursor))
     }
 }
 
