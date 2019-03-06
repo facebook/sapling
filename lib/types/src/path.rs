@@ -178,6 +178,12 @@ impl RepoPath {
         self.split_last_component().map(|(parent, _)| parent)
     }
 
+    /// Return the last component of the path. The empty path, `RepoPath::empty()` does not have
+    /// any components so `None` is returned in that case.
+    pub fn last_component(&self) -> Option<&PathComponent> {
+        self.split_last_component().map(|(_, component)| component)
+    }
+
     /// Tries to split the current `RepoPath` in a parent path and a component. If the current
     /// path is empty then None is returned. If the current path contains only one component then
     /// the pair that is returned is the empty repo path and a path component that will match the
@@ -653,6 +659,19 @@ mod tests {
         assert_eq!(
             RepoPath::from_str("foo/bar/baz").unwrap().parent(),
             Some(RepoPath::from_str("foo/bar").unwrap())
+        );
+    }
+
+    #[test]
+    fn test_last_component() {
+        assert_eq!(RepoPath::empty().last_component(), None);
+        assert_eq!(
+            RepoPath::from_str("foo").unwrap().last_component(),
+            Some(PathComponent::from_str("foo").unwrap())
+        );
+        assert_eq!(
+            RepoPath::from_str("foo/bar/baz").unwrap().last_component(),
+            Some(PathComponent::from_str("baz").unwrap())
         );
     }
 
