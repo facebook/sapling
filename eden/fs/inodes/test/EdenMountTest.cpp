@@ -64,28 +64,23 @@ class EdenMountDestroyDetector {
   long originalServerStateUseCount_;
 };
 
-/**
- * Control the result of PrivHelper::fuseMount using a folly::Promise.
- */
-class MountPromiseDelegate : public FakePrivHelper::MountDelegate {
- public:
-  folly::Future<folly::File> fuseMount() override;
-
-  template <class Exception>
-  void setException(Exception&& exception);
-
- private:
-  folly::Promise<folly::File> promise_;
-};
-
-/**
- * Unconditionally cause Privhelper::fuseMount to fail.
- */
-class FailingMountDelegate : public FakePrivHelper::MountDelegate {
+class MockMountDelegate : public FakePrivHelper::MountDelegate {
  public:
   class MountFailed : public std::exception {};
 
-  folly::Future<folly::File> fuseMount() override;
+  FOLLY_NODISCARD folly::Future<folly::File> fuseMount() override;
+
+  void makeMountFail();
+
+  /**
+   * Postconditions:
+   * - RESULT.getFuture must not be called.
+   */
+  FOLLY_NODISCARD folly::Promise<folly::File> makeMountPromise();
+
+ private:
+  folly::Future<folly::File> mountFuture_{
+      folly::Future<folly::File>::makeEmpty()};
 };
 
 class EdenMountShutdownBlocker {
@@ -641,17 +636,16 @@ TEST(EdenMountState, mountIsInitializedAfterInitializationCompletes) {
 }
 
 TEST(EdenMountState, mountIsStartingBeforeMountCompletes) {
-  class MountFailed : public std::exception {};
-
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto& mount = *testMount.getEdenMount();
-  auto mountDelegate = std::make_shared<MountPromiseDelegate>();
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
+  auto mountPromise = mountDelegate->makeMountPromise();
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
   auto startFuseFuture = mount.startFuse();
   SCOPE_EXIT {
-    mountDelegate->setException(MountFailed{});
+    mountPromise.setException(MockMountDelegate::MountFailed{});
     logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
   };
   EXPECT_FALSE(startFuseFuture.wait(kMicroTimeout).isReady())
@@ -706,8 +700,10 @@ TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
 TEST(EdenMountState, mountIsFuseErrorAfterMountFails) {
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto& mount = *testMount.getEdenMount();
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
   testMount.getPrivHelper()->registerMountDelegate(
-      mount.getPath(), std::make_shared<FailingMountDelegate>());
+      mount.getPath(), mountDelegate);
+  mountDelegate->makeMountFail();
 
   logAndSwallowExceptions([&] { mount.startFuse().get(kTimeout); });
   EXPECT_EQ(mount.getState(), EdenMount::State::FUSE_ERROR);
@@ -806,17 +802,26 @@ testing::AssertionResult EdenMountDestroyDetector::mountIsDeleted() {
   return testing::AssertionSuccess();
 }
 
-folly::Future<folly::File> MountPromiseDelegate::fuseMount() {
-  return promise_.getFuture();
+folly::Future<folly::File> MockMountDelegate::fuseMount() {
+  if (mountFuture_.valid()) {
+    return std::move(mountFuture_);
+  } else {
+    return folly::makeFuture<folly::File>(MountFailed{});
+  }
 }
 
-template <class Exception>
-void MountPromiseDelegate::setException(Exception&& exception) {
-  promise_.setException(std::forward<Exception>(exception));
+void MockMountDelegate::makeMountFail() {
+  CHECK(!mountFuture_.valid())
+      << __func__ << " unexpectedly called more than once";
+  mountFuture_ = folly::makeFuture<folly::File>(MountFailed{});
 }
 
-folly::Future<folly::File> FailingMountDelegate::fuseMount() {
-  return folly::makeFuture<folly::File>(MountFailed{});
+folly::Promise<folly::File> MockMountDelegate::makeMountPromise() {
+  CHECK(!mountFuture_.valid())
+      << __func__ << " unexpectedly called more than once";
+  auto promise = folly::Promise<folly::File>{};
+  mountFuture_ = promise.getFuture();
+  return promise;
 }
 
 EdenMountShutdownBlocker
