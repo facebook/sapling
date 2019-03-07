@@ -238,6 +238,56 @@ class MountTest(testcase.EdenRepoTest):
 
         poll_until(mount_running, timeout=60)
 
+    def test_remount_creates_mount_point_dir(self) -> None:
+        """Test that eden will automatically create the mount point directory if
+        needed when it is setting up its mount points.
+        """
+        # Create a second checkout in a directory a couple levels deep so that
+        # we can remove some of the parent directories of the checkout.
+        checkout_path = Path(self.tmp_dir) / "checkouts" / "stuff" / "myproject"
+        self.eden.run_cmd("clone", self.repo.path, str(checkout_path))
+        self.assert_checkout_root_entries(self.expected_mount_entries, checkout_path)
+
+        self.eden.run_cmd("unmount", str(checkout_path))
+        self.assertEqual(
+            {self.mount: "RUNNING", str(checkout_path): "NOT_RUNNING"},
+            self.eden.list_cmd_simple(),
+        )
+
+        # Confirm that "eden mount" recreates the mount point directory
+        shutil.rmtree(Path(self.tmp_dir) / "checkouts")
+        self.eden.run_cmd("mount", str(checkout_path))
+        self.assert_checkout_root_entries(self.expected_mount_entries, checkout_path)
+        self.assertTrue(self.eden.in_proc_mounts(str(checkout_path)))
+        self.assertEqual(
+            {self.mount: "RUNNING", str(checkout_path): "RUNNING"},
+            self.eden.list_cmd_simple(),
+        )
+
+        # Also confirm that Eden recreates the mount points on startup as well
+        self.eden.shutdown()
+        shutil.rmtree(Path(self.tmp_dir) / "checkouts")
+        shutil.rmtree(self.mount_path)
+        self.eden.start()
+        self.assertEqual(
+            {self.mount: "RUNNING", str(checkout_path): "RUNNING"},
+            self.eden.list_cmd_simple(),
+        )
+        self.assert_checkout_root_entries(self.expected_mount_entries, checkout_path)
+
+        # Check the behavior if Eden fails to create one of the mount point directories.
+        # We just confirm that Eden still starts and mounts the other checkout normally
+        # in this case.
+        self.eden.shutdown()
+        checkouts_dir = Path(self.tmp_dir) / "checkouts"
+        shutil.rmtree(checkouts_dir)
+        checkouts_dir.write_text("now a file\n")
+        self.eden.start()
+        self.assertEqual(
+            {self.mount: "RUNNING", str(checkout_path): "NOT_RUNNING"},
+            self.eden.list_cmd_simple(),
+        )
+
     def test_remount_creates_bind_mounts_if_needed(self) -> None:
         # Add a repo definition to the config that includes some bind mounts.
         edenrc = os.path.join(self.home_dir, ".edenrc")

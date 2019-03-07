@@ -848,6 +848,11 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
     transitionState(
         /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
 
+    // Just in case the mount point directory doesn't exist,
+    // automatically create it.
+    boost::filesystem::path boostMountPath{getPath().value()};
+    boost::filesystem::create_directories(boostMountPath);
+
     return serverState_->getPrivHelper()
         ->fuseMount(getPath().stringPiece())
         .thenValue([this](folly::File&& fuseDevice) {
