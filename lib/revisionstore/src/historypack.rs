@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
-    fs::{remove_file, File},
+    fs::File,
     io::{Cursor, Read, Write},
     mem::drop,
     path::{Path, PathBuf},
@@ -23,6 +23,7 @@ use crate::historystore::{Ancestors, HistoryStore};
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
 use crate::store::Store;
+use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]
