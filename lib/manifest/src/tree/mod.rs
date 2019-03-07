@@ -3,6 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+mod link;
 mod store;
 
 use std::{
@@ -14,8 +15,9 @@ use crypto::{digest::Digest, sha1::Sha1};
 use failure::{bail, format_err, Fallible};
 use once_cell::sync::OnceCell;
 
-use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::{Node, PathComponent, RepoPath, RepoPathBuf};
 
+use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
 use self::store::Store;
 use crate::{FileMetadata, Manifest};
 
@@ -41,117 +43,6 @@ impl<S> Tree<S> {
         Tree {
             store,
             root: Link::Ephemeral(BTreeMap::new()),
-        }
-    }
-}
-
-/// `Link` describes the type of nodes that tree manifest operates on.
-#[derive(Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
-pub enum Link {
-    /// `Leaf` nodes store FileMetadata. They are terminal nodes and don't have any other
-    /// information.
-    Leaf(FileMetadata),
-    /// `Ephemeral` nodes are inner nodes that have not been committed to storage. They are only
-    /// available in memory. They need to be persisted to be available in future. They are the
-    /// mutable type of an inner node. They store the contents of a directory that has been
-    /// modified.
-    Ephemeral(BTreeMap<PathComponentBuf, Link>),
-    /// `Durable` nodes are inner nodes that come from storage. Their contents can be
-    /// shared between multiple instances of Tree. They are lazily evaluated. Their children
-    /// list will be read from storage only when it is accessed.
-    Durable(Arc<DurableEntry>),
-}
-use self::Link::*;
-
-impl Link {
-    fn durable(node: Node) -> Link {
-        Link::Durable(Arc::new(DurableEntry::new(node)))
-    }
-
-    fn mut_ephemeral_links<S: Store>(
-        &mut self,
-        store: &S,
-        parent: &RepoPath,
-    ) -> Fallible<&mut BTreeMap<PathComponentBuf, Link>> {
-        loop {
-            match self {
-                Leaf(_) => bail!("Encountered file where a directory was expected."),
-                Ephemeral(ref mut links) => return Ok(links),
-                Durable(ref entry) => {
-                    let durable_links = entry.get_links(store, parent)?;
-                    *self = Ephemeral(durable_links.clone());
-                }
-            }
-        }
-    }
-}
-
-// TODO: Use Vec instead of BTreeMap
-/// The inner structure of a durable link. Of note is that failures are cached "forever".
-// The interesting question about this structure is what do we do when we have a failure when
-// reading from storage?
-// We can cache the failure or we don't cache it. Caching it is mostly fine if we had an error
-// reading from local storage or when deserializing. It is not the best option if our storage
-// is remote and we hit a network blip. On the other hand we would not want to always retry when
-// there is a failure on remote storage, we'd want to have a least an exponential backoff on
-// retries. Long story short is that caching the failure is a reasonable place to start from.
-#[derive(Debug)]
-pub struct DurableEntry {
-    node: Node,
-    links: OnceCell<Fallible<BTreeMap<PathComponentBuf, Link>>>,
-}
-
-impl DurableEntry {
-    fn new(node: Node) -> Self {
-        DurableEntry {
-            node,
-            links: OnceCell::new(),
-        }
-    }
-
-    fn get_links<S: Store>(
-        &self,
-        store: &S,
-        path: &RepoPath,
-    ) -> Fallible<&BTreeMap<PathComponentBuf, Link>> {
-        // TODO: be smarter around how failures are handled when reading from the store
-        // Currently this loses the stacktrace
-        let result = self.links.get_or_init(|| {
-            let entry = store.get(path, &self.node)?;
-            let mut links = BTreeMap::new();
-            for element_result in entry.elements() {
-                let element = element_result?;
-                let link = match element.flag {
-                    store::Flag::File(file_type) => {
-                        Leaf(FileMetadata::new(element.node, file_type))
-                    }
-                    store::Flag::Directory => Link::durable(element.node),
-                };
-                links.insert(element.component, link);
-            }
-            Ok(links)
-        });
-        match result {
-            Ok(links) => Ok(links),
-            Err(error) => Err(format_err!("{}", error)),
-        }
-    }
-}
-
-// `PartialEq` can't be derived because `fallible::Error` does not implement `PartialEq`.
-// It should also be noted that `self.links.get() != self.links.get()` can evaluate to true when
-// `self.links` are being instantiated.
-#[cfg(test)]
-impl PartialEq for DurableEntry {
-    fn eq(&self, other: &DurableEntry) -> bool {
-        if self.node != other.node {
-            return false;
-        }
-        match (self.links.get(), other.links.get()) {
-            (None, None) => true,
-            (Some(Ok(a)), Some(Ok(b))) => a == b,
-            _ => false,
         }
     }
 }
@@ -333,6 +224,8 @@ impl<S: Store> Tree<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use types::PathComponentBuf;
 
     use self::store::TestStore;
     use crate::FileType;
