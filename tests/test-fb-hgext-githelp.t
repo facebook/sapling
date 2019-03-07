@@ -57,6 +57,14 @@ githelp for git rebase --skip
   hg revert --all -r .
   hg rebase --continue
 
+githelp for git rebase --interactive
+  $ hg githelp -- git rebase -i master
+  note: if you don't need to rebase use 'hg histedit'. It just edits history.
+  
+  also note: 'hg histedit' will automatically detect your stack, so no second argument is necessary.
+  
+  hg rebase --interactive -d master
+
 githelp for git commit --amend (hg commit --amend pulls up an editor)
   $ hg githelp -- commit --amend
   hg commit --amend

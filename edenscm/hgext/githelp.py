@@ -841,14 +841,20 @@ def rebase(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
+    if opts.get("skip"):
+        cmd = Command("revert --all -r .")
+        ui.status((str(cmd)), "\n")
+
+    cmd = Command("rebase")
+
     if opts.get("interactive"):
+        cmd["--interactive"] = None
         ui.status(
             _(
-                "note: hg histedit does not perform a rebase. "
+                "note: if you don't need to rebase use 'hg histedit'. "
                 + "It just edits history.\n\n"
             )
         )
-        cmd = Command("histedit")
         if len(args) > 0:
             ui.status(
                 _(
@@ -856,14 +862,6 @@ def rebase(ui, repo, *args, **kwargs):
                     " your stack, so no second argument is necessary.\n\n"
                 )
             )
-        ui.status((str(cmd)), "\n")
-        return
-
-    if opts.get("skip"):
-        cmd = Command("revert --all -r .")
-        ui.status((str(cmd)), "\n")
-
-    cmd = Command("rebase")
 
     if opts.get("continue") or opts.get("skip"):
         cmd["--continue"] = None
