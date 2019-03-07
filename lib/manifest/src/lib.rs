@@ -45,7 +45,7 @@ pub trait Manifest {
 /// The contents of the Manifest for a file.
 /// * node: used to determine the revision of the file in the repository.
 /// * file_type: determines the type of the file.
-#[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct FileMetadata {
     pub node: Node,
     pub file_type: FileType,
@@ -57,7 +57,7 @@ pub struct FileMetadata {
 /// Technically speaking executable files are regular files. There is no big difference in terms
 /// of the mechanics between the two approaches. The approach using an Executable is more readable
 /// so that is what we have now.
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FileType {
     /// Regular files.
     Regular,
