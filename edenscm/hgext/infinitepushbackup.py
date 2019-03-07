@@ -352,6 +352,7 @@ def restore(ui, repo, dest=None, **opts):
     allbackupstates = _downloadbackupstate(
         ui, other, sourcereporoot, sourcehostname, namingmgr
     )
+
     if not allbackupstates:
         ui.warn(_("no backups found!"))
         return 1
@@ -550,7 +551,7 @@ def waitbackup(ui, repo, timeout):
     ],
 )
 def isbackedup(ui, repo, dest=None, **opts):
-    """checks if commit was backed up to infinitepush
+    """checks if commit was backed up
 
     If no revision are specified then it checks working copy parent
     """
@@ -1067,6 +1068,13 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
     Hostnames and reporoot will not be nicely MRU ordered
     until the order of insertion is not supported in fileindex
     """
+
+    if "listkeyspatterns" not in other.capabilities():
+        raise error.Abort(
+            "'listkeyspatterns' command is not supported for the server %s"
+            % other.url()
+        )
+
     if sourcehostname and sourcereporoot:
         pattern = namingmgr.getcommonuserhostreporootprefix(
             sourcehostname, sourcereporoot
