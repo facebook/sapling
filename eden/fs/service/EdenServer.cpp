@@ -969,6 +969,23 @@ EdenServer::MountList EdenServer::getMountPoints() const {
   {
     const auto mountPoints = mountPoints_.rlock();
     for (const auto& entry : *mountPoints) {
+      const auto& mount = entry.second.edenMount;
+      // Avoid returning mount points that are still initializing and are not
+      // ready to perform inode operations yet.
+      if (!mount->isSafeForInodeAccess()) {
+        continue;
+      }
+      results.emplace_back(mount);
+    }
+  }
+  return results;
+}
+
+EdenServer::MountList EdenServer::getAllMountPoints() const {
+  MountList results;
+  {
+    const auto mountPoints = mountPoints_.rlock();
+    for (const auto& entry : *mountPoints) {
       results.emplace_back(entry.second.edenMount);
     }
   }
@@ -976,19 +993,20 @@ EdenServer::MountList EdenServer::getMountPoints() const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
-  const auto mount = getMountOrNull(mountPath);
-  if (!mount) {
+  const auto mount = getMountUnsafe(mountPath);
+  if (!mount->isSafeForInodeAccess()) {
     throw EdenError(folly::to<string>(
-        "mount point \"", mountPath, "\" is not known to this eden instance"));
+        "mount point \"", mountPath, "\" is still initializing"));
   }
   return mount;
 }
 
-shared_ptr<EdenMount> EdenServer::getMountOrNull(StringPiece mountPath) const {
+shared_ptr<EdenMount> EdenServer::getMountUnsafe(StringPiece mountPath) const {
   const auto mountPoints = mountPoints_.rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
-    return nullptr;
+    throw EdenError(folly::to<string>(
+        "mount point \"", mountPath, "\" is not known to this eden instance"));
   }
   return it->second.edenMount;
 }

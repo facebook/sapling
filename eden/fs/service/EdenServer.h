@@ -197,21 +197,41 @@ class EdenServer : private TakeoverHandler {
     return server_;
   }
 
+  /**
+   * Get the list of mount points.
+   *
+   * The returned list excludes mount points that are still in the process of
+   * initializing.  This is the behavior desired by most callers, as no access
+   * to inode information is allowed yet on initializing mount points.
+   *
+   * Mount points in the returned list may be in the process of shutting down.
+   * (Even if we attempted to return only running mount points, they may
+   * transition to shutting down before the caller can access them.)
+   */
   MountList getMountPoints() const;
+
+  /**
+   * Get all mount points, including mounts that are currently initializing.
+   */
+  MountList getAllMountPoints() const;
 
   /**
    * Look up an EdenMount by the path where it is mounted.
    *
-   * Throws an EdenError if no mount exists with the specified path.
+   * Throws an EdenError if no mount exists with the specified path, or if the
+   * mount is still initializing and is not ready for inode operations yet.
    */
   std::shared_ptr<EdenMount> getMount(folly::StringPiece mountPath) const;
 
   /**
    * Look up an EdenMount by the path where it is mounted.
    *
-   * Returns nullptr if no mount exists with the specified path.
+   * This is similar to getMount(), but will also return mounts that are still
+   * initializing.  It is the caller's responsibility to ensure they do not
+   * perform any inode operations on the returned mount without first verifying
+   * it is ready for access.
    */
-  std::shared_ptr<EdenMount> getMountOrNull(folly::StringPiece mountPath) const;
+  std::shared_ptr<EdenMount> getMountUnsafe(folly::StringPiece mountPath) const;
 
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;

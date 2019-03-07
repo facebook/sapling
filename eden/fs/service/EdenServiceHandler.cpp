@@ -306,7 +306,7 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
 #ifndef EDEN_WIN
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
-  for (const auto& edenMount : server_->getMountPoints()) {
+  for (const auto& edenMount : server_->getAllMountPoints()) {
     MountInfo info;
     info.mountPoint = edenMount->getPath().value();
     info.edenClientPath = edenMount->getConfig()->getClientDirectory().value();

@@ -280,6 +280,10 @@ class EdenMount {
     return gid_;
   }
 
+  bool isSafeForInodeAccess() const {
+    return true;
+  }
+
   /**
    * Return a new stat structure that has been minimally initialized with
    * data for this mount point.

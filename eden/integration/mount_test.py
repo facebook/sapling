@@ -16,7 +16,13 @@ from typing import Optional, Set
 
 from eden.cli.util import poll_until
 from eden.thrift import EdenClient, EdenNotRunningError
-from facebook.eden.ttypes import FaultDefinition, MountState, UnblockFaultArg
+from facebook.eden.ttypes import (
+    EdenError,
+    FaultDefinition,
+    MountState,
+    UnblockFaultArg,
+    WorkingDirectoryParents,
+)
 from fb303.ttypes import fb_status
 from thrift.Thrift import TException
 
@@ -142,11 +148,32 @@ class MountTest(testcase.EdenRepoTest):
             poll_until(mount_started, timeout=30)
             self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
 
+            # Most thrift calls to access the mount should be disallowed while it is
+            # still initializing.
+            self._assert_thrift_calls_fail_during_mount_init(client)
+
             # Unblock mounting and wait for the mount to transition to running
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
 
             self._wait_for_mount_running(client)
             self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+
+    def _assert_thrift_calls_fail_during_mount_init(self, client: EdenClient) -> None:
+        error_regex = "mount point .* is still initializing"
+        mount_path = Path(self.mount)
+        null_commit = b"\00" * 20
+
+        with self.assertRaisesRegex(EdenError, error_regex):
+            client.getFileInformation(mountPoint=bytes(mount_path), paths=[b""])
+
+        with self.assertRaisesRegex(EdenError, error_regex):
+            client.getScmStatus(
+                mountPoint=bytes(mount_path), listIgnored=False, commit=null_commit
+            )
+
+        parents = WorkingDirectoryParents(parent1=null_commit)
+        with self.assertRaisesRegex(EdenError, error_regex):
+            client.resetParentCommits(mountPoint=bytes(mount_path), parents=parents)
 
     def test_start_blocked_mount_init(self) -> None:
         self.eden.shutdown()

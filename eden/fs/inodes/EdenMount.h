@@ -180,8 +180,19 @@ class EdenMount {
    * method is called, so this method should primarily only be used for
    * debugging & diagnostics.
    */
-  State getState() {
+  State getState() const {
     return state_.load(std::memory_order_acquire);
+  }
+
+  /**
+   * Check if inode operations can be performed on this EdenMount.
+   *
+   * This returns false for mounts that are still initializing and do not have
+   * their root inode loaded yet.
+   */
+  bool isSafeForInodeAccess() const {
+    auto state = getState();
+    return !(state == State::UNINITIALIZED || state == State::INITIALIZING);
   }
 
   /**
