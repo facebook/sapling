@@ -441,6 +441,16 @@ More sophisticated test for phases
 
   $ hgmn pushbackup ssh://user@dummy/repo -q
 
+  $ hgmn isbackedup ssh://user@dummy/repo -r e4ae5d869b06 --remote
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  e4ae5d869b061c927cf739de04162653c9c4a9ab backed up
+  $ hgmn isbackedup ssh://user@dummy/repo -r 8336071380f0 --remote
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  8336071380f0f7cf919e51f7f1818f2fed425fdb backed up
+  $ hgmn isbackedup ssh://user@dummy/repo -r 884e1b02454b --remote
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  884e1b02454b186570b35d47eac3794b2f8d952f backed up
+
   $ tglogp
   @  22: 1e6a6d6a35a6 public 'zzzzz'
   |
@@ -493,6 +503,11 @@ At the moment short hahses are not working, print the full hashes to use then in
   1e6a6d6a35a683a946e96ab16d011883f0dc8f77
 
   $ cd ../repo-pull
+
+  $ hgmn pullbackup
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
+  [255]
 
   $ hgmn pull -r 884e1b02454b186570b35d47eac3794b2f8d952f -r 8336071380f0f7cf919e51f7f1818f2fed425fdb -r e4ae5d869b061c927cf739de04162653c9c4a9ab -r 1e6a6d6a35a683a946e96ab16d011883f0dc8f77 -q
 
