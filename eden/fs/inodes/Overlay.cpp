@@ -85,10 +85,6 @@ constexpr uint32_t Overlay::kHeaderVersion;
 constexpr size_t Overlay::kHeaderLength;
 
 Overlay::Overlay(AbsolutePathPiece localDir) : localDir_(localDir) {
-  initOverlay();
-  tryLoadNextInodeNumber();
-
-  gcThread_ = std::thread([this] { gcThread(); });
 }
 
 Overlay::~Overlay() {
@@ -98,16 +94,17 @@ Overlay::~Overlay() {
 void Overlay::close() {
   CHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
 
+  gcQueue_.lock()->stop = true;
+  gcCondVar_.notify_one();
+  if (gcThread_.joinable()) {
+    gcThread_.join();
+  }
+
   if (!infoFile_) {
     return;
   }
 
   // Make sure everything is shut down in reverse of construction order.
-
-  gcQueue_.lock()->stop = true;
-  gcCondVar_.notify_one();
-  gcThread_.join();
-
   saveNextInodeNumber();
 
   inodeMetadataTable_.reset();
@@ -115,16 +112,11 @@ void Overlay::close() {
   infoFile_.close();
 }
 
-bool Overlay::hasInitializedNextInodeNumber() const {
-  // nextInodeNumber_ is either 0 (uninitialized) or nonzero (initialized).
-  // It's only initialized on one thread, so relaxed loads are okay.
-  return 0 != nextInodeNumber_.load(std::memory_order_relaxed);
-}
-
 void Overlay::initOverlay() {
   // Read the info file.
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
   int fd = folly::openNoInt(infoPath.value().c_str(), O_RDONLY | O_CLOEXEC);
+  bool newOverlay = false;
   if (fd >= 0) {
     // This is an existing overlay directory.
     // Read the info file and make sure we are compatible with its version.
@@ -137,6 +129,7 @@ void Overlay::initOverlay() {
     // This is a brand new overlay directory.
     initNewOverlay();
     infoFile_ = File{infoPath.value().c_str(), O_RDONLY | O_CLOEXEC};
+    newOverlay = true;
   }
 
   if (!infoFile_.try_lock()) {
@@ -155,6 +148,13 @@ void Overlay::initOverlay() {
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
 
+  if (newOverlay) {
+    nextInodeNumber_.store(kRootNodeId.get() + 1, std::memory_order_relaxed);
+  } else {
+    auto nextInodeNumber = loadNextInodeNumber();
+    nextInodeNumber_.store(nextInodeNumber.get(), std::memory_order_relaxed);
+  }
+
   // To support migrating from an older Overlay format, unconditionally create
   // tmp/.
   // TODO: It would be a bit expensive, but it might be worth checking
@@ -167,7 +167,7 @@ void Overlay::initOverlay() {
       (localDir_ + PathComponentPiece{kMetadataFile}).c_str());
 }
 
-void Overlay::tryLoadNextInodeNumber() {
+std::optional<InodeNumber> Overlay::tryLoadNextInodeNumberFile() {
   // If we ever want to extend this file, it should be renamed and a proper
   // header with version number added. In the meantime, we enforce the file is
   // 8 bytes.
@@ -177,9 +177,8 @@ void Overlay::tryLoadNextInodeNumber() {
     if (errno == ENOENT) {
       // No max inode number file was written which usually means either Eden
       // was not shut down cleanly or an old overlay is being loaded.
-      // Either way, a full scan of the overlay is necessary, so leave
-      // nextInodeNumber_ at 0.
-      return;
+      // Either way, a full scan of the overlay is necessary.
+      return std::nullopt;
     } else {
       folly::throwSystemError("Failed to open ", kNextInodeNumberFile);
     }
@@ -203,16 +202,16 @@ void Overlay::tryLoadNextInodeNumber() {
   if (readResult != sizeof(nextInodeNumber)) {
     XLOG(WARN) << "Failed to read entire inode number. Only read " << readResult
                << " bytes. Full overlay scan required.";
-    return;
+    return std::nullopt;
   }
 
   if (nextInodeNumber <= kRootNodeId.get()) {
     XLOG(WARN) << "Invalid max inode number " << nextInodeNumber
                << ". Full overlay scan required.";
-    return;
+    return std::nullopt;
   }
 
-  nextInodeNumber_.store(nextInodeNumber, std::memory_order_relaxed);
+  return InodeNumber{nextInodeNumber};
 }
 
 void Overlay::saveNextInodeNumber() {
@@ -301,9 +300,6 @@ void Overlay::initNewOverlay() {
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
   folly::writeFileAtomic(
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
-
-  // kRootNodeId is reserved - start at the next one. No scan is necessary.
-  nextInodeNumber_.store(kRootNodeId.get() + 1, std::memory_order_relaxed);
 }
 
 void Overlay::ensureTmpDirectoryIsCreated() {
@@ -486,13 +482,38 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   }
 }
 
-InodeNumber Overlay::scanForNextInodeNumber() {
-  if (auto ino = nextInodeNumber_.load(std::memory_order_relaxed)) {
-    // Already defined.
-    CHECK_GT(ino, 1);
-    return InodeNumber{ino - 1};
+folly::SemiFuture<folly::Unit> Overlay::initialize() {
+  // TODO: Perform on-disk initialization in a separate thread,
+  // to avoid blocking the current thread.
+  //
+  // We potentially could just do this in the gc thread before running
+  // the gcThread() function.
+  initOverlay();
+  gcThread_ = std::thread([this] { gcThread(); });
+  return folly::makeSemiFuture();
+}
+
+InodeNumber Overlay::getMaxInodeNumber() {
+  auto ino = nextInodeNumber_.load(std::memory_order_relaxed);
+  CHECK_GT(ino, 1);
+  return InodeNumber{ino - 1};
+}
+
+InodeNumber Overlay::loadNextInodeNumber() {
+  auto numberFromFile = tryLoadNextInodeNumberFile();
+  if (numberFromFile.has_value()) {
+    return numberFromFile.value();
   }
 
+  XLOG(WARN) << "Overlay " << localDir_
+             << " was not shut down cleanly.  Will rescan.";
+  auto numberFromScan = scanForNextInodeNumber();
+  XLOG(DBG2) << "Finished scanning overlay " << localDir_
+             << "; max existing inode number is " << numberFromScan;
+  return numberFromScan;
+}
+
+InodeNumber Overlay::scanForNextInodeNumber() {
   // Walk the root directory downwards to find all (non-unlinked) directory
   // inodes stored in the overlay.
   //
@@ -552,9 +573,7 @@ InodeNumber Overlay::scanForNextInodeNumber() {
     }
   }
 
-  nextInodeNumber_.store(maxInode.get() + 1, std::memory_order_relaxed);
-
-  return maxInode;
+  return InodeNumber{maxInode.get() + 1};
 }
 
 Overlay::InodePath Overlay::getFilePath(InodeNumber inodeNumber) {

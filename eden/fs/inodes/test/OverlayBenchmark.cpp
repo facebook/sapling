@@ -29,7 +29,7 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   // overlayPath is parameterized to measure on different filesystem types.
 
   Overlay overlay{overlayPath};
-  overlay.scanForNextInodeNumber();
+  overlay.initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};

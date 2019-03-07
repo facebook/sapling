@@ -106,11 +106,9 @@ class EdenMount {
   /**
    * Create a shared_ptr to an EdenMount.
    *
-   * Create an EdenMount instance Using an EdenMountDeleter.
-   * The caller must call initialize() after creating the EdenMount
-   * instance.  This is not done implicitly because the graceful
-   * restart code needs to take the opportunity to update the InodeMap
-   * prior to the logic in initialize() running.
+   * The caller must call initialize() after creating the EdenMount to load data
+   * required to access the mount's inodes.  No inode-related methods may be
+   * called on the EdenMount until initialize() has successfully completed.
    */
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,

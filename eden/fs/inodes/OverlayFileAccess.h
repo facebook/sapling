@@ -31,9 +31,8 @@ class Overlay;
  */
 class OverlayFileAccess {
  public:
-  OverlayFileAccess();
+  explicit OverlayFileAccess(Overlay* overlay);
   ~OverlayFileAccess();
-  void initialize(Overlay* overlay);
 
   /**
    * Creates a new empty file in the overlay.

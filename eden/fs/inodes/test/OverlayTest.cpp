@@ -69,6 +69,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   tarProcess.waitChecked();
 
   Overlay overlay{realpath(tmpdir.path().string()) + "overlay-v2"_pc};
+  overlay.initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
@@ -290,6 +291,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
 
   void loadOverlay() {
     overlay = std::make_unique<Overlay>(getLocalDir());
+    overlay->initialize().get();
   }
 
   void corruptOverlayFile(InodeNumber inodeNumber) {
@@ -320,17 +322,17 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
 };
 
 TEST_P(RawOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
-  EXPECT_EQ(kRootNodeId, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
   EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
 
   recreate(OverlayRestartMode::CLEAN);
 
-  EXPECT_EQ(2_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(2_ino, overlay->getMaxInodeNumber());
   EXPECT_EQ(3_ino, overlay->allocateInodeNumber());
 
   recreate(OverlayRestartMode::UNCLEAN);
 
-  EXPECT_EQ(kRootNodeId, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
   EXPECT_EQ(2_ino, overlay->allocateInodeNumber());
 }
 
@@ -343,7 +345,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
 
   recreate();
 
-  EXPECT_EQ(2_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(2_ino, overlay->getMaxInodeNumber());
 }
 
 TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
@@ -360,7 +362,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
   recreate();
 
   SCOPED_TRACE("Inodes:\n" + debugDumpOverlayInodes(*overlay, kRootNodeId));
-  EXPECT_EQ(4_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(4_ino, overlay->getMaxInodeNumber());
 }
 
 TEST_P(RawOverlayTest, remembers_max_inode_number_of_file) {
@@ -375,7 +377,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_file) {
 
   recreate();
 
-  EXPECT_EQ(3_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(3_ino, overlay->getMaxInodeNumber());
 }
 
 TEST_P(
@@ -395,7 +397,7 @@ TEST_P(
   corruptOverlayFile(subdirectoryIno);
   loadOverlay();
 
-  EXPECT_EQ(subdirectoryIno, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(subdirectoryIno, overlay->getMaxInodeNumber());
 }
 
 TEST_P(
@@ -468,13 +470,14 @@ TEST_P(
     corruptOverlayFileByDeleting(corruptedByDeletionIno);
     loadOverlay();
 
-    EXPECT_EQ(maxIno, overlay->scanForNextInodeNumber());
+    EXPECT_EQ(maxIno, overlay->getMaxInodeNumber());
   }
 }
 
 TEST_P(RawOverlayTest, inode_number_scan_logs_corrupt_directories_once) {
   SKIP_IF(GetParam() == OverlayRestartMode::CLEAN)
-      << "scanForNextInodeNumber should not log about corrupt directories on clean restart.";
+      << "scanForNextInodeNumber should not log about corrupt "
+         "directories on clean restart.";
 
   constexpr auto subdirCount = 5;
   static_assert(
@@ -500,21 +503,21 @@ TEST_P(RawOverlayTest, inode_number_scan_logs_corrupt_directories_once) {
   for (auto subdirIno : subdirInos) {
     corruptOverlayFile(subdirIno);
   }
-  loadOverlay();
 
   auto logHandler = std::make_shared<folly::TestLogHandler>();
   folly::LoggerDB::get()
       .getCategory("eden.fs.inodes.Overlay")
       ->addHandler(logHandler);
 
-  overlay->scanForNextInodeNumber();
+  loadOverlay();
 
   SCOPED_TRACE(prettifyLogMessages(*logHandler));
 
   auto corruptOverlayFileMessages = filterLogMessages(
       *logHandler, "Ignoring failure to load directory inode"_sp);
   EXPECT_EQ(1, corruptOverlayFileMessages.size())
-      << "scanForNextInodeNumber should have logged about corrupt directory inodes only once";
+      << "scanForNextInodeNumber should have logged about "
+         "corrupt directory inodes only once";
 }
 
 TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
@@ -540,7 +543,7 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
 
   SCOPED_TRACE(
       "Inodes from subdir:\n" + debugDumpOverlayInodes(*overlay, ino4));
-  EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
 TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
@@ -563,8 +566,6 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
 
   recreate();
 
-  overlay->scanForNextInodeNumber();
-
   // Rewrite the root (say, after a takeover) without the file.
 
   DirContents newroot;
@@ -576,7 +577,7 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   SCOPED_TRACE("Inodes:\n" + debugDumpOverlayInodes(*overlay, kRootNodeId));
   // Ensure an inode in the overlay but not referenced by the previous session
   // counts.
-  EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
+  EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -598,7 +599,9 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
  public:
   DebugDumpOverlayInodesTest()
       : testDir_{makeTempDir("eden_DebugDumpOverlayInodesTest")},
-        overlay{AbsolutePathPiece{testDir_.path().string()}} {}
+        overlay{AbsolutePathPiece{testDir_.path().string()}} {
+    overlay.initialize().get();
+  }
 
   folly::test::TemporaryDirectory testDir_;
   Overlay overlay;

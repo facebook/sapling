@@ -10,6 +10,7 @@
 #pragma once
 #include <folly/File.h>
 #include <folly/Range.h>
+#include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <gtest/gtest_prod.h>
 #include <array>
@@ -58,6 +59,12 @@ class Overlay {
  public:
   class InodePath;
 
+  /**
+   * Create a new Overlay object.
+   *
+   * The caller must call initialize() after creating the Overlay and wait for
+   * it to succeed before using any other methods.
+   */
   explicit Overlay(AbsolutePathPiece localDir);
   ~Overlay();
 
@@ -65,6 +72,26 @@ class Overlay {
   Overlay(Overlay&&) = delete;
   Overlay& operator=(const Overlay&) = delete;
   Overlay& operator=(Overlay&&) = delete;
+
+  /**
+   * Initialize the overlay.
+   *
+   * This must be called after the Overlay constructor, before performing
+   * operations on the overlay.
+   *
+   * This may be a slow operation and may perform significant amounts of
+   * disk I/O.
+   *
+   * The initialization operation may include:
+   * - Acquiring a lock to ensure no other processes are accessing the on-disk
+   *   overlay state
+   * - Creating the initial on-disk overlay data structures if necessary.
+   * - Verifying and fixing the on-disk data if the Overlay was not shut down
+   *   cleanly the last time it was opened.
+   * - Upgrading the on-disk data from older formats if the Overlay was created
+   *   by an older version of the software.
+   */
+  folly::SemiFuture<folly::Unit> initialize();
 
   /**
    * Closes the overlay. It is undefined behavior to access the
@@ -78,22 +105,9 @@ class Overlay {
   void close();
 
   /**
-   * Returns true if the next inode number was initialized, either upon
-   * construction by loading the file left by a cleanly-closed Overlay, or by
-   * calling scanForNextInodeNumber().
+   * Get the maximum inode number that has ever been allocated to an inode.
    */
-  bool hasInitializedNextInodeNumber() const;
-
-  /**
-   * Scans the Overlay for all inode numbers currently in use and sets the next
-   * inode number to the maximum plus one. Either this or setNextInodeNumber
-   * should be called when opening a mount point to ensure that any future
-   * allocated inode numbers are always greater than those already tracked in
-   * the overlay.
-   *
-   * Returns the maximum existing inode number.
-   */
-  InodeNumber scanForNextInodeNumber();
+  InodeNumber getMaxInodeNumber();
 
   /**
    * allocateInodeNumber() should only be called by TreeInode.
@@ -105,9 +119,6 @@ class Overlay {
    *   TreeInode::create() or TreeInode::mkdir().  In this case
    *   inodeCreated() should be called immediately afterwards to register the
    *   new child Inode object.
-   *
-   * It is illegal to call allocateInodeNumber prior to
-   * setNextInodeNumber or scanForNextInodeNumber.
    *
    * TODO: It would be easy to extend this function to allocate a range of
    * inode values in one atomic operation.
@@ -216,7 +227,9 @@ class Overlay {
   };
 
   void initOverlay();
-  void tryLoadNextInodeNumber();
+  InodeNumber loadNextInodeNumber();
+  std::optional<InodeNumber> tryLoadNextInodeNumberFile();
+  InodeNumber scanForNextInodeNumber();
   void saveNextInodeNumber();
   void readExistingOverlay(int infoFD);
   void initNewOverlay();
