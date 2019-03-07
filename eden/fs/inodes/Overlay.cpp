@@ -34,6 +34,7 @@ using folly::File;
 using folly::IOBuf;
 using folly::MutableStringPiece;
 using folly::StringPiece;
+using folly::Unit;
 using std::optional;
 using folly::literals::string_piece_literals::operator""_sp;
 using std::string;
@@ -482,15 +483,28 @@ bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   }
 }
 
-folly::SemiFuture<folly::Unit> Overlay::initialize() {
-  // TODO: Perform on-disk initialization in a separate thread,
-  // to avoid blocking the current thread.
+folly::SemiFuture<Unit> Overlay::initialize() {
+  // The initOverlay() call is potentially slow, so we want to avoid
+  // performing it in the current thread and blocking returning to our caller.
   //
-  // We potentially could just do this in the gc thread before running
-  // the gcThread() function.
-  initOverlay();
-  gcThread_ = std::thread([this] { gcThread(); });
-  return folly::makeSemiFuture();
+  // We already spawn a separate thread for garbage collection.  It's convenient
+  // to simply use this existing thread to perform the initialization logic
+  // before waiting for GC work to do.
+  auto [initPromise, initFuture] = folly::makePromiseContract<Unit>();
+  gcThread_ = std::thread([this, promise = std::move(initPromise)]() mutable {
+    try {
+      initOverlay();
+    } catch (std::exception& ex) {
+      XLOG(ERR) << "overlay initialization failed for " << localDir_ << ": "
+                << ex.what();
+      promise.setException(
+          folly::exception_wrapper(std::current_exception(), ex));
+      return;
+    }
+    promise.setValue();
+    gcThread();
+  });
+  return std::move(initFuture);
 }
 
 InodeNumber Overlay::getMaxInodeNumber() {
