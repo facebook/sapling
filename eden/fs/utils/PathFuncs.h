@@ -9,6 +9,8 @@
  */
 #pragma once
 #include <boost/operators.hpp>
+#include <glog/logging.h>
+
 #include <folly/Expected.h>
 #include <folly/FBString.h>
 #include <folly/FBVector.h>

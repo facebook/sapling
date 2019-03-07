@@ -11,6 +11,8 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <glog/logging.h>
+
 #include <folly/Exception.h>
 #include <folly/portability/Stdlib.h>
 #include <optional>
