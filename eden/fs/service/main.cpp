@@ -44,6 +44,11 @@ DEFINE_string(
     logPath,
     "",
     "If set, redirects stdout and stderr to the log file given.");
+DEFINE_bool(
+    noWaitForMounts,
+    false,
+    "Report successful startup without waiting for all configured mounts "
+    "to be remounted.");
 
 constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
 constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
@@ -250,7 +255,7 @@ int main(int argc, char** argv) {
     server.emplace(
         std::move(identity), std::move(privHelper), std::move(edenConfig));
 
-    prepareFuture = server->prepare(startupLogger);
+    prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
   } catch (const std::exception& ex) {
     startupLogger->exitUnsuccessfully(
         EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));

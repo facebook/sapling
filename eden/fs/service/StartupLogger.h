@@ -45,6 +45,10 @@ class StartupLogger {
 
   /**
    * Log an informational message.
+   *
+   * Note that it is valid to call log() even after success() has been called.
+   * This can occur if edenfs has been asked to report successful startup
+   * without waiting for all mount points to be remounted.
    */
   template <typename... Args>
   void log(Args&&... args) {

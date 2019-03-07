@@ -24,6 +24,11 @@ DEFINE_bool(
     enable_fault_injection,
     false,
     "Enable the fault injection framework.");
+DEFINE_bool(
+    fault_injection_block_mounts,
+    false,
+    "Block mount attempts via the fault injection framework.  "
+    "Requires --enable_fault_injection.");
 
 namespace facebook {
 namespace eden {
@@ -56,7 +61,19 @@ ServerState::ServerState(
           kUserIgnoreMinPollSeconds}},
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->getSystemIgnoreFile(),
-          kSystemIgnoreMinPollSeconds}} {}
+          kSystemIgnoreMinPollSeconds}} {
+  // It would be nice if we eventually built a more generic mechanism for
+  // defining faults to be configured on start up.  (e.g., loading this from the
+  // EdenConfig).
+  //
+  // For now, blocking mounts is the main thing we want to be able to control on
+  // startup (since mounting occurs automatically during startup).  Add a
+  // one-off command line flag to control this for now, until we build a more
+  // generic mechanism.
+  if (FLAGS_fault_injection_block_mounts) {
+    faultInjector_->injectBlock("mount", ".*");
+  }
+}
 
 ServerState::~ServerState() {}
 

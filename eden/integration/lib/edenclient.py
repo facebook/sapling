@@ -151,7 +151,12 @@ class EdenFS(object):
         cmd.extend(args)
         return cmd
 
-    def start(self, timeout: float = 60, takeover_from: Optional[int] = None) -> None:
+    def start(
+        self,
+        timeout: float = 60,
+        takeover_from: Optional[int] = None,
+        extra_args: Optional[List[str]] = None,
+    ) -> None:
         """
         Run "eden daemon" to start the eden daemon.
         """
@@ -165,7 +170,7 @@ class EdenFS(object):
             timeout += 90
 
         takeover = takeover_from is not None
-        self._spawn(gdb=use_gdb, takeover=takeover)
+        self.spawn_nowait(gdb=use_gdb, takeover=takeover, extra_args=extra_args)
 
         assert self._process is not None
         util.wait_for_daemon_healthy(
@@ -214,7 +219,15 @@ class EdenFS(object):
 
         return extra_daemon_args
 
-    def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
+    def spawn_nowait(
+        self,
+        gdb: bool = False,
+        takeover: bool = False,
+        extra_args: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Start edenfs but do not wait for it to become healthy.
+        """
         if self._process is not None:
             raise Exception("cannot start an already-running eden client")
 
@@ -226,6 +239,8 @@ class EdenFS(object):
         )
 
         extra_daemon_args = self.get_extra_daemon_args()
+        if extra_args:
+            extra_daemon_args.extend(extra_args)
 
         if takeover:
             args.append("--takeover")

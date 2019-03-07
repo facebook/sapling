@@ -372,8 +372,10 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
 }
 #endif // !EDEN_WIN
 
-Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
-  return prepareImpl(std::move(logger))
+Future<Unit> EdenServer::prepare(
+    std::shared_ptr<StartupLogger> logger,
+    bool waitForMountCompletion) {
+  return prepareImpl(std::move(logger), waitForMountCompletion)
       .ensure(
           // Mark the server state as RUNNING once we finish setting up the
           // mount points. Even if an error occurs we still transition to the
@@ -382,7 +384,9 @@ Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
           [this] { runningState_.wlock()->state = RunState::RUNNING; });
 }
 
-Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
+Future<Unit> EdenServer::prepareImpl(
+    std::shared_ptr<StartupLogger> logger,
+    bool waitForMountCompletion) {
   bool doingTakeover = false;
   if (!acquireEdenLock()) {
     // Another edenfs process is already running.
@@ -429,8 +433,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
   const auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
-  TakeoverData takeoverData;
 #endif
+  TakeoverData takeoverData;
   if (doingTakeover) {
 #ifndef EDEN_WIN
     logger->log(
@@ -494,96 +498,120 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   takeoverServer_->start();
 #endif // !EDEN_WIN
 
-  // Trigger remounting of existing mount points
-  // If doingTakeover is true, use the mounts received in TakeoverData
   std::vector<Future<Unit>> mountFutures;
   if (doingTakeover) {
 #ifndef EDEN_WIN
-    for (auto& info : takeoverData.mountPoints) {
-      const auto stateDirectory = info.stateDirectory;
-      auto mountFuture =
-          makeFutureWith([&] {
-            auto initialConfig = ClientConfig::loadFromClientDirectory(
-                AbsolutePathPiece{info.mountPath},
-                AbsolutePathPiece{info.stateDirectory});
-            return mount(std::move(initialConfig), std::move(info));
-          })
-              .thenTry([logger, mountPath = info.mountPath](
-                           folly::Try<std::shared_ptr<EdenMount>>&& result) {
-                if (result.hasValue()) {
-                  logger->log("Successfully took over mount ", mountPath);
-                  return makeFuture();
-                } else {
-                  logger->warn(
-                      "Failed to perform takeover for ",
-                      mountPath,
-                      ": ",
-                      result.exception().what());
-                  return makeFuture<Unit>(std::move(result).exception());
-                }
-              });
-      mountFutures.push_back(std::move(mountFuture));
-    }
+    mountFutures =
+        prepareMountsTakeover(logger, std::move(takeoverData.mountPoints));
 #else
     NOT_IMPLEMENTED();
-#endif
+#endif // !EDEN_WIN
   } else {
-    folly::dynamic dirs = folly::dynamic::object();
-    try {
-      dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
-    } catch (const std::exception& ex) {
-      logger->warn(
-          "Could not parse config.json file: ",
-          ex.what(),
-          "\nSkipping remount step.");
-      return std::move(thriftRunningFuture)
-          .thenValue(
-              [ew = folly::exception_wrapper(std::current_exception(), ex)](
-                  auto&&) { return makeFuture<Unit>(ew); });
-    }
-
-    if (dirs.empty()) {
-      logger->log("No mount points currently configured.");
-      return thriftRunningFuture;
-    }
-    logger->log("Remounting ", dirs.size(), " mount points...");
-
-    for (const auto& client : dirs.items()) {
-      auto mountFuture =
-          makeFutureWith([&] {
-            MountInfo mountInfo;
-            mountInfo.mountPoint = client.first.c_str();
-            auto edenClientPath = edenDir_ + PathComponent("clients") +
-                PathComponent(client.second.c_str());
-            mountInfo.edenClientPath = edenClientPath.stringPiece().str();
-            auto initialConfig = ClientConfig::loadFromClientDirectory(
-                AbsolutePathPiece{mountInfo.mountPoint},
-                AbsolutePathPiece{mountInfo.edenClientPath});
-            return mount(std::move(initialConfig));
-          })
-              .thenTry([logger, mountPath = client.first.asString()](
-                           folly::Try<std::shared_ptr<EdenMount>>&& result) {
-                if (result.hasValue()) {
-                  logger->log("Successfully remounted ", mountPath);
-                  return makeFuture();
-                } else {
-                  logger->warn(
-                      "Failed to remount ",
-                      mountPath,
-                      ": ",
-                      result.exception().what());
-                  return makeFuture<Unit>(std::move(result).exception());
-                }
-              });
-      mountFutures.push_back(std::move(mountFuture));
-    }
+    mountFutures = prepareMounts(logger);
   }
 
-  // Return a future that will complete only when all mount points have started
-  // and the thrift server is also running.
-  return folly::collectAll(mountFutures)
-      .thenValue([thriftFuture = std::move(thriftRunningFuture)](
-                     auto&&) mutable { return std::move(thriftFuture); });
+  if (waitForMountCompletion) {
+    // Return a future that will complete only when all mount points have
+    // started and the thrift server is also running.
+    mountFutures.emplace_back(std::move(thriftRunningFuture));
+    return folly::collectAll(mountFutures).unit();
+  } else {
+    // Don't wait for the mount futures.
+    // Only return the thrift future.
+    return thriftRunningFuture;
+  }
+}
+
+std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
+    shared_ptr<StartupLogger> logger,
+    std::vector<TakeoverData::MountInfo>&& takeoverMounts) {
+  // Trigger remounting of existing mount points
+  // If doingTakeover is true, use the mounts received in TakeoverData
+  std::vector<Future<Unit>> mountFutures;
+#ifndef EDEN_WIN
+  for (auto& info : takeoverMounts) {
+    const auto stateDirectory = info.stateDirectory;
+    auto mountFuture =
+        makeFutureWith([&] {
+          auto initialConfig = ClientConfig::loadFromClientDirectory(
+              AbsolutePathPiece{info.mountPath},
+              AbsolutePathPiece{info.stateDirectory});
+          return mount(std::move(initialConfig), std::move(info));
+        })
+            .thenTry([logger, mountPath = info.mountPath](
+                         folly::Try<std::shared_ptr<EdenMount>>&& result) {
+              if (result.hasValue()) {
+                logger->log("Successfully took over mount ", mountPath);
+                return makeFuture();
+              } else {
+                logger->warn(
+                    "Failed to perform takeover for ",
+                    mountPath,
+                    ": ",
+                    result.exception().what());
+                return makeFuture<Unit>(std::move(result).exception());
+              }
+            });
+    mountFutures.push_back(std::move(mountFuture));
+  }
+#else
+  NOT_IMPLEMENTED();
+#endif
+  return mountFutures;
+}
+
+std::vector<Future<Unit>> EdenServer::prepareMounts(
+    shared_ptr<StartupLogger> logger) {
+  std::vector<Future<Unit>> mountFutures;
+  folly::dynamic dirs = folly::dynamic::object();
+  try {
+    dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
+  } catch (const std::exception& ex) {
+    logger->warn(
+        "Could not parse config.json file: ",
+        ex.what(),
+        "\nSkipping remount step.");
+    mountFutures.emplace_back(
+        folly::exception_wrapper(std::current_exception(), ex));
+    return mountFutures;
+  }
+
+  if (dirs.empty()) {
+    logger->log("No mount points currently configured.");
+    return mountFutures;
+  }
+  logger->log("Remounting ", dirs.size(), " mount points...");
+
+  for (const auto& client : dirs.items()) {
+    auto mountFuture =
+        makeFutureWith([&] {
+          MountInfo mountInfo;
+          mountInfo.mountPoint = client.first.c_str();
+          auto edenClientPath = edenDir_ + PathComponent("clients") +
+              PathComponent(client.second.c_str());
+          mountInfo.edenClientPath = edenClientPath.stringPiece().str();
+          auto initialConfig = ClientConfig::loadFromClientDirectory(
+              AbsolutePathPiece{mountInfo.mountPoint},
+              AbsolutePathPiece{mountInfo.edenClientPath});
+          return mount(std::move(initialConfig));
+        })
+            .thenTry([logger, mountPath = client.first.asString()](
+                         folly::Try<std::shared_ptr<EdenMount>>&& result) {
+              if (result.hasValue()) {
+                logger->log("Successfully remounted ", mountPath);
+                return makeFuture();
+              } else {
+                logger->warn(
+                    "Failed to remount ",
+                    mountPath,
+                    ": ",
+                    result.exception().what());
+                return makeFuture<Unit>(std::move(result).exception());
+              }
+            });
+    mountFutures.push_back(std::move(mountFuture));
+  }
+  return mountFutures;
 }
 
 void EdenServer::run(void (*runThriftServer)(const EdenServer&)) {

@@ -15,7 +15,10 @@ from pathlib import Path
 from typing import Optional, Set
 
 from eden.cli.util import poll_until
+from eden.thrift import EdenClient, EdenNotRunningError
 from facebook.eden.ttypes import FaultDefinition, MountState, UnblockFaultArg
+from fb303.ttypes import fb_status
+from thrift.Thrift import TException
 
 from .lib import testcase
 
@@ -142,17 +145,71 @@ class MountTest(testcase.EdenRepoTest):
             # Unblock mounting and wait for the mount to transition to running
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
 
-            def mount_running() -> Optional[bool]:
-                if (
-                    self.eden.get_mount_state(Path(self.mount), client)
-                    == MountState.RUNNING
-                ):
-                    return True
+            self._wait_for_mount_running(client)
+            self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+
+    def test_start_blocked_mount_init(self) -> None:
+        self.eden.shutdown()
+        self.eden.spawn_nowait(
+            extra_args=["--enable_fault_injection", "--fault_injection_block_mounts"]
+        )
+
+        # Wait for eden to report the mount point in the listMounts() output
+        def is_initializing() -> Optional[bool]:
+            try:
+                with self.eden.get_thrift_client() as client:
+                    if self.eden.get_mount_state(Path(self.mount), client) is not None:
+                        return True
+                assert self.eden._process is not None
+                if self.eden._process.poll():
+                    self.fail("eden exited before becoming healthy")
+                return None
+            except (EdenNotRunningError, TException):
                 return None
 
-            poll_until(mount_running, timeout=30)
-            self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
-            self.assertEqual(0, mount_proc.wait())
+        poll_until(is_initializing, timeout=60)
+        with self.eden.get_thrift_client() as client:
+            # Since we blocked mount initialization the mount should still
+            # report as INITIALIZING, and edenfs should report itself STARTING
+            self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
+            self.assertEqual(fb_status.STARTING, client.getStatus())
+
+            # Unblock mounting and wait for the mount to transition to running
+            client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
+            self._wait_for_mount_running(client)
+            self.assertEqual(fb_status.ALIVE, client.getStatus())
+
+        self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+
+    def test_start_no_mount_wait(self) -> None:
+        self.eden.shutdown()
+        self.eden.start(
+            extra_args=[
+                "--noWaitForMounts",
+                "--enable_fault_injection",
+                "--fault_injection_block_mounts",
+            ]
+        )
+        self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
+
+        # Unblock mounting and wait for the mount to transition to running
+        with self.eden.get_thrift_client() as client:
+            self.assertEqual(fb_status.ALIVE, client.getStatus())
+            client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
+            self._wait_for_mount_running(client)
+
+        self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+
+    def _wait_for_mount_running(self, client: EdenClient) -> None:
+        def mount_running() -> Optional[bool]:
+            if (
+                self.eden.get_mount_state(Path(self.mount), client)
+                == MountState.RUNNING
+            ):
+                return True
+            return None
+
+        poll_until(mount_running, timeout=60)
 
     def test_remount_creates_bind_mounts_if_needed(self) -> None:
         # Add a repo definition to the config that includes some bind mounts.
