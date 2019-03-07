@@ -466,9 +466,6 @@ Delete backup state file and try again
 Prune commit and then inhibit obsmarkers. Make sure isbackedup still works
   $ hg pushbackup
   starting backup .* (re)
-  backing up stack rooted at cf2adfba1469
-  remote: pushing 1 commit:
-  remote:     cf2adfba1469  headone
   backing up stack rooted at 6c4f4b30ae4c
   remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo
@@ -685,9 +682,9 @@ Test push for new bookmark, should not be pushed with --delete-bookmarks
 Remove the infinitepush backup state file
   $ rm .hg/infinitepushbackups/infinitepushbackupstate_f6bce706
 
-Local check fails
+Local check should recover the file
   $ hg isbackedup -r .
-  b226c8ca23a2db9b70a50978c6d30658683d9e9f not backed up
+  b226c8ca23a2db9b70a50978c6d30658683d9e9f backed up
 
 But remote check still succeeds
   $ hg isbackedup -r . --remote

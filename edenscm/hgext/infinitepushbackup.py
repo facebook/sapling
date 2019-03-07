@@ -836,7 +836,7 @@ def _dobackup(ui, repo, dest, **opts):
         _deletebackupstate(repo, path)
         _writebackupgenerationfile(repo.sharedvfs, path, newbkpgenerationvalue)
 
-    bkpstate = _readlocalbackupstate(ui, repo, path)
+    bkpstate = _readlocalbackupstate(ui, repo, path, doingbackup=True)
 
     # Work out what the heads and bookmarks to backup are.
     headstobackup = _backupheads(ui, repo, doingbackup=True)
@@ -1283,23 +1283,16 @@ def _getinfinitepushbookmarks(
 
 
 def _localbackupstatepath(remotepath):
-    hash = hashlib.sha256(remotepath.split("?")[0]).hexdigest()[0:8]
+    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
     return os.path.join("infinitepushbackups", _backupstatefile + "_" + hash)
 
 
 def _localbackupgenerationpath(remotepath):
-    hash = hashlib.sha256(remotepath.split("?")[0]).hexdigest()[0:8]
+    hash = hashlib.sha256(remotepath).hexdigest()[0:8]
     return os.path.join("infinitepushbackups", _backupgenerationfile + "_" + hash)
 
 
 def _localbackupstateexists(repo, remotepath):
-    # migration
-    if repo.sharedvfs.exists(_backupstatefile):
-        with repo.sharedvfs(_backupstatefile) as old:
-            with repo.sharedvfs(_localbackupstatepath(remotepath), "w") as new:
-                new.write(old.read())
-        repo.sharedvfs.tryunlink(_backupstatefile)
-
     return repo.sharedvfs.exists(_localbackupstatepath(remotepath))
 
 
@@ -1307,9 +1300,36 @@ def _deletebackupstate(repo, remotepath):
     return repo.sharedvfs.tryunlink(_localbackupstatepath(remotepath))
 
 
-def _readlocalbackupstate(ui, repo, remotepath):
+def _readlocalbackupstate(ui, repo, remotepath, doingbackup=False):
     if not _localbackupstateexists(repo, remotepath):
-        return backupstate()
+        if doingbackup:
+            return backupstate()
+
+        # migration
+        # if we are reading the backup file for commands like `hg sl` or
+        # `hg isbackedup` and it doesn't exists but there are some draft heads,
+        # check with the server first and maybe recover some of the state.
+        # remotepath could be changed / renamed.
+
+        headstobackup = _backupheads(ui, repo, doingbackup)
+        if not headstobackup:
+            return backupstate()
+
+        def getconnection():
+            return repo.connectionpool.get(remotepath)
+
+        backedupheadsremote = {
+            head
+            for head, backedup in zip(
+                headstobackup,
+                infinitepush.isbackedupnodes(getconnection, headstobackup),
+            )
+            if backedup
+        }
+        if backedupheadsremote:
+            _writelocalbackupstate(repo.sharedvfs, remotepath, backedupheadsremote, {})
+        else:
+            return backupstate()
 
     backupstatefile = _localbackupstatepath(remotepath)
 
@@ -1332,24 +1352,12 @@ def _readlocalbackupstate(ui, repo, remotepath):
 
 
 def _writelocalbackupstate(vfs, remotepath, heads, bookmarks):
-    # migration
-    if vfs.exists(_backupstatefile):
-        with vfs(_backupstatefile) as old:
-            with vfs(_localbackupstatepath(remotepath), "w") as new:
-                new.write(old.read())
-        vfs.tryunlink(_backupstatefile)
     with vfs(_localbackupstatepath(remotepath), "w") as f:
         f.write(json.dumps({"heads": list(heads), "bookmarks": bookmarks}))
 
 
 def _readbackupgenerationfile(vfs, remotepath):
     try:
-        # migration
-        if vfs.exists(_backupgenerationfile):
-            with vfs(_backupgenerationfile) as old:
-                with vfs(_localbackupgenerationpath(remotepath), "w") as new:
-                    new.write(old.read())
-            vfs.tryunlink(_backupgenerationfile)
         with vfs(_localbackupgenerationpath(remotepath)) as f:
             return int(f.read())
     except (IOError, OSError, ValueError):
