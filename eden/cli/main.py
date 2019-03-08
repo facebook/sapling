@@ -570,6 +570,9 @@ class FsckCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         if not args.path:
             return_codes = self.check_all(args)
+            if not return_codes:
+                print_stderr("No Eden checkouts are configured.  Nothing to check.")
+                return 0
         else:
             return_codes = self.check_explicit_paths(args)
 

@@ -10,10 +10,13 @@
 import os
 import pathlib
 import subprocess
+import unittest
 from pathlib import Path
 from typing import Tuple
 
-from .lib import overlay as overlay_mod, repobase, testcase
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+
+from .lib import edenclient, overlay as overlay_mod, repobase, testcase
 
 
 FSCK_RETCODE_OK = 0
@@ -147,3 +150,21 @@ class FsckTest(testcase.EdenRepoTest):
         self.assertIn(f"Checking {mount3}", fsck_out)
         self.assertIn(f"Checking {mount4}", fsck_out)
         self.assertEqual(FSCK_RETCODE_OK, returncode)
+
+
+class FsckTestNoEdenfs(unittest.TestCase, TemporaryDirectoryMixin):
+    def test_fsck_no_checkouts(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        eden = edenclient.EdenFS(tmp_dir)
+        cmd_result = eden.run_unchecked(
+            "fsck",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            errors="replace",
+        )
+        self.assertIn(
+            "No Eden checkouts are configured.  Nothing to check.", cmd_result.stderr
+        )
+        self.assertEqual("", cmd_result.stdout)
+        self.assertEqual(0, cmd_result.returncode)
