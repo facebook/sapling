@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 #include <openssl/sha.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"

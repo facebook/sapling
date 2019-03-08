@@ -19,6 +19,7 @@
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
+#include <gflags/gflags.h>
 #ifndef EDEN_WIN
 #include <folly/Subprocess.h>
 #endif

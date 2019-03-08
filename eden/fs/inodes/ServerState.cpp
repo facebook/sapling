@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/ServerState.h"
 
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 
 #include "eden/fs/config/EdenConfig.h"
 #ifndef EDEN_WIN
