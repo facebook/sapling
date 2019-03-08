@@ -73,6 +73,7 @@ from edenscm.mercurial import (
     revsetlang,
     scmutil,
     util,
+    visibility,
     wireproto,
 )
 from edenscm.mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
@@ -407,7 +408,7 @@ def createrebasepart(repo, peer, outgoing, onto):
     # it has an unwanted side effect: pushing markers from client to server.
     #
     # "createmarkers" is all we need to be able to write a new marker.
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+    if obsolete.isenabled(repo, obsolete.createmarkersopt) or mutation.enabled(repo):
         obsmarkerversions = "\0".join(str(v) for v in obsolete.formats)
     else:
         obsmarkerversions = ""
@@ -471,6 +472,19 @@ def _push(orig, ui, repo, *args, **opts):
                 )
             if bmarkchanges:
                 bmarks.applychanges(repo, tr, bmarkchanges)
+            visibility.remove(repo, tracker.mapping.keys())
+            if mutation.recording(repo):
+                # Landed commits require a mutation record, even if the server
+                # recorded the land within the commit, as the changelog isn't
+                # currently indexed by mutation information.
+                entries = []
+                for pred, succ in tracker.mapping.items():
+                    entries.append(
+                        mutation.createsyntheticentry(
+                            repo, mutation.ORIGIN_SYNTHETIC, [pred], succ, "pushrebase"
+                        )
+                    )
+                mutation.recordentries(repo, entries, skipexisting=False)
 
     return result
 
@@ -481,20 +495,55 @@ class replacementtracker(object):
     def __init__(self):
         self.replacementsreceived = False
         self.mapping = {}
+        self.pushnodes = set()
+
+    def pushdiscovery(self, orig, pushop):
+        ret = orig(pushop)
+        self.pushnodes = set(pushop.outgoing.missing)
+        return ret
 
     def processchangegroup(self, orig, op, cg, tr, source, url, **kwargs):
+        """find replacements from commit mutation metadata
+
+        Look through the commits that the server returned, looking for ones
+        that replace the commits we just pushed.
+        """
         self.replacementsreceived = True
-        return orig(op, cg, tr, source, url, **kwargs)
+        ret = orig(op, cg, tr, source, url, **kwargs)
+
+        clnode = op.repo.changelog.node
+        for rev in tr.changes["revs"]:
+            node = clnode(rev)
+            entry = mutation.lookup(op.repo, node)
+            if entry is not None:
+                preds = entry.preds() or []
+                for pred in preds:
+                    if pred in self.pushnodes:
+                        self.mapping[pred] = node
+        return ret
 
     def mergemarkers(self, orig, obsstore, transaction, data):
-        """record new markers so we could know the correct nodes for _phasemove"""
+        """find replacements from obsmarkers
+
+        Look through the markers that the server returned, looking for ones
+        that tell us the commits that replaced the ones we just pushed.
+        """
         version, markers = obsolete._readmarkers(data)
         if version == obsolete._fm1version:
             # only support fm1 1:1 replacements for now, record prec -> sucs
             for prec, sucs, flags, meta, date, parents in markers:
                 if len(sucs) == 1:
                     self.mapping[prec] = sucs[0]
-        return orig(obsstore, transaction, data)
+
+        # We force retrieval of obsmarkers even if they are not enabled locally,
+        # so that we can look at them to track replacements and maybe synthesize
+        # mutation information for the commits.  However, if markers are not
+        # enabled locally then the store is read-only and we shouldn't add the
+        # markers to it.  In this case, just skip adding them - this is the same
+        # as if we'd never requested them.
+        if not obsstore._readonly:
+            return orig(obsstore, transaction, data)
+        return 0
 
     def phasemove(self, orig, pushop, nodes, phase=phasesmod.public):
         """prevent replaced changesets from being marked public
@@ -540,11 +589,13 @@ class replacementtracker(object):
         orig(pushop, nodes, phase)
 
     def __enter__(self):
+        wrapfunction(exchange, "_pushdiscovery", self.pushdiscovery)
         wrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
         wrapfunction(exchange, "_localphasemove", self.phasemove)
         wrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
 
     def __exit__(self, exctype, excvalue, traceback):
+        unwrapfunction(exchange, "_pushdiscovery", self.pushdiscovery)
         unwrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
         unwrapfunction(exchange, "_localphasemove", self.phasemove)
         unwrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
