@@ -333,6 +333,7 @@ def commonsetup(ui):
         wireprotolistkeyspatterns,
         "namespace patterns",
     )
+    wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
     scratchbranchpat = ui.config("infinitepush", "branchpattern")
     if scratchbranchpat:
         global _scratchbranchmatcher
@@ -359,7 +360,6 @@ def serverextsetup(ui):
     wrapfunction(localrepo.localrepository, "listkeys", localrepolistkeys)
     wireproto.commands["lookup"] = (_lookupwrap(wireproto.commands["lookup"][0]), "key")
     wrapfunction(exchange, "getbundlechunks", getbundlechunks)
-
     wrapfunction(bundle2, "processparts", processparts)
 
     if util.safehasattr(wireproto, "_capabilities"):
@@ -371,6 +371,7 @@ def serverextsetup(ui):
 def _capabilities(orig, repo, proto):
     caps = orig(repo, proto)
     caps.append("listkeyspatterns")
+    caps.append("knownnodes")
     return caps
 
 
@@ -423,6 +424,7 @@ def clientextsetup(ui):
     wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)
 
     wireproto.wirepeer.listkeyspatterns = listkeyspatterns
+    wireproto.wirepeer.knownnodes = knownnodes
 
     # Move infinitepush part before pushrebase part
     # to avoid generation of both parts.
@@ -534,6 +536,17 @@ def listkeyspatterns(self, namespace, patterns):
     d = f.value
     self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))
     yield pushkey.decodekeys(d)
+
+
+@batchable
+def knownnodes(self, nodes):
+    f = future()
+    yield {"nodes": encodelist(nodes)}, f
+    d = f.value
+    try:
+        yield [bool(int(b)) for b in d]
+    except ValueError:
+        error.Abort(error.ResponseError(_("unexpected response:"), d))
 
 
 def _readbundlerevs(bundlerepo):
@@ -833,6 +846,17 @@ def _lookupwrap(orig):
                     return "%s %s\n" % (0, str(inst))
 
     return _lookup
+
+
+def wireprotoknownnodes(repo, proto, nodes, others):
+    """similar to 'known' but also check in infinitepush storage"""
+    nodes = decodelist(nodes)
+    knownlocally = repo.known(nodes)
+    for index, known in enumerate(knownlocally):
+        # TODO: make a single query to the bundlestore.index
+        if not known and repo.bundlestore.index.getnodebyprefix(hex(nodes[index])):
+            knownlocally[index] = True
+    return "".join(b and "1" or "0" for b in knownlocally)
 
 
 def _decodebookmarks(stream):
@@ -1785,12 +1809,13 @@ def isbackedupnodes(getconnection, nodes):
 
 def isbackedupnodes2(getconnection, nodes):
     """
-    check on the server side if the nodes are backed up using 'known'
-
-    TODO: support 'known' in infinitepush.
+    check on the server side if the nodes are backed up using 'known' or 'knownnodes' commands
     """
     with getconnection() as conn:
-        return conn.peer.known([nodemod.bin(n) for n in nodes])
+        if "knownnodes" in conn.peer.capabilities():
+            return conn.peer.knownnodes([nodemod.bin(n) for n in nodes])
+        else:
+            return conn.peer.known([nodemod.bin(n) for n in nodes])
 
 
 def pushbackupbundledraftheads(ui, repo, getconnection, heads):
