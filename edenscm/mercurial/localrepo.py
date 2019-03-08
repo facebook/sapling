@@ -39,6 +39,7 @@ from . import (
     match as matchmod,
     merge as mergemod,
     mergeutil,
+    mutation,
     namespaces,
     obsolete,
     pathutil,
@@ -991,6 +992,10 @@ class localrepository(object):
         replacing code that is expected to call a hook.
         """
         return hook.hook(self.ui, self, name, throw, **args)
+
+    @filteredpropertycache
+    def _mutationcache(self):
+        return mutation.mutationcache(self)
 
     @filteredpropertycache
     def _tagscache(self):
