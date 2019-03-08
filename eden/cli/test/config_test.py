@@ -48,14 +48,6 @@ reporter = 'arc paste --title "eden rage from $(hostname)" --conduit-uri=https:/
     return cfg_file
 
 
-def get_toml_test_file_hooks():
-    cfg_file = """
-[hooks]
-"hg.edenextension" = "/usr/local/fb-mercurial/eden/hgext3rd/eden"
-"""
-    return cfg_file
-
-
 def get_toml_test_file_fbsource_repo():
     cfg_file = """
 ["repository fbsource"]
@@ -118,10 +110,6 @@ class TomlConfigTest(
         with open(path, "w") as text_file:
             text_file.write(get_toml_test_file_fbsource_repo())
 
-        path = os.path.join(self._config_d, "hooks.toml")
-        with open(path, "w") as text_file:
-            text_file.write(get_toml_test_file_hooks())
-
         path = os.path.join(self._home_dir, ".edenrc")
         with open(path, "w") as text_file:
             text_file.write(get_toml_test_file_user_rc())
@@ -181,7 +169,6 @@ class TomlConfigTest(
         exp_rc_files = [
             os.path.join(self._config_d, "defaults.toml"),
             os.path.join(self._config_d, "fbsource.repo.toml"),
-            os.path.join(self._config_d, "hooks.toml"),
             os.path.join(self._home_dir, ".edenrc"),
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)
