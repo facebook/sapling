@@ -4276,3 +4276,42 @@ def removeduplicates(items, key=None):
             seen.add(itemkey)
             uniqueitems.append(item)
     return uniqueitems
+
+
+def mergelists(a, b):
+    """Merge two sorted lists, removing duplicates
+
+    >>> mergelists([1, 2, 3], [1, 4, 5])
+    [1, 2, 3, 4, 5]
+    >>> mergelists([1, 2, 2, 3, 3], [2, 2, 4, 5, 5])
+    [1, 2, 3, 4, 5]
+    >>> mergelists([1, 2, 3], [97, 98, 99])
+    [1, 2, 3, 97, 98, 99]
+    >>> mergelists([97, 98, 99], [1, 2, 3])
+    [1, 2, 3, 97, 98, 99]
+    >>> mergelists([1, 2, 3], [])
+    [1, 2, 3]
+    >>> mergelists([], [1, 2, 3])
+    [1, 2, 3]
+    >>> mergelists([], [])
+    []
+    >>> mergelists([[1, 2], [3, 4]], [[2, 3], [4, 5]])
+    [[1, 2], [2, 3], [3, 4], [4, 5]]
+    """
+    i = j = 0
+    na = len(a)
+    nb = len(b)
+    result = []
+    while i < na or j < nb:
+        if i < na and j < nb:
+            item = min(a[i], b[j])
+        elif i < na:
+            item = a[i]
+        else:
+            item = b[j]
+        result.append(item)
+        while i < na and a[i] == item:
+            i += 1
+        while j < nb and b[j] == item:
+            j += 1
+    return result

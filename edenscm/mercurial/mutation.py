@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from . import error, node as nodemod, util
+from .rust.bindings import mutationstore
 
 
 def record(repo, extra, prednodes, op=None, splitting=None):
@@ -72,6 +73,7 @@ class mutationcache(object):
     """Cache of derived mutation information for a local repo."""
 
     def __init__(self, repo):
+        self.store = mutationstore.mutationstore(repo.svfs.join("mutation"))
         self._precomputesuccessorssets(repo)
         self._precomputeobsolete(repo)
         self._precomputeorphans(repo)
@@ -168,7 +170,12 @@ class mutationcache(object):
                     if node in seen:
                         continue
                     seen.add(node)
+                    # Get successors from both this cache and the store.  We
+                    # can't use lookupsuccessors as we're still building the
+                    # cache.
                     for succset in successorssets.get(node, ()):
+                        nextlevel.update(succset)
+                    for succset in self.store.getsuccessorssets(node):
                         nextlevel.update(succset)
                 # This node is obsolete if any successor is visible in the repo.
                 # If any successor is already known to be obsolete, we can also
@@ -242,12 +249,18 @@ class mutationcache(object):
 
 
 def lookup(repo, node, extra=None):
-    """Look up mutation information for the given node"""
+    """Look up mutation information for the given node
+
+    For the fastpath case where the commit extras are already known, these
+    can optionally be passed in through the ``extra`` parameter.
+    """
     unfi = repo.unfiltered()
     if extra is None and node in unfi:
         extra = unfi.changelog.changelogrevision(node).extra
-    if extra is not None:
+    if extra is not None and "mutpred" in extra:
         return mutationentry(node, extra)
+    else:
+        return repo._mutationcache.store.get(node)
 
 
 def lookupsplit(repo, node):
@@ -256,15 +269,22 @@ def lookupsplit(repo, node):
     """
     unfi = repo.unfiltered()
     mc = repo._mutationcache
-    mainnode = mc._splitheads.get(node, node)
+    extra = None
+    mainnode = mc._splitheads.get(node) or mc.store.getsplithead(node) or node
     if mainnode in unfi:
         extra = unfi.changelog.changelogrevision(mainnode).extra
+    if extra is not None and "mutpred" in extra:
         return mutationentry(mainnode, extra)
+    else:
+        return mc.store.get(mainnode)
 
 
 def lookupsuccessors(repo, node):
     """Look up the immediate successors sets for the given node"""
-    return repo._mutationcache._successorssets.get(node)
+    mc = repo._mutationcache
+    cachesuccsets = sorted(mc._successorssets.get(node, []))
+    storesuccsets = sorted(mc.store.getsuccessorssets(node))
+    return util.mergelists(cachesuccsets, storesuccsets) or None
 
 
 def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
@@ -452,7 +472,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
     """
 
     def getsets(node):
-        return sorted(lookupsuccessors(repo, node) or [[node]])
+        return lookupsuccessors(repo, node) or [[node]]
 
     succsets = [[startnode]]
     nextsuccsets = getsets(startnode)
