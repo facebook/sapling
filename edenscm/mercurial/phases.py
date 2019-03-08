@@ -103,7 +103,7 @@ from __future__ import absolute_import
 import errno
 import struct
 
-from . import error, pycompat, smartset, txnutil, util
+from . import error, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, short
 
@@ -381,6 +381,10 @@ class phasecache(object):
             )
             if olds != roots:
                 self._updateroots(phase, roots, tr)
+                if targetphase == public:
+                    visibility.phaseadjust(
+                        repo, tr, newpublic=set(repo[r].node() for r in affected)
+                    )
                 # some roots may need to be declared for lower phases
                 delroots.extend(olds - roots)
         # declare deleted root in the target phase
@@ -415,6 +419,9 @@ class phasecache(object):
                     revs = affected
                 for r in revs:
                     _trackphasechange(phasetracking, r, phase, targetphase)
+            visibility.phaseadjust(
+                repo, tr, newdraft=set(repo[r].node() for r in affected)
+            )
         repo.invalidatevolatilesets()
 
     def _retractboundary(self, repo, tr, targetphase, nodes):

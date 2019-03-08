@@ -345,6 +345,9 @@ def getdag(ui, repo, revs, master):
         def obsolete(self):
             return False
 
+        def invisible(self):
+            return False
+
         def phase(self):
             return None
 

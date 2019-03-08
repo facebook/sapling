@@ -21,6 +21,7 @@ from . import (
     obsutil,
     progress,
     util,
+    visibility,
 )
 from .i18n import _
 from .node import hex, short
@@ -201,6 +202,8 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
     try:
         with repo.transaction("strip") as tr:
             offset = len(tr.entries)
+
+            visibility.remove(repo, stripbases)
 
             tr.startgroup()
             cl.strip(striprev, tr)

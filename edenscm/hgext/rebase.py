@@ -48,6 +48,7 @@ from edenscm.mercurial import (
     smartset,
     templatefilters,
     util,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, nullrev, short
@@ -373,7 +374,9 @@ class rebaseruntime(object):
             return 0
 
         rebaseset = destmap.keys()
-        allowunstable = obsolete.isenabled(self.repo, obsolete.allowunstableopt)
+        allowunstable = visibility.tracking(self.repo) or obsolete.isenabled(
+            self.repo, obsolete.allowunstableopt
+        )
         if not (self.keepf or allowunstable) and self.repo.revs(
             "first(children(%ld) - %ld)", rebaseset, rebaseset
         ):

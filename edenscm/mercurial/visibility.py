@@ -83,7 +83,7 @@ class visibleheads(object):
         phasecache = unfi._phasecache
         newheads = set()
         candidates = self.heads.copy()
-        obsolete = repo.nodes("obsolete()")
+        obsolete = set(repo.nodes("obsolete()"))
         oldnodes = set(oldnodes)
 
         from . import phases  # avoid circular import
@@ -109,7 +109,7 @@ class visibleheads(object):
         newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
         self._updateheads(newheads, tr)
 
-    def phaseadjust(self, repo, tr, newdraft, newpublic):
+    def phaseadjust(self, repo, tr, newdraft=None, newpublic=None):
         """update visibility following a phase adjustment.
 
         The newdraft commits should remain visible.  The newpublic commits
@@ -185,10 +185,10 @@ def remove(repo, oldnodes):
             vh.remove(repo, oldnodes, tr)
 
 
-def phaseadjust(repo, tr, oldpublic=None, newpublic=None):
+def phaseadjust(repo, tr, newdraft=None, newpublic=None):
     vh = repo._visibleheads
     if vh is not None:
-        vh.phaseadjust(repo, tr, oldpublic, newpublic)
+        vh.phaseadjust(repo, tr, newdraft, newpublic)
 
 
 def heads(repo):

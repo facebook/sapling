@@ -2372,6 +2372,9 @@ class localrepository(object):
                 phases.registernew(self, tr, targetphase, [n])
             # Newly committed commits shouldn't be obsoleted.
             obsolete.revive([self[n]], "commit")
+            # Newly committed commits should be visible.
+            if targetphase > phases.public:
+                visibility.add(self, [n])
             tr.close()
             return n
         finally:

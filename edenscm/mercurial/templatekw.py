@@ -658,6 +658,8 @@ def showgraphnode(repo, ctx, **args):
         return "x"
     elif ctx.closesbranch():
         return "_"
+    elif ctx.invisible():
+        return "-"
     else:
         return "o"
 

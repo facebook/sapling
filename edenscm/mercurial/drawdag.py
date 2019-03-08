@@ -95,6 +95,7 @@ from . import (
     pycompat,
     scmutil,
     tags as tagsmod,
+    visibility,
 )
 from .i18n import _
 
@@ -553,10 +554,21 @@ def drawdag(repo, text, **opts):
     # handle special comments
     with repo.wlock(), repo.lock(), repo.transaction(b"drawdag"):
         getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
-        for cmd, markers in obsmarkers:
-            obsrels = [(getctx(p), [getctx(s) for s in ss]) for p, ss in markers]
-            if obsrels:
-                obsolete.createmarkers(repo, obsrels, date=(0, 0), operation=cmd)
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            for cmd, markers in obsmarkers:
+                obsrels = [(getctx(p), [getctx(s) for s in ss]) for p, ss in markers]
+                if obsrels:
+                    obsolete.createmarkers(repo, obsrels, date=(0, 0), operation=cmd)
+        if visibility.tracking(repo):
+            hidenodes = set()
+            revivenodes = set()
+            for cmd, markers in obsmarkers:
+                for p, ss in markers:
+                    if cmd == "revive":
+                        revivenodes.add(getctx(p).node())
+                    else:
+                        hidenodes.add(getctx(p).node())
+            visibility.remove(repo, hidenodes - revivenodes)
 
     if opts.get("print"):
         for name, n in sorted(committed.items()):

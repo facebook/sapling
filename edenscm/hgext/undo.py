@@ -36,6 +36,7 @@ from edenscm.mercurial import (
     templater,
     transaction,
     util,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
@@ -1246,7 +1247,9 @@ def hidecommits(repo, curctx, predctxs):
 
 
 def revealcommits(repo, rev):
-    obsolete.revive(repo.set(rev))
+    ctxs = list(repo.set(rev))
+    obsolete.revive(ctxs)
+    visibility.add(repo, [ctx.node() for ctx in ctxs])
 
 
 def _preview(ui, repo, reverseindex):

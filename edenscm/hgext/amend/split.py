@@ -23,6 +23,7 @@ from edenscm.mercurial import (
     obsolete,
     registrar,
     scmutil,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 
@@ -78,8 +79,10 @@ def split(ui, repo, *revs, **opts):
         tr = repo.transaction("split")
         ctx = repo[rev]
         r = ctx.rev()
-        disallowunstable = not obsolete.isenabled(repo, obsolete.allowunstableopt)
-        if disallowunstable:
+        allowunstable = visibility.tracking(repo) or obsolete.isenabled(
+            repo, obsolete.allowunstableopt
+        )
+        if not allowunstable:
             # XXX We should check head revs
             if repo.revs("(%d::) - %d", rev, rev):
                 raise error.Abort(_("cannot split commit: %s not a head") % ctx)
@@ -163,10 +166,13 @@ def split(ui, repo, *revs, **opts):
             bmupdate(tip.node())
             if bookactive is not None:
                 bookmarks.activate(repo, bookactive)
-            obsolete.createmarkers(repo, [(repo[r], newcommits)], operation="split")
-
+            if obsolete.isenabled(repo, obsolete.createmarkersopt):
+                obsolete.createmarkers(repo, [(repo[r], newcommits)], operation="split")
             if torebase:
                 common.restackonce(ui, repo, tip.rev())
+            unfi = repo.unfiltered()
+            visibility.remove(repo, [unfi[r].node()])
+
         tr.close()
     finally:
         lockmod.release(tr, lock, wlock)

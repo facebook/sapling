@@ -37,6 +37,9 @@ class FakeCtx(object):
     def obsolete(self):
         return False
 
+    def invisible(self):
+        return False
+
     def closesbranch(self):
         return False
 

@@ -30,6 +30,7 @@ from . import (
     scmutil,
     subrepo,
     util,
+    visibility,
 )
 from .i18n import _
 from .node import (
@@ -211,6 +212,13 @@ class basectx(object):
 
     def getfileset(self, expr):
         return fileset.getfileset(self, expr)
+
+    def invisible(self):
+        repo = self.repo()
+        if visibility.enabled(repo):
+            return self.rev() in visibility.invisiblerevs(repo)
+        else:
+            return False
 
     def obsolete(self):
         """True if the changeset is obsolete"""

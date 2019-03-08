@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import copy
 import weakref
 
-from . import obsolete, phases, pycompat, tags as tagsmod
+from . import obsolete, phases, pycompat, tags as tagsmod, visibility
 from .node import nullrev
 
 
@@ -24,13 +24,14 @@ except NameError:
 def hideablerevs(repo):
     """Revision candidates to be hidden
 
-    This is a standalone function to allow extensions to wrap it.
-
     Because we use the set of immutable changesets as a fallback subset in
     branchmap (see mercurial.branchmap.subsettable), you cannot set "public"
     changesets as "hideable". Doing so would break multiple code assertions and
     lead to crashes."""
-    return obsolete.getrevs(repo, "obsolete")
+    if visibility.enabled(repo):
+        return visibility.invisiblerevs(repo)
+    else:
+        return obsolete.getrevs(repo, "obsolete")
 
 
 def pinnedrevs(repo):

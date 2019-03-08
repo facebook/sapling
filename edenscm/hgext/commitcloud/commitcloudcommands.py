@@ -30,6 +30,7 @@ from edenscm.mercurial import (
     scmutil,
     templatefilters,
     util,
+    visibility,
 )
 
 # Mercurial
@@ -533,11 +534,12 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             # send, then it's possible we have some obsoleted versions of
             # commits that are visible in the cloud workspace that need to
             # be revived.
-            cloudvisibleonly = repo.unfiltered().set(
-                "draft() & ::%ls & hidden()", localsyncedheads
+            cloudvisibleonly = list(
+                repo.unfiltered().set("draft() & ::%ls & hidden()", localsyncedheads)
             )
             repo._commitcloudskippendingobsmarkers = True
             obsolete.revive(cloudvisibleonly)
+            visibility.add(repo, [ctx.node() for ctx in cloudvisibleonly])
             repo._commitcloudskippendingobsmarkers = False
             localheads = _getheads(repo)
 

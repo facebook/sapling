@@ -138,6 +138,7 @@ from edenscm.mercurial import (
     pushkey,
     ui as uimod,
     util,
+    visibility,
     wireproto,
 )
 from edenscm.mercurial.commands import debug as debugcommands
@@ -1001,11 +1002,11 @@ def _dopull(orig, ui, repo, source="default", **opts):
         try:
             repo[rev]
         except error.FilteredRepoLookupError:
-            node = unfi[rev].node()
-            torevive.append(unfi[node])
+            torevive.append(rev)
         except error.RepoLookupError:
             pass
-    obsolete.revive(torevive)
+    obsolete.revive([unfi[r] for r in torevive])
+    visibility.add(repo, [unfi[r].node() for r in torevive])
 
     if scratchbookmarks or unknownnodes:
         # Set anyincoming to True

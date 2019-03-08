@@ -1,13 +1,13 @@
   $ enable amend rebase histedit fbhistedit
-
-We need obsmarkers for now, to allow unstable commits
-  $ enable obsstore
+  $ setconfig experimental.evolution=
 
   $ cat >> $HGRCPATH <<EOF
   > [mutation]
   > record=true
   > enabled=true
   > date=0 0
+  > [visibility]
+  > tracking=on
   > [ui]
   > interactive = true
   > [templatealias]
@@ -448,7 +448,7 @@ Drawdag
   > EOS
 
   $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node} {sl_mutations}'
-  o  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
+  -  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
   |
   o  H 45d7378ca81d4ce1e9b31f0e3d567b8292dffc77
   |
@@ -512,7 +512,7 @@ Revsets obey visibility rules
   $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
   112478962961147124edd43549aedd1a335e44bf B
   948823afc5bdb8c69913d366d7220f812ecf0d41 C
-  $ hg hide -q $E
+  $ hg hide -q $B
   $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
   948823afc5bdb8c69913d366d7220f812ecf0d41 C
 

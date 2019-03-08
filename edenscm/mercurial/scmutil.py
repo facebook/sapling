@@ -30,6 +30,7 @@ from . import (
     url,
     util,
     vfs,
+    visibility,
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
@@ -783,7 +784,8 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
         if bmarkchanges:
             bmarks.applychanges(repo, tr, bmarkchanges)
 
-        # Obsolete or strip nodes
+        # Obsolete, adjust visibility, or strip nodes
+        strip = True
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             # If a node is already obsoleted, and we want to obsolete it
             # without a successor, skip that obssolete request since it's
@@ -803,7 +805,12 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
                 obsolete.createmarkers(
                     repo, rels, operation=operation, metadata=metadata
                 )
-        else:
+            strip = False
+        if visibility.tracking(repo):
+            visibility.remove(repo, replacements.keys())
+            strip = False
+
+        if strip:
             from . import repair  # avoid import cycle
 
             tostrip = list(replacements)

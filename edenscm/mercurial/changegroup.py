@@ -12,7 +12,7 @@ import struct
 import tempfile
 import weakref
 
-from . import dagutil, error, mdiff, phases, progress, pycompat, util
+from . import dagutil, error, mdiff, phases, progress, pycompat, util, visibility
 from .i18n import _
 from .node import hex, nullrev, short
 
@@ -402,6 +402,8 @@ class cg1unpacker(object):
                     targetphase = phaseall = phases.draft
             if added:
                 phases.registernew(repo, tr, targetphase, added)
+                if targetphase > phases.public:
+                    visibility.add(repo, added)
             if phaseall is not None:
                 phases.advanceboundary(repo, tr, phaseall, cgnodes)
 

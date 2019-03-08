@@ -20,6 +20,7 @@ from edenscm.mercurial import (
     obsolete,
     registrar,
     scmutil,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import short
@@ -99,7 +100,9 @@ def hide(ui, repo, *revs, **opts):
             )
 
         # create markers
-        obsolete.createmarkers(repo, [(r, []) for r in hidectxs], operation="hide")
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            obsolete.createmarkers(repo, [(r, []) for r in hidectxs], operation="hide")
+        visibility.remove(repo, [c.node() for c in hidectxs])
         ui.status(_("%i changesets hidden\n") % len(hidectxs))
 
         # remove bookmarks pointing to hidden changesets
@@ -130,6 +133,9 @@ def unhide(ui, repo, *revs, **opts):
     """
     unfi = repo.unfiltered()
     revs = list(revs) + opts.pop("rev", [])
-    revs = set(scmutil.revrange(unfi, revs))
-    ctxs = unfi.set("::(%ld) & obsolete()", revs)
-    obsolete.revive(ctxs, operation="unhide")
+    with repo.lock():
+        revs = set(scmutil.revrange(unfi, revs))
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            ctxs = unfi.set("::(%ld) & obsolete()", revs)
+            obsolete.revive(ctxs, operation="unhide")
+        visibility.add(repo, [unfi[r].node() for r in revs])

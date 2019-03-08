@@ -20,6 +20,7 @@ from edenscm.mercurial import (
     registrar,
     repair,
     scmutil,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
@@ -96,9 +97,11 @@ def _revive(repo, rev):
         # It could either be a revset or a stripped commit.
         pass
     else:
-        if ctx.obsolete():
-            torevive = unfi.set("::%d & obsolete()", ctx.rev())
-            obsolete.revive(torevive, operation="reset")
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            if ctx.obsolete():
+                torevive = unfi.set("::%d & obsolete()", ctx.rev())
+                obsolete.revive(torevive, operation="reset")
+        visibility.add(repo, ctx.node())
 
     try:
         revs = scmutil.revrange(repo, [rev])
