@@ -214,6 +214,97 @@ class mutationcache(object):
         self._extinct = extinct
 
 
+def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
+    """Yields all the nodes that are predecessors of the given nodes.
+
+    Some predecessors may not be known locally."""
+    unfi = repo.unfiltered()
+    mc = repo._mutationcache
+    cl = unfi.changelog
+    clrev = cl.changelogrevision
+    depth = 0
+    thislevel = set(nodes)
+    nextlevel = set()
+    seen = set()
+    while thislevel and (stopdepth is None or depth < stopdepth):
+        for current in thislevel:
+            if current in seen:
+                continue
+            seen.add(current)
+            if startdepth is None or depth >= startdepth:
+                yield current
+            mainnode = mc._splitheads.get(current, current)
+            if mainnode in unfi:
+                extra = clrev(mainnode).extra
+                pred = None
+                if "mutpred" in extra:
+                    pred = [nodemod.bin(x) for x in extra["mutpred"].split(",")]
+            else:
+                continue
+            if pred is not None:
+                for nextnode in pred:
+                    if nextnode not in seen:
+                        nextlevel.add(nextnode)
+        depth += 1
+        thislevel = nextlevel
+        nextlevel = set()
+
+
+def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
+    """Yields all the nodes that are successors of the given nodes.
+
+    Successors that are not known locally may be omitted."""
+    mc = repo._mutationcache
+    depth = 0
+    thislevel = set(nodes)
+    nextlevel = set()
+    seen = set()
+    while thislevel and (stopdepth is None or depth < stopdepth):
+        for current in thislevel:
+            if current in seen:
+                continue
+            seen.add(current)
+            if startdepth is None or depth >= startdepth:
+                yield current
+            for succset in mc._successorssets.get(current, ()):
+                nextlevel.update(succset)
+        depth += 1
+        thislevel = nextlevel
+        nextlevel = set()
+
+
+def obsoletenodes(repo):
+    return repo._mutationcache._obsolete
+
+
+def extinctnodes(repo):
+    return repo._mutationcache._extinct
+
+
+def orphannodes(repo):
+    return repo._mutationcache._orphan
+
+
+def phasedivergentnodes(repo):
+    return (
+        n
+        for n in allsuccessors(
+            repo, repo._mutationcache._phasedivergenceroots, startdepth=1
+        )
+        if n in repo
+    )
+
+
+def contentdivergentnodes(repo):
+    return (
+        n
+        for n in allsuccessors(
+            repo, repo._mutationcache._contentdivergenceroots, startdepth=1
+        )
+        if n in repo
+    )
+
+
 def predecessorsset(repo, startnode, closest=False):
     """Return a list of the commits that were replaced by the startnode.
 

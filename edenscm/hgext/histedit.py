@@ -1625,6 +1625,7 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
     # successors that have already been added to succstocheck once
     seensuccs = set().union(*oldsuccs)  # create a set from an iterable of tuples
     succstocheck = list(seensuccs)
+    obsoleterevs = obsolete.getrevs(repo, "obsolete")
     while succstocheck:
         n = succstocheck.pop()
         missing = nm.get(n) is None
@@ -1632,7 +1633,7 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
         # pretend there are no successor markers if "n" is not obsoleted.
         markers = obsstore.successors.get(n, ())
         try:
-            if not unfi[n].obsolete():
+            if unfi[n].rev() not in obsoleterevs:
                 markers = []
         except error.RepoLookupError:
             # Node n no longer exists (ex. stripped).

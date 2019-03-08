@@ -6,6 +6,7 @@ We need obsmarkers for now, to allow unstable commits
   $ cat >> $HGRCPATH <<EOF
   > [mutation]
   > record=true
+  > enabled=true
   > date=0 0
   > [ui]
   > interactive = true
@@ -244,6 +245,71 @@ Histedit
     6367a1362725a82dfa430133126f72113634b084 histedit by test at 1970-01-01T00:00:00 from:
       3df81c50780f689db64a5ff6ea06be268a046cf0
 
+Revsets
+
+  $ hg log -T '{node}\n' -r 'predecessors(2a2702418db)' --hidden
+  561937d12f41e7d2f5ade2799de1bc21b92ddc51
+  1e2c46af1a22b8949201aee655b53f2aba83c490
+  afdb4ea72e8cb14b34dfae49b9cc9be698468edf
+  afcbdd90543ac6273d77ce2b6e967fb73373e5a4
+  33905c5919f60e31c4e4f00ad5956a06848cbe10
+  8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885
+  ded4fa782bd8c1051c8be550cebbc267572e15d0
+  8462f4f357413f9f1c76a798d6ccdfc1e4337bd7
+  60f9e7d031c5b05f8ff106d39a20d67c40dc7411
+  2fd85d288d1b25636df6532b000fbb150e43646e
+  618c9a83fb832b6742123bd06fa829aa32bdb1bf
+  a7e46e8d9faf725274ea4cde6d202dd8d74991b0
+  b23a10bc8972610ae489b044312b4e89e89fa08e
+  98372bb0c913529155d64663575faf5698fe8b1b
+  9f5728118af072cb4d27b2e87c1c4abf1d744c54
+  94fde643eeb6b11e10eb5de6268ce62601f8c185
+  383692dec8a1036c5b62a49a9808738c5ab72075
+  f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3
+  e086d79182ddf80b13bf03020e7955d523f78afc
+  16c4bfbbca18238ddc7bb3946a0b6b230464799b
+  2a2702418db0647c75b35bffa75ad7b4ea377e44
+  $ hg log -T '{node}\n' -r 'predecessors(2a2702418db,3)' --hidden
+  b23a10bc8972610ae489b044312b4e89e89fa08e
+  98372bb0c913529155d64663575faf5698fe8b1b
+  9f5728118af072cb4d27b2e87c1c4abf1d744c54
+  94fde643eeb6b11e10eb5de6268ce62601f8c185
+  383692dec8a1036c5b62a49a9808738c5ab72075
+  f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3
+  e086d79182ddf80b13bf03020e7955d523f78afc
+  16c4bfbbca18238ddc7bb3946a0b6b230464799b
+  2a2702418db0647c75b35bffa75ad7b4ea377e44
+  $ hg log -T '{node}\n' -r 'predecessors(d0b31d57fee)' --hidden
+  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+  e536de343881687fa51ea0174bd3333686cb4ced
+  d0b31d57fee70727f54b94594aec20afaa8bb34c
+  $ hg log -T '{node}\n' -r 'predecessors(2802b58ff91)' --hidden
+  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+
+  $ hg log -T '{node}\n' -r 'successors(2802b58ff91)' --hidden
+  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+  e536de343881687fa51ea0174bd3333686cb4ced
+  d0b31d57fee70727f54b94594aec20afaa8bb34c
+  47809cc234477ee2398d713e78c07c0411c569d4
+  cb252f4e4ec4a9befec9f4768dae810b234a03f4
+  e9a8adc18ebd9ab4986c3fb217d22ba95cefd11d
+  $ hg log -T '{node}\n' -r 'successors(2802b58ff91,2)' --hidden
+  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+  e536de343881687fa51ea0174bd3333686cb4ced
+  d0b31d57fee70727f54b94594aec20afaa8bb34c
+  $ hg log -T '{node}\n' -r 'successors(561937d12f4)' --hidden
+  561937d12f41e7d2f5ade2799de1bc21b92ddc51
+  afdb4ea72e8cb14b34dfae49b9cc9be698468edf
+  33905c5919f60e31c4e4f00ad5956a06848cbe10
+  ded4fa782bd8c1051c8be550cebbc267572e15d0
+  2fd85d288d1b25636df6532b000fbb150e43646e
+  f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3
+  e086d79182ddf80b13bf03020e7955d523f78afc
+  16c4bfbbca18238ddc7bb3946a0b6b230464799b
+  2a2702418db0647c75b35bffa75ad7b4ea377e44
+  $ hg log -T '{node}\n' -r 'successors(.)' --hidden
+  6367a1362725a82dfa430133126f72113634b084
+
 Histedit with exec that amends in between folds
 
   $ cd ..
@@ -349,13 +415,13 @@ Drawdag
   > EOS
 
   $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node}'
-  x  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
+  o  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
   |
   o  H 45d7378ca81d4ce1e9b31f0e3d567b8292dffc77
   |
   | o  G 63a5789cbb56b401dcf1c5d228d75c645df293d8
   | |
-  | x  F 64a8289d249234b9886244d379f15e6b650b28e3
+  | o  F 64a8289d249234b9886244d379f15e6b650b28e3
   | |
   | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
   |/
@@ -382,3 +448,130 @@ Drawdag
         26805aba1e600a82e93661149f2313866a221a7b
     9d3d3e8bcf0521804d5d14513461a1b43f2722ef
 
+Revsets obey visibility rules
+
+  $ cd ..
+  $ newrepo
+  $ drawdag <<'EOS'
+  >  E
+  >  |
+  >  B C D  # amend: B -> C -> D
+  >   \|/   # prune: D
+  >    A    # revive: C
+  > EOS
+
+  $ hg debugmutation "all()"
+    426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+    112478962961147124edd43549aedd1a335e44bf
+    948823afc5bdb8c69913d366d7220f812ecf0d41 amend by test at 1970-01-01T00:00:00 from:
+      112478962961147124edd43549aedd1a335e44bf
+    49cb92066bfd0763fff729c354345650b7428554
+    c746b20d1d04f32a7466f736807eeef36a33b3dd amend by test at 1970-01-01T00:00:00 from:
+      948823afc5bdb8c69913d366d7220f812ecf0d41 amend by test at 1970-01-01T00:00:00 from:
+        112478962961147124edd43549aedd1a335e44bf
+  $ hg log -T '{node} {desc}\n' -r "successors($B)"
+  112478962961147124edd43549aedd1a335e44bf B
+  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+  $ hg log -T '{node} {desc}\n' -r "successors($B)" --hidden
+  112478962961147124edd43549aedd1a335e44bf B
+  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+  c746b20d1d04f32a7466f736807eeef36a33b3dd D
+  $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
+  112478962961147124edd43549aedd1a335e44bf B
+  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+  $ hg hide -q $E
+  $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
+  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+
+Revsets for filtering commits based on mutated status
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << EOS
+  >            P
+  >            |\        # amend: C -> E -> G
+  >  D F     M O S       # rebase: D -> F
+  >  | |     | | |
+  >  C E G   L N R U     # fold: L, M -> N
+  >   \|/     \| | |
+  >    B       K Q T     # amend: Q -> T
+  >    |        \|/      # rebase: R -> U
+  >    A         A
+  > EOS
+
+  $ hg log -r "obsolete()" -T '{desc}\n'
+  Q
+  R
+  E
+  $ hg log -r "orphan()" -T '{desc}\n'
+  S
+  F
+  P
+  $ hg log -r "extinct()" -T '{desc}\n'
+  $ hg log -r "obsolete()" -T '{desc}\n' --hidden
+  Q
+  C
+  L
+  R
+  D
+  E
+  M
+  $ hg log -r "orphan()" -T '{desc}\n' --hidden
+  S
+  F
+  P
+  $ hg log -r "extinct()" -T '{desc}\n' --hidden
+  C
+  L
+  D
+  M
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << EOS
+  > E
+  > |
+  > D
+  > |
+  > C
+  > |
+  > B  B1  D1    # rebase: B -> B1
+  > |  |   |     # rebase: D -> D1
+  > A  A   A
+  > EOS
+  $ hg log -r "orphan()" -T '{desc}\n'
+  C
+  E
+  $ hg log -r "extinct()" -T '{desc}\n'
+
+Divergence
+
+  $ cd ..
+  $ newrepo
+  $ drawdag --print << EOS
+  >  Z P         F H    # amend: A -> B -> C
+  >  |/          | |    # amend: A -> D
+  >  Y   A B C D E G    # split: D -> E, F
+  >  |    \|/   \|/     # amend: E -> G
+  >  X     X     X      # rebase: F -> H
+  >                     # amend: Z -> P
+  > EOS
+  a3d17304151f A
+  29f5c7cacb84 B
+  9263b98dea84 C
+  e91ad3fd8cd0 D
+  8bab98b2a161 E
+  fd2cd4536115 F
+  b6d2081d9c92 G
+  ea4b6a4451ab H
+  55bd6ca2c9c5 P
+  ba2b7fa7166d X
+  54fe561aeb5b Y
+  e67cd4473b7c Z
+  $ hg phase -p $Z --hidden
+  $ hg log -r "contentdivergent()" -T '{desc}\n'
+  C
+  G
+  H
+  $ hg log -r "phasedivergent()" -T '{desc}\n'
+  P

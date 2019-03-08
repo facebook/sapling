@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import obsutil, phases, registrar, revset, smartset
+from edenscm.mercurial import mutation, obsutil, phases, registrar, revset, smartset
 from edenscm.mercurial.node import nullrev
 
 
@@ -43,9 +43,13 @@ def _destrestack(repo, subset, x):
     # case. However it does not support cycles (unamend) well. So we use
     # allsuccessors and pick non-obsoleted successors manually as a workaround.
     basenode = repo[base].node()
+    if mutation.enabled(repo):
+        succnodes = mutation.allsuccessors(repo, [basenode])
+    else:
+        succnodes = obsutil.allsuccessors(repo.obsstore, [basenode])
     succnodes = [
         n
-        for n in obsutil.allsuccessors(repo.obsstore, [basenode])
+        for n in succnodes
         if (n != basenode and n in nodemap and nodemap[n] not in obsoleted)
     ]
 

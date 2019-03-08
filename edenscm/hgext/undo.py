@@ -22,6 +22,7 @@ from edenscm.mercurial import (
     localrepo,
     lock as lockmod,
     merge,
+    mutation,
     obsolete,
     obsutil,
     phases,
@@ -1205,9 +1206,13 @@ def smarthide(repo, revhide, revshow, local=False):
     showctxs = repo.set(revshow)
     for ctx in hidectxs:
         unfi = repo.unfiltered()
-        related = []
-        related = set(obsutil.allpredecessors(unfi.obsstore, [ctx.node()]))
-        related.update(obsutil.allsuccessors(unfi.obsstore, [ctx.node()]))
+        related = set()
+        if mutation.enabled(unfi):
+            related.update(mutation.allpredecessors(unfi, [ctx.node()]))
+            related.update(mutation.allsuccessors(unfi, [ctx.node()]))
+        else:
+            related.update(obsutil.allpredecessors(unfi.obsstore, [ctx.node()]))
+            related.update(obsutil.allsuccessors(unfi.obsstore, [ctx.node()]))
         related.intersection_update(x.node() for x in showctxs)
         destinations = [repo[x] for x in related]
 
@@ -1215,7 +1220,7 @@ def smarthide(repo, revhide, revshow, local=False):
         # 1. correct divergence/nondivergence
         # 2. correct visibility of changesets for the user
         # secondary objectives:
-        # 3. usefull ui message in hg sl: "Undone to"
+        # 3. useful ui message in hg sl: "Undone to"
         # Design choices:
         # 1-to-1 correspondence is easy
         # 1-to-many correspondence is hard:
@@ -1223,7 +1228,7 @@ def smarthide(repo, revhide, revshow, local=False):
         #   or split A to B,C
         #   because of undo we don't know which
         #   without complex logic
-        # Solution: provide helpfull ui message for
+        # Solution: provide helpful ui message for
         # common and easy case (1 to 1), use simplest
         # correct solution for complex edge case
 

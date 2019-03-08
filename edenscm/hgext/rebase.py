@@ -1550,7 +1550,12 @@ def successorrevs(unfi, rev):
     """yield revision numbers for successors of rev"""
     assert unfi.filtername is None
     nodemap = unfi.changelog.nodemap
-    for s in obsutil.allsuccessors(unfi.obsstore, [unfi[rev].node()]):
+    node = unfi[rev].node()
+    if mutation.enabled(unfi):
+        successors = mutation.allsuccessors(unfi, [node])
+    else:
+        successors = obsutil.allsuccessors(unfi.obsstore, [node])
+    for s in successors:
         if s in nodemap:
             yield nodemap[s]
 
@@ -2139,12 +2144,15 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
         srcnode = cl.node(srcrev)
         destnode = cl.node(destmap[srcrev])
         # XXX: more advanced APIs are required to handle split correctly
-        # obsutil.allsuccessors can include nodes that aren't present
+        # allsuccessors can include nodes that aren't present
         # in the repo and changelog nodemap. This is normal if CommitCloud
         # extension is enabled.
-        successors = list(obsutil.allsuccessors(repo.obsstore, [srcnode]))
+        if mutation.enabled(repo):
+            successors = list(mutation.allsuccessors(repo, [srcnode]))
+        else:
+            successors = list(obsutil.allsuccessors(repo.obsstore, [srcnode]))
         if len(successors) == 1:
-            # obsutil.allsuccessors includes node itself. When the list only
+            # allsuccessors includes node itself. When the list only
             # contains one element, it means there are no successors.
             obsoletenotrebased[srcrev] = None
         else:
@@ -2158,7 +2166,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
                 # If 'srcrev' has a successor in rebase set but none in
                 # destination (which would be catched above), we shall skip it
                 # and its descendants to avoid divergence.
-                # obsutil.allsuccessors can include nodes that aren't present
+                # allsuccessors can include nodes that aren't present
                 # in changelog nodemap.
                 if any(
                     nodemap[s] in destmap

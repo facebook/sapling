@@ -17,6 +17,7 @@ from . import (
     error,
     hbisect,
     match as matchmod,
+    mutation,
     node,
     obsolete as obsmod,
     obsutil,
@@ -648,7 +649,13 @@ def phasedivergent(repo, subset, x):
     """
     # i18n: "phasedivergent" is a keyword
     getargs(x, 0, 0, _("phasedivergent takes no arguments"))
-    phasedivergent = obsmod.getrevs(repo, "phasedivergent")
+    if mutation.enabled(repo):
+        clrev = repo.changelog.rev
+        phasedivergent = baseset(
+            [clrev(n) for n in mutation.phasedivergentnodes(repo) if n in repo]
+        )
+    else:
+        phasedivergent = obsmod.getrevs(repo, "phasedivergent")
     return subset & phasedivergent
 
 
@@ -871,7 +878,13 @@ def contentdivergent(repo, subset, x):
     """
     # i18n: "contentdivergent" is a keyword
     getargs(x, 0, 0, _("contentdivergent takes no arguments"))
-    contentdivergent = obsmod.getrevs(repo, "contentdivergent")
+    if mutation.enabled(repo):
+        clrev = repo.changelog.rev
+        contentdivergent = baseset(
+            [clrev(n) for n in mutation.contentdivergentnodes(repo) if n in repo]
+        )
+    else:
+        contentdivergent = obsmod.getrevs(repo, "contentdivergent")
     return subset & contentdivergent
 
 
@@ -895,8 +908,12 @@ def extinct(repo, subset, x):
     """
     # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
-    extincts = obsmod.getrevs(repo, "extinct")
-    return subset & extincts
+    if mutation.enabled(repo):
+        clrev = repo.changelog.rev
+        extinct = baseset([clrev(n) for n in mutation.extinctnodes(repo)])
+    else:
+        extinct = obsmod.getrevs(repo, "extinct")
+    return subset & extinct
 
 
 @predicate("extra(label, [value])", safe=True, weight=10)
@@ -1483,7 +1500,11 @@ def obsolete(repo, subset, x):
     """Mutable changeset with a newer version."""
     # i18n: "obsolete" is a keyword
     getargs(x, 0, 0, _("obsolete takes no arguments"))
-    obsoletes = obsmod.getrevs(repo, "obsolete")
+    if mutation.enabled(repo):
+        clrev = repo.changelog.rev
+        obsoletes = baseset([clrev(n) for n in mutation.obsoletenodes(repo)])
+    else:
+        obsoletes = obsmod.getrevs(repo, "obsolete")
     return subset & obsoletes
 
 
@@ -2174,10 +2195,15 @@ def predecessors(repo, subset, x):
 
 
 def _predecessors(repo, subset, targetset, startdepth, stopdepth):
+    if mutation.enabled(repo):
+        f = lambda nodes: mutation.allpredecessors(
+            repo, nodes, startdepth=startdepth, stopdepth=stopdepth
+        )
+    else:
+        f = lambda nodes: obsutil.allpredecessors(
+            repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
+        )
     s = getset(repo, fullreposet(repo), targetset)
-    f = lambda nodes: obsutil.allpredecessors(
-        repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
-    )
     d = _mapbynodefunc(repo, s, f)
     return subset & d
 
@@ -2221,10 +2247,15 @@ def successors(repo, subset, x):
 
 
 def _successors(repo, subset, targetset, startdepth, stopdepth):
+    if mutation.enabled(repo):
+        f = lambda nodes: mutation.allsuccessors(
+            repo, nodes, startdepth=startdepth, stopdepth=stopdepth
+        )
+    else:
+        f = lambda nodes: obsutil.allsuccessors(
+            repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
+        )
     s = getset(repo, fullreposet(repo), targetset)
-    f = lambda nodes: obsutil.allsuccessors(
-        repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
-    )
     d = _mapbynodefunc(repo, s, f)
     return subset & d
 
@@ -2289,7 +2320,11 @@ def orphan(repo, subset, x):
     """
     # i18n: "orphan" is a keyword
     getargs(x, 0, 0, _("orphan takes no arguments"))
-    orphan = obsmod.getrevs(repo, "orphan")
+    if mutation.enabled(repo):
+        clrev = repo.changelog.rev
+        orphan = baseset([clrev(n) for n in mutation.orphannodes(repo)])
+    else:
+        orphan = obsmod.getrevs(repo, "orphan")
     return subset & orphan
 
 
