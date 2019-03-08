@@ -38,7 +38,7 @@ EOF
 
 # Use the system hg environment if the bundled hg can't read the repository with
 # no warning nor error.
-if [ -n "`hg id --cwd "$TESTDIR/.." 2>&1 >/dev/null`" ]; then
+if [ -n "`hg files --cwd "$TESTDIR/" 2>&1 >/dev/null`" ]; then
     testrepohgenv () {
         syshgenv
     }
