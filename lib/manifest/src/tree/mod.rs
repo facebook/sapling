@@ -8,6 +8,7 @@ mod link;
 mod store;
 
 use std::{
+    cmp::Ordering,
     collections::{btree_map::Entry, BTreeMap},
     sync::Arc,
 };
@@ -251,6 +252,136 @@ impl<'a, S: Store> Iterator for Files<'a, S> {
                 }
                 Step::Err(error) => return Some(Err(error)),
                 Step::End => return None,
+            }
+        }
+    }
+}
+
+/// Returns an iterator over all the differences between two [`Tree`]s. Keeping in mind that
+/// manifests operate over files, the difference space is limited to three cases described by
+/// [`DiffType`]:
+///  * a file may be present only in the left tree manifest
+///  * a file may be present only in the right tree manifest
+///  * a file may have different file_metadata between the two tree manifests
+///
+/// For the case where we have the the file "foo" in the `left` tree manifest and we have the "foo"
+/// directory in the `right` tree manifest, the differences returned will be:
+///  1. DiffEntry("foo", LeftOnly(_))
+///  2. DiffEntry(file, RightOnly(_)) for all `file`s under the "foo" directory
+pub fn diff<'a, S: Store>(left: &'a Tree<S>, right: &'a Tree<S>) -> Diff<'a, S> {
+    Diff {
+        left: left.root_cursor(),
+        step_left: false,
+        right: right.root_cursor(),
+        step_right: false,
+    }
+}
+
+/// An iterator over the differences between two tree manifests.
+/// See [`diff()`].
+pub struct Diff<'a, S> {
+    left: Cursor<'a, S>,
+    step_left: bool,
+    right: Cursor<'a, S>,
+    step_right: bool,
+}
+
+/// Represents a file that is different between two tree manifests.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct DiffEntry {
+    path: RepoPathBuf,
+    diff_type: DiffType,
+}
+
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum DiffType {
+    LeftOnly(FileMetadata),
+    RightOnly(FileMetadata),
+    Changed(FileMetadata, FileMetadata),
+}
+
+impl DiffEntry {
+    fn new(path: RepoPathBuf, diff_type: DiffType) -> Self {
+        DiffEntry { path, diff_type }
+    }
+}
+
+impl<'a, S: Store> Iterator for Diff<'a, S> {
+    type Item = Fallible<DiffEntry>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // This is the standard algorithm for returning the differences in two lists but adjusted
+        // to have the iterator interface and to evaluate the tree lazily.
+        fn diff_entry(path: &RepoPath, diff_type: DiffType) -> Option<Fallible<DiffEntry>> {
+            Some(Ok(DiffEntry::new(path.to_owned(), diff_type)))
+        }
+        fn compare<'a, S>(left: &Cursor<'a, S>, right: &Cursor<'a, S>) -> Option<Ordering> {
+            // TODO: cache ordering state so we compare last components at most
+            match (left.finished(), right.finished()) {
+                (true, true) => None,
+                (false, true) => Some(Ordering::Less),
+                (true, false) => Some(Ordering::Greater),
+                (false, false) => Some(left.path().cmp(right.path())),
+            }
+        }
+        loop {
+            if self.step_left {
+                if let Step::Err(error) = self.left.step() {
+                    return Some(Err(error));
+                }
+                self.step_left = false;
+            }
+            if self.step_right {
+                if let Step::Err(error) = self.right.step() {
+                    return Some(Err(error));
+                }
+                self.step_right = false;
+            }
+            match compare(&self.left, &self.right) {
+                None => return None,
+                Some(Ordering::Less) => {
+                    self.step_left = true;
+                    if let Leaf(file_metadata) = self.left.link() {
+                        return diff_entry(self.left.path(), DiffType::LeftOnly(*file_metadata));
+                    }
+                }
+                Some(Ordering::Greater) => {
+                    self.step_right = true;
+                    if let Leaf(file_metadata) = self.right.link() {
+                        return diff_entry(self.right.path(), DiffType::RightOnly(*file_metadata));
+                    }
+                }
+                Some(Ordering::Equal) => {
+                    self.step_left = true;
+                    self.step_right = true;
+                    match (self.left.link(), self.right.link()) {
+                        (Leaf(left_metadata), Leaf(right_metadata)) => {
+                            if left_metadata != right_metadata {
+                                return diff_entry(
+                                    self.left.path(),
+                                    DiffType::Changed(*left_metadata, *right_metadata),
+                                );
+                            }
+                        }
+                        (Leaf(file_metadata), _) => {
+                            return diff_entry(self.left.path(), DiffType::LeftOnly(*file_metadata));
+                        }
+                        (_, Leaf(file_metadata)) => {
+                            return diff_entry(
+                                self.right.path(),
+                                DiffType::RightOnly(*file_metadata),
+                            );
+                        }
+                        (Durable(left_entry), Durable(right_entry)) => {
+                            if left_entry.node == right_entry.node {
+                                self.left.skip_subtree();
+                                self.right.skip_subtree();
+                            }
+                        }
+                        // All other cases are two directories that we have to iterate over
+                        _ => (),
+                    }
+                }
             }
         }
     }
@@ -501,5 +632,117 @@ mod tests {
             (repo_path_buf("a2/b2/c2"), meta(30))
         );
         assert!(files.next().is_none());
+    }
+
+    #[test]
+    fn test_diff_generic() {
+        let mut left = Tree::ephemeral(TestStore::new());
+        left.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();
+        left.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
+        left.insert(repo_path_buf("a3/b1"), meta(40)).unwrap();
+
+        let mut right = Tree::ephemeral(TestStore::new());
+        right.insert(repo_path_buf("a1/b2"), meta(40)).unwrap();
+        right.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+        right.insert(repo_path_buf("a3/b1"), meta(40)).unwrap();
+
+        assert_eq!(
+            diff(&left, &right).collect::<Fallible<Vec<_>>>().unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1/b1/c1/d1"), DiffType::LeftOnly(meta(10))),
+                DiffEntry::new(
+                    repo_path_buf("a1/b2"),
+                    DiffType::Changed(meta(20), meta(40))
+                ),
+                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta(30))),
+            )
+        );
+
+        left.flush().unwrap();
+        right.flush().unwrap();
+
+        assert_eq!(
+            diff(&left, &right).collect::<Fallible<Vec<_>>>().unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1/b1/c1/d1"), DiffType::LeftOnly(meta(10))),
+                DiffEntry::new(
+                    repo_path_buf("a1/b2"),
+                    DiffType::Changed(meta(20), meta(40))
+                ),
+                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta(30))),
+            )
+        );
+        right
+            .insert(repo_path_buf("a1/b1/c1/d1"), meta(10))
+            .unwrap();
+        left.insert(repo_path_buf("a1/b2"), meta(40)).unwrap();
+        left.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+
+        assert!(diff(&left, &right).next().is_none());
+    }
+
+    #[test]
+    fn test_diff_does_not_evaluate_durable_on_node_equality() {
+        // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
+        let left = Tree::durable(TestStore::new(), Node::from_u8(10));
+        let right = Tree::durable(TestStore::new(), Node::from_u8(10));
+        assert!(diff(&left, &right).next().is_none());
+
+        let right = Tree::durable(TestStore::new(), Node::from_u8(20));
+        assert!(diff(&left, &right).next().unwrap().is_err());
+    }
+
+    #[test]
+    fn test_diff_one_file_one_directory() {
+        let mut left = Tree::ephemeral(TestStore::new());
+        left.insert(repo_path_buf("a1/b1"), meta(10)).unwrap();
+        left.insert(repo_path_buf("a2"), meta(20)).unwrap();
+
+        let mut right = Tree::ephemeral(TestStore::new());
+        right.insert(repo_path_buf("a1"), meta(30)).unwrap();
+        right.insert(repo_path_buf("a2/b2"), meta(40)).unwrap();
+
+        assert_eq!(
+            diff(&left, &right).collect::<Fallible<Vec<_>>>().unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1"), DiffType::RightOnly(meta(30))),
+                DiffEntry::new(repo_path_buf("a1/b1"), DiffType::LeftOnly(meta(10))),
+                DiffEntry::new(repo_path_buf("a2"), DiffType::LeftOnly(meta(20))),
+                DiffEntry::new(repo_path_buf("a2/b2"), DiffType::RightOnly(meta(40))),
+            )
+        );
+    }
+
+    #[test]
+    fn test_diff_left_empty() {
+        let mut left = Tree::ephemeral(TestStore::new());
+
+        let mut right = Tree::ephemeral(TestStore::new());
+        right
+            .insert(repo_path_buf("a1/b1/c1/d1"), meta(10))
+            .unwrap();
+        right.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
+        right.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+
+        assert_eq!(
+            diff(&left, &right).collect::<Fallible<Vec<_>>>().unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1/b1/c1/d1"), DiffType::RightOnly(meta(10))),
+                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(meta(20))),
+                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta(30))),
+            )
+        );
+
+        left.flush().unwrap();
+        right.flush().unwrap();
+
+        assert_eq!(
+            diff(&left, &right).collect::<Fallible<Vec<_>>>().unwrap(),
+            vec!(
+                DiffEntry::new(repo_path_buf("a1/b1/c1/d1"), DiffType::RightOnly(meta(10))),
+                DiffEntry::new(repo_path_buf("a1/b2"), DiffType::RightOnly(meta(20))),
+                DiffEntry::new(repo_path_buf("a2/b2/c2"), DiffType::RightOnly(meta(30))),
+            )
+        );
     }
 }

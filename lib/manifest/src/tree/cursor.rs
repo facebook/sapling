@@ -57,6 +57,11 @@ impl<'a, S> Cursor<'a, S> {
         }
     }
 
+    /// Returns `false` until [`step()`] returns [`Step::End`] and return `true` afterwards.
+    pub fn finished(&self) -> bool {
+        return self.state == State::Done;
+    }
+
     /// Returns the [`RepoPath`] for the link that the [`Cursor`] is currently visiting.
     /// Note that after [`Step::End`] is returned from [`step()`], this function will return
     /// the path the cursor was initialed with.
@@ -69,6 +74,14 @@ impl<'a, S> Cursor<'a, S> {
     /// to return the last link that was visited.
     pub fn link(&self) -> &Link {
         self.link
+    }
+
+    /// Will skip all the subtrees under the current [`Link`]. Assuming that the current link is a
+    /// directory then this will skip the entire contents (including `evaluation`).
+    pub fn skip_subtree(&mut self) {
+        if self.state != State::Done {
+            self.state = State::Pop;
+        }
     }
 }
 
