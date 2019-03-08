@@ -544,7 +544,7 @@ Revsets for filtering commits based on mutated status
   E
   $ hg log -r "extinct()" -T '{desc}\n'
 
-Divergence
+Divergence and Successors Sets
 
   $ cd ..
   $ newrepo
@@ -575,3 +575,397 @@ Divergence
   H
   $ hg log -r "phasedivergent()" -T '{desc}\n'
   P
+
+  $ hg debugsuccessorssets 'all()'
+  ba2b7fa7166d
+      ba2b7fa7166d
+  54fe561aeb5b
+      54fe561aeb5b
+  e67cd4473b7c
+      55bd6ca2c9c5
+  9263b98dea84
+      9263b98dea84
+  55bd6ca2c9c5
+      55bd6ca2c9c5
+  b6d2081d9c92
+      b6d2081d9c92
+  ea4b6a4451ab
+      ea4b6a4451ab
+  $ hg debugsuccessorssets 'all()' --hidden
+  ba2b7fa7166d
+      ba2b7fa7166d
+  a3d17304151f
+      9263b98dea84
+      b6d2081d9c92 ea4b6a4451ab
+  54fe561aeb5b
+      54fe561aeb5b
+  29f5c7cacb84
+      9263b98dea84
+  e91ad3fd8cd0
+      b6d2081d9c92 ea4b6a4451ab
+  e67cd4473b7c
+      55bd6ca2c9c5
+  9263b98dea84
+      9263b98dea84
+  8bab98b2a161
+      b6d2081d9c92
+  55bd6ca2c9c5
+      55bd6ca2c9c5
+  fd2cd4536115
+      ea4b6a4451ab
+  b6d2081d9c92
+      b6d2081d9c92
+  ea4b6a4451ab
+      ea4b6a4451ab
+  $ hg debugsuccessorssets 'all()' --hidden --closest
+  ba2b7fa7166d
+      ba2b7fa7166d
+  a3d17304151f
+      29f5c7cacb84
+      e91ad3fd8cd0
+  54fe561aeb5b
+      54fe561aeb5b
+  29f5c7cacb84
+      9263b98dea84
+  e91ad3fd8cd0
+      8bab98b2a161 fd2cd4536115
+  e67cd4473b7c
+      55bd6ca2c9c5
+  9263b98dea84
+      9263b98dea84
+  8bab98b2a161
+      b6d2081d9c92
+  55bd6ca2c9c5
+      55bd6ca2c9c5
+  fd2cd4536115
+      ea4b6a4451ab
+  b6d2081d9c92
+      b6d2081d9c92
+  ea4b6a4451ab
+      ea4b6a4451ab
+
+  $ cd ..
+  $ newrepo
+  $ drawdag --print <<'EOS'
+  >                  # amend: A -> B
+  >       E  G       # amend: A -> C
+  >       |  |       # split: A -> D, E
+  > A B C D  F H I   # fold: F, G -> H
+  >  \|/  |   \|/    # amend: F -> I
+  >   Z   Z    Z
+  > EOS
+  ac2f7407182b A
+  36f08465dc73 B
+  40c31c9360c7 C
+  6c7c301750f1 D
+  5713d5fbff8b E
+  847007ced9a7 F
+  e1beb503e4fb G
+  996cee015648 H
+  bbb2c6c770b0 I
+  48b9aae0607f Z
+
+  $ hg log -r "contentdivergent()" -T '{desc}\n'
+  B
+  C
+  D
+  I
+  E
+  H
+  $ hg log -r "phasedivergent()" -T '{desc}\n'
+
+  $ hg debugsuccessorssets 'all()' --hidden
+  48b9aae0607f
+      48b9aae0607f
+  ac2f7407182b
+      36f08465dc73
+      40c31c9360c7
+      6c7c301750f1 5713d5fbff8b
+  847007ced9a7
+      996cee015648
+      bbb2c6c770b0
+  36f08465dc73
+      36f08465dc73
+  40c31c9360c7
+      40c31c9360c7
+  6c7c301750f1
+      6c7c301750f1
+  e1beb503e4fb
+      996cee015648
+  bbb2c6c770b0
+      bbb2c6c770b0
+  5713d5fbff8b
+      5713d5fbff8b
+  996cee015648
+      996cee015648
+  $ hg debugsuccessorssets 'all()' --closest
+  48b9aae0607f
+      48b9aae0607f
+  36f08465dc73
+      36f08465dc73
+  40c31c9360c7
+      40c31c9360c7
+  6c7c301750f1
+      6c7c301750f1
+  bbb2c6c770b0
+      bbb2c6c770b0
+  5713d5fbff8b
+      5713d5fbff8b
+  996cee015648
+      996cee015648
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  48b9aae0607f
+      48b9aae0607f
+  ac2f7407182b
+      36f08465dc73
+      40c31c9360c7
+      6c7c301750f1 5713d5fbff8b
+  847007ced9a7
+      996cee015648
+      bbb2c6c770b0
+  36f08465dc73
+      36f08465dc73
+  40c31c9360c7
+      40c31c9360c7
+  6c7c301750f1
+      6c7c301750f1
+  e1beb503e4fb
+      996cee015648
+  bbb2c6c770b0
+      bbb2c6c770b0
+  5713d5fbff8b
+      5713d5fbff8b
+  996cee015648
+      996cee015648
+
+  $ cd ..
+  $ newrepo
+  $ drawdag --print <<'EOS'
+  >                         # amend: A -> B
+  >       E K       G   O   # amend: A -> C
+  >       | |       |   |   # split: A -> D, E
+  > A B C D J L M N F H I   # fold: F, G -> H
+  >  \|/   \|/   \|  \|/    # amend: F -> I
+  >   Z     Z     Z   Z     # amend: D -> J
+  >                         # rebase: E -> K
+  >                         # fold: J, K -> L
+  >                         # amend: B -> M -> N
+  >                         # rebase: C -> O
+  > EOS
+  ac2f7407182b A
+  36f08465dc73 B
+  40c31c9360c7 C
+  6c7c301750f1 D
+  5713d5fbff8b E
+  847007ced9a7 F
+  e1beb503e4fb G
+  996cee015648 H
+  bbb2c6c770b0 I
+  4aebccbe0e17 J
+  846a43ee5a88 K
+  2ee9ab4882bd L
+  84dbc8e53ce0 M
+  74065e09cc11 N
+  f019b41d3b77 O
+  48b9aae0607f Z
+
+  $ hg log -r "contentdivergent()" -T '{desc}\n'
+  I
+  H
+  O
+  N
+  L
+
+  $ hg debugsuccessorssets 'all()'
+  48b9aae0607f
+      48b9aae0607f
+  bbb2c6c770b0
+      bbb2c6c770b0
+  996cee015648
+      996cee015648
+  f019b41d3b77
+      f019b41d3b77
+  74065e09cc11
+      74065e09cc11
+  2ee9ab4882bd
+      2ee9ab4882bd
+  $ hg debugsuccessorssets 'all()' --hidden
+  48b9aae0607f
+      48b9aae0607f
+  ac2f7407182b
+      2ee9ab4882bd
+      74065e09cc11
+      f019b41d3b77
+  847007ced9a7
+      996cee015648
+      bbb2c6c770b0
+  36f08465dc73
+      74065e09cc11
+  40c31c9360c7
+      f019b41d3b77
+  6c7c301750f1
+      2ee9ab4882bd
+  e1beb503e4fb
+      996cee015648
+  bbb2c6c770b0
+      bbb2c6c770b0
+  5713d5fbff8b
+      2ee9ab4882bd
+  996cee015648
+      996cee015648
+  4aebccbe0e17
+      2ee9ab4882bd
+  84dbc8e53ce0
+      74065e09cc11
+  f019b41d3b77
+      f019b41d3b77
+  846a43ee5a88
+      2ee9ab4882bd
+  74065e09cc11
+      74065e09cc11
+  2ee9ab4882bd
+      2ee9ab4882bd
+  $ hg debugsuccessorssets 'all()' --closest
+  48b9aae0607f
+      48b9aae0607f
+  bbb2c6c770b0
+      bbb2c6c770b0
+  996cee015648
+      996cee015648
+  f019b41d3b77
+      f019b41d3b77
+  74065e09cc11
+      74065e09cc11
+  2ee9ab4882bd
+      2ee9ab4882bd
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  48b9aae0607f
+      48b9aae0607f
+  ac2f7407182b
+      36f08465dc73
+      40c31c9360c7
+      6c7c301750f1 5713d5fbff8b
+  847007ced9a7
+      996cee015648
+      bbb2c6c770b0
+  36f08465dc73
+      84dbc8e53ce0
+  40c31c9360c7
+      f019b41d3b77
+  6c7c301750f1
+      4aebccbe0e17
+  e1beb503e4fb
+      996cee015648
+  bbb2c6c770b0
+      bbb2c6c770b0
+  5713d5fbff8b
+      846a43ee5a88
+  996cee015648
+      996cee015648
+  4aebccbe0e17
+      2ee9ab4882bd
+  84dbc8e53ce0
+      74065e09cc11
+  f019b41d3b77
+      f019b41d3b77
+  846a43ee5a88
+      2ee9ab4882bd
+  74065e09cc11
+      74065e09cc11
+  2ee9ab4882bd
+      2ee9ab4882bd
+
+Many splits and folds:
+
+  $ cd ..
+  $ newrepo
+  $ drawdag --print <<'EOS'
+  >     G    R   P           # split: A -> B, C
+  >     |    |   |           # split: B -> D, E
+  >     F  J Q N O           # split: C -> F, G
+  >     |  |/  |/            # split: A -> H, I, J
+  >   C E  I L M             # fold: H, I -> K
+  >   | |  | |/              # rebase: J -> L
+  > A B D  H K               # split: L -> M, N
+  >  \|/    \|               # split: N -> O, P
+  >   Z      Z               # split: J -> Q, R
+  > EOS
+  ac2f7407182b A
+  f0a671a46792 B
+  5c43be2708c4 C
+  6c7c301750f1 D
+  cabf2db621a7 E
+  d2478cddeb08 F
+  a6215fa93efa G
+  45724aa2168b H
+  34d53c2267d8 I
+  2bcf00cdb39b J
+  207ff838d27e K
+  813b6aa1d16f L
+  029c898a0df7 M
+  448ce1426237 N
+  396902f0a26c O
+  1c4d29f9f72d P
+  444227ba9301 Q
+  ff341471414e R
+  48b9aae0607f Z
+
+  $ hg log -r "contentdivergent()" -T '{desc}\n'
+  H
+  D
+  I
+  E
+  K
+  F
+  Q
+  G
+  M
+  R
+  O
+  P
+  $ hg log -r "contentdivergent()" -T '{desc}\n' --hidden
+  B
+  H
+  C
+  D
+  I
+  E
+  K
+  F
+  L
+  Q
+  G
+  M
+  R
+  N
+  O
+  P
+
+  $ hg debugsuccessorssets $A --hidden
+  ac2f7407182b
+      207ff838d27e 029c898a0df7 396902f0a26c 1c4d29f9f72d
+      207ff838d27e 444227ba9301 ff341471414e
+      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+  $ hg debugsuccessorssets $A --closest --hidden
+  ac2f7407182b
+      45724aa2168b 34d53c2267d8 2bcf00cdb39b
+      f0a671a46792 5c43be2708c4
+  $ hg unhide $A $L
+  $ hg debugsuccessorssets $A
+  ac2f7407182b
+      207ff838d27e 029c898a0df7 396902f0a26c 1c4d29f9f72d
+      207ff838d27e 444227ba9301 ff341471414e
+      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+  $ hg debugsuccessorssets $A --closest
+  ac2f7407182b
+      45724aa2168b 34d53c2267d8 444227ba9301 ff341471414e
+      45724aa2168b 34d53c2267d8 813b6aa1d16f
+      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+  $ hg hide $P
+  hiding commit 1c4d29f9f72d "P"
+  1 changesets hidden
+  $ hg debugsuccessorssets $A
+  ac2f7407182b
+      207ff838d27e 029c898a0df7 396902f0a26c
+      207ff838d27e 444227ba9301 ff341471414e
+      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa

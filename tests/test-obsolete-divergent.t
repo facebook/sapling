@@ -71,8 +71,8 @@ A_1 have two direct and divergent successors A_1 and A_1
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -91,8 +91,8 @@ A_1 have two direct and divergent successors A_1 and A_1
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -135,8 +135,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       01f36c5a8fda
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -157,8 +157,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -189,8 +189,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -209,8 +209,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -283,8 +283,8 @@ divergence that converge again is not divergence anymore
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -446,24 +446,24 @@ Check more complex obsolescence graft (with divergence)
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      01f36c5a8fda bed64f5d2f5a
       01f36c5a8fda 7ae126973a96 14608b260df8
+      01f36c5a8fda bed64f5d2f5a
   82623d38b9ba
       01f36c5a8fda
   392fd25390da
-      bed64f5d2f5a
       7ae126973a96 14608b260df8
+      bed64f5d2f5a
   01f36c5a8fda
       01f36c5a8fda
   6a411f0d7a0a
-      bed64f5d2f5a
       7ae126973a96 14608b260df8
+      bed64f5d2f5a
   e442cfc57690
-      bed64f5d2f5a
       7ae126973a96 14608b260df8
+      bed64f5d2f5a
   3750ebee865d
-      bed64f5d2f5a
       7ae126973a96 14608b260df8
+      bed64f5d2f5a
   7ae126973a96
       7ae126973a96
   14608b260df8

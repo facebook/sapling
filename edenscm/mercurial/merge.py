@@ -20,6 +20,7 @@ from . import (
     filemerge,
     i18n,
     match as matchmod,
+    mutation,
     obsutil,
     progress,
     pycompat,
@@ -2148,8 +2149,11 @@ def update(
                 dirty = wc.dirty(missing=True)
                 if dirty:
                     # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to obsutil.foreground.
-                    foreground = obsutil.foreground(repo, [p1.node()])
+                    # amount of call to obsutil/mutation.foreground.
+                    if mutation.enabled(repo):
+                        foreground = mutation.foreground(repo, [p1.node()])
+                    else:
+                        foreground = obsutil.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
                         pass  # allow updating to successors

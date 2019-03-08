@@ -12,6 +12,7 @@ from . import (
     error,
     hbisect,
     i18n,
+    mutation,
     obsutil,
     patch,
     pycompat,
@@ -880,13 +881,16 @@ def showpredecessors(repo, ctx, **args):
 @templatekeyword("successorssets")
 def showsuccessorssets(repo, ctx, **args):
     """Returns a string of sets of successors for a changectx. Format used
-    is: [ctx1, ctx2], [ctx3] if ctx has been splitted into ctx1 and ctx2
+    is: [ctx1, ctx2], [ctx3] if ctx has been split into ctx1 and ctx2
     while also diverged into ctx3. (EXPERIMENTAL)"""
     if not ctx.obsolete():
         return ""
     args = pycompat.byteskwargs(args)
 
-    ssets = obsutil.successorssets(repo, ctx.node(), closest=True)
+    if mutation.enabled(repo):
+        ssets = mutation.successorssets(repo, ctx.node(), closest=True)
+    else:
+        ssets = obsutil.successorssets(repo, ctx.node(), closest=True)
     ssets = [[hex(n) for n in ss] for ss in ssets]
 
     data = []

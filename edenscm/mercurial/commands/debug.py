@@ -45,6 +45,7 @@ from .. import (
     localrepo,
     lock as lockmod,
     merge as mergemod,
+    mutation,
     obsolete,
     obsutil,
     phases,
@@ -2905,6 +2906,10 @@ def debugsuccessorssets(ui, repo, *revs, **opts):
     cache = {}
     ctx2str = str
     node2str = short
+    if mutation.enabled(repo):
+        successorssets = mutation.successorssets
+    else:
+        successorssets = obsutil.successorssets
     if ui.debug():
 
         def ctx2str(ctx):
@@ -2914,8 +2919,8 @@ def debugsuccessorssets(ui, repo, *revs, **opts):
     for rev in scmutil.revrange(repo, revs):
         ctx = repo[rev]
         ui.write("%s\n" % ctx2str(ctx))
-        for succsset in obsutil.successorssets(
-            repo, ctx.node(), closest=opts[r"closest"], cache=cache
+        for succsset in sorted(
+            successorssets(repo, ctx.node(), closest=opts[r"closest"], cache=cache)
         ):
             if succsset:
                 ui.write("    ")

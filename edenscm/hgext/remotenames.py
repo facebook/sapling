@@ -35,6 +35,7 @@ from edenscm.mercurial import (
     hg,
     localrepo,
     lock as lockmod,
+    mutation,
     namespaces,
     obsutil,
     registrar,
@@ -1001,7 +1002,10 @@ def expushdiscoverybookmarks(pushop):
             msg = _("remote bookmark revision is not in local repo")
             hint = _("pull and merge or rebase or use --non-forward-move")
             raise error.Abort(msg, hint=hint)
-        foreground = obsutil.foreground(repo, [repo.lookup(old)])
+        if mutation.enabled(repo):
+            foreground = mutation.foreground(repo, [repo.lookup(old)])
+        else:
+            foreground = obsutil.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
             msg = _("pushed rev is not in the foreground of remote bookmark")
             hint = _("use --non-forward-move flag to complete arbitrary moves")

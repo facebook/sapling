@@ -14,6 +14,7 @@ from . import (
     encoding,
     error,
     lock as lockmod,
+    mutation,
     obsutil,
     pycompat,
     scmutil,
@@ -813,6 +814,8 @@ def validdest(repo, old, new):
         # old is nullrev, anything is valid.
         # (new != nullrev has been excluded by the previous check)
         return True
+    elif mutation.enabled(repo):
+        return new.node() in mutation.foreground(repo, [old.node()])
     elif repo.obsstore:
         return new.node() in obsutil.foreground(repo, [old.node()])
     else:

@@ -356,6 +356,141 @@ def predecessorsset(repo, startnode, closest=False):
     return util.removeduplicates(preds)
 
 
+def _succproduct(succsetlist):
+    """Takes a list of successorsset lists and returns a single successorsset
+    list representing the cartesian product of those successorsset lists.
+
+    The ordering of elements within the lists must be preserved.
+
+    >>> _succproduct([[[1]], [[2]]])
+    [[1, 2]]
+    >>> _succproduct([[[1, 2]], [[3, 4]]])
+    [[1, 2, 3, 4]]
+    >>> _succproduct([[[1, 2], [3, 4]], [[5, 6]]])
+    [[1, 2, 5, 6], [3, 4, 5, 6]]
+    >>> _succproduct([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+    [[1, 2, 5, 6], [3, 4, 5, 6], [1, 2, 7, 8], [3, 4, 7, 8]]
+    >>> _succproduct([[[1, 2], [3, 4]], [[2, 3], [7, 8]]])
+    [[1, 2, 3], [3, 4, 2], [1, 2, 7, 8], [3, 4, 7, 8]]
+    >>> _succproduct([[[1, 2], [3, 4]], [[1, 2], [7, 8]]])
+    [[1, 2], [3, 4, 1, 2], [1, 2, 7, 8], [3, 4, 7, 8]]
+    >>> _succproduct([[[1], [2]], [[3], [4]]])
+    [[1, 3], [2, 3], [1, 4], [2, 4]]
+    >>> _succproduct([[[5]], [[4]], [[3]], [[2]], [[1]]])
+    [[5, 4, 3, 2, 1]]
+    """
+    # Start with the first successorsset.
+    product = succsetlist[0]
+    for succsets in succsetlist[1:]:
+        # For each of the remaining successorssets, compute the product with
+        # the successorsset so far.
+        newproduct = []
+        for succset in succsets:
+            for p in product:
+                newproduct.append(p + [s for s in succset if s not in p])
+        product = newproduct
+    return product
+
+
+def successorssets(repo, startnode, closest=False, cache=None):
+    """Return a list of lists of commits that replace the startnode.
+
+    If there are no such commits, returns a list containing a single list
+    containing the startnode.
+
+    If ``closest`` is True, the lists contain the visible commits that are the
+    closest next version of the start node.
+
+    If ``closest`` is False, the lists contain the latest versions of the start
+    node.
+
+    The ``cache`` parameter is unused.  It is provided to make this function
+    signature-compatible with ``obsutil.successorssets``.
+    """
+    mc = repo._mutationcache
+
+    def getsets(node):
+        return sorted(mc._successorssets.get(node, [[node]]))
+
+    succsets = [[startnode]]
+    nextsuccsets = getsets(startnode)
+    expanded = nextsuccsets != succsets
+    while expanded:
+        if all(s in repo for succset in nextsuccsets for s in succset):
+            # We have found a set of successor sets that all contain visible
+            # commits - this is a valid set to return.
+            succsets = nextsuccsets
+            if closest:
+                break
+
+            # Now look at the next successors of each successors set.  When
+            # commits are modified in different ways (i.e. they have been
+            # diverged), we need to find all possible permutations that replace
+            # the original nodes.  To do this, we compute the cartesian product
+            # of the successors sets of each successor in the original
+            # successors set.
+            #
+            # For example, if A is split into B and C, B is diverged to B1 and
+            # B2, and C is also diverged to C1 and C2, then the successors sets
+            # of A are: [B1, C1], [B1, C2], [B2, C1], [B2, C2], which is the
+            # cartesian product: [B1, B2] x [C1, C2].
+            newnextsuccsets = sum(
+                [
+                    _succproduct([getsets(succ) for succ in succset])
+                    for succset in nextsuccsets
+                ],
+                [],
+            )
+        else:
+            # Expand each successors set out to its successors until we find
+            # visible commit.  Again, use the cartesian product to find all
+            # permutations.
+            newnextsuccsets = sum(
+                [
+                    _succproduct(
+                        [
+                            [[succ]] if succ in repo else getsets(succ)
+                            for succ in succset
+                        ]
+                    )
+                    for succset in nextsuccsets
+                ],
+                [],
+            )
+        expanded = newnextsuccsets != nextsuccsets
+        nextsuccsets = newnextsuccsets
+        if not expanded:
+            # We've reached a stable state and some of the commits might not be
+            # visible.  Remove the invisible commits, and continue with what's
+            # left.
+            newnextsuccsets = [
+                [s for s in succset if s in repo] for succset in nextsuccsets
+            ]
+            # Remove sets that are now empty.
+            newnextsuccsets = [succset for succset in newnextsuccsets if succset]
+            if newnextsuccsets:
+                expanded = newnextsuccsets != nextsuccsets
+                nextsuccsets = newnextsuccsets
+    return util.removeduplicates(succsets, key=frozenset)
+
+
+def foreground(repo, nodes):
+    """Returns all nodes in the "foreground" of the given nodes.
+
+    The foreground of a commit is the transitive closure of all descendants
+    and successors of the commit.
+    """
+    unfi = repo.unfiltered()
+    foreground = set()
+    newctxs = set(unfi.set("%ln::", nodes))
+    while newctxs:
+        newnodes = set(c.node() for c in newctxs) - foreground
+        newnodes.update(allsuccessors(repo, newnodes))
+        foreground = foreground | newnodes
+        newctxs = set(unfi.set("(%ln::) - (%ln)", newnodes, newnodes))
+    return foreground
+
+
 def toposortrevs(repo, revs, predmap):
     """topologically sort revs according to the given predecessor map"""
     dag = {}
