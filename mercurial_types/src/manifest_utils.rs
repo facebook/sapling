@@ -591,7 +591,8 @@ pub fn diff_sorted_vecs(
                     to.push_front(to_entry);
                 } else {
                     if to_entry.get_type().is_tree() == from_entry.get_type().is_tree() {
-                        if to_entry.get_hash() != from_entry.get_hash() {
+                        if to_entry.get_hash() != from_entry.get_hash() ||
+                            to_entry.get_type() != from_entry.get_type() {
                             res.push(ChangedEntry::new_modified(
                                 path.clone(),
                                 to_entry,

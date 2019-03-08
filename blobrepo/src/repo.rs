@@ -1408,16 +1408,20 @@ impl BlobRepo {
                                     p1_hash.map(|h| h.into_nodehash()),
                                     p2_hash.map(|h| h.into_nodehash()),
                                 );
-                                repo.get_manifest_from_bonsai(ctx, bcs, mf_p1, mf_p2)
-                                    .map(move |(manifest_id, incomplete_filenodes)| {
-                                        (manifest_id, incomplete_filenodes, hg_parents)
+                                repo.get_manifest_from_bonsai(ctx.clone(), bcs, mf_p1.clone(), mf_p2.clone())
+                                    .and_then(move |(manifest_id, incomplete_filenodes)| {
+                                        compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1.as_ref(), mf_p2.as_ref())
+                                            .map(move |files| {
+                                                (manifest_id, incomplete_filenodes, hg_parents, files)
+                                            })
+
                                     })
                             }
                         })
                         // create changeset
                         .and_then({
                             cloned!(ctx, repo, bcs);
-                            move |(manifest_id, incomplete_filenodes, parents)| {
+                            move |(manifest_id, incomplete_filenodes, parents, files)| {
                                 let metadata = ChangesetMetadata {
                                     user: bcs.author().to_string(),
                                     time: *bcs.author_date(),
@@ -1427,13 +1431,6 @@ impl BlobRepo {
                                         })
                                         .collect(),
                                     comments: bcs.message().to_string(),
-                                };
-                                let files = {
-                                    let mut files: Vec<_> =
-                                        bcs.file_changes().map(|(path, _)| path.clone()).collect();
-                                    // files must be sorted lexicographically
-                                    files.sort_unstable_by(|p0, p1| p0.to_vec().cmp(&p1.to_vec()));
-                                    files
                                 };
                                 let content = HgChangesetContent::new_from_parts(
                                     parents,

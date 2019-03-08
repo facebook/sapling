@@ -36,7 +36,7 @@ start mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
-Make two client repos
+Make client repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames= -q
 
 Push to Mononoke
@@ -223,4 +223,62 @@ Continue replay
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     onemorecommit
+  
+Make a commit that makes a file executable and a commit that adds a symlink. Make sure they are sync correctly
+  $ cd $TESTTMP/client-push
+  $ hgmn up -q 2
+  $ chmod +x pushcommit
+  $ hg ci -m 'exec mode'
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 15776eb106e6 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
+  $ hgmn up -q 2
+  $ ln -s pushcommit symlink_to_pushcommit
+  $ hg addremove
+  adding symlink_to_pushcommit
+  $ hg ci -m 'symlink'
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 6f060fabc8e7 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
+
+Continue replay
+  $ cd $TESTTMP/repo-hg-3
+  $ cat >>.hg/hgrc <<CONFIG
+  > [hooks]
+  > prepushkey = python "$TESTTMP/replayverification.py"
+  > CONFIG
+
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop repo-hg-3 5
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #6 ... (glob)
+  * successful sync (glob)
+  * syncing log entry #7 ... (glob)
+  * successful sync (glob)
+  $ cd repo-hg-3
+  $ hg log -r master_bookmark^
+  changeset:   5:a7acac33c050
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     exec mode
+  
+  $ hg log -r master_bookmark
+  changeset:   6:6f24f1b38581
+  bookmark:    master_bookmark
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     symlink
   

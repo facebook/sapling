@@ -229,7 +229,7 @@ mod test {
             let nodestream = AncestorsNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                string_to_bonsai(&repo, "d0b4845e349f338361208f170ec13120080da37f"),
             )
             .boxify();
 
@@ -237,7 +237,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(&repo, "d0b4845e349f338361208f170ec13120080da37f"),
                     string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
@@ -298,7 +298,7 @@ mod test {
             let nodestream = AncestorsNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                string_to_bonsai(&repo, "c10443fa4198c6abad76dc6c69c1417b2e821508)"),
+                string_to_bonsai(&repo, "dd993aab2bed7276e17c88470286ba8459ba6d94)"),
             )
             .boxify();
 
@@ -306,8 +306,8 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "c10443fa4198c6abad76dc6c69c1417b2e821508"),
-                    string_to_bonsai(&repo, "a5ab070634ab9cbdfc92404b3ec648f7e29547bc"),
+                    string_to_bonsai(&repo, "dd993aab2bed7276e17c88470286ba8459ba6d94"),
+                    string_to_bonsai(&repo, "9c6dd4e2c2f43c89613b094efb426cc42afdee2a"),
                     string_to_bonsai(&repo, "64011f64aaf9c2ad2e674f57c033987da4016f51"),
                     string_to_bonsai(&repo, "c1d5375bf73caab8725d759eaca56037c725c7d1"),
                     string_to_bonsai(&repo, "e819f2dd9a01d3e63d9a93e298968df275e6ad7c"),

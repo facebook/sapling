@@ -75,6 +75,6 @@ List of files before the push
   $ hgmn push -r . --to master_bookmark -q
   $ hgmn up master_bookmark -q
 
-List of files after the push. TODO(stash): fix
+List of files after the push.
   $ hg log -r . -T '{files}'
-  dir (no-eol)
+  dir dir/1 dir/2 dir/3 (no-eol)

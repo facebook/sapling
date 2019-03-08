@@ -171,7 +171,7 @@ pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_crea
         let _merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+            "d0b4845e349f338361208f170ec13120080da37f",
         );
 
         for left_node in branch_1.into_iter() {

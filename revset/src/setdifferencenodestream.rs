@@ -436,7 +436,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 &[
-                    "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    "d0b4845e349f338361208f170ec13120080da37f",
                     "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
                     "16839021e338500b3cf7c9b871c8a07351697d68",
                 ],
@@ -470,7 +470,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(&repo, "d0b4845e349f338361208f170ec13120080da37f"),
                     string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                 ],
                 nodestream,

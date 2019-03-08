@@ -518,7 +518,7 @@ mod test {
                 Arc::new(SkiplistIndex::new()),
                 vec![string_to_bonsai(
                     &repo,
-                    "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    "d0b4845e349f338361208f170ec13120080da37f",
                 )],
                 vec![
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
@@ -531,7 +531,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(&repo, "d0b4845e349f338361208f170ec13120080da37f"),
                     string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                 ],
@@ -554,7 +554,7 @@ mod test {
                 Arc::new(SkiplistIndex::new()),
                 vec![string_to_bonsai(
                     &repo,
-                    "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    "d0b4845e349f338361208f170ec13120080da37f",
                 )],
                 vec![string_to_bonsai(
                     &repo,
@@ -567,7 +567,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(&repo, "d0b4845e349f338361208f170ec13120080da37f"),
                     string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),

@@ -675,7 +675,7 @@ fn test_compute_changed_files_no_parents() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
-        let nodehash = string_to_nodehash("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480");
+        let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
         let expected = vec![
             MPath::new(b"1").unwrap(),
             MPath::new(b"2").unwrap(),
@@ -712,7 +712,7 @@ fn test_compute_changed_files_one_parent() {
         // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
         // to see how Mercurial would compute the files list and confirm that it's the same
         let repo = many_files_dirs::getrepo(None);
-        let nodehash = string_to_nodehash("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480");
+        let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
         let parenthash = string_to_nodehash("d261bc7900818dea7c86935b3fb17a33b2e3a6b4");
         let expected = vec![
             MPath::new(b"dir1").unwrap(),

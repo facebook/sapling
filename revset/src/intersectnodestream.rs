@@ -466,8 +466,8 @@ mod test {
                 ctx.clone(),
                 &repo,
                 &[
-                    "c10443fa4198c6abad76dc6c69c1417b2e821508",
-                    "a5ab070634ab9cbdfc92404b3ec648f7e29547bc",
+                    "dd993aab2bed7276e17c88470286ba8459ba6d94",
+                    "9c6dd4e2c2f43c89613b094efb426cc42afdee2a",
                     "64011f64aaf9c2ad2e674f57c033987da4016f51",
                     "03b0589d9788870817d03ce7b87516648ed5b33a",
                 ],
