@@ -11,7 +11,7 @@ We need obsmarkers for now, to allow unstable commits
   > [ui]
   > interactive = true
   > [templatealias]
-  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into")
+  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as")
   > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
   > sl_mutation_descs = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{desc}", ", ")})', ' ')}"
   > EOF
@@ -1136,4 +1136,54 @@ Metaedit automatic rebase of amended commit
   o  B1
   |
   o  A
+  
+Landing
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << EOS
+  > X         # amend: A -> B -> C
+  > |         # rebase: C -> X
+  > Y  A B C
+  > |   \|/
+  > Z    Z
+  > EOS
+  $ hg unhide $B
+  $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  o  X
+  |
+  | x  B (Rewritten into X)
+  | |
+  o |  Y
+  |/
+  o  Z
+  
+Because we don't have a successor index for the changelog, and we only build the cache
+for draft commits, we lose the fact that B was landed.
+
+  $ hg phase -p $X
+  $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  o  X
+  |
+  | o  B
+  | |
+  o |  Y
+  |/
+  o  Z
+  
+We can restore it by re-introducing the links via mutation records.  This is a temporary
+hack until we write an indexed changelog that lets us do the successor lookup for any
+commit cheaply.  Normally the pullcreatemarkers and pushrebase extensions will do this
+for us, but for this test we do it manually.
+
+  $ hg debugsh --hidden -c "from edenscm.mercurial import mutation; mutation.recordentries(repo, [mutation.createsyntheticentry(repo, mutation.ORIGIN_SYNTHETIC, [repo[\"$B\"].node()], repo[\"$C\"].node(), \"land\")], skipexisting=False)"
+  $ hg debugsh --hidden -c "from edenscm.mercurial import mutation; mutation.recordentries(repo, [mutation.createsyntheticentry(repo, mutation.ORIGIN_SYNTHETIC, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
+  $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  o  X
+  |
+  | x  B (Landed as X)
+  | |
+  o |  Y
+  |/
+  o  Z
   

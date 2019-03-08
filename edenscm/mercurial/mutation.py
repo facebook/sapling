@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from . import error, node as nodemod, util
+from . import error, node as nodemod, phases, util
 from .rust.bindings import mutationstore
 
 
@@ -89,6 +89,20 @@ class mutationentry(object):
                 self.tz() or 0,
                 None,
             )
+
+
+def createsyntheticentry(
+    repo, origin, preds, succ, op, splitting=None, user=None, date=None
+):
+    user = user or repo.ui.config("mutation", "user") or repo.ui.username()
+    date = date or repo.ui.config("mutation", "date")
+    if date is None:
+        date = util.makedate()
+    else:
+        date = util.parsedate(date)
+    return mutationstore.mutationentry(
+        origin, succ, preds, splitting, op, user, date[0], date[1], None
+    )
 
 
 def recordentries(repo, entries, skipexisting=True):
@@ -379,6 +393,8 @@ def fate(repo, node):
     This returns a list of ([nodes], operation) pairs, indicating mutations that
     happened to this node that resulted in one or more visible commits.
     """
+    clrev = repo.changelog.rev
+    phasecache = repo._phasecache
     fate = []
     for succset in successorssets(repo, node, closest=True):
         if succset == [node]:
@@ -394,6 +410,8 @@ def fate(repo, node):
                 op = entry.op()
             if preds is not None and node in preds:
                 fate.append((succset, op))
+            elif succ in repo and phasecache.phase(repo, clrev(succ)) == phases.public:
+                fate.append((succset, "land"))
             else:
                 fate.append((succset, "rewrite"))
     return fate
