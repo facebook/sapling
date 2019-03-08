@@ -130,6 +130,7 @@ from edenscm.mercurial import (
     hintutil,
     i18n,
     localrepo,
+    mutation,
     node as nodemod,
     obsolete,
     peer,
@@ -139,6 +140,7 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
+from edenscm.mercurial.commands import debug as debugcommands
 
 from . import bundleparts, common, infinitepushcommands
 
@@ -147,6 +149,7 @@ copiedpart = bundleparts.copiedpart
 getscratchbranchparts = bundleparts.getscratchbranchparts
 scratchbookmarksparttype = bundleparts.scratchbookmarksparttype
 scratchbranchparttype = bundleparts.scratchbranchparttype
+scratchmutationparttype = bundleparts.scratchmutationparttype
 
 batchable = peer.batchable
 bin = nodemod.bin
@@ -248,6 +251,28 @@ def _tryhoist(ui, remotebookmark):
     return remotebookmark
 
 
+def _debugbundle2part(orig, ui, part, all, **opts):
+    if part.type == scratchmutationparttype:
+        entries = mutation.mutationstore.unbundle(part.read())
+        ui.write(("    %s entries\n") % len(entries))
+        for entry in entries:
+            fold = entry.fold()
+            if fold:
+                pred = ",".join([hex(f) for f in fold])
+            else:
+                pred = hex(entry.pred())
+            succ = hex(entry.succ())
+            split = entry.split()
+            if split:
+                succ = ",".join([hex(s) for s in split] + succ)
+            ui.write(
+                ("      %s -> %s (%s by %s at %s)\n")
+                % (pred, succ, entry.op(), entry.user(), entry.time())
+            )
+
+    orig(ui, part, all, **opts)
+
+
 class bundlestore(object):
     def __init__(self, repo):
         self._repo = repo
@@ -311,6 +336,7 @@ def commonsetup(ui):
     if scratchbranchpat:
         global _scratchbranchmatcher
         kind, pat, _scratchbranchmatcher = util.stringmatcher(scratchbranchpat)
+    extensions.wrapfunction(debugcommands, "_debugbundle2part", _debugbundle2part)
 
 
 def serverextsetup(ui):
@@ -1236,6 +1262,7 @@ def partgen(pushop, bundler):
 
 bundle2.capabilities[scratchbranchparttype] = ()
 bundle2.capabilities[scratchbookmarksparttype] = ()
+bundle2.capabilities[scratchmutationparttype] = ()
 
 
 def _getrevs(bundle, oldnode, force, bookmark):
@@ -1317,7 +1344,7 @@ def processparts(orig, repo, op, unbundler):
 
     handleallparts = repo.ui.configbool("infinitepush", "storeallparts")
 
-    partforwardingwhitelist = []
+    partforwardingwhitelist = [scratchmutationparttype]
     try:
         treemfmod = extensions.find("treemanifest")
         partforwardingwhitelist.append(treemfmod.TREEGROUP_PARTTYPE2)
@@ -1571,6 +1598,11 @@ def bundle2scratchbookmarks(op, part):
             index.deletebookmarks(todelete)
         if toinsert:
             index.addmanybookmarks(toinsert)
+
+
+@bundle2.parthandler(scratchmutationparttype)
+def bundle2scratchmutation(op, part):
+    mutation.unbundle(op.repo, part.read())
 
 
 def bundle2pushkey(orig, op, part):

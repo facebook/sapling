@@ -3,7 +3,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from edenscm.mercurial import bundle2, changegroup, error, extensions, revsetlang, util
+from edenscm.mercurial import (
+    bundle2,
+    changegroup,
+    error,
+    extensions,
+    mutation,
+    revsetlang,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 from .common import encodebookmarks
@@ -11,6 +19,7 @@ from .common import encodebookmarks
 
 scratchbranchparttype = "b2x:infinitepush"
 scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"
+scratchmutationparttype = "b2x:infinitepushmutation"
 
 
 def getscratchbranchparts(
@@ -50,6 +59,19 @@ def getscratchbranchparts(
             scratchbranchparttype.upper(), advisoryparams=params.iteritems(), data=cg
         )
     )
+
+    if mutation.recording(repo):
+        if scratchmutationparttype not in bundle2.bundle2caps(peer):
+            repo.ui.warn(
+                _("no server support for %r - skipping\n") % scratchmutationparttype
+            )
+        else:
+            parts.append(
+                bundle2.bundlepart(
+                    scratchmutationparttype,
+                    data=mutation.bundle(repo, outgoing.missing),
+                )
+            )
 
     try:
         treemod = extensions.find("treemanifest")

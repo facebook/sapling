@@ -76,6 +76,33 @@ class mutationentry(object):
         if "mutdate" in self.extra:
             return int(self.extra.get("mutdate").split()[1])
 
+    def tostoreentry(self, origin=ORIGIN_COMMIT):
+        if "mutpred" in self.extra:
+            return mutationstore.mutationentry(
+                origin,
+                self.node,
+                self.preds(),
+                self.split(),
+                self.op() or "",
+                self.user() or "",
+                self.time() or 0,
+                self.tz() or 0,
+                None,
+            )
+
+
+def recordentries(repo, entries, skipexisting=True):
+    unfi = repo.unfiltered()
+    mc = repo._mutationcache
+    for entry in entries:
+        if skipexisting:
+            succ = entry.succ()
+            if succ in unfi or mc.store.has(succ):
+                continue
+        repo._mutationcache.store.add(entry)
+    # TODO(mbthomas): take part in transactions
+    repo._mutationcache.store.flush()
+
 
 class mutationcache(object):
     """Cache of derived mutation information for a local repo."""
@@ -611,3 +638,37 @@ def toposort(repo, items, nodefn=None):
         ]
     sortedrevs = toposortrevs(repo, revmap.keys(), predmap)
     return [items[revmap[r]] for r in sortedrevs]
+
+
+def unbundle(repo, bundledata):
+    if recording(repo):
+        entries = mutationstore.unbundle(bundledata)
+        recordentries(repo, entries, skipexisting=True)
+
+
+def bundle(repo, nodes):
+    """Generate bundled mutation data for bundling alongside the given nodes.
+
+    This consists of mutation entries for all predecessors of the given nodes,
+    excluding the nodes themselves, as they are expected to have the mutation
+    information embedded in the commit extras.
+    """
+    nodes = set(nodes)
+    remaining = set(nodes)
+    seen = set()
+    entries = []
+    while remaining:
+        current = remaining.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+
+        entry = lookupsplit(repo, current)
+        if entry is not None:
+            if entry.succ() not in nodes:
+                entries.append(entry.tostoreentry())
+            for nextnode in entry.preds():
+                if nextnode not in seen:
+                    remaining.add(nextnode)
+
+    return mutationstore.bundle(entries)

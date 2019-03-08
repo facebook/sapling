@@ -157,6 +157,7 @@ from . import (
     bookmarks,
     changegroup,
     error,
+    mutation,
     node as nodemod,
     obsolete,
     phases,
