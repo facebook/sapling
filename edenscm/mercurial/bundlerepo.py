@@ -374,6 +374,11 @@ class bundlerepository(localrepo.localrepository):
         return bundlephasecache(self, self._phasedefaults)
 
     @localrepo.unfilteredpropertycache
+    def _visibleheads(self):
+        # TODO(mbthomas): return bundlevisibleheads(self)
+        return None
+
+    @localrepo.unfilteredpropertycache
     def changelog(self):
         # consume the header if it exists
         self._cgunpacker.changelogheader()

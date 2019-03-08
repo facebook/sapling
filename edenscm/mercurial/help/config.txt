@@ -2391,6 +2391,34 @@ User interface controls.
     Increase the amount of output printed. (default: False)
 
 
+``visibility``
+--------------
+
+Controls how Mercurial determines commit visibility.
+
+``forceobsolete``
+    Force the use of obsolescence information for visibility, even if
+    the ``visibleheads`` requirement is set in the repo.
+
+``tracking``
+    Whether to track commit visibility.  (default: auto)
+
+    ``off``
+      Use obsolescence markers to determine visibility.  Only commits
+      that have not been obsoleted are visible.
+
+    ``on``
+      Explicitly track visibility of commits using a set of visible
+      heads. Only commits that are ancestors of the visible heads are
+      visible.  This adds the ``visibleheads`` requirement to the
+      repository store, so it cannot be used by versions of Mercurial
+      that do not track visibleheads.
+
+    ``auto``
+      Use visible heads if the repository store has the ``visibleheads``
+      requirement, otherwise use ``obsolescence``.
+
+
 ``web``
 -------
 

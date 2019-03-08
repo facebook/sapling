@@ -60,6 +60,7 @@ from . import (
     txnutil,
     util,
     vfs as vfsmod,
+    visibility,
 )
 from .i18n import _
 from .node import hex, nullid, short
@@ -364,7 +365,7 @@ class localrepository(object):
         "treestate",
         "storerequirements",
     }
-    _basestoresupported = set()
+    _basestoresupported = {"visibleheads"}
     openerreqs = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
 
     # sets of (ui, featureset) functions for repo and store features.
@@ -820,6 +821,10 @@ class localrepository(object):
     @storecache("phaseroots", "00changelog.i")
     def _phasecache(self):
         return phases.phasecache(self, self._phasedefaults)
+
+    @storecache("visibleheads")
+    def _visibleheads(self):
+        return visibility.makevisibleheads(self.ui, self)
 
     @storecache("obsstore")
     def obsstore(self):
