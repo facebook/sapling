@@ -11,6 +11,11 @@ from . import error, node as nodemod, util
 from .rust.bindings import mutationstore
 
 
+ORIGIN_COMMIT = mutationstore.ORIGIN_COMMIT
+ORIGIN_OBSMARKER = mutationstore.ORIGIN_OBSMARKER
+ORIGIN_SYNTHETIC = mutationstore.ORIGIN_SYNTHETIC
+
+
 def record(repo, extra, prednodes, op=None, splitting=None):
     for key in "mutpred", "mutuser", "mutdate", "mutop", "mutsplit":
         if key in extra:
@@ -42,6 +47,9 @@ class mutationentry(object):
     def __init__(self, node, extra):
         self.extra = extra
         self.node = node
+
+    def origin(self):
+        return None
 
     def succ(self):
         return self.node

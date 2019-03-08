@@ -3294,23 +3294,30 @@ def debugmutation(ui, repo, *revs, **opts):
         while nodestack:
             node = nodestack[-1].pop()
             ui.status(("%s%s") % ("  " * len(nodestack), hex(node)))
-            if node in repo:
-                ctx = repo[node]
-                pred = ctx.mutationpredecessors()
-                if pred:
-                    mutop = ctx.mutationoperation()
-                    mutuser = ctx.mutationuser()
-                    mutdate = util.shortdatetime(ctx.mutationdate())
-                    extra = ""
-                    mutsplit = ctx.mutationsplit()
-                    if mutsplit is not None:
-                        extra += " (split into this and: %s)" % ", ".join(
-                            [hex(n) for n in mutsplit]
-                        )
-                    ui.status(
-                        (" %s by %s at %s%s from:") % (mutop, mutuser, mutdate, extra)
+            entry = mutation.lookup(repo, node)
+            if entry is not None:
+                preds = entry.preds()
+                mutop = entry.op()
+                mutuser = entry.user()
+                mutdate = util.shortdatetime((entry.time(), entry.tz()))
+                mutsplit = entry.split() or None
+                origin = entry.origin()
+                origin = {
+                    None: "",
+                    mutation.ORIGIN_COMMIT: " (from remote commit)",
+                    mutation.ORIGIN_OBSMARKER: " (from obsmarker)",
+                    mutation.ORIGIN_SYNTHETIC: " (synthetic)",
+                }.get(origin, " (unknown origin %s)" % origin)
+                extra = ""
+                if mutsplit is not None:
+                    extra += " (split into this and: %s)" % ", ".join(
+                        [hex(n) for n in mutsplit]
                     )
-                    nodestack.append(list(reversed(pred)))
+                ui.status(
+                    (" %s by %s at %s%s%s from:")
+                    % (mutop, mutuser, mutdate, extra, origin)
+                )
+                nodestack.append(list(reversed(preds)))
             ui.status(("\n"))
             while nodestack and not nodestack[-1]:
                 nodestack.pop()
