@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-from . import debug, debugstatus, debugstrip, eden, uncommit
+from . import debug, debugstatus, debugstrip, eden, fs, uncommit
 from .. import (
     archival,
     bookmarks,
@@ -74,6 +74,7 @@ table.update(uncommit.cmdtable)
 table.update(debugstatus.command._table)
 table.update(debugstrip.command._table)
 table.update(eden.command._table)
+table.update(fs.command._table)
 
 # common command options
 

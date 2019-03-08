@@ -20,6 +20,7 @@ Show all commands except debug commands
   export
   files
   forget
+  fs
   githelp
   graft
   grep
@@ -333,6 +334,7 @@ Show all commands + options
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   files: rev, print0, include, exclude, template, subrepos
+  fs: 
   graft: rev, continue, abort, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
   grep: after-context, before-context, context, ignore-case, files-with-matches, line-number, invert-match, word-regexp, extended-regexp, fixed-strings, perl-regexp, include, exclude
   heads: rev, topo, active, closed, style, template

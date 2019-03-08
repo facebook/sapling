@@ -2415,6 +2415,13 @@ Dish up an empty repo; serve it cold.
   list tracked files
   </td></tr>
   <tr><td>
+  <a href="/help/fs">
+  fs
+  </a>
+  </td><td>
+  control the edenfs daemon
+  </td></tr>
+  <tr><td>
   <a href="/help/graft">
   graft
   </a>
