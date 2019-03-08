@@ -73,7 +73,7 @@ create new commit in repo2 and check that push fails
   bb0985934a0f8a493887892173b68940ceb40b4f
   sending unbundle command
   bundle2-output-bundle: "HG20", 3 parts total
-  bundle2-output-part: "replycaps" 229 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   remote: Command failed

@@ -81,7 +81,7 @@ Do infinitepush (aka commit cloud) push
   47da8b81097c5534f3eb7947a8764dd323cffe3d
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" 283 bytes payload
+  bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   bundle2-input-bundle: 1 params no-transaction
