@@ -24,11 +24,11 @@ pub trait Store {
 /// represents serialized or deserialized data. It is the object that performs the bytes to
 /// business object transformations. It provides method for interacting with parsed data.
 ///
-/// The serialization format currently used is:
-/// Entry         = Element [ LF Entry ]
+/// The ABNF specification for the current serialization is:
+/// Entry         = 1*( Element LF )
 /// Element       = PathComponent %x00 Node [ Flag ]
-/// Flag          = %s"x" / %s"l" / %s"d"
-/// PathComponent = *( %x01-%x09 / %x0B-%xFF )
+/// Flag          = %s"x" / %s"l" / %s"t"
+/// PathComponent = 1*( %x01-%x09 / %x0B-%xFF )
 /// Node          = 40HEXDIG
 ///
 /// In this case an `Entry` is equivalent to the contents of a directory. The elements of the
@@ -62,14 +62,13 @@ pub enum Flag {
 }
 
 impl Entry {
-    const SEPARATOR: u8 = b'\n';
-
     /// Returns an iterator over the elements that the current `Entry` contains. This is the
     /// primary method of inspection for an `Entry`.
-    pub fn elements<'a>(&'a self) -> impl Iterator<Item = Fallible<Element>> + 'a {
-        self.0
-            .split(|&byte| byte == Self::SEPARATOR)
-            .map(|element_bytes| Element::from_byte_slice(element_bytes))
+    pub fn elements<'a>(&'a self) -> Elements<'a> {
+        Elements {
+            byte_slice: &self.0,
+            position: 0,
+        }
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
@@ -78,11 +77,8 @@ impl Entry {
     ) -> Fallible<Entry> {
         let mut underlying = Vec::new();
         for element_result in elements.into_iter() {
-            let element = element_result?;
-            if !underlying.is_empty() {
-                underlying.push(b'\n');
-            }
-            underlying.extend(element.to_byte_vec());
+            underlying.extend(element_result?.to_byte_vec());
+            underlying.push(b'\n');
         }
         Ok(Entry(underlying))
     }
@@ -91,6 +87,35 @@ impl Entry {
 impl AsRef<[u8]> for Entry {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+pub struct Elements<'a> {
+    byte_slice: &'a [u8],
+    position: usize,
+}
+
+impl<'a> Iterator for Elements<'a> {
+    type Item = Fallible<Element>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.position >= self.byte_slice.len() {
+            return None;
+        }
+        let end = match self.byte_slice[self.position..]
+            .iter()
+            .position(|&byte| byte == b'\n')
+        {
+            None => {
+                return Some(Err(format_err!(
+                    "failed to deserialize tree manifest entry, missing line feed"
+                )));
+            }
+            Some(delta) => self.position + delta,
+        };
+        let result = Element::from_byte_slice(&self.byte_slice[self.position..end]);
+        self.position = end + 1;
+        Some(result)
     }
 }
 
@@ -122,7 +147,7 @@ impl Element {
             None => Flag::File(FileType::Regular),
             Some(b'x') => Flag::File(FileType::Executable),
             Some(b'l') => Flag::File(FileType::Symlink),
-            Some(b'd') => Flag::Directory,
+            Some(b't') => Flag::Directory,
             Some(bad_flag) => return Err(format_err!("invalid flag {}", bad_flag)),
         };
         let element = Element {
@@ -145,7 +170,7 @@ impl Element {
             Flag::File(FileType::Regular) => None,
             Flag::File(FileType::Executable) => Some(b'x'),
             Flag::File(FileType::Symlink) => Some(b'l'),
-            Flag::Directory => Some(b'd'),
+            Flag::Directory => Some(b't'),
         };
         if let Some(byte) = flag {
             buffer.push(byte);
@@ -221,7 +246,7 @@ mod tests {
             Element::new(path.to_owned(), node, Flag::File(FileType::Symlink))
         );
 
-        *buffer.last_mut().unwrap() = b'd';
+        *buffer.last_mut().unwrap() = b't';
         assert_eq!(
             Element::from_byte_slice(&buffer).unwrap(),
             Element::new(path.to_owned(), node, Flag::Directory)
@@ -240,7 +265,7 @@ mod tests {
         let component = PathComponentBuf::from_string(String::from("c")).unwrap();
         let node = Node::from_str("2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
         let flag = Flag::Directory;
-        let byte_slice = b"c\02e31d52f551e445002a6e6690700ce2ac31f196ed";
+        let byte_slice = b"c\02e31d52f551e445002a6e6690700ce2ac31f196et";
         let element = Element::new(component, node, flag);
         assert_eq!(Element::from_byte_slice(byte_slice).unwrap(), element);
         let buffer = element.to_byte_vec();
