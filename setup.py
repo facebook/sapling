@@ -568,16 +568,7 @@ class asset(object):
             lfspypath = os.environ.get(
                 "LFSPY_PATH", pjoin(scriptdir, "../../tools/lfs/lfs.py")
             )
-            ptrpath = pjoin(scriptdir, "fb/tools/.lfs-pointers")
-            args = [
-                sys.executable,
-                lfspypath,
-                "-l",
-                ptrpath,
-                "-q",
-                "download",
-                destpath,
-            ]
+            args = [sys.executable, lfspypath, "-q", "download", destpath]
         else:
             # via external URL
             assert self.url, "Cannot download %s - no URL provided" % self.name
@@ -702,7 +693,7 @@ class fetchbuilddeps(Command):
 
     # To add a python package to this list, run "pip2 download PKG" and
     # add the URL here.  URLs are added to LFS by running eg:
-    # ../../tools/lfs/lfs.py upload LOCAL-FILE -l fb/tools/.lfs-pointers
+    # ../../tools/lfs/lfs.py upload LOCAL-FILE
     # where LOCAL-FILE is the file downloaded by "pip2 download PKG"
     pyassets = [
         asset(url=url)
