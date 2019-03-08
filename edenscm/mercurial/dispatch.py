@@ -1095,6 +1095,14 @@ def _getlocal(ui, rpath, wd=None):
         try:
             wd = pycompat.getcwd()
         except OSError as e:
+            if e.errno == errno.ENOTCONN:
+                ui.warn(_("current working directory is not connected\n"))
+                ui.warn(
+                    _(
+                        "(for virtual checkouts, run '@prog@ fs doctor' to diagnose issues with edenfs)\n"
+                    )
+                )
+                return "", ui
             raise error.Abort(
                 _("error getting current working directory: %s")
                 % encoding.strtolocal(e.strerror)
