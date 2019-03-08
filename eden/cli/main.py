@@ -595,9 +595,8 @@ class FsckCmd(Subcmd):
         # Check all configured checkouts that are not currently mounted.
         instance = get_eden_instance(args)
         return_codes: List[int] = []
-        for checkout_path, rel_state_dir in instance._get_directory_map().items():
-            abs_state_dir = instance.state_dir / config_mod.CLIENTS_DIR / rel_state_dir
-            result = self.check_one(args, Path(checkout_path), abs_state_dir)
+        for checkout in instance.get_checkouts():
+            result = self.check_one(args, checkout.path, checkout.state_dir)
             return_codes.append(result)
 
         return return_codes
