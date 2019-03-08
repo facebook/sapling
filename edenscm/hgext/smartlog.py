@@ -39,6 +39,7 @@ from edenscm.mercurial import (
     error,
     extensions,
     graphmod,
+    mutation,
     node as nodemod,
     obsutil,
     phases,
@@ -189,6 +190,8 @@ def singlepublicsuccessor(repo, ctx, templ, **args):
     given node.  If there's none or more than one, return empty string.
     This is intended to be used for "Landed as" marking
     in `hg sl` output."""
+    if mutation.enabled(repo):
+        return ""
     successorssets = obsutil.successorssets(repo, ctx.node())
     unfiltered = repo.unfiltered()
     ctxs = (unfiltered[n] for n in itertools.chain.from_iterable(successorssets))
@@ -208,6 +211,8 @@ def shelveenabled(repo, ctx, **args):
 @templatekeyword("rebasesuccessors")
 def rebasesuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of rebase"""
+    if mutation.enabled(repo):
+        return ""
     rsnodes = list(modifysuccessors(ctx, "rebase"))
     return templatekw.showlist("rebasesuccessor", rsnodes, args)
 
@@ -215,6 +220,8 @@ def rebasesuccessors(repo, ctx, **args):
 @templatekeyword("amendsuccessors")
 def amendsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of amend"""
+    if mutation.enabled(repo):
+        return ""
     asnodes = list(modifysuccessors(ctx, "amend"))
     return templatekw.showlist("amendsuccessor", asnodes, args)
 
@@ -222,6 +229,8 @@ def amendsuccessors(repo, ctx, **args):
 @templatekeyword("splitsuccessors")
 def splitsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of split"""
+    if mutation.enabled(repo):
+        return ""
     asnodes = list(modifysuccessors(ctx, "split"))
     return templatekw.showlist("splitsuccessor", asnodes, args)
 
@@ -229,6 +238,8 @@ def splitsuccessors(repo, ctx, **args):
 @templatekeyword("foldsuccessors")
 def foldsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of fold"""
+    if mutation.enabled(repo):
+        return ""
     asnodes = list(modifysuccessors(ctx, "fold"))
     return templatekw.showlist("foldsuccessor", asnodes, args)
 
@@ -238,6 +249,8 @@ def histeditsuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of
        histedit
     """
+    if mutation.enabled(repo):
+        return ""
     asnodes = list(modifysuccessors(ctx, "histedit"))
     return templatekw.showlist("histeditsuccessor", asnodes, args)
 
@@ -245,6 +258,8 @@ def histeditsuccessors(repo, ctx, **args):
 @templatekeyword("undosuccessors")
 def undosuccessors(repo, ctx, **args):
     """Return all of the node's successors created as a result of undo"""
+    if mutation.enabled(repo):
+        return ""
     asnodes = list(modifysuccessors(ctx, "undo"))
     return templatekw.showlist("undosuccessor", asnodes, args)
 

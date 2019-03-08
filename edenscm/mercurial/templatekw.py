@@ -776,6 +776,8 @@ def showobsfate(**args):
     #
     # This function will be replaced by templates fragments when we will have
     # the verbosity templatekw available.
+    if mutation.enabled(args["repo"]):
+        return ""
     succsandmarkers = showsuccsandmarkers(**args)
 
     args = pycompat.byteskwargs(args)
@@ -923,6 +925,8 @@ def showsuccsandmarkers(repo, ctx, **args):
     obs-markers from ctx to the set of successors in "markers".
     (EXPERIMENTAL)
     """
+    if mutation.enabled(repo):
+        return ""
 
     values = obsutil.successorsandmarkers(repo, ctx)
 
