@@ -10,6 +10,10 @@ We need obsmarkers for now, to allow unstable commits
   > date=0 0
   > [ui]
   > interactive = true
+  > [templatealias]
+  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into")
+  > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
+  > sl_mutation_descs = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{desc}", ", ")})', ' ')}"
   > EOF
   $ newrepo
   $ echo "base" > base
@@ -310,6 +314,35 @@ Revsets
   $ hg log -T '{node}\n' -r 'successors(.)' --hidden
   6367a1362725a82dfa430133126f72113634b084
 
+Unhide some old commits and show their mutations in the log
+  $ hg unhide -q cb252f4e4ec4a9befec9f4768dae810b234a03f4
+  $ hg unhide -q 618c9a83fb832b6742123bd06fa829aa32bdb1bf
+  $ hg unhide -q e086d79182ddf80b13bf03020e7955d523f78afc
+  $ hg unhide -q 4c8af5bba994ede28e843f607374031db8abd043
+  $ hg unhide -q c5d0fa8770bdde6ef311cc640a78a2f686be28b4
+  $ hg log -G -T "{node} {sl_mutations}\n" -r "all()"
+  @  6367a1362725a82dfa430133126f72113634b084
+  |
+  o  e9a8adc18ebd9ab4986c3fb217d22ba95cefd11d
+  |
+  | x  cb252f4e4ec4a9befec9f4768dae810b234a03f4 (Histedited to e9a8adc18ebd)
+  |/
+  o  2a2702418db0647c75b35bffa75ad7b4ea377e44
+  |
+  | x  e086d79182ddf80b13bf03020e7955d523f78afc (Rewritten into 2a2702418db0)
+  |/
+  | x  618c9a83fb832b6742123bd06fa829aa32bdb1bf (Rewritten into e086d79182dd)
+  | |
+  | x  2fd85d288d1b25636df6532b000fbb150e43646e (Rewritten into e086d79182dd)
+  |/
+  o  c5fb4c2b7fcf4b995e8cd8f6b0cb5186d9b5b935
+  |
+  | x  4c8af5bba994ede28e843f607374031db8abd043 (Rewritten into c5fb4c2b7fcf)
+  |/
+  | x  c5d0fa8770bdde6ef311cc640a78a2f686be28b4 (Amended as 4c8af5bba994)
+  |/
+  o  d20a80d4def38df63a4b330b7fb688f3d4cae1e3
+  
 Histedit with exec that amends in between folds
 
   $ cd ..
@@ -414,7 +447,7 @@ Drawdag
   >     A
   > EOS
 
-  $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node}'
+  $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node} {sl_mutations}'
   o  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
   |
   o  H 45d7378ca81d4ce1e9b31f0e3d567b8292dffc77
@@ -425,11 +458,11 @@ Drawdag
   | |
   | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
   |/
-  | x  D 78698f46e6eb5de39fc18042f71f03cb7a21285c
+  | x  D 78698f46e6eb5de39fc18042f71f03cb7a21285c (Rebased to 45d7378ca81d)
   | |
-  | | x  C 26805aba1e600a82e93661149f2313866a221a7b
+  | | x  C 26805aba1e600a82e93661149f2313866a221a7b (Rebased to 78698f46e6eb)
   | |/
-  | x  B 112478962961147124edd43549aedd1a335e44bf
+  | x  B 112478962961147124edd43549aedd1a335e44bf (Split into 7fb047a69f22, 64a8289d2492, 63a5789cbb56)
   |/
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
@@ -969,3 +1002,138 @@ Many splits and folds:
       207ff838d27e 029c898a0df7 396902f0a26c
       207ff838d27e 444227ba9301 ff341471414e
       6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+  $ hg log -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  Z 
+  A (Split into H, I, Q, R) (Split into H, I, L) (Split into D, E, F, G)
+  H (Folded into K)
+  D 
+  I (Folded into K)
+  E 
+  K 
+  F 
+  L (Split into M, O)
+  Q 
+  G 
+  M 
+  R 
+  O 
+
+Rebase of amended commit
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << 'EOS'
+  > D     E
+  > |     |
+  > C  C1 C2 C3 C4 # amend: C -> C1 -> C2 -> C3 -> C4
+  >  \ | /    \ /
+  >   \|/      B
+  >    B
+  >    |
+  >    A A1
+  >    |/
+  >    Z
+  > EOS
+  $ hg rebase -s $B -d $A1
+  rebasing 3:917a077edb8d "B"
+  rebasing 4:b45c90359798 "C"
+  rebasing 6:01f26f1a10b2 "D"
+  rebasing 7:93a74dbee093 "C2"
+  rebasing 9:516f559bdadf "E"
+  rebasing 10:c0c251cf4c45 "C4" (tip)
+  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  o  C4
+  |
+  | o  E
+  | |
+  | x  C2 (Rewritten using rebase-copy into C4)
+  |/
+  | o  D
+  | |
+  | x  C (Rewritten using rebase-copy into C2)
+  |/
+  o  B
+  |
+  o  A1
+  |
+  | o  A
+  |/
+  o  Z
+  
+Rebase of folded commit
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << 'EOS'
+  > D E
+  >  \|      # fold: C, E -> F
+  >   C F
+  >   |/
+  >   B
+  >   |
+  >   A A1
+  >   |/
+  >   Z
+  > EOS
+  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  o  F
+  |
+  | o  D
+  | |
+  | x  C (Folded into F)
+  |/
+  o  B
+  |
+  | o  A1
+  | |
+  o |  A
+  |/
+  o  Z
+  
+  $ hg rebase -s $B -d $A1
+  rebasing 3:917a077edb8d "B"
+  rebasing 4:b45c90359798 "C"
+  rebasing 5:01f26f1a10b2 "D"
+  rebasing 7:9eb924bd504e "F" (tip)
+  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  o  F
+  |
+  | o  D
+  | |
+  | x  C (Rewritten using rebase-copy into F)
+  |/
+  o  B
+  |
+  o  A1
+  |
+  | o  A
+  |/
+  o  Z
+  
+
+Metaedit automatic rebase of amended commit
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << 'EOS'
+  > D
+  > |
+  > C  C1 C2  # amend: C -> C1 -> C2
+  >  \ | /
+  >   \|/
+  >    B
+  >    |
+  >    A
+  > EOS
+  $ hg metaedit -r $B -m B1
+  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  o  C2
+  |
+  | o  D
+  | |
+  | x  C (Rewritten using metaedit-copy into C2)
+  |/
+  o  B1
+  |
+  o  A
+  

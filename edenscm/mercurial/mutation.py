@@ -373,6 +373,32 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
         nextlevel = set()
 
 
+def fate(repo, node):
+    """Returns the fate of a node.
+
+    This returns a list of ([nodes], operation) pairs, indicating mutations that
+    happened to this node that resulted in one or more visible commits.
+    """
+    fate = []
+    for succset in successorssets(repo, node, closest=True):
+        if succset == [node]:
+            pass
+        elif len(succset) > 1:
+            fate.append((succset, "split"))
+        else:
+            succ = succset[0]
+            preds = None
+            entry = lookup(repo, succ)
+            if entry is not None:
+                preds = entry.preds()
+                op = entry.op()
+            if preds is not None and node in preds:
+                fate.append((succset, op))
+            else:
+                fate.append((succset, "rewrite"))
+    return fate
+
+
 def obsoletenodes(repo):
     return repo._mutationcache._obsolete
 

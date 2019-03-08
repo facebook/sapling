@@ -960,6 +960,35 @@ def showsuccsandmarkers(repo, ctx, **args):
     return _hybrid(f, data, lambda x: x, pycompat.identity)
 
 
+@templatekeyword("mutations")
+def mutations(repo, ctx, **args):
+    """Returns a list of the results of mutating the commit.
+
+    Each mutation has the following fields:
+      - 'operation' is the name of the mutation operation
+      - 'successors' is the list of successor commits for this operation.
+
+    Sequences of mutations that result in a single successor are collapsed into
+    a single ``rewrite`` operation.
+    """
+    descs = []
+    if mutation.enabled(repo):
+        descs = [
+            {
+                "operation": op,
+                "successors": _hybrid(
+                    None,
+                    [hex(s) for s in succs],
+                    lambda x: {"ctx": repo[x], "revcache": {}},
+                    lambda x: scmutil.formatchangeid(repo[x]),
+                ),
+            }
+            for (succs, op) in sorted(mutation.fate(repo, ctx.node()))
+        ]
+    f = _showlist("mutation", descs, args)
+    return _hybrid(f, descs, lambda x: x, lambda x: x["operation"])
+
+
 @templatekeyword("p1rev")
 def showp1rev(repo, ctx, templ, **args):
     """Integer. The repository-local revision number of the changeset's
