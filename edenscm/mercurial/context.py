@@ -675,26 +675,29 @@ class changectx(basectx):
     def hidden(self):
         return self._rev in repoview.filterrevs(self._repo, "visible")
 
+    @propertycache
+    def _mutationentry(self):
+        return mutation.lookup(self._repo, self._node, extra=self.extra())
+
     def mutationpredecessors(self):
-        pred = self.extra().get("mutpred")
-        if pred:
-            pred = [bin(p) for p in pred.split(",")]
-        return pred
+        if self._mutationentry:
+            return self._mutationentry.preds()
 
     def mutationoperation(self):
-        return self.extra().get("mutop")
+        if self._mutationentry:
+            return self._mutationentry.op()
 
     def mutationuser(self):
-        return self.extra().get("mutuser")
+        if self._mutationentry:
+            return self._mutationentry.user()
 
     def mutationdate(self):
-        return self.extra().get("mutdate")
+        if self._mutationentry:
+            return (self._mutationentry.time(), self._mutationentry.tz())
 
     def mutationsplit(self):
-        split = self.extra().get("mutsplit")
-        if split is not None:
-            split = [bin(n) for n in split.split(",")]
-        return split
+        if self._mutationentry:
+            return self._mutationentry.split()
 
     def isinmemory(self):
         return False

@@ -3300,7 +3300,7 @@ def debugmutation(ui, repo, *revs, **opts):
                 if pred:
                     mutop = ctx.mutationoperation()
                     mutuser = ctx.mutationuser()
-                    mutdate = util.shortdatetime(util.parsedate(ctx.mutationdate()))
+                    mutdate = util.shortdatetime(ctx.mutationdate())
                     extra = ""
                     mutsplit = ctx.mutationsplit()
                     if mutsplit is not None:

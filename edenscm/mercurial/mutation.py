@@ -37,6 +37,37 @@ def enabled(repo):
     return repo.ui.configbool("mutation", "enabled")
 
 
+class mutationentry(object):
+    def __init__(self, node, extra):
+        self.extra = extra
+        self.node = node
+
+    def succ(self):
+        return self.node
+
+    def preds(self):
+        if "mutpred" in self.extra:
+            return [nodemod.bin(x) for x in self.extra["mutpred"].split(",")]
+
+    def split(self):
+        if "mutsplit" in self.extra:
+            return [nodemod.bin(x) for x in self.extra["mutsplit"].split(",")]
+
+    def op(self):
+        return self.extra.get("mutop")
+
+    def user(self):
+        return self.extra.get("mutuser")
+
+    def time(self):
+        if "mutdate" in self.extra:
+            return float(self.extra.get("mutdate").split()[0])
+
+    def tz(self):
+        if "mutdate" in self.extra:
+            return int(self.extra.get("mutdate").split()[1])
+
+
 class mutationcache(object):
     """Cache of derived mutation information for a local repo."""
 
@@ -80,17 +111,12 @@ class mutationcache(object):
 
         # Compute successor relationships
         for current in unfimutable:
-            extra = clrevision(current).extra
-            preds = None
-            if "mutpred" in extra:
-                preds = [nodemod.bin(x) for x in extra["mutpred"].split(",")]
-            split = None
-            if "mutsplit" in extra:
-                split = [nodemod.bin(x) for x in extra["mutsplit"].split(",")]
+            entry = mutationentry(current, clrevision(current).extra)
 
             # Compute the full set of successors, this is the current commit,
             # plus any commits mentioned in `mutsplit`.
             succs = [current]
+            split = entry.split()
             if split is not None:
                 for splitnode in split:
                     # Record that this split successor was a result of this
@@ -99,6 +125,7 @@ class mutationcache(object):
                 succs = split + succs
 
             # Now add `succs` as a successor set for all predecessors.
+            preds = entry.preds()
             if preds is not None:
                 for pred in preds:
                     addsuccs(pred, succs)
@@ -214,14 +241,36 @@ class mutationcache(object):
         self._extinct = extinct
 
 
+def lookup(repo, node, extra=None):
+    """Look up mutation information for the given node"""
+    unfi = repo.unfiltered()
+    if extra is None and node in unfi:
+        extra = unfi.changelog.changelogrevision(node).extra
+    if extra is not None:
+        return mutationentry(node, extra)
+
+
+def lookupsplit(repo, node):
+    """Look up mutation information for the given node, or the main split node
+    if this node is the result of a split.
+    """
+    unfi = repo.unfiltered()
+    mc = repo._mutationcache
+    mainnode = mc._splitheads.get(node, node)
+    if mainnode in unfi:
+        extra = unfi.changelog.changelogrevision(mainnode).extra
+        return mutationentry(mainnode, extra)
+
+
+def lookupsuccessors(repo, node):
+    """Look up the immediate successors sets for the given node"""
+    return repo._mutationcache._successorssets.get(node)
+
+
 def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
     """Yields all the nodes that are predecessors of the given nodes.
 
     Some predecessors may not be known locally."""
-    unfi = repo.unfiltered()
-    mc = repo._mutationcache
-    cl = unfi.changelog
-    clrev = cl.changelogrevision
     depth = 0
     thislevel = set(nodes)
     nextlevel = set()
@@ -233,14 +282,10 @@ def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
             seen.add(current)
             if startdepth is None or depth >= startdepth:
                 yield current
-            mainnode = mc._splitheads.get(current, current)
-            if mainnode in unfi:
-                extra = clrev(mainnode).extra
-                pred = None
-                if "mutpred" in extra:
-                    pred = [nodemod.bin(x) for x in extra["mutpred"].split(",")]
-            else:
-                continue
+            pred = None
+            entry = lookupsplit(repo, current)
+            if entry is not None:
+                pred = entry.preds()
             if pred is not None:
                 for nextnode in pred:
                     if nextnode not in seen:
@@ -254,7 +299,6 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
     """Yields all the nodes that are successors of the given nodes.
 
     Successors that are not known locally may be omitted."""
-    mc = repo._mutationcache
     depth = 0
     thislevel = set(nodes)
     nextlevel = set()
@@ -266,8 +310,9 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
             seen.add(current)
             if startdepth is None or depth >= startdepth:
                 yield current
-            for succset in mc._successorssets.get(current, ()):
-                nextlevel.update(succset)
+            succsets = lookupsuccessors(repo, current)
+            if succsets:
+                nextlevel = nextlevel.union(*succsets)
         depth += 1
         thislevel = nextlevel
         nextlevel = set()
@@ -316,15 +361,13 @@ def predecessorsset(repo, startnode, closest=False):
     If ``closest`` is False, returns a list of the earliest original versions of
     the start node.
     """
-    unfi = repo.unfiltered()
-    cl = unfi.changelog
-    clrevision = cl.changelogrevision
 
     def get(node):
-        if node in unfi:
-            extra = clrevision(node).extra
-            if "mutpred" in extra:
-                return [nodemod.bin(x) for x in extra["mutpred"].split(",")]
+        entry = lookupsplit(repo, node)
+        if entry is not None:
+            preds = entry.preds()
+            if preds is not None:
+                return preds
         return [node]
 
     preds = [startnode]
@@ -407,10 +450,9 @@ def successorssets(repo, startnode, closest=False, cache=None):
     The ``cache`` parameter is unused.  It is provided to make this function
     signature-compatible with ``obsutil.successorssets``.
     """
-    mc = repo._mutationcache
 
     def getsets(node):
-        return sorted(mc._successorssets.get(node, [[node]]))
+        return sorted(lookupsuccessors(repo, node) or [[node]])
 
     succsets = [[startnode]]
     nextsuccsets = getsets(startnode)
