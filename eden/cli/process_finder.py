@@ -12,12 +12,18 @@ import os
 import subprocess
 import typing
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, NamedTuple, Optional
 
 from . import util
 
 
 ProcessID = int
+
+
+class ProcessInfo(NamedTuple):
+    pid: ProcessID
+    cmdline: List[bytes]
+    eden_dir: Optional[Path]
 
 
 log = logging.getLogger("eden.cli.process_finder")
@@ -30,76 +36,98 @@ class ProcessFinder(abc.ABC):
 
 
 class LinuxProcessFinder(ProcessFinder):
+    proc_path = Path("/proc")
+
     def find_rogue_pids(self) -> List[ProcessID]:
-        try:
-            output = self.get_pgrep_output()
-        except Exception as ex:
-            log.warning(
-                f"Error determining currently running edenfs processes", exc_info=True
+        edenfs_processes = self.get_edenfs_processes()
+        return [info.pid for info in self.yield_rogue_processes(edenfs_processes)]
+
+    def get_edenfs_processes(self) -> List[ProcessInfo]:
+        """Return information about all running edenfs processes owned by the
+        specified user.
+        """
+        user_id = os.getuid()
+
+        edenfs_processes = []
+        for entry in os.listdir(self.proc_path):
+            # Ignore entries that do not look like integer process IDs
+            try:
+                pid = int(entry)
+            except ValueError:
+                continue
+
+            pid_path = self.proc_path / entry
+            try:
+                # Ignore processes not owned by the current user
+                st = pid_path.lstat()
+                if st.st_uid != user_id:
+                    continue
+
+                # Ignore processes that aren't edenfs
+                comm = (pid_path / "comm").read_bytes()
+                if comm != b"edenfs\n":
+                    continue
+
+                cmdline_bytes = (pid_path / "cmdline").read_bytes()
+            except OSError:
+                # Ignore any errors we encounter reading from the /proc files.
+                # For instance, this could happen if the process exits while we are
+                # trying to read its data.
+                continue
+
+            cmdline = cmdline_bytes.split(b"\x00")
+            eden_dir = self.get_eden_dir(pid, cmdline)
+            edenfs_processes.append(
+                ProcessInfo(pid=pid, cmdline=cmdline, eden_dir=eden_dir)
             )
-            return []
-        return self.keep_only_rogue_pids(output)
 
-    def get_pgrep_output(self) -> bytes:
-        # TODO: It would perhaps be better for this code to just manually examine
-        # /proc/*/cmdline.  The caller really wants to know the argument list,
-        # and this can't really be split up correctly from the pgrep output.  The
-        # calling code also will choke on the output today if one of the commands
-        # contains a newline in one of its arguments.
-        username = util.get_username()
-        cmd = ["pgrep", "-aU", username, "edenfs"]
-
-        try:
-            output = typing.cast(bytes, subprocess.check_output(cmd))
-        except subprocess.CalledProcessError:
-            log.warning(f"Error running command: {cmd}\nIt exited with failure status.")
-            return b""
-
-        if len(output) == 0:
-            log.warning(f"No output received from the OS for cmd: {cmd}")
-            return b""
-
-        log.debug(f"Output for cmd {cmd}\n{output}")
-        return output
+        return edenfs_processes
 
     def read_lock_file(self, path: Path) -> bytes:
         return path.read_bytes()
 
-    def keep_only_rogue_pids(self, output: bytes) -> List[ProcessID]:
-        pid_config_dict: Dict[Path, List[ProcessID]] = {}
-        # find all potential pids
-        for line in output.splitlines():
-            # line looks like: "PID<SPACE>CMDLINE".
-            # We're looking for "--edenDir SOMETHING" in the CMDLINE.
-            entries = line.split()
-            process_name = entries[1].split(bytes(os.sep, "utf-8"))[-1]
-            if process_name != b"edenfs":
+    def get_eden_dir(self, pid: ProcessID, cmdline: List[bytes]) -> Optional[Path]:
+        eden_dir: Optional[Path] = None
+        for idx in range(1, len(cmdline) - 1):
+            if cmdline[idx] == b"--edenDir":
+                eden_dir = Path(os.fsdecode(cmdline[idx + 1]))
+                break
+
+        if eden_dir is None:
+            log.debug(
+                f"could not determine edenDir for edenfs process {pid} ({cmdline})"
+            )
+            return None
+
+        if not eden_dir.is_absolute():
+            # We generally expect edenfs to be invoked with an absolute path to its
+            # state directory.  We cannot check relative paths here, so just skip them.
+            log.debug(
+                f"could not determine absolute path to edenDir for edenfs process "
+                f"{pid} ({cmdline})"
+            )
+            return None
+
+        return eden_dir
+
+    def yield_rogue_processes(
+        self, edenfs_processes: List[ProcessInfo]
+    ) -> Iterable[ProcessInfo]:
+        # Build a dictionary of eden directory to list of running PIDs,
+        # so that below we can we only check each eden directory once even if there are
+        # multiple processes that appear to be running for it.
+        info_by_eden_dir: Dict[Path, List[ProcessInfo]] = {}
+        for info in edenfs_processes:
+            if info.eden_dir is None:
                 continue
-            pid = ProcessID(entries[0])
-            eden_dir: Optional[Path] = None
-            for i in range(2, len(entries) - 1):
-                if entries[i] == b"--edenDir":
-                    eden_dir = Path(os.fsdecode(entries[i + 1]))
-                    break
+            if info.eden_dir not in info_by_eden_dir:
+                info_by_eden_dir[info.eden_dir] = []
+            info_by_eden_dir[info.eden_dir].append(info)
 
-            # TODO: This check logic assumes eden_dir is an absolute path,
-            # but does not actually verify that.
-            if eden_dir is None:
-                log.debug(
-                    f"could not determine edenDir for edenfs process {pid} "
-                    f"({entries[1:]})"
-                )
-                continue
-
-            if eden_dir not in pid_config_dict:
-                pid_config_dict[eden_dir] = []
-            pid_config_dict[eden_dir].append(pid)
-
-        log.debug(f"List of processes per eden_dir output: {pid_config_dict}")
+        log.debug(f"List of processes per eden_dir output: {info_by_eden_dir}")
 
         # Filter this list to only ones that we can confirm shouldn't be running
-        rogue_pids: List[ProcessID] = []
-        for eden_dir, pid_list in pid_config_dict.items():
+        for eden_dir, info_list in info_by_eden_dir.items():
             # Only bother checking for rogue processes if we found more than one EdenFS
             # instance for this directory.
             #
@@ -107,13 +135,13 @@ class LinuxProcessFinder(ProcessFinder):
             # processes are currently starting/stopping/restarting while it runs.
             # Therefore we only want to try and report this if we actually find multiple
             # edenfs processes for the same state directory.
-            if len(pid_list) <= 1:
+            if len(info_list) <= 1:
                 continue
 
             lockfile = eden_dir / "lock"
             try:
                 lock_pid = ProcessID(self.read_lock_file(lockfile).strip())
-            except IOError:
+            except OSError:
                 log.warning(f"Lock file cannot be read for {eden_dir}", exc_info=True)
                 continue
             except ValueError:
@@ -124,9 +152,6 @@ class LinuxProcessFinder(ProcessFinder):
                 )
                 continue
 
-            for pid in pid_list:
-                if pid != lock_pid:
-                    rogue_pids.append(pid)
-
-        log.debug(f"List of rogue processes : {rogue_pids}")
-        return rogue_pids
+            for info in info_list:
+                if info.pid != lock_pid:
+                    yield info

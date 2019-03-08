@@ -82,6 +82,9 @@ class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
             parents, _tuples_dict, _copymap = eden.dirstate.read(f, str(dirstate_path))
         self.assertEqual(binascii.hexlify(parents[0]).decode("utf-8"), commit)
 
+    def make_process_finder(self) -> "FakeProcessFinder":
+        return FakeProcessFinder(self.make_temporary_directory())
+
 
 class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.
@@ -166,7 +169,7 @@ class DoctorTest(DoctorTestBase):
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -241,7 +244,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -268,7 +271,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -290,7 +293,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -325,7 +328,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -360,7 +363,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -917,7 +920,7 @@ may have important bug fixes or performance improvements.
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -1020,7 +1023,7 @@ Would remount {mounts[1]}
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -1042,7 +1045,7 @@ Would remount {mounts[1]}
             dry_run=False,
             mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
 
@@ -1117,7 +1120,7 @@ Checking {mount}
                 dry_run=False,
                 mount_table=instance.mount_table,
                 fs_util=filesystem.LinuxFsUtil(),
-                process_finder=FakeProcessFinder(),
+                process_finder=self.make_process_finder(),
                 out=out,
             )
             return exit_code, out.getvalue()
@@ -1136,8 +1139,8 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
         check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
         return fixer, out.getvalue()
 
-    def test_when_there_are_rogue_pids(self):
-        process_finder = FakeProcessFinder()
+    def test_when_there_are_rogue_pids(self) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(123, "/home/someuser/.eden", set_lockfile=False)
         process_finder.add_edenfs(124, "/home/someuser/.eden", set_lockfile=False)
         process_finder.add_edenfs(125, "/home/someuser/.eden", set_lockfile=True)
@@ -1153,44 +1156,47 @@ kill -9 123 124
 """,
         )
 
-    def test_when_no_rogue_edenfs_process_running(self):
-        process_finder = FakeProcessFinder()
+    def test_when_no_rogue_edenfs_process_running(self) -> None:
+        process_finder = self.make_process_finder()
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def exception_throwing_subprocess(self):
-        raise subprocess.CalledProcessError(
-            2, cmd="pgrep -aU " + util.get_username() + " edenfs"
-        )
+    def test_when_error_reading_proc(self) -> None:
+        process_finder = self.make_process_finder()
+        # Add some rogue edenfs processes, but then blow away parts of their proc
+        # directories so that the process finder won't be able to read all of their
+        # information.
+        #
+        # This sort of simulates what would happen if the processes exited while the
+        # code was trying to read their information.
+        process_finder.add_edenfs(123, "/home/someuser/.eden", set_lockfile=False)
+        process_finder.add_edenfs(124, "/home/someuser/.eden", set_lockfile=False)
+        process_finder.add_edenfs(125, "/home/someuser/.eden", set_lockfile=True)
 
-    @patch("subprocess.check_output", side_effect=exception_throwing_subprocess)
-    def test_when_pgrep_fails(self, subprocess_function):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        with self.assertLogs() as logs_assertion:
-            fixer, out = self.run_check(linux_process_finder, dry_run=False)
-            self.assertEqual("", out)
-            self.assert_results(fixer, num_problems=0)
-        self.assertIn(
-            "Error running command: ['pgrep', '-aU", "\n".join(logs_assertion.output)
-        )
+        (process_finder.proc_path / "124" / "comm").unlink()
+        (process_finder.proc_path / "125" / "cmdline").unlink()
 
-    def test_when_os_found_no_pids_at_all(self):
-        process_finder = FakeProcessFinder()
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def test_when_os_found_pids_but_edenDir_not_in_cmdline(self):
-        process_finder = FakeProcessFinder()
-        process_finder.add_process(1_614_248, b"edenfs")
-        process_finder.add_process(1_639_164, b"edenfs")
+    def test_when_os_found_no_pids_at_all(self) -> None:
+        process_finder = self.make_process_finder()
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def test_when_many_edenfs_procs_run_for_same_config(self):
-        process_finder = FakeProcessFinder()
+    def test_when_os_found_pids_but_edenDir_not_in_cmdline(self) -> None:
+        process_finder = self.make_process_finder()
+        process_finder.add_process(1_614_248, ["edenfs"])
+        process_finder.add_process(1_639_164, ["edenfs"])
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
+    def test_when_many_edenfs_procs_run_for_same_config(self) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(
             475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=True
         )
@@ -1212,48 +1218,50 @@ kill -9 475204 475205
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-    def test_when_other_processes_with_similar_names_running(self):
-        process_finder = FakeProcessFinder()
+    def test_when_other_processes_with_similar_names_running(self) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(475_203, "/home/user/.eden")
         process_finder.add_process(
-            475_204, b"/foobar/fooedenfs --edenDir /home/user/.eden --edenfs"
+            475_204, ["/foobar/fooedenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
         process_finder.add_process(
-            475_205, b"/foobar/edenfsbar --edenDir /home/user/.eden --edenfs"
+            475_205, ["/foobar/edenfsbar", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
         process_finder.add_process(
-            475_206, b"/foobar/edenfs --edenDir /home/user/.eden --edenfs"
+            475_206, ["/foobar/edenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
 
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual(
-            out,
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
 kill -9 475206
 
 """,
+            out,
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-    def test_when_only_valid_edenfs_process_running(self):
-        process_finder = FakeProcessFinder()
+    def test_when_only_valid_edenfs_process_running(self) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(475_203, "/home/someuser/.eden")
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def test_when_os_found_pids_but_edenDir_value_not_in_cmdline(self):
-        process_finder = FakeProcessFinder()
-        process_finder.add_process(1_614_248, b"edenfs --edenDir")
-        process_finder.add_process(1_639_164, b"edenfs")
+    def test_when_os_found_pids_but_edenDir_value_not_in_cmdline(self) -> None:
+        process_finder = self.make_process_finder()
+        process_finder.add_process(1_614_248, ["edenfs", "--edenDir"])
+        process_finder.add_process(1_639_164, ["edenfs"])
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(self):
-        process_finder = FakeProcessFinder()
+    def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(
+        self
+    ) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(475_203, "/tmp/config1/.eden")
         process_finder.add_edenfs(475_204, "/tmp/config1/.eden", set_lockfile=False)
         process_finder.add_edenfs(475_205, "/tmp/config1/.eden", set_lockfile=False)
@@ -1273,7 +1281,7 @@ kill -9 475204 475205 575204 575205
 """,
         )
 
-    def test_single_edenfs_process_per_dir_okay(self):
+    def test_single_edenfs_process_per_dir_okay(self) -> None:
         # The rogue process finder should not complain about edenfs processes
         # when there is just a single edenfs process running per directory, even if the
         # pid file does not appear to currently contain that pid.
@@ -1282,10 +1290,10 @@ kill -9 475204 475205 575204 575205
         # pid if edenfs was in the middle of (re)starting.  Therefore we intentionally
         # only report rogue processes when we can actually confirm there is more than
         # one edenfs process running for a given directory.
-        process_finder = FakeProcessFinder()
+        process_finder = self.make_process_finder()
         # In config1/ replace the lock file contents with a different process ID
         process_finder.add_edenfs(123_203, "/tmp/config1/.eden", set_lockfile=False)
-        process_finder.set_file_contents("/tmp/config1/.eden/lock", "9765\n")
+        process_finder.set_file_contents("/tmp/config1/.eden/lock", b"9765\n")
         # In config2/ do not write a lock file at all
         process_finder.add_edenfs(123_456, "/tmp/config2/.eden", set_lockfile=False)
         # In config3/ report two separate edenfs processes, with one legitimate rogue
@@ -1304,8 +1312,8 @@ kill -9 123901
 """,
         )
 
-    def test_when_lock_file_op_has_io_exception(self):
-        process_finder = FakeProcessFinder()
+    def test_when_lock_file_op_has_io_exception(self) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(
             475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
@@ -1323,15 +1331,15 @@ kill -9 123901
                 "when lock file can't be opened",
             )
 
-    def test_when_lock_file_data_is_garbage(self):
-        process_finder = FakeProcessFinder()
+    def test_when_lock_file_data_is_garbage(self) -> None:
+        process_finder = self.make_process_finder()
         process_finder.add_edenfs(
             475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         process_finder.add_edenfs(
             475_204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
-        process_finder.set_file_contents("/tmp/eden_test.68yxptnx/.eden/lock", "asdf")
+        process_finder.set_file_contents("/tmp/eden_test.68yxptnx/.eden/lock", b"asdf")
         with self.assertLogs() as logs_assertion:
             fixer, out = self.run_check(process_finder, dry_run=False)
             self.assertEqual("", out)
@@ -2646,22 +2654,34 @@ class FakeEdenInstance:
 
 
 class FakeProcessFinder(process_finder.LinuxProcessFinder):
-    def __init__(self) -> None:
-        self._pgrep_output = b""
+    def __init__(self, tmp_dir: str) -> None:
+        self.proc_path = Path(tmp_dir)
         self._file_contents: Dict[Path, Union[bytes, Exception]] = {}
 
-    def add_process(self, pid: int, cmdline: bytes) -> None:
-        line = f"{pid} ".encode("utf-8") + cmdline + b"\n"
-        self._pgrep_output += line
+    def add_process(self, pid: int, cmdline: List[str]) -> None:
+        pid_dir = self.proc_path / str(pid)
+        pid_dir.mkdir()
+
+        command = os.path.basename(cmdline[0])
+        (pid_dir / "comm").write_bytes(command.encode("utf-8") + b"\n")
+
+        cmdline_bytes = b"".join((arg.encode("utf-8") + b"\0") for arg in cmdline)
+        (pid_dir / "cmdline").write_bytes(cmdline_bytes)
 
     def add_edenfs(self, pid: int, eden_dir: str, set_lockfile: bool = True) -> None:
         if set_lockfile:
             self.set_file_contents(Path(eden_dir) / "lock", f"{pid}\n".encode("utf-8"))
 
-        cmdline = (
-            f"/usr/bin/edenfs --edenfs --edenDir {eden_dir} "
-            f"--etcEdenDir /etc/eden --configPath /home/user/.edenrc"
-        ).encode("utf-8")
+        cmdline = [
+            "/usr/bin/edenfs",
+            "--edenfs",
+            "--edenDir",
+            eden_dir,
+            "--etcEdenDir",
+            "/etc/eden",
+            "--configPath",
+            "/home/user/.edenrc",
+        ]
         self.add_process(pid, cmdline)
 
     def set_file_contents(self, path: Union[Path, str], contents: bytes) -> None:
@@ -2669,9 +2689,6 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
 
     def set_file_exception(self, path: Union[Path, str], exception: Exception) -> None:
         self._file_contents[Path(path)] = exception
-
-    def get_pgrep_output(self) -> bytes:
-        return self._pgrep_output
 
     def read_lock_file(self, path: Path) -> bytes:
         contents = self._file_contents.get(path, None)
@@ -2999,7 +3016,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             dry_run,
             self.instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
         return out
@@ -3093,7 +3110,7 @@ class NfsTest(DoctorTestBase):
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
         expected = f"""\
@@ -3202,7 +3219,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at\
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
+            process_finder=self.make_process_finder(),
             out=out,
         )
         v.stdout = out.getvalue()
