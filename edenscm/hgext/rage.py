@@ -326,6 +326,7 @@ def _makerage(ui, repo, **opts):
         ("scm daemon logs", lambda: scmdaemonlog(ui, repo)),
         ("hg config (overrides)", lambda: "\n".join(overriddenconfig(ui))),
         ("fsmonitor state", lambda: readfsmonitorstate(repo)),
+        ("edenfs rage", lambda: shcmd("edenfsctl rage --stdout")),
         (
             "environment variables",
             lambda: "\n".join(
