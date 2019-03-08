@@ -189,6 +189,48 @@ def start(ui, **opts):
     return _calledenfsctl(ui, "start")
 
 
+@subcmd("stats", subonly=True, norepo=True)
+def stats(ui, **opts):
+    """print statistics for the edenfs daemon"""
+
+
+statscmd = stats.subcommand()
+
+
+@statscmd(
+    "io", [("A", "all", None, "show status for all the system calls")], norepo=True
+)
+def statsio(ui, **opts):
+    """show information about the number of I/O calls"""
+    return _calledenfsctl(ui, "stats io", opts=opts)
+
+
+@statscmd(
+    "latency", [("A", "all", None, "show status for all the system calls")], norepo=True
+)
+def statslatency(ui, **opts):
+    """show information about the latency of I/O calls"""
+    return _calledenfsctl(ui, "stats latency", opts=opts)
+
+
+@statscmd("memory", [], norepo=True)
+def statsmemory(ui, **opts):
+    """show memory statistics for the edenfs daemon"""
+    return _calledenfsctl(ui, "stats memory")
+
+
+@statscmd("thrift", [], norepo=True)
+def statsthrift(ui, **opts):
+    """show the number of received thrift calls"""
+    return _calledenfsctl(ui, "stats thrift")
+
+
+@statscmd("thriftlatency|thrift-latency", [], norepo=True)
+def statsthriftlatency(ui, **opts):
+    """show the latency of received thrift calls"""
+    return _calledenfsctl(ui, "stats thrift-latency")
+
+
 @subcmd("status", norepo=True)
 def status(ui, **opts):
     """check the health of the edenfs daemon"""
