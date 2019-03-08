@@ -3,6 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+mod cursor;
 mod link;
 mod store;
 
@@ -17,6 +18,7 @@ use once_cell::sync::OnceCell;
 
 use types::{Node, PathComponent, RepoPath, RepoPathBuf};
 
+use self::cursor::{Cursor, Step};
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
 use self::store::Store;
 use crate::{FileMetadata, Manifest};
@@ -44,6 +46,17 @@ impl<S> Tree<S> {
             store,
             root: Link::Ephemeral(BTreeMap::new()),
         }
+    }
+
+    /// Returns an iterator over all the files that are present in the tree.
+    pub fn files<'a>(&'a self) -> Files<'a, S> {
+        Files {
+            cursor: self.root_cursor(),
+        }
+    }
+
+    fn root_cursor<'a>(&'a self) -> Cursor<'a, S> {
+        Cursor::new(&self.store, RepoPathBuf::new(), &self.root)
     }
 }
 
@@ -218,6 +231,28 @@ impl<S: Store> Tree<S> {
             }
         }
         Ok(Some(cursor))
+    }
+}
+
+pub struct Files<'a, S> {
+    cursor: Cursor<'a, S>,
+}
+
+impl<'a, S: Store> Iterator for Files<'a, S> {
+    type Item = Fallible<(RepoPathBuf, FileMetadata)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.cursor.step() {
+                Step::Success => {
+                    if let Leaf(file_metadata) = self.cursor.link() {
+                        return Some(Ok((self.cursor.path().to_owned(), *file_metadata)));
+                    }
+                }
+                Step::Err(error) => return Some(Err(error)),
+                Step::End => return None,
+            }
+        }
     }
 }
 
@@ -411,5 +446,60 @@ mod tests {
         assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(&meta(20)));
         assert_eq!(tree.get(repo_path("a2/b2/c2")).unwrap(), Some(&meta(30)));
         assert_eq!(tree.get(repo_path("a2/b1")).unwrap(), None);
+    }
+
+    #[test]
+    fn test_files_empty() {
+        let tree = Tree::ephemeral(TestStore::new());
+        assert!(tree.files().next().is_none());
+    }
+
+    #[test]
+    fn test_files_ephemeral() {
+        let mut tree = Tree::ephemeral(TestStore::new());
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+
+        let mut files = tree.files();
+        assert_eq!(
+            files.next().unwrap().unwrap(),
+            (repo_path_buf("a1/b1/c1/d1"), meta(10))
+        );
+        assert_eq!(
+            files.next().unwrap().unwrap(),
+            (repo_path_buf("a1/b2"), meta(20))
+        );
+        assert_eq!(
+            files.next().unwrap().unwrap(),
+            (repo_path_buf("a2/b2/c2"), meta(30))
+        );
+        assert!(files.next().is_none());
+    }
+
+    #[test]
+    fn test_files_durable() {
+        let mut tree = Tree::ephemeral(TestStore::new());
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta(20)).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta(30)).unwrap();
+        let node = tree.flush().unwrap();
+        let store = tree.store;
+        let tree = Tree::durable(store, node);
+
+        let mut files = tree.files();
+        assert_eq!(
+            files.next().unwrap().unwrap(),
+            (repo_path_buf("a1/b1/c1/d1"), meta(10))
+        );
+        assert_eq!(
+            files.next().unwrap().unwrap(),
+            (repo_path_buf("a1/b2"), meta(20))
+        );
+        assert_eq!(
+            files.next().unwrap().unwrap(),
+            (repo_path_buf("a2/b2/c2"), meta(30))
+        );
+        assert!(files.next().is_none());
     }
 }
