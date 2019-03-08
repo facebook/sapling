@@ -65,6 +65,111 @@ def _calledenfsctl(ui, command, args=None, opts=None):
 
 
 @subcmd(
+    "check|fsck",
+    [
+        (
+            "",
+            "force",
+            None,
+            _("force a check even on checkouts that appear to be mounted"),
+        )
+    ]
+    + cmdutil.dryrunopts,
+)
+def check(ui, repo, **opts):
+    """check the filesystem of a virtual checkout"""
+    args = [repo.root]
+    if ui.verbose:
+        args.append("--verbose")
+    if opts["dry_run"]:
+        # edenfsctl uses a different name for --dry-run
+        args.append("--check-only")
+        opts["dry_run"] = False
+    return _calledenfsctl(ui, "fsck", args, opts=opts)
+
+
+@subcmd("chown", [], "UID GID")
+def chown(ui, repo, uid, gid):
+    """change the ownership of a virtual checkout
+
+    Reassigns ownership of a virtual checkout to the specified user and group.
+    """
+    return _calledenfsctl(ui, "chown", [repo.root, uid, gid])
+
+
+@subcmd("config", [], norepo=True)
+def config(ui):
+    """show the edenfs daemon configuration"""
+    return _calledenfsctl(ui, "config")
+
+
+@subcmd(
+    "doctor",
+    [("n", "dry-run", None, _("do not try to fix any issues, only report them"))],
+    norepo=True,
+)
+def doctor(ui, **opts):
+    """debug and fix issues with the edenfs daemon"""
+    return _calledenfsctl(ui, "doctor", opts=opts)
+
+
+@subcmd("gc", [], norepo=True)
+def gc(ui, **opts):
+    """minimize disk and memory usage by freeing caches"""
+    return _calledenfsctl(ui, "gc")
+
+
+@subcmd("info", [])
+def info(ui, repo, **opts):
+    """show details about the virtual checkout"""
+    return _calledenfsctl(ui, "info", [repo.root])
+
+
+@subcmd("list", [("", "json", None, _("list checkouts in JSON format"))], norepo=True)
+def list_(ui, **opts):
+    """list available virtual checkouts"""
+    return _calledenfsctl(ui, "list", opts=opts)
+
+
+@subcmd(
+    "prefetch",
+    [
+        (
+            "",
+            "pattern-file",
+            "",
+            _("specify a file that lists patterns or files to match, one per line"),
+            _("FILE"),
+        ),
+        ("", "silent", None, _("do not print the names of the matching files")),
+        ("", "no-prefetch", None, _("do not prefetch, just match the names")),
+    ],
+    _("[PATTERN]..."),
+)
+def prefetch(ui, repo, *patterns, **opts):
+    """prefetch content for files"""
+    return _calledenfsctl(
+        ui, "prefetch", ["--repo", repo.root] + list(patterns), opts=opts
+    )
+
+
+@subcmd(
+    "remove|rm",
+    [
+        (
+            "y",
+            "yes",
+            None,
+            _("do not prompt for confirmation before removing the checkout"),
+        )
+    ],
+)
+def remove(ui, repo, **opts):
+    """remove a virtual checkout"""
+    return _calledenfsctl(ui, "remove", [repo.root], opts=opts)
+
+
+@subcmd(
     "restart", [("", "graceful", None, _("perform a graceful restart"))], norepo=True
 )
 def restart(ui, **opts):
@@ -84,7 +189,25 @@ def start(ui, **opts):
     return _calledenfsctl(ui, "start")
 
 
+@subcmd("status", norepo=True)
+def status(ui, **opts):
+    """check the health of the edenfs daemon"""
+    return _calledenfsctl(ui, "status")
+
+
 @subcmd("stop", norepo=True)
 def stop(ui, **opts):
     """stop the edenfs daemon"""
     return _calledenfsctl(ui, "stop")
+
+
+@subcmd("top", norepo=True)
+def top(ui, **opts):
+    """monitor virtual checkout accesses by process"""
+    return _calledenfsctl(ui, "top")
+
+
+@subcmd("version", norepo=True)
+def version(ui, **opts):
+    """show version information for the edenfs daemon"""
+    return _calledenfsctl(ui, "version")
