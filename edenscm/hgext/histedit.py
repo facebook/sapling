@@ -1652,13 +1652,44 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
     return newreplacements
 
 
+def adjustreplacementsfrommutation(repo, oldreplacements):
+    """Adjust replacements from commit mutation
+
+    The replacements structure is originally generated based on histedit's
+    state and does not account for changes that are not recorded there.  This
+    function fixes that by adding data read from commit mutation records.
+    """
+    unfi = repo.unfiltered()
+    newreplacements = list(oldreplacements)
+    oldsuccs = [r[1] for r in oldreplacements]
+    # successors that have already been added to succstocheck once
+    seensuccs = set().union(*oldsuccs)  # create a set from an iterable of tuples
+    succstocheck = list(seensuccs)
+    while succstocheck:
+        n = succstocheck.pop()
+        succsets = mutation.lookupsuccessors(unfi, n)
+        if succsets:
+            for succset in succsets:
+                newreplacements.append((n, succset))
+                for succ in succset:
+                    if succ not in seensuccs:
+                        seensuccs.add(succ)
+                        succstocheck.append(succ)
+        elif n not in repo:
+            newreplacements.append((n, ()))
+    return newreplacements
+
+
 def processreplacement(state):
     """process the list of replacements to return
 
     1) the final mapping between original and created nodes
     2) the list of temporary node created by histedit
     3) the list of new commit created by histedit"""
-    replacements = adjustreplacementsfrommarkers(state.repo, state.replacements)
+    if mutation.enabled(state.repo):
+        replacements = adjustreplacementsfrommutation(state.repo, state.replacements)
+    else:
+        replacements = adjustreplacementsfrommarkers(state.repo, state.replacements)
     allsuccs = set()
     replaced = set()
     fullmapping = {}
