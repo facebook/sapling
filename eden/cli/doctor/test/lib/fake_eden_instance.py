@@ -109,7 +109,6 @@ class FakeEdenInstance:
         config = CheckoutConfig(
             backing_repo=backing_repo_path,
             scm_type=scm_type,
-            hooks_path="",
             bind_mounts=bind_mounts,
             default_revision=snapshot,
         )

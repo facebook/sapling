@@ -476,18 +476,16 @@ re-run `eden clone` with --allow-empty-repo"""
             repo_config = config_mod.CheckoutConfig(
                 backing_repo=Path(repo.source),
                 scm_type=repo.type,
-                hooks_path=instance.get_default_hooks_path(),
                 bind_mounts={},
                 default_revision=config_mod.DEFAULT_REVISION[repo.type],
             )
         else:
             # Build our own CheckoutConfig object, using our source repository
-            # path and type, but the hooks, bind-mount, and revision
-            # configuration from the project configuration.
+            # path and type, but the bind-mount and revision configuration from the
+            # project configuration.
             repo_config = config_mod.CheckoutConfig(
                 backing_repo=Path(repo.source),
                 scm_type=repo.type,
-                hooks_path=project_config.hooks_path,
                 bind_mounts=project_config.bind_mounts,
                 default_revision=project_config.default_revision,
             )

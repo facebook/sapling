@@ -77,7 +77,6 @@ fbcode-buck-out = "fbcode/buck-out-override"
 ["repository git"]
 type = "git"
 path = "/home/${USER}/src/git/.git"
-hooks = "/home/${USER}/my-git-hook"
 """
     return cfg_file
 
@@ -137,7 +136,6 @@ class TomlConfigTest(
         assert cc is not None
         self.assertEqual(cc.backing_repo, Path(f"/home/{self._user}/src/git/.git"))
         self.assertEqual(cc.scm_type, "git")
-        self.assertEqual(cc.hooks_path, f"/home/{self._user}/my-git-hook")
         self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 
@@ -237,7 +235,6 @@ class TomlConfigTest(
         assert cc is not None
         self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbandroid"))
         self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(cc.hooks_path, f"{self._etc_eden_dir}/hooks")
         self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 

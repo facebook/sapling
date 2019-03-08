@@ -108,7 +108,6 @@ class CheckoutConfig(typing.NamedTuple):
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
         repositories this does not include the final ".hg" directory component.
     - scm_type: "hg" or "git"
-    - hooks_path: path to where the hooks scripts are for the repo
     - bind_mounts: dict where keys are private pathnames under ~/.eden where the
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
@@ -116,7 +115,6 @@ class CheckoutConfig(typing.NamedTuple):
 
     backing_repo: Path
     scm_type: str
-    hooks_path: str
     bind_mounts: Dict[str, str]
     default_revision: str
 
@@ -278,14 +276,9 @@ class EdenInstance:
         return CheckoutConfig(
             backing_repo=Path(path),
             scm_type=scm_type,
-            hooks_path=parser.get_str(repository_header, "hooks", default="")
-            or self.get_default_hooks_path(),
             bind_mounts=bind_mounts,
             default_revision=default_revision,
         )
-
-    def get_default_hooks_path(self) -> str:
-        return os.path.join(self._etc_eden_dir, "hooks")
 
     def get_mount_paths(self) -> Iterable[str]:
         """Return the paths of the set mount points stored in config.json"""
@@ -470,7 +463,7 @@ Do you want to run `eden mount %s` instead?"""
     def _post_clone_checkout_setup(
         self, checkout: "EdenCheckout", commit_id: str
     ) -> None:
-        # First, check to see if the post-clone hook has been run successfully
+        # First, check to see if the post-clone setup has been run successfully
         # before.
         clone_success_path = checkout.state_dir / CLONE_SUCCEEDED
         is_initial_mount = not clone_success_path.is_file()
@@ -976,7 +969,6 @@ class EdenCheckout:
             "repository": {
                 "path": str(checkout_config.backing_repo),
                 "type": checkout_config.scm_type,
-                "hooks": checkout_config.hooks_path,
             },
             "bind-mounts": checkout_config.bind_mounts,
         }
@@ -1033,7 +1025,6 @@ class EdenCheckout:
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
-            hooks_path=get_field("hooks"),
             bind_mounts=bind_mounts,
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
