@@ -644,7 +644,7 @@ Refuse the fix
    This is a noop statement so that
    this test is still more bytes than success.
    pad pad pad pad............................................................
-  Accept this change? [n] 
+  Accept this change? [n]o/yes/all 
   ERROR: test-failure.t output changed
   !.
   Failed test-failure.t: output changed
@@ -668,7 +668,7 @@ Interactive with custom view
 
   $ echo 'n' | rt -i --view echo
   $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err
-  Accept this change? [n]* (glob)
+  Accept this change? [n]o/yes/all 
   ERROR: test-failure.t output changed
   !.
   Failed test-failure.t: output changed
@@ -717,7 +717,7 @@ Accept the fix
   +  saved backup bundle to $TESTTMP/foo.hg
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
      saved backup bundle to $TESTTMP/*.hg (glob)
-  Accept this change? [n] ..
+  Accept this change? [n]o/yes/all ..
   # Ran 2 tests, 0 skipped, 0 failed.
 
   $ sed -e 's,(glob)$,&<,g' test-failure.t
@@ -792,7 +792,7 @@ When "#testcases" is used in .t files
    #endif
    #if b
      $ echo 2
-  Accept this change? [n] .
+  Accept this change? [n]o/yes/all .
   --- test-cases.t
   +++ test-cases.t.b.err
   @@ -5,4 +5,5 @@
@@ -801,7 +801,7 @@ When "#testcases" is used in .t files
      $ echo 2
   +  2
    #endif
-  Accept this change? [n] .
+  Accept this change? [n]o/yes/all .
   # Ran 2 tests, 0 skipped, 0 failed.
 
   $ cat test-cases.t
@@ -1117,7 +1117,7 @@ Test that failed test accepted through interactive are properly reported:
    This is a noop statement so that
    this test is still more bytes than success.
    pad pad pad pad............................................................
-  Accept this change? [n] ..s
+  Accept this change? [n]o/yes/all ..s
   Skipped test-skip.t: missing feature: nail clipper
   # Ran 2 tests, 1 skipped, 0 failed.
 

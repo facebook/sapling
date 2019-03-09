@@ -396,6 +396,9 @@ def getparser():
         help="prompt to accept changed output",
     )
     harness.add_argument(
+        "-u", "--update-output", action="store_true", help="update test outputs"
+    )
+    harness.add_argument(
         "-j",
         "--jobs",
         type=int,
@@ -697,6 +700,8 @@ def parseargs(args, parser):
 
     if options.jobs < 1:
         parser.error("--jobs must be positive")
+    if options.update_output:
+        options.interactive = True
     if options.interactive and options.debug:
         parser.error("-i/--interactive and -d/--debug are incompatible")
     if options.debug:
@@ -2390,9 +2395,17 @@ class TestResult(unittest._TextTestResult):
                         "Reference output has changed (run again to prompt changes)"
                     )
                 else:
-                    self.stream.write("Accept this change? [n] ")
-                    answer = sys.stdin.readline().strip()
-                    if answer.lower() in ("y", "yes"):
+                    self.stream.write("Accept this change? [n]o/yes/all ")
+                    if self._options.update_output:
+                        isyes = True
+                    else:
+                        answer = sys.stdin.readline().strip()
+                        if answer.lower() in ("a", "all"):
+                            self._options.update_output = True
+                            isyes = True
+                        else:
+                            isyes = answer.lower() in ("y", "yes")
+                    if isyes:
                         if test.path.endswith(b".t"):
                             rename(test.errpath, test.path)
                         else:
