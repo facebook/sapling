@@ -971,6 +971,9 @@ class StartCmd(Subcmd):
             pass
 
         instance = get_eden_instance(args)
+        if args.if_necessary and not instance.get_mount_paths():
+            print("No Eden mount points configured.")
+            return 0
 
         if instance.should_use_experimental_systemd_mode():
             if args.foreground:
@@ -981,10 +984,6 @@ class StartCmd(Subcmd):
             return self.start(args, instance)
 
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
-        if args.if_necessary and not instance.get_mount_paths():
-            print("No Eden mount points configured.")
-            return 0
-
         daemon.exec_daemon(
             instance,
             args.daemon_binary,
