@@ -62,9 +62,11 @@ class GraftTest(EdenHgTestCase):
             (
                 "warning: 1 conflicts while merging first.txt!"
                 " (edit, then use 'hg resolve --mark')\n"
-                "  abort: unresolved conflicts, can't continue\n"
             ),
             str(context.exception),
+        )
+        self.assertIn(
+            "abort: unresolved conflicts, can't continue\n", str(context.exception)
         )
 
         # Resolve conflict with something completely different.
