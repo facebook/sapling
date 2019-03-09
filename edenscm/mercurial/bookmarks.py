@@ -238,12 +238,6 @@ class bmstore(dict):
             raise error.Abort(
                 _("bookmark '%s' already exists " "(use -f to force)") % mark
             )
-        if (
-            mark in self._repo.branchmap() or mark == self._repo.dirstate.branch()
-        ) and not force:
-            raise error.Abort(
-                _("a bookmark cannot have the name of an existing branch")
-            )
         if len(mark) > 3 and not force:
             try:
                 shadowhash = mark in self._repo

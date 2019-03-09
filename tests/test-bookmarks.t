@@ -357,12 +357,13 @@ bookmark with existing name
 bookmark with name of branch
 
   $ hg bookmark default
-  abort: a bookmark cannot have the name of an existing branch
-  [255]
+  bookmark default matches a changeset hash
+  (did you leave a -r out of an 'hg bookmark' command?)
+  $ hg bookmark -f default
+  $ hg book -d default
 
-  $ hg bookmark -m Y default
-  abort: a bookmark cannot have the name of an existing branch
-  [255]
+  $ hg bookmark -f -m Y default
+  $ hg book -m default Y
 
 bookmark with integer name
 
