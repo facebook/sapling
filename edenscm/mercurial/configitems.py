@@ -330,6 +330,7 @@ coreconfigitem("experimental", "merge.checkpathconflicts", default=False)
 coreconfigitem("merge", "followcopies", default=True)
 coreconfigitem("merge", "on-failure", default="continue")
 coreconfigitem("merge", "preferancestor", default=lambda: ["*"])
+coreconfigitem("merge", "printcandidatecommmits", default=False)
 coreconfigitem("merge-tools", ".*", default=None, generic=True)
 coreconfigitem(
     "merge-tools",

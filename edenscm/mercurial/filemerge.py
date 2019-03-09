@@ -438,8 +438,7 @@ def _describefailure(r, repo, mynode, orig, fcd, fco, fca):
         "warning: %d conflicts while merging %s! (edit, then use 'hg resolve --mark')\n"
     ) % (r, relpath)
 
-    # internal config: merge.printcandidatecommmits
-    if repo.ui.configbool("merge", "printcandidatecommmits", False):
+    if repo.ui.configbool("merge", "printcandidatecommmits"):
         candidates, hit_max = _findconflictingcommits(repo, fcd, fca)
     else:
         candidates, hit_max = [], False

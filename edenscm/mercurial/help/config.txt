@@ -1350,6 +1350,10 @@ This section specifies behavior during merges and updates.
    halted, the repository is left in a normal ``unresolved`` merge state.
    (default: ``continue``)
 
+``printcandidatecommmits``
+   If set to ``true``, calculate and print potentially conflicted commits
+   when there are merge conflicts. (default: ``false``)
+
 ``merge-patterns``
 ------------------
 
