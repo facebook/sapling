@@ -289,7 +289,7 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, filemap, mutation):
+    def __init__(self, repo, name, parentctxs, filemap, mutation, date):
         added = []
         removed = []
         for path, data in filemap.items():
@@ -308,14 +308,14 @@ class simplecommitctx(context.committablectx):
         if mutation is not None:
             predctxs, cmd, split = mutation
             extra["mutpred"] = ",".join([p.hex() for p in predctxs])
-            extra["mutdate"] = b"0 0"
+            extra["mutdate"] = date
             extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
             extra["mutop"] = cmd
             if split:
                 extra["mutsplit"] = ",".join([s.hex() for s in split])
         opts = {
             "changes": scmutil.status([], added, removed, [], [], [], []),
-            "date": b"0 0",
+            "date": date,
             "extra": extra,
         }
         super(simplecommitctx, self).__init__(self, name, **opts)
@@ -419,6 +419,12 @@ def drawdag(repo, text, **opts):
     for name, path, content in filere.findall(b"\n".join(comments)):
         content = content.replace(br"\n", b"\n").replace(br"\1", b"\1")
         files[name][path] = content
+
+    # parse commits like "X: date=1 0" to specify dates
+    dates = {}
+    datere = re.compile(br"^(\w+) has date\s*[= ]([0-9 ]+)$", re.M)
+    for name, date in datere.findall(b"\n".join(comments)):
+        dates[name] = date
 
     # do not create default files? (ex. commit A has file "A")
     defaultfiles = not any("drawdag.defaultfiles=false" in c for c in comments)
@@ -546,7 +552,8 @@ def drawdag(repo, text, **opts):
                 split = [repo[committed[s]] for s in split]
             commitmutations = ([repo[committed[p]] for p in preds], cmd, split)
 
-        ctx = simplecommitctx(repo, name, pctxs, added, commitmutations)
+        date = dates.get(name, b"0 0")
+        ctx = simplecommitctx(repo, name, pctxs, added, commitmutations, date)
         n = ctx.commit()
         committed[name] = n
         tagsmod.tag(repo, [name], n, message=None, user=None, date=None, local=True)

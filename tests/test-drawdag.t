@@ -344,3 +344,14 @@ Special comments: "(removed)", "(copied from X)", "(renamed from X)"
      @@ -0,0 +1,1 @@
      +Y
   
+Special comments: "X has date 1 0"
+
+  $ newrepo
+  $ drawdag <<'EOS'
+  > B  # B has date 2 0
+  > |
+  > A
+  > EOS
+  $ hg log -r 'all()' -T '{desc} {date}\n'
+  A 0.00
+  B 2.00
