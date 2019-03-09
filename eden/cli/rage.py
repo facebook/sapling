@@ -12,6 +12,7 @@ import io
 import socket
 import subprocess
 import traceback
+from pathlib import Path
 from typing import IO
 
 from . import (
@@ -91,11 +92,11 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
         out.write(traceback.format_exc().encode("utf-8") + b"\n")
 
 
-def print_tail_of_log_file(path: str, out: IO[bytes]) -> None:
+def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
     try:
         out.write(b"\nMost recent Eden logs:\n")
         LOG_AMOUNT = 20 * 1024
-        with open(path, "rb") as logfile:
+        with path.open("rb") as logfile:
             size = logfile.seek(0, io.SEEK_END)
             logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
             data = logfile.read()

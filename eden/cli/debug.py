@@ -696,8 +696,8 @@ class LogCmd(Subcmd):
         instance = cmd_util.get_eden_instance(args)
 
         eden_log_path = instance.get_log_path()
-        if not os.path.exists(eden_log_path):
-            print("No log file found at " + eden_log_path, file=sys.stderr)
+        if not eden_log_path.exists():
+            print(f"No log file found at {eden_log_path}", file=sys.stderr)
             return 1
 
         pager_env = os.getenv("PAGER")
@@ -705,7 +705,7 @@ class LogCmd(Subcmd):
             pager_cmd = shlex.split(pager_env)
         else:
             pager_cmd = ["less"]
-        pager_cmd.append(eden_log_path)
+        pager_cmd.append(str(eden_log_path))
 
         os.execvp(pager_cmd[0], pager_cmd)
         raise Exception("we should never reach here")

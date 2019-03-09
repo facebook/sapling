@@ -97,16 +97,16 @@ def poll_until(
         time.sleep(interval)
 
 
-def get_pid_using_lockfile(config_dir: str) -> int:
+def get_pid_using_lockfile(config_dir: Path) -> int:
     """Read the pid from the Eden lockfile, throwing an exception upon failure.
     """
-    lockfile = os.path.join(config_dir, LOCK_FILE)
-    with open(lockfile, "r") as f:
+    lockfile = config_dir / LOCK_FILE
+    with lockfile.open("r") as f:
         lockfile_contents = f.read()
     return int(lockfile_contents.rstrip())
 
 
-def check_health_using_lockfile(config_dir: str) -> HealthStatus:
+def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
     """Make a best-effort to produce a HealthStatus based on the PID in the
     Eden lockfile.
     """
@@ -149,7 +149,7 @@ def _create_dead_health_status() -> HealthStatus:
 
 def check_health(
     get_client: Callable[[], eden.thrift.EdenClient],
-    config_dir: str,
+    config_dir: Path,
     timeout: Optional[float] = None,
 ) -> HealthStatus:
     """
@@ -185,7 +185,7 @@ def check_health(
 
 def wait_for_daemon_healthy(
     proc: subprocess.Popen,
-    config_dir: str,
+    config_dir: Path,
     get_client: Callable[[], eden.thrift.EdenClient],
     timeout: float,
     exclude_pid: Optional[int] = None,
@@ -217,7 +217,7 @@ def wait_for_daemon_healthy(
     return poll_until(check_daemon_health, timeout=timeout, timeout_ex=timeout_ex)
 
 
-def get_home_dir() -> str:
+def get_home_dir() -> Path:
     home_dir = None
     if os.name == "nt":
         home_dir = os.getenv("USERPROFILE")
@@ -225,7 +225,7 @@ def get_home_dir() -> str:
         home_dir = os.getenv("HOME")
     if not home_dir:
         home_dir = pwd.getpwuid(os.getuid()).pw_dir
-    return home_dir
+    return Path(home_dir)
 
 
 def mkdir_p(path: str) -> str:
@@ -421,7 +421,7 @@ def get_project_id(repo: Repo, rev: Optional[str]) -> Optional[str]:
 
     try:
         data = json.loads(contents)
-    except Exception as ex:
+    except Exception:
         # .arcconfig does not contain valid JSON data for some reason.
         return None
 

@@ -1325,7 +1325,7 @@ class StopCmd(Subcmd):
             except thrift.transport.TTransport.TTransportException as e:
                 print_stderr(f"warning: edenfs is not responding: {e}")
                 if pid is None:
-                    pid = check_health_using_lockfile(str(instance.state_dir)).pid
+                    pid = check_health_using_lockfile(instance.state_dir).pid
                     if pid is None:
                         raise EdenNotRunningError(str(instance.state_dir)) from e
         except EdenNotRunningError:
@@ -1352,7 +1352,7 @@ class StopCmd(Subcmd):
         # If the user is forcibly trying to kill Eden we assume something is probably
         # wrong to start with and the thrift server might not be functional for some
         # reason.
-        pid = check_health_using_lockfile(str(instance.state_dir)).pid
+        pid = check_health_using_lockfile(instance.state_dir).pid
         if pid is None:
             print_stderr("error: edenfs is not running")
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR

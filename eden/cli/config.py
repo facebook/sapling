@@ -24,18 +24,7 @@ import time
 import types
 import typing
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, Union, cast
 
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
@@ -128,36 +117,37 @@ class EdenInstance:
 
     def __init__(
         self,
-        config_dir: Optional[str],
-        etc_eden_dir: Optional[str],
-        home_dir: Optional[str],
+        config_dir: Union[Path, str, None],
+        etc_eden_dir: Union[Path, str, None],
+        home_dir: Union[Path, str, None],
         interpolate_dict: Optional[Dict[str, str]] = None,
     ) -> None:
-        self._etc_eden_dir = etc_eden_dir or DEFAULT_ETC_EDEN_DIR
-        self._home_dir = home_dir or util.get_home_dir()
-        self._user_config_path = os.path.join(self._home_dir, USER_CONFIG)
+        self._etc_eden_dir = Path(etc_eden_dir or DEFAULT_ETC_EDEN_DIR)
+        self._home_dir = Path(home_dir) if home_dir is not None else util.get_home_dir()
+        self._user_config_path = self._home_dir / USER_CONFIG
         self._interpolate_dict = interpolate_dict
 
         # TODO: We should eventually read the default config_dir path from the config
         # files rather than always using ~/local/.eden
-        self._config_dir = config_dir or os.path.join(self._home_dir, "local", ".eden")
-
-        # Use os.path.realpath() to resolve any symlinks in the config directory
-        # location.
         #
+        # We call resolve() to resolve any symlinks in the config directory location.
         # This is particularly important when starting edenfs, since edenfs in some
         # cases will try to access this path as root (e.g., when creating bind mounts).
         # In some cases this path may traverse symlinks that are readable as the
         # original user but not as root: this can happen if the user has a home
         # directory on NFS, which may not be readable as root.
-        self._config_dir = os.path.realpath(self._config_dir)
+        self._config_dir = (
+            Path(config_dir)
+            if config_dir is not None
+            else (self._home_dir / "local" / ".eden")
+        ).resolve(strict=False)
 
     def __repr__(self) -> str:
         return f"EdenInstance({self._config_dir!r})"
 
     @property
     def state_dir(self) -> Path:
-        return Path(self._config_dir)
+        return self._config_dir
 
     def _loadConfig(self) -> configutil.EdenConfigParser:
         """ to facilitate templatizing a centrally deployed config, we
@@ -170,28 +160,33 @@ class EdenInstance:
         defaults = (
             self._interpolate_dict
             if self._interpolate_dict is not None
-            else {"USER": os.environ.get("USER", ""), "HOME": self._home_dir}
+            else {"USER": os.environ.get("USER", ""), "HOME": str(self._home_dir)}
         )
         parser = configutil.EdenConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(defaults)
         )
-        for f in self.get_rc_files():
+        for path in self.get_rc_files():
             try:
-                toml_cfg = _load_toml_config(f)
+                toml_cfg = _load_toml_config(path)
             except FileNotFoundError:
                 # Ignore missing config files. Eg. user_config_path is optional
                 continue
             parser.read_dict(toml_cfg)
         return parser
 
-    def get_rc_files(self) -> List[str]:
-        result: List[str] = []
-        config_d = os.path.join(self._etc_eden_dir, CONFIG_DOT_D)
-        if os.path.isdir(config_d):
-            rc_files = os.listdir(config_d)
-            for f in rc_files:
-                if f.endswith(".toml"):
-                    result.append(os.path.join(config_d, f))
+    def get_rc_files(self) -> List[Path]:
+        result: List[Path] = []
+        config_d = self._etc_eden_dir / CONFIG_DOT_D
+        try:
+            rc_entries = os.listdir(config_d)
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+            rc_entries = []
+
+        for name in rc_entries:
+            if name.endswith(".toml"):
+                result.append(config_d / name)
         result.sort()
         result.append(self._user_config_path)
         return result
@@ -280,9 +275,9 @@ class EdenInstance:
             default_revision=default_revision,
         )
 
-    def get_mount_paths(self) -> Iterable[str]:
+    def get_mount_paths(self) -> List[str]:
         """Return the paths of the set mount points stored in config.json"""
-        return self._get_directory_map().keys()
+        return [str(path) for path in self._get_directory_map().keys()]
 
     def get_all_client_config_info(self) -> Dict[str, collections.OrderedDict]:
         info = {}
@@ -292,22 +287,22 @@ class EdenInstance:
         return info
 
     def get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(self._config_dir)
+        return eden.thrift.create_thrift_client(str(self._config_dir))
 
-    def get_client_info(self, path: str) -> collections.OrderedDict:
-        path = os.path.realpath(path)
+    def get_client_info(self, path: Union[Path, str]) -> collections.OrderedDict:
+        path = Path(path).resolve(strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
-        checkout = EdenCheckout(self, Path(path), Path(client_dir))
+        checkout = EdenCheckout(self, path, client_dir)
         checkout_config = checkout.get_config()
         snapshot = checkout.get_snapshot()
 
         return collections.OrderedDict(
             [
                 ("bind-mounts", checkout_config.bind_mounts),
-                ("mount", path),
+                ("mount", str(path)),
                 ("scm_type", checkout_config.scm_type),
                 ("snapshot", snapshot),
-                ("client-dir", client_dir),
+                ("client-dir", str(client_dir)),
             ]
         )
 
@@ -352,7 +347,7 @@ Do you want to run `eden mount %s` instead?"""
 
         # Create client directory
         clients_dir = self._get_clients_dir()
-        util.mkdir_p(clients_dir)  # This directory probably already exists.
+        clients_dir.mkdir(parents=True, exist_ok=True)
         client_dir = self._create_client_dir_for_path(clients_dir, path)
 
         # Store snapshot ID
@@ -380,7 +375,7 @@ Do you want to run `eden mount %s` instead?"""
         self._post_clone_checkout_setup(checkout, snapshot_id)
 
         # Add mapping of mount path to client directory in config.json
-        self._add_path_to_directory_map(path, os.path.basename(client_dir))
+        self._add_path_to_directory_map(Path(path), os.path.basename(client_dir))
 
     def _create_mount_point_dir(self, path: str) -> None:
         # Create the directory
@@ -397,18 +392,16 @@ Do you want to run `eden mount %s` instead?"""
         # Populate the directory with a file containing instructions about how to get
         # Eden to remount the checkout.  If Eden is not running or does not have this
         # checkout mounted users will see this file.
-        help_path = os.path.join(path, NOT_MOUNTED_README_PATH)
-        site_readme_path = os.path.join(
-            self._etc_eden_dir, NOT_MOUNTED_SITE_SPECIFIC_README_PATH
-        )
+        help_path = Path(path) / NOT_MOUNTED_README_PATH
+        site_readme_path = self._etc_eden_dir / NOT_MOUNTED_SITE_SPECIFIC_README_PATH
         help_contents: Optional[str] = NOT_MOUNTED_DEFAULT_TEXT
         try:
             # Create a symlink to the site-specific readme file.  This helps ensure that
             # users will see up-to-date contents if the site-specific file is updated
             # later.
-            with open(site_readme_path, "r") as f:
+            with site_readme_path.open("r") as f:
                 try:
-                    os.symlink(site_readme_path, help_path)
+                    help_path.symlink_to(site_readme_path)
                     help_contents = None
                 except OSError as ex:
                     # EPERM can indicate that the underlying filesystem does not support
@@ -427,11 +420,11 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
         if help_contents is not None:
-            with open(help_path, "w") as f:
+            with help_path.open("w") as f:
                 f.write(help_contents)
                 os.fchmod(f.fileno(), 0o444)
 
-    def _create_client_dir_for_path(self, clients_dir: str, path: str) -> str:
+    def _create_client_dir_for_path(self, clients_dir: Path, path: str) -> Path:
         """Tries to create a new subdirectory of clients_dir based on the
         basename of the specified path. Tries appending an increasing sequence
         of integers to the basename if there is a collision until it finds an
@@ -448,9 +441,9 @@ Do you want to run `eden mount %s` instead?"""
             else:
                 dir_name = f"{basename}-{i}"
 
-            client_dir = os.path.join(clients_dir, dir_name)
+            client_dir = clients_dir / dir_name
             try:
-                os.mkdir(client_dir)
+                client_dir.mkdir()
                 return client_dir
             except OSError as e:
                 if e.errno == errno.EEXIST:
@@ -474,27 +467,27 @@ Do you want to run `eden mount %s` instead?"""
 
         clone_success_path.touch()
 
-    def mount(self, path: str) -> int:
+    def mount(self, path: Union[Path, str]) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
-        path = os.path.realpath(path)
+        path = Path(path).resolve(strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
-        checkout = EdenCheckout(self, Path(path), Path(client_dir))
+        checkout = EdenCheckout(self, path, client_dir)
 
         # Call checkout.get_config() for the side-effect of it raising an
         # Exception if the config is in an invalid state.
         checkout.get_config()
 
         # Make sure the mount path exists
-        util.mkdir_p(path)
+        path.mkdir(parents=True, exist_ok=True)
 
         # Check if it is already mounted.
         try:
-            root = os.path.join(path, ".eden", "root")
+            root = path / ".eden" / "root"
             target = readlink_retry_estale(root)
-            if target == path:
+            if Path(target) == path:
                 print_stderr(
-                    "ERROR: Mount point in use! " "{} is already mounted by Eden.", path
+                    f"ERROR: Mount point in use! {path} is already mounted by Eden."
                 )
                 return 1
             else:
@@ -505,10 +498,8 @@ Do you want to run `eden mount %s` instead?"""
                 # already thrown an exception. We return non-zero here just in
                 # case.
                 print_stderr(
-                    "ERROR: Mount point in use! "
-                    "{} is already mounted by Eden as part of {}.",
-                    path,
-                    root,
+                    f"ERROR: Mount point in use! "
+                    f"{path} is already mounted by Eden as part of {root}."
                 )
                 return 1
         except OSError as ex:
@@ -518,7 +509,7 @@ Do you want to run `eden mount %s` instead?"""
 
         # Ask eden to mount the path
         mount_info = eden_ttypes.MountArgument(
-            mountPoint=os.fsencode(path), edenClientPath=os.fsencode(client_dir)
+            mountPoint=bytes(path), edenClientPath=bytes(client_dir)
         )
         with self.get_thrift_client() as client:
             client.mount(mount_info)
@@ -537,12 +528,13 @@ Do you want to run `eden mount %s` instead?"""
             client._socket.setTimeout(15000)
             client.unmount(os.fsencode(path))
 
-    def destroy_mount(self, path: str) -> None:
+    def destroy_mount(self, path: Union[Path, str]) -> None:
         """Delete the specified mount point from the configuration file and remove
         the mount directory, if it exists.
 
         This should normally be called after unmounting the mount point.
         """
+        path = Path(path)
         shutil.rmtree(self._get_client_dir_for_mount_point(path))
         self._remove_path_from_directory_map(path)
 
@@ -553,13 +545,13 @@ Do you want to run `eden mount %s` instead?"""
         #
         # Previous versions of Eden made the mount point directory read-only
         # as part of "eden clone".  Make sure it is writable now so we can clean it up.
-        os.chmod(path, 0o755)
+        path.chmod(0o755)
         try:
-            os.unlink(os.path.join(path, NOT_MOUNTED_README_PATH))
+            (path / NOT_MOUNTED_README_PATH).unlink()
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise
-        os.rmdir(path)
+        path.rmdir()
 
     def check_health(self, timeout: Optional[float] = None) -> HealthStatus:
         """
@@ -597,11 +589,11 @@ Do you want to run `eden mount %s` instead?"""
             daemon_binary,
             "--edenfs",
             "--edenDir",
-            self._config_dir,
+            str(self._config_dir),
             "--etcEdenDir",
-            self._etc_eden_dir,
+            str(self._etc_eden_dir),
             "--configPath",
-            self._user_config_path,
+            str(self._user_config_path),
         ]
         if gdb:
             gdb_args = gdb_args or []
@@ -641,8 +633,8 @@ Do you want to run `eden mount %s` instead?"""
 
         return cmd, eden_env
 
-    def get_log_path(self) -> str:
-        return os.path.join(self._config_dir, "logs", "edenfs.log")
+    def get_log_path(self) -> Path:
+        return self._config_dir / "logs" / "edenfs.log"
 
     def _build_eden_environment(self) -> Dict[str, str]:
         # Reset $PATH to the following contents, so that everyone has the
@@ -705,55 +697,69 @@ Do you want to run `eden mount %s` instead?"""
         clients_dir = Path(self._get_clients_dir())
         for mount_path, client_name in dir_map.items():
             checkout_data_dir = clients_dir / client_name
-            checkouts.append(EdenCheckout(self, Path(mount_path), checkout_data_dir))
+            checkouts.append(EdenCheckout(self, mount_path, checkout_data_dir))
 
         return checkouts
 
-    def _get_directory_map(self) -> Dict[str, str]:
+    def _get_directory_map(self) -> Dict[Path, str]:
         """
         Parse config.json which holds a mapping of mount paths to their
         respective client directory and return contents in a dictionary.
         """
-        directory_map = os.path.join(self._config_dir, CONFIG_JSON)
-        if os.path.isfile(directory_map):
-            with open(directory_map) as f:
+        directory_map = self._config_dir / CONFIG_JSON
+        try:
+            with directory_map.open() as f:
                 data = json.load(f)
-            if not isinstance(data, dict):
-                raise Exception("invalid data found in %s" % directory_map)
-            return typing.cast(Dict[str, str], data)
-        return {}
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+            data = {}
+        except json.JSONDecodeError:
+            raise Exception(f"invalid JSON data found in {directory_map}")
 
-    def _add_path_to_directory_map(self, path: str, dir_name: str) -> None:
+        if not isinstance(data, dict):
+            raise Exception(f"invalid data found in {directory_map}")
+
+        result: Dict[Path, str] = {}
+        for k, v in data.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                raise Exception(f"invalid data found in {directory_map}")
+            result[Path(k)] = v
+
+        return result
+
+    def _add_path_to_directory_map(self, path: Path, dir_name: str) -> None:
         config_data = self._get_directory_map()
         if path in config_data:
             raise Exception("mount path %s already exists." % path)
         config_data[path] = dir_name
         self._write_directory_map(config_data)
 
-    def _remove_path_from_directory_map(self, path: str) -> None:
+    def _remove_path_from_directory_map(self, path: Path) -> None:
         config_data = self._get_directory_map()
         if path in config_data:
             del config_data[path]
             self._write_directory_map(config_data)
 
-    def _write_directory_map(self, config_data: Dict[str, Any]) -> None:
-        directory_map = os.path.join(self._config_dir, CONFIG_JSON)
-        with open(directory_map, "w") as f:
-            json.dump(config_data, f, indent=2, sort_keys=True)
+    def _write_directory_map(self, config_data: Dict[Path, str]) -> None:
+        json_data = {str(path): name for path, name in config_data.items()}
+        directory_map = self._config_dir / CONFIG_JSON
+        with directory_map.open("w") as f:
+            json.dump(json_data, f, indent=2, sort_keys=True)
             f.write("\n")
 
-    def _get_client_dir_for_mount_point(self, path: str) -> str:
+    def _get_client_dir_for_mount_point(self, path: Path) -> Path:
         # The caller is responsible for making sure the path is already
         # a normalized, absolute path.
-        assert os.path.isabs(path)
+        assert path.is_absolute()
 
         config_data = self._get_directory_map()
         if path not in config_data:
-            raise Exception("could not find mount path %s" % path)
-        return os.path.join(self._get_clients_dir(), config_data[path])
+            raise Exception(f"could not find mount path {path}")
+        return self._get_clients_dir() / config_data[path]
 
-    def _get_clients_dir(self) -> str:
-        return os.path.join(self._config_dir, CLIENTS_DIR)
+    def _get_clients_dir(self) -> Path:
+        return self._config_dir / CLIENTS_DIR
 
     def get_server_build_info(self) -> Dict[str, str]:
         with self.get_thrift_client() as client:
@@ -780,9 +786,9 @@ class ConfigUpdater(object):
     has partially written contents.
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
-        self._lock_path = self.path + ".lock"
+        self._lock_path = self.path.with_suffix(".lock")
         self._lock_file: Optional[typing.TextIO] = None
         self.config = configutil.EdenConfigParser()
 
@@ -868,9 +874,9 @@ class ConfigUpdater(object):
         # it to the desired destination.  This makes sure the .edenrc file
         # always has valid contents at all points in time.
         prefix = USER_CONFIG + ".tmp."
-        dirname = os.path.dirname(self.path)
+        dirname = self.path.parent
         tmpf = tempfile.NamedTemporaryFile(
-            "w", dir=dirname, prefix=prefix, delete=False
+            "w", dir=str(dirname), prefix=prefix, delete=False
         )
         try:
             toml_config = self.config.to_raw_dict()
@@ -987,7 +993,7 @@ class EdenCheckout:
         under self.state_dir is not properly formatted or does not exist.
         """
         config_path = self._config_path()
-        config = _load_toml_config(str(config_path))
+        config = _load_toml_config(config_path)
         repo_field = config.get("repository")
         if isinstance(repo_field, dict):
             repository = repo_field
@@ -1119,7 +1125,7 @@ def find_eden(
             rel_path = None
     elif checkout_state_dir is None:
         all_checkouts = instance._get_directory_map()
-        checkout_name_value = all_checkouts.get(str(checkout_root))
+        checkout_name_value = all_checkouts.get(checkout_root)
         if checkout_name_value is None:
             raise Exception(f"unknown checkout {checkout_root}")
         checkout_state_dir = instance.state_dir.joinpath(
@@ -1165,5 +1171,5 @@ def _verify_mount_point(mount_point: str) -> None:
 _TomlConfigDict = Mapping[str, Mapping[str, Any]]
 
 
-def _load_toml_config(path: str) -> _TomlConfigDict:
-    return typing.cast(_TomlConfigDict, toml.load(path))
+def _load_toml_config(path: Path) -> _TomlConfigDict:
+    return typing.cast(_TomlConfigDict, toml.load(str(path)))

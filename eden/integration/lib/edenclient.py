@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import tempfile
 import typing
+from pathlib import Path
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -175,7 +176,7 @@ class EdenFS(object):
         assert self._process is not None
         util.wait_for_daemon_healthy(
             proc=self._process,
-            config_dir=self._eden_dir,
+            config_dir=Path(self._eden_dir),
             get_client=lambda: self.get_thrift_client(),
             timeout=timeout,
             exclude_pid=takeover_from,

@@ -165,9 +165,9 @@ class TomlConfigTest(
 
         # Check if test is for toml or cfg by cfg._user_toml_cfg
         exp_rc_files = [
-            os.path.join(self._config_d, "defaults.toml"),
-            os.path.join(self._config_d, "fbsource.repo.toml"),
-            os.path.join(self._home_dir, ".edenrc"),
+            Path(self._config_d) / "defaults.toml",
+            Path(self._config_d) / "fbsource.repo.toml",
+            Path(self._home_dir) / ".edenrc",
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)
 
