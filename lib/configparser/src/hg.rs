@@ -184,7 +184,7 @@ impl ConfigSetHgExt for ConfigSet {
         if env::var(HGRCPATH).is_err() {
             #[cfg(unix)]
             {
-                errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
+                errors.append(&mut self.load_path(data_dir.join("default.d/mergetools.rc"), &opts));
                 errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
                 // TODO(T40519286): Remove this after the tupperware overrides move out of hgrc.d
                 errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/tupperware_overrides.rc", &opts));
@@ -194,7 +194,7 @@ impl ConfigSetHgExt for ConfigSet {
 
             #[cfg(windows)]
             {
-                errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
+                errors.append(&mut self.load_path(data_dir.join("default.d/mergetools.rc"), &opts));
                 if let Ok(program_data_path) = env::var("PROGRAMDATA") {
                     let hgrc_dir = Path::new(&program_data_path).join("Facebook\\Mercurial");
                     errors.append(&mut self.load_path(hgrc_dir.join("system.rc"), &opts));

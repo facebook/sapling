@@ -12,7 +12,6 @@ use shellexpand;
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::convert::AsRef;
-use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
 use std::ops::Range;
@@ -65,11 +64,10 @@ impl ConfigSet {
         Default::default()
     }
 
-    /// Load config files at given path. The path could be either a directory or a file.
+    /// Load config files at given path. The path is a file.
     ///
-    /// If `path` is a directory, files directly inside it with extension `.rc` will be loaded.
-    /// Files in subdirectories are ignored. The order of loading them is undefined. If `path` is
-    /// a file, it will be loaded directly.
+    /// If `path` is a directory, it is ignored.
+    /// If `path` is a file, it will be loaded directly.
     ///
     /// A config file can use `%include` to load other paths (directories or files). They will
     /// be loaded recursively. Includes take effect in place, instead of deferred. For example,
@@ -99,7 +97,7 @@ impl ConfigSet {
     pub fn load_path<P: AsRef<Path>>(&mut self, path: P, opts: &Options) -> Vec<Error> {
         let mut visited = HashSet::new();
         let mut errors = Vec::new();
-        self.load_dir_or_file(path.as_ref(), opts, &mut visited, &mut errors);
+        self.load_file(path.as_ref(), opts, &mut visited, &mut errors);
         errors
     }
 
@@ -177,7 +175,8 @@ impl ConfigSet {
         location: Option<ValueLocation>,
         opts: &Options,
     ) {
-        let filtered = opts.filters
+        let filtered = opts
+            .filters
             .iter()
             .fold(Some((section, name, value)), move |acc, func| {
                 acc.and_then(|(section, name, value)| func(section, name, value))
@@ -197,49 +196,6 @@ impl ConfigSet {
         }
     }
 
-    fn load_dir_or_file(
-        &mut self,
-        path: &Path,
-        opts: &Options,
-        visited: &mut HashSet<PathBuf>,
-        errors: &mut Vec<Error>,
-    ) {
-        if let Ok(path) = path.canonicalize() {
-            if path.is_dir() {
-                self.load_dir(&path, opts, visited, errors);
-            } else {
-                self.load_file(&path, opts, visited, errors);
-            }
-        }
-        // If `path.canonicalize` reports an error. It's usually the path cannot
-        // be resolved (ex. does not exist). It is considered normal and is not
-        // reported in `errors`.
-    }
-
-    fn load_dir(
-        &mut self,
-        dir: &Path,
-        opts: &Options,
-        visited: &mut HashSet<PathBuf>,
-        errors: &mut Vec<Error>,
-    ) {
-        let rc_ext = OsStr::new("rc");
-        match dir.read_dir() {
-            Ok(entries) => for entry in entries {
-                match entry {
-                    Ok(entry) => {
-                        let path = entry.path();
-                        if path.is_file() && path.extension() == Some(rc_ext) {
-                            self.load_file(&path, opts, visited, errors);
-                        }
-                    }
-                    Err(error) => errors.push(Error::Io(dir.to_path_buf(), error)),
-                }
-            },
-            Err(error) => errors.push(Error::Io(dir.to_path_buf(), error)),
-        }
-    }
-
     fn load_file(
         &mut self,
         path: &Path,
@@ -247,27 +203,34 @@ impl ConfigSet {
         visited: &mut HashSet<PathBuf>,
         errors: &mut Vec<Error>,
     ) {
-        debug_assert!(path.is_absolute());
+        if let Ok(path) = path.canonicalize() {
+            let path = &path;
+            debug_assert!(path.is_absolute());
 
-        if !visited.insert(path.to_path_buf()) {
-            // skip - visited before
-            return;
-        }
-
-        match fs::File::open(path) {
-            Ok(mut file) => {
-                let mut buf = Vec::with_capacity(256);
-                if let Err(error) = file.read_to_end(&mut buf) {
-                    errors.push(Error::Io(path.to_path_buf(), error));
-                    return;
-                }
-                buf.push(b'\n');
-                let buf = Bytes::from(buf);
-
-                self.load_file_content(path, buf, opts, visited, errors);
+            if !visited.insert(path.to_path_buf()) {
+                // skip - visited before
+                return;
             }
-            Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
+
+            match fs::File::open(path) {
+                Ok(mut file) => {
+                    let mut buf = Vec::with_capacity(256);
+                    if let Err(error) = file.read_to_end(&mut buf) {
+                        errors.push(Error::Io(path.to_path_buf(), error));
+                        return;
+                    }
+                    buf.push(b'\n');
+                    let buf = Bytes::from(buf);
+
+                    self.load_file_content(path, buf, opts, visited, errors);
+                }
+                Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
+            }
         }
+
+        // If `path.canonicalize` reports an error. It's usually the path cannot
+        // be resolved (ex. does not exist). It is considered normal and is not
+        // reported in `errors`.
     }
 
     fn load_file_content(
@@ -346,12 +309,14 @@ impl ConfigSet {
             let pairs = pair.into_inner();
             for pair in pairs {
                 match pair.as_rule() {
-                    Rule::line => if !skip_include {
-                        let include_path = pair.as_str();
-                        let full_include_path =
-                            path.parent().unwrap().join(expand_path(include_path));
-                        this.load_dir_or_file(&full_include_path, opts, visited, errors);
-                    },
+                    Rule::line => {
+                        if !skip_include {
+                            let include_path = pair.as_str();
+                            let full_include_path =
+                                path.parent().unwrap().join(expand_path(include_path));
+                            this.load_file(&full_include_path, opts, visited, errors);
+                        }
+                    }
                     _ => (),
                 }
             }
@@ -403,7 +368,7 @@ impl ConfigSet {
         let pairs = match ConfigParser::parse(Rule::file, &text) {
             Ok(pairs) => pairs,
             Err(error) => {
-                return errors.push(Error::Parse(path.to_path_buf(), format!("{}", error)))
+                return errors.push(Error::Parse(path.to_path_buf(), format!("{}", error)));
             }
         };
 
@@ -554,7 +519,8 @@ pub(crate) fn expand_path(path: &str) -> PathBuf {
         shellexpand::full(&new_path)
             .unwrap_or(Cow::Borrowed(path))
             .as_ref(),
-    ).to_path_buf()
+    )
+    .to_path_buf()
 }
 
 #[cfg(test)]
@@ -912,7 +878,9 @@ pub(crate) mod tests {
             "[x]\n\
              b=1\n\
              a=1\n\
-             %include dir\n\
+             %include dir/abc.rc\n\
+             %include dir/y.rc\n\
+             %include dir/loop.rc\n\
              %include b.rc\n\
              [y]\n\
              b=1\n\
@@ -931,7 +899,13 @@ pub(crate) mod tests {
         write_file(dir.path().join("dir/unusedrc"), "[unused]\na=1");
 
         // Will be loaded. `%include` shouldn't cause cycles.
-        write_file(dir.path().join("b.rc"), "[x]\nb=4\n%include dir");
+        write_file(
+            dir.path().join("b.rc"),
+            "[x]\nb=4\n\
+             %include dir/abc.rc\n\
+             %include dir/y.rc\n\
+             %include dir/loop.rc",
+        );
 
         // Will be loaded. Shouldn't cause cycles.
         write_file(dir.path().join("e.rc"), "[x]\ne=e\n%include f.rc");
