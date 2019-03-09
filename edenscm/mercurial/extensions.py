@@ -291,7 +291,10 @@ def load(ui, name, path):
 
     # "mercurial" and "hgext" were moved. Detect wrong module imports.
     if ui.configbool("devel", "all-warnings"):
-        if "mercurial" in sys.modules or "hgext" in sys.modules:
+        if (
+            "mercurial" in sys.modules
+            and sys.modules["mercurial"] is not sys.modules["edenscm.mercurial"]
+        ) or "hgext" in sys.modules:
             ui.develwarn("extension %s imported incorrect modules" % name)
 
     # Before we do anything with the extension, check against minimum stated

@@ -20,8 +20,14 @@ and add B_add and C_add. Note: there are no conflicts.
   $ setconfig experimental.mergedriver=python:$TESTTMP/mergedriver-test.py
 
   $ cat > $TESTTMP/mergedriver-test.py << EOF
+  > from edenscm.mercurial import node
+  > from mercurial import node as node2
+  > assert node is node2
   > import os
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
+  >     from edenscm.mercurial import util
+  >     from mercurial import util as util2
+  >     assert util is util2
   >     ui.write("merge driver preprocess\n")
   >     # Right now, need to mark at least one file to get mergedriver running
   >     mergestate.mark("A", "d")  # driver-resovled
