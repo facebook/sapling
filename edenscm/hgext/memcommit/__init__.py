@@ -24,7 +24,7 @@ from edenscm.mercurial import bookmarks, error, registrar, scmutil
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 
-from . import commitdata
+from . import commitdata, serialization
 from ..pushrebase.stackpush import pushrequest
 
 
@@ -83,7 +83,7 @@ def debugserializecommit(ui, repo, *args, **opts):
     )
 
     params = commitdata.params(changelist, metadata, destination)
-    ui.write(params.serialize())
+    ui.write(serialization.serialize(params.todict()))
 
 
 @command("^memcommit", [], _("hg memcommit"))
@@ -171,7 +171,7 @@ def memcommit(ui, repo, *args, **opts):
     out = {}
     try:
         with nooutput(ui):
-            params = commitdata.params.deserialize(ui.fin)
+            params = commitdata.params.fromdict(serialization.deserialize(ui.fin))
             out["hash"] = hex(_memcommit(repo, params))
     except Exception as ex:
         out["error"] = str(ex)
