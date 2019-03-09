@@ -8,7 +8,8 @@
 With this extension enabled, Mercurial provides a command i.e. `memcommit` to
 make commits to a repository without requiring a working copy.
 
-::
+Config::
+
     [memcommit]
     # allow creating commits with no parents.
     allowunrelatedroots = False
