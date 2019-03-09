@@ -8,8 +8,11 @@
 # module is only for specifying classes based on simple types to represent the
 # data required for creating commits.
 
+from __future__ import absolute_import
+
 import json
 import struct
+import sys
 
 
 class params(object):
@@ -43,18 +46,20 @@ class params(object):
         def packunsignedint(i):
             return struct.pack("!I", i)
 
-        def packdata(data):
+        def packdata(data, utf8encode=True):
+            if utf8encode:
+                data = data.encode("utf-8")
             return [packunsignedint(len(data)), data]
 
         # Need to move the content out of the JSON representation because JSON
         # can't handle binary data.
         fileout = []
         numfiles = 0
-        for path, fileinfo in d["changelist"]["files"].iteritems():
+        for path, fileinfo in d["changelist"]["files"].items():
             content = fileinfo["content"]
             if content:
                 fileout.extend(packdata(path))
-                fileout.extend(packdata(content))
+                fileout.extend(packdata(content, utf8encode=False))
                 numfiles += 1
                 del fileinfo["content"]
 
@@ -66,7 +71,7 @@ class params(object):
         # Add the information about the file contents as well.
         out.append(packunsignedint(numfiles))
         out.extend(fileout)
-        return "".join(out)
+        return b"".join(out)
 
     @classmethod
     def _fromdict(cls, d):
@@ -95,8 +100,11 @@ class params(object):
         def readunsignedint(stream):
             return readunpack(stream, "!I")[0]
 
-        def unpackdata(stream):
-            return readexactly(stream, readunsignedint(stream))
+        def unpackdata(stream, utf8decode=True):
+            data = readexactly(stream, readunsignedint(stream))
+            if utf8decode:
+                data = data.decode("utf-8")
+            return data
 
         def tobytes(data):
             if isinstance(data, unicode):
@@ -106,20 +114,23 @@ class params(object):
                 return [tobytes(item) for item in data]
 
             if isinstance(data, dict):
-                return {tobytes(key): tobytes(value) for key, value in data.iteritems()}
+                return {tobytes(key): tobytes(value) for key, value in data.items()}
 
             return data
 
-        d = json.loads(unpackdata(inputstream), object_hook=tobytes)
+        if sys.version_info[0] < 3:
+            d = json.loads(unpackdata(inputstream), object_hook=tobytes)
+        else:
+            d = json.loads(unpackdata(inputstream))
 
         numfiles = readunsignedint(inputstream)
         contents = {}
-        for _ in xrange(numfiles):
+        for _ in range(0, numfiles):
             path = unpackdata(inputstream)
-            content = unpackdata(inputstream)
+            content = unpackdata(inputstream, utf8decode=False)
             contents[path] = content
 
-        for path, fileinfo in d["changelist"]["files"].iteritems():
+        for path, fileinfo in d["changelist"]["files"].items():
             if path in contents:
                 fileinfo["content"] = contents[path]
 
@@ -188,15 +199,13 @@ class changelist(object):
     def todict(self):
         d = {}
         d["parent"] = self.parent
-        d["files"] = {path: info.todict() for path, info in self.files.iteritems()}
+        d["files"] = {path: info.todict() for path, info in self.files.items()}
         return d
 
     @classmethod
     def fromdict(cls, d):
         parent = d.get("parent")
-        files = {
-            path: fileinfo.fromdict(info) for path, info in d.get("files").iteritems()
-        }
+        files = {path: fileinfo.fromdict(info) for path, info in d.get("files").items()}
         return cls(parent, files)
 
 
