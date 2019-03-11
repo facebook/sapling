@@ -237,7 +237,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 ok(instream).boxify(),
             ),
             SingleRequest::Getfiles => {
-                let (reqs, instream) = decode_getfiles_arg_stream(instream);
+                let (reqs, instream) =
+                    decode_getfiles_arg_stream(instream, || GetfilesArgDecoder {});
                 (
                     hgcmds
                         .getfiles(reqs)
@@ -286,6 +287,12 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
 
 const NONE: &[u8] = b"None";
 
+// getfiles args format:
+// (nodepath\n)*\n
+// nodepath := node path
+// node = hex hash
+// Example:
+// 1111111111111111111111111111111111111111path1\n2222222222222222222222222222222222222222path2\n\n
 struct GetfilesArgDecoder {}
 
 // Parses one (hash, path) pair
@@ -340,19 +347,13 @@ impl Decoder for GetfilesArgDecoder {
     }
 }
 
-// getfiles args format:
-// (nodepath\n)*\n
-// nodepath := node path
-// node = hex hash
-// Example:
-// 1111111111111111111111111111111111111111path1\n2222222222222222222222222222222222222222path2\n\n
-fn decode_getfiles_arg_stream<S>(
+fn decode_getfiles_arg_stream<D, RType, S>(
     input: BytesStream<S>,
-) -> (
-    BoxStream<(HgNodeHash, MPath), Error>,
-    BoxFuture<BytesStream<S>, Error>,
-)
+    create_decoder: impl Fn() -> D + Send + 'static,
+) -> (BoxStream<RType, Error>, BoxFuture<BytesStream<S>, Error>)
 where
+    D: Decoder<Item = Option<RType>, Error = Error> + Send + 'static,
+    RType: Send + 'static,
     S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
 {
     let (send, recv) = oneshot::channel();
@@ -365,7 +366,7 @@ where
     // waits for it.
     let entry_stream: BoxStream<_, ::std::result::Result<BytesStream<S>, (_, BytesStream<S>)>> =
         stream::unfold(input, move |input| {
-            let fut_decode = input.into_future_decode(GetfilesArgDecoder {});
+            let fut_decode = input.into_future_decode(create_decoder());
             let fut = fut_decode
                 .map_err(|err| Err(err)) // Real error happened, wrap it in result
                 .and_then(|(maybe_item, instream)| match maybe_item {
@@ -698,8 +699,10 @@ mod test {
     #[test]
     fn getfilesargs() {
         let input = format!("{}path\n{}path2\n\n", hash_ones(), hash_twos());
-        let (paramstream, _input) =
-            decode_getfiles_arg_stream(BytesStream::new(stream::once(Ok(Bytes::from(input)))));
+        let (paramstream, _input) = decode_getfiles_arg_stream(
+            BytesStream::new(stream::once(Ok(Bytes::from(input)))),
+            || GetfilesArgDecoder {},
+        );
 
         let res = paramstream.collect().wait().unwrap();
         assert_eq!(
@@ -711,7 +714,8 @@ mod test {
         );
 
         // Unexpected end of file
-        let (paramstream, _input) = decode_getfiles_arg_stream(BytesStream::new(stream::empty()));
+        let (paramstream, _input) =
+            decode_getfiles_arg_stream(BytesStream::new(stream::empty()), || GetfilesArgDecoder {});
         assert!(paramstream.collect().wait().is_err());
     }
 
