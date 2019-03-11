@@ -21,7 +21,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
 
-from . import fileserverclient, remotefilelog, shallowutil
+from . import contentstore, fileserverclient, remotefilelog, shallowutil
 
 
 NoFiles = NoTrees = 0
@@ -140,10 +140,14 @@ class shallowcg1packer(changegroup.cg1packer):
         else:
             # If not using the fast path, we need to discover what files to send
             if not fastpathlinkrev:
-                mfstore = repo.manifestlog.datastore
                 localmfstore = None
                 if len(repo.manifestlog.localdatastores) > 0:
                     localmfstore = repo.manifestlog.localdatastores[0]
+                sharedmfstore = None
+                if len(repo.manifestlog.shareddatastores) > 0:
+                    sharedmfstore = contentstore.unioncontentstore(
+                        *repo.manifestlog.shareddatastores
+                    )
 
                 def containslocalfiles(mfnode):
                     # This is a local tree, then it contains local files.
@@ -155,8 +159,10 @@ class shallowcg1packer(changegroup.cg1packer):
                     # This can happen while serving an infinitepush bundle that
                     # contains flat manifests. It will need to generate trees
                     # for that manifest.
-                    if repo.svfs.treemanifestserver and mfstore.getmissing(
-                        [("", mfnode)]
+                    if (
+                        repo.svfs.treemanifestserver
+                        and sharedmfstore
+                        and sharedmfstore.getmissing([("", mfnode)])
                     ):
                         return True
 

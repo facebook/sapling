@@ -551,10 +551,10 @@ def setuptreestores(repo, mfl):
         _prunesharedpacks(repo, packpath)
         ondemandstore.setshared(mfl.datastore, mfl.historystore)
 
-        mfl.shareddatastores = []
+        mfl.shareddatastores = [datastore, revlogstore]
         # Local stores are stores that contain data not on the main server
         mfl.localdatastores = []
-        mfl.sharedhistorystores = []
+        mfl.sharedhistorystores = [historystore, revlogstore]
         mfl.localhistorystores = []
         return
 
