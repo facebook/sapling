@@ -91,7 +91,10 @@ fn main() {
                 .arg(
                     Arg::from_usage("--cmdserver [MODE] 'for remote clients'")
                         .possible_values(&["pipe", "unix"]),
-                ),
+                )
+                .arg(Arg::from_usage(
+                    "--mock-username [USERNAME] 'use only in tests, send this username instead of the currently logged in'",
+                )),
         )
         .get_matches();
 

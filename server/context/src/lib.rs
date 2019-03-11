@@ -187,4 +187,10 @@ impl CoreContext {
     pub fn perf_counters(&self) -> &PerfCounters {
         &self.inner.perf_counters
     }
+    pub fn user_unix_name(&self) -> &Option<String> {
+        &self.inner.user_unix_name
+    }
+    pub fn ssh_env_vars(&self) -> &SshEnvVars {
+        &self.inner.ssh_env_vars
+    }
 }

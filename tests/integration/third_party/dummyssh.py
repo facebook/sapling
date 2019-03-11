@@ -36,5 +36,9 @@ if "hgcli" in hgcmd:
         + (" --cert %s --ca-pem %s --private-key %s --common-name localhost" % (cert, capem, privatekey))
     )
 
+    mock_username = os.environ.get("MOCK_USERNAME")
+    hgcmd += " --mock-username '{}'".format(mock_username)
+
+
 r = os.system(hgcmd)
 sys.exit(bool(r))

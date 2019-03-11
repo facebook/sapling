@@ -222,9 +222,9 @@ impl Encoder for SshEncoder {
 
 #[derive(Debug, Default, Clone)]
 pub struct SshEnvVars {
-    ssh_cert_principals: Option<String>,
-    ssh_original_command: Option<String>,
-    ssh_client: Option<String>,
+    pub ssh_cert_principals: Option<String>,
+    pub ssh_original_command: Option<String>,
+    pub ssh_client: Option<String>,
 }
 
 impl SshEnvVars {

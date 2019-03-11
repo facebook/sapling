@@ -62,6 +62,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
                 .expect("expected SSL common name of the Mononoke server");
             let is_remote_proxy = main.is_present("remote-proxy");
             let scuba_table = main.value_of("scuba-table");
+            let mock_username = sub.value_of("mock-username");
 
             return StdioRelay {
                 path: mononoke_path,
@@ -73,6 +74,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
                 ssl_common_name: common_name,
                 is_remote_proxy,
                 scuba_table,
+                mock_username,
             }
             .run();
         }
@@ -91,6 +93,7 @@ struct StdioRelay<'a> {
     ssl_common_name: &'a str,
     is_remote_proxy: bool,
     scuba_table: Option<&'a str>,
+    mock_username: Option<&'a str>,
 }
 
 impl<'a> StdioRelay<'a> {
@@ -99,7 +102,11 @@ impl<'a> StdioRelay<'a> {
             ScubaSampleBuilder::with_opt_table(self.scuba_table.map(|v| v.to_owned()));
 
         let session_uuid = uuid::Uuid::new_v4();
-        let unix_username = get_current_username().and_then(|os_str| os_str.into_string().ok());
+        let unix_username = if let Some(mock_username) = self.mock_username {
+            Some(mock_username.to_string())
+        } else {
+            get_current_username().and_then(|os_str| os_str.into_string().ok())
+        };
         let source_hostname = if self.is_remote_proxy {
             // hgcli is run as remote proxy so grab from ssh the information about what host has
             // connected to this proxy and save it as source_hostname
