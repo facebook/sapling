@@ -1242,15 +1242,7 @@ def archive(web, req, tmpl):
     req.headers.extend(headers)
     req.respond(HTTP_OK, mimetype)
 
-    archival.archive(
-        web.repo,
-        req,
-        cnode,
-        artype,
-        prefix=name,
-        matchfn=match,
-        subrepos=web.configbool("web", "archivesubrepos"),
-    )
+    archival.archive(web.repo, req, cnode, artype, prefix=name, matchfn=match)
     return []
 
 

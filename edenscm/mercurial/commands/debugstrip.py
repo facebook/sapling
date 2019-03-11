@@ -28,22 +28,6 @@ release = lockmod.release
 command = registrar.command()
 
 
-def checksubstate(repo, baserev=None):
-    """return list of subrepos at a different revision than substate.
-    Abort if any subrepos have uncommitted changes."""
-    inclsubs = []
-    wctx = repo[None]
-    if baserev:
-        bctx = repo[baserev]
-    else:
-        bctx = wctx.parents()[0]
-    for s in sorted(wctx.substate):
-        wctx.sub(s).bailifchanged(True)
-        if s not in bctx.substate or bctx.sub(s).dirty():
-            inclsubs.append(s)
-    return inclsubs
-
-
 def checklocalchanges(repo, force=False, excsuffix=""):
     cmdutil.checkunfinished(repo)
     s = repo.status()
@@ -51,9 +35,6 @@ def checklocalchanges(repo, force=False, excsuffix=""):
         if s.modified or s.added or s.removed or s.deleted:
             _("local changes found")  # i18n tool detection
             raise error.Abort(_("local changes found" + excsuffix))
-        if checksubstate(repo):
-            _("local changed subrepos found")  # i18n tool detection
-            raise error.Abort(_("local changed subrepos found" + excsuffix))
     return s
 
 

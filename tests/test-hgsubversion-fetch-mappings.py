@@ -158,15 +158,6 @@ class MapTests(test_hgsubversion_util.TestBase):
         return self.repo
 
     @test_hgsubversion_util.requiresreplay
-    def test_file_map(self):
-        repo = self._loadwithfilemap(
-            "replace_trunk_with_branch.svndump", "include alpha\n"
-        )
-        self.assertEqual(
-            node.hex(repo[0].node()), "88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d"
-        )
-
-    @test_hgsubversion_util.requiresreplay
     def test_file_map_exclude(self):
         repo = self._loadwithfilemap(
             "replace_trunk_with_branch.svndump", "exclude alpha\n"

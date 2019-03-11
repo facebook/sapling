@@ -153,45 +153,6 @@ class mercurial_sink(common.converter_sink):
             fp.write("%s %s\n" % (revid, s[1]))
         return fp.getvalue()
 
-    def _rewritesubstate(self, source, data):
-        fp = stringio()
-        for line in data.splitlines():
-            s = line.split(" ", 1)
-            if len(s) != 2:
-                continue
-
-            revid = s[0]
-            subpath = s[1]
-            if revid != nodemod.nullhex:
-                revmap = self.subrevmaps.get(subpath)
-                if revmap is None:
-                    revmap = mapfile(self.ui, self.repo.wjoin(subpath, ".hg/shamap"))
-                    self.subrevmaps[subpath] = revmap
-
-                    # It is reasonable that one or more of the subrepos don't
-                    # need to be converted, in which case they can be cloned
-                    # into place instead of converted.  Therefore, only warn
-                    # once.
-                    msg = _('no ".hgsubstate" updates will be made for "%s"\n')
-                    if len(revmap) == 0:
-                        sub = self.repo.wvfs.reljoin(subpath, ".hg")
-
-                        if self.repo.wvfs.exists(sub):
-                            self.ui.warn(msg % subpath)
-
-                newid = revmap.get(revid)
-                if not newid:
-                    if len(revmap) > 0:
-                        self.ui.warn(
-                            _("%s is missing from %s/.hg/shamap\n") % (revid, subpath)
-                        )
-                else:
-                    revid = newid
-
-            fp.write("%s %s\n" % (revid, subpath))
-
-        return fp.getvalue()
-
     def _calculatemergedfiles(self, source, p1ctx, p2ctx):
         """Calculates the files from p2 that we need to pull in when merging p1
         and p2, given that the merge is coming from the given source.
@@ -258,8 +219,6 @@ class mercurial_sink(common.converter_sink):
                 return None
             if f == ".hgtags":
                 data = self._rewritetags(source, revmap, data)
-            if f == ".hgsubstate":
-                data = self._rewritesubstate(source, data)
             return context.memfilectx(
                 self.repo, memctx, f, data, "l" in mode, "x" in mode, copies.get(f)
             )

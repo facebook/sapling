@@ -8,7 +8,7 @@ import stat
 import subprocess
 
 import util
-from edenscm.mercurial import subrepo, util as hgutil
+from edenscm.mercurial import util as hgutil
 from edenscm.mercurial.i18n import _
 
 
@@ -423,18 +423,7 @@ def getchanges(ui, repo, parentctx, exts):
         if exts:
             files[".hgsvnexternals"] = exts.write()
     elif mode == "subrepos":
-        # XXX: clobering the subrepos files is good enough for now
-        files = {".hgsub": None, ".hgsubstate": None}
-        if exts:
-            defs = parsedefinitions(ui, repo, "", exts)
-            hgsub, hgsubstate = [], []
-            for path, rev, _source, _pegrev, norevline, base in sorted(defs):
-                hgsub.append("%s = [hgsubversion] %s:%s\n" % (path, base, norevline))
-                if rev is None:
-                    rev = "HEAD"
-                hgsubstate.append("%s %s\n" % (rev, path))
-            files[".hgsub"] = "".join(hgsub)
-            files[".hgsubstate"] = "".join(hgsubstate)
+        raise hgutil.Abort(_("subrepos mode is no longer supported"))
     elif mode == "ignore":
         files = {}
     else:
@@ -462,14 +451,7 @@ def parse(ui, ctx):
         if ".hgsvnexternals" in ctx:
             external.read(ctx[".hgsvnexternals"].data())
     elif mode == "subrepos":
-        for path in ctx.substate:
-            src, rev = ctx.substate[path][:2]
-            base, norevline = src.split(":", 1)
-            base = base.strip()
-            if rev is None:
-                rev = "HEAD"
-            line = norevline.replace("{REV}", rev)
-            external.setdefault(base, []).append(line)
+        raise hgutil.Abort(_("subrepos mode is no longer supported"))
     elif mode == "ignore":
         pass
     else:
@@ -478,75 +460,6 @@ def parse(ui, ctx):
 
 
 _notset = object()
-
-
-class svnsubrepo(subrepo.svnsubrepo):
-    def __init__(self, ctx, path, state, allowcreate=_notset):
-        state = (state[0].split(":", 1)[1], state[1])
-        if allowcreate is _notset:
-            # Mercurial 3.7 and earlier
-            super(svnsubrepo, self).__init__(ctx, path, state)
-        else:
-            # Mercurial 3.8 and later
-            super(svnsubrepo, self).__init__(ctx, path, state, allowcreate)
-        # Mercurial 3.3+ set 'ui' rather than '_ui' -- set that and use 'ui'
-        # everywhere to maintain compatibility across versions
-        if not hgutil.safehasattr(self, "ui"):
-            self.ui = ctx._repo.ui
-
-    def get(self, state, *args, **kwargs):
-        # Resolve source first
-        line = state[0].split(":", 1)[1]
-        source, pegrev = parsedefinition(line)[2:4]
-        try:
-            # Getting the root SVN repository URL is expensive.
-            # Assume the externals is absolute.
-            source = resolvesource(self.ui, None, source)
-        except RelativeSourceError:
-            svnurl = self._ctx._repo.ui.expandpath("default")
-            svnroot = getsvninfo(util.normalize_url(svnurl))[1]
-            source = resolvesource(self.ui, svnroot, source)
-        # hg 1.9 and higher, append the rev as a peg revision to
-        # the source URL, so we cannot add our own. We assume
-        # that "-r10 url@2" will be similar to "url@10" most of
-        # the time.
-        state = (source, state[1])
-        return super(svnsubrepo, self).get(state, *args, **kwargs)
-
-    def dirty(self, ignoreupdate=False, missing=False):
-        # You cannot compare anything with HEAD. Just accept it
-        # can be anything.
-        if hgutil.safehasattr(self, "_wcrevs"):
-            wcrevs = self._wcrevs()
-        else:
-            wcrev = self._wcrev()
-            wcrevs = (wcrev, wcrev)
-        shouldcheck = (
-            "HEAD" in wcrevs
-            or self._state[1] == "HEAD"
-            or self._state[1] in wcrevs
-            or ignoreupdate
-            or missing
-        )
-        if shouldcheck:
-            changes, extchanges, wcmissing = self._wcchanged()
-            changed = changes or (missing and wcmissing)
-            if not changed:
-                return False
-        return True
-
-    def commit(self, text, user, date):
-        rev = super(svnsubrepo, self).commit(text, user, date)
-        # Keep unversioned externals unversioned
-        if self._state[1] == "HEAD":
-            rev = "HEAD"
-        return rev
-
-    def basestate(self):
-        # basestate() was introduced by bcb973abcc0b in 2.2
-        if self._state[1] == "HEAD":
-            return "HEAD"
-        return super(svnsubrepo, self).basestate()
 
 
 if __name__ == "__main__":

@@ -62,15 +62,6 @@ Files
     describe file names that should be ignored by **hg**. For details,
     see |hgignore(5)|_.
 
-``.hgsub``
-    This file defines the locations of all subrepositories, and
-    tells where the subrepository checkouts came from. For details, see
-    :hg:`help subrepos`.
-
-``.hgsubstate``
-    This file is where Mercurial stores all nested repository states. *NB: This
-    file should not be edited manually.*
-
 ``.hgtags``
     This file contains changeset hash values and text tag names (one
     of each separated by spaces) that correspond to tagged versions of

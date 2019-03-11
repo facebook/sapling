@@ -150,8 +150,6 @@ similarityopts = [
     )
 ]
 
-subrepoopts = [("S", "subrepos", None, _("recurse into subrepositories"))]
-
 debugrevlogopts = [
     ("c", "changelog", False, _("open changelog")),
     ("m", "manifest", False, _("open manifest")),
@@ -861,9 +859,6 @@ def bailifchanged(repo, merge=True, hint=None):
 
     if uncommittedchanges(repo):
         raise error.UncommitedChangesAbort(_("uncommitted changes"), hint=hint)
-    ctx = repo[None]
-    for s in sorted(ctx.substate):
-        ctx.sub(s).bailifchanged(hint=hint)
 
 
 def logmessage(ui, opts):
@@ -928,11 +923,11 @@ def getcommiteditor(edit=False, finishdesc=None, extramsg=None, editform="", **o
     they are specific for usage in MQ.
     """
     if edit or finishdesc or extramsg:
-        return lambda r, c, s: commitforceeditor(
-            r, c, s, finishdesc=finishdesc, extramsg=extramsg, editform=editform
+        return lambda r, c: commitforceeditor(
+            r, c, finishdesc=finishdesc, extramsg=extramsg, editform=editform
         )
     elif editform:
-        return lambda r, c, s: commiteditor(r, c, s, editform=editform)
+        return lambda r, c: commiteditor(r, c, editform=editform)
     else:
         return commiteditor
 
@@ -1423,7 +1418,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     :updatefunc: a function that update a repo to a given node
                  updatefunc(<repo>, <node>)
     """
-    # avoid cycle context -> subrepo -> cmdutil
+    # avoid cycle context -> cmdutil
     from . import context
 
     extractdata = patch.extract(ui, hunk)
@@ -1728,7 +1723,6 @@ def diffordiffstat(
     fp=None,
     prefix="",
     root="",
-    listsubrepos=False,
     hunksfilterfn=None,
 ):
     """show diff or diffstat."""
@@ -1786,31 +1780,6 @@ def diffordiffstat(
             hunksfilterfn=hunksfilterfn,
         ):
             write(chunk, label=label)
-
-    if listsubrepos:
-        ctx1 = repo[node1]
-        ctx2 = repo[node2]
-        for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
-            tempnode2 = node2
-            try:
-                if node2 is not None:
-                    tempnode2 = ctx2.substate[subpath][1]
-            except KeyError:
-                # A subrepo that existed in node1 was deleted between node1 and
-                # node2 (inclusive). Thus, ctx2's substate won't contain that
-                # subpath. The best we can do is to ignore it.
-                tempnode2 = None
-            submatch = matchmod.subdirmatcher(subpath, match)
-            sub.diff(
-                ui,
-                diffopts,
-                tempnode2,
-                submatch,
-                changes=changes,
-                stat=stat,
-                fp=fp,
-                prefix=prefix,
-            )
 
 
 def _changesetlabels(ctx):
@@ -3121,7 +3090,6 @@ def graphrevs(repo, nodes, opts):
 
 
 def add(ui, repo, match, prefix, explicitonly, **opts):
-    join = lambda f: os.path.join(prefix, f)
     bad = []
 
     badfn = lambda x, y: bad.append(x) or match.bad(x, y)
@@ -3136,15 +3104,7 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     dirstate = repo.dirstate
     # We don't want to just call wctx.walk here, since it would return a lot of
     # clean files, which we aren't interested in and takes time.
-    for f in sorted(
-        dirstate.walk(
-            badmatch,
-            subrepos=sorted(wctx.substate),
-            unknown=True,
-            ignored=False,
-            full=False,
-        )
-    ):
+    for f in sorted(dirstate.walk(badmatch, unknown=True, ignored=False, full=False)):
         exact = match.exact(f)
         if exact or not explicitonly and f not in wctx and repo.wvfs.lexists(f):
             if cca:
@@ -3152,17 +3112,6 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
             names.append(f)
             if ui.verbose or not exact:
                 ui.status(_("adding %s\n") % match.rel(f))
-
-    for subpath in sorted(wctx.substate):
-        sub = wctx.sub(subpath)
-        try:
-            submatch = matchmod.subdirmatcher(subpath, match)
-            if opts.get(r"subrepos"):
-                bad.extend(sub.add(ui, submatch, prefix, False, **opts))
-            else:
-                bad.extend(sub.add(ui, submatch, prefix, True, **opts))
-        except error.LookupError:
-            ui.status(_("skipping missing subrepository: %s\n") % join(subpath))
 
     if not opts.get(r"dry_run"):
         rejected = wctx.add(names, prefix)
@@ -3174,14 +3123,8 @@ def addwebdirpath(repo, serverpath, webconf):
     webconf[serverpath] = repo.root
     repo.ui.debug("adding %s = %s\n" % (serverpath, repo.root))
 
-    for r in repo.revs('filelog("path:.hgsub")'):
-        ctx = repo[r]
-        for subpath in ctx.substate:
-            ctx.sub(subpath).addwebdirpath(serverpath, webconf)
-
 
 def forget(ui, repo, match, prefix, explicitonly):
-    join = lambda f: os.path.join(prefix, f)
     bad = []
     badfn = lambda x, y: bad.append(x) or match.bad(x, y)
     wctx = repo[None]
@@ -3191,16 +3134,6 @@ def forget(ui, repo, match, prefix, explicitonly):
     forget = sorted(s.modified + s.added + s.deleted + s.clean)
     if explicitonly:
         forget = [f for f in forget if match.exact(f)]
-
-    for subpath in sorted(wctx.substate):
-        sub = wctx.sub(subpath)
-        try:
-            submatch = matchmod.subdirmatcher(subpath, match)
-            subbad, subforgot = sub.forget(submatch, prefix)
-            bad.extend([subpath + "/" + f for f in subbad])
-            forgot.extend([subpath + "/" + f for f in subforgot])
-        except error.LookupError:
-            ui.status(_("skipping missing subrepository: %s\n") % join(subpath))
 
     if not explicitonly:
         for f in match.files():
@@ -3229,7 +3162,7 @@ def forget(ui, repo, match, prefix, explicitonly):
     return bad, forgot
 
 
-def files(ui, ctx, m, fm, fmt, subrepos):
+def files(ui, ctx, m, fm, fmt):
     if (ctx.rev() is None) and (edenfs.requirement in ctx.repo().requirements):
         return eden_files(ui, ctx, m, fm, fmt)
 
@@ -3247,17 +3180,6 @@ def files(ui, ctx, m, fm, fmt, subrepos):
         fm.data(abspath=f)
         fm.write("path", fmt, m.rel(f))
         ret = 0
-
-    for subpath in sorted(ctx.substate):
-        submatch = matchmod.subdirmatcher(subpath, m)
-        if subrepos or m.exact(subpath) or any(submatch.files()):
-            sub = ctx.sub(subpath)
-            try:
-                recurse = m.exact(subpath) or subrepos
-                if sub.printfiles(ui, submatch, fm, fmt, recurse) == 0:
-                    ret = 0
-            except error.LookupError:
-                ui.status(_("skipping missing subrepository: %s\n") % m.abs(subpath))
 
     return ret
 
@@ -3282,8 +3204,7 @@ def eden_files(ui, ctx, m, fm, fmt):
     return ret
 
 
-def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
-    join = lambda f: os.path.join(prefix, f)
+def remove(ui, repo, m, prefix, after, force, warnings=None):
     ret = 0
     s = repo.status(match=m, clean=True)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
@@ -3296,38 +3217,14 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
     else:
         warn = False
 
-    subs = sorted(wctx.substate)
-    with progress.bar(ui, _("searching"), _("subrepos"), len(subs)) as prog:
-        for subpath in subs:
-            prog.value += 1
-            submatch = matchmod.subdirmatcher(subpath, m)
-            if subrepos or m.exact(subpath) or any(submatch.files()):
-                sub = wctx.sub(subpath)
-                try:
-                    if sub.removefiles(
-                        submatch, prefix, after, force, subrepos, warnings
-                    ):
-                        ret = 1
-                except error.LookupError:
-                    warnings.append(
-                        _("skipping missing subrepository: %s\n") % join(subpath)
-                    )
-
     # warn about failure to delete explicit files/dirs
     deleteddirs = util.dirs(deleted)
     files = m.files()
     with progress.bar(ui, _("deleting"), _("files"), len(files)) as prog:
         for f in files:
-
-            def insubrepo():
-                for subpath in wctx.substate:
-                    if f.startswith(subpath + "/"):
-                        return True
-                return False
-
             prog.value += 1
             isdir = f in deleteddirs or wctx.hasdir(f)
-            if f in repo.dirstate or isdir or f == "." or insubrepo() or f in subs:
+            if f in repo.dirstate or isdir or f == ".":
                 continue
 
             if repo.wvfs.exists(f):
@@ -3441,25 +3338,6 @@ def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
         write(abs)
         err = 0
 
-    for subpath in sorted(ctx.substate):
-        sub = ctx.sub(subpath)
-        try:
-            submatch = matchmod.subdirmatcher(subpath, matcher)
-
-            if not sub.cat(
-                submatch,
-                basefm,
-                fntemplate,
-                os.path.join(prefix, sub._path),
-                **pycompat.strkwargs(opts)
-            ):
-                err = 0
-        except error.RepoLookupError:
-            ui.status(
-                _("skipping missing subrepository: %s\n")
-                % os.path.join(prefix, subpath)
-            )
-
     return err
 
 
@@ -3550,20 +3428,6 @@ def amend(ui, repo, old, extra, pats, opts):
             raise error.Abort(
                 _("failed to mark all new/missing files as added/removed")
             )
-
-        # Check subrepos. This depends on in-place wctx._status update in
-        # subrepo.precommit(). To minimize the risk of this hack, we do
-        # nothing if .hgsub does not exist.
-        if ".hgsub" in wctx or ".hgsub" in old:
-            from . import subrepo  # avoid cycle: cmdutil -> subrepo -> cmdutil
-
-            subs, commitsubs, newsubstate = subrepo.precommit(
-                ui, wctx, wctx._status, matcher
-            )
-            # amend should abort if commitsubrepos is enabled
-            assert not commitsubs
-            if subs:
-                subrepo.writestate(repo, newsubstate)
 
         # avoid cycle (TODO: should be removed in default branch)
         from . import merge as mergemod
@@ -3701,18 +3565,17 @@ def amend(ui, repo, old, extra, pats, opts):
     return newid
 
 
-def commiteditor(repo, ctx, subs, editform=""):
+def commiteditor(repo, ctx, editform=""):
     if ctx.description():
         return ctx.description()
     return commitforceeditor(
-        repo, ctx, subs, editform=editform, unchangedmessagedetection=True
+        repo, ctx, editform=editform, unchangedmessagedetection=True
     )
 
 
 def commitforceeditor(
     repo,
     ctx,
-    subs,
     finishdesc=None,
     extramsg=None,
     editform="",
@@ -3727,13 +3590,11 @@ def commitforceeditor(
     while forms:
         ref = ".".join(forms)
         if repo.ui.config("committemplate", ref):
-            templatetext = committext = buildcommittemplate(
-                repo, ctx, subs, extramsg, ref
-            )
+            templatetext = committext = buildcommittemplate(repo, ctx, extramsg, ref)
             break
         forms.pop()
     else:
-        committext = buildcommittext(repo, ctx, subs, extramsg)
+        committext = buildcommittext(repo, ctx, extramsg)
 
     # run editor in the repository root
     olddir = pycompat.getcwd()
@@ -3779,7 +3640,7 @@ def commitforceeditor(
     return text
 
 
-def buildcommittemplate(repo, ctx, subs, extramsg, ref):
+def buildcommittemplate(repo, ctx, extramsg, ref):
     ui = repo.ui
     spec = formatter.templatespec(ref, None, None)
     t = changeset_templater(ui, repo, spec, None, {}, False)
@@ -3800,7 +3661,7 @@ def hgprefix(msg):
     return "\n".join(["HG: %s" % a for a in msg.split("\n") if a])
 
 
-def buildcommittext(repo, ctx, subs, extramsg):
+def buildcommittext(repo, ctx, extramsg):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     if ctx.description():
@@ -3819,7 +3680,6 @@ def buildcommittext(repo, ctx, subs, extramsg):
         edittext.append(hgprefix(_("branch '%s'") % ctx.branch()))
     if bookmarks.isactivewdirparent(repo):
         edittext.append(hgprefix(_("bookmark '%s'") % repo._activebookmark))
-    edittext.extend([hgprefix(_("subrepo %s") % s) for s in subs])
     edittext.extend([hgprefix(_("added %s") % f) for f in added])
     edittext.extend([hgprefix(_("changed %s") % f) for f in modified])
     edittext.extend([hgprefix(_("removed %s") % f) for f in removed])
@@ -3880,13 +3740,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         m = scmutil.match(wctx, pats, opts)
 
         # we'll need this later
-        targetsubs = sorted(s for s in wctx.substate if m(s))
-
         badfiles = set()
 
         def badfn(path, msg):
-            if path in ctx.substate:
-                return
             # We only report errors about paths that do not exist in the original
             # node.
             #
@@ -4142,19 +3998,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             needdata = ("revert", "add", "undelete")
             _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
             _performrevert(repo, parents, ctx, actions, interactive, tobackup)
-
-        if targetsubs:
-            # Revert the subrepos on the revert list
-            for sub in targetsubs:
-                try:
-                    wctx.sub(sub).revert(
-                        ctx.substate[sub], *pats, **pycompat.strkwargs(opts)
-                    )
-                except KeyError:
-                    raise error.Abort(
-                        "subrepository '%s' does not exist in %s!"
-                        % (sub, short(ctx.node()))
-                    )
 
 
 def _revertprefetch(repo, ctx, *files):

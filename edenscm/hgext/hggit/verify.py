@@ -50,9 +50,6 @@ def verify(ui, repo, hgctx):
     dirkind = stat.S_IFDIR
 
     hgfiles = set(hgctx)
-    # TODO deal with submodules
-    hgfiles.discard(".hgsubstate")
-    hgfiles.discard(".hgsub")
     gitfiles = set()
 
     i = 0
@@ -63,11 +60,7 @@ def verify(ui, repo, hgctx):
             if gitfile.mode == dirkind:
                 continue
             # TODO deal with submodules
-            if (
-                gitfile.mode == S_IFGITLINK
-                or gitfile.path == ".hgsubstate"
-                or gitfile.path == ".hgsub"
-            ):
+            if gitfile.mode == S_IFGITLINK:
                 continue
             prog.value = i
             i += 1

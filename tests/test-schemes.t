@@ -32,7 +32,6 @@ http scheme
   comparing with l://
   searching for changes
   no changes found
-  [1]
 
 check that {1} syntax works
 
@@ -45,7 +44,6 @@ check that {1} syntax works
   searching for changes
   all remote heads known locally
   no changes found
-  [1]
 
 check that paths are expanded
 
@@ -53,7 +51,6 @@ check that paths are expanded
   comparing with z://
   searching for changes
   no changes found
-  [1]
 
 check that debugexpandscheme outputs the canonical form
 

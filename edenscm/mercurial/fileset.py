@@ -520,33 +520,6 @@ def status(mctx, x):
     return getset(mctx.switch(ctx, _buildstatus(ctx, x, basectx=basectx)), x)
 
 
-@predicate("subrepo([pattern])")
-def subrepo(mctx, x):
-    """Subrepositories whose paths match the given pattern.
-    """
-    # i18n: "subrepo" is a keyword
-    getargs(x, 0, 1, _("subrepo takes at most one argument"))
-    ctx = mctx.ctx
-    sstate = sorted(ctx.substate)
-    if x:
-        # i18n: "subrepo" is a keyword
-        pat = getstring(x, _("subrepo requires a pattern or no arguments"))
-
-        from . import match as matchmod  # avoid circular import issues
-
-        fast = not matchmod.patkind(pat)
-        if fast:
-
-            def m(s):
-                return s == pat
-
-        else:
-            m = matchmod.match(ctx.repo().root, "", [pat], ctx=ctx)
-        return [sub for sub in sstate if m(sub)]
-    else:
-        return [sub for sub in sstate]
-
-
 methods = {
     "string": stringset,
     "symbol": stringset,

@@ -291,17 +291,7 @@ archivers = {
 }
 
 
-def archive(
-    repo,
-    dest,
-    node,
-    kind,
-    decode=True,
-    matchfn=None,
-    prefix="",
-    mtime=None,
-    subrepos=False,
-):
+def archive(repo, dest, node, kind, decode=True, matchfn=None, prefix="", mtime=None):
     """create archive of repo as it was at node.
 
     dest can be name of directory, name of archive file, or file
@@ -317,8 +307,6 @@ def archive(
     prefix is name of path to put before every archive member.
 
     mtime is the modified time, in seconds, or None to use the changeset time.
-
-    subrepos tells whether to include subrepos.
     """
 
     if kind == "files":
@@ -356,12 +344,6 @@ def archive(
                 ff = ctx.flags(f)
                 write(f, "x" in ff and 0o755 or 0o644, "l" in ff, ctx[f].data)
                 prog.value = (i, f)
-
-    if subrepos:
-        for subpath in sorted(ctx.substate):
-            sub = ctx.workingsub(subpath)
-            submatch = matchmod.subdirmatcher(subpath, matchfn)
-            total += sub.archive(archiver, prefix, submatch, decode)
 
     if total == 0:
         raise error.Abort(_("no files match the archive pattern"))

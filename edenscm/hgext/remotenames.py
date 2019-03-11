@@ -1192,8 +1192,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         % (short(node), dest, opargs["to"])
     )
 
-    # TODO: subrepo stuff
-
     force = opts.get("force")
     bookmark = opargs["to"]
     pattern = ui.config("remotenames", "disallowedto")

@@ -46,7 +46,7 @@ def _rematcher(regex):
         return m.match
 
 
-def _expandsets(kindpats, ctx, listsubrepos):
+def _expandsets(kindpats, ctx):
     """Returns the kindpats list with the 'set' patterns expanded."""
     fset = set()
     other = []
@@ -57,12 +57,6 @@ def _expandsets(kindpats, ctx, listsubrepos):
                 raise error.ProgrammingError("fileset expression with no " "context")
             s = ctx.getfileset(pat)
             fset.update(s)
-
-            if listsubrepos:
-                for subpath in ctx.substate:
-                    s = ctx.sub(subpath).getfileset(pat)
-                    fset.update(subpath + "/" + f for f in s)
-
             continue
         other.append((kind, pat, source))
     return fset, other
@@ -113,7 +107,6 @@ def match(
     exact=False,
     auditor=None,
     ctx=None,
-    listsubrepos=False,
     warn=None,
     badfn=None,
     icasefs=False,
@@ -180,9 +173,7 @@ def match(
         if _kindpatsalwaysmatch(kindpats):
             m = alwaysmatcher(root, cwd, badfn, relativeuipath=True)
         else:
-            m = patternmatcher(
-                root, cwd, kindpats, ctx=ctx, listsubrepos=listsubrepos, badfn=badfn
-            )
+            m = patternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
     else:
         # It's a little strange that no patterns means to match everything.
         # Consider changing this to match nothing (probably using nevermatcher).
@@ -190,15 +181,11 @@ def match(
 
     if include:
         kindpats = normalize(include, "glob", root, cwd, auditor, warn)
-        im = includematcher(
-            root, cwd, kindpats, ctx=ctx, listsubrepos=listsubrepos, badfn=None
-        )
+        im = includematcher(root, cwd, kindpats, ctx=ctx, badfn=None)
         m = intersectmatchers(m, im)
     if exclude:
         kindpats = normalize(exclude, "glob", root, cwd, auditor, warn)
-        em = includematcher(
-            root, cwd, kindpats, ctx=ctx, listsubrepos=listsubrepos, badfn=None
-        )
+        em = includematcher(root, cwd, kindpats, ctx=ctx, badfn=None)
         m = differencematcher(m, em)
     return m
 
@@ -763,12 +750,12 @@ class gitignorematcher(basematcher):
 
 
 class patternmatcher(basematcher):
-    def __init__(self, root, cwd, kindpats, ctx=None, listsubrepos=False, badfn=None):
+    def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
 
         self._files = _explicitfiles(kindpats)
         self._prefix = _prefix(kindpats)
-        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", listsubrepos, root)
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
 
     @propertycache
     def _dirs(self):
@@ -792,12 +779,10 @@ class patternmatcher(basematcher):
 
 
 class includematcher(basematcher):
-    def __init__(self, root, cwd, kindpats, ctx=None, listsubrepos=False, badfn=None):
+    def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(includematcher, self).__init__(root, cwd, badfn)
 
-        self._pats, self.matchfn = _buildmatch(
-            ctx, kindpats, "(?:/|$)", listsubrepos, root
-        )
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
         # prefix is True if all patterns are recursive, so certain fast paths
         # can be enabled. Unfortunately, it's too easy to break it (ex. by
         # using "glob:*.c", "re:...", etc).
@@ -1250,7 +1235,7 @@ def _regex(kind, pat, globsuffix):
     return _globre(pat) + globsuffix
 
 
-def _buildmatch(ctx, kindpats, globsuffix, listsubrepos, root):
+def _buildmatch(ctx, kindpats, globsuffix, root):
     """Return regexp string and a matcher function for kindpats.
     globsuffix is appended to the regexp of globs."""
     matchfuncs = []
@@ -1273,7 +1258,7 @@ def _buildmatch(ctx, kindpats, globsuffix, listsubrepos, root):
 
         matchfuncs.append(matchsubinclude)
 
-    fset, kindpats = _expandsets(kindpats, ctx, listsubrepos)
+    fset, kindpats = _expandsets(kindpats, ctx)
     if fset:
         matchfuncs.append(fset.__contains__)
 

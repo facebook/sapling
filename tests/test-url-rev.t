@@ -117,7 +117,6 @@ Changing original repo:
   summary:     new head of branch foo
   
   $ hg -q --cwd ../clone incoming '../repo#foo'
-  [1]
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
   parent: 1:17d330177ee9 
    change a

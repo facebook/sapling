@@ -150,7 +150,6 @@ diffwsopts = cmdutil.diffwsopts
 diffopts2 = cmdutil.diffopts2
 mergetoolopts = cmdutil.mergetoolopts
 similarityopts = cmdutil.similarityopts
-subrepoopts = cmdutil.subrepoopts
 debugrevlogopts = cmdutil.debugrevlogopts
 
 # Commands start here, listed alphabetically
@@ -161,12 +160,7 @@ except NameError:
     xrange = range
 
 
-@command(
-    "^add",
-    walkopts + subrepoopts + dryrunopts,
-    _("[OPTION]... [FILE]..."),
-    inferrepo=True,
-)
+@command("^add", walkopts + dryrunopts, _("[OPTION]... [FILE]..."), inferrepo=True)
 def add(ui, repo, *pats, **opts):
     """start tracking the specified files
 
@@ -217,7 +211,7 @@ def add(ui, repo, *pats, **opts):
 
 @command(
     "addremove",
-    similarityopts + subrepoopts + walkopts + dryrunopts,
+    similarityopts + walkopts + dryrunopts,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
 )
@@ -514,7 +508,6 @@ def annotate(ui, repo, *pats, **opts):
         ("r", "rev", "", _("revision to distribute"), _("REV")),
         ("t", "type", "", _("type of distribution to create"), _("TYPE")),
     ]
-    + subrepoopts
     + walkopts,
     _("[OPTION]... DEST"),
 )
@@ -580,16 +573,7 @@ def archive(ui, repo, dest, **opts):
 
     prefix = cmdutil.makefilename(repo, prefix, node)
     match = scmutil.match(ctx, [], opts)
-    archival.archive(
-        repo,
-        dest,
-        node,
-        kind,
-        not opts.get("no_decode"),
-        match,
-        prefix,
-        subrepos=opts.get("subrepos"),
-    )
+    archival.archive(repo, dest, node, kind, not opts.get("no_decode"), match, prefix)
 
 
 @command(
@@ -1650,8 +1634,7 @@ def clone(ui, source, dest=None, **opts):
     ]
     + walkopts
     + commitopts
-    + commitopts2
-    + subrepoopts,
+    + commitopts2,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
 )
@@ -1727,11 +1710,6 @@ def _docommit(ui, repo, *pats, **opts):
         return 1 if ret == 0 else ret
 
     opts = pycompat.byteskwargs(opts)
-    if opts.get("subrepos"):
-        if opts.get("amend"):
-            raise error.Abort(_("cannot amend with --subrepos"))
-        # Let --subrepos on the command line override config setting.
-        ui.setconfig("ui", "commitsubrepos", True, "commit")
 
     # Allow the commit message from another commit to be reused.
     reuserev = opts.get("reuse_message")
@@ -1751,9 +1729,6 @@ def _docommit(ui, repo, *pats, **opts):
 
     extra = {}
     if opts.get("amend"):
-        if ui.configbool("ui", "commitsubrepos"):
-            raise error.Abort(_("cannot amend with ui.commitsubrepos enabled"))
-
         old = repo["."]
         rewriteutil.precheck(repo, [old.rev()], "amend")
 
@@ -1999,8 +1974,7 @@ def debugcomplete(ui, cmd="", **opts):
     ]
     + diffopts
     + diffopts2
-    + walkopts
-    + subrepoopts,
+    + walkopts,
     _("[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."),
     inferrepo=True,
     cmdtype=readonly,
@@ -2086,15 +2060,7 @@ def diff(ui, repo, *pats, **opts):
     m = scmutil.match(repo[node2], pats, opts)
     ui.pager("diff")
     cmdutil.diffordiffstat(
-        ui,
-        repo,
-        diffopts,
-        node1,
-        node2,
-        m,
-        stat=stat,
-        listsubrepos=opts.get("subrepos"),
-        root=opts.get("root"),
+        ui, repo, diffopts, node1, node2, m, stat=stat, root=opts.get("root")
     )
 
 
@@ -2197,8 +2163,7 @@ def export(ui, repo, *changesets, **opts):
         ("0", "print0", None, _("end filenames with NUL, for use with xargs")),
     ]
     + walkopts
-    + formatteropts
-    + subrepoopts,
+    + formatteropts,
     _("[OPTION]... [FILE]..."),
     cmdtype=readonly,
 )
@@ -2258,7 +2223,7 @@ def files(ui, repo, *pats, **opts):
     m = scmutil.match(ctx, pats, opts)
     ui.pager("files")
     with ui.formatter("files", opts) as fm:
-        return cmdutil.files(ui, ctx, m, fm, fmt, opts.get("subrepos"))
+        return cmdutil.files(ui, ctx, m, fm, fmt)
 
 
 @command("^forget", walkopts, _("[OPTION]... FILE..."), inferrepo=True)
@@ -2913,7 +2878,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     ds = repo.dirstate
     getkind = stat.S_IFMT
     lnkkind = stat.S_IFLNK
-    results = ds.walk(m, subrepos=[], unknown=False, ignored=False)
+    results = ds.walk(m, unknown=False, ignored=False)
 
     files = []
     for f in sorted(results.keys()):
@@ -3795,8 +3760,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         ("B", "bookmarks", False, _("compare bookmarks")),
     ]
     + logopts
-    + remoteopts
-    + subrepoopts,
+    + remoteopts,
     _("[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"),
 )
 def incoming(ui, repo, source="default", **opts):
@@ -3866,11 +3830,8 @@ def incoming(ui, repo, source="default", **opts):
             revdag = cmdutil.graphrevs(other, chlist, opts)
             cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
 
-        hg._incoming(display, lambda: 1, ui, repo, source, opts, buffered=True)
+        hg._incoming(display, ui, repo, source, opts, buffered=True)
         return 0
-
-    if opts.get("bundle") and opts.get("subrepos"):
-        raise error.Abort(_("cannot combine --bundle and --subrepos"))
 
     if opts.get("bookmarks"):
         source, branches = hg.parseurl(ui.expandpath(source))
@@ -4390,8 +4351,7 @@ def merge(ui, repo, node=None, **opts):
         ("B", "bookmarks", False, _("compare bookmarks")),
     ]
     + logopts
-    + remoteopts
-    + subrepoopts,
+    + remoteopts,
     _("[-M] [-p] [-n] [-f] [-r REV]... [DEST]"),
 )
 def outgoing(ui, repo, dest=None, **opts):
@@ -4960,18 +4920,6 @@ def push(ui, repo, dest=None, **opts):
                 _("default push revset for path evaluates to an " "empty set")
             )
 
-    repo._subtoppath = dest
-    try:
-        # push subrepos depth-first for coherent ordering
-        c = repo[""]
-        subs = c.substate  # only repos that are committed
-        for s in sorted(subs):
-            result = c.sub(s).push(opts)
-            if result == 0:
-                return not result
-    finally:
-        del repo._subtoppath
-
     opargs = dict(opts.get("opargs", {}))  # copy opargs since we may mutate it
     opargs.setdefault("pushvars", []).extend(opts.get("pushvars", []))
 
@@ -5011,7 +4959,6 @@ def push(ui, repo, dest=None, **opts):
     + commitopts
     + commitopts2
     + diffwsopts
-    + subrepoopts
     + walkopts,
     _("hg record [OPTION]... [FILE]..."),
 )
@@ -5076,7 +5023,6 @@ def recover(ui, repo):
         ("A", "after", None, _("record delete for missing files")),
         ("f", "force", None, _("forget added files, delete modified files")),
     ]
-    + subrepoopts
     + walkopts,
     _("[OPTION]... FILE..."),
     inferrepo=True,
@@ -5126,8 +5072,7 @@ def remove(ui, repo, *pats, **opts):
         raise error.Abort(_("no files specified"))
 
     m = scmutil.match(repo[None], pats, opts)
-    subrepos = opts.get("subrepos")
-    return cmdutil.remove(ui, repo, m, "", after, force, subrepos)
+    return cmdutil.remove(ui, repo, m, "", after, force)
 
 
 @command(
@@ -5648,8 +5593,7 @@ def root(ui, repo):
         ("6", "ipv6", None, _("use IPv6 in addition to IPv4")),
         ("", "certificate", "", _("SSL certificate file"), _("FILE")),
         ("", "read-only", None, _("only allow read operations")),
-    ]
-    + subrepoopts,
+    ],
     _("[OPTION]..."),
     optionalrepo=True,
 )
@@ -5782,7 +5726,6 @@ def show(ui, repo, *args, **opts):
         ("", "change", "", _("list the changed files of a revision"), _("REV")),
     ]
     + walkopts
-    + subrepoopts
     + formatteropts,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
@@ -5915,25 +5858,13 @@ def status(ui, repo, *pats, **opts):
     if terse:
         # we need to compute clean and unknown to terse
         stat = repo.status(
-            node1,
-            node2,
-            m,
-            "ignored" in show or "i" in terse,
-            True,
-            True,
-            opts.get("subrepos"),
+            node1, node2, m, "ignored" in show or "i" in terse, True, True
         )
 
         stat = cmdutil.tersedir(stat, terse)
     else:
         stat = repo.status(
-            node1,
-            node2,
-            m,
-            "ignored" in show,
-            "clean" in show,
-            "unknown" in show,
-            opts.get("subrepos"),
+            node1, node2, m, "ignored" in show, "clean" in show, "unknown" in show
         )
 
     changestates = zip(states, pycompat.iterbytestr("MAR!?IC"), stat)
@@ -6057,8 +5988,6 @@ def summary(ui, repo, **opts):
         if d in status.added:
             status.added.remove(d)
 
-    subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
-
     labels = [
         (ui.label(_("%d modified"), "status.modified"), status.modified),
         (ui.label(_("%d added"), "status.added"), status.added),
@@ -6068,7 +5997,6 @@ def summary(ui, repo, **opts):
         (ui.label(_("%d deleted"), "status.deleted"), status.deleted),
         (ui.label(_("%d unknown"), "status.unknown"), status.unknown),
         (ui.label(_("%d unresolved"), "resolve.unresolved"), unresolved),
-        (ui.label(_("%d subrepos"), "status.modified"), subs),
     ]
     t = []
     for l, s in labels:
@@ -6084,9 +6012,7 @@ def summary(ui, repo, **opts):
         t += _(" (interrupted update)")
     elif len(parents) > 1:
         t += _(" (merge)")
-    elif not (
-        status.modified or status.added or status.removed or renamed or copied or subs
-    ):
+    elif not (status.modified or status.added or status.removed or renamed or copied):
         t += _(" (clean)")
         cleanworkdir = True
 

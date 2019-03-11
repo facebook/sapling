@@ -190,7 +190,6 @@ def _preimportmodules():
         "sslutil",
         "store",
         "streamclone",
-        "subrepo",
         "tags",
         "templatefilters",
         "templatekw",

@@ -138,61 +138,6 @@ Test pushrev configuration option
   (use --allow-anon to override this warning)
   [255]
 
-Test traditional push with subrepo
-
-  $ cd ../repo1
-  $ hg init nested
-  $ cd nested
-  $ hg bookmark @
-  $ cd ..
-  $ cd ../repo2
-  $ hg init nested
-  $ cd nested
-  $ echo a > a
-  $ hg commit -qAm 'aa'
-  $ hg bookmark @
-  $ cd ..
-  $ echo nested=nested > .hgsub
-  $ hg add .hgsub
-  $ hg commit -m sub
-  $ hg push
-  pushing to ssh://user@dummy/repo1
-  pushing subrepo nested to ssh://user@dummy/repo1/nested
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  updating bookmark @
-  searching for changes
-  abort: push would create new anonymous heads (296c645d2a63)
-  (use --allow-anon to override this warning)
-  [255]
-  $ hg bookmark @
-  $ hg push
-  pushing to ssh://user@dummy/repo1
-  no changes made to subrepo nested since last push to ssh://user@dummy/repo1/nested
-  searching for changes
-  abort: push would create new anonymous heads (296c645d2a63)
-  (use --allow-anon to override this warning)
-  [255]
-  $ hg push --to @
-  pushing rev 296c645d2a63 to destination ssh://user@dummy/repo1 bookmark @
-  searching for changes
-  abort: not creating new remote bookmark
-  (use --create to create a new bookmark)
-  [255]
-  $ hg push -B @
-  pushing to ssh://user@dummy/repo1
-  no changes made to subrepo nested since last push to ssh://user@dummy/repo1/nested
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 2 changesets with 3 changes to 3 files (+1 heads)
-  exporting bookmark @
-  $ cd ..
-
 Set up server repo
   $ hg init rnserver
   $ cd rnserver
@@ -226,7 +171,7 @@ creation of a new one (locally unknonw).
 Force client to get data about new bookmarks without getting commits
   $ cd rnclient
   $ hg push
-  pushing to $TESTTMP/rnserver (glob)
+  pushing to $TESTTMP/repo2/rnserver
   searching for changes
   no changes found
   [1]

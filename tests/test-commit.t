@@ -376,7 +376,7 @@ test saving last-message.txt
   $ hg init sub
   $ echo a > sub/a
   $ hg -R sub add sub/a
-  $ cat > sub/.hg/hgrc <<EOF
+  $ cat > .hg/hgrc <<EOF
   > [hooks]
   > precommit.test-saving-last-message = false
   > EOF
@@ -392,7 +392,7 @@ test saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg commit -S -q
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg commit -q
   ==== before editing:
   
   
@@ -402,14 +402,13 @@ test saving last-message.txt
   HG: user: test
   HG: branch 'default'
   HG: bookmark 'activebookmark'
-  HG: subrepo sub
   HG: added .hgsub
   HG: added added
-  HG: changed .hgsubstate
   HG: changed changed
   HG: removed removed
   ====
-  abort: precommit.test-saving-last-message hook exited with status 1 (in subrepository "sub")
+  note: commit message saved in .hg/last-message.txt
+  abort: precommit.test-saving-last-message hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
   
@@ -448,12 +447,10 @@ specific template keywords work well
   $ hg -R sub2 add sub2/a
   $ echo 'sub2 = sub2' >> .hgsub
 
-  $ HGEDITOR=cat hg commit -S -q
+  $ HGEDITOR=cat hg commit -q
   HG: this is "commit.normal" template
   HG: Leave message empty to abort commit.
   HG: bookmark 'activebookmark' is activated
-  HG: subrepo 'sub' is changed
-  HG: subrepo 'sub2' is changed
   abort: empty commit message
   [255]
 
@@ -521,14 +518,17 @@ specific template keywords work well
   HG: adds=
   HG: dels=
   HG: files=changed
+  note: commit message saved in .hg/last-message.txt
+  abort: precommit.test-saving-last-message hook exited with status 1
+  [255]
   $ hg status -amr
+  M changed
   A added
   R removed
   $ hg parents --template "M {file_mods}\nA {file_adds}\nR {file_dels}\n"
-  M changed
-  A 
+  M 
+  A changed removed
   R 
-  $ hg rollback -q
 
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
@@ -591,12 +591,17 @@ specific template keywords work well
   HG: adds=added
   HG: dels=removed
   HG: files=added removed
+  note: commit message saved in .hg/last-message.txt
+  abort: precommit.test-saving-last-message hook exited with status 1
+  [255]
   $ hg status -amr
   M changed
-  $ hg parents --template "M {file_mods}\nA {file_adds}\nR {file_dels}\n"
-  M 
   A added
   R removed
+  $ hg parents --template "M {file_mods}\nA {file_adds}\nR {file_dels}\n"
+  M 
+  A changed removed
+  R 
   $ hg rollback -q
 
   $ cat >> .hg/hgrc <<EOF
@@ -718,8 +723,7 @@ verify pathauditor blocks evil filepaths
   >     HG: {extramsg}
   >     {if(activebookmark,
   >    "HG: bookmark '{activebookmark}' is activated\n",
-  >    "HG: no bookmark is activated\n")}{subrepos %
-  >    "HG: subrepo '{subrepo}' is changed\n"}
+  >    "HG: no bookmark is activated\n")}
   > EOF
   $ cat > $TESTTMP/notouching.sh <<EOF
   > true

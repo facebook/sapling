@@ -503,7 +503,6 @@ incoming from empty remote repository
   comparing with r2
   searching for changes
   no changes found
-  [1]
 
 Create a "split" repo that pulls from r1 and pushes to r2, using default-push
 

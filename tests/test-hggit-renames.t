@@ -93,7 +93,7 @@ Remove the submodule and rename the file back:
   $ cd hgrepo
   $ hg book master -q
   $ hg log -p --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  8 2e3567dd7aeb6c566bfe675119b2cc008d042c26 remove submodule and rename back
+  @  8 144790f182a8d92e4134a20b0f8698854a9638b1 remove submodule and rename back
   |  branch=default convert_revision=50d116676a308b7c22935137d944e725d2296f2a hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -106,23 +106,11 @@ Remove the submodule and rename the file back:
   |  -[submodule "gamma"]
   |  -	path = gamma
   |  -	url = ../gitsubmodule
-  |  diff --git a/.hgsub b/.hgsub
-  |  --- a/.hgsub
-  |  +++ b/.hgsub
-  |  @@ -1,2 +1,1 @@
-  |   gitsubmodule2 = [git]../gitsubmodule
-  |  -gamma = [git]../gitsubmodule
-  |  diff --git a/.hgsubstate b/.hgsubstate
-  |  --- a/.hgsubstate
-  |  +++ b/.hgsubstate
-  |  @@ -1,2 +1,1 @@
-  |  -5944b31ff85b415573d1a43eb942e2dea30ab8be gamma
-  |   5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule2
   |  diff --git a/gamma-new b/gamma
   |  rename from gamma-new
   |  rename to gamma
   |
-  o  7 24a0764120d700b1701941eb3f67454157136836 rename and add submodule
+  o  7 f49a0c6fd69faeac5e247b5b37b8e7ce1b443e04 rename and add submodule
   |  branch=default convert_revision=59fb8e82ea18f79eab99196f588e8948089c134f hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -135,23 +123,11 @@ Remove the submodule and rename the file back:
   |  +[submodule "gamma"]
   |  +	path = gamma
   |  +	url = ../gitsubmodule
-  |  diff --git a/.hgsub b/.hgsub
-  |  --- a/.hgsub
-  |  +++ b/.hgsub
-  |  @@ -1,1 +1,2 @@
-  |   gitsubmodule2 = [git]../gitsubmodule
-  |  +gamma = [git]../gitsubmodule
-  |  diff --git a/.hgsubstate b/.hgsubstate
-  |  --- a/.hgsubstate
-  |  +++ b/.hgsubstate
-  |  @@ -1,1 +1,2 @@
-  |  +5944b31ff85b415573d1a43eb942e2dea30ab8be gamma
-  |   5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule2
   |  diff --git a/gamma b/gamma-new
   |  rename from gamma
   |  rename to gamma-new
   |
-  o  6 4dfc1ab4a0ecd9066e613d8728fc6347f910801d beta renamed back
+  o  6 2d38f1131e0beb3b73451640bb27e0df3cf3684e beta renamed back
   |  branch=default convert_revision=f95497455dfa891b4cd9b524007eb9514c3ab654 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
@@ -192,7 +168,7 @@ Remove the submodule and rename the file back:
   |  -11
   |  -12
   |
-  o  5 4bc4be232b3d6e53ddef658ef3d9ab142b3d0a0f beta renamed
+  o  5 024a72621ccff3ace020e03019c323d49c718be8 beta renamed
   |  branch=default convert_revision=055f482277da6cd3dd37c7093d06983bad68f782 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
@@ -219,7 +195,7 @@ Remove the submodule and rename the file back:
   |  copy from beta
   |  copy to beta-new
   |
-  o  4 ffad978ae6259b23aae39d566ec89d3af85a6c7a move submodule
+  o  4 b48620502e8b403e9d92f8ff353ee139e4e22bf8 move submodule
   |  branch=default convert_revision=d7f31298f27df8a9226eddb1e4feb96922c46fa5 hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -230,20 +206,8 @@ Remove the submodule and rename the file back:
   |  -	path = gitsubmodule
   |  +	path = gitsubmodule2
   |   	url = ../gitsubmodule
-  |  diff --git a/.hgsub b/.hgsub
-  |  --- a/.hgsub
-  |  +++ b/.hgsub
-  |  @@ -1,1 +1,1 @@
-  |  -gitsubmodule = [git]../gitsubmodule
-  |  +gitsubmodule2 = [git]../gitsubmodule
-  |  diff --git a/.hgsubstate b/.hgsubstate
-  |  --- a/.hgsubstate
-  |  +++ b/.hgsubstate
-  |  @@ -1,1 +1,1 @@
-  |  -5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule
-  |  +5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule2
   |
-  o  3 c8c8ef153360b7368535b6ca01b7e02a7998b67e add submodule
+  o  3 ea94d2142cbfdaceacb94bedfe29add896c49e47 add submodule
   |  branch=default convert_revision=c610256cb6959852d9e70d01902a06726317affc hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -254,18 +218,6 @@ Remove the submodule and rename the file back:
   |  +[submodule "gitsubmodule"]
   |  +	path = gitsubmodule
   |  +	url = ../gitsubmodule
-  |  diff --git a/.hgsub b/.hgsub
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/.hgsub
-  |  @@ -0,0 +1,1 @@
-  |  +gitsubmodule = [git]../gitsubmodule
-  |  diff --git a/.hgsubstate b/.hgsubstate
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/.hgsubstate
-  |  @@ -0,0 +1,1 @@
-  |  +5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule
   |
   o  2 e3e6b2083b5cc4382f611b16d23df93a40a19a00 gamma
   |  branch=default convert_revision=e1348449e0c3a417b086ed60fc13f068d4aa8b26 hg-git-rename-source=git
@@ -338,8 +290,8 @@ Make a new commit with a copy and a rename in Mercurial
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID e01c1320d15c0a7abe4d30f3f71e03b2058a002f
-  # Parent  3c7e506adb7b7a2b82f887d2923ee4d955695ca2
+  # Node ID c84c4d95bbe6f146c5193dcf348fee3bb2bfb186
+  # Parent  edad41eac39c7332b5981d564157cc59a46759a9
   delta/epsilon
   
   diff --git a/gamma b/delta
@@ -413,8 +365,8 @@ Now make another clone and compare the hashes
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 5ba38aef569229c46e403f4ab17c16520e40108e
-  # Parent  2423517f443d79f55da435dfc95b828bf7b56d94
+  # Node ID 8623d5155b015112f9ea55e0520fef982e4b488a
+  # Parent  ae4f6d98d5bce684ec6ac796b8fd3319293b4264
   delta/epsilon
   
   diff --git a/gamma b/delta
@@ -444,14 +396,14 @@ Regenerate the Git metadata and compare the hashes
   $ hg gexport
   $ cd .hg/git
   $ git log master --pretty=oneline
-  9a60acf6a3a7cfaa723628d9f611f984ffdbe223 delta/epsilon
-  48cc0b1b9c2aa12caa72a86fd5d9a6dbbf392352 gamma2
-  44dbe9ba6dab7d29c312cd7001e9f1b5c52c612d remove submodule and rename back
-  fb9c13c5ac5994b47906f59376e999cbb7017327 rename and add submodule
-  dcdc3b83eec5f3b214e1cb5199edecf72d60de58 beta renamed back
-  e805d81c8372a4d0d6a22ec5abb35e3467043588 beta renamed
-  4899220730aca75da3f8f311f40bba30a7bd42ca move submodule
-  843e2dc46308ace4649dbc9c82ff87f2cf420e09 add submodule
+  a8febfd5b0396340f953924ea982b4a86a26bed3 delta/epsilon
+  dbda9582869f680cccbaebc680edd627a8fbc000 gamma2
+  15a10a2040f8f50b2d0f4f97bbffd6f05da07675 remove submodule and rename back
+  6dbd4a46e0da12500768f6963313d35fd19b8191 rename and add submodule
+  c2d6447a571e55aba88ed437051c81724500434d beta renamed back
+  0ea26deff913d7e9701bed3726ebf4686d9cf0cc beta renamed
+  8327069bf38e4ce8e8cf776a6d68fa151441916b move submodule
+  a49063ec760fa65a5aaf47f298a13222a0e3874d add submodule
   00d2f34d2f9e2230ed49343b2b3eb14637b16c2e gamma
   e3ddc25bf9b3a6a00e4379673ee2d9d6bbef720e beta
   8557a753ca442f07736d74570a9cfebde4bf02e9 alpha

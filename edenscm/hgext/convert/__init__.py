@@ -244,8 +244,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     The Git importer converts commits from all reachable branches (refs
     in refs/heads) and remotes (refs in refs/remotes) to Mercurial.
     Branches are converted to bookmarks with the same name, with the
-    leading 'refs/heads' stripped. Git submodules are converted to Git
-    subrepos in Mercurial.
+    leading 'refs/heads' stripped. Git submodules are not supported.
 
     The following options can be set with ``--config``:
 
@@ -335,23 +334,6 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     Mercurial Destination
     #####################
-
-    The Mercurial destination will recognize Mercurial subrepositories in the
-    destination directory, and update the .hgsubstate file automatically if the
-    destination subrepositories contain the <dest>/<sub>/.hg/shamap file.
-    Converting a repository with subrepositories requires converting a single
-    repository at a time, from the bottom up.
-
-    .. container:: verbose
-
-       An example showing how to convert a repository with subrepositories::
-
-         # so convert knows the type when it sees a non empty destination
-         $ hg init converted
-
-         $ hg convert orig/sub1 converted/sub1
-         $ hg convert orig/sub2 converted/sub2
-         $ hg convert orig converted
 
     The following options are supported:
 

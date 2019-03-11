@@ -39,7 +39,6 @@ from edenscm.mercurial import (
     policy,
     registrar,
     revset,
-    subrepo,
     util as hgutil,
 )
 
@@ -230,8 +229,6 @@ def extsetup(ui):
     help.helptable.extend(entries)
 
     revset.symbols.update(util.revsets)
-
-    subrepo.types["hgsubversion"] = svnexternals.svnsubrepo
 
 
 def reposetup(ui, repo):

@@ -98,7 +98,7 @@ configitem("diff-tools", r".*\.diffargs$", default=None, generic=True)
 testedwith = "ships-with-hg-core"
 
 
-def snapshot(ui, repo, files, node, tmproot, listsubrepos):
+def snapshot(ui, repo, files, node, tmproot):
     """snapshot files as of some revision
     if not using snapshot, -I/-X does not work and recursive diff
     in tools like kdiff3 and meld displays too many files."""
@@ -124,12 +124,7 @@ def snapshot(ui, repo, files, node, tmproot, listsubrepos):
         repo.ui.setconfig("ui", "archivemeta", False)
 
         archival.archive(
-            repo,
-            base,
-            node,
-            "files",
-            matchfn=scmutil.matchfiles(repo, files),
-            subrepos=listsubrepos,
+            repo, base, node, "files", matchfn=scmutil.matchfiles(repo, files)
         )
 
         for fn in sorted(files):
@@ -174,23 +169,15 @@ def dodiff(ui, repo, cmdline, pats, opts):
         if node1b == nullid:
             do3way = False
 
-    subrepos = opts.get("subrepos")
-
     matcher = scmutil.match(repo[node2], pats, opts)
 
     if opts.get("patch"):
-        if subrepos:
-            raise error.Abort(_("--patch cannot be used with --subrepos"))
         if node2 is None:
             raise error.Abort(_("--patch requires two revisions"))
     else:
-        mod_a, add_a, rem_a = map(
-            set, repo.status(node1a, node2, matcher, listsubrepos=subrepos)[:3]
-        )
+        mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher)[:3])
         if do3way:
-            mod_b, add_b, rem_b = map(
-                set, repo.status(node1b, node2, matcher, listsubrepos=subrepos)[:3]
-            )
+            mod_b, add_b, rem_b = map(set, repo.status(node1b, node2, matcher)[:3])
         else:
             mod_b, add_b, rem_b = set(), set(), set()
         modadd = mod_a | add_a | mod_b | add_b
@@ -203,11 +190,11 @@ def dodiff(ui, repo, cmdline, pats, opts):
         if not opts.get("patch"):
             # Always make a copy of node1a (and node1b, if applicable)
             dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
-            dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot, subrepos)[0]
+            dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot)[0]
             rev1a = "@%d" % repo[node1a].rev()
             if do3way:
                 dir1b_files = mod_b | rem_b | ((mod_a | add_a) - add_b)
-                dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot, subrepos)[0]
+                dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot)[0]
                 rev1b = "@%d" % repo[node1b].rev()
             else:
                 dir1b = None
@@ -219,14 +206,14 @@ def dodiff(ui, repo, cmdline, pats, opts):
             dir2root = ""
             rev2 = ""
             if node2:
-                dir2 = snapshot(ui, repo, modadd, node2, tmproot, subrepos)[0]
+                dir2 = snapshot(ui, repo, modadd, node2, tmproot)[0]
                 rev2 = "@%d" % repo[node2].rev()
             elif len(common) > 1:
                 # we only actually need to get the files to copy back to
                 # the working dir in this case (because the other cases
                 # are: diffing 2 revisions or single file -- in which case
                 # the file is already directly passed to the diff tool).
-                dir2, fnsandstat = snapshot(ui, repo, modadd, None, tmproot, subrepos)
+                dir2, fnsandstat = snapshot(ui, repo, modadd, None, tmproot)
             else:
                 # This lets the diff tool open the changed file directly
                 dir2 = ""
@@ -326,16 +313,12 @@ def dodiff(ui, repo, cmdline, pats, opts):
         shutil.rmtree(tmproot)
 
 
-extdiffopts = (
-    [
-        ("o", "option", [], _("pass option to comparison program"), _("OPT")),
-        ("r", "rev", [], _("revision"), _("REV")),
-        ("c", "change", "", _("change made by revision"), _("REV")),
-        ("", "patch", None, _("compare patches for two revisions")),
-    ]
-    + cmdutil.walkopts
-    + cmdutil.subrepoopts
-)
+extdiffopts = [
+    ("o", "option", [], _("pass option to comparison program"), _("OPT")),
+    ("r", "rev", [], _("revision"), _("REV")),
+    ("c", "change", "", _("change made by revision"), _("REV")),
+    ("", "patch", None, _("compare patches for two revisions")),
+] + cmdutil.walkopts
 
 
 @command(

@@ -12,16 +12,6 @@ from edenscm.mercurial import util as hgutil
 from edenscm.mercurial.i18n import _
 
 
-def parse_subrepos(ctx):
-    sub = util.OrderedDict()
-    if ".hgsub" in ctx:
-        sub = util.parse_hgsub(ctx[".hgsub"].data().splitlines())
-    substate = util.OrderedDict()
-    if ".hgsubstate" in ctx:
-        substate = util.parse_hgsubstate(ctx[".hgsubstate"].data().splitlines())
-    return sub, substate
-
-
 def audit_git_path(ui, path):
     r"""Check for path components that case-fold to .git.
 
@@ -247,38 +237,14 @@ class IncrementalChangesetExporter(object):
         # only export those.
         dirty_trees = set()
 
-        subadded, subremoved = [], []
-
-        for s in modified, added, removed:
-            if ".hgsub" in s or ".hgsubstate" in s:
-                subadded, subremoved = self._handle_subrepos(newctx)
-                break
-
-        # We first process subrepo and file removals so we can prune dead
-        # trees.
-        for path in subremoved:
-            self._remove_path(path, dirty_trees)
-
         for path in removed:
-            if path == ".hgsubstate" or path == ".hgsub":
-                continue
-
             self._remove_path(path, dirty_trees)
-
-        for path, sha in subadded:
-            d = os.path.dirname(path)
-            tree = self._dirs.setdefault(d, dulobjs.Tree())
-            dirty_trees.add(d)
-            tree.add(os.path.basename(path), dulobjs.S_IFGITLINK, sha)
 
         # For every file that changed or was added, we need to calculate the
         # corresponding Git blob and its tree entry. We emit the blob
         # immediately and update trees to be aware of its presence.
         for path in set(modified) | set(added):
             audit_git_path(self._hg.ui, path)
-            if path == ".hgsubstate" or path == ".hgsub":
-                continue
-
             d = os.path.dirname(path)
             tree = self._dirs.setdefault(d, dulobjs.Tree())
             dirty_trees.add(d)
@@ -400,50 +366,6 @@ class IncrementalChangesetExporter(object):
             # invalidating trees. Since we only update the entries of dirty
             # trees, this should hold true.
             parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
-
-    def _handle_subrepos(self, newctx):
-        sub, substate = parse_subrepos(self._ctx)
-        newsub, newsubstate = parse_subrepos(newctx)
-
-        # For each path, the logic is described by the following table. 'no'
-        # stands for 'the subrepo doesn't exist', 'git' stands for 'git
-        # subrepo', and 'hg' stands for 'hg or other subrepo'.
-        #
-        #  old  new  |  action
-        #   *   git  |   link    (1)
-        #  git   hg  |  delete   (2)
-        #  git   no  |  delete   (3)
-        #
-        # All other combinations are 'do nothing'.
-        #
-        # git links without corresponding submodule paths are stored as
-        # subrepos with a substate but without an entry in .hgsub.
-
-        # 'added' is both modified and added
-        added, removed = [], []
-
-        def isgit(sub, path):
-            return path not in sub or sub[path].startswith("[git]")
-
-        for path, sha in substate.iteritems():
-            if not isgit(sub, path):
-                # old = hg -- will be handled in next loop
-                continue
-            # old = git
-            if path not in newsubstate or not isgit(newsub, path):
-                # new = hg or no, case (2) or (3)
-                removed.append(path)
-
-        for path, sha in newsubstate.iteritems():
-            if not isgit(newsub, path):
-                # new = hg or no; the only cases we care about are handled
-                # above
-                continue
-
-            # case (1)
-            added.append((path, sha))
-
-        return added, removed
 
     @staticmethod
     def tree_entry(fctx, blob_cache):

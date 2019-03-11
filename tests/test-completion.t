@@ -129,7 +129,6 @@ Show debug commands if there are no other candidates
   debugssl
   debugstatus
   debugstrip
-  debugsub
   debugsuccessorssets
   debugtemplate
   debugtreestate
@@ -213,7 +212,6 @@ Show the options for the "serve" command
   --repository
   --stdio
   --style
-  --subrepos
   --templates
   --time
   --traceback
@@ -224,7 +222,6 @@ Show the options for the "serve" command
   -A
   -E
   -R
-  -S
   -a
   -d
   -h
@@ -243,11 +240,11 @@ Show an error if we use --options with an ambiguous abbreviation
 
 Show all commands + options
   $ hg debugcommands
-  add: include, exclude, subrepos, dry-run
+  add: include, exclude, dry-run
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
   clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
-  commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user, subrepos
-  diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude, subrepos
+  commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
+  diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   export: output, switch-parent, rev, text, git, binary, nodates
   forget: include, exclude
   githelp: 
@@ -256,15 +253,15 @@ Show all commands + options
   merge: force, rev, preview, tool
   pull: update, force, rev, bookmark, ssh, remotecmd, insecure
   push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd, insecure
-  record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, subrepos, include, exclude
-  remove: after, force, subrepos, include, exclude
-  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only, subrepos
+  record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude
+  remove: after, force, include, exclude
+  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only
   show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
-  status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, subrepos, template
+  status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, template
   summary: remote
   update: clean, check, merge, date, rev, inactive, tool
-  addremove: similarity, subrepos, include, exclude, dry-run
-  archive: no-decode, prefix, rev, type, subrepos, include, exclude
+  addremove: similarity, include, exclude, dry-run
+  archive: no-decode, prefix, rev, type, include, exclude
   backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
   bookmarks: force, rev, delete, strip, rename, inactive, template
@@ -325,7 +322,6 @@ Show all commands + options
   debugssl: 
   debugstatus: nonnormal
   debugstrip: rev, force, no-backup, keep, bookmark
-  debugsub: rev
   debugsuccessorssets: closest
   debugtemplate: rev, define
   debugtreestate: 
@@ -333,7 +329,7 @@ Show all commands + options
   debugupgraderepo: optimize, run
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
-  files: rev, print0, include, exclude, template, subrepos
+  files: rev, print0, include, exclude, template
   fs: 
   graft: rev, continue, abort, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
   grep: after-context, before-context, context, ignore-case, files-with-matches, line-number, invert-match, word-regexp, extended-regexp, fixed-strings, perl-regexp, include, exclude
@@ -343,10 +339,10 @@ Show all commands + options
   histgrep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
-  incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
+  incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure
   locate: rev, print0, fullpath, include, exclude
   manifest: rev, all, template
-  outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
+  outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure
   parents: rev, style, template
   paths: template
   phase: public, draft, secret, force, rev

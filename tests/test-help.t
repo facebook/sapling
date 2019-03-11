@@ -409,7 +409,6 @@ Normal help for add
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
   
   (some details hidden, use --verbose to show complete help)
@@ -460,7 +459,6 @@ Verbose help for add
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
   
   Global options ([+] can be repeated):
@@ -609,7 +607,6 @@ Test command without options
                             requested revisions
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
   
   (some details hidden, use --verbose to show complete help)
 
@@ -670,7 +667,6 @@ Test command without options
       --change REV          list the changed files of a revision
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
   
   (some details hidden, use --verbose to show complete help)
 
@@ -1030,7 +1026,6 @@ Test list of internal help commands
    debugssl      test a secure connection to a server
    debugstatus   common performance issues for status
    debugstrip    strip commits and all their descendants from the repository
-   debugsub      (no help text available)
    debugsuccessorssets
                  show set of successors for revision
    debugtemplate
@@ -1545,7 +1540,6 @@ Test keyword search help
    extensions Using Additional Features
    glossary   Common Terms
    phases     Working with Phases
-   subrepos   Subrepositories
    urls       URL Paths
   
   Commands:
@@ -2161,13 +2155,6 @@ Dish up an empty repo; serve it cold.
   Using Mercurial from scripts and automation
   </td></tr>
   <tr><td>
-  <a href="/help/subrepos">
-  subrepos
-  </a>
-  </td><td>
-  Subrepositories
-  </td></tr>
-  <tr><td>
   <a href="/help/templating">
   templating
   </a>
@@ -2725,9 +2712,6 @@ Dish up an empty repo; serve it cold.
   <tr><td>-X</td>
   <td>--exclude PATTERN [+]</td>
   <td>exclude names matching the given patterns</td></tr>
-  <tr><td>-S</td>
-  <td>--subrepos</td>
-  <td>recurse into subrepositories</td></tr>
   <tr><td>-n</td>
   <td>--dry-run</td>
   <td>do not perform actions, just print output</td></tr>
@@ -2926,9 +2910,6 @@ Dish up an empty repo; serve it cold.
   <tr><td>-f</td>
   <td>--force</td>
   <td>forget added files, delete modified files</td></tr>
-  <tr><td>-S</td>
-  <td>--subrepos</td>
-  <td>recurse into subrepositories</td></tr>
   <tr><td>-I</td>
   <td>--include PATTERN [+]</td>
   <td>include names matching the given patterns</td></tr>

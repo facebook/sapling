@@ -710,7 +710,6 @@ Extension module help vs command help:
       --patch               compare patches for two revisions
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
   
   (some details hidden, use --verbose to show complete help)
 
@@ -1380,16 +1379,9 @@ disabling in command line overlays with all configuration
   $ echo '# enable extension locally' >> parent/.hg/hgrc
   $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> parent/.hg/hgrc
   $ cp parent/.hg/hgrc parent/sub2/.hg/hgrc
-  $ hg -R parent status -S -A
+  $ hg -R parent status -A
   reposetup() for $TESTTMP/reposetup-test/parent
-  reposetup() for $TESTTMP/reposetup-test/parent/sub2
   C .hgsub
-  C .hgsubstate
-  C sub1/1
-  C sub2/.hgsub
-  C sub2/.hgsubstate
-  C sub2/sub21/21
-  C sub3/3
 
   $ cd ..
 

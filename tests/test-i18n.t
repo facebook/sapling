@@ -32,9 +32,9 @@ Different encoding:
 Test keyword search in translated help text:
 
   $ HGENCODING=UTF-8 LANGUAGE=de hg help -k Aktualisiert
-  Themen:
-  
-   subrepos Unterarchive
+  Abbruch: no matches
+  (try 'hg help' for a list of topics)
+  [255]
 
 #endif
 

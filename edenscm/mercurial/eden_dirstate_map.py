@@ -104,18 +104,6 @@ class eden_dirstate_map(dirstate.dirstatemap):
         if entry is not None:
             status, mode, merge_state = entry
             return (status, mode, merge_state, DUMMY_MTIME)
-        # TODO: Support Hg submodules.
-        # Mercurial has a bit of logic that depends on whether .hgsub or
-        # .hgsubstate is in the dirstate. Currently, Eden does not attempt to
-        # support submodules (and none of Hg's codepaths that use submodules
-        # have been tested with Eden), so don't bother to go to the server when
-        # either .hgsub or .hgsubstate is passed in.
-        #
-        # Because we know the Thrift call will fail, we throw the corresponding
-        # KeyError in this case to avoid the overhead of the Thrift call as a
-        # performance optimization.
-        if filename == ".hgsub" or filename == ".hgsubstate":
-            raise KeyError(filename)
 
         try:
             # TODO: Consider fetching this from the commit context rather than

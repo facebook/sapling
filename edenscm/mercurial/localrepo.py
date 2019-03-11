@@ -53,7 +53,6 @@ from . import (
     revsetlang,
     scmutil,
     store,
-    subrepo,
     tags as tagsmod,
     transaction,
     treestate,
@@ -417,13 +416,11 @@ class localrepository(object):
         self.path = self.wvfs.join(".hg")
         self.origroot = path
         # This is only used by context.workingctx.match in order to
-        # detect files in subrepos.
-        self.auditor = pathutil.pathauditor(self.root, callback=self._checknested)
+        # detect files in forbidden paths.
+        self.auditor = pathutil.pathauditor(self.root)
         # This is only used by context.basectx.match in order to detect
-        # files in subrepos.
-        self.nofsauditor = pathutil.pathauditor(
-            self.root, callback=self._checknested, realfs=False, cached=True
-        )
+        # files in forbidden paths..
+        self.nofsauditor = pathutil.pathauditor(self.root, realfs=False, cached=True)
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy  # prevent copying repo configuration
@@ -737,44 +734,6 @@ class localrepository(object):
     def _writestorerequirements(self):
         if "store" in self.requirements:
             scmutil.writerequires(self.svfs, self.storerequirements)
-
-    def _checknested(self, path):
-        """Determine if path is a legal nested repository."""
-        if not path.startswith(self.root):
-            return False
-        subpath = path[len(self.root) + 1 :]
-        normsubpath = util.pconvert(subpath)
-
-        # XXX: Checking against the current working copy is wrong in
-        # the sense that it can reject things like
-        #
-        #   $ hg cat -r 10 sub/x.txt
-        #
-        # if sub/ is no longer a subrepository in the working copy
-        # parent revision.
-        #
-        # However, it can of course also allow things that would have
-        # been rejected before, such as the above cat command if sub/
-        # is a subrepository now, but was a normal directory before.
-        # The old path auditor would have rejected by mistake since it
-        # panics when it sees sub/.hg/.
-        #
-        # All in all, checking against the working copy seems sensible
-        # since we want to prevent access to nested repositories on
-        # the filesystem *now*.
-        ctx = self[None]
-        parts = util.splitpath(subpath)
-        while parts:
-            prefix = "/".join(parts)
-            if prefix in ctx.substate:
-                if prefix == normsubpath:
-                    return True
-                else:
-                    sub = ctx.sub(prefix)
-                    return sub.checknested(subpath[len(prefix) + 1 :])
-            else:
-                parts.pop()
-        return False
 
     def peer(self):
         return localpeer(self)  # not cached to avoid reference cycle
@@ -2137,7 +2096,7 @@ class localrepository(object):
 
             for f in match.files():
                 f = self.dirstate.normalize(f)
-                if f == "." or f in matched or f in wctx.substate:
+                if f == "." or f in matched:
                     continue
                 if f in status.deleted:
                     fail(f, _("file not found!"))
@@ -2202,11 +2161,6 @@ class localrepository(object):
             if force:
                 status.modified.extend(status.clean)  # mq may commit clean files
 
-            # check subrepos
-            subs, commitsubs, newstate = subrepo.precommit(
-                self.ui, wctx, status, match, force=force
-            )
-
             # make sure all explicit patterns are matched
             if not force:
                 self.checkcommitpatterns(wctx, vdirs, match, status, fail)
@@ -2231,24 +2185,13 @@ class localrepository(object):
             mergeutil.checkunresolved(ms)
 
             if editor:
-                cctx._text = editor(self, cctx, subs)
+                cctx._text = editor(self, cctx)
             edited = text != cctx._text
 
             # Save commit message in case this transaction gets rolled back
             # (e.g. by a pretxncommit hook).  Leave the content alone on
             # the assumption that the user will use the same editor again.
             msgfn = self.savecommitmessage(cctx._text)
-
-            # commit subs and write new state
-            if subs:
-                for s in sorted(commitsubs):
-                    sub = wctx.sub(s)
-                    self.ui.status(
-                        _("committing subrepository %s\n") % subrepo.subrelpath(sub)
-                    )
-                    sr = sub.commit(cctx._text, user, date)
-                    newstate[s] = (newstate[s][0], sr)
-                subrepo.writestate(self, newstate)
 
             p1, p2 = self.dirstate.parents()
             hookp1, hookp2 = hex(p1), (p2 != nullid and hex(p2) or "")
@@ -2362,7 +2305,7 @@ class localrepository(object):
             xp1, xp2 = p1.hex(), p2 and p2.hex() or ""
             self.hook("pretxncommit", throw=True, node=hex(n), parent1=xp1, parent2=xp2)
             # set the new commit is proper phase
-            targetphase = subrepo.newcommitphase(self.ui, ctx)
+            targetphase = phases.newcommitphase(self.ui)
             if targetphase:
                 # retract boundary do not alter parent changeset.
                 # if a parent have higher the resulting phase will
@@ -2449,10 +2392,9 @@ class localrepository(object):
         ignored=False,
         clean=False,
         unknown=False,
-        listsubrepos=False,
     ):
         """a convenience method that calls node1.status(node2)"""
-        return self[node1].status(node2, match, ignored, clean, unknown, listsubrepos)
+        return self[node1].status(node2, match, ignored, clean, unknown)
 
     def addpostdsstatus(self, ps, afterdirstatewrite=True):
         """Add a callback to run within the wlock, at the point at which status

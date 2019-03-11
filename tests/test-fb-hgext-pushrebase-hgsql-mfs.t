@@ -67,7 +67,6 @@ Make some non-conflicting commits in in the client repos.
   o  base [public:4ced94c0a443]
   
   $ hg push -q -r tip --to master
-  *FULL* manifest read for 8655e3409b0e (outside lock)
   $ log
   @  second commit [public:0a57cb610829] master
   |
@@ -99,7 +98,6 @@ Make some non-conflicting commits in in the client repos.
   
   $ hg push -r . --to master
   pushing to ssh://user@dummy/server2
-  *FULL* manifest read for 46410a8f6645 (outside lock)
   searching for changes
   remote: *FULL* manifest read for 1e4ac5512124 (outside lock)
   remote: cached manifest read for 1e4ac5512124 (outside lock)
@@ -197,7 +195,6 @@ Meanwhile, push from client2 -> server2.
   
   $ hg push --to master 2>&1 | \sed "s/^/[client2 push] /"
   [client2 push] pushing to ssh://user@dummy/server2
-  [client2 push] *FULL* manifest read for bb1129e7c430 (outside lock)
   [client2 push] searching for changes
   [client2 push] remote: *FULL* manifest read for 1e4ac5512124 (outside lock)
   [client2 push] remote: cached manifest read for 1e4ac5512124 (outside lock)
@@ -223,7 +220,6 @@ Check that the first push is still running/blocked...
   $ touch .hg/flag
   $ wait
   [client1 push] pushing to ssh://user@dummy/server1
-  [client1 push] *FULL* manifest read for 9210795ca8ad (outside lock)
   [client1 push] searching for changes
   [client1 push] remote: *FULL* manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: cached manifest read for 8655e3409b0e (outside lock)

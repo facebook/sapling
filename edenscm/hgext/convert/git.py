@@ -23,9 +23,6 @@ class submodule(object):
     def hgsub(self):
         return "%s = [git]%s" % (self.path, self.url)
 
-    def hgsubstate(self):
-        return "%s %s" % (self.node, self.path)
-
 
 # Keys in extra fields that should not be copied if the user requests.
 bannedextrakeys = {
@@ -202,9 +199,6 @@ class convert_git(common.converter_source, common.commandline):
         if name == ".hgsub":
             data = "\n".join([m.hgsub() for m in self.submoditer()])
             mode = ""
-        elif name == ".hgsubstate":
-            data = "\n".join([m.hgsubstate() for m in self.submoditer()])
-            mode = ""
         else:
             data = self.catfile(rev, "blob")
             mode = self.modecache[(name, rev)]
@@ -265,8 +259,6 @@ class convert_git(common.converter_source, common.commandline):
         copies = {}
         seen = set()
         entry = None
-        subexists = [False]
-        subdeleted = [False]
         difftree = output.split("\x00")
         lcount = len(difftree)
         i = 0
@@ -283,16 +275,10 @@ class convert_git(common.converter_source, common.commandline):
             if f == ".gitmodules":
                 if skipsubmodules:
                     return
-
-                subexists[0] = True
-                if entry[4] == "D" or renamesource:
-                    subdeleted[0] = True
-                    changes.append((".hgsub", nodemod.nullhex))
-                else:
-                    changes.append((".hgsub", ""))
+                raise error.Abort(_("gitmodules are not supported"))
             elif entry[1] == "160000" or entry[0] == ":160000":
                 if not skipsubmodules:
-                    subexists[0] = True
+                    raise error.Abort(_("gitmodules are not supported"))
             else:
                 if renamesource:
                     h = nodemod.nullhex
@@ -330,12 +316,6 @@ class convert_git(common.converter_source, common.commandline):
                         copies[fdest] = f
             entry = None
 
-        if subexists[0]:
-            if subdeleted[0]:
-                changes.append((".hgsubstate", nodemod.nullhex))
-            else:
-                self.retrievegitmodules(version)
-                changes.append((".hgsubstate", ""))
         return (changes, copies, set())
 
     def getcommit(self, version):

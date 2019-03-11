@@ -211,62 +211,12 @@ Test merge states
   $ fileset 'unresolved()'
   $ hg ci -m merge
 
-Test subrepo predicate
+There was a commit from subrepo here. Now subrepos are gone, insert a dummy commit to take its place.
 
-  $ hg init sub
-  $ echo a > sub/suba
-  $ hg -R sub add sub/suba
-  $ hg -R sub ci -m sub
-  $ echo 'sub = sub' > .hgsub
-  $ hg init sub2
-  $ echo b > sub2/b
-  $ hg -R sub2 ci -Am sub2
-  adding b
-  $ echo 'sub2 = sub2' >> .hgsub
-  $ fileset 'subrepo()'
-  $ hg add .hgsub
-  $ fileset 'subrepo()'
-  sub
-  sub2
-  $ fileset 'subrepo("sub")'
-  sub
-  $ fileset 'subrepo("glob:*")'
-  sub
-  sub2
-  $ hg ci -m subrepo
-
-Test that .hgsubstate is updated as appropriate during a conversion.  The
-saverev property is enough to alter the hashes of the subrepo.
-
-  $ hg init ../converted
-  $ hg --config extensions.convert= convert --config convert.hg.saverev=True  \
-  >      sub ../converted/sub
-  initializing destination ../converted/sub repository
-  scanning source...
-  sorting...
-  converting...
-  0 sub
-  $ hg clone -U sub2 ../converted/sub2
-  $ hg --config extensions.convert= convert --config convert.hg.saverev=True  \
-  >      . ../converted
-  scanning source...
-  sorting...
-  converting...
-  4 addfiles
-  3 manychanges
-  2 diverging
-  1 merge
-  0 subrepo
-  no ".hgsubstate" updates will be made for "sub2"
-  $ hg up -q -R ../converted -r tip
-  $ hg --cwd ../converted cat sub/suba sub2/b -r tip
-  a
-  b
-  $ oldnode=`hg log -r tip -T "{node}\n"`
-  $ newnode=`hg log -R ../converted -r tip -T "{node}\n"`
-  $ [ "$oldnode" != "$newnode" ] || echo "nothing changed"
+  $ hg commit -m 'subrepo' --config ui.allowemptycommit=1
 
 Test with a revision
+
 
   $ hg log -G --template '{rev} {desc}\n'
   @  4 subrepo
@@ -315,11 +265,6 @@ Test with a revision
   $ hg forget 'con.xml'
 #endif
 
-  $ fileset -r4 'subrepo("re:su.*")'
-  sub
-  sub2
-  $ fileset -r4 'subrepo("sub")'
-  sub
   $ fileset -r4 'b2 or c1'
   b2
   c1
@@ -337,8 +282,6 @@ Test with a revision
   mixed
   $ fileset 'eol(unix)'
   mixed
-  .hgsub
-  .hgsubstate
   b1
   b2
   c1
@@ -351,8 +294,6 @@ Test safety of 'encoding' on removed files
   dos
   mac
   mixed
-  .hgsub
-  .hgsubstate
   1k
   2k
   b1
@@ -442,8 +383,6 @@ small reminder of the repository state
   A con.xml (no-windows !)
   R a2
   $ hg status --change 4
-  A .hgsub
-  A .hgsubstate
   $ hg status
   A dos
   A mac
@@ -482,8 +421,6 @@ Test that "revs()" work for file missing in the working copy/current context
 (none of the file exist in "0")
 
   $ fileset -r 0 "revs('4', added())"
-  .hgsub
-  .hgsubstate
 
 Call with empty revset
 --------------------------
@@ -498,8 +435,6 @@ Call with revset matching multiple revs
   a2
   b1
   b2
-  .hgsub
-  .hgsubstate
 
 overlapping set
 
@@ -513,8 +448,6 @@ Simple case
 -----------
 
   $ fileset "status(3, 4, added())"
-  .hgsub
-  .hgsubstate
 
 use rev to restrict matched file
 -----------------------------------------
@@ -565,8 +498,6 @@ test cross branch status
 test with multi revs revset
 ---------------------------
   $ hg status --added --rev 0:1 --rev 3:4
-  A .hgsub
-  A .hgsubstate
   A 1k
   A 2k
   A b2link (no-windows !)
@@ -574,8 +505,6 @@ test with multi revs revset
   A c1
   A con.xml (no-windows !)
   $ fileset "status('0:1', '3:4', added())"
-  .hgsub
-  .hgsubstate
   1k
   2k
   b2link (no-windows !)

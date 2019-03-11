@@ -105,32 +105,6 @@ class status(tuple):
         ) % self
 
 
-def itersubrepos(ctx1, ctx2):
-    """find subrepos in ctx1 or ctx2"""
-    # Create a (subpath, ctx) mapping where we prefer subpaths from
-    # ctx1. The subpaths from ctx2 are important when the .hgsub file
-    # has been modified (in ctx2) but not yet committed (in ctx1).
-    subpaths = dict.fromkeys(ctx2.substate, ctx2)
-    subpaths.update(dict.fromkeys(ctx1.substate, ctx1))
-
-    missing = set()
-
-    for subpath in ctx2.substate:
-        if subpath not in ctx1.substate:
-            del subpaths[subpath]
-            missing.add(subpath)
-
-    for subpath, ctx in sorted(subpaths.iteritems()):
-        yield subpath, ctx.sub(subpath)
-
-    # Yield an empty subrepo based on ctx1 for anything only in ctx2.  That way,
-    # status and diff will have an accurate result when it does
-    # 'sub.{status|diff}(rev2)'.  Otherwise, the ctx2 subrepo is compared
-    # against itself.
-    for subpath in missing:
-        yield subpath, ctx2.nullsub(subpath, ctx1)
-
-
 def nochangesfound(ui, repo, excluded=None):
     """Report no changes for push/pull, excluded is None or a list of
     nodes excluded from the push/pull.
@@ -599,14 +573,7 @@ def matchandpats(ctx, pats=(), opts=None, globbed=False, default="relpath", badf
     if badfn is None:
         badfn = bad
 
-    m = ctx.match(
-        pats,
-        opts.get("include"),
-        opts.get("exclude"),
-        default,
-        listsubrepos=opts.get("subrepos"),
-        badfn=badfn,
-    )
+    m = ctx.match(pats, opts.get("include"), opts.get("exclude"), default, badfn=badfn)
 
     if m.always():
         pats = []
@@ -830,20 +797,6 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
         similarity = float(opts.get("similarity") or 0)
 
     ret = 0
-    join = lambda f: os.path.join(prefix, f)
-
-    wctx = repo[None]
-    for subpath in sorted(wctx.substate):
-        submatch = matchmod.subdirmatcher(subpath, m)
-        if opts.get("subrepos") or m.exact(subpath) or any(submatch.files()):
-            sub = wctx.sub(subpath)
-            try:
-                if sub.addremove(submatch, prefix, opts, dry_run, similarity):
-                    ret = 1
-            except error.LookupError:
-                repo.ui.status(
-                    _("skipping missing subrepository: %s\n") % join(subpath)
-                )
 
     rejected = []
 
@@ -915,11 +868,8 @@ def _interestingfiles(repo, matcher):
     added, unknown, deleted, removed, forgotten = [], [], [], [], []
     audit_path = pathutil.pathauditor(repo.root, cached=True)
 
-    ctx = repo[None]
     dirstate = repo.dirstate
-    walkresults = dirstate.walk(
-        matcher, subrepos=sorted(ctx.substate), unknown=True, ignored=False, full=False
-    )
+    walkresults = dirstate.walk(matcher, unknown=True, ignored=False, full=False)
     for abs, st in walkresults.iteritems():
         dstate = dirstate[abs]
         if dstate == "?" and audit_path.check(abs):

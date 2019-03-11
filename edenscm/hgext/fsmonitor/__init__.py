@@ -137,11 +137,11 @@ performance might regress in some cases. (default: 200)
 # ============
 #
 # * fsmonitor will disable itself if any of the following extensions are
-#   enabled: largefiles, inotify, eol; or if the repository has subrepos.
-# * fsmonitor will produce incorrect results if nested repos that are not
-#   subrepos exist. *Workaround*: add nested repo paths to your `.hgignore`.
+#   enabled: largefiles, inotify, eol.
+# * fsmonitor will produce incorrect results if nested repos exist.
+#   *Workaround*: add nested repo paths to your `.hgignore`.
 #
-# The issues related to nested repos and subrepos are probably not fundamental
+# The issues related to nested repos are probably not fundamental
 # ones. Patches to fix them are welcome.
 
 from __future__ import absolute_import
@@ -302,7 +302,7 @@ def wrappurge(orig, repo, match, findfiles, finddirs, includeignored):
 
 
 @util.timefunction("fsmonitorwalk", 1, "_ui")
-def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
+def overridewalk(orig, self, match, unknown, ignored, full=True):
     """Replacement for dirstate.walk, hooking into Watchman.
 
     Whenever full is False, ignored is False, and the Watchman client is
@@ -311,7 +311,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
 
     def bail(reason):
         self._ui.debug("fsmonitor: fallback to core status, %s\n" % reason)
-        return orig(match, subrepos, unknown, ignored, full=True)
+        return orig(match, unknown, ignored, full=True)
 
     if full:
         return bail("full rewalk requested")
@@ -411,14 +411,12 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         normalize = None
 
     # step 1: find all explicit files
-    results, work, dirsnotfound = self._walkexplicit(match, subrepos)
+    results, work, dirsnotfound = self._walkexplicit(match)
 
     skipstep3 = skipstep3 and not (work or dirsnotfound)
     work = [d for d in work if not dirignore(d[0])]
 
     if not work and (exact or skipstep3):
-        for s in subrepos:
-            del results[s]
         del results[".hg"]
         return results
 
@@ -596,8 +594,6 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     state.setdroplist(droplist)
     state.setignorelist(ignorelist)
 
-    for s in subrepos:
-        del results[s]
     del results[".hg"]
     return results
 
@@ -611,7 +607,6 @@ def overridestatus(
     ignored=False,
     clean=False,
     unknown=False,
-    listsubrepos=False,
 ):
     listignored = ignored
     listclean = clean
@@ -688,9 +683,7 @@ def overridestatus(
         self._watchmanclient.clearconnection()
         _handleunavailable(self.ui, self._fsmonitorstate, ex)
         # boo, Watchman failed. bail
-        return orig(
-            node1, node2, match, listignored, listclean, listunknown, listsubrepos
-        )
+        return orig(node1, node2, match, listignored, listclean, listunknown)
 
     if updatestate:
         # We need info about unknown files. This may make things slower the
@@ -728,7 +721,7 @@ def overridestatus(
             psafter = poststatus(startclock)
             self.addpostdsstatus(psafter, afterdirstatewrite=True)
 
-    r = orig(node1, node2, match, listignored, listclean, stateunknown, listsubrepos)
+    r = orig(node1, node2, match, listignored, listclean, stateunknown)
     modified, added, removed, deleted, unknown, ignored, clean = r
 
     if not listunknown:
@@ -747,9 +740,7 @@ def overridestatus(
         self.ui.fout = self.ui.ferr = open(os.devnull, "wb")
 
         try:
-            rv2 = orig(
-                node1, node2, match, listignored, listclean, listunknown, listsubrepos
-            )
+            rv2 = orig(node1, node2, match, listignored, listclean, listunknown)
         finally:
             self.dirstate._fsmonitordisable = False
             self.ui.quiet = quiet
@@ -961,13 +952,6 @@ def reposetup(ui, repo):
     # For Eden-backed repositories the eden extension already handles optimizing
     # dirstate operations.  Let the eden extension manage the dirstate in this case.
     if "eden" in repo.requirements:
-        return
-
-    # We don't work with subrepos either.
-    #
-    # if repo[None].substate can cause a dirstate parse, which is too
-    # slow. Instead, look for a file called hgsubstate,
-    if repo.wvfs.exists(".hgsubstate") or repo.wvfs.exists(".hgsub"):
         return
 
     # Check if fsmonitor is explicitly disabled for this repository

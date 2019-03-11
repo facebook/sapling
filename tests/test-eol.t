@@ -480,14 +480,10 @@ Test eol.only-consistent can be specified in .hgeol
   $ hg ci -Am "add subrepo"
   adding .hgeol
   adding .hgsub
-  $ hg archive -S ../archive
+  $ hg archive ../archive
   $ find ../archive/* | sort
   ../archive/a.txt
-  ../archive/subrepo
-  ../archive/subrepo/a.txt
-  $ cat ../archive/a.txt ../archive/subrepo/a.txt
-  first\r (esc)
-  second\r (esc)
+  $ cat ../archive/a.txt
   first\r (esc)
   second\r (esc)
 

@@ -25,7 +25,6 @@ from . import (
     progress,
     pycompat,
     scmutil,
-    subrepo,
     util,
     worker,
 )
@@ -1111,11 +1110,6 @@ def manifestmerge(
     copied = set(copy.values())
     copied.update(movewithdir.values())
 
-    if ".hgsubstate" in m1:
-        # check whether sub state is modified
-        if any(wctx.sub(s).dirty() for s in wctx.substate):
-            m1[".hgsubstate"] = modifiednodeid
-
     # Don't use m2-vs-ma optimization if:
     # - ma is the same as m1 or m2, which we're just going to diff again later
     # - The caller specifically asks for a full diff, which is useful during bid
@@ -1548,8 +1542,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     mergeactions.extend(actions["m"])
     for f, args, msg in mergeactions:
         f1, f2, fa, move, anc = args
-        if f == ".hgsubstate":  # merged internally
-            continue
         if f1 is None:
             fcl = filemerge.absentfilectx(wctx, fa)
         else:
@@ -1578,9 +1570,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
     numupdates = sum(len(l) for m, l in actions.items() if m != "k")
     z = 0
-
-    if [a for a in actions["r"] if a[0] == ".hgsubstate"]:
-        subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # record path conflicts
     with progress.bar(
@@ -1639,9 +1628,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             z += i
             prog.value = (z, item)
         updated = len(actions["g"])
-
-        if [a for a in actions["g"] if a[0] == ".hgsubstate"]:
-            subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
         # forget (manifest only, just log it) (must come first)
         for f, args, msg in actions["f"]:
@@ -1755,11 +1741,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
-                if f == ".hgsubstate":  # subrepo states need updating
-                    subrepo.submerge(
-                        repo, wctx, mctx, wctx.ancestor(mctx), overwrite, labels
-                    )
-                    continue
                 wctx[f].audit()
                 complete, r = ms.preresolve(f, wctx)
                 if not complete:
@@ -2048,9 +2029,7 @@ def update(
             # at all, and can use the vanilla merge logic in this case.
             why_not_eden = "merge is in-memory"
         else:
-            # TODO: We probably also need to set why_not_eden if there are
-            # subrepositories.  (Personally I might vote for just not supporting
-            # subrepos in eden.)
+            # TODO: Figure out what's the other cases here.
             why_not_eden = None
 
         if why_not_eden:
@@ -2134,9 +2113,6 @@ def update(
                 raise error.Abort(
                     _("uncommitted changes"), hint=_("use 'hg status' to list changes")
                 )
-            if not wc.isinmemory():
-                for s in sorted(wc.substate):
-                    wc.sub(s).bailifchanged()
 
         elif not overwrite:
             if p1 == p2:  # no-op update
@@ -2211,48 +2187,6 @@ def update(
                     ", or update --merge to merge them"
                 )
                 raise error.Abort(msg.strip(), hint=hint)
-
-        # Prompt and create actions. Most of this is in the resolve phase
-        # already, but we can't handle .hgsubstate in filemerge or
-        # subrepo.submerge yet so we have to keep prompting for it.
-        if ".hgsubstate" in actionbyfile:
-            f = ".hgsubstate"
-            m, args, msg = actionbyfile[f]
-            prompts = filemerge.partextras(labels)
-            prompts["f"] = f
-            if m == "cd":
-                if repo.ui.promptchoice(
-                    _(
-                        "local%(l)s changed %(f)s which other%(o)s deleted\n"
-                        "use (c)hanged version or (d)elete?"
-                        "$$ &Changed $$ &Delete"
-                    )
-                    % prompts,
-                    0,
-                ):
-                    actionbyfile[f] = ("r", None, "prompt delete")
-                elif f in p1:
-                    actionbyfile[f] = ("am", None, "prompt keep")
-                else:
-                    actionbyfile[f] = ("a", None, "prompt keep")
-            elif m == "dc":
-                f1, f2, fa, move, anc = args
-                flags = p2[f2].flags()
-                if (
-                    repo.ui.promptchoice(
-                        _(
-                            "other%(o)s changed %(f)s which local%(l)s deleted\n"
-                            "use (c)hanged version or leave (d)eleted?"
-                            "$$ &Changed $$ &Deleted"
-                        )
-                        % prompts,
-                        0,
-                    )
-                    == 0
-                ):
-                    actionbyfile[f] = ("g", (flags, False), "prompt recreating")
-                else:
-                    del actionbyfile[f]
 
         # Convert to dictionary-of-lists format
         actions = dict((m, []) for m in "a am f g cd dc r dm dg m e k p pr".split())

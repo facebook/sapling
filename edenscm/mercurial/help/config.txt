@@ -484,8 +484,7 @@ one shown by default::
         HG: user: {author}\n{ifeq(p2rev, "-1", "",
        "HG: branch merge\n")
        }HG: branch '{branch}'\n{if(activebookmark,
-       "HG: bookmark '{activebookmark}'\n")   }{subrepos %
-       "HG: subrepo {subrepo}\n"              }{file_adds %
+       "HG: bookmark '{activebookmark}'\n")   }{file_adds %
        "HG: added {file}\n"                   }{file_mods %
        "HG: changed {file}\n"                 }{file_dels %
        "HG: removed {file}\n"                 }{if(files, "",
@@ -1623,17 +1622,6 @@ information about working with phases.
     Phase of newly-created commits.
     (default: draft)
 
-``checksubrepos``
-    Check the phase of the current revision of each subrepository. Allowed
-    values are "ignore", "follow" and "abort". For settings other than
-    "ignore", the phase of the current revision of each subrepository is
-    checked before committing the parent repository. If any of those phases is
-    greater than the phase of the parent repository (e.g. if a subrepo is in a
-    "secret" phase while the parent repo is in "draft" phase), the commit is
-    either aborted (if checksubrepos is set to "abort") or the higher phase is
-    used for the parent repository commit (if set to "follow").
-    (default: follow)
-
 
 ``profiling``
 -------------
@@ -1996,70 +1984,6 @@ Configuration for extensions that need to send email messages.
     itself to the MTA.
 
 
-``subpaths``
-------------
-
-Subrepository source URLs can go stale if a remote server changes name
-or becomes temporarily unavailable. This section lets you define
-rewrite rules of the form::
-
-    <pattern> = <replacement>
-
-where ``pattern`` is a regular expression matching a subrepository
-source URL and ``replacement`` is the replacement string used to
-rewrite it. Groups can be matched in ``pattern`` and referenced in
-``replacements``. For instance::
-
-    http://server/(.*)-hg/ = http://hg.server/\1/
-
-rewrites ``http://server/foo-hg/`` into ``http://hg.server/foo/``.
-
-Relative subrepository paths are first made absolute, and the
-rewrite rules are then applied on the full (absolute) path. If ``pattern``
-doesn't match the full path, an attempt is made to apply it on the
-relative path alone. The rules are applied in definition order.
-
-``subrepos``
-------------
-
-This section contains options that control the behavior of the
-subrepositories feature. See also :hg:`help subrepos`.
-
-Security note: auditing in Mercurial is known to be insufficient to
-prevent clone-time code execution with carefully constructed Git
-subrepos. It is unknown if a similar detect is present in Subversion
-subrepos. Both Git and Subversion subrepos are disabled by default
-out of security concerns. These subrepo types can be enabled using
-the respective options below.
-
-``allowed``
-    Whether subrepositories are allowed in the working directory.
-
-    When false, commands involving subrepositories (like :hg:`update`)
-    will fail for all subrepository types.
-    (default: true)
-
-``hg:allowed``
-    Whether Mercurial subrepositories are allowed in the working
-    directory. This option only has an effect if ``subrepos.allowed``
-    is true.
-    (default: true)
-
-``git:allowed``
-    Whether Git subrepositories are allowed in the working directory.
-    This option only has an effect if ``subrepos.allowed`` is true.
-
-    See the security note above before enabling Git subrepos.
-    (default: false)
-
-``svn:allowed``
-    Whether Subversion subrepositories are allowed in the working
-    directory. This option only has an effect if ``subrepos.allowed``
-    is true.
-
-    See the security note above before enabling Subversion subrepos.
-    (default: false)
-
 ``templatealias``
 -----------------
 
@@ -2164,12 +2088,6 @@ User interface controls.
     When to colorize output. Possible value are Boolean ("yes" or "no"), or
     "debug", or "always". (default: "yes"). "yes" will use color whenever it
     seems possible. See :hg:`help color` for details.
-
-``commitsubrepos``
-    Whether to commit modified subrepositories when committing the
-    parent repository. If False and one subrepository has uncommitted
-    changes, abort the commit.
-    (default: False)
 
 ``debug``
     Print debugging information. (default: False)
@@ -2494,10 +2412,6 @@ The full set of options is:
 ``allowzip``
     (DEPRECATED) Whether to allow .zip downloading of repository
     revisions. This feature creates temporary files.
-    (default: False)
-
-``archivesubrepos``
-    Whether to recurse into subrepositories when archiving.
     (default: False)
 
 ``baseurl``

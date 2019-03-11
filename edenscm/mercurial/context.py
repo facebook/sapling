@@ -28,7 +28,6 @@ from . import (
     repoview,
     revlog,
     scmutil,
-    subrepo,
     util,
     visibility,
 )
@@ -178,13 +177,6 @@ class basectx(object):
         return scmutil.status(
             modified, added, removed, deleted, unknown, ignored, clean
         )
-
-    @propertycache
-    def substate(self):
-        return subrepo.state(self, self._repo.ui)
-
-    def subrev(self, subpath):
-        return self.substate[subpath][1]
 
     def rev(self):
         return self._rev
@@ -349,28 +341,7 @@ class basectx(object):
         except error.LookupError:
             return ""
 
-    def sub(self, path, allowcreate=True):
-        """return a subrepo for the stored revision of path, never wdir()"""
-        return subrepo.subrepo(self, path, allowcreate=allowcreate)
-
-    def nullsub(self, path, pctx):
-        return subrepo.nullsubrepo(self, path, pctx)
-
-    def workingsub(self, path):
-        """return a subrepo for the stored revision, or wdir if this is a wdir
-        context.
-        """
-        return subrepo.subrepo(self, path, allowwdir=True)
-
-    def match(
-        self,
-        pats=None,
-        include=None,
-        exclude=None,
-        default="glob",
-        listsubrepos=False,
-        badfn=None,
-    ):
+    def match(self, pats=None, include=None, exclude=None, default="glob", badfn=None):
         r = self._repo
         return matchmod.match(
             r.root,
@@ -381,7 +352,6 @@ class basectx(object):
             default,
             auditor=r.nofsauditor,
             ctx=self,
-            listsubrepos=listsubrepos,
             badfn=badfn,
         )
 
@@ -407,7 +377,6 @@ class basectx(object):
         listignored=False,
         listclean=False,
         listunknown=False,
-        listsubrepos=False,
     ):
         """return status of files between two nodes or node and working
         directory.
@@ -446,27 +415,6 @@ class basectx(object):
             # Reverse added and removed. Clear deleted, unknown and ignored as
             # these make no sense to reverse.
             r = scmutil.status(r.modified, r.removed, r.added, [], [], [], r.clean)
-
-        if listsubrepos:
-            for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
-                try:
-                    rev2 = ctx2.subrev(subpath)
-                except KeyError:
-                    # A subrepo that existed in node1 was deleted between
-                    # node1 and node2 (inclusive). Thus, ctx2's substate
-                    # won't contain that subpath. The best we can do ignore it.
-                    rev2 = None
-                submatch = matchmod.subdirmatcher(subpath, match)
-                s = sub.status(
-                    rev2,
-                    match=submatch,
-                    ignored=listignored,
-                    clean=listclean,
-                    unknown=listunknown,
-                    listsubrepos=True,
-                )
-                for rfiles, sfiles in zip(r, s):
-                    rfiles.extend("%s/%s" % (subpath, f) for f in sfiles)
 
         for l in r:
             l.sort()
@@ -791,10 +739,6 @@ class changectx(basectx):
 
         # Wrap match.bad method to have message with nodeid
         def bad(fn, msg):
-            # The manifest doesn't know about subrepos, so don't complain about
-            # paths into valid subrepos.
-            if any(fn == s or fn.startswith(s + "/") for s in self.substate):
-                return
             match.bad(fn, _("no such file in rev %s") % self)
 
         m = matchmod.badmatch(match, bad)
@@ -1544,9 +1488,6 @@ class committablectx(basectx):
             date = util.makedate()
         return date
 
-    def subrev(self, subpath):
-        return None
-
     def manifestnode(self):
         return None
 
@@ -1625,11 +1566,7 @@ class committablectx(basectx):
 
     def walk(self, match):
         """Generates matching file names."""
-        return sorted(
-            self._repo.dirstate.walk(
-                match, subrepos=sorted(self.substate), unknown=True, ignored=False
-            )
-        )
+        return sorted(self._repo.dirstate.walk(match, unknown=True, ignored=False))
 
     def matches(self, match):
         return sorted(self._repo.dirstate.matches(match))
@@ -1704,10 +1641,6 @@ class workingctx(committablectx):
 
     def dirty(self, missing=False, merge=True, branch=True):
         "check whether a working directory is modified"
-        # check subrepos first
-        for s in sorted(self.substate):
-            if self.sub(s).dirty(missing=missing):
-                return True
         # check current working dir
         return (
             (merge and self.p2())
@@ -1813,15 +1746,7 @@ class workingctx(committablectx):
                     self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
 
-    def match(
-        self,
-        pats=None,
-        include=None,
-        exclude=None,
-        default="glob",
-        listsubrepos=False,
-        badfn=None,
-    ):
+    def match(self, pats=None, include=None, exclude=None, default="glob", badfn=None):
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input
@@ -1836,7 +1761,6 @@ class workingctx(committablectx):
             default,
             auditor=r.auditor,
             ctx=self,
-            listsubrepos=listsubrepos,
             badfn=badfn,
             icasefs=icasefs,
         )
@@ -1973,11 +1897,8 @@ class workingctx(committablectx):
 
     def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         """Gets the status from the dirstate -- internal use only."""
-        subrepos = []
-        if ".hgsub" in self:
-            subrepos = sorted(self.substate)
         cmp, s = self._repo.dirstate.status(
-            match, subrepos, ignored=ignored, clean=clean, unknown=unknown
+            match, ignored=ignored, clean=clean, unknown=unknown
         )
 
         # check for any possibly clean files
@@ -2744,7 +2665,6 @@ class memctx(committablectx):
         self._files = files
         if branch is not None:
             self._extra["branch"] = encoding.fromlocal(branch)
-        self.substate = {}
 
         if isinstance(filectxfn, patch.filestore):
             filectxfn = memfilefrompatch(filectxfn)
@@ -2756,7 +2676,7 @@ class memctx(committablectx):
         self._filectxfn = makecachingfilectxfn(filectxfn)
 
         if editor:
-            self._text = editor(self._repo, self, [])
+            self._text = editor(self._repo, self)
             self._repo.savecommitmessage(self._text)
 
     def filectx(self, path, filelog=None):
@@ -3005,10 +2925,9 @@ class metadataonlyctx(committablectx):
             )
 
         self._files = originalctx.files()
-        self.substate = {}
 
         if editor:
-            self._text = editor(self._repo, self, [])
+            self._text = editor(self._repo, self)
             self._repo.savecommitmessage(self._text)
 
     def manifestnode(self):

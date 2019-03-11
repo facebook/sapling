@@ -22,12 +22,10 @@ with paths:
   $ hg in dupe
   comparing with $TESTTMP/b
   no changes found
-  [1]
   $ cd ..
   $ hg -R a in dupe
   comparing with $TESTTMP/b
   no changes found
-  [1]
   $ cd a
   $ hg paths
   dupe = $TESTTMP/b#tip

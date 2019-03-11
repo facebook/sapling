@@ -190,7 +190,7 @@
       The Git importer converts commits from all reachable branches (refs in
       refs/heads) and remotes (refs in refs/remotes) to Mercurial. Branches are
       converted to bookmarks with the same name, with the leading 'refs/heads'
-      stripped. Git submodules are converted to Git subrepos in Mercurial.
+      stripped. Git submodules are not supported.
   
       The following options can be set with "--config":
   
@@ -284,12 +284,6 @@
   
       Mercurial Destination
       #####################
-  
-      The Mercurial destination will recognize Mercurial subrepositories in the
-      destination directory, and update the .hgsubstate file automatically if
-      the destination subrepositories contain the <dest>/<sub>/.hg/shamap file.
-      Converting a repository with subrepositories requires converting a single
-      repository at a time, from the bottom up.
   
       The following options are supported:
   

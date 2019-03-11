@@ -744,7 +744,6 @@ test missing .gitmodules
   2 addsubmodule
   1 remove .gitmodules
   0 missing .gitmodules
-  warning: cannot read submodules config file in * (glob)
   updating bookmarks
   $ rm -rf hg-repo6
   $ cd git-repo6
@@ -796,7 +795,6 @@ convert sub modules
   tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:23 2007 +0000
-  files:       .hgsub .hgsubstate
   description:
   addsubmodule
   
@@ -806,13 +804,8 @@ convert sub modules
 
   $ cd git-repo6-hg
   $ hg up >/dev/null 2>/dev/null
-  $ cat .hgsubstate
-  * git-repo5 (glob)
-  $ cd git-repo5
-  $ cat foo
-  sub
 
-  $ cd ../..
+  $ cd $TESTTMP
 
 make sure rename detection doesn't break removing and adding gitmodules
 
@@ -828,13 +821,9 @@ make sure rename detection doesn't break removing and adding gitmodules
   rename .gitmodules
   $ hg -R git-repo6-hg status -C --change 'tip^'
   A .gitmodules-renamed
-  R .hgsub
-  R .hgsubstate
   $ hg -R git-repo6-hg log -r tip -T "{desc|firstline}\n"
   rename .gitmodules back
   $ hg -R git-repo6-hg status -C --change tip
-  A .hgsub
-  A .hgsubstate
   R .gitmodules-renamed
 
 convert the revision removing '.gitmodules' itself (and related
@@ -852,7 +841,7 @@ submodules)
   $ hg -R git-repo6-hg tip -T "{desc|firstline}\n"
   remove .gitmodules and submodule git-repo5
   $ hg -R git-repo6-hg tip -T "{file_dels}\n"
-  .hgsub .hgsubstate
+  
 
 skip submodules in the conversion
 

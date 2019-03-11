@@ -2853,19 +2853,6 @@ def debugssl(ui, repo, source=None, **opts):
 
 
 @command(
-    "debugsub",
-    [("r", "rev", "", _("revision to check"), _("REV"))],
-    _("[-r REV] [REV]"),
-)
-def debugsub(ui, repo, rev=None):
-    ctx = scmutil.revsingle(repo, rev, None)
-    for k, v in sorted(ctx.substate.items()):
-        ui.write(("path %s\n") % k)
-        ui.write((" source   %s\n") % v[0])
-        ui.write((" revision %s\n") % v[1])
-
-
-@command(
     "debugsuccessorssets",
     [("", "closest", False, _("return closest successors sets only"))],
     _("[REV]"),

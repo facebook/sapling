@@ -32,7 +32,7 @@ try:
 except ImportError:
     smartset = None
 
-ignoredfiles = set([".hgtags", ".hgsvnexternals", ".hgsub", ".hgsubstate"])
+ignoredfiles = set([".hgtags", ".hgsvnexternals"])
 
 b_re = re.compile(r"^\+\+\+ b\/([^\n]*)", re.MULTILINE)
 a_re = re.compile(r"^--- a\/([^\n]*)", re.MULTILINE)

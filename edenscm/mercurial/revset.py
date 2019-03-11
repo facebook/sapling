@@ -1856,8 +1856,7 @@ def matching(repo, subset, x):
     Valid fields are most regular revision fields and some special fields.
 
     Regular revision fields are ``description``, ``author``, ``branch``,
-    ``date``, ``files``, ``phase``, ``parents``, ``substate``, ``user``
-    and ``diff``.
+    ``date``, ``files``, ``phase``, ``parents``, ``user`` and ``diff``.
     Note that ``author`` and ``user`` are synonyms. ``diff`` refers to the
     contents of the revision. Two revisions matching their ``diff`` will
     also match their ``files``.
@@ -1916,7 +1915,6 @@ def matching(repo, subset, x):
         "summary",
         "files",
         "description",
-        "substate",
         "diff",
     ]
 
@@ -1941,7 +1939,6 @@ def matching(repo, subset, x):
         "files": lambda r: repo[r].files(),
         "parents": lambda r: repo[r].parents(),
         "phase": lambda r: repo[r].phase(),
-        "substate": lambda r: repo[r].substate,
         "summary": lambda r: repo[r].description().splitlines()[0],
         "diff": lambda r: list(repo[r].diff(git=True)),
     }
@@ -2092,51 +2089,6 @@ def sort(repo, subset, x, order):
     for k, reverse in reversed(keyflags):
         ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
     return baseset([c.rev() for c in ctxs])
-
-
-@predicate("subrepo([pattern])", weight=10)
-def subrepo(repo, subset, x):
-    """Changesets that add, modify or remove the given subrepo.  If no subrepo
-    pattern is named, any subrepo changes are returned.
-    """
-    # i18n: "subrepo" is a keyword
-    args = getargs(x, 0, 1, _("subrepo takes at most one argument"))
-    pat = None
-    if len(args) != 0:
-        pat = getstring(args[0], _("subrepo requires a pattern"))
-
-    m = matchmod.exact(repo.root, repo.root, [".hgsubstate"])
-
-    def submatches(names):
-        k, p, m = util.stringmatcher(pat)
-        for name in names:
-            if m(name):
-                yield name
-
-    def matches(x):
-        c = repo[x]
-        s = repo.status(c.p1().node(), c.node(), match=m)
-
-        if pat is None:
-            return s.added or s.modified or s.removed
-
-        if s.added:
-            return any(submatches(c.substate.keys()))
-
-        if s.modified:
-            subs = set(c.p1().substate.keys())
-            subs.update(c.substate.keys())
-
-            for path in submatches(subs):
-                if c.p1().substate.get(path) != c.substate.get(path):
-                    return True
-
-        if s.removed:
-            return any(submatches(c.p1().substate.keys()))
-
-        return False
-
-    return subset.filter(matches, condrepr=("<subrepo %r>", pat))
 
 
 def _mapbynodefunc(repo, s, f):

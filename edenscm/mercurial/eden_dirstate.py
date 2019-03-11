@@ -19,8 +19,8 @@ from . import (
     scmutil,
     util,
 )
-from .i18n import _
 from .EdenThriftClient import ScmFileStatus
+from .i18n import _
 from .node import nullid
 
 
@@ -148,7 +148,7 @@ class eden_dirstate(dirstate.dirstate):
     #   directories
     #   - we potentially should just implement purge inside Eden
     #
-    def walk(self, match, subrepos, unknown, ignored, full=True):  # override
+    def walk(self, match, unknown, ignored, full=True):  # override
         """
         Walk recursively through the directory tree, finding all files
         matched by match.
@@ -292,7 +292,7 @@ class eden_dirstate(dirstate.dirstate):
 
         return False
 
-    def status(self, match, subrepos, ignored, clean, unknown):  # override
+    def status(self, match, ignored, clean, unknown):  # override
         edenstatus = self.eden_client.getStatus(self.p1(), list_ignored=ignored).entries
 
         nonnormal_copy = self._map.create_clone_of_internal_map()

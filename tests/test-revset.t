@@ -1498,7 +1498,7 @@ Test matching
 
   $ log 'matching(6)'
   6
-  $ log 'matching(6:7, "phase parents user date branch summary files description substate")'
+  $ log 'matching(6:7, "phase parents user date branch summary files description")'
   6
   7
 

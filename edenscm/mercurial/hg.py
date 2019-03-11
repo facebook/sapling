@@ -306,13 +306,6 @@ def unshare(ui, repo):
     repo.unfiltered().invalidatedirstate()
     repo.unfiltered().__init__(repo.baseui, repo.root)
 
-    # TODO: figure out how to access subrepos that exist, but were previously
-    #       removed from .hgsub
-    c = repo["."]
-    subs = c.substate
-    for s in sorted(subs):
-        c.sub(s).unshare()
-
 
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.
@@ -950,7 +943,7 @@ def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):
     return stats[3] > 0
 
 
-def _incoming(displaychlist, subreporecurse, ui, repo, source, opts, buffered=False):
+def _incoming(displaychlist, ui, repo, source, opts, buffered=False):
     """
     Helper for incoming / gincoming.
     displaychlist gets called with
@@ -970,27 +963,17 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source, opts, buffered=Fa
     try:
         if not chlist:
             ui.status(_("no changes found\n"))
-            return subreporecurse()
+            return
         ui.pager("incoming")
         displayer = cmdutil.show_changeset(ui, other, opts, buffered)
         displaychlist(other, chlist, displayer)
         displayer.close()
     finally:
         cleanupfn()
-    subreporecurse()
     return 0  # exit code is zero since we found incoming changes
 
 
 def incoming(ui, repo, source, opts):
-    def subreporecurse():
-        ret = 1
-        if opts.get("subrepos"):
-            ctx = repo[None]
-            for subpath in sorted(ctx.substate):
-                sub = ctx.sub(subpath)
-                ret = min(ret, sub.incoming(ui, source, opts))
-        return ret
-
     def display(other, chlist, displayer):
         limit = cmdutil.loglimit(opts)
         if opts.get("newest_first"):
@@ -1005,7 +988,7 @@ def incoming(ui, repo, source, opts):
             count += 1
             displayer.show(other[n])
 
-    return _incoming(display, subreporecurse, ui, repo, source, opts)
+    return _incoming(display, ui, repo, source, opts)
 
 
 def _outgoing(ui, repo, dest, opts):
@@ -1034,11 +1017,6 @@ def _outgoing(ui, repo, dest, opts):
 def outgoing(ui, repo, dest, opts):
     def recurse():
         ret = 1
-        if opts.get("subrepos"):
-            ctx = repo[None]
-            for subpath in sorted(ctx.substate):
-                sub = ctx.sub(subpath)
-                ret = min(ret, sub.outgoing(ui, dest, opts))
         return ret
 
     limit = cmdutil.loglimit(opts)
@@ -1073,32 +1051,6 @@ def verify(repo, revs=None):
     and some checks requiring knowledge about the entire repo will be skipped.
     """
     ret = verifymod.verify(repo, revs)
-
-    # Broken subrepo references in hidden csets don't seem worth worrying about,
-    # since they can't be pushed/pulled, and --hidden can be used if they are a
-    # concern.
-
-    if not repo.ui.configbool("verify", "skipmanifests"):
-        # pathto() is needed for -R case
-        revs = repo.revs(
-            "filelog(%s)", util.pathto(repo.root, repo.getcwd(), ".hgsubstate")
-        )
-
-        if revs:
-            repo.ui.status(_("checking subrepo links\n"))
-            for rev in revs:
-                ctx = repo[rev]
-                try:
-                    for subpath in ctx.substate:
-                        try:
-                            ret = ctx.sub(subpath, allowcreate=False).verify() or ret
-                        except error.RepoError as e:
-                            repo.ui.warn(("%s: %s\n") % (rev, e))
-                except Exception:
-                    repo.ui.warn(
-                        _(".hgsubstate is corrupt in revision %s\n")
-                        % node.short(ctx.node())
-                    )
 
     return ret
 

@@ -119,18 +119,6 @@ Abort pull early with pending uncommitted merge:
   [255]
   $ hg update --clean --quiet
 
-Abort pull early with unclean subrepo:
-  $ echo s = s > .hgsub
-  $ hg add .hgsub
-  $ hg init s
-  $ hg commit -m "generated a subrepo"
-  $ echo a > s/a
-  $ hg -R s add s/a
-  $ hg pull --rebase
-  abort: uncommitted changes in subrepository "s"
-  (cannot pull with rebase: please commit or shelve your changes first)
-  [255]
-
 Invoke pull --rebase and nothing to rebase:
 
   $ cd ../c

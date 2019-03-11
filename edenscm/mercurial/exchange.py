@@ -559,24 +559,6 @@ def _pushdiscoveryphase(pushop):
     outgoing = pushop.outgoing
     unfi = pushop.repo.unfiltered()
     remotephases = pushop.remote.listkeys("phases")
-    if (
-        pushop.ui.configbool("ui", "_usedassubrepo")
-        and remotephases  # server supports phases
-        and not pushop.outgoing.missing  # no changesets to be pushed
-        and remotephases.get("publishing", False)
-    ):
-        # When:
-        # - this is a subrepo push
-        # - and remote support phase
-        # - and no changeset are to be pushed
-        # - and remote is publishing
-        # We may be in issue 3781 case!
-        # We drop the possible phase synchronisation done by
-        # courtesy to publish changesets possibly locally draft
-        # on the remote.
-        pushop.outdatedphases = []
-        pushop.fallbackoutdatedphases = []
-        return
 
     pushop.remotephases = phases.remotephasessummary(
         pushop.repo, pushop.fallbackheads, remotephases
@@ -1121,22 +1103,6 @@ def _pushsyncphase(pushop):
     cheads = pushop.commonheads
     # even when we don't push, exchanging phase data is useful
     remotephases = pushop.remote.listkeys("phases")
-    if (
-        pushop.ui.configbool("ui", "_usedassubrepo")
-        and remotephases  # server supports phases
-        and pushop.cgresult is None  # nothing was pushed
-        and remotephases.get("publishing", False)
-    ):
-        # When:
-        # - this is a subrepo push
-        # - and remote support phase
-        # - and no changeset was pushed
-        # - and remote is publishing
-        # We may be in issue 3871 case!
-        # We drop the possible phase synchronisation done by
-        # courtesy to publish changesets possibly locally draft
-        # on the remote.
-        remotephases = {"publishing": "True"}
     if not remotephases:  # old server or public only reply from non-publishing
         _localphasemove(pushop, cheads)
         # don't push any phase data as there is nothing to push

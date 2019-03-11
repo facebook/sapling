@@ -274,7 +274,6 @@ helptable = sorted(
         ),
         (["urls"], _("URL Paths"), loaddoc("urls")),
         (["extensions"], _("Using Additional Features"), extshelp),
-        (["subrepos", "subrepo"], _("Subrepositories"), loaddoc("subrepos")),
         (["hgweb"], _("Configuring hgweb"), loaddoc("hgweb")),
         (["glossary"], _("Common Terms"), loaddoc("glossary")),
         (

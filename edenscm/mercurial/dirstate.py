@@ -860,12 +860,11 @@ class dirstate(object):
             visited.add(i)
         return (None, -1, "")
 
-    def _walkexplicit(self, match, subrepos):
+    def _walkexplicit(self, match):
         """Get stat data about the files explicitly specified by match.
 
         Return a triple (results, dirsfound, dirsnotfound).
-        - results is a mapping from filename to stat result. It also contains
-          listings mapping subrepos and .hg to None.
+        - results is a mapping from filename to stat result.
         - dirsfound is a list of files found to be directories.
         - dirsnotfound is a list of files that the dirstate thinks are
           directories and that were not found."""
@@ -904,21 +903,9 @@ class dirstate(object):
             normalize = None
 
         files = sorted(match.files())
-        subrepos.sort()
-        i, j = 0, 0
-        while i < len(files) and j < len(subrepos):
-            subpath = subrepos[j] + "/"
-            if files[i] < subpath:
-                i += 1
-                continue
-            while i < len(files) and files[i].startswith(subpath):
-                del files[i]
-            j += 1
-
         if not files or "." in files:
             files = ["."]
-        results = dict.fromkeys(subrepos)
-        results[".hg"] = None
+        results = {".hg": None}
 
         for ff in files:
             # constructing the foldmap is expensive, so don't do it for the
@@ -989,7 +976,7 @@ class dirstate(object):
         return results, dirsfound, dirsnotfound
 
     @util.timefunction("dirstatewalk", 0, "_ui")
-    def walk(self, match, subrepos, unknown, ignored, full=True):
+    def walk(self, match, unknown, ignored, full=True):
         """
         Walk recursively through the directory tree, finding all files
         matched by match.
@@ -1042,7 +1029,7 @@ class dirstate(object):
             normalizefile = None
 
         # step 1: find all explicit files
-        results, work, dirsnotfound = self._walkexplicit(match, subrepos)
+        results, work, dirsnotfound = self._walkexplicit(match)
 
         skipstep3 = skipstep3 and not (work or dirsnotfound)
         work = [d for d in work if not dirignore(d[0])]
@@ -1100,8 +1087,6 @@ class dirstate(object):
             alreadynormed = not normalize or nd == d
             traverse([d], alreadynormed)
 
-        for s in subrepos:
-            del results[s]
         del results[".hg"]
 
         # step 3: visit remaining files from dmap
@@ -1150,7 +1135,7 @@ class dirstate(object):
                     results[next(iv)] = st
         return results
 
-    def status(self, match, subrepos, ignored, clean, unknown):
+    def status(self, match, ignored, clean, unknown):
         """Determine the status of the working copy relative to the
         dirstate and return a pair of (unsure, status), where status is of type
         scmutil.status and:
@@ -1202,9 +1187,7 @@ class dirstate(object):
         # - match.traversedir does something, because match.traversedir should
         #   be called for every dir in the working dir
         full = listclean or match.traversedir is not None
-        for fn, st in self.walk(
-            match, subrepos, listunknown, listignored, full=full
-        ).iteritems():
+        for fn, st in self.walk(match, listunknown, listignored, full=full).iteritems():
             try:
                 t = dget(fn)
                 # This "?" state is only tracked by treestate, emulate the old
