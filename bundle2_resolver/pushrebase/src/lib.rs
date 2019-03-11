@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![cfg_attr(test, type_length_limit = "2097152")]
+#![deny(warnings)]
 
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
 /// Commits that client pushed are rebased on top of `onto_bookmark` on the server
@@ -544,11 +545,7 @@ fn find_changed_files(
             .map(move |(id, bcs)| {
                 let parents: Vec<_> = bcs.parents().collect();
                 match *parents {
-                    [] | [_] => ok(bcs
-                        .file_changes()
-                        .map(|(path, _)| path.clone())
-                        .collect::<Vec<MPath>>())
-                    .left_future(),
+                    [] | [_] => ok(extract_conflict_files_from_bonsai_changeset(bcs)).left_future(),
                     [p0_id, p1_id] => {
                         if reject_merges {
                             return err(PushrebaseError::RebaseOverMerge).left_future();
@@ -557,13 +554,12 @@ fn find_changed_files(
                             (Some(_), Some(_)) => {
                                 // both parents are in the rebase set, so we can just take
                                 // filechanges from bonsai changeset
-                                ok(bcs
-                                    .file_changes()
-                                    .map(|(path, _)| path.clone())
-                                    .collect::<Vec<MPath>>())
-                                .left_future()
+                                ok(extract_conflict_files_from_bonsai_changeset(bcs)).left_future()
                             }
                             (Some(p_id), None) | (None, Some(p_id)) => {
+                                // TODO(stash, T40460159) - include copy sources in the list of
+                                // conflict files
+
                                 // one of the parents is not in the rebase set, to calculate
                                 // changed files in this case we will compute manifest diff
                                 // between elements that are in rebase set.
@@ -591,6 +587,22 @@ fn find_changed_files(
             file_changes_union
         })
     })
+}
+
+fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPath> {
+    bcs.file_changes()
+        .map(|(path, maybe_file_change)| {
+            let mut v = vec![];
+            if let Some(file_change) = maybe_file_change {
+                if let Some((copy_from_path, _)) = file_change.copy_from() {
+                    v.push(copy_from_path.clone());
+                }
+            }
+            v.push(path.clone());
+            v.into_iter()
+        })
+        .flatten()
+        .collect::<Vec<MPath>>()
 }
 
 /// `left` and `right` are considerered to be conflit free, if none of the element from `left`
