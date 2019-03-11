@@ -19,6 +19,12 @@
 namespace facebook {
 namespace eden {
 
+struct CurlshDeleter {
+  void operator()(CURL* p) const {
+    curl_share_cleanup(p);
+  }
+};
+
 struct CurlDeleter {
   void operator()(CURL* p) const {
     curl_easy_cleanup(p);
@@ -30,15 +36,13 @@ class CurlHttpClient {
   CurlHttpClient(
       std::string host,
       AbsolutePath certificate,
-      std::chrono::milliseconds timeout,
-      std::shared_ptr<folly::Executor> executor);
+      std::chrono::milliseconds timeout);
 
-  folly::Future<std::unique_ptr<folly::IOBuf>> futureGet(std::string path);
+  std::unique_ptr<folly::IOBuf> get(const std::string& path);
 
  private:
   void initGlobal();
 
-  std::unique_ptr<folly::IOBuf> get(const std::string& path);
   std::unique_ptr<CURL, CurlDeleter> buildRequest(const std::string& path);
 
   std::string host_;
@@ -46,8 +50,6 @@ class CurlHttpClient {
 
   // cURL timeout for the request (see CURLOPT_TIMEOUT_MS for detail)
   const std::chrono::milliseconds timeout_;
-
-  std::shared_ptr<folly::Executor> executor_;
 };
 } // namespace eden
 } // namespace facebook

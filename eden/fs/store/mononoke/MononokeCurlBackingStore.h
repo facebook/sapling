@@ -47,8 +47,9 @@ class MononokeCurlBackingStore : public BackingStore {
   std::string buildMononokePath(
       folly::StringPiece action,
       folly::StringPiece args);
-  CurlHttpClient conn_;
   std::string repo_;
+  std::unique_ptr<folly::Executor> clientThreadPool_;
+  std::shared_ptr<folly::Executor> serverExecutor_;
 };
 } // namespace eden
 } // namespace facebook

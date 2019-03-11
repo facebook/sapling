@@ -32,12 +32,10 @@ write_callback(char* contents, size_t size, size_t nmemb, void* out) {
 CurlHttpClient::CurlHttpClient(
     std::string host,
     AbsolutePath certificate,
-    std::chrono::milliseconds timeout,
-    std::shared_ptr<folly::Executor> executor)
+    std::chrono::milliseconds timeout)
     : host_(std::move(host)),
       certificate_(std::move(certificate)),
-      timeout_(timeout),
-      executor_(std::move(executor)) {}
+      timeout_(timeout) {}
 
 std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
   auto request = buildRequest(path);
@@ -85,12 +83,6 @@ std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
   // make sure the caller of this function gets the response in one piece
   result->coalesce();
   return result;
-}
-
-folly::Future<std::unique_ptr<folly::IOBuf>> CurlHttpClient::futureGet(
-    std::string path) {
-  return folly::via(
-      executor_.get(), [this, path = std::move(path)] { return get(path); });
 }
 
 std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest(

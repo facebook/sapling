@@ -10,7 +10,6 @@
 
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/experimental/io/FsUtil.h>
 #include <gmock/gmock.h>
@@ -266,10 +265,6 @@ class CurlTest : public ::testing::Test {
     const auto address = server_->getAddresses()[0].address;
     host_ = folly::to<std::string>(
         "https://[", address.getFullyQualified(), "]:", address.getPort());
-
-    executor_ =
-        std::static_pointer_cast<folly::Executor, folly::CPUThreadPoolExecutor>(
-            std::make_shared<folly::CPUThreadPoolExecutor>(5));
   }
 
   static void TearDownTestCase() {
@@ -280,22 +275,19 @@ class CurlTest : public ::testing::Test {
   static std::unique_ptr<TemporaryDirectory> certs_;
   static std::unique_ptr<ScopedHTTPServer> server_;
   static std::string host_;
-  static std::shared_ptr<folly::Executor> executor_;
 };
 
 std::unique_ptr<TemporaryDirectory> CurlTest::certs_ = nullptr;
 std::unique_ptr<ScopedHTTPServer> CurlTest::server_ = nullptr;
 std::string CurlTest::host_ = "";
-std::shared_ptr<folly::Executor> CurlTest::executor_ = nullptr;
 
 TEST_F(CurlTest, Success) {
   auto client = CurlHttpClient(
       host_,
       AbsolutePath((certs_->path() / kClientChainName).native()),
-      std::chrono::milliseconds(100000),
-      executor_);
+      std::chrono::milliseconds(100000));
 
-  auto result = client.futureGet("/").get()->moveToFbString();
+  auto result = client.get("/")->moveToFbString();
 
   EXPECT_EQ(result, "hello world");
 }
@@ -304,11 +296,10 @@ TEST_F(CurlTest, InvalidClientCertificate) {
   auto client = CurlHttpClient(
       host_,
       AbsolutePath((certs_->path() / kInvalidChainName).native()),
-      std::chrono::milliseconds(100000),
-      executor_);
+      std::chrono::milliseconds(100000));
 
   try {
-    client.futureGet("/").get();
+    client.get("/");
     EXPECT_TRUE(false); // request should throw an exception
   } catch (const std::runtime_error& ex) {
     EXPECT_THAT(ex.what(), HasSubstr("SSL connect error"));
@@ -319,11 +310,10 @@ TEST_F(CurlTest, ThrowOn4XX) {
   auto client = CurlHttpClient(
       host_,
       AbsolutePath((certs_->path() / kClientChainName).native()),
-      std::chrono::milliseconds(100000),
-      executor_);
+      std::chrono::milliseconds(100000));
 
   try {
-    client.futureGet("/400").get();
+    client.get("/400");
     EXPECT_TRUE(false); // request should throw an exception
   } catch (const std::runtime_error& ex) {
     EXPECT_THAT(ex.what(), HasSubstr("received 400 error"));
