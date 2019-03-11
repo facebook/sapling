@@ -431,11 +431,20 @@ fn find_closest_ancestor_root(
                     ok(Loop::Break(id)).left_future()
                 } else {
                     repo.get_bonsai_changeset(ctx.clone(), id)
-                        .map(move |bcs| {
-                            queue.extend(bcs.parents());
-                            Loop::Continue((queue, depth + 1))
-                        })
                         .from_err()
+                        .and_then(move |bcs| {
+                            let mut all_parents = bcs.parents();
+                            let parent = all_parents.next();
+                            if let Some(parent) = parent {
+                                if all_parents.next().is_some() {
+                                    return err(PushrebaseError::RebaseOverMerge);
+                                } else {
+                                    queue.push_back(parent);
+                                }
+                            }
+
+                            ok(Loop::Continue((queue, depth + 1)))
+                        })
                         .right_future()
                 }
             }
