@@ -42,14 +42,15 @@ class CurlHttpClient {
 
  private:
   void initGlobal();
-
-  std::unique_ptr<CURL, CurlDeleter> buildRequest(const std::string& path);
+  std::unique_ptr<CURL, CurlDeleter> buildRequest();
 
   std::string host_;
   AbsolutePath certificate_;
 
   // cURL timeout for the request (see CURLOPT_TIMEOUT_MS for detail)
   const std::chrono::milliseconds timeout_;
+
+  std::unique_ptr<CURL, CurlDeleter> handle_;
 };
 } // namespace eden
 } // namespace facebook

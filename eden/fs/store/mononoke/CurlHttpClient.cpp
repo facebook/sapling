@@ -35,22 +35,24 @@ CurlHttpClient::CurlHttpClient(
     std::chrono::milliseconds timeout)
     : host_(std::move(host)),
       certificate_(std::move(certificate)),
-      timeout_(timeout) {}
+      timeout_(timeout) {
+  handle_ = buildRequest();
+}
 
 std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
-  auto request = buildRequest(path);
   auto buffer = folly::IOBufQueue{};
 
-  auto ret =
-      curl_easy_setopt(request.get(), CURLOPT_WRITEFUNCTION, write_callback);
-  if (ret != CURLE_OK) {
-    throw std::runtime_error("curl failed to set write function");
-  }
-  if (curl_easy_setopt(request.get(), CURLOPT_WRITEDATA, &buffer) != CURLE_OK) {
+  if (curl_easy_setopt(handle_.get(), CURLOPT_WRITEDATA, &buffer) != CURLE_OK) {
     throw std::runtime_error("curl failed to set CURLOPT_WRITEDATA");
   }
 
-  ret = curl_easy_perform(request.get());
+  if (curl_easy_setopt(handle_.get(), CURLOPT_URL, (host_ + path).c_str()) !=
+      CURLE_OK) {
+    throw std::runtime_error(
+        folly::to<std::string>("curl failed to set url: ", host_, path));
+  }
+
+  auto ret = curl_easy_perform(handle_.get());
   if (ret != CURLE_OK) {
     throw std::runtime_error(folly::to<std::string>(
         "curl error: while fetching ",
@@ -61,7 +63,7 @@ std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
 
   long statusCode;
 
-  if (curl_easy_getinfo(request.get(), CURLINFO_RESPONSE_CODE, &statusCode) !=
+  if (curl_easy_getinfo(handle_.get(), CURLINFO_RESPONSE_CODE, &statusCode) !=
       CURLE_OK) {
     throw std::runtime_error("curl failed to get response code");
   }
@@ -85,12 +87,10 @@ std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
   return result;
 }
 
-std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest(
-    const std::string& path) {
+std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest() {
   CURL* curl = curl_easy_init();
   if (!curl) {
-    throw std::runtime_error(folly::to<std::string>(
-        "failed to create easy handle for request: ", path));
+    throw std::runtime_error("failed to create easy handle");
   }
 
   auto request = std::unique_ptr<CURL, CurlDeleter>{curl};
@@ -99,11 +99,6 @@ std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest(
       CURLE_OK) {
     throw std::runtime_error(folly::to<std::string>(
         "curl failed to set client certificate: ", certificate_));
-  }
-  if (curl_easy_setopt(request.get(), CURLOPT_URL, (host_ + path).c_str()) !=
-      CURLE_OK) {
-    throw std::runtime_error(
-        folly::to<std::string>("curl failed to set url: ", host_, path));
   }
   if (curl_easy_setopt(
           request.get(), CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS) !=
@@ -114,6 +109,11 @@ std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest(
       CURLE_OK) {
     throw std::runtime_error(folly::to<std::string>(
         "curl failed to set timeout: ", timeout_.count()));
+  }
+
+  if (curl_easy_setopt(request.get(), CURLOPT_WRITEFUNCTION, write_callback) !=
+      CURLE_OK) {
+    throw std::runtime_error("curl failed to set write function");
   }
 
   // It appears that we don't have rootcanal certificate available on Mac
