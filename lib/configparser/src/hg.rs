@@ -257,22 +257,16 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(expand_path(path), &opts));
             }
         } else {
-            let option_home_dir = dirs::home_dir();
-            if let Some(home_dir) = option_home_dir {
-                #[cfg(unix)]
-                {
-                    errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
-                    if let Ok(config_home) = ::std::env::var("XDG_CONFIG_HOME") {
-                        errors
-                            .append(&mut self.load_path(format!("{}/hg/hgrc", config_home), &opts));
-                    }
-                }
+            if let Some(home_dir) = dirs::home_dir() {
+                errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
 
                 #[cfg(windows)]
                 {
                     errors.append(&mut self.load_path(home_dir.join("mercurial.ini"), &opts));
-                    errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
                 }
+            }
+            if let Some(config_dir) = dirs::config_dir() {
+                errors.append(&mut self.load_path(config_dir.join("hg/hgrc"), &opts));
             }
         }
 

@@ -8,4 +8,13 @@
   $ hg config ui.username 2>/dev/null
   foobar
 
+  $ mkdir -p home/.config/hg
+  $ echo '[ui]' > home/.config/hg/hgrc
+  $ echo 'username = bazbaz' >> home/.config/hg/hgrc
+  $ HOME="`pwd`/home" ; export HOME
+  $ unset XDG_CONFIG_HOME
+  $ hg config ui.username 2>/dev/null
+  bazbaz
+
+
 #endif
