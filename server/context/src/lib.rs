@@ -7,6 +7,7 @@
 extern crate chashmap;
 extern crate scuba_ext;
 extern crate serde;
+extern crate sshrelay;
 #[macro_use]
 extern crate slog;
 extern crate tracing;
@@ -18,6 +19,7 @@ use std::sync::Arc;
 
 use scuba_ext::ScubaSampleBuilder;
 use slog::{Logger, OwnedKV, SendSyncRefUnwindSafeKV};
+use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use uuid::Uuid;
 
@@ -91,6 +93,8 @@ struct Inner {
     wireproto_scribe_category: Option<String>,
     trace: TraceContext,
     perf_counters: PerfCounters,
+    user_unix_name: Option<String>,
+    ssh_env_vars: SshEnvVars,
 }
 
 impl CoreContext {
@@ -100,6 +104,8 @@ impl CoreContext {
         scuba: ScubaSampleBuilder,
         wireproto_scribe_category: Option<String>,
         trace: TraceContext,
+        user_unix_name: Option<String>,
+        ssh_env_vars: SshEnvVars,
     ) -> Self {
         Self {
             inner: Arc::new(Inner {
@@ -109,6 +115,8 @@ impl CoreContext {
                 wireproto_scribe_category,
                 trace,
                 perf_counters: PerfCounters::new(),
+                user_unix_name,
+                ssh_env_vars,
             }),
         }
     }
@@ -125,6 +133,8 @@ impl CoreContext {
                 wireproto_scribe_category: self.inner.wireproto_scribe_category.clone(),
                 trace: self.inner.trace.clone(),
                 perf_counters: self.inner.perf_counters.clone(),
+                user_unix_name: self.inner.user_unix_name.clone(),
+                ssh_env_vars: self.inner.ssh_env_vars.clone(),
             }),
         }
     }
@@ -141,6 +151,8 @@ impl CoreContext {
                 wireproto_scribe_category: self.inner.wireproto_scribe_category.clone(),
                 trace: self.inner.trace.clone(),
                 perf_counters: self.inner.perf_counters.clone(),
+                user_unix_name: self.inner.user_unix_name.clone(),
+                ssh_env_vars: self.inner.ssh_env_vars.clone(),
             }),
         }
     }
@@ -152,6 +164,8 @@ impl CoreContext {
             ScubaSampleBuilder::with_discard(),
             None,
             TraceContext::default(),
+            None,
+            SshEnvVars::default(),
         )
     }
 

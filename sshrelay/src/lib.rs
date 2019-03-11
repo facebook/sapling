@@ -220,6 +220,7 @@ impl Encoder for SshEncoder {
     }
 }
 
+#[derive(Debug, Default, Clone)]
 pub struct SshEnvVars {
     ssh_cert_principals: Option<String>,
     ssh_original_command: Option<String>,

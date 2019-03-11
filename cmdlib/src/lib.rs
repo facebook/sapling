@@ -40,5 +40,6 @@ extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate panichandler;
 extern crate scuba_ext;
+extern crate sshrelay;
 
 pub mod args;

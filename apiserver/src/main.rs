@@ -25,6 +25,7 @@ use serde_derive::Deserialize;
 use slog::{info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
+use sshrelay::SshEnvVars;
 use tokio::runtime::Runtime;
 use tracing::TraceContext;
 
@@ -53,6 +54,8 @@ fn prepare_fake_ctx(state: &State<HttpServerState>) -> CoreContext {
         ScubaSampleBuilder::with_discard(),
         None,
         TraceContext::default(),
+        None,
+        SshEnvVars::default(),
     )
 }
 

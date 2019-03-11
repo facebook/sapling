@@ -20,6 +20,7 @@ use slog::{Drain, Logger};
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::{Format, Severity, SourceLocation};
 use sloggers::Build;
+use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 use uuid::Uuid;
@@ -58,7 +59,7 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     (
         "content-sha1-cache-size",
         "override size of the content SHA1 cache",
-    )
+    ),
 ];
 
 pub struct MononokeApp {
@@ -249,6 +250,8 @@ pub fn get_core_context<'a>(matches: &ArgMatches<'a>) -> CoreContext {
         ScubaSampleBuilder::with_discard(),
         None,
         trace.clone(),
+        None,
+        SshEnvVars::default(),
     )
 }
 

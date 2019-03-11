@@ -27,6 +27,7 @@ use futures_stats::{FutureStats, Timed};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde::Serialize;
 use slog::Logger;
+use sshrelay::SshEnvVars;
 use time_ext::DurationExt;
 use tracing::TraceContext;
 use uuid::Uuid;
@@ -97,6 +98,8 @@ impl MononokeAPIServiceImpl {
             ScubaSampleBuilder::with_discard(),
             None,
             TraceContext::default(),
+            None,
+            SshEnvVars::default(),
         )
     }
 }

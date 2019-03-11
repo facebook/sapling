@@ -25,6 +25,7 @@ use mononoke_api;
 use remotefilelog;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
+use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use uuid::Uuid;
 
@@ -62,6 +63,8 @@ impl MononokeRepo {
             ScubaSampleBuilder::with_discard(),
             None,
             TraceContext::default(),
+            None,
+            SshEnvVars::default(),
         );
 
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();

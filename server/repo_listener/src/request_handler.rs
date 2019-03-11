@@ -24,7 +24,7 @@ use uuid::Uuid;
 use hgproto::{sshproto, HgProtoHandler};
 use repo_client::RepoClient;
 use scuba_ext::ScubaSampleBuilderExt;
-use sshrelay::{SenderBytesWrite, Stdio};
+use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 
 use repo_handlers::RepoHandler;
 
@@ -120,6 +120,8 @@ pub fn request_handler(
         scuba_logger.clone(),
         wireproto_scribe_category,
         trace.clone(),
+        preamble.misc.get("unix_username").cloned(),
+        SshEnvVars::from_map(&preamble.misc),
     );
 
     // Construct a hg protocol handler
