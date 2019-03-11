@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use cloned::cloned;
-use failure_ext::{format_err, Error};
+use failure_ext::{chain::ChainExt, format_err, Error};
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -58,6 +58,7 @@ struct GlusterBlobMetadata {
 }
 
 /// Connection to a single Gluster node
+#[derive(Clone)]
 struct GlusterCtxt {
     ctxt: AsyncNfsContext,
     host: String,
@@ -171,12 +172,12 @@ impl Glusterblob {
         &*self.basepath
     }
 
-    fn pick_context(&self) -> (AsyncNfsContext, Arc<GlusterStats>) {
+    fn pick_context(&self) -> GlusterCtxt {
         let conn = self
             .ctxts
             .choose(&mut rand::thread_rng())
             .expect("No contexts");
-        (conn.ctxt.clone(), conn.stats.clone())
+        conn.clone()
     }
 
     /// Return the path to a dir for a given key
@@ -213,10 +214,10 @@ impl Glusterblob {
     }
 
     /// Create the directory for a given key if it doesn't already exist
-    fn create_keydir(&self, key: &str) -> impl Future<Item = PathBuf, Error = io::Error> {
+    fn create_keydir(&self, key: &str) -> impl Future<Item = PathBuf, Error = std::io::Error> {
         let path = self.keydir(key);
 
-        let (ctxt, _) = self.pick_context();
+        let GlusterCtxt { ctxt, .. } = self.pick_context();
 
         // stat first to check if its there (don't worry about perms or even if its actually a dir)
         ctxt.stat64(path.clone()).then(missing_is_none).and_then({
@@ -253,7 +254,7 @@ impl Blobstore for Glusterblob {
         let datapath = path.join(Self::keyfile(&*key));
         let metapath = path.join(Self::metafile(&*key));
 
-        let (ctxt, stats) = self.pick_context();
+        let GlusterCtxt { ctxt, host, stats } = self.pick_context();
 
         // Open path; if it doesn't exist then succeed with None, otherwise return the failure.
         // If it opens OK, then stat to get the size of the file, and try to read it in a single
@@ -280,7 +281,8 @@ impl Blobstore for Glusterblob {
                     })
                     .right_future(),
                 None => Ok(None).into_future().left_future(),
-            });
+            })
+            .chain_err(format_err!("get {} data failed on host {}", key, host));
 
         let meta = ctxt
             .open(metapath, OFlag::O_RDONLY)
@@ -299,9 +301,11 @@ impl Blobstore for Glusterblob {
                         )
                     }),
                 None => Ok(None),
-            });
+            })
+            .chain_err(format_err!("get {} meta failed on host {}", key, host));
 
         data.join(meta)
+            .map_err(Error::from)
             .and_then(move |(data, meta)| match (data, meta) {
                 // Treat all partial cases as missing, since they're probably just an
                 // incomplete put().
@@ -311,12 +315,11 @@ impl Blobstore for Glusterblob {
                     if let Some(xxhash) = meta.xxhash64 {
                         let hash = Self::data_xxhash(&data);
                         if hash != xxhash {
-                            return Err(io::Error::new(
-                                io::ErrorKind::InvalidData,
-                                format!(
-                                    "key {}: xxhash mismatch: computed {:016x}, expected {:016x}",
-                                    key, hash, xxhash,
-                                ),
+                            return Err(format_err!(
+                                "key {}: xxhash mismatch: computed {:016x}, expected {:016x}",
+                                key,
+                                hash,
+                                xxhash,
                             ));
                         }
                     };
@@ -334,7 +337,6 @@ impl Blobstore for Glusterblob {
                     Ok(())
                 }
             })
-            .from_err()
             .boxify()
     }
 
@@ -342,11 +344,12 @@ impl Blobstore for Glusterblob {
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        let (ctxt, stats) = self.pick_context();
+        let GlusterCtxt { ctxt, stats, host } = self.pick_context();
 
         self.create_keydir(&*key)
+            .map_err(Error::from)
             .and_then({
-                cloned!(ctxt);
+                cloned!(ctxt, key);
                 move |path| {
                     let tmpfile = path.join(Self::tmpfile(&*key, "data"));
                     let file = path.join(Self::keyfile(&*key));
@@ -393,7 +396,8 @@ impl Blobstore for Glusterblob {
                         .and_then({
                             cloned!(ctxt);
                             move |()| ctxt.rename(tmpfile, file)
-                        });
+                        })
+                        .chain_err(format_err!("put {} data", key));
 
                     // Create, write to tmpfile, fsync and rename the metadata file
                     let meta = ctxt
@@ -424,7 +428,8 @@ impl Blobstore for Glusterblob {
                                 }
                             }
                         })
-                        .and_then(move |()| ctxt.rename(tmpmeta, metafile));
+                        .and_then(move |()| ctxt.rename(tmpmeta, metafile))
+                        .chain_err(format_err!("put {} meta", key));
 
                     // Wait for everything to succeed
                     // XXX Clean up tmpfiles if there was a failure?
@@ -445,6 +450,7 @@ impl Blobstore for Glusterblob {
                     Ok(())
                 }
             })
+            .chain_err(format_err!("put key {} on host {}", key, host))
             .from_err()
             .boxify()
     }
@@ -458,10 +464,16 @@ impl Blobstore for Glusterblob {
         let datapath = path.join(Self::keyfile(&*key));
         let metapath = path.join(Self::metafile(&*key));
 
-        let (ctxt, stats) = self.pick_context();
+        let GlusterCtxt { ctxt, stats, host } = self.pick_context();
 
-        let check_data = ctxt.stat64(datapath).then(missing_is_none);
-        let check_meta = ctxt.stat64(metapath).then(missing_is_none);
+        let check_data = ctxt
+            .stat64(datapath)
+            .then(missing_is_none)
+            .chain_err(format_err!("is_present {} data on {}", key, host));
+        let check_meta = ctxt
+            .stat64(metapath)
+            .then(missing_is_none)
+            .chain_err(format_err!("is_present {} meta on {}", key, host));
 
         check_data
             .join(check_meta)
