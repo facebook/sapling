@@ -395,6 +395,9 @@ class EdenConfig : public ConfigSettingManager {
   std::optional<std::string> getMononokeHostName() const;
   uint16_t getMononokePort() const;
 
+  /** Type of connection used to talk to Mononoke */
+  const std::string& getMononokeConnectionType() const;
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -497,6 +500,9 @@ class EdenConfig : public ConfigSettingManager {
                                                this};
   ConfigSetting<std::string> mononokeHostName_{"mononoke:hostname", "", this};
   ConfigSetting<uint16_t> mononokePort_{"mononoke:port", 443, this};
+  ConfigSetting<std::string> mononokeConnectionType_{"mononoke:connection-type",
+                                                     "http",
+                                                     this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};

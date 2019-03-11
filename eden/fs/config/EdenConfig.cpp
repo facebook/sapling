@@ -229,6 +229,10 @@ uint16_t EdenConfig::getMononokePort() const {
   return mononokePort_.getValue();
 }
 
+const std::string& EdenConfig::getMononokeConnectionType() const {
+  return mononokeConnectionType_.getValue();
+}
+
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
   userConfigPath_ = userConfigPath;
 }

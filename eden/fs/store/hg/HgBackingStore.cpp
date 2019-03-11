@@ -363,27 +363,10 @@ void HgBackingStore::initializeTreeManifestImport(
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
-void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
-  if (!config_) {
-    XLOG(DBG2)
-        << "mononoke is disabled because no config instance was provided to HgBackingStore";
-    return;
-  }
-
-  auto edenConfig = config_->getEdenConfig();
 #ifndef EDEN_WIN_NOMONONOKE
-#if EDEN_HAVE_HG_TREEMANIFEST
-  if (options.repoName.empty()) {
-    XLOG(DBG2) << "mononoke is disabled because it is not supported.";
-    return;
-  }
-
-  auto useMononoke = edenConfig->getUseMononoke();
-  if (!useMononoke) {
-    XLOG(DBG2) << "mononoke is disabled by config.";
-    return;
-  }
-
+void HgBackingStore::initializeHttpMononokeBackingStore(
+    const ImporterOptions& options) {
+  auto edenConfig = config_->getEdenConfig();
   std::shared_ptr<folly::SSLContext> sslContext;
   try {
     auto clientCertificate = edenConfig->getClientCertificate();
@@ -396,7 +379,6 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
   }
 
   auto executor = folly::getIOExecutor();
-
   auto hostName = edenConfig->getMononokeHostName();
   if (hostName) {
     auto port = edenConfig->getMononokePort();
@@ -422,7 +404,37 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
     XLOG(DBG2) << "mononoke enabled for repository " << options.repoName
                << ", using tier " << tierName;
   }
+}
+#endif
 
+void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
+  if (!config_) {
+    XLOG(DBG2)
+        << "mononoke is disabled because no config instance was provided to HgBackingStore";
+    return;
+  }
+
+  auto edenConfig = config_->getEdenConfig();
+#ifndef EDEN_WIN_NOMONONOKE
+#if EDEN_HAVE_HG_TREEMANIFEST
+  if (options.repoName.empty()) {
+    XLOG(DBG2) << "mononoke is disabled because it is not supported.";
+    return;
+  }
+
+  auto useMononoke = edenConfig->getUseMononoke();
+  if (!useMononoke) {
+    XLOG(DBG2) << "mononoke is disabled by config.";
+    return;
+  }
+
+  const auto& connectionType = edenConfig->getMononokeConnectionType();
+  if (connectionType == "http") {
+    initializeHttpMononokeBackingStore(options);
+  } else {
+    XLOG(WARN) << "got unexpected value for `mononoke:connection-type`: "
+               << connectionType;
+  }
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 #endif // EDEN_WIN_NOMONONOKE
 }
@@ -748,8 +760,8 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
     }
   } else
 #endif
-  // Prefer using the above rust implementation over the C++ implementation
-  if (useDatapackGetBlob_ && unionStore_) {
+      // Prefer using the above rust implementation over the C++ implementation
+      if (useDatapackGetBlob_ && unionStore_) {
     auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
     if (content) {
       return makeFuture(std::move(content));

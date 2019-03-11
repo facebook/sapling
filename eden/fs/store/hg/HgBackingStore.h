@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -103,6 +104,14 @@ class HgBackingStore : public BackingStore {
   void initializeMononoke(const ImporterOptions& options);
 
 #ifndef EDEN_WIN_NOMONONOKE
+  /**
+   * Initialize the mononoke_ with MononokeHttpBackingStore, which uses
+   * HTTP to talk with Mononoke API Server.
+   *
+   * This leaves mononoke_ null if SSLContext cannot be constructed.
+   */
+  void initializeHttpMononokeBackingStore(const ImporterOptions& options);
+
   /** Returns true if we should use mononoke for a fetch */
   bool useMononoke() const;
 #endif
