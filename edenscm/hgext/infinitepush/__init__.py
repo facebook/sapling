@@ -642,7 +642,7 @@ def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
         for parent in parents:
             # include all revs that exist in the main repo
             # to make sure that bundle may apply client-side
-            if parent in oldrepo:
+            if parent != nodemod.nullid and parent in oldrepo:
                 bundleroots.append(parent)
     return bundleroots
 
