@@ -21,6 +21,11 @@ to the user.
     indentnonpublic = True
     # whether to use ancestor cache (speed up on huge repos)
     useancestorcache = False
+
+    # Data. Adjust "recentdays" so that draft commits before "hide-before" are
+    # hidden.  This is used to migrate away from the "recent days" behavior and
+    # eventually show all visible commits.
+    hide-before = 2019-2-22
 """
 
 from __future__ import absolute_import
@@ -691,7 +696,7 @@ Includes:
 Excludes:
 
 - All commits under master that aren't related to your commits
-- Your local commits that are older than 2 weeks"""
+- Your local commits that are older than a specified date"""
     if ui.configbool("smartlog", "useancestorcache"):
         cachevfs = repo.cachevfs
 
@@ -721,7 +726,12 @@ def _smartlog(ui, repo, *pats, **opts):
         if opts.get("all"):
             recentdays = -1
         else:
-            recentdays = 14
+            before = ui.config("smartlog", "hide-before")
+            if before:
+                date = util.parsedate(before)[0]
+                recentdays = (int(time.time()) - date) // (3600 * 24)
+            else:
+                recentdays = 14
         masterrev = _masterrev(repo, masterrevset)
         revstring = revsetlang.formatspec(
             "smartlog(%s, %s)", masterrev or "", recentdays
