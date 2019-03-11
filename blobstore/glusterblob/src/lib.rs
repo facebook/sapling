@@ -15,7 +15,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use bytes::{BigEndian, ByteOrder};
 use cloned::cloned;
 use failure_ext::{format_err, Error};
 use futures::prelude::*;
@@ -183,13 +182,11 @@ impl Glusterblob {
     /// Return the path to a dir for a given key
     fn keydir(&self, key: &str) -> PathBuf {
         let hash = name_xxhash(key);
-        let mut prefix = [0; 4];
-        BigEndian::write_u32(&mut prefix, hash as u32);
 
         let mut path = self.basepath.clone();
-        for p in &prefix {
-            path.push(format!("{:02x}", p))
-        }
+
+        path.push(format!("{:03x}", (hash >> 12) & 0x000fff));
+        path.push(format!("{:03x}", hash & 0x000fff));
 
         path
     }
