@@ -27,6 +27,7 @@ extern crate tokio_io;
 extern crate tokio_openssl;
 extern crate tokio_proto;
 extern crate tokio_service;
+extern crate users;
 extern crate uuid;
 
 extern crate mio;

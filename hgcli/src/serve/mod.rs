@@ -19,6 +19,7 @@ use openssl::ssl::{SslConnector, SslMethod};
 use tokio_io::codec::{FramedRead, FramedWrite};
 use tokio_io::AsyncRead;
 use tokio_openssl::{SslConnectorExt, SslStream};
+use users::get_current_username;
 use uuid;
 
 use tokio::net::TcpStream;
@@ -33,7 +34,9 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
-use sshrelay::{Preamble, SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
+use sshrelay::{
+    Preamble, SenderBytesWrite, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream, Stdio,
+};
 
 mod fdio;
 
@@ -96,7 +99,7 @@ impl<'a> StdioRelay<'a> {
             ScubaSampleBuilder::with_opt_table(self.scuba_table.map(|v| v.to_owned()));
 
         let session_uuid = uuid::Uuid::new_v4();
-        let unix_username = var("USER").ok();
+        let unix_username = get_current_username().and_then(|os_str| os_str.into_string().ok());
         let source_hostname = if self.is_remote_proxy {
             // hgcli is run as remote proxy so grab from ssh the information about what host has
             // connected to this proxy and save it as source_hostname
@@ -121,6 +124,7 @@ impl<'a> StdioRelay<'a> {
             session_uuid.clone(),
             unix_username,
             source_hostname,
+            SshEnvVars::new_from_env(),
         );
 
         scuba_logger.add_preamble(&preamble);

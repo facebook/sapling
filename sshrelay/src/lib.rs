@@ -18,6 +18,7 @@ extern crate tokio_io;
 extern crate uuid;
 
 use std::collections::HashMap;
+use std::env::var;
 use std::io;
 
 use bytes::{BufMut, Bytes, BytesMut};
@@ -76,14 +77,17 @@ impl Preamble {
         session_uuid: Uuid,
         unix_username: Option<String>,
         source_hostname: Option<String>,
+        ssh_env_vars: SshEnvVars,
     ) -> Self {
-        let mut misc = hashmap!{"session_uuid".to_owned() => format!("{}", session_uuid)};
+        let mut misc = hashmap! {"session_uuid".to_owned() => format!("{}", session_uuid)};
         if let Some(unix_username) = unix_username {
             misc.insert("unix_username".to_owned(), unix_username);
         }
         if let Some(source_hostname) = source_hostname {
             misc.insert("source_hostname".to_owned(), source_hostname);
         }
+
+        ssh_env_vars.add_into_map(&mut misc);
 
         Self { reponame, misc }
     }
@@ -167,7 +171,7 @@ impl Decoder for SshDecoder {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         "bad ssh stream",
-                    ))
+                    ));
                 }
             }
         } else {
@@ -212,6 +216,54 @@ impl Encoder for SshEncoder {
                 v.extend_from_slice(&preamble);
                 Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
+        }
+    }
+}
+
+pub struct SshEnvVars {
+    ssh_cert_principals: Option<String>,
+    ssh_original_command: Option<String>,
+    ssh_client: Option<String>,
+}
+
+impl SshEnvVars {
+    const SSH_CERT_PRINCIPALS: &'static str = "SSH_CERT_PRINCIPALS";
+    const SSH_ORIGINAL_COMMAND: &'static str = "SSH_ORIGINAL_COMMAND";
+    const SSH_CLIENT: &'static str = "SSH_CLIENT";
+
+    pub fn new_from_env() -> Self {
+        Self {
+            ssh_cert_principals: var(Self::SSH_CERT_PRINCIPALS).ok(),
+            ssh_original_command: var(Self::SSH_ORIGINAL_COMMAND).ok(),
+            ssh_client: var(Self::SSH_CLIENT).ok(),
+        }
+    }
+
+    pub fn add_into_map(self, map: &mut HashMap<String, String>) {
+        let Self {
+            ssh_cert_principals,
+            ssh_original_command,
+            ssh_client,
+        } = self;
+
+        if let Some(v) = ssh_cert_principals {
+            map.insert(Self::SSH_CERT_PRINCIPALS.to_string(), v);
+        }
+
+        if let Some(v) = ssh_original_command {
+            map.insert(Self::SSH_ORIGINAL_COMMAND.to_string(), v);
+        }
+
+        if let Some(v) = ssh_client {
+            map.insert(Self::SSH_CLIENT.to_string(), v);
+        }
+    }
+
+    pub fn from_map(map: &HashMap<String, String>) -> Self {
+        Self {
+            ssh_cert_principals: map.get(Self::SSH_CERT_PRINCIPALS).cloned(),
+            ssh_original_command: map.get(Self::SSH_ORIGINAL_COMMAND).cloned(),
+            ssh_client: map.get(Self::SSH_CLIENT).cloned(),
         }
     }
 }
