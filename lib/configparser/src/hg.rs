@@ -88,9 +88,10 @@ impl OptionsHgExt for Options {
                     "style",
                     "traceback",
                     "verbose",
-                ].iter()
-                    .map(|&s| s.into())
-                    .collect();
+                ]
+                .iter()
+                .map(|&s| s.into())
+                .collect();
                 // exitcodemask is blacklisted if exitcode is outside HGPLAINEXCEPT.
                 if !plain_exceptions.contains("exitcode") {
                     ui_blacklist.insert("exitcodemask".into());
@@ -187,7 +188,9 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(data_dir.join("default.d/mergetools.rc"), &opts));
                 errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
                 // TODO(T40519286): Remove this after the tupperware overrides move out of hgrc.d
-                errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/tupperware_overrides.rc", &opts));
+                errors.append(
+                    &mut self.load_path("/etc/mercurial/hgrc.d/tupperware_overrides.rc", &opts),
+                );
                 // TODO(quark): Remove this after packages using system.rc are rolled out
                 errors.append(&mut self.load_path("/etc/mercurial/hgrc.d/include.rc", &opts));
             }
@@ -379,13 +382,15 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
                     let branch = {
                         match parts.last() {
                             None => 1,
-                            Some(last) => if last.is_empty() {
-                                1
-                            } else if last.ends_with(b"\\") {
-                                2
-                            } else {
-                                3
-                            },
+                            Some(last) => {
+                                if last.is_empty() {
+                                    1
+                                } else if last.ends_with(b"\\") {
+                                    2
+                                } else {
+                                    3
+                                }
+                            }
                         }
                     }; // manual NLL, to drop reference on "parts".
                     if branch == 1 {
@@ -457,7 +462,8 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
                     continue;
                 }
                 while offset < value.len() && value[offset] != b'"' {
-                    if value[offset] == b'\\' && offset + 1 < value.len()
+                    if value[offset] == b'\\'
+                        && offset + 1 < value.len()
                         && value[offset + 1] == b'"'
                     {
                         offset += 1;
