@@ -7,6 +7,8 @@ use std::io;
 use std::path::PathBuf;
 use std::str;
 
+use failure::Fail;
+
 /// The error type for parsing config files.
 #[derive(Fail, Debug)]
 pub enum Error {

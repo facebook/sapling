@@ -36,10 +36,6 @@ def expand_parser(pest):
         with open(os.path.join(tmp_root, "src", "lib.rs"), "w") as f:
             f.write(
                 """
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-
 #[derive(Parser)]
 #[grammar = "spec.pest"]
 pub(crate) struct ConfigParser;

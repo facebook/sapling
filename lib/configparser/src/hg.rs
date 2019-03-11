@@ -5,15 +5,17 @@
 
 //! Mercurial-specific config postprocessing
 
-use bytes::Bytes;
-use config::{expand_path, ConfigSet, Options};
-use dirs;
-use error::Error;
 use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::hash::Hash;
 use std::path::Path;
+
+use bytes::Bytes;
+use dirs;
+
+use crate::config::{expand_path, ConfigSet, Options};
+use crate::error::Error;
 
 const HGPLAIN: &str = "HGPLAIN";
 const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
@@ -394,14 +396,14 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
                         continue;
                     } else if branch == 2 {
                         // last.ends_with(b"\\")
-                        let mut last = parts.last_mut().unwrap();
+                        let last = parts.last_mut().unwrap();
                         last.pop();
                         last.push(value[offset]);
                         offset += 1;
                         continue;
                     }
                 }
-                let mut last = parts.last_mut().unwrap();
+                let last = parts.last_mut().unwrap();
                 last.push(value[offset]);
                 offset += 1;
             }
@@ -507,8 +509,10 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::tests::write_file;
+
     use tempdir::TempDir;
+
+    use crate::config::tests::write_file;
 
     #[test]
     fn test_basic_hgplain() {

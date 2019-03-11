@@ -4,17 +4,18 @@
 // GNU General Public License version 2 or any later version.
 
 //! This module exports some symbols to allow calling the config parser from C/C++
-use bytes::Bytes;
 use std::ffi::{CStr, OsStr};
 use std::os::raw::c_char;
 use std::path::Path;
 use std::ptr;
 use std::slice;
 
-use config::{ConfigSet, Options};
-use error::Error;
-use hg::ConfigSetHgExt;
-use hg::OptionsHgExt;
+use bytes::Bytes;
+
+use crate::config::{ConfigSet, Options};
+use crate::error::Error;
+use crate::hg::ConfigSetHgExt;
+use crate::hg::OptionsHgExt;
 
 /// Create and return a new, empty ConfigSet
 #[no_mangle]

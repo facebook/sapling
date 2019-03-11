@@ -64,27 +64,10 @@
 //!  line3
 //! ```
 
-extern crate bytes;
-
-extern crate dirs;
-
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-
-extern crate indexmap;
-
-extern crate pest;
-
-extern crate shellexpand;
-
+pub mod c_api;
 pub mod config;
 pub mod error;
 pub mod hg;
 pub mod parser;
-pub mod c_api;
 
 pub use error::Error;
-
-#[cfg(test)]
-extern crate tempdir;

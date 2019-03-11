@@ -3,14 +3,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bytes;
-extern crate configparser;
-extern crate minibench;
+use std::io::Write;
 
 use bytes::Bytes;
-use configparser::config::ConfigSet;
 use minibench::{bench, elapsed};
-use std::io::Write;
+
+use configparser::config::ConfigSet;
 
 fn main() {
     bench("parse 645KB file", || {

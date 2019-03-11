@@ -3,12 +3,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use bytes::Bytes;
-use error::Error;
-use indexmap::IndexMap;
-use parser::{ConfigParser, Rule};
-use pest::{self, Parser, Span};
-use shellexpand;
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::convert::AsRef;
@@ -18,6 +12,14 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
+
+use bytes::Bytes;
+use indexmap::IndexMap;
+use pest::{self, Parser, Span};
+use shellexpand;
+
+use crate::error::Error;
+use crate::parser::{ConfigParser, Rule};
 
 type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 
