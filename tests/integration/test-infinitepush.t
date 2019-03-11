@@ -93,7 +93,6 @@ Do infinitepush (aka commit cloud) push
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
-  sending branchmap command
 
   $ tglogp
   @  1: 47da8b81097c draft 'new'
