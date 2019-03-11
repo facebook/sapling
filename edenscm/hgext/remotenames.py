@@ -317,14 +317,8 @@ def pullremotenames(repo, remote, bookmarks):
         # they won't show up as heads on the next pull, so we
         # remove them here otherwise we would require the user
         # to issue a pull to refresh .hg/remotenames
-        bmap = {}
         repo = repo.unfiltered()
-        for branch, nodes in remote.branchmap().iteritems():
-            bmap[branch] = []
-            for node in nodes:
-                if node in repo and not repo[node].obsolete():
-                    bmap[branch].append(node)
-        saveremotenames(repo, path, bmap, bookmarks)
+        saveremotenames(repo, path, bookmarks)
 
     precachedistance(repo)
 
@@ -1458,9 +1452,10 @@ def activepath(ui, remote):
             rpath = getattr(getattr(remote, "_repo", None), "root", None)
     elif not isinstance(remote, str):
         try:
-            rpath = _normalizeremote(remote._url)
+            rpath = _normalizeremote(remote.url())
         except AttributeError:
-            rpath = _normalizeremote(remote.url)
+            # Handled by "isinstance(rpath, basestring)" below
+            pass
 
     candidates = []
     for path, uri in ui.configitems("paths"):
@@ -1626,11 +1621,9 @@ def transition(repo, ui):
         ui.warn(message + "\n")
 
 
-def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
+def saveremotenames(repo, remotepath, bookmarks=None):
     vfs = repo.sharedvfs
     wlock = repo.wlock()
-    if branches is None:
-        branches = {}
     if bookmarks is None:
         bookmarks = {}
     try:

@@ -1078,7 +1078,6 @@ def _readscratchremotebookmarks(ui, repo, other):
 def _saveremotebookmarks(repo, newbookmarks, remote):
     remotenamesext = extensions.find("remotenames")
     remotepath = remotenamesext.activepath(repo.ui, remote)
-    branches = collections.defaultdict(list)
     bookmarks = {}
     remotenames = remotenamesext.readremotenames(repo)
     for hexnode, nametype, remote, rname in remotenames:
@@ -1091,13 +1090,10 @@ def _saveremotebookmarks(repo, newbookmarks, remote):
                 # bookmark node
                 del newbookmarks[rname]
             bookmarks[rname] = hexnode
-        elif nametype == "branches":
-            # saveremotenames expects 20 byte binary nodes for branches
-            branches[rname].append(bin(hexnode))
 
     for bookmark, hexnode in newbookmarks.iteritems():
         bookmarks[bookmark] = hexnode
-    remotenamesext.saveremotenames(repo, remotepath, branches, bookmarks)
+    remotenamesext.saveremotenames(repo, remotepath, bookmarks)
 
 
 def _savelocalbookmarks(repo, bookmarks):
@@ -1194,7 +1190,7 @@ def _deleteinfinitepushbookmarks(ui, repo, path, names):
     remotenamesext = extensions.find("remotenames")
 
     # remotename format is:
-    # (node, nametype ("branches" or "bookmarks"), remote, name)
+    # (node, nametype ("bookmarks"), remote, name)
     nametype_idx = 1
     remote_idx = 2
     name_idx = 3
@@ -1218,15 +1214,11 @@ def _deleteinfinitepushbookmarks(ui, repo, path, names):
             )
 
     bookmarks = {}
-    branches = collections.defaultdict(list)
     for node, nametype, remote, name in remotenames:
         if nametype == "bookmarks" and name not in names:
             bookmarks[name] = node
-        elif nametype == "branches":
-            # saveremotenames wants binary nodes for branches
-            branches[name].append(bin(node))
 
-    remotenamesext.saveremotenames(repo, path, branches, bookmarks)
+    remotenamesext.saveremotenames(repo, path, bookmarks)
 
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
