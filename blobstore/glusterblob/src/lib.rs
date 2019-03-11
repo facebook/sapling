@@ -194,15 +194,18 @@ impl Glusterblob {
         path
     }
 
-    /// Return filename (not the whole path) for a given key
+    /// Return filename (not the whole path) for a given key.
     fn keyfile(key: &str) -> PathBuf {
-        PathBuf::from(format!("{}.data", keymangle(key)))
+        // Must be the basename used within `tmpfile` and `metafile` so that the rsync hack
+        // works.
+        PathBuf::from(keymangle(key))
     }
 
     /// Return tmpfile name for writing a given key. This relies on (FB?) gluster's
     /// "rsync rename" hack, where a filename of the form ".<filename>.<someext>" are mapped
     /// to the same node as "<filename>".
     fn tmpfile(key: &str, ext: &str) -> PathBuf {
+        // This must match `^\.(.+)\.[^.]+$` where `(.+)` matches the key.
         PathBuf::from(format!(".{}.tmp{}{}", keymangle(key), ext, random::<u64>()))
     }
 
