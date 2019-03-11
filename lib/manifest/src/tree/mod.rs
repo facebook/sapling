@@ -635,6 +635,17 @@ mod tests {
     }
 
     #[test]
+    fn test_files_finish_on_error_when_collecting_to_vec() {
+        let tree = Tree::durable(TestStore::new(), Node::from_u8(1));
+        let file_results = tree.files().collect::<Vec<_>>();
+        assert_eq!(file_results.len(), 1);
+        assert!(file_results[0].is_err());
+
+        let files_result = tree.files().collect::<Result<Vec<_>, _>>();
+        assert!(files_result.is_err());
+    }
+
+    #[test]
     fn test_diff_generic() {
         let mut left = Tree::ephemeral(TestStore::new());
         left.insert(repo_path_buf("a1/b1/c1/d1"), meta(10)).unwrap();

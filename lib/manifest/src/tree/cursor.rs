@@ -87,9 +87,10 @@ impl<'a, S> Cursor<'a, S> {
 
 impl<'a, S: Store> Cursor<'a, S> {
     /// Advances the cursor towards a new [`Link`]. Visiting is done in pre-order.
-    /// Errors are an interesting topic but at the time of this writing error only appear in
-    /// computing [`DurableEntry`] which cache their failures and calling [`step()`] again retries
-    /// to process the same `Link` that it previously failed on.
+    /// Errors are an interesting topic. At the time of this writing errors only appear when
+    /// computing [`DurableEntry`] (which cache their failures). To protect against potential
+    /// infinite loops, when an error is returned from [`step()`], the cursor is transitioned to
+    /// State::Done.
     pub fn step(&mut self) -> Step {
         // There are two important states phases to this code: State::Push and State::Pop.
         // The Push phase is related to the lazy nature of our durable link. We want to evaluate
@@ -111,7 +112,10 @@ impl<'a, S: Store> Cursor<'a, S> {
                         Link::Ephemeral(links) => self.stack.push(links.iter()),
                         Link::Durable(durable_entry) => {
                             match durable_entry.get_links(self.store, &self.path) {
-                                Err(err) => return Step::Err(err),
+                                Err(err) => {
+                                    self.state = State::Done;
+                                    return Step::Err(err);
+                                }
                                 Ok(links) => self.stack.push(links.iter()),
                             }
                         }
