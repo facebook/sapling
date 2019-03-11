@@ -204,7 +204,7 @@ impl Glusterblob {
     /// to the same node as "<filename>".
     fn tmpfile(key: &str, ext: &str) -> PathBuf {
         // This must match `^\.(.+)\.[^.]+$` where `(.+)` matches the key.
-        PathBuf::from(format!(".{}.tmp{}{}", keymangle(key), ext, random::<u64>()))
+        PathBuf::from(format!(".{}.{}_{}", keymangle(key), ext, random::<u64>()))
     }
 
     /// Return the metadata file for a given key (named in a similar way to tmpfiles
@@ -395,7 +395,18 @@ impl Blobstore for Glusterblob {
                         })
                         .and_then({
                             cloned!(ctxt);
-                            move |()| ctxt.rename(tmpfile, file)
+                            move |()| {
+                                ctxt.symlink(PathBuf::from(tmpfile.file_name().unwrap()), file)
+                                    .or_else(move |err| {
+                                        ctxt.unlink(tmpfile).then(|_| {
+                                            if err.kind() == io::ErrorKind::AlreadyExists {
+                                                Ok(())
+                                            } else {
+                                                Err(err)
+                                            }
+                                        })
+                                    })
+                            }
                         })
                         .chain_err(format_err!("put {} data", key));
 
@@ -428,7 +439,18 @@ impl Blobstore for Glusterblob {
                                 }
                             }
                         })
-                        .and_then(move |()| ctxt.rename(tmpmeta, metafile))
+                        .and_then(move |()| {
+                            ctxt.symlink(PathBuf::from(tmpmeta.file_name().unwrap()), metafile)
+                                .or_else(move |err| {
+                                    ctxt.unlink(tmpmeta).then(|_| {
+                                        if err.kind() == io::ErrorKind::AlreadyExists {
+                                            Ok(())
+                                        } else {
+                                            Err(err)
+                                        }
+                                    })
+                                })
+                        })
                         .chain_err(format_err!("put {} meta", key));
 
                     // Wait for everything to succeed
