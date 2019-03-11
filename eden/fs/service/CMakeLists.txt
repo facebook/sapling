@@ -39,6 +39,14 @@ target_link_libraries(
     Folly::folly
 )
 
+if (CURL_FOUND)
+  target_link_libraries(
+    eden_service
+    PUBLIC
+      curl
+  )
+endif()
+
 if (APPLE)
   target_link_libraries(
     eden_service

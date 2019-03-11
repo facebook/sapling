@@ -28,6 +28,11 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
 
+// This has to be placed after eden-config.h
+#ifdef EDEN_HAVE_CURL
+#include <curl/curl.h>
+#endif
+
 DEFINE_bool(
     edenfs,
     false,
@@ -99,6 +104,13 @@ AbsolutePath ensureEdenDirExists(folly::StringPiece path) {
 } // namespace
 
 int main(int argc, char** argv) {
+#ifdef EDEN_HAVE_CURL
+  // We need to call curl_global_init before any thread is created to avoid
+  // crashes happens when curl structs are passed between threads.
+  // See curl's documentation for details.
+  curl_global_init(CURL_GLOBAL_ALL);
+#endif
+
   // Fork the privhelper process, then drop privileges in the main process.
   // This should be done as early as possible, so that everything else we do
   // runs only with normal user privileges.
@@ -278,6 +290,10 @@ int main(int argc, char** argv) {
       });
 
   server->run(runServer);
+
+#ifdef EDEN_HAVE_CURL
+  curl_global_cleanup();
+#endif
 
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;

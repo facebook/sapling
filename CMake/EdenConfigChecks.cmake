@@ -39,6 +39,9 @@ set(EDEN_HAVE_SQLITE3 ${SQLITE3_FOUND})
 
 find_package(cpptoml REQUIRED)
 
+find_package(CURL)
+set(EDEN_HAVE_CURL ${CURL_FOUND})
+
 # We currently do not have treemanifest support in the opensource build
 set(EDEN_HAVE_HG_TREEMANIFEST OFF)
 set(EDEN_WIN_NO_RUST_DATAPACK ON)

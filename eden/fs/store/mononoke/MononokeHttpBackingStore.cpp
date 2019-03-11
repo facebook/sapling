@@ -9,9 +9,6 @@
  */
 #include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 
-#include <eden/fs/model/Blob.h>
-#include <eden/fs/model/Hash.h>
-#include <eden/fs/model/Tree.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/io/async/EventBase.h>
@@ -22,6 +19,11 @@
 #include <proxygen/lib/http/session/HTTPUpstreamSession.h>
 #include <proxygen/lib/utils/URL.h>
 #include <servicerouter/client/cpp2/ServiceRouter.h>
+
+#include "eden/fs/model/Blob.h"
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/store/mononoke/MononokeAPIUtils.h"
 
 using folly::Future;
 using folly::IOBuf;
@@ -162,53 +164,6 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
   folly::IOBuf* last_{nullptr};
   folly::exception_wrapper error_{nullptr};
 };
-
-std::unique_ptr<Tree> convertBufToTree(
-    std::unique_ptr<folly::IOBuf>&& buf,
-    const Hash& id) {
-  auto s = buf->moveToFbString();
-  auto parsed = folly::parseJson(s);
-  if (!parsed.isArray()) {
-    throw std::runtime_error(
-        "malformed json response from mononoke: should be array");
-  }
-
-  std::vector<TreeEntry> entries;
-  entries.reserve(parsed.size());
-  for (auto i = parsed.begin(); i != parsed.end(); ++i) {
-    auto name = i->at("name").asString();
-    auto hash = Hash(i->at("hash").asString());
-    auto str_type = i->at("type").asString();
-    TreeEntryType file_type;
-    if (str_type == "file") {
-      file_type = TreeEntryType::REGULAR_FILE;
-    } else if (str_type == "tree") {
-      file_type = TreeEntryType::TREE;
-    } else if (str_type == "executable") {
-      file_type = TreeEntryType::EXECUTABLE_FILE;
-    } else if (str_type == "symlink") {
-      file_type = TreeEntryType::SYMLINK;
-    } else {
-      throw std::runtime_error(folly::to<std::string>(
-          "unknown file type from mononoke: ", str_type));
-    }
-
-    auto contentSha1 = i->get_ptr("content_sha1");
-    auto size = i->get_ptr("size");
-    if (contentSha1 && !contentSha1->isNull() && size && !size->isNull()) {
-      entries.emplace_back(
-          hash,
-          name,
-          file_type,
-          static_cast<uint64_t>(size->asInt()),
-          Hash(contentSha1->asString()));
-    } else {
-      entries.emplace_back(hash, name, file_type);
-    }
-  }
-  return std::make_unique<Tree>(std::move(entries), id);
-}
-
 } // namespace
 
 MononokeHttpBackingStore::MononokeHttpBackingStore(
@@ -246,7 +201,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("tree", id); })
       .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
-        return convertBufToTree(std::move(buf), id);
+        return parseMononokeTree(std::move(buf), id);
       });
 }
 
