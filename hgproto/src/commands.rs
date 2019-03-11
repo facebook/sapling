@@ -9,12 +9,12 @@
 //! To implement a Mercurial service, implement `HgCommands` and then use it to handle incominng
 //! connections.
 use std::collections::{HashMap, HashSet};
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Cursor};
 use std::mem;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
 use failure::{err_msg, FutureFailureErrorExt};
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
@@ -29,6 +29,7 @@ use mercurial_bundles::Bundle2Item;
 use mercurial_types::MPath;
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
+use HgFileNodeId;
 use HgNodeHash;
 
 use {GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
@@ -256,6 +257,18 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
+            SingleRequest::GetpackV1 => {
+                let (reqs, instream) =
+                    decode_getfiles_arg_stream(instream, || Getpackv1ArgDecoder::new());
+                (
+                    hgcmds
+                        .getpackv1(reqs)
+                        .map(SingleResponse::Getpackv1)
+                        .map_err(self::Error::into)
+                        .boxify(),
+                    instream,
+                )
+            }
         }
     }
 
@@ -434,6 +447,107 @@ where
     )
 }
 
+#[derive(Clone)]
+enum GetPackv1ParsingState {
+    Start,
+    ParsingFilename(u16),
+    ParsedFilename(MPath),
+    ParsingFileNodes(MPath, u32, Vec<HgFileNodeId>),
+}
+
+// Request format:
+//
+// [<filerequest>,...]\0\0
+// filerequest = <filename len: 2 byte><filename><count: 4 byte>
+//               [<node: 20 byte>,...]
+//
+// Getpackv1ArgDecoder parses one `filerequest` entry i.e. one filename and a few filenodes
+struct Getpackv1ArgDecoder {
+    state: GetPackv1ParsingState,
+}
+
+impl Getpackv1ArgDecoder {
+    #[allow(unused)]
+    pub fn new() -> Self {
+        Self {
+            state: GetPackv1ParsingState::Start,
+        }
+    }
+}
+
+impl Decoder for Getpackv1ArgDecoder {
+    // If None has been decoded, then that means that client has sent all the data
+    type Item = Option<(MPath, Vec<HgFileNodeId>)>;
+    type Error = Error;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
+        use self::GetPackv1ParsingState::*;
+
+        let mut state = self.state.clone();
+        let (result, state) = loop {
+            let new_state = match state {
+                Start => {
+                    let prefix_len = 2;
+                    if src.len() < prefix_len {
+                        break (Ok(None), Start);
+                    }
+                    let len_bytes = src.split_to(prefix_len);
+                    let len = Cursor::new(len_bytes.freeze()).get_u16_be();
+                    if len == 0 {
+                        // Finished parsing the stream
+                        // 'Ok' means no error, 'Some' means that no more bytes needed,
+                        // None means that getfiles stream has finished
+                        return Ok(Some(None));
+                    }
+                    ParsingFilename(len)
+                }
+                ParsingFilename(filelen) => {
+                    let filelen = filelen as usize;
+                    if src.len() < filelen {
+                        break (Ok(None), ParsingFilename(filelen as u16));
+                    }
+
+                    let filename_bytes = src.split_to(filelen);
+                    ParsedFilename(MPath::new(&filename_bytes)?)
+                }
+                ParsedFilename(file) => {
+                    let prefix_len = 4;
+                    if src.len() < prefix_len {
+                        break (Ok(None), ParsedFilename(file));
+                    }
+
+                    let len_bytes = src.split_to(prefix_len);
+                    let nodes_count = Cursor::new(len_bytes.freeze()).get_u32_be();
+
+                    ParsingFileNodes(file, nodes_count, vec![])
+                }
+                ParsingFileNodes(file, file_nodes_count, mut file_nodes) => {
+                    if file_nodes_count as usize == file_nodes.len() {
+                        return Ok(Some(Some((file, file_nodes))));
+                    }
+                    let node_size = 20;
+                    if src.len() < node_size {
+                        break (
+                            Ok(None),
+                            ParsingFileNodes(file, file_nodes_count, file_nodes),
+                        );
+                    }
+
+                    let node = src.split_to(node_size);
+                    let node = HgFileNodeId::new(HgNodeHash::from_bytes(&node)?);
+                    file_nodes.push(node);
+                    ParsingFileNodes(file, file_nodes_count, file_nodes)
+                }
+            };
+
+            state = new_state;
+        };
+
+        self.state = state;
+        result
+    }
+}
+
 fn extract_remainder_from_bundle2<R>(
     bundle2: Bundle2Stream<R>,
 ) -> (
@@ -581,6 +695,14 @@ pub trait HgCommands {
         .boxify()
     }
 
+    // @wireprotocommand()
+    fn getpackv1(
+        &self,
+        _params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+    ) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("getpackv1".into()).into())).boxify()
+    }
+
     // whether raw bundle2 contents should be preverved in the blobstore
     fn should_preserve_raw_bundle2(&self) -> bool {
         unimplemented!("should_preserve_raw_bundle2")
@@ -591,6 +713,7 @@ pub trait HgCommands {
 mod test {
     use super::*;
 
+    use bytes::{BufMut, BytesMut};
     use context::CoreContext;
     use futures::{future, stream};
     use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
@@ -697,6 +820,32 @@ mod test {
     }
 
     #[test]
+    fn getpackv1decoder() {
+        let mut decoder = Getpackv1ArgDecoder::new();
+        let mut buf = vec![];
+        buf.put_u16_be(0);
+        assert_eq!(
+            decoder
+                .decode(&mut BytesMut::from(buf))
+                .expect("unexpected error"),
+            Some(None)
+        );
+
+        let mut buf = vec![];
+        let path = MPath::new("file".as_bytes()).unwrap();
+        buf.put_u16_be(4);
+        buf.put_slice(&path.to_vec());
+        buf.put_u32_be(1);
+        buf.put_slice(hash_ones().as_bytes());
+        assert_eq!(
+            decoder
+                .decode(&mut BytesMut::from(buf))
+                .expect("unexpected error"),
+            Some(Some((path, vec![HgFileNodeId::new(hash_ones())])))
+        );
+    }
+
+    #[test]
     fn getfilesargs() {
         let input = format!("{}path\n{}path2\n\n", hash_ones(), hash_twos());
         let (paramstream, _input) = decode_getfiles_arg_stream(
@@ -717,6 +866,17 @@ mod test {
         let (paramstream, _input) =
             decode_getfiles_arg_stream(BytesStream::new(stream::empty()), || GetfilesArgDecoder {});
         assert!(paramstream.collect().wait().is_err());
+    }
+
+    #[test]
+    fn getpackv1() {
+        let input = "\u{0}\u{4}path\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}";
+        let (paramstream, _input) = decode_getfiles_arg_stream(
+            BytesStream::new(stream::once(Ok(Bytes::from(input)))),
+            || Getpackv1ArgDecoder::new(),
+        );
+        let res = paramstream.collect().wait().unwrap();
+        assert_eq!(res, vec![(MPath::new("path").unwrap(), vec![])]);
     }
 
     fn create_hook_manager() -> Arc<HookManager> {

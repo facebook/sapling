@@ -54,7 +54,7 @@ use std::sync::Mutex;
 
 use bytes::Bytes;
 
-use mercurial_types::HgNodeHash;
+use mercurial_types::{HgFileNodeId, HgNodeHash};
 
 mod batch;
 mod commands;
@@ -114,6 +114,7 @@ pub enum SingleRequest {
     Gettreepack(GettreepackArgs),
     Getfiles,
     StreamOutShallow,
+    GetpackV1,
 }
 
 impl SingleRequest {
@@ -134,6 +135,7 @@ impl SingleRequest {
             &SingleRequest::Gettreepack(_) => "gettreepack",
             &SingleRequest::Getfiles => "getfiles",
             &SingleRequest::StreamOutShallow => "stream_out_shallow",
+            &SingleRequest::GetpackV1 => "getpackv1",
         }
     }
 }
@@ -222,6 +224,7 @@ pub enum SingleResponse {
     Gettreepack(Bytes),
     Getfiles(Bytes),
     StreamOutShallow(Bytes),
+    Getpackv1(Bytes),
 }
 
 impl SingleResponse {
@@ -231,7 +234,7 @@ impl SingleResponse {
 
         match self {
             &Getbundle(_) | &ReadyForStream | &Unbundle(_) | &Gettreepack(_)
-            | &StreamOutShallow(_) => true,
+            | &StreamOutShallow(_) | &Getpackv1(_) => true,
             _ => false,
         }
     }
