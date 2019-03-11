@@ -111,9 +111,17 @@ class HgBackingStore : public BackingStore {
    * This leaves mononoke_ null if SSLContext cannot be constructed.
    */
   void initializeHttpMononokeBackingStore(const ImporterOptions& options);
+#endif
 
   /** Returns true if we should use mononoke for a fetch */
   bool useMononoke() const;
+
+#ifdef EDEN_HAVE_CURL
+  /**
+   * Initialize the mononoke_ with MononokeCurlBackingStore, that is available
+   * on macOS
+   */
+  void initializeCurlMononokeBackingStore(const ImporterOptions& options);
 #endif
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
@@ -168,9 +176,7 @@ class HgBackingStore : public BackingStore {
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
   bool useDatapackGetBlob_{false};
 
-#ifndef EDEN_WIN_NOMONONOKE
   std::unique_ptr<BackingStore> mononoke_;
-#endif // EDEN_WIN_NOMONONOKE
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;
 #endif

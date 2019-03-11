@@ -15,6 +15,4 @@ target_link_libraries(
 
 add_subdirectory(hg)
 add_subdirectory(git)
-if (NOT EDEN_WIN_NOMONONOKE)
-  add_subdirectory(mononoke)
-endif()
+add_subdirectory(mononoke)

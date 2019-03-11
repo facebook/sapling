@@ -18,6 +18,7 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -38,6 +39,10 @@
 #include "scm/hg/lib/configparser/ConfigParser.h"
 #endif
 #endif // EDEN_HAVE_HG_TREEMANIFEST
+
+#ifdef EDEN_HAVE_CURL
+#include "eden/fs/store/mononoke/MononokeCurlBackingStore.h"
+#endif
 
 using folly::ByteRange;
 using folly::Future;
@@ -249,9 +254,8 @@ HgBackingStore::HgBackingStore(
   HgImporter importer(repository, localStore);
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
-#ifndef EDEN_WIN_NOMONONOKE
+
   initializeMononoke(options);
-#endif // EDEN_WIN_NOMONONOKE
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
@@ -368,6 +372,7 @@ void HgBackingStore::initializeHttpMononokeBackingStore(
     const ImporterOptions& options) {
   auto edenConfig = config_->getEdenConfig();
   std::shared_ptr<folly::SSLContext> sslContext;
+
   try {
     auto clientCertificate = edenConfig->getClientCertificate();
     sslContext = buildSSLContext(clientCertificate);
@@ -390,7 +395,7 @@ void HgBackingStore::initializeHttpMononokeBackingStore(
         executor.get(),
         sslContext);
 
-    XLOG(DBG2) << "mononoke enabled for repository " << options.repoName
+    XLOG(DBG2) << "HTTP Mononoke enabled for repository " << options.repoName
                << ", using host " << *hostName << ":" << port;
   } else {
     const auto& tierName = edenConfig->getMononokeTierName();
@@ -401,9 +406,39 @@ void HgBackingStore::initializeHttpMononokeBackingStore(
         executor.get(),
         sslContext);
 
-    XLOG(DBG2) << "mononoke enabled for repository " << options.repoName
+    XLOG(DBG2) << "HTTP Mononoke enabled for repository " << options.repoName
                << ", using tier " << tierName;
   }
+}
+#endif
+
+#ifdef EDEN_HAVE_CURL
+void HgBackingStore::initializeCurlMononokeBackingStore(
+    const ImporterOptions& options) {
+  auto edenConfig = config_->getEdenConfig();
+  auto host = edenConfig->getMononokeHostName();
+  auto clientCertificate = edenConfig->getClientCertificate();
+
+  if (host == std::nullopt) {
+    XLOG(WARN) << "Mononoke is disabled because no Mononoke host is provided";
+    return;
+  }
+
+  if (clientCertificate == std::nullopt) {
+    XLOG(WARN)
+        << "Mononoke is disabled because no client certificate is provided";
+    return;
+  }
+
+  mononoke_ = std::make_unique<MononokeCurlBackingStore>(
+      host.value(),
+      AbsolutePath(folly::to<std::string>(clientCertificate.value())),
+      options.repoName,
+      std::chrono::milliseconds(FLAGS_mononoke_timeout),
+      folly::getCPUExecutor());
+
+  XLOG(DBG2) << "cURL Mononoke enabled for repository " << options.repoName
+             << ", using host " << *host;
 }
 #endif
 
@@ -415,7 +450,6 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
   }
 
   auto edenConfig = config_->getEdenConfig();
-#ifndef EDEN_WIN_NOMONONOKE
 #if EDEN_HAVE_HG_TREEMANIFEST
   if (options.repoName.empty()) {
     XLOG(DBG2) << "mononoke is disabled because it is not supported.";
@@ -429,14 +463,25 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
   }
 
   const auto& connectionType = edenConfig->getMononokeConnectionType();
+
+#ifndef EDEN_WIN_NOMONONOKE
   if (connectionType == "http") {
     initializeHttpMononokeBackingStore(options);
+  } else if (connectionType == "curl") {
+#ifdef EDEN_HAVE_CURL
+    initializeCurlMononokeBackingStore(options);
+#else
+    XLOG(WARN)
+        << "User specified Mononoke connection type as cURL, but eden is built without cURL";
+#endif
   } else {
     XLOG(WARN) << "got unexpected value for `mononoke:connection-type`: "
                << connectionType;
   }
+#elif defined(EDEN_HAVE_CURL)
+  initializeCurlMononokeBackingStore(options);
+#endif
 #endif // EDEN_HAVE_HG_TREEMANIFEST
-#endif // EDEN_WIN_NOMONONOKE
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
@@ -481,7 +526,6 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     return tree;
   }
 
-#ifndef EDEN_WIN_NOMONONOKE
   if (useMononoke()) {
     // ask Mononoke API Server first because it has more metadata available
     // than we'd get from a local treepack.  Getting that data from mononoke
@@ -535,7 +579,6 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
               std::move(writeBatch));
         });
   }
-#endif // !EDEN_WIN_NOMONONOKE
 
   return fetchTreeFromHgCacheOrImporter(
       manifestNode, edenTreeID, path.copy(), writeBatch);
@@ -564,7 +607,6 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
   }
 }
 
-#ifndef EDEN_WIN_NOMONONOKE
 bool HgBackingStore::useMononoke() const {
   // Currently, useMononoke needs to be true at construction time in order
   // to configure the mononoke client safely.  If that wasn't the case then
@@ -578,7 +620,6 @@ bool HgBackingStore::useMononoke() const {
   // Check to see if the user has disabled mononoke since starting the server.
   return config_->getEdenConfig()->getUseMononoke();
 }
-#endif
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     Hash manifestNode,
@@ -768,7 +809,6 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
     }
   }
 
-#ifndef EDEN_WIN_NOMONONOKE
   if (useMononoke()) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
@@ -792,7 +832,6 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
               .via(serverThreadPool_);
         });
   }
-#endif // EDEN_WIN_NOMONONOKE
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 
   return folly::via(
