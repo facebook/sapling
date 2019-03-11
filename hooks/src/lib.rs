@@ -51,6 +51,9 @@ extern crate pretty_assertions;
 extern crate regex;
 extern crate serde_json;
 #[macro_use]
+extern crate serde_derive;
+extern crate serde;
+#[macro_use]
 extern crate slog;
 extern crate itertools;
 extern crate tempdir;
