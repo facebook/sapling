@@ -27,7 +27,8 @@ Test with shared repo
 
 Create fake infinitepush backup state to be collected by rage
 
-  $ echo '{ "fakestate": "something" }' > repo/.hg/infinitepushbackupstate
+  $ mkdir repo/.hg/infinitepushbackups
+  $ echo '{ "fakestate": "something" }' > repo/.hg/infinitepushbackups/infinitepushbackupstate_somestate
   $ cd repo2
   $ hg rage --preview | grep [f]akestate
       "fakestate": "something"

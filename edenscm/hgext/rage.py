@@ -183,10 +183,16 @@ def scmdaemonlog(ui, repo):
 
 
 def readinfinitepushbackupstate(repo):
-    filename = "infinitepushbackupstate"
-    if repo.sharedvfs.exists(filename):
-        with repo.sharedvfs.open(filename, "r") as f:
-            return json.dumps(json.load(f), indent=4) + "\n"
+    dirname = "infinitepushbackups"
+    if repo.sharedvfs.exists(dirname):
+        result = []
+        dir = repo.sharedvfs.join(dirname)
+        for filename in os.listdir(dir):
+            if "infinitepushbackupstate" in filename:
+                with open(os.path.join(dir, filename), "r") as f:
+                    result.append("reading infinitepush state file: %s" % filename)
+                    result.append(json.dumps(json.load(f), indent=4))
+        return "\n".join(result)
     else:
         return "no any infinitepushbackupstate file in the repo\n"
 
