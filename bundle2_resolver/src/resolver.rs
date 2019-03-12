@@ -35,6 +35,7 @@ use metaconfig_types::{PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
+use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::*;
 
@@ -339,7 +340,12 @@ fn resolve_pushrebase(
             cloned!(ctx, resolver);
             move |(changesets, bookmark_push_part_id, onto_params, maybe_raw_bundle2_id)| {
                 resolver
-                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto_params.bookmark)
+                    .run_hooks(
+                        ctx.clone(),
+                        changesets.clone(),
+                        maybe_pushvars,
+                        &onto_params.bookmark,
+                    )
                     .map_err(|err| match err {
                         RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
                             let mut err_msgs = vec![];
@@ -372,17 +378,28 @@ fn resolve_pushrebase(
                     })
             }
         })
-        .and_then(move |(pushrebased_rev, onto_params, bookmark_push_part_id)| {
-            resolver.prepare_pushrebase_response(
-                ctx,
-                commonheads,
-                pushrebased_rev,
-                onto_params.bookmark,
-                lca_hint,
-                phases_hint,
+        .and_then(
+            move |(
+                (pushrebased_rev, pushrebased_changesets),
+                onto_params,
                 bookmark_push_part_id,
-            )
-        })
+            )| {
+                // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
+                resolver
+                    .log_commits_to_scribe(ctx.clone(), pushrebased_changesets)
+                    .and_then(move |_| {
+                        resolver.prepare_pushrebase_response(
+                            ctx,
+                            commonheads,
+                            pushrebased_rev,
+                            onto_params.bookmark,
+                            lca_hint,
+                            phases_hint,
+                            bookmark_push_part_id,
+                        )
+                    })
+            },
+        )
         .boxify()
 }
 
@@ -532,6 +549,7 @@ struct Bundle2Resolver {
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
     hook_manager: Arc<HookManager>,
+    scribe_commit_queue: Arc<ScribeCommitQueue>,
 }
 
 impl Bundle2Resolver {
@@ -541,11 +559,19 @@ impl Bundle2Resolver {
         pushrebase: PushrebaseParams,
         hook_manager: Arc<HookManager>,
     ) -> Self {
+        let scribe_commit_queue = match pushrebase.commit_scribe_category.clone() {
+            Some(category) => Arc::new(scribe_commit_queue::LogToScribe::new_with_default_scribe(
+                category,
+            )),
+            None => Arc::new(scribe_commit_queue::LogToScribe::new_with_discard()),
+        };
+
         Self {
             ctx,
             repo,
             pushrebase,
             hook_manager,
+            scribe_commit_queue,
         }
     }
 
@@ -1004,6 +1030,37 @@ impl Bundle2Resolver {
             .boxify()
     }
 
+    fn log_commits_to_scribe(
+        &self,
+        ctx: CoreContext,
+        changesets: Vec<ChangesetId>,
+    ) -> BoxFuture<(), Error> {
+        let repo = self.repo.clone();
+        let queue = self.scribe_commit_queue.clone();
+        let futs = changesets.into_iter().map(move |changeset_id| {
+            cloned!(ctx, repo, queue, changeset_id);
+            let generation = repo
+                .get_generation_number_by_bonsai(ctx.clone(), changeset_id)
+                .and_then(|maybe_gen| maybe_gen.ok_or(err_msg("No generation number found")));
+            let parents = repo.get_changeset_parents_by_bonsai(ctx, changeset_id);
+            let repo_id = repo.get_repoid();
+            let queue = queue;
+
+            generation
+                .join(parents)
+                .and_then(move |(generation, parents)| {
+                    let ci = scribe_commit_queue::CommitInfo::new(
+                        repo_id,
+                        generation,
+                        changeset_id,
+                        parents,
+                    );
+                    queue.queue_commit(ci)
+                })
+        });
+        future::join_all(futs).map(|_| ()).boxify()
+    }
+
     /// Ensures that the next item in stream is None
     fn ensure_stream_finished(
         &self,
@@ -1201,7 +1258,7 @@ impl Bundle2Resolver {
         changesets: Changesets,
         onto_bookmark: &pushrebase::OntoBookmarkParams,
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    ) -> impl Future<Item = ChangesetId, Error = Error> {
+    ) -> impl Future<Item = (ChangesetId, Vec<ChangesetId>), Error = Error> {
         pushrebase::do_pushrebase(
             ctx,
             self.repo.clone(),
@@ -1226,7 +1283,7 @@ impl Bundle2Resolver {
                 Ok(())
             }
         })
-        .map(|res| res.head)
+        .map(|res| (res.head, res.rebased_changesets))
         .boxify()
     }
 

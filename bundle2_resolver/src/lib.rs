@@ -12,6 +12,7 @@ extern crate ascii;
 extern crate async_unit;
 extern crate blobstore;
 extern crate bytes;
+extern crate scribe_commit_queue;
 #[macro_use]
 extern crate cloned;
 #[macro_use]

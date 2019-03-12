@@ -243,6 +243,8 @@ pub struct PushrebaseParams {
     pub rewritedates: bool,
     /// How far will we go from bookmark to find rebase root
     pub recursion_limit: usize,
+    /// Scribe category we log new commits to
+    pub commit_scribe_category: Option<String>,
 }
 
 impl Default for PushrebaseParams {
@@ -250,6 +252,7 @@ impl Default for PushrebaseParams {
         PushrebaseParams {
             rewritedates: true,
             recursion_limit: 16384, // this number is fairly arbirary
+            commit_scribe_category: None,
         }
     }
 }

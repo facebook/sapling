@@ -353,6 +353,7 @@ impl RepoConfigs {
                 PushrebaseParams {
                     rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
                     recursion_limit: raw.recursion_limit.unwrap_or(default.recursion_limit),
+                    commit_scribe_category: raw.commit_scribe_category,
                 }
             })
             .unwrap_or_default();
@@ -516,6 +517,7 @@ enum RawBlobstoreType {
 struct RawPushrebaseParams {
     rewritedates: Option<bool>,
     recursion_limit: Option<usize>,
+    commit_scribe_category: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -726,6 +728,7 @@ mod test {
                 pushrebase: PushrebaseParams {
                     rewritedates: false,
                     recursion_limit: 1024,
+                    commit_scribe_category: None,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),
