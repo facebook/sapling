@@ -190,13 +190,11 @@ class cacheconnection(object):
             if self.repo.ui.configbool("remotefilelog", "fetchpacks"):
                 backgroundrepack(self.repo, incremental=True, packsonly=True)
 
-            try:
-                # Wait for process to terminate, making sure to avoid deadlock.
-                # See https://docs.python.org/2/library/subprocess.html for
-                # warnings about wait() and deadlocking.
-                self.subprocess.communicate()
-            except Exception:
-                pass
+            # The cacheclient may be executing expensive set commands in the
+            # background, As soon as the exit command, or the pipe above is
+            # closed, the client will get notified that hg has terminated and
+            # will voluntarily exit soon. Hence, there is no need to wait for
+            # it to terminate.
             self.subprocess = None
         self.connected = False
 
