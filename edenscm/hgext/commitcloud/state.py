@@ -59,6 +59,7 @@ class SyncState(object):
                     n.encode("utf-8") for n in data.get("omittedbookmarks", ())
                 ]
                 self.maxage = data.get("maxage", None)
+                self.remotepath = data.get("remotepath", None)
         else:
             self.version = 0
             self.heads = []
@@ -66,6 +67,7 @@ class SyncState(object):
             self.omittedheads = []
             self.omittedbookmarks = []
             self.maxage = None
+            self.remotepath = None
 
     def update(
         self,
@@ -75,6 +77,7 @@ class SyncState(object):
         newomittedheads,
         newomittedbookmarks,
         newmaxage,
+        remotepath,
     ):
         data = {
             "version": newversion,
@@ -83,6 +86,7 @@ class SyncState(object):
             "omittedheads": newomittedheads,
             "omittedbookmarks": newomittedbookmarks,
             "maxage": newmaxage,
+            "remotepath": remotepath,
         }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
             json.dump(data, f)

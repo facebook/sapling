@@ -428,16 +428,16 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
 
     other = "infinitepush-other"
     try:
-        path = ui.paths.getpath(other)
+        remotepath = ui.paths.getpath(other)
     except error.RepoError:
-        path = None
+        remotepath = None
 
     if (
         infinitepushbackup
-        and path
-        and path.loc != commitcloudutil.getremotepath(repo, ui, None)
+        and remotepath
+        and remotepath.loc != commitcloudutil.getremotepath(repo, ui, None)
     ):
-        highlightdebug(ui, _("starting background backup to %s\n") % path.loc)
+        highlightdebug(ui, _("starting background backup to %s\n") % remotepath.loc)
         infinitepushbackup._dobackgroundbackup(
             ui, repo, other, ["hg", "pushbackup"], **opts
         )
@@ -480,7 +480,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
                 )
 
     lastsyncstate = state.SyncState(repo, workspacename)
-    path = commitcloudutil.getremotepath(repo, ui, None)
+    remotepath = commitcloudutil.getremotepath(repo, ui, None)
 
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
@@ -507,10 +507,12 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
     pushfailures = set()
     while not synced:
         if cloudrefs.version != fetchversion:
-            _applycloudchanges(ui, repo, path, lastsyncstate, cloudrefs, pullfn, maxage)
+            _applycloudchanges(
+                ui, repo, remotepath, lastsyncstate, cloudrefs, pullfn, maxage
+            )
 
         # Check if any omissions are now included in the repo
-        _checkomissions(ui, repo, lastsyncstate)
+        _checkomissions(ui, repo, remotepath, lastsyncstate)
 
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
@@ -565,7 +567,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             # cloud.
 
             def getconnection():
-                return repo.connectionpool.get(path, opts)
+                return repo.connectionpool.get(remotepath, opts)
 
             # Push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
@@ -638,7 +640,13 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             # referenced commits have been pushed to the server.
             if not allpushed:
                 pushbackupbookmarks(
-                    ui, repo, path, getconnection, localheads, localbookmarks, **opts
+                    ui,
+                    repo,
+                    remotepath,
+                    getconnection,
+                    localheads,
+                    localbookmarks,
+                    **opts
                 )
 
             # Work out the new cloud heads and bookmarks by merging in the
@@ -684,6 +692,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
                     newomittedheads,
                     newomittedbookmarks,
                     maxage,
+                    remotepath,
                 )
                 if obsmarkers:
                     commitcloudutil.clearsyncingobsmarkers(repo)
@@ -847,6 +856,7 @@ def _applycloudchanges(
         omittedheads,
         omittedbookmarks,
         maxage,
+        remotepath,
     )
 
     # Also update infinitepush state.  These new heads are already backed up,
@@ -854,7 +864,7 @@ def _applycloudchanges(
     recordbackup(ui, repo, remotepath, newheads)
 
 
-def _checkomissions(ui, repo, lastsyncstate):
+def _checkomissions(ui, repo, remotepath, lastsyncstate):
     """check omissions are still not available locally
 
     Check that the commits that have been deliberately omitted are still not
@@ -887,6 +897,7 @@ def _checkomissions(ui, repo, lastsyncstate):
             list(omittedheads),
             list(omittedbookmarks),
             lastsyncstate.maxage,
+            remotepath,
         )
     if changes:
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:

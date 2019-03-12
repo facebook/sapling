@@ -1353,7 +1353,11 @@ def _readlocalbackupstate(ui, repo, remotepath, doingbackup=False):
 
 def _writelocalbackupstate(vfs, remotepath, heads, bookmarks):
     with vfs(_localbackupstatepath(remotepath), "w") as f:
-        f.write(json.dumps({"heads": list(heads), "bookmarks": bookmarks}))
+        f.write(
+            json.dumps(
+                {"heads": list(heads), "bookmarks": bookmarks, "remotepath": remotepath}
+            )
+        )
 
 
 def _readbackupgenerationfile(vfs, remotepath):
