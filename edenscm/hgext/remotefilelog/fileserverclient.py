@@ -34,6 +34,7 @@ from . import constants, shallowutil, wirepack
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .metadatastore import unionmetadatastore
+from .repack import backgroundrepack
 
 
 # Statistics for debugging
@@ -137,10 +138,11 @@ class cacheconnection(object):
     cache-specific implementation.
     """
 
-    def __init__(self):
+    def __init__(self, repo):
         self.pipeo = self.pipei = None
         self.subprocess = None
         self.connected = False
+        self.repo = repo
 
     def connect(self, cachecommand):
         if self.pipeo:
@@ -179,6 +181,15 @@ class cacheconnection(object):
             self.pipei = None
             tryclose(self.pipeo)
             self.pipeo = None
+
+            # When hg makes many fetch request, memcache will store each
+            # request into its own packfile. This can happen when using "hg log
+            # -p", and this causes the number of packfiles to grow very
+            # quickly, killing the performance of other commands. To avoid this
+            # pathological case, we can run a quick repack on these files.
+            if self.repo.ui.configbool("remotefilelog", "fetchpacks"):
+                backgroundrepack(self.repo, incremental=True, packsonly=True)
+
             try:
                 # Wait for process to terminate, making sure to avoid deadlock.
                 # See https://docs.python.org/2/library/subprocess.html for
@@ -377,7 +388,7 @@ class fileserverclient(object):
 
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
-        self.remotecache = cacheconnection()
+        self.remotecache = cacheconnection(repo)
 
     def setstore(self, datastore, historystore, writedata, writehistory):
         self.datastore = datastore
