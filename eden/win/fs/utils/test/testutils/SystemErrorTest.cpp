@@ -66,3 +66,100 @@ TEST(WinErrorTest, testErrorInvalidCode) {
 
   EXPECT_EQ(msg, ex.what());
 }
+
+//
+// Test exceptionToHResultWrapper, makeHResultError and HResultError exception
+//
+HRESULT throwHResultError(int arg1, std::string arg2) {
+  EXPECT_EQ(arg1, 10);
+  EXPECT_EQ(arg2, "TestString");
+  throw makeHResultErrorExplicit(E_OUTOFMEMORY, "Test throw");
+}
+
+HRESULT catchHResultError(int arg1, std::string arg2) {
+  return exceptionToHResultWrapper(
+      [&]() { return throwHResultError(arg1, arg2); });
+}
+
+TEST(WinErrorTest, testexceptionToHResultWrapper_E_OUTOFMEMORY) {
+  int arg1 = 10;
+  std::string arg2 = "TestString";
+
+  EXPECT_EQ(catchHResultError(arg1, arg2), E_OUTOFMEMORY);
+}
+
+TEST(WinErrorTest, testexceptionToHResult_E_OUTOFMEMORY) {
+  try {
+    throw makeHResultErrorExplicit(E_OUTOFMEMORY, "Test throw");
+  } catch (...) {
+    EXPECT_EQ(exceptionToHResult(), E_OUTOFMEMORY);
+  }
+}
+
+TEST(WinErrorTest, testexceptionToHResult_ERROR_ACCESS_DENIED) {
+  try {
+    throw makeWin32ErrorExplicit(ERROR_ACCESS_DENIED, "Test throw");
+  } catch (...) {
+    EXPECT_EQ(exceptionToHResult(), HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
+  }
+}
+
+//
+// Test exceptionToHResult, makeHResultFromWin32Error and HResultError exception
+//
+HRESULT throwWin32Error(int arg1, std::string arg2) {
+  EXPECT_EQ(arg1, 2232);
+  EXPECT_EQ(arg2, "Test String Win32");
+  throw makeWin32ErrorExplicit(ERROR_FILE_NOT_FOUND, "Test throw");
+}
+
+HRESULT catchWin32Error(int arg1, std::string arg2) {
+  return exceptionToHResultWrapper(
+      [&]() { return throwWin32Error(arg1, arg2); });
+}
+
+TEST(WinErrorTest, testexceptionToHResultWrapper_ERROR_FILE_NOT_FOUND) {
+  int arg1 = 2232;
+  std::string arg2 = "Test String Win32";
+
+  EXPECT_EQ(
+      catchWin32Error(arg1, arg2), HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+}
+
+TEST(WinErrorTest, testexceptionToHResult_ERROR_FILE_NOT_FOUND) {
+  try {
+    throw makeWin32ErrorExplicit(ERROR_FILE_NOT_FOUND, "Test throw");
+  } catch (...) {
+    EXPECT_EQ(exceptionToHResult(), HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+  }
+}
+
+//
+// Test exceptionToHResultWrapper, with system_error and HResultError exception
+//
+HRESULT throwSystemError(int arg1, std::string arg2) {
+  EXPECT_EQ(arg1, 1111);
+  EXPECT_EQ(arg2, "Test String Win32");
+
+  throw std::system_error(EEXIST, std::generic_category(), "Test Throw");
+}
+
+HRESULT catchSystemError(int arg1, std::string arg2) {
+  return exceptionToHResultWrapper(
+      [&]() { return throwSystemError(arg1, arg2); });
+}
+
+TEST(WinErrorTest, testexceptionToHResultWrapper_EACCES) {
+  int arg1 = 1111;
+  std::string arg2 = "Test String Win32";
+
+  EXPECT_EQ(catchSystemError(arg1, arg2), ERROR_ERRORS_ENCOUNTERED);
+}
+
+TEST(WinErrorTest, testexceptionToHResult_EACCES) {
+  try {
+    throw std::system_error(EEXIST, std::generic_category(), "Test Throw");
+  } catch (...) {
+    EXPECT_EQ(exceptionToHResult(), ERROR_ERRORS_ENCOUNTERED);
+  }
+}

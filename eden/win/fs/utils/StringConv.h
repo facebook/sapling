@@ -50,10 +50,8 @@ static std::string wcharToString(const wchar_t* wideCString) {
       return multiByteString;
     }
   }
-  throw std::system_error(
-      GetLastError(),
-      Win32ErrorCategory::get(),
-      "Failed to convert wide char to char");
+  throw makeWin32ErrorExplicit(
+      GetLastError(), "Failed to convert wide char to char");
 }
 
 static std::wstring charToWstring(const char* multiByteCString) {
@@ -78,10 +76,8 @@ static std::wstring charToWstring(const char* multiByteCString) {
       return wideString;
     }
   }
-  throw std::system_error(
-      GetLastError(),
-      Win32ErrorCategory::get(),
-      "Failed to convert char to wide char");
+  throw makeWin32ErrorExplicit(
+      GetLastError(), "Failed to convert char to wide char");
 }
 
 static std::string wstringToString(const std::wstring& wideString) {

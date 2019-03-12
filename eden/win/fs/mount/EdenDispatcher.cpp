@@ -82,10 +82,7 @@ HRESULT EdenDispatcher::startEnumeration(
     DCHECK(inserted);
     return S_OK;
   } catch (const std::exception& ex) {
-    // Working on a separate diff for exception handling which adds a converts
-    // the exception to HRESULT D13289036.
-    XLOG(ERR) << ex.what();
-    return ERROR_ERRORS_ENCOUNTERED;
+    return exceptionToHResult();
   }
 }
 
@@ -95,9 +92,9 @@ void EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
     auto erasedCount = enumSessions_.erase(enumerationId);
     DCHECK(erasedCount == 1);
   } catch (const std::exception& ex) {
-    // Working on a separate diff for exception handling which adds a converts
-    // the exception to HRESULT D13289036.
-    XLOG(ERR) << ex.what();
+    // Don't need to return result here - exceptionToHResult() will log the
+    // error.
+    (void)exceptionToHResult();
   }
 }
 
@@ -159,10 +156,7 @@ HRESULT EdenDispatcher::getEnumerationData(
     }
     return S_OK;
   } catch (const std::exception& ex) {
-    // Working on a separate diff for exception handling which adds a converts
-    // the exception to HRESULT D13289036.
-    XLOG(ERR) << ex.what();
-    return ERROR_ERRORS_ENCOUNTERED;
+    return exceptionToHResult();
   }
 }
 
@@ -208,12 +202,9 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     }
     return result;
   } catch (const std::exception& ex) {
-    // Working on a separate diff for exception handling which adds a converts
-    // the exception to HRESULT D13289036.
-    XLOG(ERR) << ex.what();
-    return ERROR_ERRORS_ENCOUNTERED;
+    return exceptionToHResult();
   }
-} // namespace eden
+}
 
 static uint64_t BlockAlignTruncate(uint64_t ptr, uint32_t alignment) {
   return ((ptr) & (0 - (static_cast<uint64_t>(alignment))));
@@ -291,12 +282,9 @@ EdenDispatcher::getFileData(
           /*chunkSize=*/chunkSize);
     }
   } catch (const std::exception& ex) {
-    // Working on a separate diff for exception handling which adds a converts
-    // the exception to HRESULT D13289036.
-    XLOG(ERR) << ex.what();
-    return ERROR_ERRORS_ENCOUNTERED;
+    return exceptionToHResult();
   }
-} // namespace eden
+}
 
 HRESULT
 EdenDispatcher::readSingleFileChunk(

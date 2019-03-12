@@ -35,8 +35,7 @@ Pipe::Pipe(PSECURITY_ATTRIBUTES securityAttr, bool inherit) {
   }
 
   if (!CreatePipe(&readHandle, &writeHandle, securityAttr, NULL)) {
-    throw std::system_error(
-        GetLastError(), Win32ErrorCategory(), "Failed to create a pipe");
+    throw makeWin32ErrorExplicit(GetLastError(), "Failed to create a pipe");
   }
   XLOG(DBG5) << "Handle Created: Read: " << readHandle
              << " Write: " << writeHandle << std::endl;
@@ -71,10 +70,7 @@ size_t Pipe::read(HANDLE handle, void* buffer, DWORD bytesToRead) {
           error,
           win32ErrorToString(error));
 
-      throw std::system_error(
-          error,
-          Win32ErrorCategory::get(),
-          "Error while reading from the pipe");
+      throw makeWin32ErrorExplicit(error, "Error while reading from the pipe");
     }
     bytesRead += read;
     remainingBytes -= read;
@@ -104,8 +100,7 @@ size_t Pipe::write(HANDLE handle, void* buffer, DWORD bytesToWrite) {
           error,
           win32ErrorToString(error));
 
-      throw std::system_error(
-          error, Win32ErrorCategory::get(), "Error while writing to the pipe");
+      throw makeWin32ErrorExplicit(error, "Error while writing to the pipe");
     }
     bytesWritten += written;
     remainingBytes -= written;

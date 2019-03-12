@@ -39,10 +39,8 @@ FsChannel::FsChannel(const AbsolutePath& mountPath, EdenMount* mount)
   if (!CreateDirectoryW(winPath_.c_str(), nullptr)) {
     DWORD error = GetLastError();
     if (error != ERROR_ALREADY_EXISTS) {
-      throw std::system_error(
-          error,
-          Win32ErrorCategory::get(),
-          sformat("Failed to create the mount point ({})", mountPath));
+      throw makeWin32ErrorExplicit(
+          error, sformat("Failed to create the mount point ({})", mountPath));
     }
   } else {
     XLOG(INFO) << sformat(
@@ -57,12 +55,10 @@ FsChannel::FsChannel(const AbsolutePath& mountPath, EdenMount* mount)
 
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
-    throw std::system_error(
-        result,
-        HResultErrorCategory::get(),
-        sformat("Failed to setup the mount point({})", mountPath));
+    throw makeHResultErrorExplicit(
+        result, sformat("Failed to setup the mount point({})", mountPath));
   }
-} // namespace eden
+}
 
 FsChannel::~FsChannel() {
   if (isRunning_) {
@@ -96,8 +92,7 @@ void FsChannel::start() {
       winPath_.c_str(), &callbacks, dispatcher, nullptr, &mountChannel_);
 
   if (FAILED(result)) {
-    throw std::system_error(
-        result, HResultErrorCategory::get(), "Failed to start the mount point");
+    throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
 
   isRunning_ = true;

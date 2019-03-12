@@ -12,7 +12,6 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
-
 namespace facebook {
 namespace eden {
 
@@ -70,6 +69,37 @@ std::string HResultErrorCategory::message(int error) const {
 const std::error_category& HResultErrorCategory::get() noexcept {
   static class HResultErrorCategory cat;
   return cat;
+}
+
+HRESULT exceptionToHResult() noexcept {
+  try {
+    throw;
+  } catch (const std::system_error& ex) {
+    auto code = ex.code();
+    XLOG(ERR) << ex.what() << " : " << ex.code();
+    if (code.category() == HResultErrorCategory::get()) {
+      return code.value();
+    }
+    if (code.category() == Win32ErrorCategory::get()) {
+      return HRESULT_FROM_WIN32(code.value());
+    }
+    return ERROR_ERRORS_ENCOUNTERED;
+
+  } catch (std::bad_alloc const&) {
+    return E_OUTOFMEMORY;
+
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << ex.what();
+    return ERROR_ERRORS_ENCOUNTERED;
+
+  } catch (...) {
+    // Make sure not to leak any exception out of here. I don't think we will
+    // hit this though. Break in debug build if we do.
+#ifndef NDEBUG
+    DebugBreak();
+#endif
+    return ERROR_ERRORS_ENCOUNTERED;
+  }
 }
 
 } // namespace eden
