@@ -213,7 +213,7 @@ TEST_F(FuseChannelTest, testInitErrorClose) {
 
   EXPECT_THROW_RE(
       std::move(initFuture).get(kTimeout),
-      std::runtime_error,
+      FuseDeviceUnmountedDuringInitialization,
       "FUSE mount \"/fake/mount/path\" was unmounted before we "
       "received the INIT packet");
 }

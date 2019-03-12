@@ -20,6 +20,7 @@
 #include <iosfwd>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -584,6 +585,11 @@ class FuseChannelDeleter {
   void operator()(FuseChannel* channel) {
     channel->destroy();
   }
+};
+
+class FuseDeviceUnmountedDuringInitialization : public std::runtime_error {
+ public:
+  explicit FuseDeviceUnmountedDuringInitialization(AbsolutePathPiece mountPath);
 };
 
 } // namespace eden

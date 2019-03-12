@@ -24,6 +24,7 @@
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/SystemError.h"
 
+using namespace folly::literals::string_piece_literals;
 using namespace folly;
 using std::string;
 
@@ -936,10 +937,7 @@ void FuseChannel::readInitPacket() {
         continue;
       }
       if (errnum == ENODEV) {
-        throw std::runtime_error(folly::to<string>(
-            "FUSE device for \"",
-            mountPath_,
-            "\" unmounted before we received INIT request"));
+        throw FuseDeviceUnmountedDuringInitialization(mountPath_);
       }
       throw std::runtime_error(folly::to<string>(
           "error reading from FUSE device for \"",
@@ -951,10 +949,7 @@ void FuseChannel::readInitPacket() {
       // This is generally caused by the unit tests closing a fake fuse
       // channel.  When we are actually connected to the kernel we normally
       // expect to see an ENODEV error rather than EOF.
-      throw std::runtime_error(folly::to<string>(
-          "FUSE mount \"",
-          mountPath_,
-          "\" was unmounted before we received the INIT packet"));
+      throw FuseDeviceUnmountedDuringInitialization(mountPath_);
     }
 
     // Error out if the kernel sends less data than we expected.
@@ -1789,6 +1784,13 @@ folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
   }
   return folly::unit;
 }
+
+FuseDeviceUnmountedDuringInitialization::
+    FuseDeviceUnmountedDuringInitialization(AbsolutePathPiece mountPath)
+    : std::runtime_error{folly::to<string>(
+          "FUSE mount \"",
+          mountPath,
+          "\" was unmounted before we received the INIT packet"_sp)} {}
 
 } // namespace eden
 } // namespace facebook
