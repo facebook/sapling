@@ -103,7 +103,7 @@ fn timeout_duration() -> Duration {
 
 fn getfiles_timeout_duration() -> Duration {
     // getfiles requests can be rather long. Let's bump the timeout
-    Duration::from_secs(60 * 60)
+    Duration::from_secs(90 * 60)
 }
 
 fn process_timeout_error(err: TimeoutError<Error>) -> Error {
