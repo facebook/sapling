@@ -6,8 +6,8 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 set(CMAKE_CXX_FLAGS_COMMON "-g -Wall -Wextra -Wno-deprecated -Wno-deprecated-declarations")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_COMMON}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_COMMON} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_COMMON}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS_COMMON} -O3")
 
 function(apply_eden_compile_options_to_target THETARGET)
   target_compile_options(${THETARGET}
