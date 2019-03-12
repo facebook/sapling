@@ -42,6 +42,7 @@ command = registrar.command(cmdtable)
     [
         ("r", "rev", "", _("revision to serialize"), _("REV")),
         ("d", "dest", "", _("destination bookmark"), _("DEST")),
+        ("", "to", "", _("destination parents"), _("TO")),
         ("", "pushrebase", False, _("pushrebase commit")),
     ],
     _("hg debugserializecommit -r REV -d DEST"),
@@ -72,14 +73,21 @@ def debugserializecommit(ui, repo, *args, **opts):
         changelistbuilder.addfile(path, info)
 
     changelist = changelistbuilder.build()
-    destination = commitdata.destination(
-        bookmark=opts.get("dest"), pushrebase=opts.get("pushrebase")
+
+    bookmark = opts.get("dest")
+    to = opts.get("to")
+    pushrebase = opts.get("pushrebase")
+
+    destination = commitdata.destination(bookmark=bookmark, pushrebase=pushrebase)
+
+    parents = (
+        [hex(p) for p in repo.nodes(to)] if to else [p.hex() for p in ctx.parents()]
     )
 
     metadata = commitdata.metadata(
         author=ctx.user(),
         description=ctx.description(),
-        parents=[p.hex() for p in ctx.parents()],
+        parents=parents,
         extra=ctx.extra(),
     )
 

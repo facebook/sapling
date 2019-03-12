@@ -105,6 +105,23 @@ commit hash in the output.
   $ testreposimilarity . ../mirroredrepo
 
 
+- Test that the '--to' option works.
+
+  $ echo >> y
+  $ hg commit -Aqm "added another file"
+  $ testmemcommit . ../mirroredrepo --to ".^"
+  $ echo >> x
+  $ hg commit -qm "modified existing file"
+  $ testmemcommit . ../mirroredrepo --to ".^"
+  $ hg bookmark -r "." temporary_bookmark
+  $ hg -q up ".~2"
+  $ echo >> x
+  $ hg commit -qm "modified existing file"
+  $ hg -q up temporary_bookmark
+  $ hg bookmark -d temporary_bookmark
+  $ testmemcommit . ../mirroredrepo --to ".^^"
+
+
 - Test that we can mirror commits from the originalrepo to the mirroredrepo. In
 this case, each commit will be created on the parent commit specified in the
 memcommit request.
@@ -237,6 +254,10 @@ descendent of destination bookmark.
 - Test that we fail to create merge commits.
 
   $ cd ../originalrepo
+  $ copycommit . ../mirroredrepo --to ". + .^"
+  {"error": "merge commits are not supported"} (no-eol)
+  [255]
+
   $ hg -q merge "master"
   $ hg commit -qm "merge commit"
   $ copycommit . ../mirroredrepo
