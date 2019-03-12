@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use failure::{Fail, Fallible};
+use failure::{format_err, Error, Fail, Fallible};
 
 use types::Key;
 
@@ -110,8 +110,13 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fall
 }
 
 #[derive(Debug, Fail)]
-#[fail(display = "Repack failure: {:?}", _0)]
-struct RepackFailure(Vec<(PathBuf, Vec<Key>)>);
+enum RepackFailure {
+    #[fail(display = "Repack failure: {:?}", _0)]
+    Total(Vec<(PathBuf, Error)>),
+
+    #[fail(display = "Repack successful but with errors: {:?}", _1)]
+    Partial(PathBuf, Vec<(PathBuf, Error)>),
+}
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
@@ -128,16 +133,31 @@ fn repack_packs<'a, T: MutablePack, U: Store + Repackable>(
         }
     }
 
-    for path in paths.clone() {
-        let pack = U::from_path(&path)?;
-        repack_pack(&pack, &mut mut_pack)?;
+    let mut repacked = vec![];
+    let mut errors = vec![];
+
+    for path in paths {
+        match U::from_path(&path) {
+            Ok(pack) => {
+                if let Err(e) = repack_pack(&pack, &mut mut_pack) {
+                    errors.push((path.clone(), e));
+                } else {
+                    repacked.push(path);
+                }
+            }
+            Err(e) => errors.push((path.clone(), e)),
+        }
+    }
+
+    if repacked.len() == 0 {
+        return Err(RepackFailure::Total(errors).into());
     }
 
     let new_pack_path = mut_pack.close()?;
     let new_pack = U::from_path(&new_pack_path)?;
 
-    let mut errors = vec![];
-    for path in paths {
+    let mut successfully_repacked = 0;
+    for path in repacked {
         if *path != new_pack_path {
             let pack = U::from_path(&path)?;
             let keys = pack.iter().filter_map(|res| res.ok()).collect::<Vec<Key>>();
@@ -145,14 +165,19 @@ fn repack_packs<'a, T: MutablePack, U: Store + Repackable>(
 
             if missing.len() == 0 {
                 pack.delete()?;
+                successfully_repacked += 1;
             } else {
-                errors.push((path.clone(), missing));
+                errors.push((path.clone(), format_err!("{:?}", missing)));
             }
+        } else {
+            successfully_repacked += 1;
         }
     }
 
-    if errors.len() != 0 {
-        Err(RepackFailure(errors).into())
+    if successfully_repacked == 0 {
+        Err(RepackFailure::Total(errors).into())
+    } else if errors.len() != 0 {
+        Err(RepackFailure::Partial(new_pack_path, errors).into())
     } else {
         Ok(new_pack_path)
     }
@@ -259,6 +284,8 @@ mod tests {
 
     use std::{
         collections::HashMap,
+        fs::{set_permissions, OpenOptions},
+        io::Write,
         rc::Rc,
         sync::atomic::{AtomicBool, Ordering},
     };
@@ -448,6 +475,81 @@ mod tests {
                 .map(|d| d.0.key.clone())
                 .collect::<Vec<Key>>()
         );
+    }
+
+    #[test]
+    fn test_repack_missing_files() {
+        let tempdir = TempDir::new().unwrap();
+
+        let paths = vec![PathBuf::from("foo.datapack"), PathBuf::from("bar.datapack")];
+        let files = paths.iter().map(|p| p).collect::<Vec<&PathBuf>>();
+        let res = repack_datapacks(files.clone(), tempdir.path())
+            .err()
+            .unwrap();
+
+        if let Some(RepackFailure::Total(errors)) = res.downcast_ref() {
+            assert!(errors.iter().map(|(path, _)| path).eq(files));
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn test_repack_corrupted() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+        let mut revisions = Vec::new();
+        let mut paths = Vec::new();
+
+        for _ in 0..2 {
+            let base = Key::new(vec![0], Node::random(&mut rng));
+            let rev = vec![
+                (
+                    Delta {
+                        data: Bytes::from(&[1, 2, 3, 4][..]),
+                        base: None,
+                        key: base.clone(),
+                    },
+                    None,
+                ),
+                (
+                    Delta {
+                        data: Bytes::from(&[1, 2, 3, 4][..]),
+                        base: Some(base),
+                        key: Key::new(vec![0], Node::random(&mut rng)),
+                    },
+                    None,
+                ),
+            ];
+            let pack = make_datapack(&tempdir, &rev);
+            let path = pack.base_path().to_path_buf();
+            revisions.push(rev);
+            paths.push(path);
+        }
+
+        let mut to_corrupt = paths.get(0).unwrap().clone();
+        to_corrupt.set_extension("datapack");
+        let mut perms = to_corrupt.metadata().unwrap().permissions();
+        perms.set_readonly(false);
+        set_permissions(to_corrupt.clone(), perms).unwrap();
+        let mut file = OpenOptions::new()
+            .write(true)
+            .open(to_corrupt.clone())
+            .unwrap();
+        file.write_all(b"FOOBARBAZ").unwrap();
+        drop(file);
+
+        let res = repack_datapacks(paths.iter(), tempdir.path())
+            .err()
+            .unwrap();
+
+        if let Some(RepackFailure::Partial(_, errors)) = res.downcast_ref() {
+            assert_eq!(errors.iter().count(), 1);
+            to_corrupt.set_extension("");
+            assert!(errors.iter().find(|(p, _)| p == &to_corrupt).is_some());
+        } else {
+            assert!(false);
+        }
     }
 
     #[test]

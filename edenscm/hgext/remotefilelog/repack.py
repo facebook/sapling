@@ -84,6 +84,7 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
         pythonrepack(repo, newoptions, packpath, incremental)
 
     try:
+        failed = False
         with flock(
             repacklockvfs(repo).join("repacklock"),
             _("repacking %s") % repo.origroot,
@@ -94,21 +95,29 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
             _cleanuptemppacks(repo.ui, packpath)
 
             if incremental:
-                repackincrementaldatapacks(packpath, packpath)
-                repackincrementalhistpacks(packpath, packpath)
+                repacks = [repackincrementaldatapacks, repackincrementalhistpacks]
             else:
-                repackdatapacks(packpath, packpath)
-                repackhistpacks(packpath, packpath)
+                repacks = [repackdatapacks, repackhistpacks]
+
+            for dorepack in repacks:
+                try:
+                    dorepack(packpath, packpath)
+                except Exception as e:
+                    repo.ui.log(
+                        "repack_failure", msg=str(e), traceback=traceback.format_exc()
+                    )
+                    if "Repack successful but with errors" not in str(e):
+                        failed = True
+
     except error.LockHeld:
         raise RepackAlreadyRunning(
             _("skipping repack - another repack is already running")
         )
-    except Exception as e:
+
+    if failed:
         repo.ui.warn(
-            _("warning: rust repack failed for: %s, fallback to python: %s\n")
-            % (packpath, e)
+            _("warning: rust repack failed for: %s, fallback to python\n") % packpath
         )
-        repo.ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
         pythonrepack(repo, options, packpath, incremental)
 
 
