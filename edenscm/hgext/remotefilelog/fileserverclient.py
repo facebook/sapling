@@ -388,40 +388,51 @@ class fileserverclient(object):
     def _connect(self):
         return self.repo.connectionpool.get(self.repo.fallbackpath)
 
-    def request(self, fileids):
+    def request(self, fileids, fetchdata, fetchhistory):
         if self.ui.configbool("remotefilelog", "fetchpacks"):
             if self.ui.configbool("edenapi", "enabled"):
                 return self.httprequestpacks(fileids)
-            return self.requestpacks(fileids)
+            return self.requestpacks(fileids, fetchdata, fetchhistory)
         return self.requestloose(fileids)
 
-    def httprequestpacks(self, fileids):
+    def httprequestpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTP using the Eden API"""
-        self.repo.edenapi.get_files(fileids)
-        self.repo.edenapi.get_history(fileids)
+        if fetchdata:
+            self.repo.edenapi.get_files(fileids)
 
-    def requestpacks(self, fileids):
+        if fetchhistory:
+            self.repo.edenapi.get_history(fileids)
+
+    def requestpacks(self, fileids, fetchdata, fetchhistory):
         if not self.remotecache.connected:
             self.connect()
         cache = self.remotecache
 
         total = len(fileids)
-        totalfetches = 2 * total  # requesting twice: data & history
+        totalfetches = 0
+        if fetchdata:
+            totalfetches += total
+        if fetchhistory:
+            totalfetches += total
         with progress.bar(
             self.ui, _("fetching from memcache"), total=totalfetches
         ) as prog:
             # generate `get` keys and make data request
             getkeys = [file + "\0" + node for file, node in fileids]
-            cache.getdatapack(getkeys)
-            cache.gethistorypack(getkeys)
+            if fetchdata:
+                cache.getdatapack(getkeys)
+            if fetchhistory:
+                cache.gethistorypack(getkeys)
 
             # receive both data and history
             misses = []
             try:
-                datamisses = cache.receive(prog)
-                histmisses = cache.receive(prog)
+                allmisses = set()
+                if fetchdata:
+                    allmisses.update(cache.receive(prog))
+                if fetchhistory:
+                    allmisses.update(cache.receive(prog))
 
-                allmisses = histmisses.union(datamisses)
                 misses = map(lambda key: key.split("\0"), allmisses)
             except CacheConnectionError:
                 misses = fileids
@@ -803,7 +814,7 @@ class fileserverclient(object):
         if self.remotecache.connected:
             self.remotecache.close()
 
-    def prefetch(self, fileids, force=False, fetchdata=True, fetchhistory=False):
+    def prefetch(self, fileids, force=False, fetchdata=True, fetchhistory=True):
         """downloads the given file versions to the cache
         """
         repo = self.repo
@@ -864,7 +875,7 @@ class fileserverclient(object):
 
             start = time.time()
             with self.ui.timesection("fetchingfiles"):
-                self.request(missingids)
+                self.request(missingids, fetchdata, fetchhistory)
             fetchcost += time.time() - start
             if not batchlfsdownloads and dolfsprefetch:
                 self._lfsprefetch(fileids)

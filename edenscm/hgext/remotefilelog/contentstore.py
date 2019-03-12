@@ -237,7 +237,9 @@ class remotecontentstore(object):
         self._shared = shared
 
     def _prefetch(self, name, node):
-        self._fileservice.prefetch([(name, hex(node))], force=True, fetchdata=True)
+        self._fileservice.prefetch(
+            [(name, hex(node))], force=True, fetchdata=True, fetchhistory=False
+        )
         self._shared.markforrefresh()
 
     def get(self, name, node):
