@@ -85,7 +85,7 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, FileInode& inode) {
   // improve concurrency.
   struct stat st;
   folly::checkUnixError(fstat(entry->file.fd(), &st));
-  if (st.st_size < static_cast<off_t>(Overlay::kHeaderLength)) {
+  if (st.st_size < static_cast<off_t>(FsOverlay::kHeaderLength)) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
@@ -94,7 +94,7 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, FileInode& inode) {
     throw InodeError(EIO, inode.inodePtrFromThis(), "corrupt overlay file");
   }
 
-  auto size = st.st_size - static_cast<off_t>(Overlay::kHeaderLength);
+  auto size = st.st_size - static_cast<off_t>(FsOverlay::kHeaderLength);
 
   // Update the cache if the version still matches.
   auto info = entry->info.wlock();
@@ -121,7 +121,7 @@ Hash OverlayFileAccess::getSha1(InodeNumber ino) {
   SHA_CTX ctx;
   SHA1_Init(&ctx);
 
-  off_t off = Overlay::kHeaderLength;
+  off_t off = FsOverlay::kHeaderLength;
   while (true) {
     // Using pread here so that we don't move the file position;
     // the file descriptor is shared between multiple file handles
@@ -165,7 +165,7 @@ std::string OverlayFileAccess::readAllContents(InodeNumber ino) {
   auto info = entry->info.wlock();
 
   int fd = entry->file.fd();
-  auto rc = lseek(fd, Overlay::kHeaderLength, SEEK_SET);
+  auto rc = lseek(fd, FsOverlay::kHeaderLength, SEEK_SET);
   folly::checkUnixError(rc, "unable to seek in materialized FileInode");
   std::string result;
   if (!folly::readFile(fd, result)) {
@@ -182,7 +182,7 @@ BufVec OverlayFileAccess::read(InodeNumber ino, size_t size, off_t off) {
       entry->file.fd(),
       buf->writableBuffer(),
       size,
-      off + Overlay::kHeaderLength);
+      off + FsOverlay::kHeaderLength);
 
   folly::checkUnixError(res);
   buf->append(res);
@@ -198,7 +198,7 @@ size_t OverlayFileAccess::write(
 
   // TODO: Introduce a folly::pwritevNoInt and call that instead.
   auto xfer =
-      ::pwritev(entry->file.fd(), iov, iovcnt, off + Overlay::kHeaderLength);
+      ::pwritev(entry->file.fd(), iov, iovcnt, off + FsOverlay::kHeaderLength);
   folly::checkUnixError(xfer);
 
   auto info = entry->info.wlock();
@@ -211,7 +211,7 @@ void OverlayFileAccess::truncate(InodeNumber ino, off_t size) {
   auto entry = getEntryForInode(ino);
 
   folly::checkUnixError(
-      ftruncate(entry->file.fd(), size + Overlay::kHeaderLength));
+      ftruncate(entry->file.fd(), size + FsOverlay::kHeaderLength));
 
   auto info = entry->info.wlock();
   info->invalidateMetadata();

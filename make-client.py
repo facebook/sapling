@@ -61,7 +61,7 @@ def generate_thrift_code(gen_dir):
     thrift_files = [
         "eden/fs/service/eden.thrift",
         "common/fb303/if/fb303.thrift",
-        "eden/fs/inodes/overlay.thrift",
+        "eden/fs/inodes/overlay/overlay.thrift",
     ]
     for t in thrift_files:
         run_cmd(

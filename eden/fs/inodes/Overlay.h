@@ -12,13 +12,13 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
-#include <gtest/gtest_prod.h>
 #include <array>
 #include <condition_variable>
 #include <optional>
 #include <thread>
 #include "eden/fs/fuse/InodeNumber.h"
-#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
+#include "eden/fs/inodes/overlay/FsOverlay.h"
+#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -57,8 +57,6 @@ struct SerializedInodeMap;
  */
 class Overlay {
  public:
-  class InodePath;
-
   /**
    * Create a new Overlay object.
    *
@@ -182,24 +180,7 @@ class Overlay {
       InodeNumber inodeNumber,
       const folly::IOBuf& contents);
 
-  /**
-   * Constants for an header in overlay file.
-   */
-  static constexpr folly::StringPiece kHeaderIdentifierDir{"OVDR"};
-  static constexpr folly::StringPiece kHeaderIdentifierFile{"OVFL"};
-  static constexpr uint32_t kHeaderVersion = 1;
-  static constexpr size_t kHeaderLength = 64;
-
-  /**
-   * The number of digits required for a decimal representation of an
-   * inode number.
-   */
-  static constexpr size_t kMaxDecimalInodeNumberLength = 20;
-
  private:
-  FRIEND_TEST(OverlayTest, getFilePath);
-  friend class RawOverlayTest;
-
   /**
    * A request for the background GC thread.  There are two types of requests:
    * recursively forget data underneath an given directory, or complete a
@@ -227,47 +208,8 @@ class Overlay {
   };
 
   void initOverlay();
-  InodeNumber loadNextInodeNumber();
-  std::optional<InodeNumber> tryLoadNextInodeNumberFile();
-  InodeNumber scanForNextInodeNumber();
-  void saveNextInodeNumber();
-  void readExistingOverlay(int infoFD);
-  void initNewOverlay();
-  void ensureTmpDirectoryIsCreated();
-
-  std::optional<overlay::OverlayDir> deserializeOverlayDir(
-      InodeNumber inodeNumber) const;
-
-  /**
-   * Creates header for the files stored in Overlay
-   */
-  static std::array<uint8_t, kHeaderLength> createHeader(
-      folly::StringPiece identifier,
-      uint32_t version);
-
-  folly::File
-  createOverlayFileImpl(InodeNumber inodeNumber, iovec* iov, size_t iovCount);
-
-  /**
-   * Get the path to the file for the given inode, relative to localDir_.
-   *
-   * Returns a null-terminated InodePath value.
-   */
-  static InodePath getFilePath(InodeNumber inodeNumber);
-
-  /**
-   * Validates an entry's header.
-   */
-  static void validateHeader(
-      InodeNumber inodeNumber,
-      folly::StringPiece contents,
-      folly::StringPiece headerId);
-
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
-
-  /** path to ".eden/CLIENT/local" */
-  const AbsolutePath localDir_;
 
   /**
    * The next inode number to allocate.  Zero indicates that neither
@@ -277,26 +219,12 @@ class Overlay {
    */
   std::atomic<uint64_t> nextInodeNumber_{0};
 
-  /**
-   * An open file descriptor to the overlay info file.
-   *
-   * This is primarily used to hold a lock on the overlay for as long as we are
-   * using it.  We want to ensure that only one eden process accesses the
-   * Overlay directory at a time.
-   */
-  folly::File infoFile_;
-
-  /**
-   * An open file to the overlay directory.
-   *
-   * We maintain this so we can use openat(), unlinkat(), etc.
-   */
-  folly::File dirFile_;
+  FsOverlay fsOverlay_;
 
   /**
    * Disk-backed mapping from inode number to InodeMetadata.
-   * Defined below infoFile_ because it acquires its own file lock, which should
-   * be released first during shutdown.
+   * Defined below fsOverlay_ because it acquires its own file lock, which
+   * should be released first during shutdown.
    */
   std::unique_ptr<InodeMetadataTable> inodeMetadataTable_;
 
@@ -307,29 +235,6 @@ class Overlay {
   std::thread gcThread_;
   folly::Synchronized<GCQueue, std::mutex> gcQueue_;
   std::condition_variable gcCondVar_;
-};
-
-class Overlay::InodePath {
- public:
-  explicit InodePath() noexcept;
-
-  /**
-   * The maximum path length for the path to a file inside the overlay
-   * directory.
-   *
-   * This is 2 bytes for the initial subdirectory name, 1 byte for the '/',
-   * 20 bytes for the inode number, and 1 byte for a null terminator.
-   */
-  static constexpr size_t kMaxPathLength =
-      2 + 1 + Overlay::kMaxDecimalInodeNumberLength + 1;
-
-  const char* c_str() const noexcept;
-  /* implicit */ operator RelativePathPiece() const noexcept;
-
-  std::array<char, kMaxPathLength>& rawData() noexcept;
-
- private:
-  std::array<char, kMaxPathLength> path_;
 };
 
 } // namespace eden
