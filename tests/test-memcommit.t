@@ -91,7 +91,7 @@ configuration.
   $ touch x
   $ hg commit -Aqm "initial commit"
   $ copycommit . ../mirroredrepo
-  {"error": "commit without parents are not supported"} (no-eol)
+  {"error": "commit without parents are not allowed"} (no-eol)
   [255]
 
 

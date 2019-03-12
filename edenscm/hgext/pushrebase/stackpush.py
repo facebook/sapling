@@ -183,7 +183,7 @@ class pushrequest(object):
                 not repo.ui.configbool("memcommit", "allowunrelatedroots")
                 and p1.node() == nullid
             ):
-                raise error.Abort(_("commit without parents are not supported"))
+                raise error.Abort(_("commit without parents are not allowed"))
 
             return p1
 
