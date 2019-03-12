@@ -82,13 +82,11 @@ pub fn repo_handlers(
             let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let repoid = RepositoryId::new(config.repoid);
-            let post_commit_scribe_category = config.post_commit_scribe_category.clone();
             open_blobrepo(
                 logger.clone(),
                 config.repotype.clone(),
                 repoid,
                 myrouter_port,
-                post_commit_scribe_category,
             )
             .and_then(move |blobrepo| {
                 let hook_manager_params = match config.hook_manager_params.clone() {

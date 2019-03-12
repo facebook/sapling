@@ -297,7 +297,6 @@ impl RepoConfigs {
         let repoid = this.repoid;
         let scuba_table = this.scuba_table;
         let wireproto_scribe_category = this.wireproto_scribe_category;
-        let post_commit_scribe_category = this.post_commit_scribe_category;
         let cache_warmup = this.cache_warmup.map(|cache_warmup| CacheWarmupParams {
             bookmark: Bookmark::new(cache_warmup.bookmark).expect("bookmark name must be ascii"),
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
@@ -394,7 +393,6 @@ impl RepoConfigs {
             pushrebase,
             lfs,
             wireproto_scribe_category,
-            post_commit_scribe_category,
             hash_validation_percentage,
             readonly,
             skiplist_index_blobstore_key,
@@ -422,7 +420,6 @@ struct RawRepoConfig {
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
     wireproto_scribe_category: Option<String>,
-    post_commit_scribe_category: Option<String>,
     hash_validation_percentage: Option<usize>,
     readonly: Option<bool>,
     hook_manager_params: Option<HookManagerParams>,
@@ -734,7 +731,6 @@ mod test {
                     threshold: Some(1000),
                 },
                 wireproto_scribe_category: None,
-                post_commit_scribe_category: None,
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 skiplist_index_blobstore_key: Some("skiplist_key".into()),
@@ -758,7 +754,6 @@ mod test {
                 pushrebase: Default::default(),
                 lfs: Default::default(),
                 wireproto_scribe_category: Some("category".to_string()),
-                post_commit_scribe_category: None,
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 skiplist_index_blobstore_key: None,

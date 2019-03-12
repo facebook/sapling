@@ -16,7 +16,6 @@ use futures::{
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use metaconfig_types::{self, RepoType};
 use mononoke_types::RepositoryId;
-use post_commit::{LogToScribe, PostCommitQueue};
 use slog::{self, o, Discard, Drain, Logger};
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::path::Path;
@@ -50,7 +49,6 @@ pub fn new_local(
     path: &Path,
     blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
-    post_commit_queue: Arc<PostCommitQueue>,
 ) -> Result<BlobRepo> {
     let bookmarks = SqlBookmarks::with_sqlite_path(path.join("books"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
@@ -69,33 +67,22 @@ pub fn new_local(
         Arc::new(changesets),
         Arc::new(bonsai_hg_mapping),
         repoid,
-        post_commit_queue,
     ))
 }
 
 /// Most local use cases should use new_rocksdb instead. This is only meant for test
 /// fixtures.
-pub fn new_files(
-    logger: Logger,
-    path: &Path,
-    repoid: RepositoryId,
-    post_commit_queue: Arc<PostCommitQueue>,
-) -> Result<BlobRepo> {
+pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
     let blobstore = Fileblob::create(path.join("blobs"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    new_local(logger, path, Arc::new(blobstore), repoid, post_commit_queue)
+    new_local(logger, path, Arc::new(blobstore), repoid)
 }
 
-pub fn new_rocksdb(
-    logger: Logger,
-    path: &Path,
-    repoid: RepositoryId,
-    post_commit_queue: Arc<PostCommitQueue>,
-) -> Result<BlobRepo> {
+pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
     let options = rocksdb::Options::new().create_if_missing(true);
     let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
         .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    new_local(logger, path, Arc::new(blobstore), repoid, post_commit_queue)
+    new_local(logger, path, Arc::new(blobstore), repoid)
 }
 
 pub fn new_rocksdb_delayed<F>(
@@ -107,7 +94,6 @@ pub fn new_rocksdb_delayed<F>(
     put_roundtrips: usize,
     is_present_roundtrips: usize,
     assert_present_roundtrips: usize,
-    post_commit_queue: Arc<PostCommitQueue>,
 ) -> Result<BlobRepo>
 where
     F: FnMut(()) -> Duration + 'static + Send + Sync,
@@ -123,18 +109,13 @@ where
         is_present_roundtrips,
         assert_present_roundtrips,
     );
-    new_local(logger, path, Arc::new(blobstore), repoid, post_commit_queue)
+    new_local(logger, path, Arc::new(blobstore), repoid)
 }
 
-pub fn new_sqlite(
-    logger: Logger,
-    path: &Path,
-    repoid: RepositoryId,
-    post_commit_queue: Arc<PostCommitQueue>,
-) -> Result<BlobRepo> {
+pub fn new_sqlite(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
     let blobstore = Sqlblob::with_sqlite_path(repoid, path.join("blobs"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    new_local(logger, path, Arc::new(blobstore), repoid, post_commit_queue)
+    new_local(logger, path, Arc::new(blobstore), repoid)
 }
 
 pub fn open_blobrepo(
@@ -142,20 +123,17 @@ pub fn open_blobrepo(
     repotype: RepoType,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
-    post_commit_scribe_category: Option<String>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     use metaconfig_types::RepoType::*;
-    let post_commit_queue = Arc::new(LogToScribe::new_with_default_scribe(
-        post_commit_scribe_category.clone(),
-    ));
+
     match repotype {
-        BlobFiles(ref path) => new_files(logger, &path, repoid, post_commit_queue)
+        BlobFiles(ref path) => new_files(logger, &path, repoid)
             .into_future()
             .left_future(),
-        BlobRocks(ref path) => new_rocksdb(logger, &path, repoid, post_commit_queue)
+        BlobRocks(ref path) => new_rocksdb(logger, &path, repoid)
             .into_future()
             .left_future(),
-        BlobSqlite(ref path) => new_sqlite(logger, &path, repoid, post_commit_queue)
+        BlobSqlite(ref path) => new_sqlite(logger, &path, repoid)
             .into_future()
             .left_future(),
         BlobRemote {
@@ -179,7 +157,6 @@ pub fn open_blobrepo(
                 filenode_shards.clone(),
                 repoid,
                 myrouter_port,
-                post_commit_scribe_category,
             )
             .right_future()
         }
@@ -207,7 +184,6 @@ pub fn new_memblob_empty(
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
         ),
         RepositoryId::new(0),
-        Arc::new(LogToScribe::new_with_default_scribe(None)),
     ))
 }
 
@@ -218,7 +194,6 @@ pub fn new_remote(
     filenode_shards: Option<usize>,
     repoid: RepositoryId,
     myrouter_port: u16,
-    post_commit_scribe_category: Option<String>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     // recursively construct blobstore from arguments
     fn eval_remote_args(
@@ -337,10 +312,6 @@ pub fn new_remote(
                 }
             };
 
-            let post_commit_queue = Arc::new(LogToScribe::new_with_default_scribe(
-                post_commit_scribe_category,
-            ));
-
             Ok(BlobRepo::new_with_changeset_fetcher_factory(
                 logger,
                 Arc::new(bookmarks),
@@ -349,7 +320,6 @@ pub fn new_remote(
                 changesets,
                 Arc::new(bonsai_hg_mapping),
                 repoid,
-                post_commit_queue,
                 Arc::new(changeset_fetcher_factory),
             ))
         },

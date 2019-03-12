@@ -45,7 +45,6 @@ use mononoke_types::{
     ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
     RepositoryId,
 };
-use post_commit::{self, PostCommitQueue};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::Timeseries;
@@ -107,7 +106,6 @@ pub struct BlobRepo {
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
     // (for example, revsets).
     changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
-    postcommit_queue: Arc<PostCommitQueue>,
 }
 
 impl BlobRepo {
@@ -119,7 +117,6 @@ impl BlobRepo {
         changesets: Arc<Changesets>,
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
         repoid: RepositoryId,
-        postcommit_queue: Arc<PostCommitQueue>,
     ) -> Self {
         let changeset_fetcher_factory = {
             cloned!(changesets, repoid);
@@ -140,7 +137,6 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
-            postcommit_queue,
         }
     }
 
@@ -152,7 +148,6 @@ impl BlobRepo {
         changesets: Arc<Changesets>,
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
         repoid: RepositoryId,
-        postcommit_queue: Arc<PostCommitQueue>,
         changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
     ) -> Self {
         BlobRepo {
@@ -164,7 +159,6 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory,
-            postcommit_queue,
         }
     }
 
@@ -188,8 +182,6 @@ impl BlobRepo {
             ..
         } = self;
 
-        let postcommit_queue = Arc::new(post_commit::Discard::new());
-
         // Drop the PrefixBlobstore (it will be wrapped up in one again by BlobRepo::new)
         let blobstore = blobstore.into_inner();
         let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
@@ -202,7 +194,6 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             repoid,
-            postcommit_queue,
         )
     }
 
@@ -1898,7 +1889,6 @@ pub fn save_bonsai_changesets(
         ));
     }
     let bonsai_objects = bonsai_object_futs.collect();
-
     // Order of inserting entries in changeset table matters though, so we first need to
     // topologically sort commits.
     let mut bcs_parents = HashMap::new();
@@ -1919,48 +1909,27 @@ pub fn save_bonsai_changesets(
                 cs_id: bcs_id,
                 parents: bcs.parents().into_iter().collect(),
             };
-            let pc = post_commit::PreCommitInfo::new(repo.repoid, bcs_id, bcs);
+
             bonsai_complete_futs.push(
                 complete_changesets
                     .add(ctx.clone(), completion_record)
-                    .and_then({
-                        cloned!(ctx, repo);
-                        move |_| {
-                            repo.get_generation_number_by_bonsai(ctx, pc.get_changeset_id())
-                                .map(move |gen| {
-                                    pc.complete(
-                                        gen.expect(
-                                            "Just inserted changeset has no generation number",
-                                        ),
-                                    )
-                                })
-                        }
-                    }),
-            );
+                );
         }
     }
 
-    let postcommit_queue = repo.postcommit_queue.clone();
-    bonsai_objects.and_then(move |_| {
-        // T33825303 - build a future that depends on parent futures instead of inserting them
-        // one by one.
-        loop_fn(
-            bonsai_complete_futs.into_iter(),
-            move |mut futs| match futs.next() {
-                Some(fut) => fut
-                    .and_then({
-                        cloned!(postcommit_queue);
-                        move |pc| {
-                            postcommit_queue
-                                .queue_commit(pc)
-                                .map(|_| Loop::Continue(futs))
-                        }
-                    })
-                    .left_future(),
-                None => ok(Loop::Break(())).right_future(),
-            },
-        )
-    })
+    bonsai_objects
+        .and_then(move |_| {
+            loop_fn(
+                bonsai_complete_futs.into_iter(),
+                move |mut futs| match futs.next() {
+                    Some(fut) => fut
+                        .and_then({ move |_| ok(Loop::Continue(futs)) })
+                        .left_future(),
+                    None => ok(Loop::Break(())).right_future(),
+                },
+            )
+        })
+        .and_then(|_| ok(()))
 }
 
 pub struct CreateChangeset {
@@ -2225,11 +2194,6 @@ impl CreateChangeset {
                     }
                 })
                 .and_then(move |(hg_cs, bonsai_cs)| {
-                    let pc = post_commit::PreCommitInfo::new(
-                        repoid,
-                        bonsai_cs.get_changeset_id(),
-                        &bonsai_cs,
-                    );
                     let completion_record = ChangesetInsert {
                         repo_id: repo.repoid,
                         cs_id: bonsai_cs.get_changeset_id(),
@@ -2237,18 +2201,6 @@ impl CreateChangeset {
                     };
                     complete_changesets
                         .add(ctx.clone(), completion_record)
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |_| {
-                                repo.get_generation_number_by_bonsai(ctx, pc.get_changeset_id())
-                                    .map(move |gen| {
-                                        pc.complete(gen.expect(
-                                            "Just inserted changeset has no generation number",
-                                        ))
-                                    })
-                                    .and_then(move |pc| repo.postcommit_queue.queue_commit(pc))
-                            }
-                        })
                         .map(|_| (bonsai_cs, hg_cs))
                         .context("While inserting into changeset table")
                         .traced_with_id(
@@ -2292,7 +2244,6 @@ impl Clone for BlobRepo {
             bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
-            postcommit_queue: self.postcommit_queue.clone(),
         }
     }
 }

@@ -178,7 +178,6 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo,
         filenode_shards,
         RepositoryId::new(0),
         myrouter_port,
-        None,
     )
     .boxify()
 }

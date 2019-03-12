@@ -71,7 +71,7 @@ impl MononokeRepo {
 
         let repoid = RepositoryId::new(config.repoid);
         let sha1_cache = cachelib::get_pool("content-sha1");
-        open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port, None)
+        open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port)
             .map(move |repo| {
                 let skiplist_index = {
                     if !with_skiplist {

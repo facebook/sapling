@@ -79,9 +79,6 @@ pub struct RepoConfig {
     /// Scribe category to log all wireproto requests with full arguments.
     /// Used for replay on shadow tier.
     pub wireproto_scribe_category: Option<String>,
-    /// Scribe category to log all commits to.
-    /// Used for triggering clone streamfile updates.
-    pub post_commit_scribe_category: Option<String>,
     /// What percent of read request verifies that returned content matches the hash
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
