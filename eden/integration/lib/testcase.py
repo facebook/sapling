@@ -83,7 +83,9 @@ class EdenTestCase(
             finally:
                 self.setUp = old_setUp  # type: ignore # (mypy issue 2427)
                 self.tearDown = old_tearDown  # type: ignore # (mypy issue 2427)
+                # pyre-fixme[16]: `EdenTestCase` has no attribute `setup_example`.
                 del self.setup_example
+                # pyre-fixme[16]: `EdenTestCase` has no attribute `teardown_example`.
                 del self.teardown_example
         else:
             return super(EdenTestCase, self).run(result)
@@ -429,6 +431,7 @@ def _replicate_eden_repo_test(
 # Given an input test class named "MyTest", this will create two separate
 # classes named "MyTestHg" and "MyTestGit", which run the tests with
 # mercurial and git repositories, respectively.
+# pyre-fixme[6]: Expected `Callable[..., Iterable[Tuple[str, Type[TestCase]]]]` for 1...
 eden_repo_test = test_replicator(_replicate_eden_repo_test)
 
 

@@ -116,7 +116,6 @@ class StatusCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--timeout",
-            # pyre-fixme[6]: Expected `Union[Callable[[str], _T], FileType]` for 2nd ...
             type=float,
             default=15.0,
             help="Wait up to TIMEOUT seconds for the daemon to respond "
@@ -1083,7 +1082,6 @@ class RestartCmd(Subcmd):
         )
         parser.add_argument(
             "--shutdown-timeout",
-            # pyre-fixme[6]: Expected `Union[Callable[[str], _T], FileType]` for 2nd ...
             type=float,
             default=None,
             help="How long to wait for the old edenfs process to exit when "
@@ -1284,7 +1282,6 @@ class StopCmd(Subcmd):
         parser.add_argument(
             "-t",
             "--timeout",
-            # pyre-fixme[6]: Expected `Union[Callable[[str], _T], FileType]` for 3rd ...
             type=float,
             default=15.0,
             help="Wait up to TIMEOUT seconds for the daemon to exit "

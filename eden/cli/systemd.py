@@ -117,7 +117,6 @@ class SystemdEnvironmentFile:
     def __escape_value(value: bytes) -> bytes:
         return (
             b'"'
-            # pyre-fixme[6]: Expected `AnyStr` for 2nd param but got `Callable[[Any],...
             + re.sub(b'[\\\\"]', lambda match: b"\\" + match.group(0), value)
             + b'"'
         )

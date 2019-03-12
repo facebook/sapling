@@ -248,4 +248,5 @@ def _replicate_service_test(
 #
 # [1] This class is *not* created if the input test class derives from
 #     SystemdServiceTestCaseMarker.
+# pyre-fixme[6]: Expected `Callable[..., Iterable[Tuple[str, Type[TestCase]]]]` for 1...
 service_test = test_replicator(_replicate_service_test)
