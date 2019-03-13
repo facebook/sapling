@@ -198,7 +198,7 @@ def _memcommit(repo, params):
 
     with repo.wlock(), repo.lock(), repo.transaction("memcommit"):
 
-        def resolvetargetctx(repo, targetparents):
+        def resolvetargetctx(repo, originalparentnode, targetparents):
             numparents = len(targetparents)
 
             if numparents > 1:
@@ -210,6 +210,9 @@ def _memcommit(repo, params):
             targetctx = repo[targetparents[0]]
             targetnode = targetctx.node()
 
+            if originalparentnode != targetnode:
+                raise error.Abort(_("commit with new parents not supported"))
+
             if (
                 not repo.ui.configbool("memcommit", "allowunrelatedroots")
                 and targetnode == nullid
@@ -220,7 +223,7 @@ def _memcommit(repo, params):
 
         request = pushrequest.frommemcommit(repo, params)
         originalparentnode = request.stackparentnode
-        targetctx = resolvetargetctx(repo, params.metadata.parents)
+        targetctx = resolvetargetctx(repo, originalparentnode, params.metadata.parents)
         targetnode = targetctx.node()
 
         destination = params.destination

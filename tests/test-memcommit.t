@@ -110,16 +110,13 @@ commit hash in the output.
   $ echo >> y
   $ hg commit -Aqm "added another file"
   $ testmemcommit . ../mirroredrepo --to ".^"
-  $ echo >> x
-  $ hg commit -qm "modified existing file"
-  $ testmemcommit . ../mirroredrepo --to ".^"
-  $ hg bookmark -r "." temporary_bookmark
-  $ hg -q up ".~2"
-  $ echo >> x
-  $ hg commit -qm "modified existing file"
-  $ hg -q up temporary_bookmark
-  $ hg bookmark -d temporary_bookmark
-  $ testmemcommit . ../mirroredrepo --to ".^^"
+
+
+- Test that committing to new parents is not supported.
+
+  $ copycommit . ../mirroredrepo --to "."
+  {"error": "commit with new parents not supported"} (no-eol)
+  [255]
 
 
 - Test that we can mirror commits from the originalrepo to the mirroredrepo. In
