@@ -22,6 +22,7 @@
 #include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/utils/FaultInjector.h"
 
 using facebook::eden::Hash;
 using folly::ByteRange;
@@ -182,8 +183,10 @@ namespace eden {
 
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
+    FaultInjector* faultInjector,
     std::shared_ptr<ReloadableConfig> config)
     : LocalStore(std::move(config)),
+      faultInjector_(*faultInjector),
       dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()),
       ioPool_(12, "RocksLocalStore") {}
 
@@ -258,11 +261,12 @@ FOLLY_NODISCARD folly::Future<StoreResult> RocksDbLocalStore::getFuture(
   // but can potentially be an arbitrary length so we can't just use Hash as
   // the storage here.  std::string is appropriate, but there's some noise
   // with the conversion from unsigned/signed and back again.
-  return folly::via(
-      &ioPool_,
-      [keySpace,
-       key = std::string(reinterpret_cast<const char*>(key.data()), key.size()),
-       this] {
+  return faultInjector_.checkAsync("local store get single", "")
+      .via(&ioPool_)
+      .thenValue([keySpace,
+                  key = std::string(
+                      reinterpret_cast<const char*>(key.data()), key.size()),
+                  this](folly::Unit&&) {
         return get(
             keySpace,
             folly::ByteRange(
@@ -290,44 +294,48 @@ RocksDbLocalStore::getBatch(
 
   for (auto& batch : batches) {
     futures.emplace_back(
-        folly::via(&ioPool_, [this, keySpace, keys = std::move(batch)] {
-          std::vector<Slice> keySlices;
-          std::vector<std::string> values;
-          std::vector<rocksdb::ColumnFamilyHandle*> columns;
-          for (auto& key : *keys) {
-            keySlices.emplace_back(key);
-            columns.emplace_back(dbHandles_.columns[keySpace].get());
-          }
-          auto statuses = dbHandles_.db->MultiGet(
-              ReadOptions(), columns, keySlices, &values);
+        faultInjector_.checkAsync("local store get batch", "")
+            .via(&ioPool_)
+            .thenValue(
+                [this, keySpace, keys = std::move(batch)](folly::Unit&&) {
+                  XLOG(INFO) << __func__ << " starting to actually do work";
+                  std::vector<Slice> keySlices;
+                  std::vector<std::string> values;
+                  std::vector<rocksdb::ColumnFamilyHandle*> columns;
+                  for (auto& key : *keys) {
+                    keySlices.emplace_back(key);
+                    columns.emplace_back(dbHandles_.columns[keySpace].get());
+                  }
+                  auto statuses = dbHandles_.db->MultiGet(
+                      ReadOptions(), columns, keySlices, &values);
 
-          std::vector<StoreResult> results;
-          for (size_t i = 0; i < keys->size(); ++i) {
-            auto& status = statuses[i];
-            if (!status.ok()) {
-              if (status.IsNotFound()) {
-                // Return an empty StoreResult
-                results.emplace_back(); // StoreResult();
-                continue;
-              }
+                  std::vector<StoreResult> results;
+                  for (size_t i = 0; i < keys->size(); ++i) {
+                    auto& status = statuses[i];
+                    if (!status.ok()) {
+                      if (status.IsNotFound()) {
+                        // Return an empty StoreResult
+                        results.emplace_back(); // StoreResult();
+                        continue;
+                      }
 
-              // TODO: RocksDB can return a "TryAgain" error.
-              // Should we try again for the user, rather than re-throwing the
-              // error?
+                      // TODO: RocksDB can return a "TryAgain" error.
+                      // Should we try again for the user, rather than
+                      // re-throwing the error?
 
-              // We don't use RocksException::check(), since we don't want to
-              // waste our time computing the hex string of the key if we
-              // succeeded.
-              throw RocksException::build(
-                  status,
-                  "failed to get ",
-                  folly::hexlify(keys->at(i)),
-                  " from local store");
-            }
-            results.emplace_back(std::move(values[i]));
-          }
-          return results;
-        }));
+                      // We don't use RocksException::check(), since we don't
+                      // want to waste our time computing the hex string of the
+                      // key if we succeeded.
+                      throw RocksException::build(
+                          status,
+                          "failed to get ",
+                          folly::hexlify(keys->at(i)),
+                          " from local store");
+                    }
+                    results.emplace_back(std::move(values[i]));
+                  }
+                  return results;
+                }));
   }
 
   return folly::collect(futures).thenValue(

@@ -26,6 +26,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
@@ -191,7 +192,8 @@ int main(int argc, char* argv[]) {
     revName = ".";
   }
 
-  RocksDbLocalStore store(rocksPath);
+  FaultInjector faultInjector(/*enabled=*/false);
+  RocksDbLocalStore store(rocksPath, &faultInjector);
 
   int returnCode = EX_OK;
   if (FLAGS_import_type == "flat") {

@@ -478,7 +478,8 @@ Future<Unit> EdenServer::prepareImpl(
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
-    localStore_ = make_shared<RocksDbLocalStore>(rocksPath, serverState_);
+    localStore_ = make_shared<RocksDbLocalStore>(
+        rocksPath, &serverState_->getFaultInjector(), serverState_);
     logger->log(
         "Opened RocksDB store in ",
         watch.elapsed().count() / 1000.0,
@@ -943,6 +944,7 @@ void EdenServer::mountFinished(
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
   edenMount->shutdown(doTakeover)
+      .via(getMainEventBase())
       .thenTry([unmountPromise = std::move(unmountPromise),
                 takeoverPromise = std::move(takeoverPromise),
                 takeoverData = std::move(takeover)](

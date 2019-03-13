@@ -15,6 +15,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/utils/FaultInjector.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(blobID, "", "The blob ID");
@@ -41,7 +42,8 @@ int main(int argc, char* argv[]) {
 
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
   const auto rocksPath = edenDir + RelativePathPiece{kRocksDBPath};
-  RocksDbLocalStore localStore(rocksPath);
+  FaultInjector faultInjector(/*enabled=*/false);
+  RocksDbLocalStore localStore(rocksPath, &faultInjector);
 
   Blob blob(blobID, IOBuf());
   localStore.putBlob(blobID, &blob);

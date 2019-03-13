@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Dict
 
 from eden.cli.util import get_pid_using_lockfile
+from facebook.eden.ttypes import FaultDefinition
 
 from .lib import testcase
 
@@ -273,3 +274,59 @@ class TakeoverTest(testcase.EdenRepoTest):
 
             self.assertEqual(self.page1 + self.page2, c2_hello_file.read())
             self.assertEqual("hello world v2", c2_mainc_file.read())
+
+
+@testcase.eden_repo_test
+class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
+    enable_fault_injection: bool = True
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("test-directory/file", "")
+        self.commit1 = self.repo.commit("Initial commit.")
+
+    def select_storage_engine(self) -> str:
+        return "rocksdb"
+
+    def test_takeover_with_tree_inode_loading_from_local_store(self) -> None:
+        """
+        Restart edenfs while a tree inode is being loaded asynchronously. Ensure
+        restarting does not deadlock.
+        """
+
+        def load_test_directory_inode_from_local_store_asynchronously() -> None:
+            """
+            Make edenfs start loading "/test-directory" from the local store.
+
+            To ensure that the local store is in use during takeover, load the tree
+            inode using a prefetch.
+
+            At the time of writing, os.listdir("foo") causes edenfs to prefetch
+            the tree inodes of foo/*. Exploit this to load the tree inode for
+            "/directory".
+
+            Other options considered:
+
+            * At the time of writing, if we load the tree inode using a FUSE
+              request (e.g. os.stat), edenfs would wait for the FUSE request to
+              finish before starting the inode shutdown procedure.
+
+            * At the time of writing, 'edenfsctl prefetch' does not prefetch
+              tree inodes asynchronously.
+            """
+            os.listdir(self.mount)
+
+        graceful_restart_startup_time = 5.0
+
+        with self.eden.get_thrift_client() as client:
+            for key_class in ["local store get single", "local store get batch"]:
+                client.injectFault(
+                    FaultDefinition(
+                        keyClass=key_class,
+                        keyValueRegex=".*",
+                        delayMilliseconds=int(graceful_restart_startup_time * 1000),
+                        count=100,
+                    )
+                )
+
+        load_test_directory_inode_from_local_store_asynchronously()
+        self.eden.graceful_restart()

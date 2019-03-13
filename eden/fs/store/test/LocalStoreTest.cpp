@@ -23,6 +23,7 @@
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/testharness/TempFile.h"
+#include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -50,7 +51,7 @@ class LocalStoreTest : public ::testing::TestWithParam<StoreImpl> {
       case StoreImpl::RocksDB:
         testDir_ = makeTempDir();
         store_ = std::make_unique<RocksDbLocalStore>(
-            AbsolutePathPiece{testDir_->path().string()});
+            AbsolutePathPiece{testDir_->path().string()}, &faultInjector_);
         break;
       case StoreImpl::Sqlite:
         testDir_ = makeTempDir();
@@ -64,6 +65,7 @@ class LocalStoreTest : public ::testing::TestWithParam<StoreImpl> {
     testDir_.reset();
   }
 
+  FaultInjector faultInjector_{/*enabled=*/false};
   std::optional<TemporaryDirectory> testDir_;
   std::unique_ptr<LocalStore> store_;
 };
