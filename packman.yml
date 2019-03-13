@@ -2,6 +2,7 @@ options:
   prefix: /
 packages:
   fb-mononoke-admin:
+    packager: mononoke
     summary: Administration tools for Mononoke
     rules:
       buck:scm/mononoke:admin:
