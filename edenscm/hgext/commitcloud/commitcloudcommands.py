@@ -872,6 +872,7 @@ def _checkomissions(ui, repo, remotepath, lastsyncstate):
     them manually), then remove the tracking of those heads being omitted, and
     restore any bookmarks that can now be restored.
     """
+    unfi = repo.unfiltered()
     lastomittedheads = set(lastsyncstate.omittedheads)
     lastomittedbookmarks = set(lastsyncstate.omittedbookmarks)
     omittedheads = set()
@@ -885,7 +886,7 @@ def _checkomissions(ui, repo, remotepath, lastsyncstate):
         if name not in lastsyncstate.bookmarks:
             continue
         node = lastsyncstate.bookmarks[name]
-        if node in repo:
+        if node in unfi:
             changes.append((name, nodemod.bin(node)))
         else:
             omittedbookmarks.add(name)
