@@ -23,7 +23,7 @@ import sys
 
 from edenscm.mercurial import bookmarks, error, registrar, scmutil
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm.mercurial.node import hex, nullid
 
 from . import commitdata, serialization
 from ..pushrebase.stackpush import pushrequest
@@ -197,35 +197,60 @@ def _memcommit(repo, params):
     """
 
     with repo.wlock(), repo.lock(), repo.transaction("memcommit"):
+
+        def resolvetargetctx(repo, targetparents):
+            numparents = len(targetparents)
+
+            if numparents > 1:
+                raise error.Abort(_("merge commits are not supported"))
+
+            if numparents == 0:
+                raise error.Abort(_("parent commit must be specified"))
+
+            targetctx = repo[targetparents[0]]
+            targetnode = targetctx.node()
+
+            if (
+                not repo.ui.configbool("memcommit", "allowunrelatedroots")
+                and targetnode == nullid
+            ):
+                raise error.Abort(_("commit without parents are not allowed"))
+
+            return targetctx
+
         request = pushrequest.frommemcommit(repo, params)
-        p1node = request.stackparentnode
+        originalparentnode = request.stackparentnode
+        targetctx = resolvetargetctx(repo, params.metadata.parents)
+        targetnode = targetctx.node()
 
         destination = params.destination
         pushrebase = destination.pushrebase
         ontobookmark = destination.bookmark
+
         if ontobookmark:
             bookmarkctx = scmutil.revsingle(repo, ontobookmark)
-            if not pushrebase and bookmarkctx.node() != p1node:
+            if not pushrebase and bookmarkctx.node() != targetnode:
                 raise error.Abort(
                     _("destination parent does not match destination bookmark")
                 )
         elif pushrebase:
             raise error.Abort(_("must specify destination bookmark for pushrebase"))
 
-        ontoctx = repo[p1node]
         if pushrebase:
             ontonode = bookmarkctx.node()
             cl = repo.changelog
-            if cl.isancestor(p1node, ontonode):
-                ontoctx = bookmarkctx
-            elif not cl.isancestor(ontonode, p1node):
+            if cl.isancestor(originalparentnode, ontonode):
+                targetctx = bookmarkctx
+            elif cl.isancestor(ontonode, originalparentnode):
+                targetctx = repo[originalparentnode]
+            else:
                 raise error.Abort(
                     _(
                         "destination bookmark is not ancestor or descendant of commit parent"
                     )
                 )
 
-        added, replacements = request.pushonto(ontoctx)
+        added, replacements = request.pushonto(targetctx)
 
         if len(added) > 1:
             # We always create a single commit.

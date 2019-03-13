@@ -168,26 +168,13 @@ class pushrequest(object):
             examinepaths,
         )
 
-        def resolveparentctx(repo, parents):
-            numparents = len(parents)
-
-            if numparents > 1:
-                raise error.Abort(_("merge commits are not supported"))
-
-            if numparents == 0:
+        def resolveparentctx(repo, originalparent):
+            if not originalparent:
                 raise error.Abort(_("parent commit must be specified"))
 
-            p1 = repo[parents[0]]
+            return repo[originalparent]
 
-            if (
-                not repo.ui.configbool("memcommit", "allowunrelatedroots")
-                and p1.node() == nullid
-            ):
-                raise error.Abort(_("commit without parents are not allowed"))
-
-            return p1
-
-        p1 = resolveparentctx(repo, metadata.parents)
+        p1 = resolveparentctx(repo, changelist.parent)
         return cls(p1.node(), [commit], cls._calculatefileconditions(p1, examinepaths))
 
     @staticmethod
