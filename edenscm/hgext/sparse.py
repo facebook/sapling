@@ -2272,7 +2272,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
             ui.warn(_("pending changes to '%s'\n") % file)
             abort = not force
     if abort:
-        raise error.Abort(_("could not update sparseness due to " + "pending changes"))
+        raise error.Abort(_("could not update sparseness due to pending changes"))
 
     # Calculate actions
     ui.note(_("calculating actions for refresh\n"))

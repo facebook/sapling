@@ -1469,7 +1469,7 @@ def wraprepo(repo):
                 maxlinkrev = int(tipresults[0][0])
             else:
                 raise CorruptionException(
-                    ("multiple tips for %s in " + " the database") % reponame
+                    ("multiple tips for %s in the database") % reponame
                 )
 
             if (not ignoreduplicates) and (
@@ -2322,7 +2322,7 @@ def sqlrefill(ui, startrev, **opts):
             "",
             "i-know-what-i-am-doing",
             None,
-            _("only run sqlstrip if you know " + "exactly what you're doing"),
+            _("only run sqlstrip if you know exactly what you're doing"),
         ),
         (
             "",

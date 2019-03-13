@@ -899,7 +899,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
 
         if dopull:
             ui.warn(
-                _("'%s' does not exist locally - looking for it " + "remotely...\n")
+                _("'%s' does not exist locally - looking for it remotely...\n")
                 % mayberemote
             )
             # Try pulling node from remote repo

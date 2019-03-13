@@ -943,9 +943,7 @@ def revert(ui, repo, *args, **kwargs):
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if len(args) > 1:
-        ui.status(
-            _("note: hg backout doesn't support multiple commits at " + "once\n\n")
-        )
+        ui.status(_("note: hg backout doesn't support multiple commits at once\n\n"))
 
     cmd = Command("backout")
     if args:

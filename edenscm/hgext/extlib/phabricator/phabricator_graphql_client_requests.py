@@ -25,7 +25,7 @@ class PhabricatorGraphQLClientRequests(object):
         data = json.loads(res.content.decode("utf8"))
         if res.status_code != 200:
             raise PhabricatorClientError(
-                "Phabricator not available " + "returned " + str(res.status), res
+                "Phabricator not available returned " + str(res.status), res
             )
         # Apparently both singular and plural are used.
         if "error" in data:

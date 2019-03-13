@@ -776,8 +776,7 @@ class SqliteRevMap(collections.MutableMapping):
         if rows and type(rows[0][-1]) is not self.sqlblobtype:
             rows = [(r, b, self.sqlblobtype(h)) for r, b, h in rows]
         self._db.executemany(
-            "INSERT OR REPLACE INTO revmap (rev, branch, hash) " + "VALUES (?, ?, ?)",
-            rows,
+            "INSERT OR REPLACE INTO revmap (rev, branch, hash) VALUES (?, ?, ?)", rows
         )
         # If REPLACE happens, rowcount can be wrong. But it is only used to
         # calculate how many revisions pulled, and during pull we don't

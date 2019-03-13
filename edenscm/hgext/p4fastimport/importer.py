@@ -17,7 +17,7 @@ from . import p4
 from .util import localpath
 
 
-KEYWORD_REGEX = "\$(Id|Header|DateTime|" + "Date|Change|File|" + "Revision|Author).*?\$"
+KEYWORD_REGEX = "\$(Id|Header|DateTime|Date|Change|File|Revision|Author).*?\$"
 
 # TODO: make p4 user configurable
 P4_ADMIN_USER = "p4admin"

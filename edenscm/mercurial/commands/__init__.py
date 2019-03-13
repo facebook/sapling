@@ -739,7 +739,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         editform = "backout"
         e = cmdutil.getcommiteditor(editform=editform, **pycompat.strkwargs(opts))
 
-        addmessage = "\n\n" + "Original commit changeset: %s" % short(node)
+        addmessage = "\n\nOriginal commit changeset: %s" % short(node)
         if not message:
             message = 'Back out "%s"' % olddescription
             e = cmdutil.getcommiteditor(edit=True, editform=editform)
@@ -5650,7 +5650,7 @@ def serve(ui, repo, **opts):
             "",
             "nodates",
             None,
-            _("omit dates from diff headers " + "(but keeps it in commit header)"),
+            _("omit dates from diff headers (but keeps it in commit header)"),
         ),
         ("", "noprefix", None, _("omit a/ and b/ prefixes from filenames")),
         ("", "stat", None, _("output diffstat-style summary of changes")),
