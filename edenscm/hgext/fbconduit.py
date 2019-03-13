@@ -10,7 +10,6 @@ from urllib import urlencode
 
 from edenscm.mercurial import error, namespaces, node, registrar, revset, templater
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin
 from edenscm.mercurial.util import httplib
 
 
@@ -260,9 +259,7 @@ def _phablookup(repo, phabrev):
         if phabrepo in repo.ui.configlist("fbconduit", "gitcallsigns", []):
             return gittohg(phabhash)
 
-        phabnode = bin(phabhash)
-        if phabnode in cl.nodemap:
-            return [phabnode]
+        return [repo[phabhash].node()]
 
     m = githashre.match(phabrev)
     if m is not None:
