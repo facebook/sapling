@@ -450,7 +450,7 @@ void EdenMount::destroy() {
               << " in unexpected state " << oldState;
 }
 
-Future<SerializedInodeMap> EdenMount::shutdown(
+folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
     bool doTakeover,
     bool allowFuseNotStarted) {
   // shutdown() should only be called on mounts that have not yet reached
@@ -469,7 +469,7 @@ Future<SerializedInodeMap> EdenMount::shutdown(
   return shutdownImpl(doTakeover);
 }
 
-Future<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
+folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
   journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
 

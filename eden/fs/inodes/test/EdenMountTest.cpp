@@ -14,6 +14,7 @@
 #include <folly/ScopeGuard.h>
 #include <folly/chrono/Conv.h>
 #include <folly/executors/ManualExecutor.h>
+#include <folly/futures/FutureSplitter.h>
 #include <folly/futures/Promise.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -728,16 +729,20 @@ TEST(EdenMountState, mountIsFuseErrorAfterFuseInitializationFails) {
 TEST(EdenMountState, mountIsShuttingDownWhileInodeIsReferencedDuringShutdown) {
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto& mount = *testMount.getEdenMount();
+  auto* executor = testMount.getServerExecutor().get();
 
   auto inode = mount.getInodeMap()->getRootInode();
 
-  auto shutdownFuture =
-      mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true);
+  auto shutdownFutures = folly::FutureSplitter<SerializedInodeMap>{
+      mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true)
+          .via(executor)};
   SCOPE_EXIT {
     inode.reset();
-    std::move(shutdownFuture).get(kTimeout);
+    shutdownFutures.getFuture().within(kTimeout).getVia(executor);
   };
-  EXPECT_FALSE(shutdownFuture.wait(kMicroTimeout).isReady())
+  EXPECT_THROW(
+      shutdownFutures.getFuture().within(kMicroTimeout).getVia(executor),
+      folly::FutureTimeout)
       << "shutdown should not finish while inode is referenced";
   EXPECT_EQ(mount.getState(), EdenMount::State::SHUTTING_DOWN);
 }

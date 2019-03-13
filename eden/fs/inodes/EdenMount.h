@@ -156,7 +156,7 @@ class EdenMount {
    * If doTakeover is false, this function will return default-constructed
    * SerializedFileHandleMap and SerializedInodeMap instances.
    */
-  folly::Future<SerializedInodeMap> shutdown(
+  folly::SemiFuture<SerializedInodeMap> shutdown(
       bool doTakeover,
       bool allowFuseNotStarted = false);
 
@@ -590,7 +590,7 @@ class EdenMount {
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
-  folly::Future<SerializedInodeMap> shutdownImpl(bool doTakeover);
+  folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
   std::unique_ptr<DiffContext> createDiffContext(
       InodeDiffCallback* callback,
