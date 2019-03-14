@@ -130,8 +130,3 @@ class LocalService(baseservice.BaseService):
             return self._makefakedag(nodes, repo)
         except Exception as e:
             raise commitcloudcommon.UnexpectedError(self._ui, e)
-
-    def getbundles(self, reponame, heads):
-        """Fetch bundles directly
-        """
-        raise NotImplementedError

@@ -106,13 +106,6 @@ Configs::
     # Caution: using this option may leave some local commits unbacked up
     custom_push_revs = draft()
 
-    # Direct infinitepush bundle fetching command
-    # the command has to be a formatted string with params: filename and handle
-    get_command = bundlefetcher -h {handle} -o {filename}
-
-    # Use direct infinitepush bundle fetching if the commands is specified
-    use_direct_bundle_fetching = true
-
     # Maximum age (in days) of commits to pull when syncing
     max_sync_age = 14
 

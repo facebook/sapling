@@ -396,8 +396,3 @@ class BaseService(object):
                 node, bookmarks, parents, author, date, message, phase
             )
         return nodes
-
-    @abstractmethod
-    def getbundles(self, reponame, heads):
-        """Fetch bundles directly
-        """

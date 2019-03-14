@@ -53,21 +53,12 @@ _backuplockname = "infinitepushbackup.lock"
 pullopts = [
     (
         "",
-        "direct-fetching",
-        None,
-        _(
-            "try to use directly fetch mercurial bundles instead of pulling through the server "
-            "(option requires commitcloud.get_command config) (ADVANCED)"
-        ),
-    ),
-    (
-        "",
         "full",
         None,
         _(
             "pull all workspace commits into the local repository, don't omit old ones. (ADVANCED)"
         ),
-    ),
+    )
 ]
 
 pushopts = [
@@ -464,21 +455,6 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
 
         serv.getbundles(reponame, heads, unbundleall)
 
-    # external services can know that fast pool is preferable to try
-    pullfn = None
-    if opts.get("direct_fetching"):
-        if ui.configbool("commitcloud", "use_direct_bundle_fetching") and ui.config(
-            "commitcloud", "get_command"
-        ):
-            pullfn = directfetching
-        else:
-            if not ui.config("commitcloud", "get_command"):
-                ui.warn(
-                    _(
-                        "can't use direct fetching because 'commitcloud.get_command' is not set\n"
-                    )
-                )
-
     lastsyncstate = state.SyncState(repo, workspacename)
     remotepath = commitcloudutil.getremotepath(repo, ui, None)
 
@@ -507,9 +483,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
     pushfailures = set()
     while not synced:
         if cloudrefs.version != fetchversion:
-            _applycloudchanges(
-                ui, repo, remotepath, lastsyncstate, cloudrefs, pullfn, maxage
-            )
+            _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage)
 
         # Check if any omissions are now included in the repo
         _checkomissions(ui, repo, remotepath, lastsyncstate)
@@ -766,9 +740,7 @@ def cloudrecover(ui, repo, **opts):
     cloudsync(ui, repo, **opts)
 
 
-def _applycloudchanges(
-    ui, repo, remotepath, lastsyncstate, cloudrefs, directfetchingfn=None, maxage=None
-):
+def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=None):
     pullcmd, pullopts = _getcommandandoptions("^pull")
 
     try:
@@ -803,7 +775,7 @@ def _applycloudchanges(
             repo, "pulling %s" % nodemod.short(newheads[0]), newheads=newheads
         )
 
-    if newheads and not directfetchingfn:
+    if newheads:
         # Replace the exchange pullbookmarks function with one which updates the
         # user's synced bookmarks.  This also means we don't partially update a
         # subset of the remote bookmarks if they happen to be included in the
@@ -840,8 +812,6 @@ def _applycloudchanges(
         ) if remotenames else util.nullcontextmanager():
             pullcmd(ui, repo, **pullopts)
     else:
-        if newheads and directfetchingfn:
-            directfetchingfn(newheads)
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
             omittedbookmarks.extend(
                 _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
