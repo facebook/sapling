@@ -441,6 +441,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         self.__cleanups = contextlib.ExitStack()
 
     def start_systemd_process(self) -> subprocess.Popen:
+        self._create_run_systemd_directory()
         cgroup = self.create_cgroup()
         env = self.base_systemd_environment
         env["XDG_RUNTIME_DIR"] = str(self.__xdg_runtime_dir)
@@ -466,6 +467,30 @@ class _TransientUnmanagedSystemdUserServiceManager:
         )
         self.__cleanups.callback(lambda: self.stop_systemd_process(process))
         return process
+
+    def _create_run_systemd_directory(self) -> None:
+        """Create /run/systemd/ if it doesn't already exist.
+
+        'systemctl --user daemon-reload' checks for disk free space by calling
+        statvfs(3) on /run/systemd [1]. If the directory is missing,
+        daemon-reload fails. Call this function to make daemon-reload pass this
+        check.
+
+        daemon-reload is right in expecting that /run/systemd exists, since
+        systemd requires sd_booted(3) to return true. However, we force
+        sd_booted(3) to return true, so /run/systemd might not exist.
+
+        [1] https://github.com/systemd/systemd/blob/v239/src/core/dbus-manager.c#L1277
+        """
+        path = pathlib.Path("/run/systemd")
+        try:
+            path.mkdir(exist_ok=False, mode=0o755, parents=False)
+        except OSError:
+            logging.warning(
+                f"Failed to create {path}; ignoring error, but systemd might "
+                f"fail to reload",
+                exc_info=True,
+            )
 
     @property
     def base_systemd_environment(self) -> typing.Dict[str, str]:
