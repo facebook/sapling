@@ -225,13 +225,32 @@ EdenDispatcher::write(InodeNumber ino, folly::StringPiece data, off_t off) {
       });
 }
 
+Future<Unit> EdenDispatcher::flush(
+    InodeNumber /* ino */,
+    uint64_t /* lock_owner */) {
+  // Return ENOSYS from flush.
+  // This will cause the kernel to stop sending future flush() calls.
+  return makeFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "flush"));
+}
+
 folly::Future<folly::Unit> EdenDispatcher::fsync(
     InodeNumber ino,
     bool datasync) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "fsync({})", ino);
   return inodeMap_->lookupFileInode(ino).thenValue(
       [datasync](FileInodePtr inode) { return inode->fsync(datasync); });
-};
+}
+
+Future<Unit> EdenDispatcher::fsyncdir(
+    InodeNumber /* ino */,
+    bool /* datasync */) {
+  // Return ENOSYS from fsyncdir. The kernel will stop sending them.
+  //
+  // In a possible future where the tree structure is stored in a SQLite
+  // database, we could handle this request by waiting for SQLite's
+  // write-ahead-log to be flushed.
+  return makeFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "fsyncdir"));
+}
 
 folly::Future<std::string> EdenDispatcher::readlink(
     InodeNumber ino,

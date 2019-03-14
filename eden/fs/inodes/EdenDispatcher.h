@@ -83,20 +83,10 @@ class EdenDispatcher : public Dispatcher {
       folly::StringPiece data,
       off_t off) override;
 
+  folly::Future<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
+      override;
   folly::Future<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
-
-  /**
-   * Return ENOSYS from fsyncdir. The kernel will stop sending them.
-   *
-   * In a possible future where the tree structure is stored in a SQLite
-   * database, we could handle this request by waiting for SQLite's
-   * write-ahead-log to be flushed.
-   */
-#if 0
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsyncdir(
-      InodeNumber ino,
-      bool datasync);
-#endif
+  folly::Future<folly::Unit> fsyncdir(InodeNumber ino, bool datasync) override;
 
   folly::Future<DirList> readdir(
       InodeNumber ino,
