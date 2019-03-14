@@ -92,9 +92,9 @@ class SystemdUserServiceManager:
         actual_unit_file = service.query_fragment_path()
         if actual_unit_file != expected_unit_file:
             raise Exception(
-                "Enabled unit's FragmentPath does not match unit file\n"
-                "Expected: {repr(expected_unit_file)}\n"
-                "Actual:   {repr(actual_unit_file)}"
+                f"Enabled unit's FragmentPath does not match unit file\n"
+                f"Expected: {expected_unit_file}\n"
+                f"Actual:   {actual_unit_file}"
             )
 
     def sanity_check_enabled_unit_sources(
