@@ -169,8 +169,8 @@ Make sure that locally found commits actually work
 Make sure that globalrevs work
 
   $ cd ..
-  $ initserver sqlbackedserver sqlbackedserver
-  $ cd sqlbackedserver
+  $ initserver mockwwwrepo mockwwwrepo
+  $ cd mockwwwrepo
   $ enable fbconduit globalrevs hgsubversion pushrebase
   $ setconfig \
   > hgsql.enabled=True \
@@ -187,4 +187,13 @@ Make sure that globalrevs work
   $ touch x
   $ hg commit -Aqm "added a file"
 
+  $ hg up rWWW4999
+  abort: unknown revision 'rWWW4999'!
+  [255]
+
+  $ hg up rWWWHGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  abort: unknown revision 'rWWWHGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'!
+  [255]
+
   $ hg up -q rWWW5000
+  $ hg up -q rWWWHGff7a2f4908d3dd5010cc3a620bd8e8abc7ef634d
