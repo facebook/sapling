@@ -136,6 +136,7 @@ import traceback
 from contextlib import contextmanager
 
 from edenscm.mercurial import (
+    archival,
     bundle2,
     changegroup,
     changelog,
@@ -579,6 +580,19 @@ def onetimeclientsetup(ui):
         return missing
 
     wrapfunction(copies, "_computeforwardmissing", computeforwardmissing)
+
+    # prefetch files before archiving
+    def computefiles(orig, ctx, matchfn):
+        files = orig(ctx, matchfn)
+
+        repo = ctx._repo
+        if shallowrepo.requirement in repo.requirements:
+            mf = ctx.manifest()
+            repo.fileservice.prefetch(list((f, hex(mf.get(f))) for f in files))
+
+        return files
+
+    wrapfunction(archival, "computefiles", computefiles)
 
     # close cache miss server connection after the command has finished
     def runcommand(orig, lui, repo, *args, **kwargs):

@@ -332,10 +332,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None, prefix="", mtime=
         if not matchfn or matchfn(name):
             write(name, 0o644, False, lambda: buildmetadata(ctx))
 
-    if matchfn:
-        files = ctx.manifest().matches(matchfn).keys()
-    else:
-        files = ctx.manifest().keys()
+    files = computefiles(ctx, matchfn)
     total = len(files)
     if total:
         files.sort()
@@ -350,3 +347,11 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None, prefix="", mtime=
 
     archiver.done()
     return total
+
+
+def computefiles(ctx, matchfn):
+    if matchfn:
+        files = ctx.manifest().matches(matchfn).keys()
+    else:
+        files = ctx.manifest().keys()
+    return files

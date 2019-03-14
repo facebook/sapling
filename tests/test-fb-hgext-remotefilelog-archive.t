@@ -26,4 +26,4 @@ Test blame
 
   $ clearcache
   $ hg archive -r tip -t tar myarchive.tar
-  3 files fetched over 3 fetches - (3 misses, 0.00% hit ratio) over 0.00s
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over 0.00s
