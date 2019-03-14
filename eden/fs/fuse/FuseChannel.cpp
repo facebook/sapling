@@ -1169,6 +1169,21 @@ void FuseChannel::processSession() {
       case FUSE_SETLKW:
         // Deliberately not handling locking; this causes
         // the kernel to do it for us
+        XLOG(DBG7) << fuseOpcodeName(header->opcode);
+        replyError(*header, ENOSYS);
+        break;
+
+      case FUSE_LSEEK:
+        // We only support stateless file handles, so lseek() is meaningless
+        // for us.  Returning ENOSYS causes the kernel to implement it for us,
+        // and will cause it to stop sending subsequent FUSE_LSEEK requests.
+        XLOG(DBG7) << "FUSE_LSEEK";
+        replyError(*header, ENOSYS);
+        break;
+
+      case FUSE_POLL:
+        // We do not currently implement FUSE_POLL.
+        XLOG(DBG7) << "FUSE_POLL";
         replyError(*header, ENOSYS);
         break;
 
@@ -1258,8 +1273,8 @@ void FuseChannel::processSession() {
               return std::nullopt;
             },
             [&](auto& unhandledOpcodes) -> folly::Unit {
-              XLOG(ERR) << "unhandled fuse opcode " << opcode << "("
-                        << fuseOpcodeName(opcode) << ")";
+              XLOG(WARN) << "unhandled fuse opcode " << opcode << "("
+                         << fuseOpcodeName(opcode) << ")";
               unhandledOpcodes->insert(opcode);
               return folly::unit;
             });
