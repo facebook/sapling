@@ -11,13 +11,14 @@ import heapq
 import os
 import time
 
+from edenscm.hgext.extlib import cstore
 from edenscm.mercurial import error, manifest, mdiff, revlog, util
 
 from ..extlib import cfastmanifest
 from .constants import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES
 from .metrics import metricscollector
 
-from edenscm.hgext.extlib import cstore
+
 supportsctree = True
 
 propertycache = util.propertycache

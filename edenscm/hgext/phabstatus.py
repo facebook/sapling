@@ -7,7 +7,14 @@
 
 import os
 
-from edenscm.mercurial import cmdutil, extensions, obsutil, pycompat, registrar, util as hgutil
+from edenscm.mercurial import (
+    cmdutil,
+    extensions,
+    obsutil,
+    pycompat,
+    registrar,
+    util as hgutil,
+)
 from edenscm.mercurial.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql

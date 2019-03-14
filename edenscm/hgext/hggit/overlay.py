@@ -4,7 +4,14 @@
 #
 # incomplete, implemented on demand
 
-from edenscm.mercurial import ancestor, changelog, context, manifest, match as matchmod, util
+from edenscm.mercurial import (
+    ancestor,
+    changelog,
+    context,
+    manifest,
+    match as matchmod,
+    util,
+)
 from edenscm.mercurial.node import bin, hex, nullid
 
 

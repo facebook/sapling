@@ -8,7 +8,15 @@
 from __future__ import absolute_import
 
 from edenscm.hgext import extutil
-from edenscm.mercurial import dispatch, error, extensions, obsolete, repoview, scmutil, util
+from edenscm.mercurial import (
+    dispatch,
+    error,
+    extensions,
+    obsolete,
+    repoview,
+    scmutil,
+    util,
+)
 from edenscm.mercurial.node import short
 
 

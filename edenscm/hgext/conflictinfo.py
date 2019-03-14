@@ -27,7 +27,14 @@ from __future__ import absolute_import
 
 import copy
 
-from edenscm.mercurial import commands, error, extensions, merge as mergemod, scmutil, util
+from edenscm.mercurial import (
+    commands,
+    error,
+    extensions,
+    merge as mergemod,
+    scmutil,
+    util,
+)
 from edenscm.mercurial.filemerge import absentfilectx
 from edenscm.mercurial.i18n import _
 

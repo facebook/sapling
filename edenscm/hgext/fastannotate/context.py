@@ -12,7 +12,15 @@ import contextlib
 import hashlib
 import os
 
-from edenscm.mercurial import error, lock as lockmod, mdiff, node, progress, scmutil, util
+from edenscm.mercurial import (
+    error,
+    lock as lockmod,
+    mdiff,
+    node,
+    progress,
+    scmutil,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 from . import error as faerror, revmap as revmapmod

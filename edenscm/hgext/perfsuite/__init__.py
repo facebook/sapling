@@ -10,7 +10,15 @@ import random
 import subprocess
 import time
 
-from edenscm.mercurial import commands, encoding, error, metrics, registrar, scmutil, util
+from edenscm.mercurial import (
+    commands,
+    encoding,
+    error,
+    metrics,
+    registrar,
+    scmutil,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 from . import editsgenerator

@@ -11,7 +11,15 @@ import binascii
 import os
 import tempfile
 
-from edenscm.mercurial import cmdutil, error, match, node as hgnode, pycompat, registrar, util
+from edenscm.mercurial import (
+    cmdutil,
+    error,
+    match,
+    node as hgnode,
+    pycompat,
+    registrar,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 
