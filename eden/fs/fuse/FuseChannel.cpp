@@ -468,7 +468,7 @@ Future<FuseChannel::StopFuture> FuseChannel::initialize() {
 FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   connInfo_ = connInfo;
-  XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
+  XLOG(DBG1) << "Takeover using max_write=" << connInfo_->max_write
              << ", max_readahead=" << connInfo_->max_readahead
              << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
   startWorkerThreads();
@@ -1018,7 +1018,7 @@ void FuseChannel::readInitPacket() {
   // Only return the capabilities the kernel supports.
   want &= capable;
 
-  XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
+  XLOG(DBG1) << "Speaking fuse protocol kernel=" << init.init.major << "."
              << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
              << FUSE_KERNEL_MINOR_VERSION << " on mount \"" << mountPath_
              << "\", max_write=" << connInfo.max_write
