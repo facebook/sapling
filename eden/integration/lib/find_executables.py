@@ -170,12 +170,6 @@ class FindExeClass(object):
         logging.info("Found hg.real binary: %r", hg)
         return hg
 
-    @cached_property
-    def CHG(self) -> str:
-        chg = self._find_chg()
-        logging.info("Found chg binary: %r", chg)
-        return chg
-
     def _find_hg(self) -> str:
         # If EDEN_HG_BINARY is set in the environment, use that.
         # This is always set when the tests are run by `buck test`
@@ -221,27 +215,6 @@ class FindExeClass(object):
             return hg_real_bin
 
         raise Exception("No hg binary found!")
-
-    def _find_chg(self) -> str:
-        # If CHG_BIN is set in the environment, use that.
-        # This is always set when the tests are run by `buck test`
-        # The code below is only used as a fallback when the tests are invoked manually.
-        chg_bin = os.environ.get("CHG_BIN")
-        if chg_bin:
-            return chg_bin
-
-        start_path = os.path.abspath(sys.argv[0])
-        chg_bin = pathutils.get_build_rule_output_path(
-            "//scm/hg:chg", pathutils.BuildRuleTypes.CXX_BINARY, start_path=start_path
-        )
-        if chg_bin:
-            return chg_bin
-
-        chg_bin = distutils.spawn.find_executable("chg")
-        if chg_bin:
-            return chg_bin
-
-        raise Exception("No chg binary found!")
 
     def _find_exe(self, name: str, env: str, candidates: List[str]) -> str:
         if env is not None:

@@ -63,7 +63,7 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   XLOG(DBG1) << "Using hg command: " << hgCmd_;
 
   // Set up hgEnv_
-  std::vector<const char*> passthroughVars{{"PATH", "HG_REAL_BIN", "CHG_BIN"}};
+  std::vector<const char*> passthroughVars{{"PATH", "HG_REAL_BIN"}};
   for (const char* varName : passthroughVars) {
     auto value = getenv(varName);
     if (value) {
