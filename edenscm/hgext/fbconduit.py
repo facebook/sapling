@@ -38,6 +38,7 @@ class HttpError(Exception):
 
 
 githashre = re.compile("g([0-9a-f]{40})")
+svnrevre = re.compile("^r[A-Z]+(\d+)$")
 phabhashre = re.compile("^r([A-Z]+)([0-9a-f]{12,40})$")
 
 
@@ -260,6 +261,13 @@ def _phablookup(repo, phabrev):
             return gittohg(phabhash)
 
         return [repo[phabhash].node()]
+
+    # TODO: 's/svnrev/globalrev' after turning off Subversion servers. We will
+    # know about this when we remove the `svnrev` revset.
+    svnrevmatch = svnrevre.match(phabrev)
+    if svnrevmatch is not None:
+        svnrev = svnrevmatch.group(1)
+        return [tonode(rev) for rev in repo.revs("svnrev(%s)" % svnrev)]
 
     m = githashre.match(phabrev)
     if m is not None:

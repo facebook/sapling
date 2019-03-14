@@ -1,3 +1,5 @@
+  $ . "$TESTDIR/hgsql/library.sh"
+
 Start up translation service.
 
   $ $PYTHON "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
@@ -163,3 +165,26 @@ Make sure that locally found commits actually work
   $ hg up rFBS4772e01e369e598da6a916e3f4fc83dd8944bf23
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
+
+Make sure that globalrevs work
+
+  $ cd ..
+  $ initserver sqlbackedserver sqlbackedserver
+  $ cd sqlbackedserver
+  $ enable fbconduit globalrevs hgsubversion pushrebase
+  $ setconfig \
+  > hgsql.enabled=True \
+  > fbconduit.reponame=basic \
+  > fbconduit.host=localhost:$CONDUIT_PORT \
+  > fbconduit.path=/intern/conduit/ \
+  > fbconduit.protocol=http \
+  > globalrevs.onlypushrebase=False \
+  > globalrevs.startrev=5000 \
+  > globalrevs.svnrevinteroperation=True
+
+  $ hg initglobalrev 5000 --i-know-what-i-am-doing
+
+  $ touch x
+  $ hg commit -Aqm "added a file"
+
+  $ hg up -q rWWW5000
