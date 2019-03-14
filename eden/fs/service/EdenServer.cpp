@@ -25,8 +25,8 @@
 #include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"
 #ifdef EDEN_WIN
-#include "eden/win/fs/mount/EdenMount.h"
-#include "eden/win/fs/service/StartupLogger.h"
+#include "eden/win/fs/mount/EdenMount.h" // @manual
+#include "eden/win/fs/service/StartupLogger.h" // @manual
 #include "eden/win/fs/utils/Stub.h" // @manual
 #else
 #include "eden/fs/fuse/FileHandle.h"

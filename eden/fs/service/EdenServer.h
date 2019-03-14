@@ -28,7 +28,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/fuse/EdenStats.h"
 #ifdef EDEN_WIN
-#include "eden/win/fs/mount/EdenMount.h"
+#include "eden/win/fs/mount/EdenMount.h" // @manual
 #include "eden/win/fs/utils/Stub.h" // @manual
 #else
 #include "eden/fs/fuse/FuseTypes.h"
