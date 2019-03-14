@@ -231,14 +231,24 @@ def revsetdiff(repo, diffid):
             # The response from phabricator contains a changeset ID.
             # Convert it back to a rev number.
             try:
-                node = repo[rev.encode("utf-8")]
+                return [repo[rev.encode("utf-8")].rev()]
             except error.RepoLookupError:
+                # TODO: 's/svnrev/globalrev' after turning off Subversion
+                # servers. We will know about this when we remove the `svnrev`
+                # revset.
+                #
+                # Unfortunately the rev can also be a svnrev/globalrev :(.
+                if rev.isdigit():
+                    try:
+                        return [r for r in repo.revs("svnrev(%s)" % rev)]
+                    except error.RepoLookupError:
+                        pass
+
                 raise error.Abort(
                     "Landed commit for diff D%s not available "
                     'in current repository: run "hg pull" '
                     "to retrieve it" % diffid
                 )
-            return [node.rev()]
 
         # commit is still local, get its hash
 
