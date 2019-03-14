@@ -17,7 +17,7 @@ use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use manifold::{ManifoldHttpClient, PayloadRange};
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
@@ -78,8 +78,8 @@ impl Tailer {
         ctx: CoreContext,
         repo: BlobRepo,
         hm: Arc<HookManager>,
-        last_rev: HgNodeHash,
-        end_rev: HgNodeHash,
+        last_rev: HgChangesetId,
+        end_rev: HgChangesetId,
         bm: Bookmark,
         logger: Logger,
     ) -> BoxFuture<Vec<HookResults>, Error> {
@@ -98,7 +98,7 @@ impl Tailer {
                     .map(spawn_future)
                     .buffered(100)
                     .take_while(move |(hg_cs, _)| {
-                        Ok(*hg_cs != HgChangesetId::new(last_rev))
+                        Ok(*hg_cs != last_rev)
                     })
                     .map(|(_, res)| res)
                     .collect()
@@ -108,8 +108,8 @@ impl Tailer {
 
     pub fn run_in_range(
         &self,
-        last_rev: HgNodeHash,
-        end_rev: HgNodeHash,
+        last_rev: HgChangesetId,
+        end_rev: HgChangesetId,
     ) -> BoxFuture<Vec<HookResults>, Error> {
         cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark);
         Tailer::run_in_range0(
@@ -137,7 +137,7 @@ impl Tailer {
             })
             .and_then({
                 cloned!(ctx, self.repo);
-                move |bm_rev| nodehash_to_bonsai(ctx, &repo, bm_rev.into_nodehash())
+                move |bm_rev| nodehash_to_bonsai(ctx, &repo, bm_rev)
             });
 
         cloned!(self.ctx, self.repo, self.logger);
@@ -189,11 +189,11 @@ impl Tailer {
                 None => Err(ErrorKind::NoLastRevision.into()),
             })
             .and_then(|(current_bm_cs, last_rev_bytes)| {
-                let node_hash = HgNodeHash::from_bytes(&*last_rev_bytes.payload.payload)?;
+                let node_hash = HgChangesetId::from_bytes(&*last_rev_bytes.payload.payload)?;
                 Ok((current_bm_cs, node_hash))
             })
             .and_then(move |(current_bm_cs, last_rev)| {
-                let end_rev = current_bm_cs.into_nodehash();
+                let end_rev = current_bm_cs;
                 info!(
                     logger,
                     "Bookmark is currently at {}, last processed revision is {}", end_rev, last_rev
@@ -216,9 +216,8 @@ impl Tailer {
 fn nodehash_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
-    node: HgNodeHash,
+    hg_cs: HgChangesetId,
 ) -> impl Future<Item = ChangesetId, Error = Error> {
-    let hg_cs = HgChangesetId::new(node);
     repo.get_bonsai_from_hg(ctx, hg_cs)
         .and_then(move |maybe_node| maybe_node.ok_or(ErrorKind::BonsaiNotFound(hg_cs).into()))
 }

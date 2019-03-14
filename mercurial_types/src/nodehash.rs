@@ -211,6 +211,10 @@ impl HgChangesetId {
         HgNodeHash::from_bytes(bytes).map(HgChangesetId)
     }
 
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }
