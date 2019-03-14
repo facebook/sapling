@@ -1,7 +1,7 @@
 Writing Extensions
 ==================
 
-Extensions are Python modules that live in ``hgext/``.
+Extensions are Python modules that live in ``edenscm/hgext/``.
 
 These modules should be side-effect free when imported.
 
@@ -15,7 +15,7 @@ Registering new logic
 
 Use the ``registrar`` module to register commands, revsets, template keywords,
 config items, and namespaces. They will be defined as module-level variables
-and will not change the global state.
+and will not change the global state living in other modules.
 
 New commands
 ~~~~~~~~~~~~
@@ -24,7 +24,7 @@ Here is an example of registering a simple ``hello`` command:
 
 .. sourcecode:: python
 
-    from edenscm.mercurial import commands
+    from edenscm.mercurial import registrar
     from edenscm.mercurial.i18n import _
 
     cmdtable = {}
@@ -51,7 +51,28 @@ of simple names (ex. bookmarks or commit hashes) are incorrect.
 New revsets
 ~~~~~~~~~~~
 
-(To be written)
+Here is an example of registering a ``draftbranch`` revset:
+
+.. sourcecode:: python
+
+    from edenscm.mercurial import registrar, revset, smartset
+
+    revsetpredicate = registrar.revsetpredicate()
+
+    @revsetpredicate("draftbranch([set])")
+    def draftbranch(repo, subset, x=None):
+        """The set of all commits in feature branches containing the current
+        or selected commits.
+        """
+        if x is None:
+            revs = [p.rev() for p in repo[None].parents()]
+        else:
+            revs = revset.getset(revset.getset(repo, smartset.fullreposet(repo), x))
+
+        return subset & smartset.baseset(repo.revs("roots(draft() & ::%ld)::", revs))
+
+The docstring is used as help text in ``hg help revset`` command.
+
 
 Patching existing logic
 -----------------------
@@ -93,8 +114,8 @@ Patching methods on the ``ui`` or ``repo`` object
 
 While it's possible to patch methods on ``ui.ui``, or
 ``localrepo.localrepository`` object using the above method, other extensions
-might alter them to different objects. To work better with other extensions,
-replacing ``__class__`` is the better way.
+might change the class of those objects. To work better with other extensions,
+just replace ``__class__`` is the better way.
 
 Here is an example that patches ``repo.lock`` method to forbid writes (because
 writes need to take the lock):
