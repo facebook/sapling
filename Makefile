@@ -83,7 +83,6 @@ cleanbutpackages:
 	if test -d .hg; then rm -f edenscm/mercurial/__version__.py; fi
 	rm -rf build edenscm/mercurial/locale
 	$(MAKE) -C doc clean
-	$(MAKE) -C contrib/chg distclean
 ifeq ($(OS),Windows_NT)
 	rm -rf hg-python hg.exe python27.dll
 else
@@ -202,13 +201,6 @@ osx:
         # location of our own.
 	install -d build/mercurial/usr/local/hg/contrib/
 	install -m 0644 contrib/bash_completion build/mercurial/usr/local/hg/contrib/hg-completion.bash
-	make -C contrib/chg \
-	  HGPATH=/usr/local/bin/hg \
-	  PYTHON=/usr/bin/python2.7 \
-	  HGEXTDIR=/Library/Python/2.7/site-packages/hgext \
-	  DESTDIR=../../build/mercurial \
-	  PREFIX=/usr/local \
-	  clean install
 	mkdir -p $${OUTPUTDIR:-dist}
 	HGVER=$$(python contrib/genosxversion.py $(OSXVERSIONFLAGS) build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \

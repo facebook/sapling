@@ -20,12 +20,10 @@ import unittest
 try:
     import libfb.py.pathutils as pathutils
 
-    chgpath = pathutils.get_build_rule_output_path("//scm/hg:chg")
     hgpath = pathutils.get_build_rule_output_path("//scm/hg:hg")
     pythonbinpath = pathutils.get_build_rule_output_path("//scm/hg:hgpython")
     watchman = pathutils.get_build_rule_output_path("//watchman:watchman")
 except ImportError:
-    chgpath = os.environ.get("HGTEST_CHG")
     hgpath = os.environ.get("HGTEST_HG")
     pythonbinpath = os.environ.get("HGTEST_PYTHON", "python2")
     watchman = os.environ.get("HGTEST_WATCHMAN")
@@ -58,8 +56,6 @@ def prepareargsenv(runtestsdir, port=None):
 
     if hgpath:
         args.append("--with-hg=%s" % hgpath)
-    if chgpath:
-        env["CHG"] = chgpath
     if watchman:
         args += ["--with-watchman", watchman]
     # set HGDATAPATH

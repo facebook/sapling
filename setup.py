@@ -206,7 +206,6 @@ PIC = "" if iswindows else "-fPIC"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
 SHA1_LIBRARY = "sha1detectcoll"
 SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
-STATIC_CHG = "" if iswindows else "-DCHG_STATIC_LIB"
 STDC99 = "" if iswindows else "-std=c99"
 STDCPP0X = "" if iswindows else "-std=c++0x"
 STDCPP11 = "" if iswindows else "-std=c++11"
@@ -894,17 +893,6 @@ class hgbuildext(build_ext):
 
 class hgbuildscripts(build_scripts):
     def run(self):
-        # Build chg on non-Windows platform
-        if not iswindows:
-            cc = new_compiler()
-            if hgname != "hg":
-                chgcflags.append('-DHGPATH="%s"' % hgname)
-            objs = cc.compile(
-                glob.glob("contrib/chg/*.c"), debug=True, extra_preargs=chgcflags
-            )
-            dest = os.path.join(self.build_dir, "chg")
-            cc.link_executable(objs, dest)
-
         if havefanotify:
             cc = new_compiler()
             objs = cc.compile(glob.glob("contrib/whochanges/*.c"), debug=True)
@@ -1858,9 +1846,7 @@ if not iswindows:
                     "contrib/chg/util.c",
                 ],
                 "include_dirs": ["contrib/chg"] + include_dirs,
-                "extra_args": filter(
-                    None, cflags + chgcflags + [STDC99, WALL, STATIC_CHG, PIC]
-                ),
+                "extra_args": filter(None, cflags + chgcflags + [STDC99, WALL, PIC]),
             },
         )
     )
