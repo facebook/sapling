@@ -26,6 +26,9 @@ to the user.
     # This is used to migrate away from the "recent days" behavior and
     # eventually show all visible commits.
     hide-before = 2019-2-22
+
+    # Default parameter for master
+    master = remote/master
 """
 
 from __future__ import absolute_import
@@ -468,23 +471,6 @@ def getdag(ui, repo, revs, master):
     return results
 
 
-def _masterrevset(ui, repo, masterstring):
-    """
-    Try to find the name of ``master`` -- usually a bookmark.
-
-    Defaults to the last public revision, if no suitable local or remote
-    bookmark is found.
-    """
-
-    if not masterstring:
-        masterstring = ui.config("smartlog", "master")
-
-    if masterstring:
-        return masterstring
-
-    return "interestingmaster()"
-
-
 def _reposnames(ui):
     # '' is local repo. This also defines an order precedence for master.
     repos = ui.configlist("smartlog", "repos", ["", "remote/", "default/"])
@@ -493,19 +479,6 @@ def _reposnames(ui):
     for repo in repos:
         for name in names:
             yield repo + name
-
-
-def _masterrev(repo, masterrevset):
-    try:
-        master = scmutil.revsingle(repo, masterrevset)
-    except error.RepoLookupError:
-        master = scmutil.revsingle(repo, _masterrevset(repo.ui, repo, ""))
-    except error.Abort:  # empty revision set
-        return None
-
-    if master:
-        return master.rev()
-    return None
 
 
 @revsetpredicate("smartlog([heads], [master])")
@@ -522,33 +495,23 @@ def smartlogrevset(repo, subset, x):
 
     args = revset.getargsdict(x, "smartlogrevset", "heads master")
     if "master" in args:
-        masterstring = revsetlang.getstring(
-            args["master"], _("master must be a string")
-        )
+        masterset = revset.getset(repo, subset, args["master"])
     else:
-        masterstring = ""
+        masterset = repo.revs("interestingmaster()")
 
     if "heads" in args:
         heads = set(revset.getset(repo, subset, args["heads"]))
     else:
         heads = set(repo.revs("interestingbookmarks() + heads(draft()) + ."))
 
-    masterrevset = _masterrevset(repo.ui, repo, masterstring)
-    masterrev = _masterrev(repo, masterrevset)
-
-    if masterrev is None:
-        masterrev = repo["tip"].rev()
-        if masterrev == nodemod.nullrev:
-            # repo is empty
-            return smartset.baseset()
-
     # Remove "null" commit. "::x" does not support it.
+    masterset -= smartset.baseset([nodemod.nullrev])
     if nodemod.nullrev in heads:
         heads.remove(nodemod.nullrev)
     # Select ancestors that are draft.
     drafts = repo.revs("draft() & ::%ld", heads)
     # Include parents of drafts, and public heads.
-    revs = repo.revs("parents(%ld) + %ld + %ld + %d", drafts, drafts, heads, masterrev)
+    revs = repo.revs("parents(%ld) + %ld + %ld + %ld", drafts, drafts, heads, masterset)
 
     return subset & revs
 
@@ -691,8 +654,15 @@ Excludes:
 
 
 def _smartlog(ui, repo, *pats, **opts):
-    masterstring = opts.get("master")
-    masterrevset = _masterrevset(ui, repo, masterstring)
+    if opts.get("rev"):
+        masterfallback = "p1(.)"
+    else:
+        masterfallback = "interestingmaster()"
+
+    masterstring = (
+        opts.get("master") or ui.config("smartlog", "master") or masterfallback
+    )
+    masterrev = repo.anyrevs([masterstring], user=True).first()
 
     revs = set()
 
@@ -717,21 +687,14 @@ def _smartlog(ui, repo, *pats, **opts):
             visibleheads = repo.revs("%ld & %r", allheads, datefilter)
             hiddenchanges = len(allheads) - len(visibleheads)
 
-        masterrev = _masterrev(repo, masterrevset)
         revstring = revsetlang.formatspec(
-            "smartlog(heads=(interestingbookmarks() + (heads(draft()) & %r) + .), master=%s)",
+            "smartlog(heads=(interestingbookmarks() + (heads(draft()) & %r) + .), master=%r)",
             datefilter,
-            masterrev or "",
+            masterstring,
         )
         revs.update(scmutil.revrange(repo, [revstring]))
     else:
         revs.update(scmutil.revrange(repo, opts.get("rev")))
-        masterrev = _masterrev(repo, masterrevset)
-        if masterrev not in revs:
-            try:
-                masterrev = repo.revs(".").first()
-            except error.RepoLookupError:
-                masterrev = revs[0]
 
     if -1 in revs:
         revs.remove(-1)

@@ -18,5 +18,6 @@
   B
   C
   $ hg log -r "smartlog(master=($A::)-$B-$C)" -T '{desc}\n'
-  hg: parse error: master must be a string
-  [255]
+  A
+  B
+  C
