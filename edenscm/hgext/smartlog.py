@@ -72,6 +72,8 @@ except ImportError:
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+revsetpredicate = registrar.revsetpredicate()
+
 testedwith = "ships-with-fb-hgext"
 commit_info = False
 hiddenchanges = 0
@@ -180,9 +182,6 @@ def uisetup(ui):
         orig(ui, state, type, char, text, coldata)
 
     extensions.wrapfunction(graphmod, "ascii", ascii)
-
-    revset.symbols["smartlog"] = smartlogrevset
-    revset.safesymbols.add("smartlog")
 
 
 templatekeyword = registrar.templatekeyword()
@@ -517,6 +516,7 @@ def _masterrev(repo, masterrevset):
     return None
 
 
+@revsetpredicate("smartlog([master], [recentdays=N])")
 def smartlogrevset(repo, subset, x):
     """``smartlog([master], [recentdays=N])``
     Changesets relevent to you.
@@ -538,29 +538,13 @@ def smartlogrevset(repo, subset, x):
     )
 
     revs = set()
-    heads = set()
 
     rev = repo.changelog.rev
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
     parentrevs = repo.changelog.parentrevs
 
-    books = bookmarks.bmstore(repo)
-    ignore = re.compile(repo.ui.config("smartlog", "ignorebookmarks", "!"))
-    for b in books:
-        if not ignore.match(b):
-            heads.add(rev(books[b]))
-
-    # add 'interesting' remote bookmarks as well
-    remotebooks = set()
-    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
-        ns = repo.names["remotebookmarks"]
-        remotebooks = set(ns.listnames(repo))
-        for name in _reposnames(repo.ui):
-            if name in remotebooks:
-                heads.add(rev(ns.namemap(repo, name)[0]))
-
-    heads.update(repo.revs("."))
+    heads = set(repo.revs("interestingbookmarks() + ."))
 
     global hiddenchanges
     headquery = "heads(draft())"
@@ -605,6 +589,29 @@ def smartlogrevset(repo, subset, x):
     revs.add(masterrev)
 
     return subset & revs
+
+
+@revsetpredicate("interestingbookmarks()")
+def interestingheads(repo, subset, x):
+    """Set of interesting bookmarks (local and remote)"""
+    rev = repo.changelog.rev
+    heads = set()
+    books = bookmarks.bmstore(repo)
+    ignore = re.compile(repo.ui.config("smartlog", "ignorebookmarks", "!"))
+    for b in books:
+        if not ignore.match(b):
+            heads.add(rev(books[b]))
+
+    # add 'interesting' remote bookmarks as well
+    remotebooks = set()
+    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
+        ns = repo.names["remotebookmarks"]
+        remotebooks = set(ns.listnames(repo))
+        for name in _reposnames(repo.ui):
+            if name in remotebooks:
+                heads.add(rev(ns.namemap(repo, name)[0]))
+
+    return subset & smartset.baseset(heads)
 
 
 @templatefunc("simpledate(date[, tz])")
