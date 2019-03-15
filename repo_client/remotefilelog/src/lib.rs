@@ -27,6 +27,7 @@ use mercurial_types::{
     NULL_HASH,
 };
 use metaconfig_types::LfsParams;
+use mononoke_types::FileContents;
 use tracing::{trace_args, Traced};
 
 const METAKEYFLAG: &str = "f";
@@ -59,7 +60,18 @@ pub fn create_remotefilelog_blob(
 ) -> BoxFuture<Bytes, Error> {
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
 
-    let raw_content_bytes = get_raw_content(ctx.clone(), repo.clone(), node, lfs_params).traced(
+    let raw_content_bytes = get_raw_content(
+        ctx.clone(),
+        repo.clone(),
+        node,
+        RepoPath::FilePath(path.clone()),
+        lfs_params,
+        validate_hash,
+    )
+    .and_then(move |(raw_content, meta_key_flag)| {
+        encode_remotefilelog_file_content(raw_content, meta_key_flag)
+    })
+    .traced(
         ctx.trace(),
         "fetching remotefilelog content",
         trace_args.clone(),
@@ -93,75 +105,63 @@ pub fn create_remotefilelog_blob(
         .and_then(serialize_history)
         .traced(ctx.trace(), "fetching file history", trace_args);
 
-    let validate_content = if validate_hash {
-        validate_content(ctx, repo.clone(), path, node).left_future()
-    } else {
-        ok(()).right_future()
-    };
-
-    validate_content
-        .and_then(|()| {
-            raw_content_bytes
-                .join(file_history_bytes)
-                .map(|(mut raw_content, file_history)| {
-                    raw_content.extend(file_history);
-                    raw_content
-                })
-                .and_then(|content| lz4_pyframe::compress(&content))
-                .map(|bytes| Bytes::from(bytes))
+    raw_content_bytes
+        .join(file_history_bytes)
+        .map(|(mut raw_content, file_history)| {
+            raw_content.extend(file_history);
+            raw_content
         })
+        .and_then(|content| lz4_pyframe::compress(&content))
+        .map(|bytes| Bytes::from(bytes))
         .boxify()
 }
 
 fn validate_content(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    path: MPath,
+    content: &FileContents,
+    filenode: FilenodeInfo,
+    repopath: RepoPath,
     actual: HgFileNodeId,
-) -> impl Future<Item = (), Error = Error> {
-    let file_content = repo.get_file_content(ctx.clone(), actual);
-    let repopath = RepoPath::FilePath(path.clone());
-    let filenode = get_maybe_draft_filenode(ctx, repo, repopath.clone(), actual);
+) -> Result<(), Error> {
+    let mut out: Vec<u8> = vec![];
+    File::generate_metadata(
+        filenode
+            .copyfrom
+            .map(|(path, node)| (path.into_mpath().unwrap(), node))
+            .as_ref(),
+        content,
+        &mut out,
+    )?;
+    let mut bytes = BytesMut::from(out);
+    bytes.extend_from_slice(content.as_bytes());
 
-    file_content
-        .join(filenode)
-        .and_then(move |(content, filenode)| {
-            let mut out: Vec<u8> = vec![];
-            File::generate_metadata(
-                filenode
-                    .copyfrom
-                    .map(|(path, node)| (path.into_mpath().unwrap(), node))
-                    .as_ref(),
-                &content,
-                &mut out,
-            )?;
-            let mut bytes = BytesMut::from(out);
-            bytes.extend_from_slice(&content.into_bytes());
-
-            let p1 = filenode.p1.map(|p| p.into_nodehash());
-            let p2 = filenode.p2.map(|p| p.into_nodehash());
-            let expected = HgFileNodeId::new(HgBlobNode::new(bytes.freeze(), p1, p2).nodeid());
-            if actual == expected {
-                Ok(())
-            } else {
-                Err(ErrorKind::DataCorruption {
-                    path: repopath,
-                    expected,
-                    actual,
-                }
-                .into())
-            }
-        })
+    let p1 = filenode.p1.map(|p| p.into_nodehash());
+    let p2 = filenode.p2.map(|p| p.into_nodehash());
+    let expected = HgFileNodeId::new(HgBlobNode::new(bytes.freeze(), p1, p2).nodeid());
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(ErrorKind::DataCorruption {
+            path: repopath,
+            expected,
+            actual,
+        }
+        .into())
+    }
 }
 
-/// Get the raw content of a remotefilelog blob, including a header and the
-/// content bytes (or content hash in the case of LFS files).
+/// Get the raw content of a file or content hash in the case of LFS files.
+/// Can also optionally validate a hash hg filenode
 fn get_raw_content(
     ctx: CoreContext,
     repo: BlobRepo,
     node: HgFileNodeId,
+    repopath: RepoPath,
     lfs_params: LfsParams,
-) -> impl Future<Item = Vec<u8>, Error = Error> {
+    validate_hash: bool,
+) -> impl Future<Item = (FileContents, RevFlags), Error = Error> {
+    let filenode_fut =
+        get_maybe_draft_filenode(ctx.clone(), repo.clone(), repopath.clone(), node.clone());
+
     repo.get_file_size(ctx.clone(), node)
         .map({
             move |file_size| match lfs_params.threshold {
@@ -169,12 +169,22 @@ fn get_raw_content(
                 None => (true, file_size),
             }
         })
+        .join(filenode_fut)
         .and_then({
             cloned!(ctx, repo);
-            move |(direct_fetching_file, file_size)| {
+            move |((direct_fetching_file, file_size), filenode_info)| {
                 if direct_fetching_file {
                     (
-                        repo.get_file_content(ctx, node).left_future(),
+                        repo.get_file_content(ctx, node)
+                            .and_then(move |content| {
+                                if validate_hash {
+                                    validate_content(&content, filenode_info, repopath, node)
+                                        .map(|()| content)
+                                } else {
+                                    Ok(content)
+                                }
+                            })
+                            .left_future(),
                         Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
                     )
                 } else {
@@ -191,28 +201,32 @@ fn get_raw_content(
                 }
             }
         })
-        .and_then(move |(raw_content, meta_key_flag)| {
-            let raw_content = raw_content.into_bytes();
-            // requires digit counting to know for sure, use reasonable approximation
-            let approximate_header_size = 12;
-            let mut writer = Cursor::new(Vec::with_capacity(
-                approximate_header_size + raw_content.len(),
-            ));
+}
 
-            // Write header
-            let res = write!(
-                writer,
-                "v1\n{}{}\n{}{}\0",
-                METAKEYSIZE,
-                raw_content.len(),
-                METAKEYFLAG,
-                meta_key_flag,
-            );
+fn encode_remotefilelog_file_content(
+    raw_content: FileContents,
+    meta_key_flag: RevFlags,
+) -> Result<Vec<u8>, Error> {
+    let raw_content = raw_content.into_bytes();
+    // requires digit counting to know for sure, use reasonable approximation
+    let approximate_header_size = 12;
+    let mut writer = Cursor::new(Vec::with_capacity(
+        approximate_header_size + raw_content.len(),
+    ));
 
-            res.and_then(|_| writer.write_all(&raw_content))
-                .map_err(Error::from)
-                .map(|_| writer.into_inner())
-        })
+    // Write header
+    let res = write!(
+        writer,
+        "v1\n{}{}\n{}{}\0",
+        METAKEYSIZE,
+        raw_content.len(),
+        METAKEYFLAG,
+        meta_key_flag,
+    );
+
+    res.and_then(|_| writer.write_all(&raw_content))
+        .map_err(Error::from)
+        .map(|_| writer.into_inner())
 }
 
 /// Get ancestors of all filenodes
