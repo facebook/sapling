@@ -401,18 +401,43 @@ def ancestor(repo, subset, x):
     # i18n: "ancestor" is a keyword
     l = getlist(x)
     rl = fullreposet(repo)
-    anc = None
 
     # (getset(repo, rl, i) for i in l) generates a list of lists
-    for revs in (getset(repo, rl, i) for i in l):
-        for r in revs:
-            if anc is None:
-                anc = repo[r]
-            else:
-                anc = anc.ancestor(repo[r])
+    def yieldrevs(repo, rl, l):
+        for revs in (getset(repo, rl, i) for i in l):
+            for r in revs:
+                yield r
 
-    if anc is not None and anc.rev() in subset:
-        return baseset([anc.rev()])
+    # see https://ruby-doc.org/core-2.2.0/Enumerable.html#method-i-each_slice
+    def eachslice(iterable, n):
+        buf = []
+        for value in iterable:
+            buf.append(value)
+            if len(buf) == n:
+                yield buf
+                buf = []
+        if buf:
+            yield buf
+
+    it = yieldrevs(repo, rl, l)
+    ancestors = repo.changelog.index.ancestors
+
+    # revlog.c ancestors can handle 24 revs at a time
+    try:
+        anc = next(it)
+    except StopIteration:
+        return baseset()
+
+    for revs in eachslice(it, 23):
+        ancrevs = ancestors(anc, *revs)
+        if ancrevs:
+            anc = ancrevs[0]
+        else:
+            anc = None
+            break
+
+    if anc is not None and anc in subset:
+        return baseset([anc])
     return baseset()
 
 

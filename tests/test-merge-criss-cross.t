@@ -488,15 +488,15 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
   b
   c
 
-Verify that the old context ancestor works with / despite preferancestor:
+merge.preferancestor does not affect revsets
 
   $ hg log -r 'ancestor(head())' --config merge.preferancestor=1 -T '{rev}\n'
   1
   $ hg log -r 'ancestor(head())' --config merge.preferancestor=2 -T '{rev}\n'
-  2
+  1
   $ hg log -r 'ancestor(head())' --config merge.preferancestor=3 -T '{rev}\n'
   1
   $ hg log -r 'ancestor(head())' --config merge.preferancestor='1337 * - 2' -T '{rev}\n'
-  2
+  1
 
   $ cd ..
