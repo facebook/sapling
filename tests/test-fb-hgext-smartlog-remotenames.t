@@ -82,8 +82,8 @@ Test configuration of "interesting" bookmarks
   @  0 mybook
   
 
-Change remote master to a non-existing locally commit and check that warning
-is shown to the user
+Change remote master to a non-existing locally commit.
+
   $ cat > .hg/remotenames << EOF
   > 6dd477f76ca35ae46e82972648735867cf335d3e bookmarks remote/master
   > EOF
@@ -101,5 +101,3 @@ is shown to the user
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     x
   
-  note: hiding 3 old heads without bookmarks
-  (use --all to see them)

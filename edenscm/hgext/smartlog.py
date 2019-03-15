@@ -563,14 +563,7 @@ def smartlogrevset(repo, subset, x):
     heads.update(repo.revs("."))
 
     global hiddenchanges
-    headquery = "head()"
-    if remotebooks:
-        # When we have remote bookmarks, only show draft heads, since public
-        # heads should have a remote bookmark indicating them. This allows us
-        # to force push server bookmarks to new locations, and not have the
-        # commits clutter the user's smartlog.
-        headquery = "heads(draft())"
-
+    headquery = "heads(draft())"
     allheads = set(repo.revs(headquery))
     if recentdays >= 0:
         recentquery = revsetlang.formatspec("%r & date(-%d)", headquery, recentdays)
