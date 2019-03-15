@@ -482,15 +482,7 @@ def _masterrevset(ui, repo, masterstring):
     if masterstring:
         return masterstring
 
-    names = set(bookmarks.bmstore(repo).keys())
-    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
-        names.update(set(repo.names["remotebookmarks"].listnames(repo)))
-
-    for name in _reposnames(ui):
-        if name in names:
-            return name
-
-    return "last(public())"
+    return "interestingmaster()"
 
 
 def _reposnames(ui):
@@ -525,6 +517,7 @@ def smartlogrevset(repo, subset, x):
     (default: 'interestingbookmarks() + heads(draft()) + .')
 
     'master' is the head of the public branch.
+    (default: 'interestingmaster()')
     """
 
     args = revset.getargsdict(x, "smartlogrevset", "heads master")
@@ -581,6 +574,24 @@ def interestingheads(repo, subset, x):
                 heads.add(rev(ns.namemap(repo, name)[0]))
 
     return subset & smartset.baseset(heads)
+
+
+@revsetpredicate("interestingmaster()")
+def interestingmaster(repo, subset, x):
+    """Interesting 'master' commit"""
+
+    names = set(bookmarks.bmstore(repo).keys())
+    if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
+        names.update(set(repo.names["remotebookmarks"].listnames(repo)))
+
+    for name in _reposnames(repo.ui):
+        if name in names:
+            revs = repo.revs("%s", name)
+            break
+    else:
+        revs = repo.revs("last(public())")
+
+    return subset & revs
 
 
 @templatefunc("simpledate(date[, tz])")
