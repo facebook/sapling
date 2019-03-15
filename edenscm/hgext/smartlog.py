@@ -22,8 +22,8 @@ to the user.
     # whether to use ancestor cache (speed up on huge repos)
     useancestorcache = False
 
-    # Data. Adjust "recentdays" so that draft commits before "hide-before" are
-    # hidden.  This is used to migrate away from the "recent days" behavior and
+    # Data. Hide draft commits before "hide-before".
+    # This is used to migrate away from the "recent days" behavior and
     # eventually show all visible commits.
     hide-before = 2019-2-22
 """
@@ -516,16 +516,18 @@ def _masterrev(repo, masterrevset):
     return None
 
 
-@revsetpredicate("smartlog([master], [recentdays=N])")
+@revsetpredicate("smartlog([heads], [master])")
 def smartlogrevset(repo, subset, x):
-    """``smartlog([master], [recentdays=N])``
+    """``smartlog([heads], [master])``
     Changesets relevent to you.
 
+    'heads' overrides what feature branches to include.
+    (default: 'interestingbookmarks() + heads(draft()) + .')
+
     'master' is the head of the public branch.
-    Unnamed heads will be hidden unless it's within 'recentdays'.
     """
 
-    args = revset.getargsdict(x, "smartlogrevset", "master recentdays")
+    args = revset.getargsdict(x, "smartlogrevset", "heads master")
     if "master" in args:
         masterstring = revsetlang.getstring(
             args["master"], _("master must be a string")
@@ -533,22 +535,10 @@ def smartlogrevset(repo, subset, x):
     else:
         masterstring = ""
 
-    recentdays = revsetlang.getinteger(
-        args.get("recentdays"), _("recentdays should be int"), -1
-    )
-
-    heads = set(repo.revs("interestingbookmarks() + ."))
-
-    global hiddenchanges
-    headquery = "heads(draft())"
-    allheads = set(repo.revs(headquery))
-    if recentdays >= 0:
-        recentquery = revsetlang.formatspec("%r & date(-%d)", headquery, recentdays)
-        recentrevs = set(repo.revs(recentquery))
-        hiddenchanges += len(allheads - heads) - len(recentrevs - heads)
-        heads.update(recentrevs)
+    if "heads" in args:
+        heads = set(revset.getset(repo, subset, args["heads"]))
     else:
-        heads.update(allheads)
+        heads = set(repo.revs("interestingbookmarks() + heads(draft()) + ."))
 
     masterrevset = _masterrevset(repo.ui, repo, masterstring)
     masterrev = _masterrev(repo, masterrevset)
@@ -703,17 +693,24 @@ def _smartlog(ui, repo, *pats, **opts):
 
     if not opts.get("rev"):
         if opts.get("all"):
-            recentdays = -1
+            datefilter = "all()"
         else:
             before = ui.config("smartlog", "hide-before")
             if before:
-                date = util.parsedate(before)[0]
-                recentdays = (int(time.time()) - date) // (3600 * 24)
+                datefilter = revsetlang.formatspec("date(%s)", ">%s" % before)
             else:
-                recentdays = 14
+                # last 2 weeks
+                datefilter = "date(-14)"
+            # Calculate hiddenchanges
+            allheads = repo.revs("heads(draft()) - . - interestingbookmarks()")
+            visibleheads = repo.revs("%ld & %r", allheads, datefilter)
+            hiddenchanges = len(allheads) - len(visibleheads)
+
         masterrev = _masterrev(repo, masterrevset)
         revstring = revsetlang.formatspec(
-            "smartlog(%s, %s)", masterrev or "", recentdays
+            "smartlog(heads=(interestingbookmarks() + (heads(draft()) & %r) + .), master=%s)",
+            datefilter,
+            masterrev or "",
         )
         revs.update(scmutil.revrange(repo, [revstring]))
     else:

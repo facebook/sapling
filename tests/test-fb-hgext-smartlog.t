@@ -436,7 +436,7 @@ Recent arg select days correctly
   $ myday=`$PYTHON -c 'import time; print(int(time.time()) - 24 * 3600 * 20)'`
   $ hg commit --date "$myday 0" -m test2
   $ hg update 0 -q
-  $ hg log -Gr 'smartlog("master", recentdays=15)' -T compact
+  $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T compact
   o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
   |    r1
   |
@@ -444,7 +444,7 @@ Recent arg select days correctly
        r0
   
 
-  $ hg log -Gr 'smartlog("master", recentdays=25)' -T compact
+  $ hg log -Gr 'smartlog((date(-25) & draft()) + .)' -T compact
   o  7[tip] * (glob)
   |    test2
   |
