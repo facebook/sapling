@@ -56,12 +56,17 @@ class UserInfo {
     return username_;
   }
 
+  uid_t getUid() const {
+    return uid_;
+  }
+
   const AbsolutePath& getHomeDirectory() const {
     return homeDirectory_;
   }
 
  private:
   std::string username_ = "puneetk";
+  uid_t uid_ = 9999999;
   AbsolutePath homeDirectory_ =
       facebook::eden::realpath("C:\\eden\\home\\puneetk");
 };

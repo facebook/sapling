@@ -31,9 +31,11 @@ using std::optional;
 using std::string;
 using namespace folly::string_piece_literals;
 
-constexpr std::array<folly::StringPiece, 2> kEnvVars = {
+constexpr std::array<folly::StringPiece, 3> kEnvVars = {
     folly::StringPiece{"HOME"},
-    folly::StringPiece{"USER"}};
+    folly::StringPiece{"USER"},
+    folly::StringPiece{"USER_ID"},
+};
 
 const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
 const facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{".edenignore"};
@@ -124,11 +126,13 @@ std::string EdenConfig::toString() const {
 
 EdenConfig::EdenConfig(
     folly::StringPiece userName,
+    uid_t userID,
     AbsolutePath userHomePath,
     AbsolutePath userConfigPath,
     AbsolutePath systemConfigDir,
     AbsolutePath systemConfigPath)
     : userName_(userName),
+      userID_(userID),
       userHomePath_(userHomePath),
       userConfigPath_(userConfigPath),
       systemConfigPath_(systemConfigPath),
@@ -413,6 +417,7 @@ void EdenConfig::parseAndApplyConfigFile(
   std::map<std::string, std::string> attrMap;
   attrMap["HOME"] = userHomePath_.value();
   attrMap["USER"] = userName_;
+  attrMap["USER_ID"] = std::to_string(userID_);
 
   try {
     std::string fileContents;

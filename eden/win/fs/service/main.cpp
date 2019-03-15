@@ -77,6 +77,7 @@ void startServer() {
 
   auto edenConfig = std::make_unique<EdenConfig>(
       identity.getUsername(),
+      identity.getUid(),
       identity.getHomeDirectory(),
       userConfigPath,
       systemConfigDir,

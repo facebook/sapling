@@ -209,6 +209,7 @@ int main(int argc, char** argv) {
   // Command line areguments will take precedence over config file settings.
   auto edenConfig = std::make_unique<EdenConfig>(
       identity.getUsername(),
+      identity.getUid(),
       identity.getHomeDirectory(),
       userConfigPath,
       systemConfigDir,

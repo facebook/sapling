@@ -92,7 +92,11 @@ class TomlConfigTest(
         self._etc_eden_dir = os.path.join(self._test_dir, "etc/eden")
         self._config_d = os.path.join(self._test_dir, "etc/eden/config.d")
         self._home_dir = os.path.join(self._test_dir, "home", self._user)
-        self._interpolate_dict = {"USER": self._user, "HOME": self._home_dir}
+        self._interpolate_dict = {
+            "USER": self._user,
+            "USER_ID": "42",
+            "HOME": self._home_dir,
+        }
 
         os.mkdir(self._state_dir)
         util.mkdir_p(self._config_d)
@@ -405,6 +409,19 @@ experimental_systemd = false
         )
         self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
 
+    def test_user_id_variable_is_set_to_process_uid(self) -> None:
+        config = self.get_config_without_stub_variables()
+        self.write_user_config(
+            """
+[testsection]
+testoption = "My user ID is ${USER_ID}."
+"""
+        )
+        self.assertEqual(
+            config.get_config_value("testsection.testoption", default=""),
+            f"My user ID is {os.getuid()}.",
+        )
+
     def test_printed_config_is_valid_toml(self) -> None:
         self.write_user_config(
             """
@@ -451,6 +468,11 @@ experimental_systemd = true
     def get_config(self) -> EdenInstance:
         return EdenInstance(
             self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        )
+
+    def get_config_without_stub_variables(self) -> EdenInstance:
+        return EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, interpolate_dict=None
         )
 
     def write_user_config(self, content: str) -> None:

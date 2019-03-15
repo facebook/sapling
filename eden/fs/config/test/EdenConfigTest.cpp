@@ -21,6 +21,8 @@ using facebook::eden::Hash;
 using facebook::eden::RelativePath;
 using folly::StringPiece;
 using std::optional;
+using namespace folly::literals::string_piece_literals;
+using namespace facebook::eden::path_literals;
 
 namespace {
 
@@ -102,6 +104,7 @@ TEST_F(EdenConfigTest, defaultTest) {
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
       testUser_,
+      uid_t{},
       testHomeDir_,
       userConfigPath,
       systemConfigDir,
@@ -127,6 +130,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
       testUser_,
+      uid_t{},
       testHomeDir_,
       userConfigPath,
       systemConfigPath,
@@ -185,6 +189,7 @@ TEST_F(EdenConfigTest, cloneTest) {
   {
     auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
         testUser_,
+        uid_t{},
         testHomeDir_,
         userConfigPath,
         systemConfigDir,
@@ -240,6 +245,7 @@ TEST_F(EdenConfigTest, clearAllTest) {
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
       testUser_,
+      uid_t{},
       testHomeDir_,
       userConfigPath,
       systemConfigDir,
@@ -291,6 +297,7 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
       testUser_,
+      uid_t{},
       testHomeDir_,
       userConfigPath,
       systemConfigDir,
@@ -319,6 +326,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   // TODO: GET THE BASE NAME FOR THE SYSTEM CONFIG DIR!
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
       testUser_,
+      uid_t{},
       testHomeDir_,
       testPathMap_[simpleOverRideTest_].second,
       testPathMap_[simpleOverRideTest_].first,
@@ -352,6 +360,7 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
 
   auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
       testUser_,
+      uid_t{},
       testHomeDir_,
       userConfigPath,
       systemConfigDir,
@@ -366,4 +375,40 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
   EXPECT_EQ(edenConfig->getClientCertificate(), defaultClientCertificatePath_);
   EXPECT_EQ(edenConfig->getUseMononoke(), defaultUseMononoke_);
+}
+
+TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
+  auto systemConfigDir = rootTestDir_->path() / "etc-eden";
+  folly::fs::create_directory(systemConfigDir);
+
+  auto userConfigPath = rootTestDir_->path() / "user-edenrc";
+  auto getConfig = [&]() {
+    auto config =
+        EdenConfig{"testusername"_sp,
+                   uid_t{42},
+                   AbsolutePath{"/testhomedir"_abspath},
+                   AbsolutePath{userConfigPath.string()},
+                   AbsolutePath{systemConfigDir.string()},
+                   AbsolutePath{(systemConfigDir / "system-edenrc").string()}};
+    config.loadUserConfig();
+    return EdenConfig{config};
+  };
+
+  folly::writeFile(
+      "[core]\n"
+      "ignoreFile=\"${HOME}/myignore\"\n"_sp,
+      userConfigPath.c_str());
+  EXPECT_EQ(getConfig().getUserIgnoreFile(), "/testhomedir/myignore");
+
+  folly::writeFile(
+      "[core]\n"
+      "ignoreFile=\"/home/${USER}/myignore\"\n"_sp,
+      userConfigPath.c_str());
+  EXPECT_EQ(getConfig().getUserIgnoreFile(), "/home/testusername/myignore");
+
+  folly::writeFile(
+      "[core]\n"
+      "ignoreFile=\"/var/user/${USER_ID}/myignore\"\n"_sp,
+      userConfigPath.c_str());
+  EXPECT_EQ(getConfig().getUserIgnoreFile(), "/var/user/42/myignore");
 }

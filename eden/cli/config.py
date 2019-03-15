@@ -160,7 +160,11 @@ class EdenInstance:
         defaults = (
             self._interpolate_dict
             if self._interpolate_dict is not None
-            else {"USER": os.environ.get("USER", ""), "HOME": str(self._home_dir)}
+            else {
+                "USER": os.environ.get("USER", ""),
+                "USER_ID": str(os.getuid()),
+                "HOME": str(self._home_dir),
+            }
         )
         parser = configutil.EdenConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(defaults)

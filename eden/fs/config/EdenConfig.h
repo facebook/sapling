@@ -23,6 +23,9 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/Stub.h" // @manual
+#endif
 
 extern const facebook::eden::RelativePathPiece kDefaultEdenDirectory;
 extern const facebook::eden::RelativePathPiece kDefaultIgnoreFile;
@@ -321,6 +324,7 @@ class EdenConfig : public ConfigSettingManager {
    */
   explicit EdenConfig(
       folly::StringPiece userName,
+      uid_t userID,
       AbsolutePath userHomePath,
       AbsolutePath userConfigPath,
       AbsolutePath systemConfigDir,
@@ -468,6 +472,7 @@ class EdenConfig : public ConfigSettingManager {
   std::map<std::string, std::map<std::string, ConfigSettingBase*>> configMap_;
 
   std::string userName_;
+  uid_t userID_;
   AbsolutePath userHomePath_;
   AbsolutePath userConfigPath_;
   AbsolutePath systemConfigPath_;

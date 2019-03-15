@@ -94,6 +94,7 @@ TestMount::TestMount()
       make_shared<ProcessNameCache>(),
       make_shared<EdenConfig>(
           /*userName=*/folly::StringPiece{"bob"},
+          /*userID=*/uid_t{},
           /*userHomePath=*/AbsolutePath{testDir_->path().string()},
           /*userConfigPath=*/
           AbsolutePath{testDir_->path().string() + ".edenrc"},
