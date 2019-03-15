@@ -157,17 +157,10 @@ class EdenInstance:
             These are coupled with the equivalent code in
             eden/fs/config/ClientConfig.cpp and must be kept in sync.
         """
-        defaults = (
-            self._interpolate_dict
-            if self._interpolate_dict is not None
-            else {
-                "USER": os.environ.get("USER", ""),
-                "USER_ID": str(os.getuid()),
-                "HOME": str(self._home_dir),
-            }
-        )
         parser = configutil.EdenConfigParser(
-            interpolation=configinterpolator.EdenConfigInterpolator(defaults)
+            interpolation=configinterpolator.EdenConfigInterpolator(
+                self._config_variables
+            )
         )
         for path in self.get_rc_files():
             try:
@@ -177,6 +170,18 @@ class EdenInstance:
                 continue
             parser.read_dict(toml_cfg)
         return parser
+
+    @property
+    def _config_variables(self) -> Dict[str, str]:
+        return (
+            self._interpolate_dict
+            if self._interpolate_dict is not None
+            else {
+                "USER": os.environ.get("USER", ""),
+                "USER_ID": str(os.getuid()),
+                "HOME": str(self._home_dir),
+            }
+        )
 
     def get_rc_files(self) -> List[Path]:
         result: List[Path] = []
@@ -227,6 +232,15 @@ class EdenInstance:
             return True
 
         return False
+
+    def get_fallback_systemd_xdg_runtime_dir(self) -> str:
+        xdg_runtime_dir = self.get_config_value(
+            "service.fallback_systemd_xdg_runtime_dir", default=""
+        )
+        if xdg_runtime_dir == "":
+            user_id = self._config_variables["USER_ID"]
+            xdg_runtime_dir = f"/run/user/{user_id}"
+        return xdg_runtime_dir
 
     def print_full_config(self, file: typing.TextIO) -> None:
         parser = self._loadConfig()

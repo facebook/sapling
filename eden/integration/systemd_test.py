@@ -14,11 +14,13 @@ import typing
 import unittest
 
 import pexpect
+import toml
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.edenfs_systemd import EdenFSSystemdMixin
 from .lib.find_executables import FindExe
+from .lib.pexpect import PexpectAssertionMixin
 from .lib.systemd import SystemdUserServiceManagerMixin
 
 
@@ -28,6 +30,7 @@ class SystemdTest(
     TemporaryDirectoryMixin,
     SystemdUserServiceManagerMixin,
     EdenFSSystemdMixin,
+    PexpectAssertionMixin,
 ):
     """Test Eden's systemd service for Linux."""
 
@@ -146,14 +149,25 @@ class SystemdTest(
         # TODO(strager): Improve this message.
         start_process.expect_exact("Failed to connect to bus: Connection refused")
 
-    def test_eden_start_reports_error_if_systemd_environment_is_missing(self) -> None:
+    def test_eden_start_uses_fallback_if_systemd_environment_is_missing(self) -> None:
         self.set_up_edenfs_systemd_service()
+        systemd = self.systemd
+        assert systemd is not None
+
+        fallback_xdg_runtime_dir = str(systemd.xdg_runtime_dir)
+        self.set_eden_config(
+            {"service": {"fallback_systemd_xdg_runtime_dir": fallback_xdg_runtime_dir}}
+        )
         self.unset_environment_variable("XDG_RUNTIME_DIR")
 
         start_process = self.spawn_start_with_fake_edenfs()
         start_process.expect_exact(
-            "error: The XDG_RUNTIME_DIR environment variable is not set"
+            f"warning: The XDG_RUNTIME_DIR environment variable is not set; "
+            f"using fallback: '{fallback_xdg_runtime_dir}'"
         )
+        start_process.expect_exact("Started edenfs")
+        self.assert_process_succeeds(start_process)
+        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
 
     def spawn_start_with_fake_edenfs(
         self, extra_args: typing.Sequence[str] = ()
@@ -180,3 +194,9 @@ class SystemdTest(
             "--home-dir",
             self.home_dir,
         ]
+
+    def set_eden_config(self, config) -> None:
+        config_d = pathlib.Path(self.etc_eden_dir) / "config.d"
+        config_d.mkdir()
+        with open(config_d / "systemd.toml", "w") as config_file:
+            toml.dump(config, config_file)

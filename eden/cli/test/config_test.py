@@ -422,6 +422,24 @@ testoption = "My user ID is ${USER_ID}."
             f"My user ID is {os.getuid()}.",
         )
 
+    def test_default_fallback_systemd_xdg_runtime_dir_is_run_user_uid(self) -> None:
+        self.assertEqual(
+            self.get_config().get_fallback_systemd_xdg_runtime_dir(), "/run/user/42"
+        )
+
+    def test_configured_fallback_systemd_xdg_runtime_dir_expands_user_and_user_id(
+        self
+    ) -> None:
+        self.write_user_config(
+            """
+[service]
+fallback_systemd_xdg_runtime_dir = "/var/run/${USER}/${USER_ID}"
+"""
+        )
+        self.assertEqual(
+            self.get_config().get_fallback_systemd_xdg_runtime_dir(), "/var/run/bob/42"
+        )
+
     def test_printed_config_is_valid_toml(self) -> None:
         self.write_user_config(
             """

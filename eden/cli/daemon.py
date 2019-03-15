@@ -19,11 +19,7 @@ from typing import Dict, List, NoReturn, Optional, Tuple, Union
 
 from .config import EdenInstance
 from .logfile import forward_log_file
-from .systemd import (
-    EdenFSSystemdServiceConfig,
-    SystemdNotConfiguredError,
-    edenfs_systemd_service_name,
-)
+from .systemd import EdenFSSystemdServiceConfig, edenfs_systemd_service_name
 from .util import ShutdownError, poll_until, print_stderr
 
 
@@ -250,22 +246,36 @@ def start_systemd_service(
         loop = asyncio.get_event_loop()
 
         async def start_service_async():
-            if "XDG_RUNTIME_DIR" not in os.environ:
-                raise SystemdNotConfiguredError()
+            systemctl_environment = dict(os.environ)
+            systemctl_environment["XDG_RUNTIME_DIR"] = _get_systemd_xdg_runtime_dir(
+                config=instance
+            )
             start_process = await asyncio.create_subprocess_exec(
-                "systemctl", "--user", "start", "--", service_name
+                "systemctl",
+                "--user",
+                "start",
+                "--",
+                service_name,
+                env=systemctl_environment,
             )
             return await start_process.wait()
 
-        try:
-            start_task = loop.create_task(start_service_async())
-            loop.create_task(log_forwarder.poll_forever_async())
-            loop.run_until_complete(start_task)
-            log_forwarder.poll()
-            return start_task.result()
-        except SystemdNotConfiguredError as e:
-            print_stderr(f"error: {e}")
-            return 1
+        start_task = loop.create_task(start_service_async())
+        loop.create_task(log_forwarder.poll_forever_async())
+        loop.run_until_complete(start_task)
+        log_forwarder.poll()
+        return start_task.result()
+
+
+def _get_systemd_xdg_runtime_dir(config: EdenInstance) -> str:
+    xdg_runtime_dir = os.getenv("XDG_RUNTIME_DIR")
+    if xdg_runtime_dir is None:
+        xdg_runtime_dir = config.get_fallback_systemd_xdg_runtime_dir()
+        print_stderr(
+            f"warning: The XDG_RUNTIME_DIR environment variable is not set; "
+            f"using fallback: {xdg_runtime_dir!r}"
+        )
+    return xdg_runtime_dir
 
 
 def _get_daemon_args(
