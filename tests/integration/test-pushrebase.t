@@ -199,21 +199,21 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ echo 7 > 7 && hg add 7 && hg ci -m 7
   $ hg merge -q -r 13 && hg ci -m "merge 6 and 7"
   $ log -r ":"
-  o  5 [public;rev=12;59e5396444cf] default/master_bookmark
-  |
-  o  4 [public;rev=11;4f5a4463b24b]
-  |
-  o  3 [public;rev=10;7796136324ad]
-  |
-  o  1 [public;rev=4;c2e526aacb51]
-  |
-  o  C [public;rev=2;26805aba1e60]
-  |
-  | @    merge 6 and 7 [draft;rev=15;fad460d85200]
-  | |\
-  +---o  7 [draft;rev=14;299aa3fbbd3f]
+  @    merge 6 and 7 [draft;rev=15;fad460d85200]
+  |\
+  | o  7 [draft;rev=14;299aa3fbbd3f]
   | |
-  | o  6 [draft;rev=13;55337b4265b3]
+  o |  6 [draft;rev=13;55337b4265b3]
+  |/
+  | o  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  | |
+  | o  4 [public;rev=11;4f5a4463b24b]
+  | |
+  | o  3 [public;rev=10;7796136324ad]
+  | |
+  | o  1 [public;rev=4;c2e526aacb51]
+  | |
+  | o  C [public;rev=2;26805aba1e60]
   |/
   o  B [public;rev=1;112478962961]
   |
@@ -232,9 +232,9 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ log -r ":"
   @    merge 6 and 7 [public;rev=18;4a0002072071] default/master_bookmark
   |\
-  \| o  (6|7) \[public;rev=17;.*\] (re)
-  | |
   o \|  (7|6) \[public;rev=16;.*\] (re)
+  | |
+  \| o  (6|7) \[public;rev=17;.*\] (re)
   |/
   o  5 [public;rev=12;59e5396444cf]
   |
@@ -278,11 +278,11 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ hgmn up .^^ && echo 12 > 12 && hg add 12 && hg ci -m 12
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ log -r ":"
-  o  11 [public;rev=22;589551466f25] default/master_bookmark
+  @  12 [draft;rev=23;cd5aac4439e5]
   |
-  o  10 [public;rev=21;c573a92e1179]
-  |
-  | @  12 [draft;rev=23;cd5aac4439e5]
+  | o  11 [public;rev=22;589551466f25] default/master_bookmark
+  | |
+  | o  10 [public;rev=21;c573a92e1179]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
@@ -314,13 +314,13 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ hg phase -r $(hg log -r . -T "{p2node}")
   21: public
   $ log -r ":"
-  o  11 [public;rev=22;589551466f25] default/master_bookmark
-  |
-  | @  merge 10 and 12 [draft;rev=24;e3db177db1d1]
-  |/|
-  o |  10 [public;rev=21;c573a92e1179]
-  | |
+  @    merge 10 and 12 [draft;rev=24;e3db177db1d1]
+  |\
   | o  12 [draft;rev=23;cd5aac4439e5]
+  | |
+  +---o  11 [public;rev=22;589551466f25] default/master_bookmark
+  | |
+  o |  10 [public;rev=21;c573a92e1179]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
@@ -417,11 +417,11 @@ Test a non-forward push
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
   |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
   @ |  11 [public;rev=22;589551466f25]
   | |
   o |  10 [public;rev=21;c573a92e1179]
+  | |
+  | o  12 [public;rev=23;cd5aac4439e5]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
@@ -436,11 +436,11 @@ Test a non-forward push
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
   @ |  11 [public;rev=22;589551466f25] default/master_bookmark_2
   | |
   o |  10 [public;rev=21;c573a92e1179]
+  | |
+  | o  12 [public;rev=23;cd5aac4439e5]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
@@ -457,11 +457,11 @@ Test deleting a bookmark
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
   @ |  11 [public;rev=22;589551466f25]
   | |
   o |  10 [public;rev=21;c573a92e1179]
+  | |
+  | o  12 [public;rev=23;cd5aac4439e5]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
