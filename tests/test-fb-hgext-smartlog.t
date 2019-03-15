@@ -35,6 +35,8 @@ Continue repo setup
   $ touch c2 && hg add c2 && hg ci -mc2
   $ hg book feature2
   $ touch d && hg add d && hg ci -md
+
+  $ hg phase -r master --public
   $ hg log -G -T compact
   @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
   |    d
@@ -105,6 +107,9 @@ As a revset
   |
 
 With --master
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r 1 --public
+
   $ hg smartlog -T compact --master 1
   @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
@@ -121,6 +126,8 @@ With --master
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
+
+  $ hg phase -r master --public
 
 Specific revs
   $ hg smartlog -T compact -r 2 -r 4
@@ -152,6 +159,9 @@ Specific revs
   
 
 Test master ordering
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r 49cdb4091aca --public
+
   $ hg boo -f master -r 49cdb4091aca
   $ hg smartlog -T compact
   o  2[feature1,master]   49cdb4091aca   1970-01-01 00:00 +0000   test
@@ -171,6 +181,9 @@ Test master ordering
   |
 
 Test overriding master
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r 38d85b506754 --public
+
   $ hg boo -f master -r 38d85b506754
   $ hg smartlog -T compact
   @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
@@ -185,6 +198,9 @@ Test overriding master
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
+
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r feature1 --public
 
   $ hg smartlog -T compact --master feature1
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
@@ -237,6 +253,9 @@ Test overriding master
   |    a2
   |
 
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r master --public
+
 Test with weird bookmark names
 
   $ hg book -r 2 foo-bar
@@ -250,6 +269,10 @@ Test with weird bookmark names
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
+
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r foo-bar --public
+
   $ hg smartlog --config smartlog.master=foo-bar -T compact
   o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
@@ -269,6 +292,9 @@ Test with weird bookmark names
   $ hg smartlog --config smartlog.master=xxxx -T compact
   abort: unknown revision 'xxxx'!
   [255]
+
+  $ hg phase -r 'all()' --draft -f
+  $ hg phase -r master --public
 
 Test with two unrelated histories
   $ hg update null
@@ -415,10 +441,7 @@ Recent arg select days correctly
   |    r1
   |
   @  0   1ea73414a91b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r0
-  |
-  o  -1[curr]   000000000000   1970-01-01 00:00 +0000
-  
+       r0
   
 
   $ hg log -Gr 'smartlog("master", recentdays=25)' -T compact
@@ -435,10 +458,7 @@ Recent arg select days correctly
   |    r1
   |
   @  0   1ea73414a91b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r0
-  |
-  o  -1[curr]   000000000000   1970-01-01 00:00 +0000
-  
+       r0
   
 Make sure public commits that are descendants of master are not drawn
   $ cd ..

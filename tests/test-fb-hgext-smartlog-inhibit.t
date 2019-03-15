@@ -30,6 +30,7 @@ Test that changesets with visible precursors are rendered as x's
   $ hg unamend
   $ hg up 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg phase -r '.' --public
   $ hg smartlog -T '{rev} {bookmarks}'
   o  3 test
   |

@@ -375,6 +375,7 @@ checking split/divergence.
   to restore the changes to the working copy, run 'hg revert -r c9476255bc2a --all'
   in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
   hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
+  $ hg phase -r . --public
   $ hg sl --all --hidden -T "{node|short} {if(undosuccessors, label('sl.undo', '(Undone as {join(undosuccessors% \'{shortest(undosuccessor, 6)}\', ', ')})'))}"
   x  f007a7cf4c3d
   |
@@ -399,6 +400,7 @@ checking split/divergence.
   o  b68836a6e2ca
   |
   ~
+  $ hg phase -r 'all()' --draft -f
   $ echo "a" >> newa && echo "b" >> newb && hg add newa newb && hg ci -m "newfiles"
   $ hg split --quiet << EOF
   > y

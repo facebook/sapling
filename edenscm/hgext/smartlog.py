@@ -537,13 +537,6 @@ def smartlogrevset(repo, subset, x):
         args.get("recentdays"), _("recentdays should be int"), -1
     )
 
-    revs = set()
-
-    rev = repo.changelog.rev
-    ancestor = repo.changelog.ancestor
-    node = repo.changelog.node
-    parentrevs = repo.changelog.parentrevs
-
     heads = set(repo.revs("interestingbookmarks() + ."))
 
     global hiddenchanges
@@ -562,31 +555,17 @@ def smartlogrevset(repo, subset, x):
 
     if masterrev is None:
         masterrev = repo["tip"].rev()
+        if masterrev == nodemod.nullrev:
+            # repo is empty
+            return smartset.baseset()
 
-    masternode = node(masterrev)
-
-    # Find all draft ancestors and latest public ancestor of heads
-    # that are not in master.
-    # We don't want to draw all public commits because there can be too
-    # many of them.
-    # Don't use revsets, they are too slow
-    for head in heads:
-        anc = rev(ancestor(node(head), masternode))
-        queue = [head]
-        while queue:
-            current = queue.pop(0)
-            if current not in revs:
-                revs.add(current)
-                # stop as soon as we find public commit
-                ispublic = repo[current].phase() == phases.public
-                if current != anc and not ispublic:
-                    parents = parentrevs(current)
-                    for p in parents:
-                        if p >= anc:
-                            queue.append(p)
-
-    # add context: master, current commit, and the common ancestor
-    revs.add(masterrev)
+    # Remove "null" commit. "::x" does not support it.
+    if nodemod.nullrev in heads:
+        heads.remove(nodemod.nullrev)
+    # Select ancestors that are draft.
+    drafts = repo.revs("draft() & ::%ld", heads)
+    # Include parents of drafts, and public heads.
+    revs = repo.revs("parents(%ld) + %ld + %ld + %d", drafts, drafts, heads, masterrev)
 
     return subset & revs
 
