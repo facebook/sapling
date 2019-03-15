@@ -534,7 +534,7 @@ pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     RepoConfigs::read_configs(config_path)
 }
 
-fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
+pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
     let repo_id = get_repo_id(matches);
 
     let configs = read_configs(matches)?;
