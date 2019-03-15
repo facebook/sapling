@@ -1094,74 +1094,127 @@ impl HgCommands for RepoClient {
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         info!(self.ctx.logger(), "{}", ops::GETPACKV1);
+        let mut wireproto_logger = self.wireproto_logger(ops::GETPACKV1, None);
 
         // TODO(stash): make it configurable
         let getpackv1_buffer_size = 100;
+        // We buffer all parameters in memory so that we can log them.
+        // That shouldn't be a problem because requests are quite small
+        let getpackv1_params = Arc::new(Mutex::new(vec![]));
         let ctx = self.ctx.clone();
         let repo = self.repo.blobrepo().clone();
 
         let s = params
-            .map(move |(path, filenodes)| {
-                let history = get_unordered_file_history_for_multiple_nodes(
-                    ctx.clone(),
-                    repo.clone(),
-                    filenodes.clone().into_iter().collect(),
-                    &path,
-                )
-                .collect();
+            .map({
+                cloned!(ctx, getpackv1_params);
+                move |(path, filenodes)| {
+                    {
+                        let mut getpackv1_params = getpackv1_params.lock().unwrap();
+                        getpackv1_params.push((path.clone(), filenodes.clone()));
+                    }
+                    let history = get_unordered_file_history_for_multiple_nodes(
+                        ctx.clone(),
+                        repo.clone(),
+                        filenodes.clone().into_iter().collect(),
+                        &path,
+                    )
+                    .collect();
 
-                let mut contents = vec![];
-                for filenode in filenodes {
-                    let fut = repo
-                        .get_file_content(ctx.clone(), filenode)
-                        .map(move |content| (filenode, content));
-                    contents.push(fut);
+                    let mut contents = vec![];
+                    for filenode in filenodes {
+                        let fut = repo
+                            .get_file_content(ctx.clone(), filenode)
+                            .map(move |content| (filenode, content));
+                        contents.push(fut);
+                    }
+                    future::join_all(contents)
+                        .join(history)
+                        .map(move |(contents, history)| (path, contents, history))
                 }
-                future::join_all(contents)
-                    .join(history)
-                    .map(move |(contents, history)| (path, contents, history))
             })
             .buffered(getpackv1_buffer_size)
-            .map(|(path, contents, history)| {
-                let mut res = vec![wirepack::Part::HistoryMeta {
-                    path: RepoPath::FilePath(path.clone()),
-                    entry_count: history.len() as u32,
-                }];
+            .map({
+                cloned!(ctx);
+                move |(path, contents, history)| {
+                    let mut res = vec![wirepack::Part::HistoryMeta {
+                        path: RepoPath::FilePath(path.clone()),
+                        entry_count: history.len() as u32,
+                    }];
 
-                let history = history.into_iter().map(|history_entry| {
-                    let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
-                        history_entry.parents(),
-                        history_entry.copyfrom().as_ref(),
-                    );
+                    let history = history.into_iter().map(|history_entry| {
+                        let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
+                            history_entry.parents(),
+                            history_entry.copyfrom().as_ref(),
+                        );
 
-                    wirepack::Part::History(wirepack::HistoryEntry {
-                        node: history_entry.filenode().into_nodehash(),
-                        p1: p1.into_nodehash(),
-                        p2: p2.into_nodehash(),
-                        linknode: history_entry.linknode().into_nodehash(),
-                        copy_from: copy_from.cloned().map(RepoPath::FilePath),
-                    })
-                });
-                res.extend(history);
+                        wirepack::Part::History(wirepack::HistoryEntry {
+                            node: history_entry.filenode().into_nodehash(),
+                            p1: p1.into_nodehash(),
+                            p2: p2.into_nodehash(),
+                            linknode: history_entry.linknode().into_nodehash(),
+                            copy_from: copy_from.cloned().map(RepoPath::FilePath),
+                        })
+                    });
+                    res.extend(history);
 
-                res.push(wirepack::Part::DataMeta {
-                    path: RepoPath::FilePath(path),
-                    entry_count: contents.len() as u32,
-                });
-                for (filenode, content) in contents {
-                    res.push(wirepack::Part::Data(wirepack::DataEntry {
-                        node: filenode.into_nodehash(),
-                        delta_base: NULL_HASH,
-                        delta: Delta::new_fulltext(content.into_bytes().to_vec()),
-                    }));
+                    res.push(wirepack::Part::DataMeta {
+                        path: RepoPath::FilePath(path),
+                        entry_count: contents.len() as u32,
+                    });
+                    for (filenode, content) in contents {
+                        let content = content.into_bytes().to_vec();
+                        ctx.perf_counters()
+                            .set_max_counter("getpackv1_max_file_size", content.len() as i64);
+                        res.push(wirepack::Part::Data(wirepack::DataEntry {
+                            node: filenode.into_nodehash(),
+                            delta_base: NULL_HASH,
+                            delta: Delta::new_fulltext(content),
+                        }));
+                    }
+                    stream::iter_ok(res.into_iter())
                 }
-                stream::iter_ok(res.into_iter())
             })
             .flatten()
             .chain(stream::once(Ok(wirepack::Part::End)));
 
         wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
             .and_then(|chunk| chunk.into_bytes())
+            .inspect({
+                cloned!(self.ctx);
+                move |bytes| {
+                    let len = bytes.len() as i64;
+                    ctx.perf_counters()
+                        .add_to_counter("getpackv1_response_size", len);
+                }
+            })
+            .timed({
+                cloned!(self.ctx);
+                move |stats, _| {
+                    let encoded_params = {
+                        let getpackv1_params = getpackv1_params.lock().unwrap();
+                        let mut encoded_params = vec![];
+                        for (path, filenodes) in getpackv1_params.iter() {
+                            let mut encoded_filenodes = vec![];
+                            for filenode in filenodes {
+                                encoded_filenodes.push(format!("{}", filenode));
+                            }
+                            encoded_params.push((
+                                String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                encoded_filenodes,
+                            ));
+                        }
+                        encoded_params
+                    };
+
+                    ctx.perf_counters()
+                        .add_to_counter("getpackv1_num_files", stats.count as i64);
+
+                    wireproto_logger.set_args(Some(json! {encoded_params}));
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                    Ok(())
+                }
+            })
             .boxify()
     }
 
