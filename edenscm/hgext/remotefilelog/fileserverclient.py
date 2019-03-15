@@ -400,7 +400,7 @@ class fileserverclient(object):
     def request(self, fileids, fetchdata, fetchhistory):
         if self.ui.configbool("remotefilelog", "fetchpacks"):
             if self.ui.configbool("edenapi", "enabled"):
-                return self.httprequestpacks(fileids)
+                return self.httprequestpacks(fileids, fetchdata, fetchhistory)
             return self.requestpacks(fileids, fetchdata, fetchhistory)
         return self.requestloose(fileids)
 
