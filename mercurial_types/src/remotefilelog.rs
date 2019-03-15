@@ -14,6 +14,30 @@ use types::{LooseHistoryEntry, Parents};
 use crate::blobnode::HgParents;
 use crate::nodehash::{HgChangesetId, HgFileNodeId, NULL_HASH};
 
+/// Mercurial revlogs and remotefilelog pack files have different formats of storing parents
+/// if a file was copied or moved. This function converts from mercurial revlog format to
+/// remotefilelog format
+pub fn convert_parents_to_remotefilelog_format<'a>(
+    parents: &HgParents,
+    copyfrom: Option<&'a (MPath, HgFileNodeId)>,
+) -> (HgFileNodeId, HgFileNodeId, Option<&'a MPath>) {
+    let (p1, p2) = match parents {
+        HgParents::None => (NULL_HASH, NULL_HASH),
+        HgParents::One(p) => (p.clone(), NULL_HASH),
+        HgParents::Two(p1, p2) => (p1.clone(), p2.clone()),
+    };
+
+    if let Some((ref copied_from, copied_rev)) = copyfrom {
+        // Mercurial has a complicated copy/renames logic.
+        // If (path1, filenode1) is copied/renamed from (path2, filenode2),
+        // filenode1's p1 is set to filenode2, and copy_from path is set to path2
+        // filenode1's p2 is null for non-merge commits. It might be non-null for merges.
+        (*copied_rev, HgFileNodeId::new(p1), Some(copied_from))
+    } else {
+        (HgFileNodeId::new(p1), HgFileNodeId::new(p2), None)
+    }
+}
+
 /// Represents a file history entry in Mercurial's loose file format.
 pub struct HgFileHistoryEntry {
     node: HgFileNodeId,
@@ -37,29 +61,32 @@ impl HgFileHistoryEntry {
         }
     }
 
+    pub fn filenode(&self) -> &HgFileNodeId {
+        &self.node
+    }
+
+    pub fn parents(&self) -> &HgParents {
+        &self.parents
+    }
+
+    pub fn linknode(&self) -> &HgChangesetId {
+        &self.linknode
+    }
+
+    pub fn copyfrom(&self) -> &Option<(MPath, HgFileNodeId)> {
+        &self.copyfrom
+    }
+
     /// Serialize this entry into Mercurial's loose file format and write
     /// the resulting bytes to the given writer (most likely representing
     /// partially written loose file contents).
     pub fn write_to_loose_file<W: Write>(&self, writer: &mut W) -> Result<()> {
-        let (p1, p2) = match self.parents {
-            HgParents::None => (NULL_HASH, NULL_HASH),
-            HgParents::One(p) => (p, NULL_HASH),
-            HgParents::Two(p1, p2) => (p1, p2),
-        };
-
-        let (p1, p2, copied_from) = if let Some((ref copied_from, copied_rev)) = self.copyfrom {
-            // Mercurial has a complicated copy/renames logic.
-            // If (path1, filenode1) is copied/renamed from (path2, filenode2),
-            // filenode1's p1 is set to filenode2, and copy_from path is set to path2
-            // filenode1's p2 is null for non-merge commits. It might be non-null for merges.
-            (copied_rev.into_nodehash(), p1, Some(copied_from))
-        } else {
-            (p1, p2, None)
-        };
+        let (p1, p2, copied_from) =
+            convert_parents_to_remotefilelog_format(&self.parents, self.copyfrom.as_ref());
 
         writer.write_all(self.node.clone().into_nodehash().as_bytes())?;
-        writer.write_all(p1.as_bytes())?;
-        writer.write_all(p2.as_bytes())?;
+        writer.write_all(p1.into_nodehash().as_bytes())?;
+        writer.write_all(p2.into_nodehash().as_bytes())?;
         writer.write_all(self.linknode.clone().into_nodehash().as_bytes())?;
         if let Some(copied_from) = copied_from {
             writer.write_all(&copied_from.to_vec())?;

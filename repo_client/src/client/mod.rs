@@ -25,14 +25,15 @@ use blobrepo::HgBlobChangeset;
 use bookmarks::Bookmark;
 use bundle2_resolver;
 use context::CoreContext;
-use mercurial_bundles::{create_bundle_stream, parts, Bundle2Item};
+use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
 use mercurial_types::manifest_utils::{
     changed_entry_stream_with_pruner, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
     Pruner, VisitedPruner,
 };
 use mercurial_types::{
-    percent_encode, Entry, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
-    MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
+    convert_parents_to_remotefilelog_format, percent_encode, Delta, Entry, HgBlobNode,
+    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_CSID,
+    NULL_HASH,
 };
 use percent_encoding;
 use phases::Phases;
@@ -48,7 +49,7 @@ use tracing::Traced;
 use blobrepo::BlobRepo;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 
-use remotefilelog::create_remotefilelog_blob;
+use remotefilelog::{create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes};
 use streaming_clone::RevlogStreamingChunks;
 
 use errors::*;
@@ -79,6 +80,7 @@ mod ops {
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
     pub static GETFILES: &str = "getfiles";
+    pub static GETPACKV1: &str = "getpackv1";
 }
 
 fn format_nodes_list(nodes: &Vec<HgNodeHash>) -> String {
@@ -1083,6 +1085,83 @@ impl HgCommands for RepoClient {
             .flatten_stream()
             .whole_stream_timeout(timeout_duration())
             .map_err(process_stream_timeout_error)
+            .boxify()
+    }
+
+    // @wireprotocommand('getpackv1')
+    fn getpackv1(
+        &self,
+        params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+    ) -> BoxStream<Bytes, Error> {
+        info!(self.ctx.logger(), "{}", ops::GETPACKV1);
+
+        // TODO(stash): make it configurable
+        let getpackv1_buffer_size = 100;
+        let ctx = self.ctx.clone();
+        let repo = self.repo.blobrepo().clone();
+
+        let s = params
+            .map(move |(path, filenodes)| {
+                let history = get_unordered_file_history_for_multiple_nodes(
+                    ctx.clone(),
+                    repo.clone(),
+                    filenodes.clone().into_iter().collect(),
+                    &path,
+                )
+                .collect();
+
+                let mut contents = vec![];
+                for filenode in filenodes {
+                    let fut = repo
+                        .get_file_content(ctx.clone(), filenode)
+                        .map(move |content| (filenode, content));
+                    contents.push(fut);
+                }
+                future::join_all(contents)
+                    .join(history)
+                    .map(move |(contents, history)| (path, contents, history))
+            })
+            .buffered(getpackv1_buffer_size)
+            .map(|(path, contents, history)| {
+                let mut res = vec![wirepack::Part::HistoryMeta {
+                    path: RepoPath::FilePath(path.clone()),
+                    entry_count: history.len() as u32,
+                }];
+
+                let history = history.into_iter().map(|history_entry| {
+                    let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
+                        history_entry.parents(),
+                        history_entry.copyfrom().as_ref(),
+                    );
+
+                    wirepack::Part::History(wirepack::HistoryEntry {
+                        node: history_entry.filenode().into_nodehash(),
+                        p1: p1.into_nodehash(),
+                        p2: p2.into_nodehash(),
+                        linknode: history_entry.linknode().into_nodehash(),
+                        copy_from: copy_from.cloned().map(RepoPath::FilePath),
+                    })
+                });
+                res.extend(history);
+
+                res.push(wirepack::Part::DataMeta {
+                    path: RepoPath::FilePath(path),
+                    entry_count: contents.len() as u32,
+                });
+                for (filenode, content) in contents {
+                    res.push(wirepack::Part::Data(wirepack::DataEntry {
+                        node: filenode.into_nodehash(),
+                        delta_base: NULL_HASH,
+                        delta: Delta::new_fulltext(content.into_bytes().to_vec()),
+                    }));
+                }
+                stream::iter_ok(res.into_iter())
+            })
+            .flatten()
+            .chain(stream::once(Ok(wirepack::Part::End)));
+
+        wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
+            .and_then(|chunk| chunk.into_bytes())
             .boxify()
     }
 

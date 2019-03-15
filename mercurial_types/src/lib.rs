@@ -127,7 +127,7 @@ pub use nodehash::{
     NULL_HASH,
 };
 pub use phase::HgPhase;
-pub use remotefilelog::HgFileHistoryEntry;
+pub use remotefilelog::{convert_parents_to_remotefilelog_format, HgFileHistoryEntry};
 pub use utils::percent_encode;
 
 #[cfg(test)]

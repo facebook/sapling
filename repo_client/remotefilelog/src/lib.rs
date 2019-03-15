@@ -18,7 +18,7 @@ use context::CoreContext;
 use failure::{Error, Fail, Fallible};
 use filenodes::FilenodeInfo;
 use futures::{future::ok, stream, Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 use lz4_pyframe;
 use maplit::hashset;
 use mercurial::file::File;
@@ -213,6 +213,26 @@ fn get_raw_content(
                 .map_err(Error::from)
                 .map(|_| writer.into_inner())
         })
+}
+
+/// Get ancestors of all filenodes
+/// Current implementation might be inefficient because it might re-fetch the same filenode a few
+/// times
+pub fn get_unordered_file_history_for_multiple_nodes(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    filenodes: HashSet<HgFileNodeId>,
+    path: &MPath,
+) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
+    select_all(
+        filenodes.into_iter().map(|filenode| {
+            get_file_history(ctx.clone(), repo.clone(), filenode, path.clone(), None)
+        }),
+    )
+    .filter({
+        let mut used_filenodes = HashSet::new();
+        move |entry| used_filenodes.insert(entry.filenode().clone())
+    })
 }
 
 /// Get the history of the file corresponding to the given filenode and path.
