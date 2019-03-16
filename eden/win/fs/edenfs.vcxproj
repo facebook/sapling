@@ -263,7 +263,6 @@
     <ClInclude Include="..\..\fs\service\EdenError.h" />
     <ClInclude Include="..\..\fs\service\EdenServer.h" />
     <ClInclude Include="..\..\fs\service\EdenServiceHandler.h" />
-    <ClInclude Include="..\..\fs\service\main.h" />
     <ClInclude Include="..\..\fs\service\StreamingSubscriber.h" />
     <ClInclude Include="..\..\fs\sqlite\Sqlite.h" />
     <ClInclude Include="..\..\fs\store\BackingStore.h" />

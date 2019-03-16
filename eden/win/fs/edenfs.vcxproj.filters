@@ -406,9 +406,6 @@
     <ClInclude Include="..\..\fs\service\EdenServer.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\fs\service\main.h">
-      <Filter>fs\Service</Filter>
-    </ClInclude>
     <ClInclude Include="Stub.h">
       <Filter>Win\Stubs</Filter>
     </ClInclude>

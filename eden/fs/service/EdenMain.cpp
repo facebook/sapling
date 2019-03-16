@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/service/main.h"
+#include "eden/fs/service/EdenMain.h"
 
 #include <boost/filesystem.hpp>
 #include <folly/Conv.h>

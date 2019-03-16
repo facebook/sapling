@@ -19,7 +19,7 @@ file(GLOB SERVICE_SRCS "*.cpp")
 add_library(
   eden_service STATIC
     ${SERVICE_SRCS}
-    oss/RunServer.cpp
+    oss/main.cpp
 )
 target_link_libraries(
   eden_service
