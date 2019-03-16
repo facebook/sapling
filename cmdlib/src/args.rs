@@ -545,7 +545,7 @@ pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> 
         .last();
     match repo_config {
         Some((name, config)) => Ok((name, config)),
-        None => Err(err_msg(format!("uknown repoid {:?}", repo_id))),
+        None => Err(err_msg(format!("unknown repoid {:?}", repo_id))),
     }
 }
 

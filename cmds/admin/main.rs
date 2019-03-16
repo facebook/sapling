@@ -34,6 +34,7 @@ extern crate manifoldblob;
 extern crate mercurial_types;
 extern crate metaconfig_types;
 extern crate mononoke_types;
+extern crate mutable_counters;
 extern crate revset;
 extern crate rust_thrift;
 extern crate skiplist;
@@ -51,7 +52,7 @@ use bookmarks::Bookmark;
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use failure::{err_msg, Error, Result};
@@ -70,6 +71,7 @@ use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
     FileContents, Generation, RepositoryId,
 };
+use mutable_counters::{MutableCounters, SqlMutableCounters};
 use revset::RangeNodeStream;
 use rust_thrift::compact_protocol;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
@@ -90,6 +92,9 @@ const HASH_CONVERT: &'static str = "convert";
 const HG_CHANGESET: &'static str = "hg-changeset";
 const HG_CHANGESET_DIFF: &'static str = "diff";
 const HG_CHANGESET_RANGE: &'static str = "range";
+const HG_SYNC_BUNDLE: &'static str = "hg-sync-bundle";
+const HG_SYNC_LAST: &'static str = "last";
+const HG_SYNC_LAST_PROCESSED: &'static str = "last-processed";
 const SKIPLIST_BUILD: &'static str = "build";
 const SKIPLIST_READ: &'static str = "read";
 
@@ -196,6 +201,24 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
         .args_from_usage("<HASH>  'source hash'");
 
+    let hg_sync = SubCommand::with_name(HG_SYNC_BUNDLE)
+        .about("things related to mononoke-hg-sync counters")
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_LAST_PROCESSED)
+                .about("inspect/change mononoke-hg sync last processed counter")
+                .arg(
+                    Arg::with_name("set")
+                        .long("set")
+                        .required(false)
+                        .takes_value(true)
+                        .help("get the value of the latest processed mononoke-hg-sync counter"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_LAST)
+                .about("get the value of the last mononoke-hg-sync counter to be processed"),
+        );
+
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
@@ -214,6 +237,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(hg_changeset)
         .subcommand(skiplist)
         .subcommand(convert)
+        .subcommand(hg_sync)
 }
 
 fn fetch_content_from_manifest(
@@ -657,6 +681,77 @@ fn read_skiplist_index<S: ToString>(
         .boxify()
 }
 
+const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
+
+fn process_hg_sync_subcommand<'a>(
+    sub_m: &ArgMatches<'a>,
+    matches: &ArgMatches<'a>,
+    repo_id: RepositoryId,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
+    let ctx = CoreContext::test_mock();
+    let mutable_counters: Arc<SqlMutableCounters> = Arc::new(
+        args::open_sql(&matches, "mutable_counters")
+            .expect("Failed to open the db with mutable_counters"),
+    );
+    match sub_m.subcommand() {
+        (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match sub_m.value_of("set") {
+            Some(new_value) => {
+                let new_value = i64::from_str_radix(new_value, 10).unwrap();
+                mutable_counters
+                    .set_counter(
+                        ctx.clone(),
+                        repo_id,
+                        LATEST_REPLAYED_REQUEST_KEY,
+                        new_value,
+                        None,
+                    )
+                    .map({
+                        cloned!(repo_id, logger);
+                        move |_| {
+                            info!(logger, "Counter for {:?} set to {}", repo_id, new_value);
+                            ()
+                        }
+                    })
+                    .map_err({
+                        cloned!(repo_id, logger);
+                        move |e| {
+                            info!(
+                                logger,
+                                "Failed to set counter for {:?} set to {}", repo_id, new_value
+                            );
+                            e
+                        }
+                    })
+                    .boxify()
+            }
+            None => mutable_counters
+                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                .and_then(move |maybe_counter| {
+                    match maybe_counter {
+                        None => info!(logger, "No counter found for {:?}", repo_id), //println!("No counter found for {:?}", repo_id),
+                        Some(counter) => {
+                            info!(logger, "Counter for {:?} has value {}", repo_id, counter)
+                        }
+                    }
+                    ok(()).boxify()
+                })
+                .boxify(),
+        },
+        (HG_SYNC_LAST, Some(_sub_m)) => {
+            info!(
+                logger,
+                "Getting last available bundle id to sync not yet implemented"
+            );
+            ::std::process::exit(1);
+        }
+        _ => {
+            println!("{}", matches.usage());
+            ::std::process::exit(1);
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
@@ -933,6 +1028,7 @@ fn main() -> Result<()> {
                 ::std::process::exit(1);
             }
         },
+        (HG_SYNC_BUNDLE, Some(sub_m)) => process_hg_sync_subcommand(sub_m, &matches, repo_id, logger.clone()),
         (SKIPLIST, Some(sub_m)) => match sub_m.subcommand() {
             (SKIPLIST_BUILD, Some(sub_m)) => {
                 let key = sub_m
