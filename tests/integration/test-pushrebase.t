@@ -14,7 +14,7 @@ setup common configuration
 
 Setup helpers
   $ log() {
-  >   hg sl -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
+  >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
   > }
 
 setup repo
@@ -71,11 +71,11 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
   $ log -r ":"
   @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
   |
-  o  C [public;rev=2;26805aba1e60]
-  |
-  o  B [public;rev=1;112478962961]
-  |
   | o  1 [draft;rev=3;a0c9c5791058]
+  | |
+  o |  C [public;rev=2;26805aba1e60]
+  | |
+  o |  B [public;rev=1;112478962961]
   |/
   o  A [public;rev=0;426bada5c675]
    (re)
@@ -232,9 +232,9 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ log -r ":"
   @    merge 6 and 7 [public;rev=18;4a0002072071] default/master_bookmark
   |\
-  o \|  (7|6) \[public;rev=16;.*\] (re)
-  | |
   \| o  (6|7) \[public;rev=17;.*\] (re)
+  | |
+  o \|  (7|6) \[public;rev=16;.*\] (re)
   |/
   o  5 [public;rev=12;59e5396444cf]
   |
@@ -286,15 +286,15 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
-  o    merge 6 and 7 [public;rev=18;4a0002072071]
-  |\
-  \| o  (6|7) \[public;rev=17;.*\] (re)
-  | |
-  o \|  (6|7) \[public;rev=16;.*\] (re)
-  |/
-  o  5 [public;rev=12;59e5396444cf]
-  |
   | o  8 [draft;rev=19;e0f0824ca6a6]
+  | |
+  o |    merge 6 and 7 [public;rev=18;4a0002072071]
+  |\ \
+  | o |  7 [public;rev=17;7126dfcadf99]
+  | | |
+  o | |  6 [public;rev=16;8ad514b2cb51]
+  |/ /
+  o /  5 [public;rev=12;59e5396444cf]
   |/
   o  4 [public;rev=11;4f5a4463b24b]
   |
@@ -324,15 +324,15 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
-  o    merge 6 and 7 [public;rev=18;4a0002072071]
-  |\
-  \| o  (6|7) \[public;rev=17;.*\] (re)
-  | |
-  o \|  (6|7) \[public;rev=16;.*\] (re)
-  |/
-  o  5 [public;rev=12;59e5396444cf]
-  |
   | o  8 [draft;rev=19;e0f0824ca6a6]
+  | |
+  o |    merge 6 and 7 [public;rev=18;4a0002072071]
+  |\ \
+  | o |  7 [public;rev=17;7126dfcadf99]
+  | | |
+  o | |  6 [public;rev=16;8ad514b2cb51]
+  |/ /
+  o /  5 [public;rev=12;59e5396444cf]
   |/
   o  4 [public;rev=11;4f5a4463b24b]
   |
@@ -369,15 +369,15 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
-  o    merge 6 and 7 [public;rev=18;4a0002072071]
-  |\
-  \| o  (7|6) \[public;rev=17;.*\] (re)
-  | |
-  o \|  (6|7) \[public;rev=16;.*\] (re)
-  |/
-  o  5 [public;rev=12;59e5396444cf]
-  |
   | o  8 [draft;rev=19;e0f0824ca6a6]
+  | |
+  o |    merge 6 and 7 [public;rev=18;4a0002072071]
+  |\ \
+  | o |  7 [public;rev=17;7126dfcadf99]
+  | | |
+  o | |  6 [public;rev=16;8ad514b2cb51]
+  |/ /
+  o /  5 [public;rev=12;59e5396444cf]
   |/
   o  4 [public;rev=11;4f5a4463b24b]
   |
@@ -417,11 +417,11 @@ Test a non-forward push
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
   |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
   @ |  11 [public;rev=22;589551466f25]
   | |
   o |  10 [public;rev=21;c573a92e1179]
-  | |
-  | o  12 [public;rev=23;cd5aac4439e5]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
@@ -436,11 +436,11 @@ Test a non-forward push
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
   @ |  11 [public;rev=22;589551466f25] default/master_bookmark_2
   | |
   o |  10 [public;rev=21;c573a92e1179]
-  | |
-  | o  12 [public;rev=23;cd5aac4439e5]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
@@ -457,11 +457,11 @@ Test deleting a bookmark
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   |\
+  | o  12 [public;rev=23;cd5aac4439e5]
+  | |
   @ |  11 [public;rev=22;589551466f25]
   | |
   o |  10 [public;rev=21;c573a92e1179]
-  | |
-  | o  12 [public;rev=23;cd5aac4439e5]
   |/
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
