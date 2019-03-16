@@ -75,6 +75,18 @@ class TakeoverServer;
  * It performs locking to ensure only a single EdenServer instance is running
  * for a particular location, then starts the thrift management server
  * and the fuse session.
+ *
+ * The general usage model to run an EdenServer is:
+ * - Call prepare().
+ * - Run the thrift server.  The server object can be obtained by calling
+ *   getServer().  When the thrift server stops this indicates the EdenServer
+ *   is done and should be shut down.
+ * - Call performCleanup() to let the EdenServer shut down.  This includes
+ *   unmounting FUSE mounts or, if a graceful restart was requested,
+ *   transferring state to the new process.
+ *
+ * These are 3 separate steps to provide the caller with flexibility around
+ * exactly how they drive the thrift server object.
  */
 class EdenServer : private TakeoverHandler {
  public:
@@ -130,12 +142,17 @@ class EdenServer : private TakeoverHandler {
       bool waitForMountCompletion = true);
 
   /**
-   * Run the EdenServer.
+   * Shut down the EdenServer after it has stopped running.
    *
-   * prepare() must have been called before calling run(), but the future
-   * returned by prepare() does not need to be complete yet.
+   * This should be called after the EdenServer's thrift server has returned
+   * from its serve loop.
+   *
+   * If a graceful restart has been triggered performCleanup() will stop
+   * processing new FUSE requests and transfer state to the new process.
+   * Otherwise performCleanup() will unmount and shutdown all currently running
+   * mounts.
    */
-  void run(void (*runThriftServer)(const EdenServer&));
+  void performCleanup();
 
   /**
    * Stops this server, which includes the underlying Thrift server.

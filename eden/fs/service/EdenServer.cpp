@@ -615,15 +615,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   return mountFutures;
 }
 
-void EdenServer::run(void (*runThriftServer)(const EdenServer&)) {
-  if (!lockFile_) {
-    throw std::runtime_error(
-        "prepare() must be called before EdenServer::run()");
-  }
-
-  // Run the thrift server
-  runThriftServer(*this);
-
+void EdenServer::performCleanup() {
 #ifndef EDEN_WIN
   bool takeover;
   folly::File thriftSocket;

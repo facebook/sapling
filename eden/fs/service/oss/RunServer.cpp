@@ -7,26 +7,9 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/service/EdenServer.h"
+#include "eden/fs/service/main.h"
 
-#include <thrift/lib/cpp2/server/ThriftServer.h>
-
-namespace facebook {
-namespace eden {
-
-std::string getEdenfsBuildName() {
-  // We don't have any version information for now, so just return "edenfs"
-  return "edenfs";
+int main(int argc, char** argv) {
+  facebook::eden::EdenMain server;
+  return server.main(argc, argv);
 }
-
-void runServer(const EdenServer& server) {
-  // ThriftServer::serve() will drive the current thread's EventBase.
-  // Verify that we are being called from the expected thread, and will end up
-  // driving the EventBase returned by EdenServer::getMainEventBase().
-  CHECK_EQ(
-      server.getMainEventBase(),
-      folly::EventBaseManager::get()->getEventBase());
-  server.getServer()->serve();
-}
-} // namespace eden
-} // namespace facebook

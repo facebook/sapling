@@ -7,6 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/service/main.h"
 
 #include <boost/filesystem.hpp>
 #include <folly/Conv.h>
@@ -18,14 +19,15 @@
 #include <gflags/gflags.h>
 #include <pwd.h>
 #include <sysexits.h>
+#include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <unistd.h>
 #include <optional>
-#include "EdenServer.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
 
@@ -60,13 +62,6 @@ constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
 constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
 
 using namespace facebook::eden;
-
-namespace facebook {
-namespace eden {
-std::string getEdenfsBuildName();
-void runServer(const EdenServer& server);
-} // namespace eden
-} // namespace facebook
 
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
@@ -104,7 +99,26 @@ AbsolutePath ensureEdenDirExists(folly::StringPiece path) {
 
 } // namespace
 
-int main(int argc, char** argv) {
+namespace facebook {
+namespace eden {
+
+std::string EdenMain::getEdenfsBuildName() {
+  // Subclasses can override this if desired to include a version number
+  // or other build information.
+  return "edenfs";
+}
+
+void EdenMain::runServer(const EdenServer& server) {
+  // ThriftServer::serve() will drive the current thread's EventBase.
+  // Verify that we are being called from the expected thread, and will end up
+  // driving the EventBase returned by EdenServer::getMainEventBase().
+  CHECK_EQ(
+      server.getMainEventBase(),
+      folly::EventBaseManager::get()->getEventBase());
+  server.getServer()->serve();
+}
+
+int EdenMain::main(int argc, char** argv) {
   // Fork the privhelper process, then drop privileges in the main process.
   // This should be done as early as possible, so that everything else we do
   // runs only with normal user privileges.
@@ -294,8 +308,12 @@ int main(int argc, char** argv) {
         startupLogger->success();
       });
 
-  server->run(runServer);
+  runServer(server.value());
+  server->performCleanup();
 
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;
 }
+
+} // namespace eden
+} // namespace facebook

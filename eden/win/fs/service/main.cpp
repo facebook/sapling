@@ -14,6 +14,7 @@
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
+#include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <iostream>
 #include <memory>
 #include "eden/fs/model/Hash.h"
@@ -57,14 +58,7 @@ void debugSetLogLevel(std::string category, std::string level) {
 constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
 constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
 
-namespace facebook {
-namespace eden {
-void runServer(const EdenServer& server);
-}
-} // namespace facebook
-
 void startServer() {
-  std::optional<EdenServer> server;
   UserInfo identity;
   auto privHelper = make_unique<PrivHelper>();
 
@@ -86,6 +80,7 @@ void startServer() {
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   auto startupLogger = std::make_shared<StartupLogger>();
 
+  std::optional<EdenServer> server;
   try {
     server.emplace(
         std::move(identity), std::move(privHelper), std::move(edenConfig));
@@ -98,7 +93,8 @@ void startServer() {
     //    EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
   }
 
-  server->run(runServer);
+  server->getServer()->serve();
+  server->performCleanup();
 }
 
 int __cdecl main(int argc, char** argv) {

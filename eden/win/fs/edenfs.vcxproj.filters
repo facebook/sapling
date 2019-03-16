@@ -272,9 +272,6 @@
     <ClCompile Include="..\..\fs\journal\JournalDeltaPtr.cpp">
       <Filter>fs\Journal</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\fs\service\oss\RunServer.cpp">
-      <Filter>fs\Service</Filter>
-    </ClCompile>
     <ClCompile Include="service\main.cpp">
       <Filter>Win\fs\Service</Filter>
     </ClCompile>
@@ -407,6 +404,9 @@
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\service\EdenServer.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\main.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="Stub.h">
