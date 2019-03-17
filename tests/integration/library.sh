@@ -53,6 +53,13 @@ function mononoke_hg_sync {
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
+function mononoke_hg_sync_with_failure_handler {
+  $MONONOKE_HG_SYNC \
+    --do-not-init-cachelib \
+    --mononoke-config-path mononoke-config  \
+    --run-on-failure "$3" \
+     ssh://user@dummy/"$1" sync-once --start-id "$2"
+}
 
 function create_mutable_counters_sqlite3_db {
   cat >> "$TESTTMP"/mutable_counters.sql <<SQL

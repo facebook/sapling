@@ -8,6 +8,12 @@ setup configuration
   $ init_pushrebaserecording_sqlite3_db
   $ cd $TESTTMP
 
+setup a script to handle failures
+  $ cat >> $TESTTMP/onfailure.sh <<EOF
+  > echo "Failure handling."
+  > EOF
+  $ chmod +x $TESTTMP/onfailure.sh
+
 setup repo
 
   $ hginit_treemanifest repo-hg
@@ -74,9 +80,11 @@ Make a copy of it that will be used later
   $ cp -r repo-hg repo-hg-3
 
 Try to sync blobimport bookmark move, which should fail
-  $ mononoke_hg_sync repo-hg 0
+  $ mononoke_hg_sync_with_failure_handler repo-hg 0 $TESTTMP/onfailure.sh
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #1 ... (glob)
+  * running a failure handler: "$TESTTMP/onfailure.sh" (glob)
+  Failure handling.
   * sync failed for #1 (glob)
   * caused by: unexpected bookmark move: blobimport (glob)
 
