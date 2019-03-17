@@ -170,6 +170,14 @@ pub trait Bookmarks: Send + Sync + 'static {
         id: u64,
         repoid: RepositoryId,
     ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error>;
+
+    /// Count the number of BookmarkUpdateLog entries wiht id greater than the give value
+    fn count_further_bookmark_log_entries(
+        &self,
+        _ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+    ) -> BoxFuture<u64, Error>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

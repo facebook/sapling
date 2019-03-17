@@ -28,6 +28,7 @@ extern crate changeset_fetcher;
 extern crate changesets;
 extern crate cmdlib;
 extern crate context;
+extern crate dbbookmarks;
 #[macro_use]
 extern crate futures_ext;
 extern crate manifoldblob;
@@ -48,13 +49,14 @@ mod bookmarks_manager;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
-use bookmarks::Bookmark;
+use bookmarks::{Bookmark, Bookmarks};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
+use dbbookmarks::SqlBookmarks;
 use failure::{err_msg, Error, Result};
 use futures::future::{self, loop_fn, ok, Loop};
 use futures::prelude::*;
@@ -93,7 +95,7 @@ const HG_CHANGESET: &'static str = "hg-changeset";
 const HG_CHANGESET_DIFF: &'static str = "diff";
 const HG_CHANGESET_RANGE: &'static str = "range";
 const HG_SYNC_BUNDLE: &'static str = "hg-sync-bundle";
-const HG_SYNC_LAST: &'static str = "last";
+const HG_SYNC_REMAINS: &'static str = "remains";
 const HG_SYNC_LAST_PROCESSED: &'static str = "last-processed";
 const SKIPLIST_BUILD: &'static str = "build";
 const SKIPLIST_READ: &'static str = "read";
@@ -215,7 +217,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name(HG_SYNC_LAST)
+            SubCommand::with_name(HG_SYNC_REMAINS)
                 .about("get the value of the last mononoke-hg-sync counter to be processed"),
         );
 
@@ -694,6 +696,9 @@ fn process_hg_sync_subcommand<'a>(
         args::open_sql(&matches, "mutable_counters")
             .expect("Failed to open the db with mutable_counters"),
     );
+    let bookmarks: Arc<SqlBookmarks> = Arc::new(
+        args::open_sql(&matches, "bookmarks").expect("Failed to open the db with bookmarks"),
+    );
     match sub_m.subcommand() {
         (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match sub_m.value_of("set") {
             Some(new_value) => {
@@ -738,12 +743,37 @@ fn process_hg_sync_subcommand<'a>(
                 })
                 .boxify(),
         },
-        (HG_SYNC_LAST, Some(_sub_m)) => {
-            info!(
-                logger,
-                "Getting last available bundle id to sync not yet implemented"
-            );
-            ::std::process::exit(1);
+        (HG_SYNC_REMAINS, Some(_sub_m)) => {
+            mutable_counters
+                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                .map(|maybe_counter| {
+                    // yes, technically if the sync hasn't started yet
+                    // and there exists a counter #0, we want return the
+                    // correct value, but it's ok, since (a) there won't
+                    // be a counter #0 and (b) this is just an advisory data
+                    maybe_counter.unwrap_or(0)
+                })
+                .and_then({
+                    cloned!(ctx, repo_id);
+                    move |counter|
+                        bookmarks.count_further_bookmark_log_entries(
+                            ctx, counter as u64, repo_id
+                        )
+                })
+                .map({
+                    cloned!(logger, repo_id);
+                    move |remaining| {
+                        info!(logger, "Remaining bundles to replay in {:?}: {}", repo_id, remaining);
+                    }
+                })
+                .map_err({
+                    cloned!(logger, repo_id);
+                    move |e| {
+                        info!(logger, "Failed to fetch remaining bundles to replay for {:?}", repo_id);
+                        e
+                    }
+                })
+                .boxify()
         }
         _ => {
             println!("{}", matches.usage());
