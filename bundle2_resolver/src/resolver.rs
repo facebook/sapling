@@ -31,7 +31,7 @@ use mercurial_bundles::{
 use mercurial_types::{
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
-use metaconfig_types::{PushrebaseParams, RepoReadOnly};
+use metaconfig_types::{BookmarkOrRegex, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -60,6 +60,7 @@ pub fn resolve(
     ctx: CoreContext,
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
+    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
@@ -68,7 +69,13 @@ pub fn resolve(
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
-    let resolver = Bundle2Resolver::new(ctx.clone(), repo, pushrebase, hook_manager);
+    let resolver = Bundle2Resolver::new(
+        ctx.clone(),
+        repo,
+        pushrebase,
+        fastforward_only_bookmarks,
+        hook_manager,
+    );
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
@@ -108,9 +115,25 @@ pub fn resolve(
         })
         .and_then(
             move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
+                let mut allow_non_fast_forward = false;
+                // check the bypass condition
+                if let Some(ref pushvars) = maybe_pushvars {
+                    allow_non_fast_forward = pushvars
+                        .get("NON_FAST_FORWARD")
+                        .map(|s| s.to_ascii_lowercase())
+                        == Some("true".into());
+                }
+
                 if let Some(commonheads) = maybe_commonheads {
                     if pushkey_next {
-                        resolve_bookmark_only_pushrebase(ctx, resolver, bundle2, maybe_full_content)
+                        resolve_bookmark_only_pushrebase(
+                            ctx,
+                            resolver,
+                            bundle2,
+                            allow_non_fast_forward,
+                            maybe_full_content,
+                            lca_hint,
+                        )
                     } else {
                         resolve_pushrebase(
                             ctx,
@@ -124,7 +147,14 @@ pub fn resolve(
                         )
                     }
                 } else {
-                    resolve_push(ctx, resolver, bundle2, maybe_full_content)
+                    resolve_push(
+                        ctx,
+                        resolver,
+                        bundle2,
+                        allow_non_fast_forward,
+                        maybe_full_content,
+                        lca_hint,
+                    )
                 }
             },
         )
@@ -135,7 +165,9 @@ fn resolve_push(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
+    allow_non_fast_forward: bool,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_changegroup(ctx.clone(), bundle2)
@@ -217,7 +249,12 @@ fn resolve_push(
                             .map(|id| BundleReplayData::new(id)),
                     };
                     resolver
-                        .resolve_bookmark_pushes(bookmark_push, reason)
+                        .resolve_bookmark_pushes(
+                            bookmark_push,
+                            reason,
+                            lca_hint,
+                            allow_non_fast_forward,
+                        )
                         .map(move |()| (changegroup_id, bookmark_ids))
                         .boxify()
                 })()
@@ -408,7 +445,9 @@ fn resolve_bookmark_only_pushrebase(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
+    allow_non_fast_forward: bool,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
 ) -> BoxFuture<Bytes, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
@@ -458,7 +497,7 @@ fn resolve_bookmark_only_pushrebase(
                     bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
                 };
                 resolver
-                    .resolve_bookmark_pushes(pushes, reason)
+                    .resolve_bookmark_pushes(pushes, reason, lca_hint, allow_non_fast_forward)
                     .and_then(move |_| ok(part_id).boxify())
             }
         })
@@ -548,6 +587,7 @@ struct Bundle2Resolver {
     ctx: CoreContext,
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
+    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
     hook_manager: Arc<HookManager>,
     scribe_commit_queue: Arc<ScribeCommitQueue>,
 }
@@ -557,6 +597,7 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         repo: BlobRepo,
         pushrebase: PushrebaseParams,
+        fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
         hook_manager: Arc<HookManager>,
     ) -> Self {
         let scribe_commit_queue = match pushrebase.commit_scribe_category.clone() {
@@ -570,6 +611,7 @@ impl Bundle2Resolver {
             ctx,
             repo,
             pushrebase,
+            fastforward_only_bookmarks,
             hook_manager,
             scribe_commit_queue,
         }
@@ -580,14 +622,31 @@ impl Bundle2Resolver {
         &self,
         bookmark_pushes: Vec<BookmarkPush>,
         reason: BookmarkUpdateReason,
+        lca_hint: Arc<LeastCommonAncestorsHint>,
+        allow_non_fast_forward: bool,
     ) -> impl Future<Item = (), Error = Error> {
         let resolver = self.clone();
         let ctx = resolver.ctx.clone();
         let repo = resolver.repo.clone();
+        let fastforward_only_bookmarks = resolver.fastforward_only_bookmarks.clone();
 
         let bookmarks_push_fut = bookmark_pushes
             .into_iter()
-            .map(move |bp| BonsaiBookmarkPush::new(ctx.clone(), &repo, bp))
+            .map(move |bp| {
+                BonsaiBookmarkPush::new(ctx.clone(), &repo, bp).and_then({
+                    cloned!(repo, ctx, lca_hint, fastforward_only_bookmarks);
+                    move |bp| {
+                        check_bookmark_push_allowed(
+                            ctx.clone(),
+                            repo.clone(),
+                            fastforward_only_bookmarks.clone(),
+                            allow_non_fast_forward,
+                            bp,
+                            lca_hint,
+                        )
+                    }
+                })
+            })
             .collect::<Vec<_>>();
 
         future::join_all(bookmarks_push_fut).and_then({
@@ -1363,6 +1422,36 @@ pub enum RunHooksError {
 impl From<Error> for RunHooksError {
     fn from(error: Error) -> Self {
         RunHooksError::Error(error)
+    }
+}
+
+fn check_bookmark_push_allowed(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
+    allow_non_fast_forward: bool,
+    bp: BonsaiBookmarkPush,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
+) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> {
+    // only allow non fast forward moves if the pushvar is set and the bookmark does not
+    // explicitly block them.
+    let block_non_fast_forward = fastforward_only_bookmarks
+        .iter()
+        .any(|b_or_re| b_or_re.matches(&bp.name))
+        || !allow_non_fast_forward;
+
+    match (bp.old, bp.new) {
+        (Some(old), Some(new)) if block_non_fast_forward && old != new => lca_hint
+            .is_ancestor(ctx, repo.get_changeset_fetcher(), old, new)
+            .and_then(|is_ancestor| {
+                if is_ancestor {
+                    Ok(bp)
+                } else {
+                    Err(format_err!("Non fastforward bookmark move"))
+                }
+            })
+            .left_future(),
+        _ => Ok(bp).into_future().right_future(),
     }
 }
 

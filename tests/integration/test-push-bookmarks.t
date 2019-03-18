@@ -1,9 +1,9 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-
+  $ export ONLY_FAST_FORWARD_BOOKMARK="master_bookmark"
+  $ export ONLY_FAST_FORWARD_BOOKMARK_REGEX="ffonly.*"
   $ setup_common_config
-
   $ cd $TESTTMP
 
 setup repo
@@ -69,6 +69,86 @@ Update the bookmark
      default/master_bookmark   0:0e7ec5675652
      default/withbook          2:66b9c137712a
 
+Try non fastforward moves (backwards and across branches)
+  $ cd ../repo-push
+  $ hg update -q master_bookmark
+  $ echo other_commit > other_commit && hg -q addremove && hg ci -m other_commit
+  $ hgmn push
+  pushing to ssh://user@dummy/repo
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  searching for changes
+  updating bookmark master_bookmark
+  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  no changes found
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Non fastforward bookmark move"
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  no changes found
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Non fastforward bookmark move"
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark withbook
+  searching for changes
+  no changes found
+  updating bookmark withbook
+  [1]
+  $ cd ../repo-pull
+  $ hgmn pull -q
+  $ hg book --remote
+     default/master_bookmark   3:a075b5221b92
+     default/withbook          0:0e7ec5675652
+
+Try non fastfoward moves on regex bookmark
+  $ hgmn push -r a075b5221b92 --to ffonly_bookmark --create -q
+  [1]
+  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark ffonly_bookmark
+  searching for changes
+  no changes found
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Non fastforward bookmark move"
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
 Delete the bookmark
   $ cd ../repo-push
   $ hgmn push --delete withbook
@@ -82,4 +162,5 @@ Delete the bookmark
   $ hgmn pull -q
   devel-warn: applied empty changegroup * (glob)
   $ hg book --remote
-     default/master_bookmark   0:0e7ec5675652
+     default/ffonly_bookmark   3:a075b5221b92
+     default/master_bookmark   3:a075b5221b92

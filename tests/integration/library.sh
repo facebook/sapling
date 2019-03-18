@@ -196,6 +196,22 @@ enabled=true
 hash_validation_percentage=100
 CONFIG
 
+if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[[bookmarks]]
+name="$ONLY_FAST_FORWARD_BOOKMARK"
+only_fast_forward=true
+CONFIG
+fi
+
+if [[ -v ONLY_FAST_FORWARD_BOOKMARK_REGEX ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[[bookmarks]]
+regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
+only_fast_forward=true
+CONFIG
+fi
+
 if [[ -v READ_ONLY_REPO ]]; then
   cat >> repos/repo/server.toml <<CONFIG
 readonly=true

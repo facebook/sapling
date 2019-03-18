@@ -143,4 +143,12 @@ pub trait LeastCommonAncestorsHint: Send + Sync {
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error>;
+
+    fn is_ancestor(
+        &self,
+        ctx: CoreContext,
+        repo: Arc<ChangesetFetcher>,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> BoxFuture<bool, Error>;
 }

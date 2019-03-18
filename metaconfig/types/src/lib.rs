@@ -152,6 +152,16 @@ pub enum BookmarkOrRegex {
     Regex(Regex),
 }
 
+impl BookmarkOrRegex {
+    /// Checks whether a given Bookmark matches this bookmark or regex
+    pub fn matches(&self, bookmark: &Bookmark) -> bool {
+        match self {
+            BookmarkOrRegex::Bookmark(ref bm) => bm.eq(bookmark),
+            BookmarkOrRegex::Regex(ref re) => re.is_match(&bookmark.to_string()),
+        }
+    }
+}
+
 impl PartialEq for BookmarkOrRegex {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -184,6 +194,8 @@ pub struct BookmarkParams {
     pub bookmark: BookmarkOrRegex,
     /// The hooks active for the bookmark
     pub hooks: Vec<String>,
+    /// Are non fast forward moves blocked for this bookmark
+    pub only_fast_forward: bool,
 }
 
 /// The type of the hook

@@ -60,7 +60,7 @@ Push to Mononoke
   $ mkcommit anothercommit
   $ hgmn push -r . --to master_bookmark -q
 
-  $ hgmn push -r .^ --to master_bookmark -q
+  $ hgmn push -r .^ --to master_bookmark -q --non-forward-move --pushvar NON_FAST_FORWARD=true
   [1]
 
 Check that new entry was added to the sync database. 3 pushes and 1 blobimport

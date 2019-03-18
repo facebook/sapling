@@ -323,6 +323,8 @@ impl RepoConfigs {
                         }
                     };
 
+                    let only_fast_forward =  bookmark.only_fast_forward.unwrap_or(false);
+
                     bookmark_params.push(BookmarkParams {
                         bookmark: bookmark_or_regex,
                         hooks: match bookmark.hooks {
@@ -331,6 +333,7 @@ impl RepoConfigs {
                             }
                             None => vec![],
                         },
+                        only_fast_forward,
                     });
                 }
                 bookmark_params
@@ -445,6 +448,8 @@ struct RawBookmarkConfig {
     regex: Option<RawRegex>,
     name: Option<String>,
     hooks: Option<Vec<RawBookmarkHook>>,
+    // Are non fastforward moves allowed for this bookmark
+    only_fast_forward: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -669,10 +674,12 @@ mod test {
                             "hook2".to_string(),
                             "rust:rusthook".to_string(),
                         ],
+                        only_fast_forward: false,
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
                         hooks: vec![],
+                        only_fast_forward: false,
                     },
                 ],
                 hooks: vec![

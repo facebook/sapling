@@ -426,7 +426,7 @@ Test a non-forward push
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
   ~
-  $ hgmn push --force -r . --to master_bookmark_2
+  $ hgmn push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 589551466f25 to destination ssh://user@dummy/repo bookmark master_bookmark_2
   searching for changes

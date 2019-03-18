@@ -1214,6 +1214,7 @@ fn test_load_hooks() {
             BookmarkParams {
                 bookmark: Bookmark::new("bm1").unwrap().into(),
                 hooks: vec!["hook1".into(), "hook2".into()],
+                only_fast_forward: false,
             },
             BookmarkParams {
                 bookmark: Regex::new("bm2").unwrap().into(),
@@ -1222,6 +1223,7 @@ fn test_load_hooks() {
                     "hook3".into(),
                     "rust:verify_integrity".into(),
                 ],
+                only_fast_forward: false,
             },
         ];
 
@@ -1268,6 +1270,7 @@ fn test_load_hooks_no_such_hook() {
         config.bookmarks = vec![BookmarkParams {
             bookmark: book_or_rex.clone(),
             hooks: vec!["hook1".into(), "hook2".into()],
+            only_fast_forward: false,
         }];
 
         config.hooks = vec![HookParams {
@@ -1298,6 +1301,7 @@ fn test_load_hooks_bad_rust_hook() {
         config.bookmarks = vec![BookmarkParams {
             bookmark: Bookmark::new("bm1").unwrap().into(),
             hooks: vec!["rust:hook1".into()],
+            only_fast_forward: false,
         }];
 
         config.hooks = vec![HookParams {

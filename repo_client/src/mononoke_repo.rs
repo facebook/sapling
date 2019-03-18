@@ -9,7 +9,7 @@ use blobstore::{Blobstore, PrefixBlobstore};
 use errors::*;
 use hooks::HookManager;
 use metaconfig_types::RepoReadOnly;
-use metaconfig_types::{LfsParams, PushrebaseParams};
+use metaconfig_types::{BookmarkOrRegex, BookmarkParams, LfsParams, PushrebaseParams};
 use mononoke_types::RepositoryId;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
@@ -26,6 +26,7 @@ pub struct SqlStreamingCloneConfig {
 pub struct MononokeRepo {
     blobrepo: BlobRepo,
     pushrebase_params: PushrebaseParams,
+    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
     hook_manager: Arc<HookManager>,
     streaming_clone: Option<SqlStreamingCloneConfig>,
     lfs_params: LfsParams,
@@ -38,15 +39,27 @@ impl MononokeRepo {
     pub fn new(
         blobrepo: BlobRepo,
         pushrebase_params: &PushrebaseParams,
+        bookmark_params: Vec<BookmarkParams>,
         hook_manager: Arc<HookManager>,
         streaming_clone: Option<SqlStreamingCloneConfig>,
         lfs_params: LfsParams,
         reponame: String,
         readonly: RepoReadOnly,
     ) -> Self {
+        let fastforward_only_bookmarks = bookmark_params
+            .into_iter()
+            .filter_map(|param| {
+                if param.only_fast_forward {
+                    Some(param.bookmark)
+                } else {
+                    None
+                }
+            })
+            .collect();
         MononokeRepo {
             blobrepo,
             pushrebase_params: pushrebase_params.clone(),
+            fastforward_only_bookmarks,
             hook_manager,
             streaming_clone,
             lfs_params,
@@ -62,6 +75,10 @@ impl MononokeRepo {
 
     pub fn pushrebase_params(&self) -> &PushrebaseParams {
         &self.pushrebase_params
+    }
+
+    pub fn fastforward_only_bookmarks(&self) -> &Vec<BookmarkOrRegex> {
+        &self.fastforward_only_bookmarks
     }
 
     pub fn hook_manager(&self) -> Arc<HookManager> {

@@ -4,6 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#[macro_use]
+extern crate failure_ext as failure;
+
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -12,8 +15,8 @@ use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Result};
-use futures::future::{join_all, ok, Future};
-use futures::future::{loop_fn, Loop};
+use futures::future::{join_all, loop_fn, ok, Future, Loop};
+use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use maplit::{hashmap, hashset};
 
@@ -552,6 +555,46 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
         )
         .boxify()
     }
+
+    fn is_ancestor(
+        &self,
+        ctx: CoreContext,
+        changeset_fetcher: Arc<ChangesetFetcher>,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> BoxFuture<bool, Error> {
+        let anc_with_gen = changeset_fetcher
+            .get_generation_number(ctx.clone(), ancestor)
+            .map(move |gen| (ancestor, gen));
+        let desc_with_gen = changeset_fetcher
+            .get_generation_number(ctx.clone(), descendant)
+            .map(move |gen| (descendant, gen));
+
+        anc_with_gen
+            .join(desc_with_gen)
+            .and_then({
+                let this = self.clone();
+                move |(anc, desc)| {
+                    if anc.1 >= desc.1 {
+                        Ok(false).into_future().boxify()
+                    } else {
+                        let mut frontier = NodeFrontier::default();
+                        frontier.insert(desc);
+                        this.lca_hint(ctx.clone(), changeset_fetcher, frontier, anc.1)
+                            .map(move |res| {
+                                // If "ancestor" is an ancestor of "descendant" lca_hint will return
+                                // a node frontier that contains "ancestor".
+                                match res.get_all_changesets_for_gen_num(anc.1) {
+                                    Some(generation_set) if generation_set.contains(&anc.0) => true,
+                                    _ => false,
+                                }
+                            })
+                            .boxify()
+                    }
+                }
+            })
+            .boxify()
+    }
 }
 
 #[cfg(test)]
@@ -563,16 +606,17 @@ mod test {
 
     use async_unit;
     use blobrepo::BlobRepo;
+    use bookmarks::Bookmark;
     use chashmap::CHashMap;
     use context::CoreContext;
     use futures::stream::iter_ok;
     use futures::stream::Stream;
+    use revset::AncestorsNodeStream;
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
 
     use super::*;
-    use fixtures::branch_wide;
-    use fixtures::linear;
-    use fixtures::merge_uneven;
-    use fixtures::unshared_merge_even;
+    use fixtures::{branch_wide, linear, merge_uneven, unshared_merge_even};
     use test_helpers::string_to_bonsai;
     use test_helpers::test_branch_wide_reachability;
     use test_helpers::test_linear_reachability;
@@ -2092,6 +2136,90 @@ mod test {
         );
     }
 
+    fn test_is_ancestor(
+        runtime: &mut tokio::runtime::Runtime,
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let f = repo
+            .get_bonsai_bookmark(ctx.clone(), &Bookmark::new("master").unwrap())
+            .and_then({
+                cloned!(ctx, repo);
+                move |maybe_cs_id| {
+                    AncestorsNodeStream::new(
+                        ctx,
+                        &repo.get_changeset_fetcher(),
+                        maybe_cs_id.unwrap(),
+                    )
+                    .collect()
+                }
+            })
+            .and_then({
+                cloned!(ctx, repo);
+                move |cs_ids| {
+                    join_all(cs_ids.into_iter().map({
+                        move |cs| {
+                            AncestorsNodeStream::new(
+                                ctx.clone(),
+                                &repo.get_changeset_fetcher(),
+                                cs.clone(),
+                            )
+                            .collect()
+                            .map(move |ancestors| {
+                                // AncestorsNodeStream incorrectly returns the node itself
+                                (cs, ancestors.into_iter().filter(move |anc| *anc != cs))
+                            })
+                        }
+                    }))
+                }
+            })
+            .and_then(move |cs_and_ancestors| {
+                let cs_ancestor_map: HashMap<ChangesetId, HashSet<ChangesetId>> = cs_and_ancestors
+                    .into_iter()
+                    .map(|(cs, ancestors)| (cs, HashSet::from_iter(ancestors)))
+                    .collect();
+
+                let mut res = vec![];
+                for anc in cs_ancestor_map.keys() {
+                    for desc in cs_ancestor_map.keys() {
+                        cloned!(ctx, repo, anc, desc);
+                        let expected_and_params = Ok((
+                            cs_ancestor_map.get(&desc).unwrap().contains(&anc),
+                            (anc, desc),
+                        ))
+                        .into_future();
+                        let actual = sli.is_ancestor(ctx, repo.get_changeset_fetcher(), anc, desc);
+                        res.push(actual.join(expected_and_params))
+                    }
+                }
+                join_all(res).map(|res| {
+                    res.into_iter()
+                        .all(|(actual, (expected, _))| actual == expected)
+                })
+            });
+
+        assert!(run_future(runtime, f).unwrap());
+    }
+
+    fn test_is_ancestor_merge_uneven(
+        runtime: &mut tokio::runtime::Runtime,
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        test_is_ancestor(runtime, ctx, repo, sli)
+    }
+
+    fn test_is_ancestor_unshared_merge_even(
+        runtime: &mut tokio::runtime::Runtime,
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        test_is_ancestor(runtime, ctx, repo, sli)
+    }
+
     skiplist_test!(query_reachability_hint_on_self_is_true, linear);
     skiplist_test!(query_reachability_to_higher_gen_is_false, linear);
     skiplist_test!(query_from_indexed_merge_node, unshared_merge_even);
@@ -2100,4 +2228,6 @@ mod test {
     skiplist_test!(advance_node_on_partial_index, merge_uneven);
     skiplist_test!(simul_node_advance_on_wide_branch, branch_wide);
     skiplist_test!(process_frontier_on_wide_branch, branch_wide);
+    skiplist_test!(test_is_ancestor_merge_uneven, merge_uneven);
+    skiplist_test!(test_is_ancestor_unshared_merge_even, unshared_merge_even);
 }

@@ -120,6 +120,7 @@ pub fn repo_handlers(
                 let repo = MononokeRepo::new(
                     blobrepo,
                     &config.pushrebase,
+                    config.bookmarks.clone(),
                     Arc::new(hook_manager),
                     streaming_clone,
                     config.lfs.clone(),
