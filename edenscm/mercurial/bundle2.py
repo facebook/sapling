@@ -341,6 +341,8 @@ class bundleoperation(object):
         if self.replaydata.ontobook is not None:
             self.hookargs["EXPECTED_ONTOBOOK"] = self.replaydata.ontobook
 
+        self.hookargs["IS_UNBUNDLE_REPLAY"] = "true"
+
     def gettransaction(self):
         transaction = self._gettransaction()
 

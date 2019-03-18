@@ -38,6 +38,7 @@ CREATE DATABASE IF NOT EXISTS $DBNAME;
 USE $DBNAME;
 DROP TABLE IF EXISTS revisions;
 DROP TABLE IF EXISTS revision_references;
+DROP TABLE IF EXISTS repo_lock;
 $(cat $TESTDIR/hgsql/schema.$DBENGINE.sql)
 EOF
 

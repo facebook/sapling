@@ -713,6 +713,21 @@ def wraprepo(repo):
             self.sqlcursor = None
             self.sqlconn = None
 
+        def sqlisreporeadonly(self):
+            NO_WRITE = 0
+            MONONOKE_WRITE = 2
+            query = "SELECT state FROM repo_lock WHERE repo = %s"
+            self.sqlcursor.execute(query, (self.sqlreponame,))
+            rows = self.sqlcursor.fetchall()
+
+            if not rows:
+                # If there isn't an entry for this repo, let's treat it as
+                # unlocked.
+                return False
+
+            state = int(rows[0][0])
+            return state == NO_WRITE or state == MONONOKE_WRITE
+
         def _hgsqlnote(self, message):
             if self.ui.configbool("hgsql", "verbose"):
                 self.ui.write_err("[hgsql] %s\n" % message)
