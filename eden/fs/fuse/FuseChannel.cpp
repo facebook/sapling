@@ -1173,6 +1173,7 @@ void FuseChannel::processSession() {
         replyError(*header, ENOSYS);
         break;
 
+#ifdef __linux__
       case FUSE_LSEEK:
         // We only support stateless file handles, so lseek() is meaningless
         // for us.  Returning ENOSYS causes the kernel to implement it for us,
@@ -1180,6 +1181,7 @@ void FuseChannel::processSession() {
         XLOG(DBG7) << "FUSE_LSEEK";
         replyError(*header, ENOSYS);
         break;
+#endif
 
       case FUSE_POLL:
         // We do not currently implement FUSE_POLL.

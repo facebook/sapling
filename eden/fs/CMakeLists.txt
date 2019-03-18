@@ -7,7 +7,7 @@
 
 add_executable(
   edenfs
-  service/main.cpp
+  service/oss/main.cpp
 )
 target_include_directories(
   edenfs
