@@ -314,6 +314,9 @@
     <ClCompile Include="..\..\fs\utils\FaultInjector.cpp">
       <Filter>fs\Util</Filter>
     </ClCompile>
+    <ClCompile Include="utils\FileUtils.cpp">
+      <Filter>Win\fs\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
@@ -563,6 +566,12 @@
       <Filter>Win\fs\Mount</Filter>
     </ClInclude>
     <ClInclude Include="utils\Guid.h">
+      <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\FileUtils.h">
+      <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Handle.h">
       <Filter>Win\fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\FaultInjector.h">

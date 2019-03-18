@@ -233,6 +233,7 @@
     <ClCompile Include="mount\FsChannel.cpp" />
     <ClCompile Include="service\main.cpp" />
     <ClCompile Include="store\WinStore.cpp" />
+    <ClCompile Include="utils\FileUtils.cpp" />
     <ClCompile Include="utils\Pipe.cpp" />
     <ClCompile Include="utils\Subprocess.cpp" />
     <ClCompile Include="utils\WinError.cpp" />
@@ -316,7 +317,9 @@
     <ClInclude Include="service\StartupLogger.h" />
     <ClInclude Include="store\WinStore.h" />
     <ClInclude Include="Stub.h" />
+    <ClInclude Include="utils\FileUtils.h" />
     <ClInclude Include="utils\Guid.h" />
+    <ClInclude Include="utils\Handle.h" />
     <ClInclude Include="utils\Pipe.h" />
     <ClInclude Include="utils\StringConv.h" />
     <ClInclude Include="utils\Stub.h" />

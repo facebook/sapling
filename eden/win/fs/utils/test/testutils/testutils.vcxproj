@@ -90,10 +90,10 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;EDEN_WIN;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\edenwin64\pklib\include;$(SolutionDir)\..\..\</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -152,7 +152,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\fs\model\Hash.cpp" />
+    <ClCompile Include="..\..\FileUtils.cpp" />
     <ClCompile Include="..\..\WinError.cpp" />
+    <ClCompile Include="FileUtilsTest.cpp" />
     <ClCompile Include="StringConvTest.cpp" />
     <ClCompile Include="SystemErrorTest.cpp" />
   </ItemGroup>
