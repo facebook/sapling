@@ -87,3 +87,29 @@ Prefetch should fail with corruption error
   abort: error downloading file contents:
   'connection closed early for filename A and node 005d992c5dcf32993668f7cede29d296c494a5d9'
   [255]
+
+Same for getpackv1
+  $ hgmn prefetch -r ":" --config remotefilelog.fetchpacks=True
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  remote: Command failed
+  remote:   Error:
+  remote:     Data corruption for file 'A': expected a2e456504a5e61f763f1a0b36a6c247c7541b2b3, actual 005d992c5dcf32993668f7cede29d296c494a5d9!
+  remote:   Root cause:
+  remote:     DataCorruption {
+  remote:         path: FilePath(
+  remote:             MPath("A")
+  remote:         ),
+  remote:         expected: HgFileNodeId(
+  remote:             HgNodeHash(
+  remote:                 Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3)
+  remote:             )
+  remote:         ),
+  remote:         actual: HgFileNodeId(
+  remote:             HgNodeHash(
+  remote:                 Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)
+  remote:             )
+  remote:         )
+  remote:     }
+  abort: stream ended unexpectedly (got 0 bytes, expected 2)
+  [255]

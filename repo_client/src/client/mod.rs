@@ -36,10 +36,10 @@ use mercurial_types::{
     HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_CSID,
     NULL_HASH,
 };
-use metaconfig_types::RepoReadOnly;
+use metaconfig_types::{LfsParams, RepoReadOnly};
 use percent_encoding;
 use phases::Phases;
-use rand;
+use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -51,7 +51,9 @@ use tracing::Traced;
 use blobrepo::BlobRepo;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 
-use remotefilelog::{create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes};
+use remotefilelog::{
+    self, create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes,
+};
 use streaming_clone::RevlogStreamingChunks;
 
 use errors::*;
@@ -1113,6 +1115,8 @@ impl HgCommands for RepoClient {
         let getpackv1_params = Arc::new(Mutex::new(vec![]));
         let ctx = self.ctx.clone();
         let repo = self.repo.blobrepo().clone();
+        let validate_hash =
+            rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
 
         let s = params
             .map({
@@ -1132,9 +1136,17 @@ impl HgCommands for RepoClient {
 
                     let mut contents = vec![];
                     for filenode in filenodes {
-                        let fut = repo
-                            .get_file_content(ctx.clone(), filenode)
-                            .map(move |content| (filenode, content));
+                        let fut = remotefilelog::get_raw_content(
+                            ctx.clone(),
+                            repo.clone(),
+                            filenode,
+                            RepoPath::FilePath(path.clone()),
+                            // TODO(stash): T41600715 - getpackv1 doesn't seem to support lfs
+                            LfsParams::default(),
+                            validate_hash,
+                        );
+                        let fut = fut
+                            .map(move |(content, _)| (filenode, content));
                         contents.push(fut);
                     }
                     future::join_all(contents)

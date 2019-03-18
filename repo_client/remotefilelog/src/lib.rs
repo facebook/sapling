@@ -151,7 +151,7 @@ fn validate_content(
 
 /// Get the raw content of a file or content hash in the case of LFS files.
 /// Can also optionally validate a hash hg filenode
-fn get_raw_content(
+pub fn get_raw_content(
     ctx: CoreContext,
     repo: BlobRepo,
     node: HgFileNodeId,
