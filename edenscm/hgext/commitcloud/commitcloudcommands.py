@@ -449,12 +449,6 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
         repo, "starting synchronizing with '%s'" % workspacename
     )
 
-    def directfetching(heads):
-        def unbundleall(bundlefiles):
-            commands.unbundle(ui, repo, bundlefiles[0], *bundlefiles[1:], **opts)
-
-        serv.getbundles(reponame, heads, unbundleall)
-
     lastsyncstate = state.SyncState(repo, workspacename)
     remotepath = commitcloudutil.getremotepath(repo, ui, None)
 
@@ -750,8 +744,7 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
 
     # Pull all the new heads and any bookmark hashes we don't have. We need to
     # filter cloudrefs before pull as pull does't check if a rev is present
-    # locally.  Note that bookmarked public hashes can't use the
-    # directfetchingfn fastpath.
+    # locally.
     unfi = repo.unfiltered()
     newheads = [head for head in cloudrefs.heads if head not in unfi]
     if maxage is not None and maxage >= 0:
