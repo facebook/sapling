@@ -190,7 +190,9 @@ class CorruptNextInodeNumber(ExpectedError):
         return error.next_inode_number == self.next_inode_number
 
 
-class Test(unittest.TestCase, TemporaryDirectoryMixin):
+class SnapshotTestBase(
+    unittest.TestCase, TemporaryDirectoryMixin, metaclass=abc.ABCMeta
+):
     """Tests for fsck that extract the basic-20181121 snapshot, corrupt it in various
     ways, and then run fsck to try and repair it.
     """
@@ -198,11 +200,13 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
     tmp_dir: Path
     snapshot: BasicSnapshot
 
-    def setUp(self) -> None:
-        snapshot_path = Path("eden/test-data/snapshots/basic-20181121.tar.xz")
+    @abc.abstractmethod
+    def get_snapshot_path(self) -> Path:
+        raise NotImplementedError()
 
+    def setUp(self) -> None:
         self.tmp_dir = Path(self.make_temporary_directory())
-        snapshot = snapshot_mod.unpack_into(snapshot_path, self.tmp_dir)
+        snapshot = snapshot_mod.unpack_into(self.get_snapshot_path(), self.tmp_dir)
         self.snapshot = typing.cast(BasicSnapshot, snapshot)
 
     def _checkout_state_dir(self) -> Path:
@@ -304,6 +308,11 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
 
         if errors:
             self.fail("\n".join(errors))
+
+
+class Basic20181121Test(SnapshotTestBase):
+    def get_snapshot_path(self) -> Path:
+        return Path("eden/test-data/snapshots/basic-20181121.tar.xz")
 
     def test_untracked_file_removed(self) -> None:
         self._test_file_corrupted(None, MissingMaterializedInode)
@@ -526,3 +535,22 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
 
     # TODO: replace untracked dir with file
     # TODO: replace untracked file with dir
+
+
+class Basic20190313Test(SnapshotTestBase):
+    def get_snapshot_path(self) -> Path:
+        return Path("eden/test-data/snapshots/basic-20190313.tar.xz")
+
+    def test_corrupt_rocks_db(self) -> None:
+        # Remove the RocksDB manifest.  This will cause RocksDB to fail to open
+        # the DB.  Confirm that edenfs automatically invokes RocksDB's repair routines
+        # to repair and then successfully open the DB.
+        rocksdb_manifest = (
+            self.snapshot.eden_state_dir / "storage" / "rocks-db" / "MANIFEST-000004"
+        )
+        rocksdb_manifest.unlink()
+
+        # We don't actually need to run fsck in this case.
+        # edenfs will automatically repair the DB on startup.
+        expected_files = self.snapshot.get_expected_files()
+        self._verify_contents(expected_files)
