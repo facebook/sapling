@@ -149,8 +149,28 @@ Try non fastfoward moves on regex bookmark
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-Delete the bookmark
+Try to delete master
   $ cd ../repo-push
+  $ hgmn push --delete master_bookmark
+  pushing to ssh://user@dummy/repo
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  searching for changes
+  no changes found
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Deletion of bookmark master_bookmark is forbidden."
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     Deletion of bookmark master_bookmark is forbidden.
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
+Delete the bookmark
   $ hgmn push --delete withbook
   pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)

@@ -1433,12 +1433,12 @@ fn check_bookmark_push_allowed(
     bp: BonsaiBookmarkPush,
     lca_hint: Arc<LeastCommonAncestorsHint>,
 ) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> {
+    let fastforward_only_bookmark = fastforward_only_bookmarks
+        .iter()
+        .any(|bookmark| bookmark.matches(&bp.name));
     // only allow non fast forward moves if the pushvar is set and the bookmark does not
     // explicitly block them.
-    let block_non_fast_forward = fastforward_only_bookmarks
-        .iter()
-        .any(|b_or_re| b_or_re.matches(&bp.name))
-        || !allow_non_fast_forward;
+    let block_non_fast_forward = fastforward_only_bookmark || !allow_non_fast_forward;
 
     match (bp.old, bp.new) {
         (Some(old), Some(new)) if block_non_fast_forward && old != new => lca_hint
@@ -1451,6 +1451,12 @@ fn check_bookmark_push_allowed(
                 }
             })
             .left_future(),
+        (Some(_old), None) if fastforward_only_bookmark => Err(format_err!(
+            "Deletion of bookmark {} is forbidden.",
+            bp.name
+        ))
+        .into_future()
+        .right_future(),
         _ => Ok(bp).into_future().right_future(),
     }
 }
