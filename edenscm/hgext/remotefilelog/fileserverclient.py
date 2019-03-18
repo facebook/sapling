@@ -163,6 +163,7 @@ class cacheconnection(object):
 
         self.pipei = self.subprocess.stdin
         self.pipeo = self.subprocess.stdout
+        self.bufferedpipeo = io.open(self.pipeo.fileno(), mode="rb", closefd=False)
         self.connected = True
 
     def close(self):
@@ -179,6 +180,7 @@ class cacheconnection(object):
                 pass
             tryclose(self.pipei)
             self.pipei = None
+            self.bufferedpipeo = None
             tryclose(self.pipeo)
             self.pipeo = None
 
@@ -255,7 +257,7 @@ class cacheconnection(object):
         if not self.connected:
             return None
         try:
-            result = self.pipeo.readline()[:-1]
+            result = self.bufferedpipeo.readline()[:-1]
             if not result:
                 self.close()
         except IOError:
