@@ -9,13 +9,19 @@
  */
 #include "ClientConfig.h"
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
-#include <folly/File.h>
-#include <folly/FileUtil.h>
+
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
+
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/FileUtils.h" // @manual
+#else
+#include <folly/File.h>
+#include <folly/FileUtil.h>
+#endif
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -67,7 +73,12 @@ ParentCommits ClientConfig::getParentCommits() const {
   // Read the snapshot.
   auto snapshotFile = getSnapshotPath();
   string snapshotFileContents;
+
+#ifdef EDEN_WIN
+  readFile(snapshotFile.c_str(), snapshotFileContents);
+#else
   folly::readFile(snapshotFile.c_str(), snapshotFileContents);
+#endif
 
   StringPiece contents{snapshotFileContents};
   if (!contents.startsWith(kSnapshotFileMagic)) {
@@ -137,8 +148,11 @@ void ClientConfig::setParentCommits(const ParentCommits& parents) const {
   }
   size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
   ByteRange snapshotData{buffer.data(), writtenSize};
-
+#ifdef EDEN_WIN
+  writeFileAtomic(getSnapshotPath().c_str(), snapshotData);
+#else
   folly::writeFileAtomic(getSnapshotPath().stringPiece(), snapshotData);
+#endif
 }
 
 void ClientConfig::setParentCommits(Hash parent1, std::optional<Hash> parent2)
@@ -193,7 +207,11 @@ folly::dynamic ClientConfig::loadClientDirectoryMap(AbsolutePathPiece edenDir) {
   // Extract the JSON and strip any comments.
   std::string jsonContents;
   auto configJsonFile = edenDir + kClientDirectoryMap;
+#ifdef EDEN_WIN
+  readFile(configJsonFile.c_str(), jsonContents);
+#else
   folly::readFile(configJsonFile.c_str(), jsonContents);
+#endif
   auto jsonWithoutComments = folly::json::stripComments(jsonContents);
   if (jsonWithoutComments.empty()) {
     return folly::dynamic::object();
