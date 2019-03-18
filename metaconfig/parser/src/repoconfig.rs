@@ -211,6 +211,10 @@ impl RepoConfigs {
                     "xdb tier was not specified".into(),
                 ))?;
 
+                let write_lock_db_address = this.write_lock_db_address.ok_or(ErrorKind::InvalidConfig(
+                    "xdb tier for the write lock db was not specified".into(),
+                ))?;
+
                 let mut blobstores = HashMap::new();
                 for blobstore in remote_blobstores {
                     let args = match blobstore.blobstore_type {
@@ -288,6 +292,7 @@ impl RepoConfigs {
                     blobstores_args,
                     db_address,
                     filenode_shards: this.filenode_shards,
+                    write_lock_db_address,
                 }
             }
         };
@@ -405,6 +410,7 @@ struct RawRepoConfig {
     generation_cache_size: Option<usize>,
     repoid: i32,
     db_address: Option<String>,
+    write_lock_db_address: Option<String>,
     filenode_shards: Option<usize>,
     scuba_table: Option<String>,
     blobstore_scuba_table: Option<String>,
@@ -537,6 +543,7 @@ mod test {
         let hook2_content = "this is hook2";
         let fbsource_content = r#"
             db_address="db_address"
+            write_lock_db_address="write_lock_db_address"
             repotype="blob:remote"
             generation_cache_size=1048576
             repoid=0
@@ -653,6 +660,7 @@ mod test {
                     db_address: "db_address".into(),
                     blobstores_args,
                     filenode_shards: None,
+                    write_lock_db_address: "write_lock_db_address".into(),
                 },
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,

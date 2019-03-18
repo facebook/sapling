@@ -56,13 +56,18 @@ extern crate reachabilityindex;
 extern crate remotefilelog;
 extern crate revset;
 extern crate scuba_ext;
+#[macro_use]
+extern crate sql;
+extern crate sql_ext;
 extern crate streaming_clone;
 extern crate tokio;
 
 mod client;
 mod errors;
 mod mononoke_repo;
+mod read_write;
 
 pub use client::RepoClient;
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
+pub use read_write::RepoReadWriteFetcher;
 pub use streaming_clone::SqlStreamingChunksFetcher;

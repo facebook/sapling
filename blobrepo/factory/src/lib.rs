@@ -139,6 +139,7 @@ pub fn open_blobrepo(
         BlobRemote {
             ref blobstores_args,
             ref db_address,
+            write_lock_db_address: _,
             ref filenode_shards,
         } => {
             let myrouter_port = match myrouter_port {

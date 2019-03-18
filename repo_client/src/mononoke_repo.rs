@@ -7,10 +7,11 @@
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use errors::*;
+use futures_ext::BoxFuture;
 use hooks::HookManager;
-use metaconfig_types::RepoReadOnly;
-use metaconfig_types::{BookmarkOrRegex, BookmarkParams, LfsParams, PushrebaseParams};
+use metaconfig_types::{BookmarkOrRegex, BookmarkParams, LfsParams, PushrebaseParams, RepoReadOnly};
 use mononoke_types::RepositoryId;
+use read_write::RepoReadWriteFetcher;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
 use streaming_clone::SqlStreamingChunksFetcher;
@@ -31,7 +32,7 @@ pub struct MononokeRepo {
     streaming_clone: Option<SqlStreamingCloneConfig>,
     lfs_params: LfsParams,
     reponame: String,
-    readonly: RepoReadOnly,
+    readonly_fetcher: RepoReadWriteFetcher,
 }
 
 impl MononokeRepo {
@@ -44,7 +45,7 @@ impl MononokeRepo {
         streaming_clone: Option<SqlStreamingCloneConfig>,
         lfs_params: LfsParams,
         reponame: String,
-        readonly: RepoReadOnly,
+        readonly_fetcher: RepoReadWriteFetcher,
     ) -> Self {
         let fastforward_only_bookmarks = bookmark_params
             .into_iter()
@@ -64,7 +65,7 @@ impl MononokeRepo {
             streaming_clone,
             lfs_params,
             reponame,
-            readonly,
+            readonly_fetcher,
         }
     }
 
@@ -97,8 +98,8 @@ impl MononokeRepo {
         &self.reponame
     }
 
-    pub fn readonly(&self) -> RepoReadOnly {
-        self.readonly
+    pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
+        self.readonly_fetcher.readonly()
     }
 }
 

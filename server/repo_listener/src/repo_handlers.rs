@@ -27,7 +27,7 @@ use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
-use repo_client::{streaming_clone, MononokeRepo};
+use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 
@@ -117,6 +117,19 @@ pub fn repo_handlers(
                     _ => None,
                 };
 
+                let read_write_fetcher = match config.repotype {
+                    RepoType::BlobRemote {
+                        ref write_lock_db_address,
+                        ..
+                    } => RepoReadWriteFetcher::with_myrouter(
+                        config.readonly,
+                        reponame.clone(),
+                        write_lock_db_address,
+                        myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                    ),
+                    _ => RepoReadWriteFetcher::new(config.readonly, reponame.clone()),
+                };
+
                 let repo = MononokeRepo::new(
                     blobrepo,
                     &config.pushrebase,
@@ -125,7 +138,7 @@ pub fn repo_handlers(
                     streaming_clone,
                     config.lfs.clone(),
                     reponame.clone(),
-                    config.readonly,
+                    read_write_fetcher,
                 );
 
                 let listen_log = root_log.new(o!("repo" => reponame.clone()));

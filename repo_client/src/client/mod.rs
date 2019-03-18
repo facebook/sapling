@@ -14,6 +14,7 @@ use std::time::Duration;
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use fbwhoami::FbWhoAmI;
+use futures::future::ok;
 use futures::{future, stream, stream::empty, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt, StreamTimeoutError};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
@@ -35,6 +36,7 @@ use mercurial_types::{
     HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_CSID,
     NULL_HASH,
 };
+use metaconfig_types::RepoReadOnly;
 use percent_encoding;
 use phases::Phases;
 use rand;
@@ -864,34 +866,41 @@ impl HgCommands for RepoClient {
         hook_manager: Arc<HookManager>,
         maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
-        let ctx = self.prepared_ctx(ops::UNBUNDLE, None);
-        let mut scuba_logger = ctx.scuba().clone();
+        let client = self.clone();
+        self.repo
+            .readonly()
+            // Assume read only if we have an error.
+            .or_else(|_| ok(RepoReadOnly::ReadOnly))
+            .and_then(move |read_write| {
+                let ctx = client.prepared_ctx(ops::UNBUNDLE, None);
+                let mut scuba_logger = ctx.scuba().clone();
 
-        let res = bundle2_resolver::resolve(
-            ctx.with_logger_kv(o!("command" => "unbundle")),
-            self.repo.blobrepo().clone(),
-            self.repo.pushrebase_params().clone(),
-            self.repo.fastforward_only_bookmarks().clone(),
-            heads,
-            stream,
-            hook_manager,
-            self.lca_hint.clone(),
-            self.phases_hint.clone(),
-            self.repo.readonly(),
-            maybe_full_content,
-        );
+                let res = bundle2_resolver::resolve(
+                    ctx.with_logger_kv(o!("command" => "unbundle")),
+                    client.repo.blobrepo().clone(),
+                    client.repo.pushrebase_params().clone(),
+                    client.repo.fastforward_only_bookmarks().clone(),
+                    heads,
+                    stream,
+                    hook_manager,
+                    client.lca_hint.clone(),
+                    client.phases_hint.clone(),
+                    read_write,
+                    maybe_full_content,
+                );
 
-        res.timeout(timeout_duration())
-            .map_err(process_timeout_error)
-            .traced(self.ctx.trace(), ops::UNBUNDLE, trace_args!())
-            .timed(move |stats, _| {
-                if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
-                    scuba_logger.add("extra_context", counters);
-                }
-                scuba_logger
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
-                Ok(())
+                res.timeout(timeout_duration())
+                    .map_err(process_timeout_error)
+                    .traced(client.ctx.trace(), ops::UNBUNDLE, trace_args!())
+                    .timed(move |stats, _| {
+                        if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+                            scuba_logger.add("extra_context", counters);
+                        }
+                        scuba_logger
+                            .add_future_stats(&stats)
+                            .log_with_msg("Command processed", None);
+                        Ok(())
+                    })
             })
             .boxify()
     }
