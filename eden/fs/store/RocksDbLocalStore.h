@@ -52,6 +52,8 @@ class RocksDbLocalStore : public LocalStore {
   std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) override;
 
  private:
+  void writeColumnFamilyIDs();
+
   FaultInjector& faultInjector_;
   RocksHandles dbHandles_;
   mutable UnboundedQueueExecutor ioPool_;
