@@ -1194,8 +1194,8 @@ fn default_repo_config() -> RepoConfig {
         scuba_table: None,
         cache_warmup: None,
         hook_manager_params: None,
-        bookmarks: None,
-        hooks: None,
+        bookmarks: vec![],
+        hooks: vec![],
         pushrebase: Default::default(),
         lfs: Default::default(),
         wireproto_scribe_category: None,
@@ -1210,22 +1210,22 @@ fn default_repo_config() -> RepoConfig {
 fn test_load_hooks() {
     async_unit::tokio_unit_test(|| {
         let mut config = default_repo_config();
-        config.bookmarks = Some(vec![
+        config.bookmarks = vec![
             BookmarkParams {
                 bookmark: Bookmark::new("bm1").unwrap().into(),
-                hooks: Some(vec!["hook1".into(), "hook2".into()]),
+                hooks: vec!["hook1".into(), "hook2".into()],
             },
             BookmarkParams {
                 bookmark: Regex::new("bm2").unwrap().into(),
-                hooks: Some(vec![
+                hooks: vec![
                     "hook2".into(),
                     "hook3".into(),
                     "rust:verify_integrity".into(),
-                ]),
+                ],
             },
-        ]);
+        ];
 
-        config.hooks = Some(vec![
+        config.hooks = vec![
             HookParams {
                 name: "hook1".into(),
                 code: Some("hook1 code".into()),
@@ -1250,7 +1250,7 @@ fn test_load_hooks() {
                 hook_type: HookType::PerChangeset,
                 config: Default::default(),
             },
-        ]);
+        ];
 
         let mut hm = hook_manager_blobrepo();
         match load_hooks(&mut hm, config) {
@@ -1265,17 +1265,17 @@ fn test_load_hooks_no_such_hook() {
     async_unit::tokio_unit_test(|| {
         let book_or_rex = BookmarkOrRegex::Bookmark(Bookmark::new("bm1").unwrap());
         let mut config = default_repo_config();
-        config.bookmarks = Some(vec![BookmarkParams {
+        config.bookmarks = vec![BookmarkParams {
             bookmark: book_or_rex.clone(),
-            hooks: Some(vec!["hook1".into(), "hook2".into()]),
-        }]);
+            hooks: vec!["hook1".into(), "hook2".into()],
+        }];
 
-        config.hooks = Some(vec![HookParams {
+        config.hooks = vec![HookParams {
             name: "hook1".into(),
             code: Some("hook1 code".into()),
             hook_type: HookType::PerAddedOrModifiedFile,
             config: Default::default(),
-        }]);
+        }];
 
         let mut hm = hook_manager_blobrepo();
 
@@ -1295,17 +1295,17 @@ fn test_load_hooks_no_such_hook() {
 fn test_load_hooks_bad_rust_hook() {
     async_unit::tokio_unit_test(|| {
         let mut config = default_repo_config();
-        config.bookmarks = Some(vec![BookmarkParams {
+        config.bookmarks = vec![BookmarkParams {
             bookmark: Bookmark::new("bm1").unwrap().into(),
-            hooks: Some(vec!["rust:hook1".into()]),
-        }]);
+            hooks: vec!["rust:hook1".into()],
+        }];
 
-        config.hooks = Some(vec![HookParams {
+        config.hooks = vec![HookParams {
             name: "rust:hook1".into(),
             code: Some("hook1 code".into()),
             hook_type: HookType::PerChangeset,
             config: Default::default(),
-        }]);
+        }];
 
         let mut hm = hook_manager_blobrepo();
 

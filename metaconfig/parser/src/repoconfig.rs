@@ -327,23 +327,16 @@ impl RepoConfigs {
                         bookmark: bookmark_or_regex,
                         hooks: match bookmark.hooks {
                             Some(hooks) => {
-                                Some(hooks.into_iter().map(|rbmh| rbmh.hook_name).collect())
+                                hooks.into_iter().map(|rbmh| rbmh.hook_name).collect()
                             }
-                            None => None,
+                            None => vec![],
                         },
                     });
                 }
-                Some(bookmark_params)
+                bookmark_params
             }
-            None => None,
+            None => vec![],
         };
-
-        let hooks_opt;
-        if hooks.len() != 0 {
-            hooks_opt = Some(hooks);
-        } else {
-            hooks_opt = None;
-        }
 
         let pushrebase = this
             .pushrebase
@@ -389,7 +382,7 @@ impl RepoConfigs {
             cache_warmup,
             hook_manager_params,
             bookmarks,
-            hooks: hooks_opt,
+            hooks,
             pushrebase,
             lfs,
             wireproto_scribe_category,
@@ -668,21 +661,21 @@ mod test {
                     weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
-                bookmarks: Some(vec![
+                bookmarks: vec![
                     BookmarkParams {
                         bookmark: Bookmark::new("master").unwrap().into(),
-                        hooks: Some(vec![
+                        hooks: vec![
                             "hook1".to_string(),
                             "hook2".to_string(),
                             "rust:rusthook".to_string(),
-                        ]),
+                        ],
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
-                        hooks: None,
+                        hooks: vec![],
                     },
-                ]),
-                hooks: Some(vec![
+                ],
+                hooks: vec![
                     HookParams {
                         name: "hook1".to_string(),
                         code: Some("this is hook1".to_string()),
@@ -721,7 +714,7 @@ mod test {
                             },
                         },
                     },
-                ]),
+                ],
                 pushrebase: PushrebaseParams {
                     rewritedates: false,
                     recursion_limit: 1024,
@@ -749,8 +742,8 @@ mod test {
                 scuba_table: Some("scuba_table".to_string()),
                 cache_warmup: None,
                 hook_manager_params: None,
-                bookmarks: None,
-                hooks: None,
+                bookmarks: vec![],
+                hooks: vec![],
                 pushrebase: Default::default(),
                 lfs: Default::default(),
                 wireproto_scribe_category: Some("category".to_string()),

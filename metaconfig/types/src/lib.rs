@@ -69,9 +69,9 @@ pub struct RepoConfig {
     /// Parameters of how to warm up the cache
     pub cache_warmup: Option<CacheWarmupParams>,
     /// Configuration for bookmarks
-    pub bookmarks: Option<Vec<BookmarkParams>>,
+    pub bookmarks: Vec<BookmarkParams>,
     /// Configuration for hooks
-    pub hooks: Option<Vec<HookParams>>,
+    pub hooks: Vec<HookParams>,
     /// Pushrebase configuration options
     pub pushrebase: PushrebaseParams,
     /// LFS configuration options
@@ -183,7 +183,7 @@ pub struct BookmarkParams {
     /// The bookmark
     pub bookmark: BookmarkOrRegex,
     /// The hooks active for the bookmark
-    pub hooks: Option<Vec<String>>,
+    pub hooks: Vec<String>,
 }
 
 /// The type of the hook
