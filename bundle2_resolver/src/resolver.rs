@@ -1318,16 +1318,30 @@ impl Bundle2Resolver {
         onto_bookmark: &pushrebase::OntoBookmarkParams,
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
     ) -> impl Future<Item = (ChangesetId, Vec<ChangesetId>), Error = Error> {
+        let block_merges = self.pushrebase.block_merges.clone();
+        if block_merges
+            && changesets
+                .iter()
+                .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some())
+        {
+            return future::err(format_err!(
+                "Pushrebase blocked because it contains a merge commit.\n\
+                 If you need this for a specific use case please contact\n\
+                 the Source Control team at https://fburl.com/27qnuyl2"
+            ))
+            .boxify();
+        }
+
         pushrebase::do_pushrebase(
-            ctx,
-            self.repo.clone(),
-            self.pushrebase.clone(),
-            onto_bookmark.clone(),
-            changesets
-                .into_iter()
-                .map(|(hg_cs_id, _)| hg_cs_id)
-                .collect(),
-            maybe_raw_bundle2_id,
+                    ctx,
+                    self.repo.clone(),
+                    self.pushrebase.clone(),
+                    onto_bookmark.clone(),
+                    changesets
+                        .into_iter()
+                        .map(|(hg_cs_id, _)| hg_cs_id)
+                        .collect(),
+                    maybe_raw_bundle2_id,
         )
         .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
         .timed({

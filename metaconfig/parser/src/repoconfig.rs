@@ -354,6 +354,7 @@ impl RepoConfigs {
                     rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
                     recursion_limit: raw.recursion_limit.unwrap_or(default.recursion_limit),
                     commit_scribe_category: raw.commit_scribe_category,
+                    block_merges: raw.block_merges.unwrap_or(default.block_merges)
                 }
             })
             .unwrap_or_default();
@@ -519,6 +520,7 @@ struct RawPushrebaseParams {
     rewritedates: Option<bool>,
     recursion_limit: Option<usize>,
     commit_scribe_category: Option<String>,
+    block_merges: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -734,6 +736,7 @@ mod test {
                     rewritedates: false,
                     recursion_limit: 1024,
                     commit_scribe_category: None,
+                    block_merges: false,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

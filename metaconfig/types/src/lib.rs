@@ -254,6 +254,8 @@ pub struct PushrebaseParams {
     pub recursion_limit: usize,
     /// Scribe category we log new commits to
     pub commit_scribe_category: Option<String>,
+    /// Block merge commits
+    pub block_merges: bool,
 }
 
 impl Default for PushrebaseParams {
@@ -262,6 +264,7 @@ impl Default for PushrebaseParams {
             rewritedates: true,
             recursion_limit: 16384, // this number is fairly arbirary
             commit_scribe_category: None,
+            block_merges: false,
         }
     }
 }

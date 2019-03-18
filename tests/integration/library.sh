@@ -218,14 +218,22 @@ readonly=true
 CONFIG
 fi
 
-if [[ -v PUSHREBASE_REWRITE_DATES ]]; then
   cat >> repos/repo/server.toml <<CONFIG
 [pushrebase]
+CONFIG
+
+if [[ -v BLOCK_MERGES ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+block_merges=true
+CONFIG
+fi
+
+if [[ -v PUSHREBASE_REWRITE_DATES ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
 rewritedates=true
 CONFIG
 else
   cat >> repos/repo/server.toml <<CONFIG
-[pushrebase]
 rewritedates=false
 CONFIG
 fi
