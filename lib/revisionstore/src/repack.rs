@@ -159,12 +159,21 @@ fn repack_packs<'a, T: MutablePack, U: Store + Repackable>(
     let mut successfully_repacked = 0;
     for path in repacked {
         if *path != new_pack_path {
-            let pack = U::from_path(&path)?;
+            let pack = match U::from_path(&path) {
+                Ok(pack) => pack,
+                Err(_e) => {
+                    // We were about to remove this file, let's just ignore the failures to open
+                    // it.
+                    successfully_repacked += 1;
+                    continue
+                }
+            };
+
             let keys = pack.iter().filter_map(|res| res.ok()).collect::<Vec<Key>>();
             let missing = new_pack.get_missing(&keys)?;
 
             if missing.len() == 0 {
-                pack.delete()?;
+                let _ = pack.delete();
                 successfully_repacked += 1;
             } else {
                 errors.push((path.clone(), format_err!("{:?}", missing)));
