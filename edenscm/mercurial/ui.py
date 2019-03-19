@@ -946,8 +946,6 @@ class ui(object):
         self.flush()
 
         wasformatted = self.formatted()
-        if util.safehasattr(signal, "SIGPIPE"):
-            signal.signal(signal.SIGPIPE, _catchterm)
         if self._runpager(pagercmd, pagerenv):
             self.pageractive = True
             # Preserve the formatted-ness of the UI. This is important
