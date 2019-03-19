@@ -57,7 +57,7 @@ impl AsyncMutableDataPack {
                 blocking(|| {
                     let inner = self.inner.take();
                     let mut inner = inner.expect("The datapack is closed");
-                    inner.data.add(&delta, metadata.clone()).map(|()| inner)
+                    inner.data.add(&delta, &metadata.clone().unwrap_or_default()).map(|()| inner)
                 })
             }
         })

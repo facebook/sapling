@@ -38,11 +38,11 @@ mod tests {
 
     fn make_datapack(
         tempdir: &TempDir,
-        deltas: &Vec<(Delta, Option<Metadata>)>,
+        deltas: &Vec<(Delta, Metadata)>,
     ) -> impl Future<Item = AsyncDataPack, Error = Error> + 'static {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
-        for &(ref delta, ref metadata) in deltas.iter() {
-            mutdatapack.add(&delta, metadata.clone()).unwrap();
+        for (delta, metadata) in deltas.iter() {
+            mutdatapack.add(delta, metadata).unwrap();
         }
 
         let path = mutdatapack.close().unwrap();
@@ -60,7 +60,7 @@ mod tests {
             base: Some(Key::new(vec![0], Node::random(&mut rng))),
             key: Key::new(vec![0], Node::random(&mut rng)),
         };
-        let revisions = vec![(delta.clone(), None)];
+        let revisions = vec![(delta.clone(), Default::default())];
 
         let work = make_datapack(&tempdir, &revisions);
         let key = delta.key.clone();
@@ -86,7 +86,10 @@ mod tests {
             base: Some(Key::new(vec![0], Node::random(&mut rng))),
             key: Key::new(vec![0], Node::random(&mut rng)),
         };
-        let revisions = vec![(delta1.clone(), None), (delta2.clone(), None)];
+        let revisions = vec![
+            (delta1.clone(), Default::default()),
+            (delta2.clone(), Default::default()),
+        ];
 
         let work = make_datapack(&tempdir, &revisions);
         let key1 = delta1.key.clone();

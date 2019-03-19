@@ -446,10 +446,10 @@ pub mod tests {
     use crate::mutabledatapack::MutableDataPack;
     use crate::mutablepack::MutablePack;
 
-    pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
+    pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Metadata)>) -> DataPack {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
-        for &(ref delta, ref metadata) in deltas.iter() {
-            mutdatapack.add(&delta, metadata.clone()).unwrap();
+        for (delta, metadata) in deltas.iter() {
+            mutdatapack.add(delta, metadata).unwrap();
         }
 
         let path = mutdatapack.close().unwrap();
@@ -475,7 +475,7 @@ pub mod tests {
                 base: Some(Key::new(vec![0], Node::random(&mut rng))),
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         )];
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref _metadata) in revisions.iter() {
@@ -500,7 +500,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
             (
                 Delta {
@@ -508,21 +508,17 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                Some(Metadata {
+                Metadata {
                     size: Some(1000),
                     flags: Some(7),
-                }),
+                },
             ),
         ];
 
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref metadata) in revisions.iter() {
             let meta = pack.get_meta(&delta.key).unwrap();
-            let metadata = match metadata {
-                &Some(ref m) => m.clone(),
-                &None => Default::default(),
-            };
-            assert_eq!(meta, metadata);
+            assert_eq!(&meta, metadata);
         }
     }
 
@@ -538,7 +534,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
             (
                 Delta {
@@ -546,7 +542,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
         ];
 
@@ -569,7 +565,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
             (
                 Delta {
@@ -577,7 +573,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
         ];
 
@@ -599,7 +595,7 @@ pub mod tests {
                 base: Some(Key::new(vec![0], Node::random(&mut rng))),
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         )];
         let base0 = revisions[0].0.key.clone();
         revisions.push((
@@ -608,7 +604,7 @@ pub mod tests {
                 base: Some(base0),
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         ));
         let base1 = revisions[1].0.key.clone();
         revisions.push((
@@ -617,7 +613,7 @@ pub mod tests {
                 base: Some(base1),
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         ));
 
         let pack = make_datapack(&tempdir, &revisions);
@@ -650,7 +646,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
             (
                 Delta {
@@ -658,7 +654,7 @@ pub mod tests {
                     base: Some(Key::new(vec![0], Node::random(&mut rng))),
                     key: Key::new(vec![0], Node::random(&mut rng)),
                 },
-                None,
+                Default::default(),
             ),
         ];
 
@@ -683,7 +679,7 @@ pub mod tests {
                 base: None,
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         )];
 
         let pack = make_datapack(&tempdir, &revisions);
@@ -709,7 +705,7 @@ pub mod tests {
                 base: None,
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         )];
 
         let pack = make_datapack(&tempdir, &revisions);
@@ -730,7 +726,7 @@ pub mod tests {
                 base: None,
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         )];
 
         let pack = Rc::new(make_datapack(&tempdir, &revisions));
@@ -742,7 +738,7 @@ pub mod tests {
         fn test_iter_quickcheck(keys: Vec<(Vec<u8>, Key)>) -> bool {
             let tempdir = TempDir::new().unwrap();
 
-            let mut revisions: Vec<(Delta, Option<Metadata>)> = vec![];
+            let mut revisions = vec![];
             for (data, key) in keys {
                 revisions.push((
                     Delta {
@@ -750,7 +746,7 @@ pub mod tests {
                         base: None,
                         key: key.clone(),
                     },
-                    None,
+                    Default::default(),
                 ));
             }
 

@@ -101,8 +101,8 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fall
                 break;
             }
 
-            let meta = Some(data_pack.get_meta(&delta.key)?);
-            mut_pack.add(&delta, meta)?;
+            let meta = data_pack.get_meta(&delta.key)?;
+            mut_pack.add(&delta, &meta)?;
         }
     }
 
@@ -420,7 +420,7 @@ mod tests {
                 base: None,
                 key: Key::new(vec![0], Node::random(&mut rng)),
             },
-            None,
+            Default::default(),
         )];
 
         let pack = make_datapack(&tempdir, &revisions);
@@ -456,7 +456,7 @@ mod tests {
                         base: None,
                         key: base.clone(),
                     },
-                    None,
+                    Default::default(),
                 ),
                 (
                     Delta {
@@ -464,7 +464,7 @@ mod tests {
                         base: Some(base),
                         key: Key::new(vec![0], Node::random(&mut rng)),
                     },
-                    None,
+                    Default::default(),
                 ),
             ];
             let pack = make_datapack(&tempdir, &rev);
@@ -519,7 +519,7 @@ mod tests {
                         base: None,
                         key: base.clone(),
                     },
-                    None,
+                    Default::default(),
                 ),
                 (
                     Delta {
@@ -527,7 +527,7 @@ mod tests {
                         base: Some(base),
                         key: Key::new(vec![0], Node::random(&mut rng)),
                     },
-                    None,
+                    Default::default(),
                 ),
             ];
             let pack = make_datapack(&tempdir, &rev);

@@ -220,7 +220,7 @@ fn write_datapack(
             base: None,
             key,
         };
-        datapack.add(&delta, Some(metadata))?;
+        datapack.add(&delta, &metadata)?;
     }
     datapack.close()
 }

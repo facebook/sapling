@@ -72,7 +72,7 @@ impl MutableDataPack {
     }
 
     /// Adds the given entry to the mutable datapack.
-    pub fn add(&mut self, delta: &Delta, metadata: Option<Metadata>) -> Fallible<()> {
+    pub fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         if delta.key.name().len() >= u16::MAX as usize {
             return Err(MutableDataPackError("delta name is longer than 2^16".into()).into());
         }
@@ -98,7 +98,7 @@ impl MutableDataPack {
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        metadata.unwrap_or_default().write(&mut buf)?;
+        metadata.write(&mut buf)?;
 
         self.data_file.write_all(&buf)?;
         self.hasher.input(&buf);
@@ -228,7 +228,7 @@ mod tests {
             base: None,
             key: Key::new(Vec::new(), Default::default()),
         };
-        mutdatapack.add(&delta, None).expect("add");
+        mutdatapack.add(&delta, &Default::default()).expect("add");
         let datapackbase = mutdatapack.close().expect("close");
         let datapackpath = datapackbase.with_extension("datapack");
         let dataindexpath = datapackbase.with_extension("dataidx");
@@ -262,7 +262,7 @@ mod tests {
                 base: None,
                 key: Key::new(Vec::new(), Default::default()),
             };
-            mutdatapack.add(&delta, None).expect("add");
+            mutdatapack.add(&delta, &Default::default()).expect("add");
         }
 
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
@@ -279,13 +279,13 @@ mod tests {
             base: None,
             key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
-        mutdatapack.add(&delta, None).unwrap();
+        mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: Some(Key::new(Vec::new(), delta.key.node().clone())),
             key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
-        mutdatapack.add(&delta2, None).unwrap();
+        mutdatapack.add(&delta2, &Default::default()).unwrap();
 
         let chain = mutdatapack.get_delta_chain(&delta.key).unwrap();
         assert_eq!(&vec![delta.clone()], &chain);
@@ -305,7 +305,7 @@ mod tests {
             base: None,
             key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
-        mutdatapack.add(&delta, None).unwrap();
+        mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -315,7 +315,7 @@ mod tests {
             flags: Some(2),
             size: Some(1000),
         };
-        mutdatapack.add(&delta2, Some(meta2.clone())).unwrap();
+        mutdatapack.add(&delta2, &meta2).unwrap();
 
         // Requesting a default metadata
         let found_meta = mutdatapack.get_meta(&delta.key).unwrap();
@@ -343,7 +343,7 @@ mod tests {
             base: None,
             key: Key::new(Vec::new(), Default::default()),
         };
-        mutdatapack.add(&delta, None).unwrap();
+        mutdatapack.add(&delta, &Default::default()).unwrap();
 
         let not = Key::new(vec![1], Node::random(&mut rng));
         let missing = mutdatapack
