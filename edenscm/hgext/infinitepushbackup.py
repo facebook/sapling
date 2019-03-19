@@ -1318,14 +1318,19 @@ def _readlocalbackupstate(ui, repo, remotepath, doingbackup=False):
         def getconnection():
             return repo.connectionpool.get(remotepath)
 
-        backedupheadsremote = {
-            head
-            for head, backedup in zip(
-                headstobackup,
-                infinitepush.isbackedupnodes(getconnection, headstobackup),
-            )
-            if backedup
-        }
+        backedupheadsremote = {}
+        try:
+            backedupheadsremote = {
+                head
+                for head, backedup in zip(
+                    headstobackup,
+                    infinitepush.isbackedupnodes(getconnection, headstobackup),
+                )
+                if backedup
+            }
+        except error.RepoError:
+            pass
+
         if backedupheadsremote:
             _writelocalbackupstate(repo.sharedvfs, remotepath, backedupheadsremote, {})
         else:
