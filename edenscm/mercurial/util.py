@@ -1670,6 +1670,11 @@ def fspath(name, root):
 def checknlink(testfile):
     """check whether hardlink count reporting works properly"""
 
+    # Skip checking for known filesystems
+    fstype = getfstype(os.path.dirname(testfile))
+    if fscap.getfscap(fstype, fscap.HARDLINK) is not None:
+        return True
+
     # testfile may be open, so we need a separate file for checking to
     # work around issue2543 (or testfile may get lost on Samba shares)
     f1, f2, fp = None, None, None
