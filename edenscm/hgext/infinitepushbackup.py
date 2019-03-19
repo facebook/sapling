@@ -46,7 +46,7 @@ Configs::
     # pushbackup can partially fail and manage to push some of the stacks
     # this will prevent repush of that stacks
     # the option only works if the server supports discovery for draft commits
-    backuplimitnocheck = 4
+    backuplimitnocheck = 0
 """
 from __future__ import absolute_import
 
@@ -88,7 +88,7 @@ configitem = registrar.configitem(configtable)
 
 # defaults
 configitem("infinitepushbackup", "backupgeneration", default=0)
-configitem("infinitepushbackup", "backuplimitnocheck", default=4)
+configitem("infinitepushbackup", "backuplimitnocheck", default=0)
 configitem("infinitepushbackup", "backuplistlimit", default=5)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 
