@@ -9,7 +9,7 @@ use tokio_threadpool::blocking;
 
 use cloned::cloned;
 use revisionstore::{HistoryPackVersion, MutableHistoryPack, MutablePack};
-use types::{Key, NodeInfo, PackHistoryEntry};
+use types::{HistoryEntry, Key, NodeInfo};
 
 pub struct AsyncMutableHistoryPackInner {
     data: MutableHistoryPack,
@@ -70,7 +70,7 @@ impl AsyncMutableHistoryPack {
     /// Convenience function for adding a `types::PackHistoryEntry`.
     pub fn add_entry(
         self,
-        entry: &PackHistoryEntry,
+        entry: &HistoryEntry,
     ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
         self.add(&entry.key, &entry.nodeinfo)
     }

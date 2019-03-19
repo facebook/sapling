@@ -18,7 +18,7 @@ use revisionstore::{
     DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableHistoryPack,
     MutablePack,
 };
-use types::{Key, PackHistoryEntry};
+use types::{HistoryEntry, Key};
 use url_ext::UrlExt;
 
 use crate::client::{EdenApiHttpClient, HyperClient};
@@ -155,7 +155,7 @@ fn get_history(
     url_prefix: &Url,
     key: Key,
     max_depth: Option<u32>,
-) -> impl Stream<Item = PackHistoryEntry, Error = Error> {
+) -> impl Stream<Item = HistoryEntry, Error = Error> {
     log::debug!("Fetching history for key: {}", &key);
     let filenode = key.node().to_hex();
     let filename = url_encode(&key.name());
@@ -198,7 +198,7 @@ fn get_history(
             stream::iter_result(entries).from_err()
         })
         .flatten_stream()
-        .map(move |entry| PackHistoryEntry::from_loose(entry, key.name().to_vec()))
+        .map(move |entry| HistoryEntry::from_wire(entry, key.name().to_vec()))
 }
 
 /// Create a new datapack in the given directory, and populate it with the file
@@ -229,7 +229,7 @@ fn write_datapack(
 /// with the given history entries.
 fn write_historypack(
     pack_dir: impl AsRef<Path>,
-    entries: impl IntoIterator<Item = PackHistoryEntry>,
+    entries: impl IntoIterator<Item = HistoryEntry>,
 ) -> Fallible<PathBuf> {
     let mut historypack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
     for entry in entries {

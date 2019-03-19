@@ -16,7 +16,7 @@ use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
 use tempfile::NamedTempFile;
 
-use types::{Key, NodeInfo, PackHistoryEntry};
+use types::{Key, NodeInfo};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
@@ -67,7 +67,7 @@ impl MutableHistoryPack {
         Ok(())
     }
 
-    pub fn add_entry(&mut self, entry: &PackHistoryEntry) -> Fallible<()> {
+    pub fn add_entry(&mut self, entry: &types::HistoryEntry) -> Fallible<()> {
         self.add(&entry.key, &entry.nodeinfo)
     }
 

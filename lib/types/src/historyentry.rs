@@ -19,19 +19,18 @@ use crate::{key::Key, node::Node, nodeinfo::NodeInfo, parents::Parents};
     Serialize,
     Deserialize
 )]
-pub struct PackHistoryEntry {
+pub struct HistoryEntry {
     pub key: Key,
     pub nodeinfo: NodeInfo,
 }
 
-impl PackHistoryEntry {
-    /// A LooseHistoryEntry doesn't contain enough information to
-    /// construct a PackHistoryEntry because it doesn't contain the
-    /// name of file to which the entry refers. (The name is a bytestring
-    /// that usually consists of the file's path.) As such, the name
-    /// needs to be supplied by the caller in order to convert to
-    /// PackHistoryEntry.
-    pub fn from_loose(entry: LooseHistoryEntry, name: Vec<u8>) -> Self {
+impl HistoryEntry {
+    /// A WireHistoryEntry doesn't contain enough information to construct
+    /// a HistoryEntry because it doesn't contain the name of file to which
+    /// the entry refers. (The name is a bytestring that usually consists
+    /// of the file's path.) As such, the name needs to be supplied by the
+    /// caller in order to perform the conversion.
+    pub fn from_wire(entry: WireHistoryEntry, name: Vec<u8>) -> Self {
         // If this file was copied, use the original name as the name of
         // the p1 key instead of the current entry's name.
         let p1_name = entry.copyfrom.unwrap_or_else(|| name.clone());
@@ -61,15 +60,15 @@ impl PackHistoryEntry {
     }
 }
 
-impl From<(LooseHistoryEntry, Vec<u8>)> for PackHistoryEntry {
-    fn from((entry, name): (LooseHistoryEntry, Vec<u8>)) -> Self {
-        Self::from_loose(entry, name)
+impl From<(WireHistoryEntry, Vec<u8>)> for HistoryEntry {
+    fn from((entry, name): (WireHistoryEntry, Vec<u8>)) -> Self {
+        Self::from_wire(entry, name)
     }
 }
 
 /// History entry structure containing fields corresponding to
 /// a single history record in Mercurial's loose file format.
-/// This format contains less information than a PackHistoryEntry
+/// This format contains less information than a HistoryEntry
 /// (namely, it doesn't contain the name of the file), and has
 /// less redundancy, making it more suitable as a compact
 /// representation of a history entry for data exchange between
@@ -86,15 +85,15 @@ impl From<(LooseHistoryEntry, Vec<u8>)> for PackHistoryEntry {
     Serialize,
     Deserialize
 )]
-pub struct LooseHistoryEntry {
+pub struct WireHistoryEntry {
     pub node: Node,
     pub parents: Parents,
     pub linknode: Node,
     pub copyfrom: Option<Vec<u8>>,
 }
 
-impl From<PackHistoryEntry> for LooseHistoryEntry {
-    fn from(entry: PackHistoryEntry) -> Self {
+impl From<HistoryEntry> for WireHistoryEntry {
+    fn from(entry: HistoryEntry) -> Self {
         let [p1, p2] = entry.nodeinfo.parents;
         // If the p1's name differs from the entry's name, this means the file
         // was copied, so populate the copyfrom path with the p1 name.
@@ -117,7 +116,7 @@ impl From<PackHistoryEntry> for LooseHistoryEntry {
 use quickcheck::{quickcheck, Arbitrary};
 
 #[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for PackHistoryEntry {
+impl Arbitrary for HistoryEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         let key = Key::arbitrary(g);
         let mut nodeinfo = NodeInfo::arbitrary(g);
@@ -142,12 +141,12 @@ impl Arbitrary for PackHistoryEntry {
             nodeinfo.parents[1] = Key::default();
         }
 
-        PackHistoryEntry { key, nodeinfo }
+        Self { key, nodeinfo }
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for LooseHistoryEntry {
+impl Arbitrary for WireHistoryEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         // It doesn't make sense to have a non-None copyfrom containing
         // an empty name, so set copyfrom to None in such cases.
@@ -160,7 +159,7 @@ impl Arbitrary for LooseHistoryEntry {
             copyfrom = None;
         }
 
-        LooseHistoryEntry {
+        Self {
             node: Node::arbitrary(g),
             parents,
             linknode: Node::arbitrary(g),
@@ -174,17 +173,17 @@ mod tests {
     use super::*;
 
     quickcheck! {
-        fn pack_entry_roundtrip(pack: PackHistoryEntry) -> bool {
-            let name = pack.key.name.clone();
-            let loose = LooseHistoryEntry::from(pack.clone());
-            let roundtrip = PackHistoryEntry::from((loose, name));
-            pack == roundtrip
+        fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
+            let name = entry.key.name.clone();
+            let wire = WireHistoryEntry::from(entry.clone());
+            let roundtrip = HistoryEntry::from((wire, name));
+            entry == roundtrip
         }
 
-        fn loose_entry_roundtrip(loose: LooseHistoryEntry, name: Vec<u8>) -> bool {
-            let pack = PackHistoryEntry::from((loose.clone(), name));
-            let roundtrip = LooseHistoryEntry::from(pack);
-            loose == roundtrip
+        fn wire_entry_roundtrip(wire: WireHistoryEntry, name: Vec<u8>) -> bool {
+            let entry = HistoryEntry::from((wire.clone(), name));
+            let roundtrip = WireHistoryEntry::from(entry);
+            wire == roundtrip
         }
     }
 }

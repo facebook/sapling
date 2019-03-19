@@ -13,7 +13,7 @@ pub mod nodeinfo;
 pub mod parents;
 pub mod path;
 
-pub use crate::historyentry::{LooseHistoryEntry, PackHistoryEntry};
+pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};
 pub use crate::key::Key;
 pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
