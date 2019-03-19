@@ -1286,7 +1286,7 @@ impl HgCommands for RepoClient {
                     };
 
                     ctx.perf_counters()
-                        .add_to_counter("getpackv1_num_files", stats.count as i64);
+                        .add_to_counter("getpackv1_num_files", encoded_params.len() as i64);
 
                     wireproto_logger.set_args(Some(json! {encoded_params}));
                     wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
