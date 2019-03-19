@@ -58,6 +58,20 @@ impl Arbitrary for Key {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+pub mod mocks {
+    use super::Key;
+    use crate::node::mocks::{ONES, THREES, TWOS};
+
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        pub static ref FOO_KEY: Key = Key::new(b"foo".to_vec(), ONES);
+        pub static ref BAR_KEY: Key = Key::new(b"bar".to_vec(), TWOS);
+        pub static ref BAZ_KEY: Key = Key::new(b"baz".to_vec(), THREES);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

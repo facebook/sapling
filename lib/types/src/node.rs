@@ -222,6 +222,27 @@ impl quickcheck::Arbitrary for Node {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+pub mod mocks {
+    use super::Node;
+
+    pub const ONES: Node = Node([1; Node::len()]);
+    pub const TWOS: Node = Node([2; Node::len()]);
+    pub const THREES: Node = Node([3; Node::len()]);
+    pub const FOURS: Node = Node([4; Node::len()]);
+    pub const FIVES: Node = Node([5; Node::len()]);
+    pub const SIXES: Node = Node([6; Node::len()]);
+    pub const SEVENS: Node = Node([7; Node::len()]);
+    pub const EIGHTS: Node = Node([8; Node::len()]);
+    pub const NINES: Node = Node([9; Node::len()]);
+    pub const AS: Node = Node([0xA; Node::len()]);
+    pub const BS: Node = Node([0xB; Node::len()]);
+    pub const CS: Node = Node([0xC; Node::len()]);
+    pub const DS: Node = Node([0xD; Node::len()]);
+    pub const ES: Node = Node([0xE; Node::len()]);
+    pub const FS: Node = Node([0xF; Node::len()]);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
