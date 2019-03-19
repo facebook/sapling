@@ -873,9 +873,8 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   transitionState(State::INITIALIZED, State::STARTING);
 
-  createFuseChannel(std::move(takeoverData.fd));
-
   try {
+    createFuseChannel(std::move(takeoverData.fd));
     auto fuseCompleteFuture =
         channel_->initializeFromTakeover(takeoverData.connInfo);
     fuseInitSuccessful(std::move(fuseCompleteFuture));
