@@ -432,6 +432,7 @@ def print_stderr(message: str, *args: Any, **kwargs: Any) -> None:
     """Prints the message to stderr."""
     if args or kwargs:
         message = message.format(*args, **kwargs)
+    # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
     print(message, file=sys.stderr)
 
 

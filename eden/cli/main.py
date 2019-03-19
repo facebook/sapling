@@ -1225,6 +1225,7 @@ re-open these files after Eden is restarted.
                 instance, daemon_binary=self.args.daemon_binary
             )
         if exit_code != 0:
+            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             print("Failed to start edenfs!", file=sys.stderr)
             return exit_code
 
@@ -1456,6 +1457,7 @@ def check_for_stale_working_directory() -> Optional[int]:
     except OSError as ex:
         print(
             f"error: unable to determine current working directory: {ex}",
+            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             file=sys.stderr,
         )
         return os.EX_OSFILE
@@ -1480,9 +1482,11 @@ Your current working directory appears to be a stale Eden
 mount point from a previous Eden daemon instance.
 Please run "cd / && cd -" to update your shell's working directory."""
     if not can_continue:
+        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print(f"Error: {msg}", file=sys.stderr)
         return os.EX_OSFILE
 
+    # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
     print(f"Warning: {msg}", file=sys.stderr)
     doctor_mod.working_directory_was_stale = True
     return None
@@ -1506,6 +1510,7 @@ def main() -> int:
     try:
         return_code: int = args.func(args)
     except subcmd_mod.CmdError as ex:
+        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print(f"error: {ex}", file=sys.stderr)
         return os.EX_SOFTWARE
     return return_code

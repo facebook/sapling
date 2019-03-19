@@ -323,6 +323,7 @@ class HgGetDirstateTupleCmd(Subcmd):
                     dirstate_tuple = ("n", entry.mode, 0)
                     _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
                 except NoValueForKeyError:
+                    # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but g...
                     print(f"No tuple for {rel_path}", file=sys.stderr)
                     return 1
 
@@ -507,6 +508,7 @@ class OverlayCmd(Subcmd):
         elif rel_path != Path():
             inode_number = self.overlay.lookup_path(rel_path)
             if inode_number is None:
+                # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `...
                 print(f"{rel_path} is not materialized", file=sys.stderr)
                 return 1
             self._process_root(inode_number, rel_path)
@@ -696,6 +698,7 @@ class LogCmd(Subcmd):
 
         eden_log_path = instance.get_log_path()
         if not eden_log_path.exists():
+            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             print(f"No log file found at {eden_log_path}", file=sys.stderr)
             return 1
 
@@ -979,10 +982,12 @@ class DebugThriftCmd(Subcmd):
             return 0
 
         if not args.function_name:
+            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             print(f"Error: no function name specified", file=sys.stderr)
             print(
                 "Use the --list argument to see a list of available functions, or "
                 "specify a function name",
+                # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `...
                 file=sys.stderr,
             )
             return 1
@@ -993,9 +998,11 @@ class DebugThriftCmd(Subcmd):
                 EdenService, args.function_name
             )
         except thrift.util.inspect.NoSuchFunctionError:
+            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             print(f"Error: unknown function {args.function_name!r}", file=sys.stderr)
             print(
                 'Run "eden debug thrift --list" to see a list of available functions',
+                # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `...
                 file=sys.stderr,
             )
             return 1
@@ -1004,6 +1011,7 @@ class DebugThriftCmd(Subcmd):
             print(
                 f"Error: {args.function_name} requires {len(fn_info.arg_specs)} "
                 f"arguments, but {len(args.args)} were supplied>",
+                # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `...
                 file=sys.stderr,
             )
             return 1
