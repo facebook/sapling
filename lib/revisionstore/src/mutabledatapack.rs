@@ -27,7 +27,6 @@ use crate::packwriter::PackWriter;
 use crate::store::Store;
 
 pub struct MutableDataPack {
-    version: DataPackVersion,
     dir: PathBuf,
     data_file: PackWriter<NamedTempFile>,
     mem_index: HashMap<Node, DeltaLocation>,
@@ -54,6 +53,10 @@ impl MutableDataPack {
             ));
         }
 
+        if version == DataPackVersion::Zero {
+            return Err(format_err!("cannot create a v0 datapack"));
+        }
+
         let mut data_file = PackWriter::new(NamedTempFile::new_in(&dir)?);
         let mut hasher = Sha1::new();
         let version_u8: u8 = version.clone().into();
@@ -61,7 +64,6 @@ impl MutableDataPack {
         hasher.input(&[version_u8]);
 
         Ok(MutableDataPack {
-            version,
             dir: dir.to_path_buf(),
             data_file,
             mem_index: HashMap::new(),
@@ -73,9 +75,6 @@ impl MutableDataPack {
     pub fn add(&mut self, delta: &Delta, metadata: Option<Metadata>) -> Fallible<()> {
         if delta.key.name().len() >= u16::MAX as usize {
             return Err(MutableDataPackError("delta name is longer than 2^16".into()).into());
-        }
-        if self.version == DataPackVersion::Zero && metadata.is_some() {
-            return Err(MutableDataPackError("v0 data pack cannot store metadata".into()).into());
         }
 
         let offset = self.data_file.bytes_written();
@@ -99,9 +98,7 @@ impl MutableDataPack {
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        if self.version == DataPackVersion::One {
-            metadata.unwrap_or_default().write(&mut buf)?;
-        }
+        metadata.unwrap_or_default().write(&mut buf)?;
 
         self.data_file.write_all(&buf)?;
         self.hasher.input(&buf);
@@ -134,7 +131,7 @@ impl MutableDataPack {
         // The add function assumes the file position is always at the end, so reset it.
         file.seek(SeekFrom::End(0))?;
 
-        let entry = DataEntry::new(&data, 0, self.version.clone())?;
+        let entry = DataEntry::new(&data, 0, DataPackVersion::One)?;
         Ok((
             Delta {
                 data: entry.delta()?,
