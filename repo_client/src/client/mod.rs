@@ -1155,6 +1155,8 @@ impl HgCommands for RepoClient {
                 }
             })
             .buffered(getpackv1_buffer_size)
+            .whole_stream_timeout(getfiles_timeout_duration())
+            .map_err(process_stream_timeout_error)
             .map({
                 cloned!(ctx);
                 move |(path, contents, history)| {
