@@ -85,6 +85,7 @@ mod ops {
     pub static GETTREEPACK: &str = "gettreepack";
     pub static GETFILES: &str = "getfiles";
     pub static GETPACKV1: &str = "getpackv1";
+    pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
 fn format_nodes_list(nodes: &Vec<HgNodeHash>) -> String {
@@ -1037,7 +1038,8 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "stream_out_shallow");
+        info!(self.ctx.logger(), "{}", ops::STREAMOUTSHALLOW);
+        let mut wireproto_logger = self.wireproto_logger(ops::STREAMOUTSHALLOW, None);
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
             Some(SqlStreamingCloneConfig {
@@ -1050,6 +1052,51 @@ impl HgCommands for RepoClient {
         };
 
         changelog
+            .map({
+                let ctx = self.ctx.clone();
+                move |chunk| {
+                    let data_blobs = chunk
+                        .data_blobs
+                        .into_iter()
+                        .map(|fut| {
+                            fut.timed({
+                                let ctx = ctx.clone();
+                                move |stats, _| {
+                                    ctx.perf_counters().add_to_counter(
+                                        "sum_manifold_poll_time",
+                                        stats.poll_time.as_nanos_unchecked() as i64,
+                                    );
+                                    Ok(())
+                                }
+                            })
+                        })
+                        .collect();
+
+                    let index_blobs = chunk
+                        .index_blobs
+                        .into_iter()
+                        .map(|fut| {
+                            fut.timed({
+                                let ctx = ctx.clone();
+                                move |stats, _| {
+                                    ctx.perf_counters().add_to_counter(
+                                        "sum_manifold_poll_time",
+                                        stats.poll_time.as_nanos_unchecked() as i64,
+                                    );
+                                    Ok(())
+                                }
+                            })
+                        })
+                        .collect();
+
+                    RevlogStreamingChunks {
+                        data_size: chunk.data_size,
+                        index_size: chunk.index_size,
+                        data_blobs,
+                        index_blobs,
+                    }
+                }
+            })
             .map({
                 let ctx = self.ctx.clone();
                 move |changelog_chunks| {
@@ -1097,6 +1144,14 @@ impl HgCommands for RepoClient {
             .flatten_stream()
             .whole_stream_timeout(timeout_duration())
             .map_err(process_stream_timeout_error)
+            .timed({
+                let ctx = self.ctx.clone();
+                move |stats, _| {
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                    Ok(())
+                }
+            })
             .boxify()
     }
 
