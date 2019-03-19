@@ -23,8 +23,8 @@ struct AsyncMutableDataPackInner {
 /// ```
 /// let mutablepack = AsyncMutableDataPack::new(path, DataPackVersion::One);
 /// let work = mutablepack
-///     .and_then(move |datapack| datapack.add(&delta1, None))
-///     .and_then(move |datapack| datapack.add(&delta2, None))
+///     .and_then(move |datapack| datapack.add(&delta1, &meta1))
+///     .and_then(move |datapack| datapack.add(&delta2, &meta2))
 ///     .and_then(move |datapack| datapack.close()
 /// ```
 pub struct AsyncMutableDataPack {
@@ -49,15 +49,15 @@ impl AsyncMutableDataPack {
     pub fn add(
         mut self,
         delta: &Delta,
-        metadata: Option<Metadata>,
+        metadata: &Metadata,
     ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
         poll_fn({
-            cloned!(delta);
+            cloned!(delta, metadata);
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
                     let mut inner = inner.expect("The datapack is closed");
-                    inner.data.add(&delta, &metadata.clone().unwrap_or_default()).map(|()| inner)
+                    inner.data.add(&delta, &metadata).map(|()| inner)
                 })
             }
         })
@@ -94,7 +94,6 @@ mod tests {
     use revisionstore::{DataPack, DataStore};
     use types::Key;
 
-
     #[test]
     fn test_add() {
         let tempdir = tempdir().unwrap();
@@ -109,7 +108,8 @@ mod tests {
         };
 
         let cloned_delta = delta.clone();
-        let work = mutabledatapack.and_then(move |datapack| datapack.add(&delta, None));
+        let work =
+            mutabledatapack.and_then(move |datapack| datapack.add(&delta, &Default::default()));
         let work = work.and_then(move |datapack| datapack.close());
 
         let mut runtime = Runtime::new().unwrap();
