@@ -31,7 +31,7 @@ use uuid::Uuid;
 
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
-use types::LooseHistoryEntry;
+use types::WireHistoryEntry;
 
 use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
@@ -186,7 +186,7 @@ impl MononokeRepo {
         let history =
             remotefilelog::get_file_history(ctx, self.repo.clone(), filenode, path.clone(), depth)
                 .and_then(move |entry| {
-                    let entry = LooseHistoryEntry::from(entry);
+                    let entry = WireHistoryEntry::from(entry);
                     Ok(Bytes::from(serde_json::to_vec(&entry)?))
                 })
                 .from_err()

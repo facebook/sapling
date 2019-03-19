@@ -9,7 +9,7 @@ use std::io::Write;
 use failure::Result;
 
 use mononoke_types::MPath;
-use types::{LooseHistoryEntry, Parents};
+use types::{Parents, WireHistoryEntry};
 
 use crate::blobnode::HgParents;
 use crate::nodehash::{HgChangesetId, HgFileNodeId, NULL_HASH};
@@ -96,7 +96,7 @@ impl HgFileHistoryEntry {
     }
 }
 
-impl From<HgFileHistoryEntry> for LooseHistoryEntry {
+impl From<HgFileHistoryEntry> for WireHistoryEntry {
     /// Convert from a representation of a history entry using Mononoke's types to
     /// a representation that uses the Mercurial client's types.
     fn from(entry: HgFileHistoryEntry) -> Self {
