@@ -93,8 +93,8 @@ push an infinitepush commit with new content
   $ hg commit -q -m branch
   $ hgmn pushbackup
   starting backup * (glob)
-  backing up stack rooted at 60ab8a6c8e65
   remote: * DEBG Session with Mononoke started * (glob)
+  backing up stack rooted at 60ab8a6c8e65
   finished in * seconds (glob)
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()

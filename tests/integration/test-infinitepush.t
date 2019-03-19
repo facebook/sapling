@@ -128,7 +128,6 @@ Pushbackup also works
   adding aa
   $ hgmn pushbackup ssh://user@dummy/repo --debug
   starting backup* (glob)
-  backing up stack rooted at 47da8b81097c
   running * (glob)
   sending hello command
   sending between command
@@ -136,6 +135,8 @@ Pushbackup also works
   remote: * (glob)
   remote: capabilities: clienttelemetry lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
   remote: 1
+  sending known command
+  backing up stack rooted at 47da8b81097c
   2 changesets found
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
@@ -292,8 +293,8 @@ Check phases on another side (for pull command and pull -r)
   $ hg ci -m "change on top of the release"
   $ hgmn pushbackup ssh://user@dummy/repo
   starting backup* (glob)
-  backing up stack rooted at eca836c7c651
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  backing up stack rooted at eca836c7c651
   finished in * seconds (glob)
 
   $ tglogp
