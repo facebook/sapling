@@ -155,7 +155,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\edenwin64\pklib\lib;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;ProjectedFSLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;Userenv.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;ProjectedFSLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -236,6 +236,7 @@
     <ClCompile Include="utils\FileUtils.cpp" />
     <ClCompile Include="utils\Pipe.cpp" />
     <ClCompile Include="utils\Subprocess.cpp" />
+    <ClCompile Include="utils\UserInfo.cpp" />
     <ClCompile Include="utils\WinError.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -324,6 +325,7 @@
     <ClInclude Include="utils\StringConv.h" />
     <ClInclude Include="utils\Stub.h" />
     <ClInclude Include="utils\Subprocess.h" />
+    <ClInclude Include="utils\UserInfo.h" />
     <ClInclude Include="utils\WinError.h" />
   </ItemGroup>
   <ItemGroup>

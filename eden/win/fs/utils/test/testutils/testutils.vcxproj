@@ -103,7 +103,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\edenwin64\pklib\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtest.lib;gtest_main.lib;Ws2_32.lib;folly.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gtest.lib;gtest_main.lib;Ws2_32.lib;folly.lib;Userenv.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -153,11 +153,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\fs\model\Hash.cpp" />
+    <ClCompile Include="..\..\..\..\..\fs\utils\PathFuncs.cpp" />
     <ClCompile Include="..\..\FileUtils.cpp" />
+    <ClCompile Include="..\..\UserInfo.cpp" />
     <ClCompile Include="..\..\WinError.cpp" />
     <ClCompile Include="FileUtilsTest.cpp" />
     <ClCompile Include="StringConvTest.cpp" />
     <ClCompile Include="SystemErrorTest.cpp" />
+    <ClCompile Include="UserInfoTest.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

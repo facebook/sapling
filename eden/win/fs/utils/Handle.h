@@ -108,3 +108,21 @@ class HandleBase {
     }
   }
 };
+
+/*
+ * Token Handle traits. Token Handle has no defined invalid handle value. We
+ * will use nullptr as invalid handle. It would use the standard CloseHandle()
+ * function to close the handle.
+ */
+struct TokenHandleTraits {
+  using Type = HANDLE;
+
+  static Type invalidHandleValue() noexcept {
+    return nullptr;
+  }
+  static void close(Type handle) noexcept {
+    CloseHandle(handle);
+  }
+};
+
+using TokenHandle = HandleBase<TokenHandleTraits>;
