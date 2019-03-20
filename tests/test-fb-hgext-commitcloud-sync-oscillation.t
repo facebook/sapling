@@ -352,3 +352,92 @@ Put a bookmark on the new public commit
       65299708466caa8f13c05d82e76d611c183defee
       27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
+
+Ensure everything is synced
+
+  $ cd ../client1
+  $ hg pull -q
+  $ hg cloud sync -q
+  $ cd ../client2
+  $ hg pull -q
+  $ hg cloud sync -q
+
+Create a commit that was obsoleted without the commitcloud extension loaded, but is bookmarked.
+
+  $ hg hide 5 --config extensions.commitcloud=!
+  hiding commit 27ad02806080 "E"
+  1 changesets hidden
+  $ hg book --hidden -r 5 hiddenbook
+  $ tglogp -r 3::
+  x  5: 27ad02806080 draft 'E' hiddenbook
+  |
+  o  3: 449486ddff7a draft 'D'
+  |
+  ~
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+  finished in * (glob)
+  $ tglogp -r 3::
+  x  5: 27ad02806080 draft 'E' hiddenbook
+  |
+  o  3: 449486ddff7a draft 'D'
+  |
+  ~
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 4
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+      hiddenbook => 27ad028060800678c2de95fea2e826bbd4bf2c21
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c
+
+Client 1 keeps trying to upload it.
+
+  $ cd ../client1
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at 04b96a2be922
+  remote: pushing 3 commits:
+  remote:     04b96a2be922  A
+  remote:     449486ddff7a  D
+  remote:     27ad02806080  E
+  #commitcloud commits synchronized
+  finished in * (glob)
+  $ tglogp -r 3::
+  o  6: 27ad02806080 draft 'E' hiddenbook
+  |
+  o  3: 449486ddff7a draft 'D'
+  |
+  ~
+
+  $ cd ../client2
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+  finished in * (glob)
+  $ tglogp -r 3::
+  x  5: 27ad02806080 draft 'E' hiddenbook
+  |
+  o  3: 449486ddff7a draft 'D'
+  |
+  ~
+
+  $ cd ../client1
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at 04b96a2be922
+  remote: pushing 3 commits:
+  remote:     04b96a2be922  A
+  remote:     449486ddff7a  D
+  remote:     27ad02806080  E
+  #commitcloud commits synchronized
+  finished in * (glob)
+  $ tglogp -r 3::
+  o  6: 27ad02806080 draft 'E' hiddenbook
+  |
+  o  3: 449486ddff7a draft 'D'
+  |
+  ~
+
