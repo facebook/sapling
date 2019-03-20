@@ -85,6 +85,12 @@ def wraprepo(repo):
                 return super(shallowrepository, self).filectx(path, changeid, fileid)
 
         @localrepo.unfilteredmethod
+        def close(self):
+            self.fileservice.close()
+
+            return super(shallowrepository, self).close()
+
+        @localrepo.unfilteredmethod
         def commitctx(self, ctx, error=False):
             """Add a new revision to current repository.
             Revision information is passed via the context argument.

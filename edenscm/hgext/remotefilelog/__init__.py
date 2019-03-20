@@ -375,13 +375,7 @@ def cloneshallow(orig, ui, repo, *args, **opts):
 
             wrapfunction(localrepo.localrepository, "stream_in", stream_in_shallow)
 
-    try:
-        orig(ui, repo, *args, **opts)
-    finally:
-        if opts.get("shallow"):
-            for r in repos:
-                if util.safehasattr(r, "fileservice"):
-                    r.fileservice.close()
+    orig(ui, repo, *args, **opts)
 
 
 def debugdatashallow(orig, *args, **kwds):
@@ -593,19 +587,6 @@ def onetimeclientsetup(ui):
         return files
 
     wrapfunction(archival, "computefiles", computefiles)
-
-    # close cache miss server connection after the command has finished
-    def runcommand(orig, lui, repo, *args, **kwargs):
-        try:
-            return orig(lui, repo, *args, **kwargs)
-        finally:
-            # repo can be None when running in chg:
-            # - at startup, reposetup was called because serve is not norepo
-            # - a norepo command like "help" is called
-            if repo and shallowrepo.requirement in repo.requirements:
-                repo.fileservice.close()
-
-    wrapfunction(dispatch, "runcommand", runcommand)
 
     # disappointing hacks below
     templatekw.getrenamedfn = getrenamedfn
