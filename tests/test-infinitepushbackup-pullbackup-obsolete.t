@@ -47,7 +47,9 @@ Do a backup and try to restore. Make sure it doesn't fail
   $ hg --hidden book -r edb281c9cc7e2e51c382b6f254d1967fdfa5e6ff newbookonpruned
   $ hg pushbackup
   starting backup .* (re)
-  nothing to backup
+  backing up stack rooted at edb281c9cc7e
+  remote: pushing 1 commit:
+  remote:     edb281c9cc7e  tobepruned
   finished in \d+\.(\d+)? seconds (re)
 
 Restore the repo
@@ -60,5 +62,9 @@ Restore the repo
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets b75a450e74d5
-  (run 'hg update' to get a working copy)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets b75a450e74d5:edb281c9cc7e
+  (run 'hg heads' to see heads, 'hg merge' to merge)
