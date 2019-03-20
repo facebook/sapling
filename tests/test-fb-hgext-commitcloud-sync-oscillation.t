@@ -391,18 +391,14 @@ Create a commit that was obsoleted without the commitcloud extension loaded, but
       hiddenbook => 27ad028060800678c2de95fea2e826bbd4bf2c21
   heads:
       65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
-Client 1 keeps trying to upload it.
+Clients are now in sync.
 
   $ cd ../client1
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 3 commits:
-  remote:     04b96a2be922  A
-  remote:     449486ddff7a  D
-  remote:     27ad02806080  E
   #commitcloud commits synchronized
   finished in * (glob)
   $ tglogp -r 3::
@@ -427,11 +423,6 @@ Client 1 keeps trying to upload it.
   $ cd ../client1
   $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 3 commits:
-  remote:     04b96a2be922  A
-  remote:     449486ddff7a  D
-  remote:     27ad02806080  E
   #commitcloud commits synchronized
   finished in * (glob)
   $ tglogp -r 3::

@@ -583,15 +583,19 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
                 localheads = [
                     ctx.hex()
                     for ctx in unfi.set(
-                        "heads((draft() & ::%ls) + (draft() & ::%ls & not obsolete()))",
+                        "heads((draft() & ::%ls) + (draft() & ::%ls & ::%ls))",
                         newheads,
+                        localheads,
                         localsyncedheads,
                     )
                 ]
                 failedcommits = {
                     ctx.hex()
-                    for ctx in repo.set(
-                        "(draft() & ::%ls) - (draft() & ::%ls)", failedheads, localheads
+                    for ctx in unfi.set(
+                        "(draft() & ::%ls) - (draft() & ::%ls) - (draft() & ::%ls)",
+                        failedheads,
+                        newheads,
+                        localsyncedheads,
                     )
                 }
                 # Revert any bookmark updates that refer to failed commits to
@@ -1002,7 +1006,7 @@ def _forkname(ui, name, othernames):
 
 
 def _getheads(repo):
-    headsrevset = repo.set("heads(draft()) & not obsolete()")
+    headsrevset = repo.set("heads(draft() & ::(not obsolete() + bookmark()))")
     return [ctx.hex() for ctx in headsrevset]
 
 
