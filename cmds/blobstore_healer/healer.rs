@@ -4,21 +4,23 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::rate_limiter::RateLimiter;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use chrono::Duration as ChronoDuration;
+use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, prelude::*};
+use failure_ext::{err_msg, format_err, prelude::*};
 use futures::{
     future::{join_all, loop_fn, Loop},
     prelude::*,
 };
 use futures_ext::FutureExt;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-use rate_limiter::RateLimiter;
-use slog::Logger;
+use slog::{info, Logger};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 

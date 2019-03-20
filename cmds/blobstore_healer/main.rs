@@ -7,43 +7,18 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-extern crate blobstore;
-extern crate blobstore_sync_queue;
-extern crate chrono;
-extern crate clap;
-#[macro_use]
-extern crate cloned;
-extern crate cmdlib;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate glusterblob;
-extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
-extern crate manifoldblob;
-extern crate mercurial_types;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-#[macro_use]
-extern crate slog;
-extern crate sqlblob;
-extern crate tokio;
-extern crate tokio_timer;
-
 mod dummy;
 mod healer;
 mod rate_limiter;
 
+use crate::rate_limiter::RateLimiter;
 use blobstore::{Blobstore, PrefixBlobstore};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
 use cmdlib::args;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure::{err_msg, prelude::*};
+use failure_ext::{bail_msg, ensure_msg, err_msg, prelude::*};
 use futures::{
     future::{join_all, loop_fn, ok, Loop},
     prelude::*,
@@ -54,8 +29,8 @@ use healer::RepoHealer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{RemoteBlobstoreArgs, RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
-use rate_limiter::RateLimiter;
-use slog::Logger;
+use slog::{error, info, o, Logger};
+use sql::myrouter;
 use sqlblob::Sqlblob;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -141,7 +116,7 @@ fn maybe_schedule_healer_for_repo(
     .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
 
     let sync_queue: Arc<BlobstoreSyncQueue> = {
-        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(db_address, myrouter_port);
+        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(db_address.clone(), myrouter_port);
 
         if !dry_run {
             Arc::new(sync_queue)
@@ -151,25 +126,26 @@ fn maybe_schedule_healer_for_repo(
         }
     };
 
-    Ok(blobstores
-        .and_then(move |blobstores| {
-            let repo_healer = RepoHealer::new(
-                logger,
-                blobstore_sync_queue_limit,
-                RepositoryId::new(config.repoid),
-                rate_limiter,
-                sync_queue,
-                Arc::new(blobstores),
-            );
+    let heal = blobstores.and_then(move |blobstores| {
+        let repo_healer = RepoHealer::new(
+            logger,
+            blobstore_sync_queue_limit,
+            RepositoryId::new(config.repoid),
+            rate_limiter,
+            sync_queue,
+            Arc::new(blobstores),
+        );
 
-            if dry_run {
-                // TODO(luk) use a proper context here and put the logger inside of it
-                let ctx = CoreContext::test_mock();
-                repo_healer.heal(ctx).boxify()
-            } else {
-                schedule_everlasting_healing(repo_healer)
-            }
-        })
+        if dry_run {
+            // TODO(luk) use a proper context here and put the logger inside of it
+            let ctx = CoreContext::test_mock();
+            repo_healer.heal(ctx).boxify()
+        } else {
+            schedule_everlasting_healing(repo_healer)
+        }
+    });
+    Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
+        .and_then(|_| heal)
         .boxify())
 }
 

@@ -10,11 +10,11 @@
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-use slog::Logger;
+use slog::{info, Logger};
 
 #[derive(Debug)]
 pub struct DummyBlobstore<B> {

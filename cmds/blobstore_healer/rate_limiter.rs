@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Error;
+use cloned::cloned;
+use failure_ext::Error;
 use futures::{
     future::{self, lazy, IntoFuture},
     prelude::*,
