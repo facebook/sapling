@@ -44,13 +44,7 @@ Check that logging works for b2x:infinitepushscratchbookmarks part
   $ cd client
   $ hg pushbackup
   starting backup .* (re)
-  backing up stack rooted at 7e6a6fd9c7c8
-  remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: pushing 1 commit:
-  remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: index \(eventtype=start, hostname=.+, newheadscount=0, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: index \(elapsedms=.+, eventtype=success, hostname=.+, newheadscount=0, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  all commits are found remotely
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   finished in \d+\.(\d+)? seconds (re)

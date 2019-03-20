@@ -159,11 +159,6 @@ Check that correct path is used in pushbackup
   $ hg book badpathbookmark
   $ hg --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo pushbackup
   starting backup .* (re)
-  backing up stack rooted at 89ecc969c0ac
-  push failed: repository $TESTTMP/backupsource/badpath not found
-  retrying push with discovery
-  push of head 89ecc969c0ac failed: repository $TESTTMP/backupsource/badpath not found
-  finished in \d+\.(\d+)? seconds (re)
   abort: repository $TESTTMP/backupsource/badpath not found!
   [255]
   $ hg pushbackup anotherpath --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo

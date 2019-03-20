@@ -113,7 +113,5 @@ Download scratch commit. It also downloads a few public commits
 Run pushbackup and make sure only scratch commit is backed up.
   $ hg pushbackup
   starting backup * (glob)
-  backing up stack rooted at ce87a066ebc2
-  remote: pushing 1 commit:
-  remote:     ce87a066ebc2  scratch
+  all commits are found remotely
   finished in * (glob)

@@ -204,10 +204,7 @@ Obsolete a head, make sure backup happens
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg pushbackup
   starting backup .* (re)
-  backing up stack rooted at 667453c0787e
-  remote: pushing 2 commits:
-  remote:     667453c0787e  newhead2
-  remote:     773a3ba2e7c2  newcommit
+  all commits are found remotely
   finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c (re)
@@ -320,15 +317,6 @@ Backup to different path
   $ hg book somebook
   $ hg --config paths.default=brokenpath pushbackup
   starting backup .* (re)
-  backing up stack rooted at 94a60f5ad8b2
-  push failed: repository $TESTTMP/client/brokenpath not found
-  retrying push with discovery
-  push of head d5609f7fa633 failed: repository $TESTTMP/client/brokenpath not found
-  backing up stack rooted at 3a30e220fe42
-  push failed: repository $TESTTMP/client/brokenpath not found
-  retrying push with discovery
-  push of head 3a30e220fe42 failed: repository $TESTTMP/client/brokenpath not found
-  finished in \d+\.(\d+)? seconds (re)
   abort: repository $TESTTMP/client/brokenpath not found!
   [255]
   $ hg pushbackup nondefault --traceback
@@ -436,9 +424,6 @@ Test isbackedup command
   backing up stack rooted at cf2adfba1469
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
-  backing up stack rooted at 6c4f4b30ae4c
-  remote: pushing 1 commit:
-  remote:     6c4f4b30ae4c  headtwo
   finished in \d+\.(\d+)? seconds (re)
   $ hg isbackedup
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
@@ -486,9 +471,7 @@ new full backup should be made.
   finished in \d+\.(\d+)? seconds (re)
   $ hg pushbackup --config infinitepushbackup.backupgeneration=1
   starting backup .* (re)
-  backing up stack rooted at cf2adfba1469
-  remote: pushing 1 commit:
-  remote:     cf2adfba1469  headone
+  all commits are found remotely
   finished in \d+\.(\d+)? seconds (re)
 
 Next backup with the same backup generation value should not trigger full backup
@@ -510,18 +493,14 @@ Delete infinitepushbackupstate and set backupgeneration. Make sure it doesn't fa
   $ rm -r .hg/infinitepushbackups
   $ hg pushbackup --config infinitepushbackup.backupgeneration=2
   starting backup * (glob)
-  backing up stack rooted at cf2adfba1469
-  remote: pushing 1 commit:
-  remote:     cf2adfba1469  headone
+  all commits are found remotely
   finished in * seconds (glob)
 
 Test hostname option
   $ rm -r .hg/infinitepushbackups
   $ hg pushbackup --config infinitepushbackup.hostname=hostname
   starting backup * (glob)
-  backing up stack rooted at cf2adfba1469
-  remote: pushing 1 commit:
-  remote:     cf2adfba1469  headone
+  all commits are found remotely
   finished in \d+\.(\d+)? seconds (re)
   $ scratchbookmarks | grep test/hostname
   infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
@@ -532,9 +511,7 @@ Malformed backup state file
   $ hg pushbackup
   starting backup * (glob)
   corrupt file: infinitepushbackups/infinitepushbackupstate* (No JSON object could be decoded) (glob)
-  backing up stack rooted at cf2adfba1469
-  remote: pushing 1 commit:
-  remote:     cf2adfba1469  headone
+  all commits are found remotely
   finished in * seconds (glob)
 
 Run command that creates multiple transactions. Make sure that just one backup is started

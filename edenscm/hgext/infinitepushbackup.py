@@ -882,6 +882,8 @@ def _dobackup(ui, repo, dest, **opts):
             )
             if backedup
         }
+        if len(headstobackup) == len(backedupheadsremote):
+            ui.status(_("all commits are found remotely\n"))
 
     newheads, failedheads = infinitepush.pushbackupbundlestacks(
         ui, repo, getconnection, headstobackup - backedupheadsremote
