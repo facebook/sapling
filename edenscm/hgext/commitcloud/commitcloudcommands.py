@@ -475,6 +475,10 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
     pushrevspec = calcpushrevfilter(ui, repo, workspacename, opts)
     synced = False
     pushfailures = set()
+    prevsyncversion = lastsyncstate.version
+    prevsyncheads = lastsyncstate.heads
+    prevsyncbookmarks = lastsyncstate.bookmarks
+    prevsynctime = lastsyncstate.lastupdatetime or 0
     while not synced:
         if cloudrefs.version != fetchversion:
             _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage)
@@ -641,6 +645,21 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             newomittedbookmarks = list(
                 set(newcloudbookmarks.keys()) - set(localbookmarks.keys())
             )
+
+            if (
+                prevsyncversion == lastsyncstate.version - 1
+                and prevsyncheads == newcloudheads
+                and prevsyncbookmarks == newcloudbookmarks
+                and prevsynctime > time.time() - 60
+            ):
+                raise commitcloudcommon.SynchronizationError(
+                    ui,
+                    _(
+                        "oscillating commit cloud workspace detected.\n"
+                        "check for commits that are visible in one repo but hidden in another,\n"
+                        "and hide or unhide those commits in all places."
+                    ),
+                )
 
             # Update the cloud heads, bookmarks and obsmarkers.
             commitcloudutil.writesyncprogress(

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 # Standard Library
 import hashlib
 import json
+import time
 
 from edenscm.mercurial.i18n import _
 
@@ -60,6 +61,7 @@ class SyncState(object):
                 ]
                 self.maxage = data.get("maxage", None)
                 self.remotepath = data.get("remotepath", None)
+                self.lastupdatetime = data.get("lastupdatetime", None)
         else:
             self.version = 0
             self.heads = []
@@ -68,6 +70,7 @@ class SyncState(object):
             self.omittedbookmarks = []
             self.maxage = None
             self.remotepath = None
+            self.lastupdatetime = None
 
     def update(
         self,
@@ -87,6 +90,7 @@ class SyncState(object):
             "omittedbookmarks": newomittedbookmarks,
             "maxage": newmaxage,
             "remotepath": remotepath,
+            "lastupdatetime": time.time(),
         }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
             json.dump(data, f)
