@@ -49,7 +49,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.error import LookupError
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm.mercurial.node import hex, nullid
 from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
 from git_handler import GitHandler
 
@@ -336,8 +336,11 @@ def gitupdatemeta(ui, repo):
     with repo.wlock(), repo.lock():
         stack = repo.heads()
         githandler = repo.githandler
+        parents = repo.changelog.parents
+        clrevision = repo.changelog.changelogrevision
 
         seen = set(stack)
+        seen.add(nullid)
         while stack:
             node = stack.pop()
             hgsha = hex(node)
@@ -345,15 +348,17 @@ def gitupdatemeta(ui, repo):
 
             # If the gitsha is not already known, add it if we can
             if gitsha is None:
-                ctx = repo[node]
-                gitsha = ctx.extra().get("convert_revision")
+                gitsha = None
+                commitdata = clrevision(node)
+                if "convert_revision" in commitdata._rawextra:
+                    gitsha = commitdata.extra.get("convert_revision")
 
-                # If there is no git sha, it may be a local commit. Just walk past
-                # it.
-                if gitsha:
-                    githandler.map_set(gitsha, hgsha)
-                for parent in ctx.parents():
-                    pnode = parent.node()
+                    # If there is no git sha, it may be a local commit. Just walk past
+                    # it.
+                    if gitsha:
+                        githandler.map_set(gitsha, hgsha)
+
+                for pnode in parents(node):
                     if pnode not in seen:
                         seen.add(pnode)
                         stack.append(pnode)
