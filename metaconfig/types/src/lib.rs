@@ -101,11 +101,11 @@ impl RepoConfig {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 /// Is the repo read-only?
 pub enum RepoReadOnly {
     /// This repo is read-only and should not accept pushes or other writes
-    ReadOnly,
+    ReadOnly(String),
     /// This repo should accept writes.
     ReadWrite,
 }

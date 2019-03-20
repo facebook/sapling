@@ -873,7 +873,7 @@ impl HgCommands for RepoClient {
         self.repo
             .readonly()
             // Assume read only if we have an error.
-            .or_else(|_| ok(RepoReadOnly::ReadOnly))
+            .or_else(|_| ok(RepoReadOnly::ReadOnly("Failed to fetch repo lock status".to_string())))
             .and_then(move |read_write| {
                 let ctx = client.prepared_ctx(ops::UNBUNDLE, None);
                 let mut scuba_logger = ctx.scuba().clone();

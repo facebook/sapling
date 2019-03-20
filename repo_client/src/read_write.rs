@@ -17,6 +17,9 @@ use sql::mysql_async::{
 
 use metaconfig_types::RepoReadOnly;
 
+static DEFAULT_MSG: &str = "Defaulting to locked as the lock state isn't initialised for this repo";
+static DB_MSG: &str = "Repo is locked in DB";
+
 #[derive(Clone)]
 enum HgMononokeReadWrite {
     NoWrite,
@@ -105,10 +108,10 @@ impl RepoReadWriteFetcher {
                 match rows.first() {
                     Some(row) => match row {
                         (HgMononokeReadWrite::MononokeWrite,) => RepoReadOnly::ReadWrite,
-                        _ => RepoReadOnly::ReadOnly,
+                        _ => RepoReadOnly::ReadOnly(DB_MSG.to_string()),
                     },
                     // The repo state hasn't been initialised yet, so let's be cautious.
-                    None => RepoReadOnly::ReadOnly,
+                    None => RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string()),
                 }
             })
             .boxify()
@@ -117,11 +120,13 @@ impl RepoReadWriteFetcher {
     pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
         if self.read_connection.is_some() {
             match self.readonly_config {
-                RepoReadOnly::ReadOnly => ok(RepoReadOnly::ReadOnly).boxify(),
+                RepoReadOnly::ReadOnly(ref reason) => {
+                    ok(RepoReadOnly::ReadOnly(reason.clone())).boxify()
+                }
                 RepoReadOnly::ReadWrite => self.query_read_write_state().boxify(),
             }
         } else {
-            ok(self.readonly_config).boxify()
+            ok(self.readonly_config.clone()).boxify()
         }
     }
 }
@@ -133,6 +138,8 @@ mod test {
     use metaconfig_types::RepoReadOnly;
     use metaconfig_types::RepoReadOnly::*;
     use sql::rusqlite::Connection as SqliteConnection;
+
+    static CONFIG_MSG: &str = "Set by config option";
 
     queries! {
         write InsertState(values: (repo: str, state: HgMononokeReadWrite)) {
@@ -163,8 +170,12 @@ mod test {
 
     #[test]
     fn test_readonly_config_no_sqlite() {
-        let fetcher = RepoReadWriteFetcher::new(ReadOnly, "repo".to_string());
-        assert_eq!(fetcher.readonly().wait().unwrap(), ReadOnly);
+        let fetcher =
+            RepoReadWriteFetcher::new(ReadOnly(CONFIG_MSG.to_string()), "repo".to_string());
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(CONFIG_MSG.to_string())
+        );
     }
 
     #[test]
@@ -175,15 +186,23 @@ mod test {
 
     #[test]
     fn test_readonly_config_with_sqlite() {
-        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadOnly, "repo".to_string()).unwrap();
-        assert_eq!(fetcher.readonly().wait().unwrap(), ReadOnly);
+        let fetcher =
+            RepoReadWriteFetcher::with_sqlite(ReadOnly(CONFIG_MSG.to_string()), "repo".to_string())
+                .unwrap();
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(CONFIG_MSG.to_string())
+        );
     }
 
     #[test]
     fn test_readwrite_with_sqlite() {
         let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
         // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
-        assert_eq!(fetcher.readonly().wait().unwrap(), ReadOnly);
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
 
         InsertState::query(
             &fetcher.get_connection().unwrap(),
@@ -201,14 +220,20 @@ mod test {
         .wait()
         .unwrap();
 
-        assert_eq!(fetcher.readonly().wait().unwrap(), ReadOnly);
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(DB_MSG.to_string())
+        );
     }
 
     #[test]
     fn test_readwrite_with_sqlite_other_repo() {
         let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
         // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
-        assert_eq!(fetcher.readonly().wait().unwrap(), ReadOnly);
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
 
         InsertState::query(
             &fetcher.get_connection().unwrap(),
@@ -217,7 +242,10 @@ mod test {
         .wait()
         .unwrap();
 
-        assert_eq!(fetcher.readonly().wait().unwrap(), ReadOnly);
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
 
         InsertState::query(
             &fetcher.get_connection().unwrap(),

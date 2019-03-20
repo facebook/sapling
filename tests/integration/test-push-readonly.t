@@ -78,9 +78,11 @@ create new commit in repo2 and check that push fails
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   remote: Command failed
   remote:   Error:
-  remote:     Repo is marked as read-only
+  remote:     Repo is marked as read-only: Set by config option
   remote:   Root cause:
-  remote:     RepoReadOnly
+  remote:     RepoReadOnly(
+  remote:         "Set by config option"
+  remote:     )
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

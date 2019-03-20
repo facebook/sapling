@@ -376,7 +376,7 @@ impl RepoConfigs {
         let hash_validation_percentage = this.hash_validation_percentage.unwrap_or(0);
 
         let readonly = if this.readonly.unwrap_or(false) {
-            RepoReadOnly::ReadOnly
+            RepoReadOnly::ReadOnly("Set by config option".to_string())
         } else {
             RepoReadOnly::ReadWrite
         };

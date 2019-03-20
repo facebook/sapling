@@ -122,12 +122,12 @@ pub fn repo_handlers(
                         ref write_lock_db_address,
                         ..
                     } => RepoReadWriteFetcher::with_myrouter(
-                        config.readonly,
+                        config.readonly.clone(),
                         reponame.clone(),
                         write_lock_db_address,
                         myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
                     ),
-                    _ => RepoReadWriteFetcher::new(config.readonly, reponame.clone()),
+                    _ => RepoReadWriteFetcher::new(config.readonly.clone(), reponame.clone()),
                 };
 
                 let repo = MononokeRepo::new(

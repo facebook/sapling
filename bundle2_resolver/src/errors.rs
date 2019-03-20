@@ -32,6 +32,6 @@ pub enum ErrorKind {
         _0, _1
     )]
     PushrebaseNoCommonRoot(Bookmark, HashSet<ChangesetId>),
-    #[fail(display = "Repo is marked as read-only")]
-    RepoReadOnly,
+    #[fail(display = "Repo is marked as read-only: {}", _0)]
+    RepoReadOnly(String),
 }

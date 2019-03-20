@@ -94,10 +94,13 @@ pub fn resolve(
                                 == Some("true".into());
                         }
                         // force the readonly check
-                        if readonly == RepoReadOnly::ReadOnly && !bypass_readonly {
-                            future::err(ErrorKind::RepoReadOnly.into()).left_future()
-                        } else {
-                            future::ok((maybe_pushvars, maybe_commonheads, bundle2)).right_future()
+                        match (readonly, bypass_readonly) {
+                            (RepoReadOnly::ReadOnly(reason), false) => {
+                                future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
+                            },
+                            _ => {
+                                future::ok((maybe_pushvars, maybe_commonheads, bundle2)).right_future()
+                            }
                         }
                     },
                 )
