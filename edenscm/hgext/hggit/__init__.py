@@ -40,6 +40,7 @@ from edenscm.mercurial import (
     hg,
     localrepo,
     manifest,
+    phases,
     pycompat,
     revset,
     scmutil,
@@ -337,7 +338,10 @@ def gitupdatemeta(ui, repo):
         stack = repo.heads()
         githandler = repo.githandler
         parents = repo.changelog.parents
+        clrev = repo.changelog.rev
         clrevision = repo.changelog.changelogrevision
+        phase = repo._phasecache.phase
+        public = phases.public
 
         seen = set(stack)
         seen.add(nullid)
@@ -358,10 +362,11 @@ def gitupdatemeta(ui, repo):
                     if gitsha:
                         githandler.map_set(gitsha, hgsha)
 
-                for pnode in parents(node):
-                    if pnode not in seen:
-                        seen.add(pnode)
-                        stack.append(pnode)
+                if gitsha or phase(repo, clrev(node)) != public:
+                    for pnode in parents(node):
+                        if pnode not in seen:
+                            seen.add(pnode)
+                            stack.append(pnode)
 
         githandler.save_map(githandler.map_file)
 
