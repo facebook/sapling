@@ -1025,7 +1025,9 @@ def _forkname(ui, name, othernames):
 
 
 def _getheads(repo):
-    headsrevset = repo.set("heads(draft() & ::(not obsolete() + bookmark()))")
+    headsrevset = repo.set(
+        "heads(draft() & ::((draft() & not obsolete()) + bookmark()))"
+    )
     return [ctx.hex() for ctx in headsrevset]
 
 
