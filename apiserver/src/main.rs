@@ -74,13 +74,14 @@ struct GetRawFileParams {
 fn get_raw_file(
     (state, params): (State<HttpServerState>, Path<GetRawFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::GetRawFile {
-                revision: Revision::CommitHash(params.changeset.clone()),
-                path: params.path.clone(),
+                revision: Revision::CommitHash(params.changeset),
+                path: params.path,
             },
         },
     )
@@ -95,12 +96,13 @@ struct GetHgFileParams {
 fn get_hg_file(
     (state, params): (State<HttpServerState>, Path<GetHgFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::GetHgFile {
-                filenode: params.filenode.clone(),
+                filenode: params.filenode,
             },
         },
     )
@@ -120,13 +122,14 @@ fn get_file_history(
         Path<GetFileHistoryParams>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::GetFileHistory {
-                filenode: params.filenode.clone(),
-                path: params.path.clone(),
+                filenode: params.filenode,
+                path: params.path,
                 depth: req.query().get("depth").and_then(|d| d.parse().ok()),
             },
         },
@@ -143,6 +146,7 @@ struct IsAncestorParams {
 fn is_ancestor(
     (state, params): (State<HttpServerState>, Path<IsAncestorParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     let ancestor_parsed = percent_decode(params.ancestor.as_bytes())
         .decode_utf8_lossy()
         .to_string();
@@ -152,7 +156,7 @@ fn is_ancestor(
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::IsAncestor {
                 ancestor: Revision::CommitHash(ancestor_parsed),
                 descendant: Revision::CommitHash(descendant_parsed),
@@ -171,13 +175,14 @@ struct ListDirectoryParams {
 fn list_directory(
     (state, params): (State<HttpServerState>, Path<ListDirectoryParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::ListDirectory {
-                revision: Revision::CommitHash(params.changeset.clone()),
-                path: params.path.clone(),
+                revision: Revision::CommitHash(params.changeset),
+                path: params.path,
             },
         },
     )
@@ -192,13 +197,12 @@ struct GetBlobParams {
 fn get_blob_content(
     (state, params): (State<HttpServerState>, Path<GetBlobParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
-            kind: MononokeRepoQuery::GetBlobContent {
-                hash: params.hash.clone(),
-            },
+            repo: params.repo,
+            kind: MononokeRepoQuery::GetBlobContent { hash: params.hash },
         },
     )
 }
@@ -212,13 +216,12 @@ struct GetTreeParams {
 fn get_tree(
     (state, params): (State<HttpServerState>, Path<GetTreeParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
-            kind: MononokeRepoQuery::GetTree {
-                hash: params.hash.clone(),
-            },
+            repo: params.repo,
+            kind: MononokeRepoQuery::GetTree { hash: params.hash },
         },
     )
 }
@@ -232,12 +235,13 @@ struct GetChangesetParams {
 fn get_changeset(
     (state, params): (State<HttpServerState>, Path<GetChangesetParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::GetChangeset {
-                revision: Revision::CommitHash(params.hash.clone()),
+                revision: Revision::CommitHash(params.hash),
             },
         },
     )
@@ -252,13 +256,12 @@ struct DownloadLargeFileParams {
 fn download_large_file(
     (state, params): (State<HttpServerState>, Path<DownloadLargeFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
-            kind: MononokeRepoQuery::DownloadLargeFile {
-                oid: params.oid.clone(),
-            },
+            repo: params.repo,
+            kind: MononokeRepoQuery::DownloadLargeFile { oid: params.oid },
         },
     )
 }
@@ -276,6 +279,7 @@ fn lfs_batch(
         HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     let host_url = req.headers().get(header::HOST);
     let scheme = if state.use_ssl {
         Scheme::HTTPS
@@ -302,7 +306,7 @@ fn lfs_batch(
             repo: params.repo.clone(),
             kind: MononokeRepoQuery::LfsBatch {
                 req: req_json.into_inner(),
-                repo_name: params.repo.clone(),
+                repo_name: params.repo,
                 lfs_url,
             },
         },
@@ -319,12 +323,13 @@ struct UploadLargeFileParams {
 fn upload_large_file(
     (state, body, params): (State<HttpServerState>, Bytes, Path<UploadLargeFileParams>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
     state.mononoke.send_query(
         prepare_fake_ctx(&state),
         MononokeQuery {
-            repo: params.repo.clone(),
+            repo: params.repo,
             kind: MononokeRepoQuery::UploadLargeFile {
-                oid: params.oid.clone(),
+                oid: params.oid,
                 body,
             },
         },
