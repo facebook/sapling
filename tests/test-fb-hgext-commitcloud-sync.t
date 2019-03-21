@@ -239,29 +239,12 @@ Try to push selectively
   $ hg amend --rebase -m "`hg descr | head -n1` amended"
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
 
-  $ hg cloud sync --push-revs 'public() and draft()'
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud push filter: list of unsynced local heads that will be skipped
-      48610b1a7ec03148    commit2
-  #commitcloud commits synchronized
-  finished in * (glob)
-
-  $ hg cloud sync --push-revs '.'
+  $ hg cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     48610b1a7ec0  commit2
-  #commitcloud commits synchronized
-  finished in * (glob)
-
-  $ hg cloud sync --push-revs 48610b1a7ec0
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
-  finished in * (glob)
-
-  $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
   finished in * (glob)
 

@@ -95,17 +95,6 @@ Configs::
     # Use secrets_tool for token backup between machines
     use_secrets_tool = true
 
-    # Default workspace only! From all new commits skip other users commits
-    # This includes all the stacks where at least one commit is user's own
-    # Caution: using this option may leave some local commits unbacked up
-    user_commits_only = true
-
-    # Default workspace only! From all new commits skip those doesn't match the revset
-    # Please, use only 'static' revsets meaning that if a commit doesn't match it will never match
-    # Examples are: "date('>Apr 01 2018')"
-    # Caution: using this option may leave some local commits unbacked up
-    custom_push_revs = draft()
-
     # Maximum age (in days) of commits to pull when syncing
     max_sync_age = 14
 
