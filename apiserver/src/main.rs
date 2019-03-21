@@ -559,10 +559,9 @@ fn main() -> Fallible<()> {
                 .resource("/getfilehistory/{filenode}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_file_history)
                 })
-                .resource(
-                    "/is_ancestor/{ancestor}/{descendant}",
-                    |r| r.method(http::Method::GET).with_async(is_ancestor),
-                )
+                .resource("/is_ancestor/{ancestor}/{descendant}", |r| {
+                    r.method(http::Method::GET).with_async(is_ancestor)
+                })
                 .resource("/list/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(list_directory)
                 })

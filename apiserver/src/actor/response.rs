@@ -72,7 +72,9 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => Ok(binary_response(content)),
+            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => {
+                Ok(binary_response(content))
+            }
             GetFileHistory { history } => Ok(streaming_response(history)),
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),

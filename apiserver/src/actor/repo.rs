@@ -301,11 +301,16 @@ impl MononokeRepo {
             .map({
                 cloned!(self.sha1_cache);
                 move |tree| {
-                join_all(tree.list().map(
-                    move |entry| {
-                        EntryWithSizeAndContentHash::materialize_future(ctx.clone(), repoid.clone(), entry, sha1_cache.clone())
+                    join_all(tree.list().map(move |entry| {
+                        EntryWithSizeAndContentHash::materialize_future(
+                            ctx.clone(),
+                            repoid.clone(),
+                            entry,
+                            sha1_cache.clone(),
+                        )
                     }))
-            }})
+                }
+            })
             .flatten()
             .map(|files| MononokeRepoResponse::GetTree { files })
             .from_err()
@@ -409,7 +414,11 @@ impl MononokeRepo {
         match msg {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
             GetHgFile { filenode } => self.get_hg_file(ctx, filenode),
-            GetFileHistory { filenode, path, depth } => self.get_file_history(ctx, filenode, path, depth),
+            GetFileHistory {
+                filenode,
+                path,
+                depth,
+            } => self.get_file_history(ctx, filenode, path, depth),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             GetTree { hash } => self.get_tree(ctx, hash),
