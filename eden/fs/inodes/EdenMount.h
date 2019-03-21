@@ -15,6 +15,7 @@
 #include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
 #include <chrono>
 #include <memory>
@@ -172,6 +173,9 @@ class EdenMount {
    * * The future returned by getFuseCompletionFuture() is fulfilled.
    *
    * If startFuse() is in progress, unmount() can cancel startFuse().
+   *
+   * If startFuse() is in progress, unmount() might wait for startFuse() to
+   * finish before calling umount(2).
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 
@@ -622,15 +626,20 @@ class EdenMount {
   folly::Future<folly::File> fuseMount();
 
   /**
-   * Check if unmount() was called.
+   * Signal to unmount() that fuseMount() or takeoverFuse() has started.
    *
-   * If unmount() was called in the past, throw EdenMountCancelled. Otherwise,
-   * do nothing.
+   * beginMount() returns a reference to
+   * *mountingUnmountingState_->fuseMountPromise. To signal that the fuseMount()
+   * has completed, set the promise's value (or exception) without
+   * mountingUnmountingState_'s lock held.
+   *
+   * If unmount() was called in the past, beginMount() throws
+   * EdenMountCancelled.
    *
    * Preconditions:
    * - `beginMount()` has not been called before.
    */
-  void beginMount();
+  FOLLY_NODISCARD folly::SharedPromise<folly::Unit>& beginMount();
 
   /**
    * Construct the channel_ member variable.
@@ -745,17 +754,39 @@ class EdenMount {
   folly::Synchronized<struct timespec> lastCheckoutTime_;
 
   struct MountingUnmountingState {
+    bool fuseMountStarted() const noexcept;
+
     /**
-     * Whether or not fuseUnmount has been called.
+     * Whether or not the mount(2) syscall has been called (via fuseMount).
      *
-     * * false: fuseUnmount has not been called yet.
-     * * true: fuseUnmount was called. fuseUnmount could be in progress, or
-     *   fuseUnmount could have succeeded or failed.
+     * Use this promise to wait for fuseMount to finish.
+     *
+     * * Empty optional: fuseMount/mount(2) has not been called yet.
+     *   (startFuse/fuseMount can be called.)
+     * * Unfulfilled: fuseMount is in progress.
+     * * Fulfilled with Unit: fuseMount completed successfully (via startFuse),
+     *   or we took over the FUSE device from another process (via
+     *   takeoverFuse). (startFuse or takeoverFuse can still be in progress.)
+     * * Fulfilled with error: fuseMount failed, or fuseMount was cancelled.
+     *
+     * The state of this variable might not reflect whether the file system is
+     * mounted. For example, if this promise is fulfilled with Unit, then
+     * umount(8) is called by another process, the file system will not be
+     * mounted.
+     */
+    std::optional<folly::SharedPromise<folly::Unit>> fuseMountPromise;
+
+    /**
+     * Whether or not unmount has been called.
+     *
+     * * false: unmount has not been called yet.
+     * * true: unmount was called. unmount could be in progress (e.g. waiting
+     *   for fuseMount to finish), or unmount could have succeeded or failed.
      *
      * The state of this variable might not reflect whether the file system is
      * unmounted.
      */
-    bool fuseUnmountStarted{false};
+    bool unmountStarted{false};
   };
 
   folly::Synchronized<MountingUnmountingState> mountingUnmountingState_;

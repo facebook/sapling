@@ -492,8 +492,21 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
 
 folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
-    mountingUnmountingState_.wlock()->fuseUnmountStarted = true;
-    return serverState_->getPrivHelper()->fuseUnmount(getPath().stringPiece());
+    auto mountingUnmountingState = mountingUnmountingState_.wlock();
+    mountingUnmountingState->unmountStarted = true;
+    auto mountFuture = mountingUnmountingState->fuseMountStarted()
+        ? mountingUnmountingState->fuseMountPromise->getFuture()
+        : folly::makeFuture();
+    mountingUnmountingState.unlock();
+
+    return std::move(mountFuture)
+        .thenTry([this](folly::Try<folly::Unit>&& mountResult) {
+          if (mountResult.hasException()) {
+            return folly::makeFuture();
+          }
+          return serverState_->getPrivHelper()->fuseUnmount(
+              getPath().stringPiece());
+        });
   });
 }
 
@@ -874,7 +887,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   transitionState(State::INITIALIZED, State::STARTING);
 
   try {
-    beginMount();
+    beginMount().setValue();
 
     createFuseChannel(std::move(takeoverData.fd));
     auto fuseCompleteFuture =
@@ -887,32 +900,68 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 }
 
 folly::Future<folly::File> EdenMount::fuseMount() {
-  return folly::makeFutureWith([&] { beginMount(); })
-      .thenValue([this](folly::Unit&&) {
+  return folly::makeFutureWith([&] { return &beginMount(); })
+      .thenValue([this](folly::SharedPromise<folly::Unit>* mountPromise) {
         AbsolutePath mountPath = getPath();
         return serverState_->getPrivHelper()
             ->fuseMount(mountPath.stringPiece())
-            .thenValue(
-                [mountPath,
-                 this](folly::File&& fuseDevice) -> folly::Future<folly::File> {
-                  if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
+            .thenTry(
+                [mountPath, mountPromise, this](
+                    folly::Try<folly::File>&& fuseDevice)
+                    -> folly::Future<folly::File> {
+                  if (fuseDevice.hasException()) {
+                    mountPromise->setException(fuseDevice.exception());
+                    return folly::makeFuture<folly::File>(
+                        fuseDevice.exception());
+                  }
+                  if (mountingUnmountingState_.rlock()->unmountStarted) {
+                    fuseDevice->close();
                     return serverState_->getPrivHelper()
                         ->fuseUnmount(mountPath.stringPiece())
-                        .thenValue([mountPath](folly::Unit&&) {
-                          return folly::makeFuture<folly::File>(
-                              FuseDeviceUnmountedDuringInitialization{
-                                  mountPath});
+                        .thenError(
+                            folly::tag<std::exception>,
+                            [](std::exception&& unmountError) {
+                              // TODO(strager): Should we make
+                              // EdenMount::unmount() also fail with the same
+                              // exception?
+                              XLOG(ERR)
+                                  << "fuseMount was cancelled, but rollback (fuseUnmount) failed: "
+                                  << unmountError.what();
+                              throw unmountError;
+                            })
+                        .thenValue([mountPath, mountPromise](folly::Unit&&) {
+                          auto error = FuseDeviceUnmountedDuringInitialization{
+                              mountPath};
+                          mountPromise->setException(error);
+                          return folly::makeFuture<folly::File>(error);
                         });
                   }
-                  return folly::makeFuture(std::move(fuseDevice));
+
+                  mountPromise->setValue();
+                  return folly::makeFuture(std::move(fuseDevice).value());
                 });
       });
 }
 
-void EdenMount::beginMount() {
-  if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
+folly::SharedPromise<folly::Unit>& EdenMount::beginMount() {
+  auto mountingUnmountingState = mountingUnmountingState_.wlock();
+  if (mountingUnmountingState->fuseMountPromise.has_value()) {
+    EDEN_BUG() << __func__ << " unexpectedly called more than once";
+  }
+  if (mountingUnmountingState->unmountStarted) {
     throw EdenMountCancelled{};
   }
+  mountingUnmountingState->fuseMountPromise.emplace();
+  // N.B. Return a reference to the lock-protected fuseMountPromise member,
+  // then release the lock. This is safe for two reasons:
+  //
+  // * *fuseMountPromise will never be destructed (e.g. by calling
+  //   std::optional<>::reset()) or reassigned. (fuseMountPromise never goes
+  //   from `has_value() == true` to `has_value() == false`.)
+  //
+  // * folly::SharedPromise is self-synchronizing; getFuture() can be called
+  //   concurrently with setValue()/setException().
+  return *mountingUnmountingState->fuseMountPromise;
 }
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {
@@ -1025,6 +1074,10 @@ Future<Unit> ensureDirectoryExistsHelper(
 Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
   auto [childName, rest] = splitFirst(fromRoot);
   return ensureDirectoryExistsHelper(getRootInode(), childName, rest);
+}
+
+bool EdenMount::MountingUnmountingState::fuseMountStarted() const noexcept {
+  return fuseMountPromise.has_value();
 }
 
 EdenMountCancelled::EdenMountCancelled()
