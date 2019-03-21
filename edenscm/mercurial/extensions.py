@@ -76,6 +76,7 @@ DEFAULT_EXTENSIONS = {
     "githelp",
     "mergedriver",
     "progressfile",
+    "sampling",
     "simplecache",
 }
 

@@ -268,6 +268,8 @@ Test extension help:
        progressfile  allows users to have JSON progress bar information written
                      to a path
        rebase        command to move sets of revisions to a different ancestor
+       eden          accelerated hg functionality in Eden checkouts (eden !)
+       sampling      (no help text available)
        simplecache
   
       Disabled extensions:
@@ -298,7 +300,6 @@ Test extension help:
        disablesymlinks
                      disables symlink support when enabled
        drop          drop specified changeset from the stack
-       eden          accelerated hg functionality in Eden checkouts (eden !)
        edrecord      (no help text available)
        eol           automatically manage newlines in repository files
        extdiff       command to allow external programs to compare revisions
@@ -363,7 +364,6 @@ Test extension help:
                      (no help text available)
        reset         reset the active bookmark and working copy to a desired
                      revision
-       sampling      (no help text available)
        schemes       extend schemes with shortcuts to repository swarms
        sendunbundlereplay
                      (no help text available)
