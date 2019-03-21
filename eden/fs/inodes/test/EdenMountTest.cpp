@@ -68,8 +68,12 @@ class EdenMountDestroyDetector {
 class MockMountDelegate : public FakePrivHelper::MountDelegate {
  public:
   class MountFailed : public std::exception {};
+  class UnmountFailed : public std::exception {};
 
   FOLLY_NODISCARD folly::Future<folly::File> fuseMount() override;
+  FOLLY_NODISCARD folly::Future<folly::Unit> fuseUnmount() override;
+
+  void setMountFuseDevice(folly::File&&);
 
   void makeMountFail();
 
@@ -79,9 +83,27 @@ class MockMountDelegate : public FakePrivHelper::MountDelegate {
    */
   FOLLY_NODISCARD folly::Promise<folly::File> makeMountPromise();
 
+  /**
+   * Postconditions:
+   * - fuseUnmount().hasValue() == true
+   */
+  void makeUnmountSucceed();
+
+  void makeUnmountFail();
+
+  FOLLY_NODISCARD folly::Promise<folly::Unit> makeUnmountPromise();
+
+  FOLLY_NODISCARD bool wasFuseMountEverCalled() const noexcept;
+
+  FOLLY_NODISCARD int getFuseUnmountCallCount() const noexcept;
+  FOLLY_NODISCARD bool wasFuseUnmountEverCalled() const noexcept;
+
  private:
   folly::Future<folly::File> mountFuture_{
       folly::Future<folly::File>::makeEmpty()};
+  std::optional<folly::FutureSplitter<folly::Unit>> unmountFuture_;
+  int fuseMountCalls_{0};
+  int fuseUnmountCalls_{0};
 };
 
 class EdenMountShutdownBlocker {
@@ -808,6 +830,7 @@ testing::AssertionResult EdenMountDestroyDetector::mountIsDeleted() {
 }
 
 folly::Future<folly::File> MockMountDelegate::fuseMount() {
+  fuseMountCalls_ += 1;
   if (mountFuture_.valid()) {
     return std::move(mountFuture_);
   } else {
@@ -815,9 +838,28 @@ folly::Future<folly::File> MockMountDelegate::fuseMount() {
   }
 }
 
+folly::Future<folly::Unit> MockMountDelegate::fuseUnmount() {
+  fuseUnmountCalls_ += 1;
+  if (unmountFuture_) {
+    return unmountFuture_->getFuture();
+  } else {
+    return folly::makeFuture<folly::Unit>(UnmountFailed{});
+  }
+}
+
+void MockMountDelegate::setMountFuseDevice(folly::File&& fuseDevice) {
+  CHECK(!mountFuture_.valid())
+      << __func__ << " unexpectedly called more than once";
+  CHECK(!wasFuseMountEverCalled())
+      << __func__ << " unexpectedly called after fuseMount was called";
+  mountFuture_ = folly::makeFuture(std::move(fuseDevice));
+}
+
 void MockMountDelegate::makeMountFail() {
   CHECK(!mountFuture_.valid())
       << __func__ << " unexpectedly called more than once";
+  CHECK(!wasFuseMountEverCalled())
+      << __func__ << " unexpectedly called after fuseMount was called";
   mountFuture_ = folly::makeFuture<folly::File>(MountFailed{});
 }
 
@@ -827,6 +869,41 @@ folly::Promise<folly::File> MockMountDelegate::makeMountPromise() {
   auto promise = folly::Promise<folly::File>{};
   mountFuture_ = promise.getFuture();
   return promise;
+}
+
+void MockMountDelegate::makeUnmountSucceed() {
+  CHECK(!unmountFuture_) << __func__ << " unexpectedly called more than once";
+  CHECK(!wasFuseUnmountEverCalled())
+      << __func__ << " unexpectedly called after fuseUnmount was called";
+  unmountFuture_.emplace(folly::makeFuture());
+}
+
+void MockMountDelegate::makeUnmountFail() {
+  CHECK(!unmountFuture_) << __func__ << " unexpectedly called more than once";
+  CHECK(!wasFuseUnmountEverCalled())
+      << __func__ << " unexpectedly called after fuseUnmount was called";
+  unmountFuture_.emplace(folly::makeFuture<folly::Unit>(UnmountFailed{}));
+}
+
+folly::Promise<folly::Unit> MockMountDelegate::makeUnmountPromise() {
+  CHECK(!unmountFuture_) << __func__ << " unexpectedly called more than once";
+  CHECK(!wasFuseUnmountEverCalled())
+      << __func__ << " unexpectedly called after fuseUnmount was called";
+  auto promise = folly::Promise<folly::Unit>{};
+  unmountFuture_.emplace(promise.getFuture());
+  return promise;
+}
+
+bool MockMountDelegate::wasFuseMountEverCalled() const noexcept {
+  return fuseMountCalls_ > 0;
+}
+
+int MockMountDelegate::getFuseUnmountCallCount() const noexcept {
+  return fuseUnmountCalls_;
+}
+
+bool MockMountDelegate::wasFuseUnmountEverCalled() const noexcept {
+  return fuseUnmountCalls_ > 0;
 }
 
 EdenMountShutdownBlocker

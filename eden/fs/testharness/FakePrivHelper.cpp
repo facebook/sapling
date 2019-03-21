@@ -40,6 +40,23 @@ folly::Future<folly::File> FakeFuseMountDelegate::fuseMount() {
   return fuse_->start();
 }
 
+folly::Future<folly::Unit> FakeFuseMountDelegate::fuseUnmount() {
+  return folly::makeFutureWith([this] {
+    wasFuseUnmountEverCalled_ = true;
+    if (!fuse_->isStarted()) {
+      throw std::runtime_error(folly::to<string>(
+          "got request to unmount ",
+          mountPath_,
+          ", but this mount is not moutned"));
+    }
+    return fuse_->close();
+  });
+}
+
+bool FakeFuseMountDelegate::wasFuseUnmountEverCalled() const noexcept {
+  return wasFuseUnmountEverCalled_;
+}
+
 FakePrivHelper::MountDelegate::~MountDelegate() = default;
 
 FakePrivHelper::FakePrivHelper() {}
@@ -69,19 +86,12 @@ void FakePrivHelper::attachEventBase(folly::EventBase* /* eventBase */) {}
 void FakePrivHelper::detachEventBase() {}
 
 Future<File> FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
-  auto it = mountDelegates_.find(mountPath.str());
-  if (it == mountDelegates_.end()) {
-    throw std::range_error(folly::to<string>(
-        "got request to create FUSE mount ",
-        mountPath,
-        ", but no test FUSE endpoint defined for this path"));
-  }
-  return it->second->fuseMount();
+  return getMountDelegate(mountPath)->fuseMount();
 }
 
-Future<Unit> FakePrivHelper::fuseUnmount(folly::StringPiece /* mountPath */) {
-  return makeFuture<Unit>(
-      runtime_error("FakePrivHelper::fuseUnmount() not implemented"));
+Future<Unit> FakePrivHelper::fuseUnmount(folly::StringPiece mountPath) {
+  return folly::makeFutureWith(
+      [&] { return getMountDelegate(mountPath)->fuseUnmount(); });
 }
 
 Future<Unit> FakePrivHelper::bindMount(
@@ -110,6 +120,18 @@ Future<Unit> FakePrivHelper::setLogFile(folly::File /* logFile */) {
 
 int FakePrivHelper::stop() {
   return 0;
+}
+
+std::shared_ptr<FakePrivHelper::MountDelegate> FakePrivHelper::getMountDelegate(
+    folly::StringPiece mountPath) {
+  auto it = mountDelegates_.find(mountPath.str());
+  if (it == mountDelegates_.end()) {
+    throw std::range_error(folly::to<string>(
+        "got request to for FUSE mount ",
+        mountPath,
+        ", but no test FUSE endpoint defined for this path"));
+  }
+  return it->second;
 }
 
 } // namespace eden
