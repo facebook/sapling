@@ -21,6 +21,7 @@
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
+#include <stdexcept>
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
@@ -51,6 +52,7 @@ class Clock;
 class DiffContext;
 class EdenDispatcher;
 class FuseChannel;
+class FuseDeviceUnmountedDuringInitialization;
 class InodeDiffCallback;
 class InodeMap;
 class MountPoint;
@@ -168,6 +170,8 @@ class EdenMount {
    *
    * * The future returned by unmount() is fulfilled successfully.
    * * The future returned by getFuseCompletionFuture() is fulfilled.
+   *
+   * If startFuse() is in progress, unmount() can cancel startFuse().
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 
@@ -476,6 +480,19 @@ class EdenMount {
    * Returns a Future that will complete as soon as the filesystem has been
    * successfully mounted, or as soon as the mount fails (state transitions
    * to RUNNING or FUSE_ERROR).
+   *
+   * If unmount() is called before startFuse() is called, then startFuse()
+   * does the following:
+   *
+   * * startFuse() does not attempt to mount the filesystem
+   * * The returned Future is fulfilled with an EdenMountCancelled exception
+   *
+   * If unmount() is called while startFuse() is in progress, then startFuse()
+   * does the following:
+   *
+   * * The filesystem is unmounted (if it was mounted)
+   * * The returned Future is fulfilled with an
+   *   FuseDeviceUnmountedDuringInitialization exception
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startFuse();
 
@@ -597,6 +614,11 @@ class EdenMount {
       bool listIgnored) const;
 
   /**
+   * Open the FUSE device and mount it using the mount(2) syscall.
+   */
+  folly::Future<folly::File> fuseMount();
+
+  /**
    * Construct the channel_ member variable.
    */
   void createFuseChannel(folly::File fuseDevice);
@@ -708,6 +730,22 @@ class EdenMount {
    */
   folly::Synchronized<struct timespec> lastCheckoutTime_;
 
+  struct MountingUnmountingState {
+    /**
+     * Whether or not fuseUnmount has been called.
+     *
+     * * false: fuseUnmount has not been called yet.
+     * * true: fuseUnmount was called. fuseUnmount could be in progress, or
+     *   fuseUnmount could have succeeded or failed.
+     *
+     * The state of this variable might not reflect whether the file system is
+     * unmounted.
+     */
+    bool fuseUnmountStarted{false};
+  };
+
+  folly::Synchronized<MountingUnmountingState> mountingUnmountingState_;
+
   /**
    * The current state of the mount point.
    */
@@ -772,6 +810,11 @@ class EdenMountDeleter {
   void operator()(EdenMount* mount) {
     mount->destroy();
   }
+};
+
+class EdenMountCancelled : public std::runtime_error {
+ public:
+  explicit EdenMountCancelled();
 };
 
 } // namespace eden

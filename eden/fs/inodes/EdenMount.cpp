@@ -492,6 +492,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
 
 folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
+    mountingUnmountingState_.wlock()->fuseUnmountStarted = true;
     return serverState_->getPrivHelper()->fuseUnmount(getPath().stringPiece());
   });
 }
@@ -854,12 +855,11 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
     boost::filesystem::path boostMountPath{getPath().value()};
     boost::filesystem::create_directories(boostMountPath);
 
-    return serverState_->getPrivHelper()
-        ->fuseMount(getPath().stringPiece())
+    return fuseMount()
         .thenValue([this](folly::File&& fuseDevice) {
           createFuseChannel(std::move(fuseDevice));
-          return channel_->initialize()
-              .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+          return channel_->initialize().thenValue(
+              [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
                 fuseInitSuccessful(std::move(fuseCompleteFuture));
               });
         })
@@ -882,6 +882,28 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     transitionToFuseInitializationErrorState();
     throw;
   }
+}
+
+folly::Future<folly::File> EdenMount::fuseMount() {
+  if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
+    return folly::makeFuture<folly::File>(EdenMountCancelled{});
+  }
+  AbsolutePath mountPath = getPath();
+  return serverState_->getPrivHelper()
+      ->fuseMount(mountPath.stringPiece())
+      .thenValue(
+          [mountPath,
+           this](folly::File&& fuseDevice) -> folly::Future<folly::File> {
+            if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
+              return serverState_->getPrivHelper()
+                  ->fuseUnmount(mountPath.stringPiece())
+                  .thenValue([mountPath](folly::Unit&&) {
+                    return folly::makeFuture<folly::File>(
+                        FuseDeviceUnmountedDuringInitialization{mountPath});
+                  });
+            }
+            return folly::makeFuture(std::move(fuseDevice));
+          });
 }
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {
@@ -995,5 +1017,9 @@ Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
   auto [childName, rest] = splitFirst(fromRoot);
   return ensureDirectoryExistsHelper(getRootInode(), childName, rest);
 }
+
+EdenMountCancelled::EdenMountCancelled()
+    : std::runtime_error{"EdenMount was unmounted during initialization"} {}
+
 } // namespace eden
 } // namespace facebook
