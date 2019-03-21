@@ -36,13 +36,16 @@
 //! To give an more detailed example, suppose the "key function" is `FixedKey::read`
 //! (fixed 20-byte keys) and the key buffer ([u8]) looks like:
 //!
+//! ```plain,ignore
 //!     Offset Content
 //!     0x100: 0x12 0x34 0x56 .... (key)
 //!     0x114: 0x12 0x78 0x9a .... (another key)
+//! ```
 //!
 //! With both of the keys inserted at radix offset 0x400, the radix buffer ([u32])
 //! looks like:
 //!
+//! ```plain,ignore
 //!     Offset Content
 //!     0x400: 0 0x880 0 0 0 0 0 0 0 0 0 0 0 0 0 0 (raidx node, 16 pointers)
 //!              ^^^^^
@@ -53,6 +56,7 @@
 //!     0x480: 0 0 0 0x201 0 0 0 0x229 0 0 0 0 0 0 0 0 (another radix node)
 //!                  ^^^^^       ^^^^^
 //!        0x3: KeyId 0x100      0x7: KeyId 0x114
+//! ```
 //!
 //! Note the radix buffer does not contain full key contents (ex. it does not
 //! have 0x34 0x56 or 0x78 0x9a). It only has the ambiguous prefix (0x12) stored.
