@@ -176,6 +176,10 @@ class EdenMount {
    *
    * If startFuse() is in progress, unmount() might wait for startFuse() to
    * finish before calling umount(2).
+   *
+   * If neither startFuse() nor takeoverFuse() has been called, unmount()
+   * finishes successfully without calling umount(2). Thereafter, startFuse()
+   * and takeoverFuse() will both fail with an EdenMountCancelled exception.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 

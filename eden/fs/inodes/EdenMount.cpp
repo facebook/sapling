@@ -494,9 +494,10 @@ folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
     auto mountingUnmountingState = mountingUnmountingState_.wlock();
     mountingUnmountingState->unmountStarted = true;
-    auto mountFuture = mountingUnmountingState->fuseMountStarted()
-        ? mountingUnmountingState->fuseMountPromise->getFuture()
-        : folly::makeFuture();
+    if (!mountingUnmountingState->fuseMountStarted()) {
+      return folly::makeFuture();
+    }
+    auto mountFuture = mountingUnmountingState->fuseMountPromise->getFuture();
     mountingUnmountingState.unlock();
 
     return std::move(mountFuture)
