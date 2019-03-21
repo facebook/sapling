@@ -668,6 +668,10 @@ class localrepository(object):
         if util.safehasattr(self, "connectionpool"):
             self.connectionpool.close()
 
+        self.commitpending()
+
+    @unfilteredmethod
+    def commitpending(self):
         # If we have any pending manifests, commit them to disk.
         if "manifestlog" in self.__dict__:
             self.manifestlog.commitpending()

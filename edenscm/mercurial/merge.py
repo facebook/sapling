@@ -1598,6 +1598,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         # per-item cost at 0 in that case.
         cost = 0 if wctx.isinmemory() else 0.001
 
+        # Flush any pending data to disk before forking workers, so the workers
+        # don't all flush duplicate data.
+        repo.commitpending()
+
         # remove in parallel (must come before resolving path conflicts and
         # getting)
         workerprog = worker.worker(

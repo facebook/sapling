@@ -128,23 +128,6 @@ Test rebasing a stack of commits results in a pack with all the trees
   0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655
   8289b85c6a307a5a64ffe3bd80bd7998775c787a
   $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/20c4a2261c2e7b9985385ca10219670dc10a6aef:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  a4e2f032ee0f  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  0d05c20bb7eb  000000000000  92            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ad0a48a2ec1e  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  8289b85c6a30  000000000000  92            (missing)
-  
   .hg/store/packs/manifests/3f3f675f03d1d5c32ce32a7ca749309fb59f4c9e:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
@@ -162,6 +145,24 @@ Test rebasing a stack of commits results in a pack with all the trees
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   7a911436836f  000000000000  92            (missing)
+  
+  .hg/store/packs/manifests/b68f34f2ea3d8cf08d4504d2c8a43775645f1c1a:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  a4e2f032ee0f  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  0d05c20bb7eb  000000000000  92            (missing)
+  
+  .hg/store/packs/manifests/c550c1ee0db73784322bd380c41efc1ee2db5d0e:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ad0a48a2ec1e  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  8289b85c6a30  000000000000  92            (missing)
   
   .hg/store/packs/manifests/dcda72bf149ff3d15689406ee73e30c31a303630:
   subdir:
@@ -203,12 +204,19 @@ Test rebase two commits with same changes
   rebasing 4:6052526a0d67 "modify subdir/y #1"
   rebasing 5:79a69a1547d7 "modify subdir/y #2"
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/79a69a1547d7-fc6bc129-rebase.hg (glob)
-  $ hg debughistorypack .hg/store/packs/manifests/3ca08dde9cb570bfcaa028cef400b79c912fd49d.histidx
+  $ hg debughistorypack .hg/store/packs/manifests/387394c1cfba657cf7ac620d361317dd969a5c70.histidx .hg/store/packs/manifests/3b9ccdeefd4d12bf729e949ffdd58c25525a53e2.histidx
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  5ca06dca517c  8011431de863  000000000000  36098647e229  
+  
+  subdir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  ad0a48a2ec1e  a4e2f032ee0f  000000000000  36098647e229  
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
   8026e03c5a35  8011431de863  000000000000  904f99ba5a9e  
-  5ca06dca517c  8011431de863  000000000000  36098647e229  
   
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
