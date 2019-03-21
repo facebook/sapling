@@ -1173,7 +1173,13 @@ impl HgCommands for RepoClient {
         let validate_hash =
             rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
 
+        // Let's fetch the whole request before responding.
+        // That's prevents deadlocks, because hg client doesn't start reading the response
+        // before all the arguments were sent.
         let s = params
+            .collect()
+            .map(|v| stream::iter_ok(v.into_iter()))
+            .flatten_stream()
             .map({
                 cloned!(ctx, getpackv1_params);
                 move |(path, filenodes)| {
