@@ -71,9 +71,20 @@ DEFINE_string(
     "",
     "The path to the mercurial import helper script");
 
-DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
+#ifdef EDEN_WIN
+// We will use the known path to HG executable instead of searching in the
+// path. This would make sure we are picking the right mercurial. In future
+// we should find a chef config to lookup the path.
 
-#ifdef __APPLE__
+DEFINE_string(
+    hgPath,
+    "C:\\tools\\hg\\hg.real.exe",
+    "The path to the mercurial executable");
+#else
+DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
+#endif
+
+#if defined(__APPLE__) || defined(EDEN_WIN)
 constexpr bool kEnableHgImportSubcommand = true;
 #else
 constexpr bool kEnableHgImportSubcommand = false;
