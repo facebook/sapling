@@ -32,8 +32,8 @@ mononoke + local commit cloud backend
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ mkcommit "base_commit"
   $ hg log -T '{short(node)}\n'
   8b2dca0c8a72
@@ -44,12 +44,12 @@ create master bookmark
   $ cd $TESTTMP
 
 setup client1 and client2
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client1 --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client2 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo client1 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo client2 --noupdate
 
 blobimport
 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 
