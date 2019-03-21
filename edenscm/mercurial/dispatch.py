@@ -376,20 +376,43 @@ def dispatch(req):
     ret = None
     retmask = 255
 
-    try:
-
-        def measuredtimeslogger():
-            req.ui.log(
+    def logatexit():
+        ui = req.ui
+        if ui.logmeasuredtimes:
+            ui.log(
                 "measuredtimes",
                 "measured times",
-                **pycompat.strkwargs(req.ui._measuredtimes)
+                **pycompat.strkwargs(ui._measuredtimes)
+            )
+        if ui.metrics.stats:
+            # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
+            # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
+            metrics = {}
+            for key, value in ui.metrics.stats.items():
+                cur = metrics
+                names = key.split("_")
+                for name in names[:-1]:
+                    cur = cur.setdefault(name, {})
+                cur[names[-1]] = value
+            # pprint.pformat stablizes the output
+            from pprint import pformat
+
+            # developer config: devel.print-metrics
+            if ui.configbool("devel", "print-metrics"):
+                # Print it out.
+                msg = "%s\n" % pformat({"metrics": metrics}).replace("'", " ")
+                ui.flush()
+                ui.write_err(msg, label="ui.metrics")
+            # Write to blackbox, and sampling
+            ui.log(
+                "metrics", pformat({"metrics": metrics}, width=1024), **ui.metrics.stats
             )
 
-        if req.ui.logmeasuredtimes:
-            # by registering this exit handler here, we guarantee that it runs
-            # after other exithandlers, like the killpager one
-            req.ui.atexit(measuredtimeslogger)
+    # by registering this exit handler here, we guarantee that it runs
+    # after other exithandlers, like the killpager one
+    req.ui.atexit(logatexit)
 
+    try:
         ret = _runcatch(req)
     except error.ProgrammingError as inst:
         req.ui.warn(_("** ProgrammingError: %s\n") % inst)

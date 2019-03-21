@@ -27,6 +27,7 @@ from . import (
     encoding,
     error,
     formatter,
+    metrics,
     progress,
     pycompat,
     rcutil,
@@ -218,6 +219,8 @@ class ui(object):
 
             self.httppasswordmgrdb = src.httppasswordmgrdb
             self._measuredtimes = src._measuredtimes
+
+            self.metrics = src.metrics
         else:
             self._rcfg = configparser.config()
             # map from IDs to unserializable Python objects.
@@ -238,6 +241,8 @@ class ui(object):
 
             self.httppasswordmgrdb = httppasswordmgrdbproxy()
             self._measuredtimes = collections.defaultdict(int)
+
+            self.metrics = metrics.metrics(self)
 
         allowed = self.configlist("experimental", "exportableenviron")
         if "*" in allowed:

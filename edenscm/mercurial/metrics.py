@@ -13,10 +13,13 @@ class metrics(object):
 
     def __init__(self, ui):
         self.ui = ui
+        self.stats = {}
 
     def gauge(self, key, value=1, entity=None):
         """If entity is None, log locally. Otherwise, send it to a global counter."""
-        pass
+        if entity is None:
+            self.stats.setdefault(key, 0)
+            self.stats[key] += value
 
 
 def client(ui):

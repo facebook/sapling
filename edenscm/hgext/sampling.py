@@ -109,7 +109,9 @@ def uisetup(ui):
             if script:
                 try:
                     opts["metrics_type"] = event
-                    if msg:
+                    if msg and event != "metrics":
+                        # do not keep message for "metrics", which only wants
+                        # to log key/value dict.
                         # ui.log treats msg as a format string + format args.
                         opts["msg"] = msg[0] % msg[1:]
                     with open(script, "a") as outfile:

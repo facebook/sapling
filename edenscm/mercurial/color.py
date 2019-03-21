@@ -148,6 +148,7 @@ _defaultstyles = {
     "status.unknown": "magenta bold underline",
     "tags.normal": "green",
     "tags.local": "black bold",
+    "ui.metrics": "#777:color242:dim",
 }
 
 

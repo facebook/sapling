@@ -141,3 +141,49 @@ Note: Errors raised by the dispatch logic aren't logged here:
   exception_msg: nothing to rebase
   exception_type: NoMergeDestAbort
   metrics_type: exceptions
+
+Test ui.metrics.gauge API
+  $ cat > $TESTTMP/a.py << EOF
+  > def reposetup(ui, repo):
+  >     ui.metrics.gauge("foo_a", 1)
+  >     ui.metrics.gauge("foo_b", 2)
+  >     ui.metrics.gauge("foo_b", len(repo))
+  >     ui.metrics.gauge("bar")
+  >     ui.metrics.gauge("bar")
+  > EOF
+  $ SCM_SAMPLING_FILEPATH=$TESTTMP/a.txt hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config sampling.key.metrics=aaa
+  .
+  atexit handler executed
+  >>> import os, json
+  >>> with open(os.path.join(os.environ["TESTTMP"], "a.txt"), "r") as f:
+  ...     lines = f.read().split("\0")
+  ...     for line in lines:
+  ...         if "foo" in line:
+  ...             obj = json.loads(line)
+  ...             category = obj["category"]
+  ...             data = obj["data"]
+  ...             print("category: %s" % category)
+  ...             for k, v in sorted(data.items()):
+  ...                 print("  %s=%s" % (k, v))
+  category: aaa
+    bar=2
+    foo_a=1
+    foo_b=5
+    metrics_type=metrics
+
+Metrics can be printed if devel.print-metrics is set:
+  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics=1
+  .
+  atexit handler executed
+  { metrics : { bar : 2,  foo : { a : 1,  b : 5}}}
+
+Metrics is logged to blackbox:
+
+  $ enable blackbox
+  $ setconfig blackbox.track=metrics
+  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py
+  .
+  atexit handler executed
+  $ hg blackbox
+  *> {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}} (glob)
+  atexit handler executed
