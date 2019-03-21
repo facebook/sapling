@@ -18,6 +18,7 @@ import os
 import py_compile
 import re
 import shutil
+import socket
 import stat
 import struct
 import subprocess
@@ -452,15 +453,24 @@ def localhgenv():
     return env
 
 
-def pickversion():
-    hg = findhg()
+hg = findhg()
+
+
+def hgtemplate(template, cast=None):
     if not hg:
-        # if hg is not found, fallback to a fixed version
-        return "4.4.2"
+        return None
+    result = sysstr(hg.run(["log", "-r.", "-T", template]))
+    if result and cast:
+        result = cast(result)
+    return result
+
+
+def pickversion():
     # New version system: YYMMDD_HHmmSS_hash
     # This is duplicated a bit from build_rpm.py:auto_release_str()
     template = '{sub("([:+-]|\d\d\d\d$)", "",date|isodatesec)} {node|short}'
-    out = sysstr(hg.run(["log", "-r.", "-T", template]))
+    # if hg is not found, fallback to a fixed version
+    out = hgtemplate(template) or ""
     # Some tools parse this number to figure out if they support this version of
     # Mercurial, so prepend with 4.4.2.
     # ex. 4.4.2_20180105_214829_58fda95a0202
@@ -500,6 +510,77 @@ if not os.path.isdir(builddir):
         os.symlink(scratchpath, builddir)
     except Exception:
         ensureexists(builddir)
+
+
+def writebuildinfoc():
+    """Write build/buildinfo.c"""
+    commithash = hgtemplate("{node}")
+    commitunixtime = hgtemplate('{sub("[^0-9].*","",date)}', cast=int)
+
+    # Search 'extractBuildInfoFromELF' in fbcode for supported fields.
+    buildinfo = {
+        "Host": socket.gethostname(),
+        "PackageName": os.environ.get("RPM_PACKAGE_NAME")
+        or os.environ.get("PACKAGE_NAME"),
+        "PackageRelease": os.environ.get("RPM_PACKAGE_RELEASE")
+        or os.environ.get("PACKAGE_RELEASE"),
+        "PackageVersion": os.environ.get("RPM_PACKAGE_VERSION")
+        or os.environ.get("PACKAGE_VERSION"),
+        "Path": os.getcwd(),
+        "Platform": os.environ.get("RPM_OS"),
+        "Revision": commithash,
+        "RevisionCommitTimeUnix": commitunixtime,
+        "TimeUnix": int(time.time()),
+        "UpstreamRevision": commithash,
+        "UpstreamRevisionCommitTimeUnix": commitunixtime,
+        "User": os.environ.get("USER"),
+    }
+
+    buildinfosrc = """
+#include <stdio.h>
+#include <time.h>
+"""
+    for name, value in sorted(buildinfo.items()):
+        if isinstance(value, str):
+            buildinfosrc += 'const char *BuildInfo_k%s = "%s";\n' % (
+                name,
+                value.replace('"', '\\"'),
+            )
+        elif isinstance(value, int):
+            # The only usage of int is timestamp
+            buildinfosrc += "const time_t BuildInfo_k%s = %d;\n" % (name, value)
+
+    buildinfosrc += """
+/* This function keeps references of the symbols and prevents them from being
+ * optimized out if this function is used. */
+void print_buildinfo() {
+"""
+    for name, value in sorted(buildinfo.items()):
+        if isinstance(value, str):
+            buildinfosrc += (
+                '  fprintf(stderr, "%(name)s: %%s (at %%p)\\n", BuildInfo_k%(name)s, BuildInfo_k%(name)s);\n'
+                % {"name": name}
+            )
+        elif isinstance(value, int):
+            buildinfosrc += (
+                '  fprintf(stderr, "%(name)s: %%lu (at %%p)\\n", (long unsigned)BuildInfo_k%(name)s, &BuildInfo_k%(name)s) ;\n'
+                % {"name": name}
+            )
+    buildinfosrc += """
+}
+"""
+
+    path = pjoin(builddir, "buildinfo.c")
+    write_if_changed(path, buildinfosrc)
+    return path
+
+
+# If NEED_BUILDINFO is set, write buildinfo.
+# For rpmbuild, imply NEED_BUILDINFO.
+needbuildinfo = bool(os.environ.get("NEED_BUILDINFO", "RPM_PACKAGE_NAME" in os.environ))
+
+if needbuildinfo:
+    buildinfocpath = writebuildinfoc()
 
 
 try:
@@ -1833,6 +1914,16 @@ libraries = [
         },
     ),
 ]
+if needbuildinfo:
+    libraries += [
+        (
+            "buildinfo",
+            {
+                "sources": [buildinfocpath],
+                "extra_args": filter(None, cflags + [WALL, PIC]),
+            },
+        )
+    ]
 
 if not iswindows:
     libraries.append(
@@ -2104,6 +2195,7 @@ hgmainfeatures = (
         filter(
             None,
             [
+                "buildinfo" if needbuildinfo else None,
                 "hgdev" if os.environ.get("HGDEV") else None,
                 "with_chg" if not iswindows else None,
             ],

@@ -14,6 +14,11 @@ fn main() {
                 "cargo:rerun-if-changed={}",
                 lib_dir.join("libchg.a").display()
             );
+            #[cfg(feature = "buildinfo")]
+            println!(
+                "cargo:rerun-if-changed={}",
+                lib_dir.join("buildinfo.a").display()
+            );
         }
     }
 }

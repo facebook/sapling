@@ -1,4 +1,5 @@
 // Copyright Facebook, Inc. 2018
+
 #[cfg(feature = "with_chg")]
 extern crate dirs;
 extern crate encoding;
@@ -7,6 +8,7 @@ extern crate hgpython;
 extern crate libc;
 use hgpython::HgPython;
 
+mod buildinfo;
 #[cfg(feature = "with_chg")]
 mod chg;
 #[cfg(feature = "with_chg")]
@@ -23,6 +25,20 @@ fn call_embedded_python() {
 }
 
 fn main() {
+    #[cfg(feature = "buildinfo")]
+    {
+        // This code path keeps buildinfo-related symbols alive.
+        use std::env;
+        if let Some(arg0) = env::args().nth(0) {
+            if arg0.ends_with("buildinfo") {
+                unsafe {
+                    buildinfo::print_buildinfo();
+                }
+                return;
+            }
+        }
+    }
+
     #[cfg(feature = "with_chg")]
     maybe_call_chg();
     call_embedded_python();
