@@ -282,7 +282,19 @@ class basestore(object):
                     filenamehash = root[-41:-39] + root[-38:]
                 else:
                     filenamehash = root[-40:]
+
+                self._reportmetrics(root, filename)
+
                 yield (bin(filenamehash), bin(node))
+
+    def _reportmetrics(self, root, filename):
+        """Log total remotefilelog blob size and count.
+
+        The method is overloaded in remotefilelogstore class, because we can
+        only count metrics for the datastore. History is kept in the same files
+        so we don't need to log metrics twice.
+        """
+        pass
 
     def _getfilepath(self, name, node):
         """

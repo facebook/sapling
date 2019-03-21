@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import os
 import threading
 
 from edenscm.mercurial import manifest, mdiff, revlog, util
@@ -163,6 +164,9 @@ class remotefilelogcontentstore(basestore.basestore):
         super(remotefilelogcontentstore, self).__init__(*args, **kwargs)
         self._threaddata = threading.local()
 
+        storetype = "shared" if self._shared else "local"
+        self._metricsprefix = "filestore_%s_blob" % storetype
+
     def get(self, name, node):
         # return raw revision text
         data = self._getdata(name, node)
@@ -228,6 +232,13 @@ class remotefilelogcontentstore(basestore.basestore):
 
     def markforrefresh(self):
         pass
+
+    def _reportmetrics(self, root, filename):
+        filepath = os.path.join(root, filename)
+        stats = os.stat(filepath)
+
+        self.ui.metrics.gauge(self._metricsprefix + "size", stats.st_size)
+        self.ui.metrics.gauge(self._metricsprefix + "num", 1)
 
 
 class remotecontentstore(object):

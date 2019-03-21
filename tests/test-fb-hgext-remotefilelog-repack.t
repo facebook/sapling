@@ -28,6 +28,7 @@
   $ cd ..
 
 # Test that repack cleans up the old files and creates new packs
+# metrics should show the total size and counf of the loose files
 
   $ cd shallow
   $ find $CACHEDIR | sort
@@ -39,7 +40,8 @@
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/repos
 
-  $ hg repack
+  $ hg repack --config "devel.print-metrics=1"
+  { metrics : { filestore : { shared : { blobnum : 1,  blobsize : 175}}}}
 
   $ find $CACHEDIR | sort
   $TESTTMP/hgcache
@@ -88,7 +90,7 @@
 
 # First assert that with --packsonly, the loose object will be ignored:
 
-  $ hg repack --packsonly
+  $ hg repack --packsonly --config "devel.print-metrics=1"
 
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
@@ -103,7 +105,8 @@
 # Now test that --looseonly will only repack the loose file, leaving
 # the old packs:
 
-  $ hg repack --looseonly --traceback
+  $ hg repack --looseonly --traceback --config "devel.print-metrics=1"
+  { metrics : { filestore : { shared : { blobnum : 1,  blobsize : 258}}}}
 
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
@@ -119,7 +122,7 @@
 
 # A full repack creates the optimal packing:
 
-  $ hg repack --traceback
+  $ hg repack --traceback --config "devel.print-metrics=1"
 
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
@@ -137,6 +140,7 @@
   $ hg cat -r '.^' x
   x
   x
+
 
 # Test that repacking again without new data does not delete the pack files
 # and did not change the pack names
