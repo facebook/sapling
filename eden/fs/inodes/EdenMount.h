@@ -647,7 +647,7 @@ class EdenMount {
    * Preconditions:
    * - `beginMount()` has not been called before.
    */
-  FOLLY_NODISCARD folly::SharedPromise<folly::Unit>& beginMount();
+  FOLLY_NODISCARD folly::Promise<folly::Unit>& beginMount();
 
   /**
    * Construct the channel_ member variable.
@@ -783,7 +783,7 @@ class EdenMount {
      * umount(8) is called by another process, the file system will not be
      * mounted.
      */
-    std::optional<folly::SharedPromise<folly::Unit>> fuseMountPromise;
+    std::optional<folly::Promise<folly::Unit>> fuseMountPromise;
 
     /**
      * Whether or not unmount has been called.

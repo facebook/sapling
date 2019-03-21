@@ -917,7 +917,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 
 folly::Future<folly::File> EdenMount::fuseMount() {
   return folly::makeFutureWith([&] { return &beginMount(); })
-      .thenValue([this](folly::SharedPromise<folly::Unit>* mountPromise) {
+      .thenValue([this](folly::Promise<folly::Unit>* mountPromise) {
         AbsolutePath mountPath = getPath();
         return serverState_->getPrivHelper()
             ->fuseMount(mountPath.stringPiece())
@@ -959,7 +959,7 @@ folly::Future<folly::File> EdenMount::fuseMount() {
       });
 }
 
-folly::SharedPromise<folly::Unit>& EdenMount::beginMount() {
+folly::Promise<folly::Unit>& EdenMount::beginMount() {
   auto mountingUnmountingState = mountingUnmountingState_.wlock();
   if (mountingUnmountingState->fuseMountPromise.has_value()) {
     EDEN_BUG() << __func__ << " unexpectedly called more than once";
@@ -975,7 +975,7 @@ folly::SharedPromise<folly::Unit>& EdenMount::beginMount() {
   //   std::optional<>::reset()) or reassigned. (fuseMountPromise never goes
   //   from `has_value() == true` to `has_value() == false`.)
   //
-  // * folly::SharedPromise is self-synchronizing; getFuture() can be called
+  // * folly::Promise is self-synchronizing; getFuture() can be called
   //   concurrently with setValue()/setException().
   return *mountingUnmountingState->fuseMountPromise;
 }
