@@ -261,8 +261,4 @@ should break rules depending on result of repquote(), in this case)
   stringjoin.py:7: string join across lines with no space --> 'bar foo+'
   stringjoin.py:8: string join across lines with no space --> 'bar foo-'
   uigettext.py:1: missing _() in ui message (use () to hide false-positives) --> ui.status("% 10s %05d % -3.2f %*s %%"
-  superfluous_pass.py:14: omit superfluous pass --> if foo:
-  superfluous_pass.py:17: omit superfluous pass --> else: # trailing comment doesn't fool checker
-  superfluous_pass.py:20: omit superfluous pass --> def nothing():
-  superfluous_pass.py:23: omit superfluous pass --> class empty(object):
   [1]

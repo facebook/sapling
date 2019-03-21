@@ -87,7 +87,7 @@ class perftestsuite(object):
             self.ui.warn(_("ran '%s' in %0.2f sec\n") % (cmd, duration))
             if self.publish:
                 metrics.client(self.ui).gauge(
-                    "hg.perfsuite.%s" % reponame, "%s.time" % cmd, duration
+                    "%s.time" % cmd, duration, entity="hg.perfsuite.%s" % reponame
                 )
 
     def testcommit(self):
