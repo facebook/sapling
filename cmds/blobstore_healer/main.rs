@@ -187,14 +187,21 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
+    let repo_id = matches
+        .value_of("repo-id")
+        .and_then(|repo_id_str| repo_id_str.parse::<u32>().ok())
+        .and_then(|repo_id| {
+            if repo_id == 0 {
+                None
+            } else {
+                Some(RepositoryId::new(repo_id as i32))
+            }
+        });
     let logger = args::get_logger(&matches);
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("Missing --myrouter-port"))?;
-
     let rate_limiter = RateLimiter::new(100);
-
     let repo_configs = args::read_configs(&matches)?;
-
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let dry_run = matches.is_present("dry-run");
 
@@ -202,6 +209,12 @@ fn main() -> Result<()> {
         .repos
         .into_iter()
         .filter_map(move |(name, config)| {
+            if let Some(repo_id) = repo_id {
+                if repo_id != RepositoryId::new(config.repoid) {
+                    return None;
+                }
+            }
+
             let logger = logger.new(o!(
                 "repo" => format!("{} ({})", name, config.repoid),
             ));
