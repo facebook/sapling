@@ -226,21 +226,21 @@ impl quickcheck::Arbitrary for Node {
 pub mod mocks {
     use super::Node;
 
-    pub const ONES: Node = Node([1; Node::len()]);
-    pub const TWOS: Node = Node([2; Node::len()]);
-    pub const THREES: Node = Node([3; Node::len()]);
-    pub const FOURS: Node = Node([4; Node::len()]);
-    pub const FIVES: Node = Node([5; Node::len()]);
-    pub const SIXES: Node = Node([6; Node::len()]);
-    pub const SEVENS: Node = Node([7; Node::len()]);
-    pub const EIGHTS: Node = Node([8; Node::len()]);
-    pub const NINES: Node = Node([9; Node::len()]);
-    pub const AS: Node = Node([0xA; Node::len()]);
-    pub const BS: Node = Node([0xB; Node::len()]);
-    pub const CS: Node = Node([0xC; Node::len()]);
-    pub const DS: Node = Node([0xD; Node::len()]);
-    pub const ES: Node = Node([0xE; Node::len()]);
-    pub const FS: Node = Node([0xF; Node::len()]);
+    pub const ONES: Node = Node([0x11; Node::len()]);
+    pub const TWOS: Node = Node([0x22; Node::len()]);
+    pub const THREES: Node = Node([0x33; Node::len()]);
+    pub const FOURS: Node = Node([0x44; Node::len()]);
+    pub const FIVES: Node = Node([0x55; Node::len()]);
+    pub const SIXES: Node = Node([0x66; Node::len()]);
+    pub const SEVENS: Node = Node([0x77; Node::len()]);
+    pub const EIGHTS: Node = Node([0x88; Node::len()]);
+    pub const NINES: Node = Node([0x99; Node::len()]);
+    pub const AS: Node = Node([0xAA; Node::len()]);
+    pub const BS: Node = Node([0xAB; Node::len()]);
+    pub const CS: Node = Node([0xCC; Node::len()]);
+    pub const DS: Node = Node([0xDD; Node::len()]);
+    pub const ES: Node = Node([0xEE; Node::len()]);
+    pub const FS: Node = Node([0xFF; Node::len()]);
 }
 
 #[cfg(test)]

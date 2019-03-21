@@ -76,12 +76,15 @@ pub mod mocks {
 mod tests {
     use super::*;
 
+    use mocks::*;
+
     #[test]
     fn display_key() {
-        let name = b"/foo/bar/baz".to_vec();
-        let node = Node::default();
-        let key = Key::new(name, node);
-        let expected = "0000000000000000000000000000000000000000 /foo/bar/baz";
-        assert_eq!(format!("{}", key), expected);
+        let foo = "1111111111111111111111111111111111111111 foo";
+        let bar = "2222222222222222222222222222222222222222 bar";
+        let baz = "3333333333333333333333333333333333333333 baz";
+        assert_eq!(format!("{}", &*FOO_KEY), foo);
+        assert_eq!(format!("{}", &*BAR_KEY), bar);
+        assert_eq!(format!("{}", &*BAZ_KEY), baz);
     }
 }
