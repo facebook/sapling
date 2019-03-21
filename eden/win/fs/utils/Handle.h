@@ -11,6 +11,9 @@
 #pragma once
 #include "folly/logging/xlog.h"
 #include "folly/portability/Windows.h"
+
+namespace facebook {
+namespace eden {
 /*
  * This is a generic base class to create a handle classes. The handle class
  * with make sure that handle is closed when it goes out of scope. To create a
@@ -126,3 +129,6 @@ struct TokenHandleTraits {
 };
 
 using TokenHandle = HandleBase<TokenHandleTraits>;
+
+} // namespace eden
+} // namespace facebook
