@@ -276,11 +276,6 @@ helptable = sorted(
         (["extensions"], _("Using Additional Features"), extshelp),
         (["hgweb"], _("Configuring hgweb"), loaddoc("hgweb")),
         (["glossary"], _("Common Terms"), loaddoc("glossary")),
-        (
-            ["hgignore", "ignore"],
-            _("Syntax for Mercurial Ignore Files"),
-            loaddoc("hgignore"),
-        ),
         (["phases"], _("Working with Phases"), loaddoc("phases")),
         (
             ["scripting"],

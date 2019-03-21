@@ -309,9 +309,9 @@ Also true for move overwriting an existing file
 
   $ hg init ignored
   $ cd ignored
-  $ echo '^ignored$' > .hgignore
-  $ echo '^ignoreddir$' >> .hgignore
-  $ echo '^removed$' >> .hgignore
+  $ echo 'ignored' > .gitignore
+  $ echo 'ignoreddir' >> .gitignore
+  $ echo 'removed' >> .gitignore
 
   $ mkdir ignoreddir
   $ touch ignoreddir/file
@@ -321,7 +321,7 @@ Also true for move overwriting an existing file
 
 4 ignored files (we will add/commit everything)
 
-  $ hg st -A -X .hgignore
+  $ hg st -A -X .gitignore
   I ignored
   I ignoreddir/file
   I ignoreddir/removed
@@ -357,7 +357,7 @@ Reverting copy (issue3920)
 
 someone set up us the copies
 
-  $ rm .hgignore
+  $ rm .gitignore
   $ hg update -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv ignored allyour
@@ -1082,7 +1082,7 @@ Test revert to parent content with explicit file name but ignored files
 
   $ cp -R revert-ref revert-parent-explicit-ignored
   $ cd revert-parent-explicit-ignored
-  $ echo '.*' > .hgignore
+  $ echo '*' > .gitignore
 
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
@@ -1176,7 +1176,7 @@ Test revert to "base" content with explicit file name
 
   $ cp -R revert-ref revert-base-explicit-ignored
   $ cd revert-base-explicit-ignored
-  $ echo '.*' > .hgignore
+  $ echo '*' > .gitignore
 
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
@@ -1270,7 +1270,7 @@ Revert to an ancestor of P2 during a merge (issue5052)
 
   $ hg init issue5052
   $ cd issue5052
-  $ echo '.\.orig' > .hgignore
+  $ echo '*\.orig' > .gitignore
   $ echo 0 > root
   $ hg ci -qAm C0
   $ echo 0 > A
@@ -1289,7 +1289,7 @@ Revert to an ancestor of P2 during a merge (issue5052)
   | |
   | o  1 (A)
   |/
-  o  0 (.hgignore root)
+  o  0 (.gitignore root)
   
 
 actual tests: reverting to something else than a merge parent

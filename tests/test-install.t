@@ -181,7 +181,6 @@ path variables are expanded (~ is the same as $TESTTMP)
     help/common.txt
     help/hg-ssh.8.txt
     help/hg.1.txt
-    help/hgignore.5.txt
     help/hgrc.5.txt
     help/subversion/subversion.rst
   Not tracked:

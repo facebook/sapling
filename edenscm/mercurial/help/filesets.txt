@@ -53,9 +53,9 @@ Some sample queries:
 
     hg status -A "set:binary()"
 
-- Forget files that are in .hgignore but are already tracked::
+- Forget files that are in .gitignore but are already tracked::
 
-    hg forget "set:hgignore() and not ignored()"
+    hg forget "set:gitignore() and not ignored()"
 
 - Find text files that contain a string::
 

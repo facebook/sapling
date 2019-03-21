@@ -54,7 +54,7 @@ test what happens if we want to trick hg
   adding a.c
   adding dir/a.o
   adding dir/b.o
-  $ echo "relglob:*.o" > .hgignore
+  $ echo "*.o" > .gitignore
   $ rm a.c
   $ rm dir/a.o
   $ rm dir/b.o
@@ -68,7 +68,7 @@ it should show a.c, dir/a.o and dir/b.o deleted
   M dir/b.o
   ! a.c
   ! dir/a.o
-  ? .hgignore
+  ? .gitignore
   $ hg status a.c
   a.c: unsupported file type (type is fifo)
   ! a.c

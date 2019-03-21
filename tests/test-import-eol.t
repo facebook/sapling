@@ -20,14 +20,14 @@
 
   $ hg init repo
   $ cd repo
-  $ echo '\.diff' > .hgignore
+  $ echo '*\.diff' > .gitignore
 
 
 Test different --eol values
 
   $ $PYTHON -c 'file("a", "wb").write("a\nbbb\ncc\n\nd\ne")'
   $ hg ci -Am adda
-  adding .hgignore
+  adding .gitignore
   adding a
   $ $PYTHON ../makepatch.py
 

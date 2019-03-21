@@ -171,7 +171,7 @@ def add(ui, repo, *pats, **opts):
     undo an add before that, see :hg:`forget`.
 
     If no names are given, add all files to the repository (except
-    files matching ``.hgignore``).
+    files matching ``.gitignore``).
 
     .. container:: verbose
 
@@ -222,7 +222,7 @@ def addremove(ui, repo, *pats, **opts):
     repository.
 
     Unless names are given, new files are ignored if they match any of
-    the patterns in ``.hgignore``. As with add, these changes take
+    the patterns in ``.gitignore``. As with add, these changes take
     effect at the next commit.
 
     Use the -s/--similarity option to detect renamed files. This
@@ -2249,9 +2249,9 @@ def forget(ui, repo, *pats, **opts):
 
           hg forget "set:added() and binary()"
 
-      - forget files that would be excluded by .hgignore::
+      - forget files that would be excluded by .gitignore::
 
-          hg forget "set:hgignore()"
+          hg forget "set:gitignore()"
 
     Returns 0 on success.
     """

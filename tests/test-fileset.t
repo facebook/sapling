@@ -61,9 +61,9 @@ Test files status
   $ hg cp b1 c1
   $ echo c > c2
   $ echo c > c3
-  $ cat > .hgignore <<EOF
-  > \.hgignore
-  > 2$
+  $ cat > .gitignore <<EOF
+  > .gitignore
+  > *2
   > EOF
   $ fileset 'modified()'
   b2
@@ -78,9 +78,9 @@ Test files status
   $ fileset 'unknown()'
   c3
   $ fileset 'ignored()'
-  .hgignore
+  .gitignore
   c2
-  $ fileset 'hgignore()'
+  $ fileset 'gitignore()'
   a2
   b2
   $ fileset 'clean()'
@@ -123,7 +123,7 @@ Test files properties
   $ fileset 'binary()'
   $ fileset 'binary() and unknown()'
   bin
-  $ echo '^bin$' >> .hgignore
+  $ echo 'bin' >> .gitignore
   $ fileset 'binary() and ignored()'
   bin
   $ hg add bin
@@ -239,7 +239,7 @@ Test with a revision
   $ fileset -r1 'deleted()'
   $ fileset -r1 'unknown()'
   $ fileset -r1 'ignored()'
-  $ fileset -r1 'hgignore()'
+  $ fileset -r1 'gitignore()'
   b2
   bin
   $ fileset -r1 'binary()'

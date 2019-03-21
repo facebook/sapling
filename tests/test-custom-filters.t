@@ -23,8 +23,8 @@
   >     repo.adddatafilter('insertprefix:', insertprefix)
   > EOF
 
-  $ cat > .hgignore <<EOF
-  > .hgignore
+  $ cat > .gitignore <<EOF
+  > .gitignore
   > prefix.py
   > prefix.pyc
   > EOF

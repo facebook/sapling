@@ -29,7 +29,7 @@ Mercurial was written by Matt Mackall <mpm@selenic.com>.
 
 See Also
 ========
-|hg(1)|_, |hgignore(5)|_
+|hg(1)|_
 
 Copying
 =======

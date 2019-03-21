@@ -189,14 +189,14 @@ test conflicting untracked files
 test conflicting untracked ignored file
 
   $ hg up -qC 0
-  $ echo ignored > .hgignore
-  $ hg add .hgignore
-  $ hg ci -m 'add .hgignore'
+  $ echo ignored > .gitignore
+  $ hg add .gitignore
+  $ hg ci -m 'add .gitignore'
   $ echo ignored > ignored
   $ hg add ignored
   $ hg ci -m 'add ignored file'
 
-  $ hg up -q 'desc("add .hgignore")'
+  $ hg up -q 'desc("add .gitignore")'
   $ echo untracked > ignored
   $ hg st
   $ hg up 'desc("add ignored file")'

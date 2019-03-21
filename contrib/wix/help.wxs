@@ -25,7 +25,6 @@
           <File Name="filesets.txt" />
           <File Name="flags.txt" />
           <File Name="glossary.txt" />
-          <File Name="hgignore.txt" />
           <File Name="hgweb.txt" />
           <File Name="merge-tools.txt" />
           <File Name="pager.txt" />

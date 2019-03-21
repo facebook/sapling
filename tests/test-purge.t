@@ -15,7 +15,7 @@ setup
   $ mkdir directory
   $ echo r2 > directory/r2
   $ hg ci -qAmr2 -d'1 0'
-  $ echo 'ignored' > .hgignore
+  $ echo 'ignored' > .gitignore
   $ hg ci -qAmr3 -d'2 0'
 
 delete an empty directory
@@ -162,7 +162,7 @@ hide error messages to avoid changing the output when the text changes
 
 tracked file in ignored directory (issue621)
 
-  $ echo directory >> .hgignore
+  $ echo directory >> .gitignore
   $ hg ci -m 'ignore directory'
   $ touch untracked_file
   $ hg purge -p

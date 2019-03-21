@@ -26,11 +26,11 @@
   abort: 'f' not recognized
   [255]
 
-Add a .hgignore so that we can also have ignored files
+Add a .gitignore so that we can also have ignored files
 
-  $ echo ".*\.o" > .hgignore
+  $ echo "*\.o" > .gitignore
   $ hg status
-  ? .hgignore
+  ? .gitignore
   ? a
   ? b
   $ hg status -i
@@ -47,7 +47,7 @@ Adding more files
   $ touch x/l/aa x/m/aa x/n/aa x/l/u/bb x/l/u/a/bb
 
   $ hg status
-  ? .hgignore
+  ? .gitignore
   ? a
   ? b
   ? x/aa
@@ -61,15 +61,15 @@ Adding more files
   ? y/m
 
   $ hg status --terse u
-  ? .hgignore
+  ? .gitignore
   ? a
   ? b
   ? x/
   ? y/
 
-  $ hg add x/aa x/bb .hgignore
+  $ hg add x/aa x/bb .gitignore
   $ hg status --terse au
-  A .hgignore
+  A .gitignore
   A x/aa
   A x/bb
   ? a
@@ -82,7 +82,7 @@ Adding more files
 Including ignored files
 
   $ hg status --terse aui
-  A .hgignore
+  A .gitignore
   A x/aa
   A x/bb
   ? a
@@ -100,7 +100,7 @@ Including ignored files
 
 Committing some of the files
 
-  $ hg commit x/aa x/bb .hgignore -m "First commit"
+  $ hg commit x/aa x/bb .gitignore -m "First commit"
   $ hg status
   ? a
   ? b
@@ -149,10 +149,10 @@ Respecting other flags
   I x/bb.o
   I y/l.o
   I y/m.o
-  C .hgignore
+  C .gitignore
   $ hg status --terse marduic -a
   $ hg status --terse marduic -c
-  C .hgignore
+  C .gitignore
   $ hg status --terse marduic -m
   M x/aa
   M x/bb

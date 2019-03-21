@@ -8,8 +8,14 @@ Alternate pattern notations must be specified explicitly.
 
 .. note::
 
-  Patterns specified in ``.hgignore`` are not rooted.
-  Please see :hg:`help hgignore` for details.
+  Patterns specified in ``.gitignore`` are not rooted. And is different
+  from patterns used by **hg** in other places.
+
+.. note::
+
+  In the future, patterns might be reworked to be more consistent with
+  ``.gitignore``. For example, negative patterns are possible and patterns
+  are orders. Things listed below might change significantly.
 
 To use a plain path name without any pattern matching, start it with
 ``path:``. These path names must completely match starting at the
@@ -32,12 +38,6 @@ To read name patterns from a file, use ``listfile:`` or ``listfile0:``.
 The latter expects null delimited patterns while the former expects line
 feeds. Each string read from the file is itself treated as a file
 pattern.
-
-To read a set of patterns from a file, use ``include:`` or ``subinclude:``.
-``include:`` will use all the patterns from the given file and treat them as if
-they had been passed in manually.  ``subinclude:`` will only apply the patterns
-against files that are under the subinclude file's directory. See :hg:`help
-hgignore` for details on the format of these files.
 
 All patterns, except for ``glob:`` specified in command line (not for
 ``-I`` or ``-X`` options), can match also against directories: files

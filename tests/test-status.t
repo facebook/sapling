@@ -138,9 +138,9 @@ relative paths can be requested
   $ hg init repo2
   $ cd repo2
   $ touch modified removed deleted ignored
-  $ echo "^ignored$" > .hgignore
+  $ echo "ignored" > .gitignore
   $ hg ci -A -m 'initial checkin'
-  adding .hgignore
+  adding .gitignore
   adding deleted
   adding modified
   adding removed
@@ -188,7 +188,7 @@ hg status -A:
   ! deleted
   ? unknown
   I ignored
-  C .hgignore
+  C .gitignore
   C modified
 
   $ hg status -A -Tjson
@@ -219,7 +219,7 @@ hg status -A:
     "status": "I"
    },
    {
-    "path": ".hgignore",
+    "path": ".gitignore",
     "status": "C"
    },
    {
@@ -232,17 +232,17 @@ hg status -A:
   >>> from __future__ import print_function
   >>> import pickle
   >>> print(sorted((x['status'], x['path']) for x in pickle.load(open("pickle"))))
-  [('!', 'deleted'), ('?', 'pickle'), ('?', 'unknown'), ('A', 'added'), ('A', 'copied'), ('C', '.hgignore'), ('C', 'modified'), ('I', 'ignored'), ('R', 'removed')]
+  [('!', 'deleted'), ('?', 'pickle'), ('?', 'unknown'), ('A', 'added'), ('A', 'copied'), ('C', '.gitignore'), ('C', 'modified'), ('I', 'ignored'), ('R', 'removed')]
   $ rm pickle
 
-  $ echo "^ignoreddir$" > .hgignore
+  $ echo "ignoreddir/" > .gitignore
   $ mkdir ignoreddir
   $ touch ignoreddir/file
 
 Test templater support:
 
   $ hg status -AT "[{status}]\t{if(copy, '{copy} -> ')}{path}\n"
-  [M]	.hgignore
+  [M]	.gitignore
   [A]	added
   [A]	modified -> copied
   [R]	removed
@@ -252,7 +252,7 @@ Test templater support:
   [I]	ignoreddir/file
   [C]	modified
   $ hg status -AT default
-  M .hgignore
+  M .gitignore
   A added
   A copied
     modified
@@ -281,9 +281,9 @@ Check 'status -q' and some combinations
   $ hg init repo3
   $ cd repo3
   $ touch modified removed deleted ignored
-  $ echo "^ignored$" > .hgignore
+  $ echo "ignored" > .gitignore
   $ hg commit -A -m 'initial checkin'
-  adding .hgignore
+  adding .gitignore
   adding deleted
   adding modified
   adding removed

@@ -2120,21 +2120,17 @@ User interface controls.
     (default: ``{graphnode}``)
 
 ``hgignore``
-    Respect ``.hgignore`` at the root of a repo. (default: True)
+    The hgignore feature is being deprecated. Use .gitignore instead.
+    Respect ``.hgignore`` at the root of a repo. (default: False)
 
 ``ignore``
     A file to read per-user ignore patterns from. This file should be
-    in the same format as a repository-wide .hgignore file. Filenames
+    in the same format as a repository-wide .gitignore file. Filenames
     are relative to the repository root. This option supports hook syntax,
     so if you want to specify multiple ignore files, you can do so by
-    setting something like ``ignore.other = ~/.hgignore2``.
+    setting something like ``ignore.other = ~/.gitignore2``.
 
-    Ignore files are treated as gitignore, unless it contains lines starting
-    with ``syntax:``, in which case they will be treated as hgignore files.
-    Hgignore files are being deprecated and may lose support in the future.
-
-    For details of the ignore file format, see the ``hgignore(5)`` and
-    ``gitignore(5)`` man page.
+    For details of the ignore file format, see the ``gitignore(5)`` man page.
 
 ``interactive``
     Allow to prompt the user. (default: True)

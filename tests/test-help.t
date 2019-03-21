@@ -401,7 +401,7 @@ Normal help for add
       add before that, see 'hg forget'.
   
       If no names are given, add all files to the repository (except files
-      matching ".hgignore").
+      matching ".gitignore").
   
       Returns 0 if all files are successfully added.
   
@@ -426,7 +426,7 @@ Verbose help for add
       add before that, see 'hg forget'.
   
       If no names are given, add all files to the repository (except files
-      matching ".hgignore").
+      matching ".gitignore").
   
       Examples:
   
@@ -2092,13 +2092,6 @@ Dish up an empty repo; serve it cold.
   Common Terms
   </td></tr>
   <tr><td>
-  <a href="/help/hgignore">
-  hgignore
-  </a>
-  </td><td>
-  Syntax for Mercurial Ignore Files
-  </td></tr>
-  <tr><td>
   <a href="/help/hgweb">
   hgweb
   </a>
@@ -2669,7 +2662,7 @@ Dish up an empty repo; serve it cold.
   </p>
   <p>
   If no names are given, add all files to the repository (except
-  files matching &quot;.hgignore&quot;).
+  files matching &quot;.gitignore&quot;).
   </p>
   <p>
   Examples:

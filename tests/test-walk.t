@@ -470,7 +470,7 @@ Test patterns:
 
   $ mkdir ignored
   $ touch ignored/file
-  $ echo '^ignored$' > .hgignore
+  $ echo 'ignored' > .gitignore
   $ hg debugwalk ignored
   matcher: <patternmatcher patterns='(?:ignored(?:/|$))'>
   $ hg debugwalk ignored/file

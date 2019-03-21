@@ -57,10 +57,10 @@ Files
     See |hgrc(5)|_ for details of the contents and format of these
     files.
 
-``.hgignore``
+``.gitignore``
     This file contains regular expressions (one per line) that
-    describe file names that should be ignored by **hg**. For details,
-    see |hgignore(5)|_.
+    describe file names that should be ignored by **hg**. Check
+    the manual page provided by ``git`` for details.
 
 ``.hgtags``
     This file contains changeset hash values and text tag names (one
@@ -87,7 +87,7 @@ below) when you find them.
 
 See Also
 """"""""
-|hgignore(5)|_, |hgrc(5)|_
+|hgrc(5)|_
 
 Author
 """"""

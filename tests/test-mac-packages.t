@@ -46,7 +46,6 @@ Spot-check some randomly selected files:
   ./usr/local/share/man/man1/chg.1	100644	0/0
   ./usr/local/share/man/man1/hg.1	100644	0/0
   ./usr/local/share/man/man5	40755	0/0
-  ./usr/local/share/man/man5/hgignore.5	100644	0/0
   ./usr/local/share/man/man5/hgrc.5	100644	0/0
   $ grep bser boms.txt | cut -d '	' -f 1,2,3
   ./Library/Python/2.7/site-packages/hgext/extlib/pywatchman/bser.so	100755	0/0

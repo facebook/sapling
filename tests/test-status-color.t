@@ -166,21 +166,21 @@ Make sure ui.formatted=False works
   $ hg init repo2
   $ cd repo2
   $ touch modified removed deleted ignored
-  $ echo "^ignored$" > .hgignore
+  $ echo "ignored" > .gitignore
   $ hg ci -A -m 'initial checkin'
-  adding .hgignore
+  adding .gitignore
   adding deleted
   adding modified
   adding removed
   $ hg log --color=debug
-  [log.changeset changeset.draft|changeset:   0:389aef86a55e]
+  [log.changeset changeset.draft|changeset:   0:51a28a6611a2]
   [log.tag|tag:         tip]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [log.summary|summary:     initial checkin]
   
   $ hg log -Tcompact --color=debug
-  [log.changeset changeset.draft|0][tip]   [log.node|389aef86a55e]   [log.date|1970-01-01 00:00 +0000]   [log.user|test]
+  [log.changeset changeset.draft|0][tip]   [log.node|51a28a6611a2]   [log.date|1970-01-01 00:00 +0000]   [log.user|test]
     [ui.note log.description|initial checkin]
   
 Labels on empty strings should not be displayed, labels on custom
@@ -232,11 +232,11 @@ hg status -A:
   \x1b[0;36;1;4m! \x1b[0m\x1b[0;36;1;4mdeleted\x1b[0m (esc)
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4munknown\x1b[0m (esc)
   \x1b[0;30;1mI \x1b[0m\x1b[0;30;1mignored\x1b[0m (esc)
-  \x1b[0;0mC \x1b[0m\x1b[0;0m.hgignore\x1b[0m (esc)
+  \x1b[0;0mC \x1b[0m\x1b[0;0m.gitignore\x1b[0m (esc)
   \x1b[0;0mC \x1b[0m\x1b[0;0mmodified\x1b[0m (esc)
 
 
-  $ echo "^ignoreddir$" > .hgignore
+  $ echo "ignoreddir" > .gitignore
   $ mkdir ignoreddir
   $ touch ignoreddir/file
 
@@ -255,9 +255,9 @@ check 'status -q' and some combinations
   $ hg init repo3
   $ cd repo3
   $ touch modified removed deleted ignored
-  $ echo "^ignored$" > .hgignore
+  $ echo "ignored" > .gitignore
   $ hg commit -A -m 'initial checkin'
-  adding .hgignore
+  adding .gitignore
   adding deleted
   adding modified
   adding removed
