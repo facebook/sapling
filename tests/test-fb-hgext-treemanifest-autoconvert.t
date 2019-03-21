@@ -1,4 +1,5 @@
   $ . "$TESTDIR/library.sh"
+  $ setconfig devel.print-metrics=1
 
 
   $ hginit master
@@ -17,6 +18,10 @@
 
   $ hgcloneshallow ssh://user@dummy/master client -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  { metrics : { ssh : { connections : 2,
+                        getfiles : { calls : 1,  revs : 1},
+                        read : { bytes : 1703},
+                        write : { bytes : 812}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -54,6 +59,9 @@ Test auto creating trees for merge commit
   added 2 changesets with 0 changes to 0 files
   new changesets d32fd17cb041:92f4ca0e667c
   (run 'hg update' to get a working copy)
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 1435},
+                        write : { bytes : 655}}}}
   $ hg manifest -r tip
   x
   z

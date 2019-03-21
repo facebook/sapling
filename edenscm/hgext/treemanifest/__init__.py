@@ -2086,6 +2086,11 @@ def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth)
     opts["directories"] = ",".join(wireproto.escapearg(d) for d in directories)
     opts["depth"] = str(depth)
 
+    ui = remote.ui
+    ui.metrics.gauge("ssh_gettreepack_basemfnodes", len(basemfnodes))
+    ui.metrics.gauge("ssh_gettreepack_mfnodes", len(mfnodes))
+    ui.metrics.gauge("ssh_gettreepack_calls", 1)
+
     f = remote._callcompressable("gettreepack", **opts)
     return bundle2.getunbundler(remote.ui, f)
 

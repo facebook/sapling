@@ -1,4 +1,5 @@
   $ . "$TESTDIR/library.sh"
+  $ setconfig devel.print-metrics=1
 
   $ hginit master
   $ cd master
@@ -21,6 +22,13 @@ Clone it
   fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, found via d2ae7f538514
   1 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  { metrics : { ssh : { connections : 2,
+                        getfiles : { calls : 1,  revs : 2},
+                        gettreepack : { basemfnodes : 0,
+                                        calls : 1,
+                                        mfnodes : 1},
+                        read : { bytes : 2234},
+                        write : { bytes : 1042}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -70,4 +78,7 @@ Pull exactly up to d into the client
   added 2 changesets with 0 changes to 0 files
   new changesets 177f92b77385:055a42cdd887
   (run 'hg update' to get a working copy)
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 1170},
+                        write : { bytes : 708}}}}
 

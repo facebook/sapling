@@ -88,6 +88,7 @@ class doublepipe(object):
 
     def write(self, data):
         self._totalbytes += len(data)
+        self._ui.metrics.gauge("ssh_write_bytes", len(data))
         return self._call("write", data)
 
     def read(self, size):
@@ -100,11 +101,13 @@ class doublepipe(object):
             # closed prematurely.
             _forwardoutput(self._ui, self._side)
         self._totalbytes += len(r)
+        self._ui.metrics.gauge("ssh_read_bytes", len(r))
         return r
 
     def readline(self):
         r = self._call("readline")
         self._totalbytes += len(r)
+        self._ui.metrics.gauge("ssh_read_bytes", len(r))
         return r
 
     def _call(self, methname, data=None):
@@ -232,6 +235,8 @@ class sshpeer(wireproto.wirepeer):
         self._pipei = util.bufferedinputpipe(self._pipei)
         self._pipei = doublepipe(self.ui, self._pipei, self._pipee)
         self._pipeo = doublepipe(self.ui, self._pipeo, self._pipee)
+
+        self.ui.metrics.gauge("ssh_connections")
 
         def badresponse():
             msg = _("no suitable response from remote hg")

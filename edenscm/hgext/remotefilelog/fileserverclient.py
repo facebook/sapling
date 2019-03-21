@@ -409,9 +409,13 @@ class fileserverclient(object):
     def httprequestpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTP using the Eden API"""
         if fetchdata:
+            self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+            self.ui.metrics.gauge("http_getfiles_calls", 1)
             self.repo.edenapi.get_files(fileids)
 
         if fetchhistory:
+            self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+            self.ui.metrics.gauge("http_gethistory_calls", 1)
             self.repo.edenapi.get_history(fileids)
 
     def requestpacks(self, fileids, fetchdata, fetchhistory):
@@ -597,6 +601,10 @@ class fileserverclient(object):
             with self._connect() as conn:
                 remote = conn.peer
                 missedlist = list(missed)
+
+                self.ui.metrics.gauge("ssh_getfiles_revs", len(missedlist))
+                self.ui.metrics.gauge("ssh_getfiles_calls", 1)
+
                 # TODO: deduplicate this with the constant in
                 #       shallowrepo
                 if remote.capable("remotefilelog"):
@@ -694,6 +702,9 @@ class fileserverclient(object):
             with self._connect() as conn:
                 total = len(fileids)
                 rcvd = 0
+
+                self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
+                self.ui.metrics.gauge("ssh_getpack_calls", 1)
 
                 remote = conn.peer
                 remote._callstream("getpackv1")

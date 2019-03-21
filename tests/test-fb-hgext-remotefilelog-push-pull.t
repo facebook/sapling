@@ -1,5 +1,6 @@
 
   $ . "$TESTDIR/library.sh"
+  $ setconfig devel.print-metrics=1
 
   $ hginit master
   $ cd master
@@ -14,7 +15,14 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  { metrics : { ssh : { connections : 2,
+                        getfiles : { calls : 1,  revs : 1},
+                        read : { bytes : 1446},
+                        write : { bytes : 812}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 902},
+                        write : { bytes : 656}}}}
 
 We should see the remotefilelog capability here, which advertises that
 the server supports our custom getfiles method.
@@ -42,10 +50,17 @@ the server supports our custom getfiles method.
   added 1 changesets with 0 changes to 0 files
   new changesets d34c38483be9
   (run 'hg update' to get a working copy)
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 1034},
+                        write : { bytes : 633}}}}
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  { metrics : { ssh : { connections : 1,
+                        getfiles : { calls : 1,  revs : 1},
+                        read : { bytes : 544},
+                        write : { bytes : 156}}}}
 
   $ cat y
   y
@@ -72,6 +87,10 @@ the server supports our custom getfiles method.
   new changesets d34c38483be9:d7373980d475
   (run 'hg update' to get a working copy)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  { metrics : { ssh : { connections : 1,
+                        getfiles : { calls : 1,  revs : 2},
+                        read : { bytes : 611},
+                        write : { bytes : 198}}}}
 
 # pull from shallow to shallow (ssh)
 
@@ -87,6 +106,10 @@ the server supports our custom getfiles method.
   new changesets d34c38483be9:d7373980d475
   (run 'hg update' to get a working copy)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  { metrics : { ssh : { connections : 2,
+                        getfiles : { calls : 1,  revs : 2},
+                        read : { bytes : 2793},
+                        write : { bytes : 831}}}}
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -110,6 +133,9 @@ the server supports our custom getfiles method.
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 707},
+                        write : { bytes : 1058}}}}
 
   $ cd ../shallow2
   $ hg up
@@ -142,6 +168,9 @@ the server supports our custom getfiles method.
   remote: adding manifests
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 673},
+                        write : { bytes : 1575}}}}
 
   $ cd ../master
   $ hg log -l 1 --style compact
@@ -181,7 +210,13 @@ the server supports our custom getfiles method.
 
   $ hginit multimf-master
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow -q
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 574},
+                        write : { bytes : 577}}}}
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow2 -q
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 574},
+                        write : { bytes : 577}}}}
   $ cd multimf-shallow
   $ echo a > a
   $ hg commit -qAm a
@@ -220,6 +255,9 @@ the server supports our custom getfiles method.
   added 5 changesets with 4 changes to 3 files (+2 heads)
   new changesets cb9a9f314b8b:d8f06a4c6d38
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  { metrics : { ssh : { connections : 1,
+                        read : { bytes : 2966},
+                        write : { bytes : 674}}}}
 
   $ hg up -q 5
   $ hg log -f -T '{rev}\n' c
