@@ -18,7 +18,7 @@ tempfile = "3.0.4"
 types = { path = "../types" }
 
 [dev-dependencies]
-rand = "0.5.5"
+rand = "0.6"
 rand_chacha = "0.1.0"
 quickcheck = "0.6.2"
 types = { path = "../types", default-features = false, features = ["for-tests"] }
