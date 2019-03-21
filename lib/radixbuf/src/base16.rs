@@ -42,7 +42,9 @@ impl<'a, T: AsRef<[u8]>> Iterator for Base16Iter<'a, T> {
     }
 
     #[inline]
-    fn count(self) -> usize { self.len() }
+    fn count(self) -> usize {
+        self.len()
+    }
 }
 
 impl<'a, T: AsRef<[u8]>> DoubleEndedIterator for Base16Iter<'a, T> {
@@ -61,12 +63,16 @@ impl<'a, T: AsRef<[u8]>> DoubleEndedIterator for Base16Iter<'a, T> {
 
 impl<'a, T: AsRef<[u8]>> ExactSizeIterator for Base16Iter<'a, T> {
     #[inline]
-    fn len(&self) -> usize { self.2 - self.1 }
+    fn len(&self) -> usize {
+        self.2 - self.1
+    }
 }
 
 impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
     #[inline]
-    pub fn skip(self, n: usize) -> Self { Base16Iter(self.0, self.1 + n, self.2) }
+    pub fn skip(self, n: usize) -> Self {
+        Base16Iter(self.0, self.1 + n, self.2)
+    }
 
     #[inline]
     pub fn take(self, n: usize) -> Self {

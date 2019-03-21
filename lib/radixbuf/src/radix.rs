@@ -68,7 +68,7 @@
 //! additional data.
 
 use base16::Base16Iter;
-use errors::{Result, ErrorKind};
+use errors::{ErrorKind, Result};
 use key::KeyId;
 use traits::Resize;
 
@@ -82,7 +82,9 @@ struct RadixOffset(u32);
 
 impl RadixOffset {
     #[inline]
-    pub fn new(offset: u32) -> Self { RadixOffset(offset) }
+    pub fn new(offset: u32) -> Self {
+        RadixOffset(offset)
+    }
 
     /// Append an empty `RadixNode` (`[u32; 16]`) at the end of a buffer.
     #[inline]
@@ -118,8 +120,11 @@ impl RadixOffset {
     /// part of the base16 sequence (starting from 12) are not verified against the
     /// key. It's up to the caller to verify it if needed.
     #[inline]
-    pub fn follow<R: AsRef<[u32]>, I: Iterator<Item = u8>>(self, buf: &R, seq: I)
-        -> Result<(Option<KeyId>, (RadixOffset, usize, u8))> {
+    pub fn follow<R: AsRef<[u32]>, I: Iterator<Item = u8>>(
+        self,
+        buf: &R,
+        seq: I,
+    ) -> Result<(Option<KeyId>, (RadixOffset, usize, u8))> {
         let buf = buf.as_ref();
         let mut radix = self;
         for (i, b) in seq.enumerate() {
@@ -154,8 +159,12 @@ impl RadixOffset {
 
     /// Rewrite specified entry to point to another radix node.
     #[inline]
-    pub fn write_radix<R: AsMut<[u32]>>(&self, vec: &mut R, index: u8, node: RadixOffset)
-        -> Result<()> {
+    pub fn write_radix<R: AsMut<[u32]>>(
+        &self,
+        vec: &mut R,
+        index: u8,
+        node: RadixOffset,
+    ) -> Result<()> {
         if node.0 > 0x7fff_ffff {
             bail!(ErrorKind::OffsetOverflow(node.0 as u64));
         }
@@ -164,8 +173,12 @@ impl RadixOffset {
 
     /// Rewrite specified entry to point to a `KeyId`.
     #[inline]
-    pub fn write_key_id<R: AsMut<[u32]>>(&self, vec: &mut R, index: u8, key_id: KeyId)
-        -> Result<()> {
+    pub fn write_key_id<R: AsMut<[u32]>>(
+        &self,
+        vec: &mut R,
+        index: u8,
+        key_id: KeyId,
+    ) -> Result<()> {
         let id: u32 = key_id.into();
         if id > 0x7fff_ffff {
             bail!(ErrorKind::OffsetOverflow(key_id.into()));
@@ -199,10 +212,7 @@ where
     R: AsRef<[u32]>,
     K: AsRef<[u8]>,
 {
-    let (key_id, _) = RadixOffset::new(offset).follow(
-        radix_buf,
-        Base16Iter::from_bin(&key),
-    )?;
+    let (key_id, _) = RadixOffset::new(offset).follow(radix_buf, Base16Iter::from_bin(&key))?;
     Ok(key_id)
 }
 

@@ -12,5 +12,7 @@ pub trait Resize<T> {
 
 impl<T: Copy> Resize<T> for Vec<T> {
     #[inline]
-    fn resize(&mut self, new_len: usize, value: T) { Vec::resize(self, new_len, value) }
+    fn resize(&mut self, new_len: usize, value: T) {
+        Vec::resize(self, new_len, value)
+    }
 }

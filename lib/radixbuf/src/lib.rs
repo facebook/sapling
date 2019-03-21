@@ -12,8 +12,8 @@ extern crate quickcheck;
 
 extern crate vlqencoding;
 
-pub mod errors;
 pub mod base16;
+pub mod errors;
 pub mod key;
-pub mod traits;
 pub mod radix;
+pub mod traits;

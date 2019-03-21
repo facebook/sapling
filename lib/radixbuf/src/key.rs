@@ -33,7 +33,7 @@ use vlqencoding::{VLQDecode, VLQEncode};
 pub struct KeyId(u32);
 
 macro_rules! impl_convert {
-    ($T: ty) => (
+    ($T: ty) => {
         impl From<$T> for KeyId {
             #[allow(unused_comparisons)]
             #[inline]
@@ -47,9 +47,11 @@ macro_rules! impl_convert {
 
         impl Into<$T> for KeyId {
             #[inline]
-            fn into(self) -> $T { self.0 as $T }
+            fn into(self) -> $T {
+                self.0 as $T
+            }
         }
-    )
+    };
 }
 
 impl_convert!(u32);
@@ -144,7 +146,8 @@ mod tests {
                     .collect()
             })
             .collect();
-        let key_ids: Vec<KeyId> = keys.iter()
+        let key_ids: Vec<KeyId> = keys
+            .iter()
             .map(|key| VariantKey::append(&mut buf, key))
             .collect();
         let keys_retrieved: Vec<Vec<u8>> = key_ids
@@ -165,7 +168,8 @@ mod tests {
                 bytes
             })
             .collect();
-        let key_ids: Vec<KeyId> = keys.iter()
+        let key_ids: Vec<KeyId> = keys
+            .iter()
             .map(|key| FixedKey::append(&mut buf, key))
             .collect();
         assert_eq!(buf.len(), 1000 * 20);
