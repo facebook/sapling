@@ -874,6 +874,8 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   transitionState(State::INITIALIZED, State::STARTING);
 
   try {
+    beginMount();
+
     createFuseChannel(std::move(takeoverData.fd));
     auto fuseCompleteFuture =
         channel_->initializeFromTakeover(takeoverData.connInfo);
@@ -885,25 +887,32 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 }
 
 folly::Future<folly::File> EdenMount::fuseMount() {
+  return folly::makeFutureWith([&] { beginMount(); })
+      .thenValue([this](folly::Unit&&) {
+        AbsolutePath mountPath = getPath();
+        return serverState_->getPrivHelper()
+            ->fuseMount(mountPath.stringPiece())
+            .thenValue(
+                [mountPath,
+                 this](folly::File&& fuseDevice) -> folly::Future<folly::File> {
+                  if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
+                    return serverState_->getPrivHelper()
+                        ->fuseUnmount(mountPath.stringPiece())
+                        .thenValue([mountPath](folly::Unit&&) {
+                          return folly::makeFuture<folly::File>(
+                              FuseDeviceUnmountedDuringInitialization{
+                                  mountPath});
+                        });
+                  }
+                  return folly::makeFuture(std::move(fuseDevice));
+                });
+      });
+}
+
+void EdenMount::beginMount() {
   if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
-    return folly::makeFuture<folly::File>(EdenMountCancelled{});
+    throw EdenMountCancelled{};
   }
-  AbsolutePath mountPath = getPath();
-  return serverState_->getPrivHelper()
-      ->fuseMount(mountPath.stringPiece())
-      .thenValue(
-          [mountPath,
-           this](folly::File&& fuseDevice) -> folly::Future<folly::File> {
-            if (mountingUnmountingState_.rlock()->fuseUnmountStarted) {
-              return serverState_->getPrivHelper()
-                  ->fuseUnmount(mountPath.stringPiece())
-                  .thenValue([mountPath](folly::Unit&&) {
-                    return folly::makeFuture<folly::File>(
-                        FuseDeviceUnmountedDuringInitialization{mountPath});
-                  });
-            }
-            return folly::makeFuture(std::move(fuseDevice));
-          });
 }
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {

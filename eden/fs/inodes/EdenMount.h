@@ -501,6 +501,9 @@ class EdenMount {
    *
    * This spins up worker threads to service the existing FUSE channel and
    * returns immediately, or throws an exception on error.
+   *
+   * If unmount() is called before takeoverFuse() is called, then takeoverFuse()
+   * throws an EdenMountCancelled exception.
    */
   void takeoverFuse(FuseChannelData takeoverData);
 
@@ -617,6 +620,17 @@ class EdenMount {
    * Open the FUSE device and mount it using the mount(2) syscall.
    */
   folly::Future<folly::File> fuseMount();
+
+  /**
+   * Check if unmount() was called.
+   *
+   * If unmount() was called in the past, throw EdenMountCancelled. Otherwise,
+   * do nothing.
+   *
+   * Preconditions:
+   * - `beginMount()` has not been called before.
+   */
+  void beginMount();
 
   /**
    * Construct the channel_ member variable.

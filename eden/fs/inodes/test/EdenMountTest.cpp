@@ -812,6 +812,49 @@ TEST(EdenMount, startingFuseFailsImmediatelyIfUnmountWasEverCalled) {
       << "startFuse should fail and not call fuseMount";
 }
 
+TEST(EdenMount, takeoverFuseFailsIfUnmountWasEverCalled) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount.getPath(), mountDelegate);
+
+  try {
+    mount.unmount().within(kTimeout).get();
+  } catch (MockMountDelegate::UnmountFailed&) {
+  }
+  auto fuse = std::make_shared<FakeFuse>();
+  EXPECT_THROW(
+      {
+        mount.takeoverFuse(FuseChannelData{fuse->start(), {}});
+      },
+      EdenMountCancelled);
+}
+
+TEST(EdenMount, takeoverFuseFailsIfUnmountIsPending) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount.getPath(), mountDelegate);
+  auto unmountPromise = mountDelegate->makeUnmountPromise();
+
+  auto unmountFuture = mount.unmount();
+  ASSERT_FALSE(unmountFuture.wait(kMicroTimeout).isReady())
+      << "unmount should not finish until fuseUnmount completes";
+  SCOPE_EXIT {
+    unmountPromise.setValue();
+    std::move(unmountFuture).get(kTimeout);
+  };
+
+  auto fuse = std::make_shared<FakeFuse>();
+  EXPECT_THROW(
+      {
+        mount.takeoverFuse(FuseChannelData{fuse->start(), {}});
+      },
+      EdenMountCancelled);
+}
+
 TEST(EdenMountState, mountIsUninitializedAfterConstruction) {
   auto testMount = TestMount{};
   auto builder = FakeTreeBuilder{};
