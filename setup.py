@@ -486,7 +486,9 @@ if not isinstance(versionb, bytes):
 # connects to a compatible server.
 versionhash = struct.unpack(">Q", hashlib.sha1(versionb).digest()[:8])[0]
 
-chgcflags = ["-std=c99", "-D_GNU_SOURCE", "-DHGVERSIONHASH=%sULL" % versionhash]
+chgcflags = ["-std=c99", "-D_GNU_SOURCE", "-DHAVE_VERSIONHASH", "-I%s" % builddir]
+versionhashpath = pjoin(builddir, "versionhash.h")
+write_if_changed(versionhashpath, "#define HGVERSIONHASH %sULL\n" % versionhash)
 
 write_if_changed(
     "edenscm/mercurial/__version__.py",
@@ -1936,6 +1938,7 @@ if not iswindows:
                     "contrib/chg/procutil.c",
                     "contrib/chg/util.c",
                 ],
+                "depends": [versionhashpath],
                 "include_dirs": ["contrib/chg"] + include_dirs,
                 "extra_args": filter(None, cflags + chgcflags + [STDC99, WALL, PIC]),
             },

@@ -26,6 +26,11 @@
 #include "procutil.h"
 #include "util.h"
 
+/* Written by setup.py */
+#ifdef HAVE_VERSIONHASH
+#include "versionhash.h"
+#endif
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -369,7 +374,7 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
     if (!hgc)
       abortmsg("cannot open hg client");
     int needreconnect = 0;
-#ifdef HGVERSIONHASH
+#ifdef HAVE_VERSIONHASH
     unsigned long long versionhash = hgc_versionhash(hgc);
     if (versionhash != HGVERSIONHASH) {
       debugmsg(
