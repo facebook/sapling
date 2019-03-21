@@ -180,6 +180,10 @@ class EdenMount {
    * If neither startFuse() nor takeoverFuse() has been called, unmount()
    * finishes successfully without calling umount(2). Thereafter, startFuse()
    * and takeoverFuse() will both fail with an EdenMountCancelled exception.
+   *
+   * unmount() is idempotent: If unmount() has already been called, this
+   * function immediately returns a Future which will complete at the same time
+   * the original call to unmount() completes.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmount();
 
@@ -759,6 +763,7 @@ class EdenMount {
 
   struct MountingUnmountingState {
     bool fuseMountStarted() const noexcept;
+    bool unmountStarted() const noexcept;
 
     /**
      * Whether or not the mount(2) syscall has been called (via fuseMount).
@@ -783,14 +788,18 @@ class EdenMount {
     /**
      * Whether or not unmount has been called.
      *
-     * * false: unmount has not been called yet.
-     * * true: unmount was called. unmount could be in progress (e.g. waiting
-     *   for fuseMount to finish), or unmount could have succeeded or failed.
+     * * Empty optional: unmount has not been called yet. (unmount can be
+     *   called.)
+     * * Unfulfilled: unmount is in progress, either waiting for a concurrent
+     *   fuseMount to complete or waiting for fuseUnmount to complete.
+     * * Fulfilled with Unit: unmount was called. fuseUnmount completed
+     *   successfully, or fuseMount was never called for this EdenMount.
+     * * Fulfilled with error: unmount was called, but fuseUnmount failed.
      *
      * The state of this variable might not reflect whether the file system is
      * unmounted.
      */
-    bool unmountStarted{false};
+    std::optional<folly::SharedPromise<folly::Unit>> unmountPromise;
   };
 
   folly::Synchronized<MountingUnmountingState> mountingUnmountingState_;

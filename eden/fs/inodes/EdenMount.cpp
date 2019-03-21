@@ -493,7 +493,10 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
 folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
     auto mountingUnmountingState = mountingUnmountingState_.wlock();
-    mountingUnmountingState->unmountStarted = true;
+    if (mountingUnmountingState->unmountStarted()) {
+      return mountingUnmountingState->unmountPromise->getFuture();
+    }
+    mountingUnmountingState->unmountPromise.emplace();
     if (!mountingUnmountingState->fuseMountStarted()) {
       return folly::makeFuture();
     }
@@ -507,6 +510,18 @@ folly::Future<folly::Unit> EdenMount::unmount() {
           }
           return serverState_->getPrivHelper()->fuseUnmount(
               getPath().stringPiece());
+        })
+        .thenTry([this](
+                     folly::Try<folly::Unit> &&
+                     result) noexcept->folly::Future<Unit> {
+          auto mountingUnmountingState = mountingUnmountingState_.wlock();
+          DCHECK(mountingUnmountingState->unmountPromise.has_value());
+          folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
+              &*mountingUnmountingState->unmountPromise;
+          mountingUnmountingState.unlock();
+
+          unsafeUnmountPromise->setTry(folly::Try<Unit>{result});
+          return folly::makeFuture<folly::Unit>(std::move(result));
         });
   });
 }
@@ -915,7 +930,7 @@ folly::Future<folly::File> EdenMount::fuseMount() {
                     return folly::makeFuture<folly::File>(
                         fuseDevice.exception());
                   }
-                  if (mountingUnmountingState_.rlock()->unmountStarted) {
+                  if (mountingUnmountingState_.rlock()->unmountStarted()) {
                     fuseDevice->close();
                     return serverState_->getPrivHelper()
                         ->fuseUnmount(mountPath.stringPiece())
@@ -949,7 +964,7 @@ folly::SharedPromise<folly::Unit>& EdenMount::beginMount() {
   if (mountingUnmountingState->fuseMountPromise.has_value()) {
     EDEN_BUG() << __func__ << " unexpectedly called more than once";
   }
-  if (mountingUnmountingState->unmountStarted) {
+  if (mountingUnmountingState->unmountStarted()) {
     throw EdenMountCancelled{};
   }
   mountingUnmountingState->fuseMountPromise.emplace();
@@ -1079,6 +1094,10 @@ Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
 
 bool EdenMount::MountingUnmountingState::fuseMountStarted() const noexcept {
   return fuseMountPromise.has_value();
+}
+
+bool EdenMount::MountingUnmountingState::unmountStarted() const noexcept {
+  return unmountPromise.has_value();
 }
 
 EdenMountCancelled::EdenMountCancelled()

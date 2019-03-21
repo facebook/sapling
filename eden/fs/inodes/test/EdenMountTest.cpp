@@ -672,6 +672,73 @@ TEST(EdenMount, unmountDoesNothingIfPriorMountFailed) {
       << "unmount should not call fuseUnmount";
 }
 
+TEST(EdenMount, unmountIsIdempotent) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount.getPath(), mountDelegate);
+  auto fuse = std::make_shared<FakeFuse>();
+  mountDelegate->setMountFuseDevice(fuse->start());
+  mountDelegate->makeUnmountSucceed();
+
+  auto startFuseFuture = mount.startFuse();
+  fuse->sendInitRequest();
+  fuse->recvResponse();
+  std::move(startFuseFuture)
+      .within(kTimeout)
+      .getVia(testMount.getServerExecutor().get());
+  SCOPE_EXIT {
+    fuse->close();
+    mount.getFuseCompletionFuture().within(kTimeout).getVia(
+        testMount.getServerExecutor().get());
+  };
+
+  mount.unmount().get(kTimeout);
+  mount.unmount().get(kTimeout);
+  EXPECT_EQ(mountDelegate->getFuseUnmountCallCount(), 1)
+      << "fuseUnmount should be called only once despite multiple calls to unmount";
+}
+
+TEST(EdenMount, concurrentUnmountCallsWaitForExactlyOneFuseUnmount) {
+  auto testMount = TestMount{FakeTreeBuilder{}};
+  auto& mount = *testMount.getEdenMount();
+  auto mountDelegate = std::make_shared<MockMountDelegate>();
+  auto unmountPromise = mountDelegate->makeUnmountPromise();
+  testMount.getPrivHelper()->registerMountDelegate(
+      mount.getPath(), mountDelegate);
+
+  auto fuse = std::make_shared<FakeFuse>();
+  mountDelegate->setMountFuseDevice(fuse->start());
+
+  auto startFuseFuture = mount.startFuse();
+  fuse->sendInitRequest();
+  fuse->recvResponse();
+  std::move(startFuseFuture)
+      .within(kTimeout)
+      .getVia(testMount.getServerExecutor().get());
+  SCOPE_EXIT {
+    fuse->close();
+    mount.getFuseCompletionFuture().within(kTimeout).getVia(
+        testMount.getServerExecutor().get());
+  };
+
+  auto unmountFuture1 = mount.unmount();
+  auto unmountFuture2 = mount.unmount();
+  EXPECT_FALSE(unmountFuture1.isReady())
+      << "unmount should not finish before fuseUnmount returns";
+  EXPECT_FALSE(unmountFuture2.isReady())
+      << "unmount should not finish before fuseUnmount returns";
+
+  unmountPromise.setValue();
+
+  std::move(unmountFuture1).get(kTimeout);
+  std::move(unmountFuture2).get(kTimeout);
+
+  EXPECT_EQ(mountDelegate->getFuseUnmountCallCount(), 1)
+      << "fuseUnmount should be called only once despite multiple calls to unmount";
+}
+
 TEST(EdenMount, unmountUnmountsIfMounted) {
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto& mount = *testMount.getEdenMount();
