@@ -100,3 +100,14 @@ class SyncState(object):
         self.omittedheads = newomittedheads
         self.omittedbookmarks = newomittedbookmarks
         self.maxage = newmaxage
+
+    def updateremotepath(self, remotepath):
+        self.update(
+            self.version,
+            self.heads,
+            self.bookmarks,
+            self.omittedheads,
+            self.omittedbookmarks,
+            self.maxage,
+            remotepath,
+        )

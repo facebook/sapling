@@ -464,6 +464,20 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
         maxage = ui.configint("commitcloud", "max_sync_age", None)
     fetchversion = lastsyncstate.version
 
+    # the remote backend for storing Commit Cloud commit have been changed
+    # switching between Mercurial <-> Mononoke
+    if lastsyncstate.remotepath and remotepath != lastsyncstate.remotepath:
+        highlightstatus(
+            ui,
+            _(
+                "commits storage have been switched\n"
+                "             from: %s\n"
+                "             to: %s\n"
+            )
+            % (lastsyncstate.remotepath, remotepath),
+        )
+        fetchversion = 0
+
     # cloudrefs are passed in cloud rejoin
     if cloudrefs is None:
         # if we are doing a full sync, or maxage has changed since the last
@@ -471,6 +485,21 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
         if maxage != lastsyncstate.maxage:
             fetchversion = 0
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
+
+    def getconnection():
+        return repo.connectionpool.get(remotepath, opts)
+
+    # the remote backend for storing Commit Cloud commit have been changed
+    if lastsyncstate.remotepath and remotepath != lastsyncstate.remotepath:
+        commitcloudutil.writesyncprogress(
+            repo, "verifying backed up heads at '%s'" % remotepath
+        )
+        # make sure cloudrefs.heads have been backed up at this remote path
+        verifybackedupheads(
+            repo, remotepath, lastsyncstate.remotepath, getconnection, cloudrefs.heads
+        )
+        # if verification succeeded, update remote path in the local state and go on
+        lastsyncstate.updateremotepath(remotepath)
 
     pushrevspec = calcpushrevfilter(ui, repo, workspacename, opts)
     synced = False
@@ -537,9 +566,6 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
         if not synced:
             # The local repo has changed.  We must send these changes to the
             # cloud.
-
-            def getconnection():
-                return repo.connectionpool.get(remotepath, opts)
 
             # Push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
@@ -826,7 +852,7 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
         ), extensions.wrappedfunction(
             remotenames, "pullremotenames", _pullremotenames
         ) if remotenames else util.nullcontextmanager():
-            pullcmd(ui, repo, **pullopts)
+            pullcmd(ui, repo, remotepath, **pullopts)
     else:
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
             omittedbookmarks.extend(
@@ -1066,6 +1092,48 @@ def finddestinationnode(repo, node, visited=set()):
     if len(nodes) == 0:
         return node
     return None
+
+
+def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
+    if not heads:
+        return
+
+    backedupheadsremote = {
+        head
+        for head, backedup in zip(
+            heads, infinitepush.isbackedupnodes(getconnection, heads)
+        )
+        if backedup
+    }
+
+    notbackedupheads = set(heads) - backedupheadsremote
+    notbackeduplocalheads = {head for head in notbackedupheads if head in repo}
+
+    if notbackeduplocalheads:
+        backingup = list(notbackeduplocalheads)
+        commitcloudutil.writesyncprogress(
+            repo, "backing up %s" % backingup[0][:12], backingup=backingup
+        )
+        repo.ui.status(_("pushing to %s\n") % remotepath)
+        infinitepush.pushbackupbundlestacks(repo.ui, repo, getconnection, backingup)
+        recordbackup(repo.ui, repo, remotepath, backingup)
+
+    if len(notbackedupheads) != len(notbackeduplocalheads):
+        missingheads = list(notbackedupheads - notbackeduplocalheads)
+        highlightstatus(repo.ui, _("some heads are missing at %s\n") % remotepath)
+        commitcloudutil.writesyncprogress(repo, "pulling %s" % missingheads[0][:12])
+        pullcmd, pullopts = _getcommandandoptions("^pull")
+        pullopts["rev"] = missingheads
+        pullcmd(repo.ui, repo.unfiltered(), oldremotepath, **pullopts)
+        backingup = list(missingheads)
+        commitcloudutil.writesyncprogress(
+            repo, "backing up %s" % backingup[0][:12], backingup=backingup
+        )
+        repo.ui.status(_("pushing to %s\n") % remotepath)
+        infinitepush.pushbackupbundlestacks(repo.ui, repo, getconnection, backingup)
+        recordbackup(repo.ui, repo, remotepath, backingup)
+
+    return 0
 
 
 def pushbackupbookmarks(
