@@ -322,6 +322,7 @@ def backup(ui, repo, dest=None, **opts):
         timeout = 120
         with lockmod.lock(repo.sharedvfs, _backuplockname, timeout=timeout):
             _dobackup(ui, repo, dest, **opts)
+            _dobackgroundbackupother(ui, repo, dest, **opts)
             return 0
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -933,6 +934,18 @@ def _dobackup(ui, repo, dest, **opts):
         ui.status(_("finished in %.2f seconds\n") % (time.time() - start))
     if failedheads:
         raise error.Abort(_("failed to backup %d heads\n") % len(failedheads))
+
+
+def _dobackgroundbackupother(ui, repo, dest=None, command=None, **opts):
+    """Wrapper on _dobackgroundbackup for "infinitepush-other" path"""
+    other = "infinitepush-other"
+    try:
+        remotepath = ui.paths.getpath(other)
+    except error.RepoError:
+        remotepath = None
+    if remotepath and remotepath.loc != _getremotepath(repo, ui, dest):
+        ui.debug("starting background backup to %s\n" % remotepath.loc)
+        _dobackgroundbackup(ui, repo, other, command, **opts)
 
 
 def _dobackgroundbackup(ui, repo, dest=None, command=None, **opts):
