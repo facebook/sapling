@@ -571,7 +571,8 @@ impl Log {
 
     /// Read `LogMetadata` from given directory. Create an empty one on demand.
     fn load_or_create_meta(dir: &Path) -> io::Result<LogMetadata> {
-        match LogMetadata::read_file(dir.join(META_FILE)) {
+        let meta_path = dir.join(META_FILE);
+        match LogMetadata::read_file(&meta_path) {
             Err(err) => {
                 if err.kind() == io::ErrorKind::NotFound {
                     // Create (and truncate) the primary log and indexes.
@@ -579,10 +580,12 @@ impl Log {
                     let mut primary_file = File::create(dir.join(PRIMARY_FILE))?;
                     primary_file.write_all(PRIMARY_HEADER)?;
                     // Start from empty file and indexes.
-                    Ok(LogMetadata {
+                    let meta = LogMetadata {
                         primary_len: PRIMARY_START_OFFSET,
                         indexes: BTreeMap::new(),
-                    })
+                    };
+                    meta.write_file(&meta_path)?;
+                    Ok(meta)
                 } else {
                     Err(err)
                 }
