@@ -2824,7 +2824,6 @@ mod tests {
     #[test]
     fn test_checksum_bitflip() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // Debug build is much slower than release build. Limit the key length to 1-byte.
         #[cfg(debug_assertions)]
@@ -2841,18 +2840,23 @@ mod tests {
             vec![0x78, 0x9a],
         ];
 
-        for (i, key) in keys.iter().enumerate() {
-            index.insert(key, i as u64).expect("insert");
-            index.insert(key, (i as u64) << 50).expect("insert");
-        }
-        index.flush().expect("flush");
-
-        // Read the raw bytes of the index content
         let bytes = {
+            let mut index = open_opts().open(dir.path().join("a")).expect("open");
+
+            for (i, key) in keys.iter().enumerate() {
+                index.insert(key, i as u64).expect("insert");
+                index.insert(key, (i as u64) << 50).expect("insert");
+            }
+            index.flush().expect("flush");
+
+            // Read the raw bytes of the index content
             let mut f = File::open(dir.path().join("a")).expect("open");
             let mut buf = vec![];
             f.read_to_end(&mut buf).expect("read");
             buf
+
+            // Drop `index` here. This would unmap files so File::create below
+            // can work on Windows.
         };
 
         fn is_corrupted(index: &Index, key: &[u8]) -> bool {

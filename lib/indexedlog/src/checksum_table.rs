@@ -412,6 +412,8 @@ mod tests {
         assert!(table.check_range(0, 4));
     }
 
+    // This test truncates mmaped files which is unsupported by Windows.
+    #[cfg(not(windows))]
     #[test]
     fn test_truncate() {
         let (mut file, get_table) = setup();
