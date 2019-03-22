@@ -575,8 +575,10 @@ fn build_skiplist_index<S: ToString>(
     sql_changesets: SqlChangesets,
 ) -> BoxFuture<(), Error> {
     let blobstore = repo.get_blobstore();
-    let skiplist_depth = 16;
-    let max_index_depth = 2000000000;
+    // skiplist will jump up to 2^9 changesets
+    let skiplist_depth = 10;
+    // Index all changesets
+    let max_index_depth = 20000000000;
     let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
     let key = key.to_string();
 
