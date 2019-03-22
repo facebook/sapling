@@ -699,43 +699,25 @@ def _smartlog(ui, repo, *pats, **opts):
     if -1 in revs:
         revs.remove(-1)
 
-    # It's important that these function caches come after the revsets above,
-    # because the revsets may cause extra nodes to become visible, which in
-    # turn invalidates the changelog instance.
-    rev = repo.changelog.rev
-    ancestor = repo.changelog.ancestor
-    node = repo.changelog.node
-
-    # Find lowest common ancestors of revs. If we have multiple roots in the
-    # repo the following will find one ancestor per group of revs with the
-    # same root.
-    ancestors = set()
-    for r in revs:
-        added = False
-        for anc in list(ancestors):
-            lca = rev(ancestor(node(anc), node(r)))
-            if lca != -1:
-                if anc != lca:
-                    ancestors.discard(anc)
-                    ancestors.add(lca)
-                added = True
-
-        if not added:
-            ancestors.add(r)
-
-    revs |= ancestors
-
-    revs = sorted(list(revs), reverse=True)
-
     if len(revs) == 0:
         return
+
+    # When calculating ancestors, filter commits using 'public()' to reduce the
+    # number of commits to calculate. This is sound because the smartlog revset
+    # will include p1 of draft commits. Practically, this optimization can make
+    # a 3x difference. This is not sound if smartlog() revset function is not
+    # used (when --rev is passed).
+    if opts.get("rev"):
+        revs = repo.revs("sort(ancestor(%ld) | %ld, -rev)", revs, revs)
+    else:
+        revs = repo.revs("sort(ancestor(%ld & public()) | %ld, -rev)", revs, revs)
 
     # Print it!
     overrides = {}
     if ui.config("experimental", "graphstyle.grandparent", "2.") == "|":
         overrides[("experimental", "graphstyle.grandparent")] = "2."
     with ui.configoverride(overrides, "smartlog"):
-        revdag = getdag(ui, repo, revs, masterrev)
+        revdag = getdag(ui, repo, list(revs), masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         ui.pager("smartlog")
         cmdutil.displaygraph(
