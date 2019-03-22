@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use memmap::{Mmap, MmapOptions};
-use std::fs::File;
+use std::fs::{self, File};
 use std::hash::Hasher;
 use std::io;
 use std::path::Path;
@@ -44,6 +44,33 @@ pub fn mmap_readonly(file: &File, len: Option<u64>) -> io::Result<(Mmap, u64)> {
         }
     };
     Ok((mmap, len))
+}
+
+/// Open a path. Usually for locking purpose.
+///
+/// The path is assumed to be a directory. But this function does not do extra
+/// checks to make sure. If path is not a directory, this function might still
+/// succeed on unix systems.
+///
+/// Windows does not support opening a directory. This function will create a
+/// file called "lock" inside the directory and open that file instead.
+pub fn open_dir(lock_path: impl AsRef<Path>) -> io::Result<File> {
+    let path = lock_path.as_ref();
+    #[cfg(unix)]
+    {
+        File::open(&path)
+    }
+    #[cfg(not(unix))]
+    {
+        let mut path = path.to_path_buf();
+        path.push("lock");
+        File::open(&path).or_else(|_| {
+            fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+        })
+    }
 }
 
 #[inline]

@@ -44,7 +44,7 @@ use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use utils::{mmap_readonly, xxhash, xxhash32};
+use utils::{mmap_readonly, open_dir, xxhash, xxhash32};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
@@ -339,7 +339,7 @@ impl Log {
     pub fn flush(&mut self) -> io::Result<()> {
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
-        let mut dir_file = fs::OpenOptions::new().read(true).open(&self.dir)?;
+        let mut dir_file = open_dir(&self.dir)?;
         let _lock = ScopedFileLock::new(&mut dir_file, true)?;
 
         // Step 1: Reload metadata to get the latest view of the files.
