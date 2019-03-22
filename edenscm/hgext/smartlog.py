@@ -471,6 +471,14 @@ def smartlogrevset(repo, subset, x):
     # Include parents of drafts, and public heads.
     revs = repo.revs("parents(%ld) + %ld + %ld + %ld", drafts, drafts, heads, masterset)
 
+    # Include the ancestor of above commits to make the graph connected.
+    #
+    # When calculating ancestors, filter commits using 'public()' to reduce the
+    # number of commits to calculate. This is sound because the above logic
+    # includes p1 of draft commits, and assume master is public. Practically,
+    # this optimization can make a 3x difference.
+    revs = repo.revs("ancestor(%ld & public()) + %ld", revs, revs)
+
     return subset & revs
 
 
@@ -654,18 +662,12 @@ def _smartlog(ui, repo, *pats, **opts):
     if len(revs) == 0:
         return
 
-    # When calculating ancestors, filter commits using 'public()' to reduce the
-    # number of commits to calculate. This is sound because the smartlog revset
-    # will include p1 of draft commits. Practically, this optimization can make
-    # a 3x difference.
-    revs = repo.revs("sort(ancestor(%ld & public()) | %ld, -rev)", revs, revs)
-
     # Print it!
     overrides = {}
     if ui.config("experimental", "graphstyle.grandparent", "2.") == "|":
         overrides[("experimental", "graphstyle.grandparent")] = "2."
     with ui.configoverride(overrides, "smartlog"):
-        revdag = getdag(ui, repo, list(revs), masterrev)
+        revdag = getdag(ui, repo, sorted(revs, reverse=True), masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         ui.pager("smartlog")
         cmdutil.displaygraph(
