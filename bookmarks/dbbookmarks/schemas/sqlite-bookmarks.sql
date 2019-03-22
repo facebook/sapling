@@ -2,8 +2,13 @@ CREATE TABLE bookmarks (
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(512) NOT NULL,
   changeset_id VARBINARY(32) NOT NULL,
+  publishing tinyint(1) NOT NULL DEFAULT '1', --bookmark can be public or scratch'
+  pull_default tinyint(1) NOT NULL DEFAULT '1', --bookmark can be pulled by default or not'
   PRIMARY KEY (repo_id, name)
 );
+
+CREATE INDEX repo_id_publishing ON bookmarks (repo_id, publishing);
+CREATE INDEX repo_id_pull_default ON bookmarks (repo_id, pull_default);
 
 CREATE TABLE bookmarks_update_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
