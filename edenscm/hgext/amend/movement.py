@@ -338,16 +338,25 @@ def _findnexttarget(
                 % short(repo[rev].node())
             )
             _showchangesets(ui, repo, revs=children)
-            raise error.Abort(
-                _("ambiguous next changeset"),
-                hint=_(
-                    "use the --newest or --towards flags "
-                    "to specify which child to pick"
-                ),
-            )
-
-        # Get the child with the highest revision number.
-        rev = max(children)
+            # if theres only one nonobsolete we're guessing it's the one
+            nonobschildren = filter(lambda c: not repo[c].obsolete(), children)
+            if len(nonobschildren) == 1:
+                rev = nonobschildren[0]
+                ui.status(
+                    _("choosing the only non-obsolete child: %s\n")
+                    % short(repo[rev].node())
+                )
+            else:
+                raise error.Abort(
+                    _("ambiguous next changeset"),
+                    hint=_(
+                        "use the --newest or --towards flags "
+                        "to specify which child to pick"
+                    ),
+                )
+        else:
+            # Get the child with the highest revision number.
+            rev = max(children)
 
     return rev
 

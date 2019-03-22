@@ -55,10 +55,7 @@ Check the next behaviour in case of ambiguity between obsolete and non-obsolete
   changeset 61246295ee1e has multiple children, namely:
   [e8ec16] r1
   [dc00ac] amended
-  abort: ambiguous next changeset
-  (use the --newest or --towards flags to specify which child to pick)
-  [255]
-  $ hg next --newest
+  choosing the only non-obsolete child: dc00accb61d3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [dc00ac] amended
 
