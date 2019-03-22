@@ -28,13 +28,41 @@ Cannot --rebase and --merge.
   abort: cannot use both --merge and --rebase
   [255]
 
-Rebasing single changeset.
+Build dag with instablility
   $ hg debugbuilddag -n +4
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
+
+Check the next behaviour in case of ambiguity between obsolete and non-obsolete
+  $ showgraph
+  @  4 amended
+  |
+  | o  3 r3
+  | |
+  | o  2 r2
+  | |
+  | x  1 r1
+  |/
+  o  0 r0
+  
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [612462] r0
+  $ hg next
+  changeset 61246295ee1e has multiple children, namely:
+  [e8ec16] r1
+  [dc00ac] amended
+  abort: ambiguous next changeset
+  (use the --newest or --towards flags to specify which child to pick)
+  [255]
+  $ hg next --newest
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [dc00ac] amended
+
+Rebasing single changeset.
   $ hg next
   abort: current changeset has no children
   [255]
