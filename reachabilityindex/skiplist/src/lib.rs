@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#[macro_use]
 extern crate failure_ext as failure;
 
 use std::collections::{HashMap, HashSet};
@@ -398,42 +397,37 @@ impl ReachabilityIndex for SkiplistIndex {
         &self,
         ctx: CoreContext,
         changeset_fetcher: Arc<ChangesetFetcher>,
-        maybe_descendant_hash: ChangesetId,
-        maybe_ancestor_hash: ChangesetId,
+        desc_hash: ChangesetId,
+        anc_hash: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         cloned!(self.skip_list_edges);
-        fetch_generation_and_join(
-            ctx.clone(),
-            changeset_fetcher.clone(),
-            maybe_descendant_hash,
-        )
-        .join(fetch_generation_and_join(
-            ctx.clone(),
-            changeset_fetcher.clone(),
-            maybe_ancestor_hash,
-        ))
-        .and_then(
-            move |(maybe_descendant_hash_gen, maybe_ancestor_hash_gen)| {
-                let (maybe_descendant_hash, maybe_descendant_gen) = maybe_descendant_hash_gen;
-                let (maybe_ancestor_hash, maybe_ancestor_gen) = maybe_ancestor_hash_gen;
+        fetch_generation_and_join(ctx.clone(), changeset_fetcher.clone(), desc_hash)
+            .join(fetch_generation_and_join(
+                ctx.clone(),
+                changeset_fetcher.clone(),
+                anc_hash,
+            ))
+            .and_then(move |((desc_hash, desc_gen), (anc_hash, anc_gen))| {
+                ctx.perf_counters()
+                    .set_counter("ancestor_gen", anc_gen.value() as i64);
+                ctx.perf_counters()
+                    .set_counter("descendant_gen", desc_gen.value() as i64);
+
                 process_frontier(
-                    ctx,
+                    ctx.clone(),
                     changeset_fetcher,
                     skip_list_edges,
-                    NodeFrontier::new(
-                        hashmap! {maybe_descendant_gen => hashset!{maybe_descendant_hash}},
-                    ),
-                    maybe_ancestor_gen,
+                    NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
+                    anc_gen,
                 )
                 .map(move |frontier| {
-                    match frontier.get_all_changesets_for_gen_num(maybe_ancestor_gen) {
-                        Some(cs_ids) => cs_ids.contains(&maybe_ancestor_hash),
+                    match frontier.get_all_changesets_for_gen_num(anc_gen) {
+                        Some(cs_ids) => cs_ids.contains(&anc_hash),
                         None => false,
                     }
                 })
-            },
-        )
-        .boxify()
+            })
+            .boxify()
     }
 }
 
@@ -496,7 +490,17 @@ fn process_frontier(
                     all_cs_ids.into_iter().collect(),
                     max_gen,
                 );
-
+                if skipped_frontier.len() == 0 {
+                    ctx.perf_counters().increment_counter("noskip_iterations");
+                } else {
+                    ctx.perf_counters().increment_counter("skip_iterations");
+                    if let Some(new) = skipped_frontier.max_gen() {
+                        ctx.perf_counters().add_to_counter(
+                            "skipped_generations",
+                            (val.value() - new.value()) as i64,
+                        );
+                    }
+                }
                 let parents_futs = no_skiplist_edges.into_iter().map({
                     cloned!(ctx, changeset_fetcher);
                     move |cs_id| {
@@ -505,7 +509,6 @@ fn process_frontier(
                             .map(IntoIterator::into_iter)
                     }
                 });
-
                 join_all(parents_futs)
                     .map(|all_parents| all_parents.into_iter().flatten())
                     .and_then({

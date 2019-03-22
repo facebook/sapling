@@ -332,7 +332,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .into_future()
             .from_err()
             .and_then({
-                cloned!(self.addr);
+                cloned!(self.addr, ctx);
                 move |param| addr.send_query(ctx, param)
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
@@ -344,6 +344,9 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             .map_err(move |e| IsAncestorExn::e(e.into()))
             .timed({
                 move |stats, resp| {
+                    if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+                        scuba.add("extra_context", counters);
+                    };
                     log_time(&mut scuba, &stats, resp, resp.map(|_| 0).unwrap_or(0));
 
                     Ok(())
