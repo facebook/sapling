@@ -245,7 +245,7 @@ Test overriding master
   |
 
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r master --public
+  $ hg phase -r . --public
 
 Test with weird bookmark names
 
@@ -335,6 +335,8 @@ Test singlepublicsuccessor  template keyword
   $ hg smartlog -r 2 -T "SPS: {singlepublicsuccessor}" --hidden
   x  SPS: 2b5806c2ca1e228838315bbffeb7d1504c38c9d6
   |
+  o  SPS:
+  
 
 A draft stack at the top
   $ cd ..

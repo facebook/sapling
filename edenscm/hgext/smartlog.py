@@ -620,7 +620,10 @@ def _smartlog(ui, repo, *pats, **opts):
     global commit_info
     commit_info = opts.get("commit_info")
 
-    if not opts.get("rev"):
+    headrevs = opts.get("rev")
+    if headrevs:
+        headspec = revsetlang.formatspec("%lr", headrevs)
+    else:
         if opts.get("all"):
             datefilter = "all()"
         else:
@@ -635,14 +638,15 @@ def _smartlog(ui, repo, *pats, **opts):
             visibleheads = repo.revs("%ld & %r", allheads, datefilter)
             hiddenchanges = len(allheads) - len(visibleheads)
 
-        revstring = revsetlang.formatspec(
-            "smartlog(heads=(interestingbookmarks() + (heads(draft()) & %r) + .), master=%r)",
-            datefilter,
-            masterstring,
+        headspec = revsetlang.formatspec(
+            "interestingbookmarks() + (heads(draft()) & %r) + .", datefilter
         )
-        revs.update(scmutil.revrange(repo, [revstring]))
-    else:
-        revs.update(scmutil.revrange(repo, opts.get("rev")))
+
+    revstring = revsetlang.formatspec(
+        "smartlog(heads=%r, master=%r)", headspec, masterstring
+    )
+
+    revs = set(scmutil.revrange(repo, [revstring]))
 
     if -1 in revs:
         revs.remove(-1)
@@ -653,12 +657,8 @@ def _smartlog(ui, repo, *pats, **opts):
     # When calculating ancestors, filter commits using 'public()' to reduce the
     # number of commits to calculate. This is sound because the smartlog revset
     # will include p1 of draft commits. Practically, this optimization can make
-    # a 3x difference. This is not sound if smartlog() revset function is not
-    # used (when --rev is passed).
-    if opts.get("rev"):
-        revs = repo.revs("sort(ancestor(%ld) | %ld, -rev)", revs, revs)
-    else:
-        revs = repo.revs("sort(ancestor(%ld & public()) | %ld, -rev)", revs, revs)
+    # a 3x difference.
+    revs = repo.revs("sort(ancestor(%ld & public()) | %ld, -rev)", revs, revs)
 
     # Print it!
     overrides = {}
