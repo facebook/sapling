@@ -234,6 +234,13 @@ impl Log {
     /// transaction.
     pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
         let dir = dir.as_ref();
+
+        fs::create_dir_all(dir)?;
+
+        // Make sure check and write happens atomically.
+        let mut dir_file = open_dir(dir)?;
+        let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+
         let meta = Self::load_or_create_meta(dir)?;
         let (disk_buf, indexes) = Self::load_log_and_indexes(dir, &meta, &index_defs)?;
         let mut log = Log {
@@ -570,13 +577,15 @@ impl Log {
     }
 
     /// Read `LogMetadata` from given directory. Create an empty one on demand.
+    ///
+    /// The caller should ensure the directory exists and take a lock on it to
+    /// avoid filesystem races.
     fn load_or_create_meta(dir: &Path) -> io::Result<LogMetadata> {
         let meta_path = dir.join(META_FILE);
         match LogMetadata::read_file(&meta_path) {
             Err(err) => {
                 if err.kind() == io::ErrorKind::NotFound {
                     // Create (and truncate) the primary log and indexes.
-                    fs::create_dir_all(dir)?;
                     let mut primary_file = File::create(dir.join(PRIMARY_FILE))?;
                     primary_file.write_all(PRIMARY_HEADER)?;
                     // Start from empty file and indexes.
