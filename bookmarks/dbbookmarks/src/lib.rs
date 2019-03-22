@@ -6,6 +6,8 @@
 
 #![deny(warnings)]
 
+#[macro_use]
+extern crate stats;
 extern crate ascii;
 extern crate bookmarks;
 extern crate context;
@@ -19,8 +21,6 @@ extern crate serde_json;
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
-
-use std::collections::HashMap;
 
 use bookmarks::{
     Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
@@ -36,8 +36,17 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::Timestamp;
 use sql::{Connection, Transaction as SqlTransaction};
 pub use sql_ext::SqlConstructors;
+use stats::Timeseries;
+use std::collections::HashMap;
 
 use mononoke_types::{ChangesetId, RepositoryId};
+
+define_stats! {
+    prefix = "mononoke.dbbookmarks";
+    list_by_prefix_maybe_stale: timeseries(RATE, SUM),
+    list_by_prefix: timeseries(RATE, SUM),
+    get_bookmark: timeseries(RATE, SUM),
+}
 
 #[derive(Clone)]
 pub struct SqlBookmarks {
@@ -208,6 +217,7 @@ impl Bookmarks for SqlBookmarks {
         name: &Bookmark,
         repo_id: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
+        STATS::get_bookmark.add_value(1);
         SelectBookmark::query(&self.read_master_connection, &repo_id, &name)
             .map(|rows| rows.into_iter().next().map(|row| row.0))
             .boxify()
@@ -219,6 +229,7 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        STATS::list_by_prefix.add_value(1);
         self.list_by_prefix_impl(prefix, repo_id, &self.read_master_connection)
     }
 
@@ -228,6 +239,7 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        STATS::list_by_prefix_maybe_stale.add_value(1);
         self.list_by_prefix_impl(prefix, repo_id, &self.read_connection)
     }
 
