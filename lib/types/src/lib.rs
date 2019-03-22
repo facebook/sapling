@@ -14,7 +14,7 @@ pub mod nodeinfo;
 pub mod parents;
 pub mod path;
 
-pub use crate::api::{FileDataResponse, FileHistoryResponse};
+pub use crate::api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse};
 pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};
 pub use crate::key::Key;
 pub use crate::node::Node;

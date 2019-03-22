@@ -11,6 +11,11 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct FileDataRequest {
+    pub keys: Vec<Key>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FileDataResponse {
     files: Vec<(Key, Bytes)>,
 }
@@ -30,6 +35,12 @@ impl IntoIterator for FileDataResponse {
     fn into_iter(self) -> Self::IntoIter {
         self.files.into_iter()
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileHistoryRequest {
+    pub keys: Vec<Key>,
+    pub depth: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
