@@ -842,24 +842,6 @@ class dirstate(object):
                     files.append(fullpath)
         return files
 
-    def _ignorefileandline(self, f):
-        files = collections.deque(self._ignorefiles())
-        visited = set()
-        while files:
-            i = files.popleft()
-            patterns = matchmod.readpatternfile(i, self._ui.warn, sourceinfo=True)
-            for pattern, lineno, line in patterns:
-                kind, p = matchmod._patsplit(pattern, "glob")
-                if kind == "subinclude":
-                    if p not in visited:
-                        files.append(p)
-                    continue
-                m = matchmod.match(self._root, "", [], [pattern], warn=self._ui.warn)
-                if m(f):
-                    return (i, lineno, line)
-            visited.add(i)
-        return (None, -1, "")
-
     def _walkexplicit(self, match):
         """Get stat data about the files explicitly specified by match.
 

@@ -1212,6 +1212,7 @@ def debugignore(ui, repo, *files, **opts):
     if so, show the ignore rule (file and line number) that matched it.
     """
     ignore = repo.dirstate._ignore
+    visitdir = repo.dirstate._ignore.visitdir
     if not files:
         # Show all the patterns
         ui.write("%s\n" % repr(ignore))
@@ -1220,30 +1221,22 @@ def debugignore(ui, repo, *files, **opts):
         for f in m.files():
             nf = util.normpath(f)
             ignored = None
-            ignoredata = None
             if nf != ".":
                 if ignore(nf):
                     ignored = nf
-                    ignoredata = repo.dirstate._ignorefileandline(nf)
                 else:
                     for p in util.finddirs(nf):
-                        if ignore(p):
+                        if visitdir(p) == "all":
                             ignored = p
-                            ignoredata = repo.dirstate._ignorefileandline(p)
                             break
             if ignored:
                 if ignored == nf:
                     ui.write(_("%s is ignored\n") % m.uipath(f))
                 else:
                     ui.write(
-                        _("%s is ignored because of " "containing folder %s\n")
+                        _("%s is ignored because of containing folder %s\n")
                         % (m.uipath(f), ignored)
                     )
-                ignorefile, lineno, line = ignoredata
-                ui.write(
-                    _("(ignore rule in %s, line %d: '%s')\n")
-                    % (ignorefile, lineno, line)
-                )
             else:
                 ui.write(_("%s is not ignored\n") % m.uipath(f))
 
