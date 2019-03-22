@@ -7,6 +7,7 @@ use memmap::{Mmap, MmapOptions};
 use std::fs::File;
 use std::hash::Hasher;
 use std::io;
+use std::path::Path;
 use twox_hash::{XxHash, XxHash32};
 
 /// Return a read-only mmap view of the entire file, and its length.
@@ -20,17 +21,19 @@ use twox_hash::{XxHash, XxHash32};
 pub fn mmap_readonly(file: &File, len: Option<u64>) -> io::Result<(Mmap, u64)> {
     let actual_len = file.metadata()?.len();
     let len = match len {
-        Some(len) => if len > actual_len {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                format!(
-                    "mmap length {} is greater than file size {}",
-                    len, actual_len
-                ),
-            ));
-        } else {
-            len
-        },
+        Some(len) => {
+            if len > actual_len {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    format!(
+                        "mmap length {} is greater than file size {}",
+                        len, actual_len
+                    ),
+                ));
+            } else {
+                len
+            }
+        }
         None => actual_len,
     };
     let mmap = unsafe {

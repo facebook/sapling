@@ -375,7 +375,8 @@ impl Log {
         self.mem_buf.clear();
 
         // Step 4: Update the indexes. Optionally flush them.
-        let indexes_to_flush: Vec<usize> = self.index_defs
+        let indexes_to_flush: Vec<usize> = self
+            .index_defs
             .iter()
             .enumerate()
             .filter(|&(_i, def)| {
