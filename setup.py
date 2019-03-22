@@ -477,6 +477,19 @@ def pickversion():
     return "_".join(["4.4.2"] + out.split())
 
 
+if not os.path.isdir(builddir):
+    # Create the "build" directory
+    try:
+        # Prefer a symlink to a "scratch path" path if the "scratch" tool exists
+        scratchpath = subprocess.check_output(
+            ["scratch", "path", "--subdir", "hgbuild"]
+        ).strip()
+        assert os.path.isdir(scratchpath)
+        os.symlink(scratchpath, builddir)
+    except Exception:
+        ensureexists(builddir)
+
+
 version = pickversion()
 versionb = version
 if not isinstance(versionb, bytes):
@@ -500,18 +513,6 @@ write_if_changed(
         ]
     ),
 )
-
-if not os.path.isdir(builddir):
-    # Create the "build" directory
-    try:
-        # Prefer a symlink to a "scratch path" path if the "scratch" tool exists
-        scratchpath = subprocess.check_output(
-            ["scratch", "path", "--subdir", "hgbuild"]
-        ).strip()
-        assert os.path.isdir(scratchpath)
-        os.symlink(scratchpath, builddir)
-    except Exception:
-        ensureexists(builddir)
 
 
 def writebuildinfoc():
