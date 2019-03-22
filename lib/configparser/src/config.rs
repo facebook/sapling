@@ -228,6 +228,22 @@ impl ConfigSet {
                 }
                 Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
             }
+        } else {
+            // On Windows, a UNC path `\\?\C:\foo\.\x` will fail to canonicalize
+            // because it contains `.`. That path can be constructed by using
+            // `PathBuf::join` to concatenate a UNC path `\\?\C:\foo` with
+            // a "normal" path `.\x`.
+            // Try to fix it automatically by stripping the UNC prefix and retry
+            // `canonicalize`. `C:\foo\.\x` would be canonicalized without errors.
+            #[cfg(windows)]
+            {
+                if let Some(path_str) = path.to_str() {
+                    if path_str.starts_with(r"\\?\") {
+                        let path = Path::new(&path_str[4..]);
+                        self.load_file(&path, opts, visited, errors);
+                    }
+                }
+            }
         }
 
         // If `path.canonicalize` reports an error. It's usually the path cannot
