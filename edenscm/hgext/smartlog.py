@@ -655,7 +655,7 @@ Excludes:
 
 def _smartlog(ui, repo, *pats, **opts):
     if opts.get("rev"):
-        masterfallback = "p1(.)"
+        masterfallback = "null"
     else:
         masterfallback = "interestingmaster()"
 
