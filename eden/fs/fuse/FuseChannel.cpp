@@ -1696,11 +1696,19 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPENDIR";
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->opendir(ino, open->flags).thenValue([](uint64_t fh) {
-    fuse_open_out out = {};
-    out.fh = fh;
-    RequestData::get().sendReply(out);
-  });
+  auto minorVersion = connInfo_->minor;
+  return dispatcher_->opendir(ino, open->flags)
+      .thenValue([minorVersion](uint64_t fh) {
+        fuse_open_out out = {};
+#ifdef FOPEN_CACHE_DIR
+        if (minorVersion >= 28) {
+          // Opt into readdir caching.
+          out.open_flags |= FOPEN_KEEP_CACHE | FOPEN_CACHE_DIR;
+        }
+#endif
+        out.fh = fh;
+        RequestData::get().sendReply(out);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadDir(
