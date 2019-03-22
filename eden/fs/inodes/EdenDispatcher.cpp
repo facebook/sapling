@@ -10,8 +10,6 @@
 #include "EdenDispatcher.h"
 
 #include <folly/Format.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
-#include <folly/executors/GlobalExecutor.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <cstring>
