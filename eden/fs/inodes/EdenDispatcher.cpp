@@ -80,6 +80,15 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(InodeNumber ino) {
 folly::Future<uint64_t> EdenDispatcher::opendir(InodeNumber ino, int flags) {
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "opendir({}, flags={:x})", ino, flags);
+#ifdef FUSE_NO_OPENDIR_SUPPORT
+  if (getConnInfo().flags & FUSE_NO_OPENDIR_SUPPORT) {
+    // If the kernel understands FUSE_NO_OPENDIR_SUPPORT, then returning ENOSYS
+    // means that no further opendir() nor releasedir() calls will make it into
+    // Eden.
+    folly::throwSystemErrorExplicit(
+        ENOSYS, "Eden opendir() calls are stateless and not required");
+  }
+#endif
   return 0;
 }
 

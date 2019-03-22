@@ -1013,6 +1013,9 @@ void FuseChannel::readInitPacket() {
   // File handles are stateless so the kernel does not need to send open() and
   // release().
   want |= FUSE_NO_OPEN_SUPPORT;
+  // File handles are stateless so the kernel does not need to send
+  // open() and release().
+  want |= FUSE_NO_OPENDIR_SUPPORT;
 #endif
 
   // Only return the capabilities the kernel supports.
