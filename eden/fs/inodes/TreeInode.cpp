@@ -903,7 +903,8 @@ FileInodePtr TreeInode::createImpl(
     contents.unlock();
   }
 
-  invalidateFuseCacheIfRequired(name);
+  invalidateFuseEntryCacheIfRequired(name);
+  invalidateFuseInodeCacheIfRequired();
 
   getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
@@ -1058,7 +1059,8 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     saveOverlayDir(contents->entries);
   }
 
-  invalidateFuseCacheIfRequired(name);
+  invalidateFuseEntryCacheIfRequired(name);
+  invalidateFuseInodeCacheIfRequired();
   getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
@@ -1238,7 +1240,8 @@ int TreeInode::tryRemoveChild(
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
   if (flushKernelCache) {
-    invalidateFuseCache(name);
+    invalidateFuseInodeCache();
+    invalidateFuseEntryCache(name);
   }
 
   return 0;
@@ -1597,6 +1600,15 @@ Future<Unit> TreeInode::doRename(
   locks.reset();
   deletedInode.reset();
 
+  // If the rename occurred outside of a FUSE request (unlikely), make sure to
+  // invalidate the kernel caches.
+  invalidateFuseInodeCacheIfRequired();
+  if (destParent.get() != this) {
+    destParent->invalidateFuseInodeCacheIfRequired();
+  }
+  invalidateFuseEntryCacheIfRequired(srcName);
+  destParent->invalidateFuseEntryCacheIfRequired(destName);
+
   return folly::unit;
 }
 
@@ -1876,7 +1888,7 @@ Future<Unit> TreeInode::diff(
     inode = inodeEntry->getInodePtr();
     if (!inode) {
       inodeFuture = loadChildLocked(
-          contents->entries, kIgnoreFilename, *inodeEntry, &pendingLoads);
+          contents->entries, kIgnoreFilename, *inodeEntry, pendingLoads);
     }
   }
 
@@ -2052,7 +2064,7 @@ Future<Unit> TreeInode::computeDiff(
                     entryIgnored));
           } else {
             auto inodeFuture = self->loadChildLocked(
-                contents->entries, name, *inodeEntry, &pendingLoads);
+                contents->entries, name, *inodeEntry, pendingLoads);
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
                     context,
@@ -2123,7 +2135,7 @@ Future<Unit> TreeInode::computeDiff(
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
         auto inodeFuture = self->loadChildLocked(
-            contents->entries, scmEntry.getName(), *inodeEntry, &pendingLoads);
+            contents->entries, scmEntry.getName(), *inodeEntry, pendingLoads);
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2146,7 +2158,7 @@ Future<Unit> TreeInode::computeDiff(
         // This is a modified directory.  We have to load it then recurse
         // into it to find files with differences.
         auto inodeFuture = self->loadChildLocked(
-            contents->entries, scmEntry.getName(), *inodeEntry, &pendingLoads);
+            contents->entries, scmEntry.getName(), *inodeEntry, pendingLoads);
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2292,11 +2304,18 @@ Future<Unit> TreeInode::checkout(
   XLOG(DBG4) << "checkout: starting update of " << getLogPath() << ": "
              << (fromTree ? fromTree->getHash().toString() : "<none>")
              << " --> " << (toTree ? toTree->getHash().toString() : "<none>");
+
   vector<unique_ptr<CheckoutAction>> actions;
   vector<IncompleteInodeLoad> pendingLoads;
+  bool wasDirectoryListModified = false;
 
   computeCheckoutActions(
-      ctx, fromTree.get(), toTree.get(), &actions, &pendingLoads);
+      ctx,
+      fromTree.get(),
+      toTree.get(),
+      actions,
+      pendingLoads,
+      wasDirectoryListModified);
 
   // Wire up the callbacks for any pending inode loads we started
   for (auto& load : pendingLoads) {
@@ -2304,36 +2323,44 @@ Future<Unit> TreeInode::checkout(
   }
 
   // Now start all of the checkout actions
-  vector<Future<Unit>> actionFutures;
+  vector<Future<InvalidationRequired>> actionFutures;
   for (const auto& action : actions) {
     actionFutures.emplace_back(action->run(ctx, getStore()));
   }
   // Wait for all of the actions, and record any errors.
   return folly::collectAllSemiFuture(actionFutures)
       .toUnsafeFuture()
-      .thenValue([ctx,
-                  self = inodePtrFromThis(),
-                  toTree = std::move(toTree),
-                  actions = std::move(actions)](
-                     vector<folly::Try<Unit>> actionResults) {
-        // Record any errors that occurred
-        size_t numErrors = 0;
-        for (size_t n = 0; n < actionResults.size(); ++n) {
-          auto& result = actionResults[n];
-          if (!result.hasException()) {
-            continue;
-          }
-          ++numErrors;
-          ctx->addError(
-              self.get(), actions[n]->getEntryName(), result.exception());
-        }
+      .thenValue(
+          [ctx,
+           self = inodePtrFromThis(),
+           toTree = std::move(toTree),
+           actions = std::move(actions),
+           wasDirectoryListModified](
+              vector<folly::Try<InvalidationRequired>> actionResults) mutable {
+            // Record any errors that occurred
+            size_t numErrors = 0;
+            for (size_t n = 0; n < actionResults.size(); ++n) {
+              auto& result = actionResults[n];
+              if (!result.hasException()) {
+                wasDirectoryListModified |=
+                    (result.value() == InvalidationRequired::Yes);
+                continue;
+              }
+              ++numErrors;
+              ctx->addError(
+                  self.get(), actions[n]->getEntryName(), result.exception());
+            }
 
-        // Update our state in the overlay
-        self->saveOverlayPostCheckout(ctx, toTree.get());
+            if (wasDirectoryListModified) {
+              self->invalidateFuseInodeCache();
+            }
 
-        XLOG(DBG4) << "checkout: finished update of " << self->getLogPath()
-                   << ": " << numErrors << " errors";
-      });
+            // Update our state in the overlay
+            self->saveOverlayPostCheckout(ctx, toTree.get());
+
+            XLOG(DBG4) << "checkout: finished update of " << self->getLogPath()
+                       << ": " << numErrors << " errors";
+          });
 }
 
 bool TreeInode::canShortCircuitCheckout(
@@ -2385,8 +2412,9 @@ void TreeInode::computeCheckoutActions(
     CheckoutContext* ctx,
     const Tree* fromTree,
     const Tree* toTree,
-    vector<unique_ptr<CheckoutAction>>* actions,
-    vector<IncompleteInodeLoad>* pendingLoads) {
+    vector<unique_ptr<CheckoutAction>>& actions,
+    vector<IncompleteInodeLoad>& pendingLoads,
+    bool& wasDirectoryListModified) {
   // Grab the contents_ lock for the duration of this function
   auto contents = contents_.wlock();
 
@@ -2421,20 +2449,40 @@ void TreeInode::computeCheckoutActions(
 
       // This entry is present in the new tree but not the old one.
       action = processCheckoutEntry(
-          ctx, contents->entries, nullptr, &newEntries[newIdx], pendingLoads);
+          ctx,
+          contents->entries,
+          nullptr,
+          &newEntries[newIdx],
+          pendingLoads,
+          wasDirectoryListModified);
       ++newIdx;
     } else if (newIdx >= newEntries.size()) {
       // This entry is present in the old tree but not the old one.
       action = processCheckoutEntry(
-          ctx, contents->entries, &oldEntries[oldIdx], nullptr, pendingLoads);
+          ctx,
+          contents->entries,
+          &oldEntries[oldIdx],
+          nullptr,
+          pendingLoads,
+          wasDirectoryListModified);
       ++oldIdx;
     } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
-          ctx, contents->entries, &oldEntries[oldIdx], nullptr, pendingLoads);
+          ctx,
+          contents->entries,
+          &oldEntries[oldIdx],
+          nullptr,
+          pendingLoads,
+          wasDirectoryListModified);
       ++oldIdx;
     } else if (oldEntries[oldIdx].getName() > newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
-          ctx, contents->entries, nullptr, &newEntries[newIdx], pendingLoads);
+          ctx,
+          contents->entries,
+          nullptr,
+          &newEntries[newIdx],
+          pendingLoads,
+          wasDirectoryListModified);
       ++newIdx;
     } else {
       action = processCheckoutEntry(
@@ -2442,13 +2490,14 @@ void TreeInode::computeCheckoutActions(
           contents->entries,
           &oldEntries[oldIdx],
           &newEntries[newIdx],
-          pendingLoads);
+          pendingLoads,
+          wasDirectoryListModified);
       ++oldIdx;
       ++newIdx;
     }
 
     if (action) {
-      actions->push_back(std::move(action));
+      actions.push_back(std::move(action));
     }
   }
 }
@@ -2458,7 +2507,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     DirContents& contents,
     const TreeEntry* oldScmEntry,
     const TreeEntry* newScmEntry,
-    vector<IncompleteInodeLoad>* pendingLoads) {
+    vector<IncompleteInodeLoad>& pendingLoads,
+    bool& wasDirectoryListModified) {
   XLOG(DBG5) << "processCheckoutEntry(" << getLogPath()
              << "): " << (oldScmEntry ? oldScmEntry->toLogString() : "(null)")
              << " -> " << (newScmEntry ? newScmEntry->toLogString() : "(null)");
@@ -2496,7 +2546,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
-        invalidateFuseCache(newScmEntry->getName());
         contentsUpdated = true;
       }
     } else if (!newScmEntry) {
@@ -2518,19 +2567,18 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
-        invalidateFuseCache(newScmEntry->getName());
         contentsUpdated = true;
       }
     }
 
     if (contentsUpdated) {
-      // Contents have changed and they need to be written out to the overlay.
-      // We should not do that here since this code runs per entry.  Today this
-      // ought to be reconciled in saveOverlayPostCheckout() after this inode
-      // processes all of its checkout actions.
-      // TODO: it is probably worth poking at this code to see if we can find
-      // cases where it does the wrong thing or fails to persist state after
-      // a checkout.
+      // Contents have changed and they need to be written out to the
+      // overlay.  We should not do that here since this code runs per
+      // entry. Today this is reconciled in saveOverlayPostCheckout()
+      // after this inode processes all of its checkout actions. But we
+      // do want to invalidate the kernel's dcache and inode caches.
+      wasDirectoryListModified = true;
+      invalidateFuseEntryCache(name);
     }
 
     // Nothing else to do when there is no local inode.
@@ -2615,6 +2663,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
                      newScmEntry->getHash()};
   }
 
+  wasDirectoryListModified = true;
+
   // Contents have changed and the entry is not materialized, but we may have
   // allocated and remembered inode numbers for this tree.  It's much faster to
   // simply forget the inode numbers we allocated here -- if we were a real
@@ -2641,7 +2691,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   return nullptr;
 }
 
-Future<Unit> TreeInode::checkoutUpdateEntry(
+Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
     InodePtr inode,
@@ -2653,7 +2703,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     // If the target of the update is not a directory, then we know we do not
     // need to recurse into it, looking for more conflicts, so we can exit here.
     if (ctx->isDryRun()) {
-      return makeFuture();
+      return InvalidationRequired::No;
     }
 
     {
@@ -2667,13 +2717,13 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
         auto bug = EDEN_BUG()
             << "entry removed while holding rename lock during checkout: "
             << inode->getLogPath();
-        return folly::makeFuture<Unit>(bug.toException());
+        return folly::makeFuture<InvalidationRequired>(bug.toException());
       }
       if (it->second.getInode() != inode.get()) {
         auto bug = EDEN_BUG()
             << "entry changed while holding rename lock during checkout: "
             << inode->getLogPath();
-        return folly::makeFuture<Unit>(bug.toException());
+        return folly::makeFuture<InvalidationRequired>(bug.toException());
       }
 
       // This is a file, so we can simply unlink it, and replace/remove the
@@ -2691,12 +2741,12 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     }
 
     // Tell FUSE to invalidate its cache for this entry.
-    invalidateFuseCache(name);
+    invalidateFuseEntryCache(name);
 
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
     // of our children in checkout().
-    return makeFuture();
+    return InvalidationRequired::Yes;
   }
 
   // If we are going from a directory to a directory, all we need to do
@@ -2706,7 +2756,8 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
 
     CHECK(newScmEntry.has_value());
     CHECK(newScmEntry->isTree());
-    return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree));
+    return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
+        .thenValue([](folly::Unit) { return InvalidationRequired::No; });
   }
 
   if (ctx->isDryRun()) {
@@ -2715,7 +2766,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     // investigation to determine whether this is acceptible behavior.
     // Currently, the Hg extension ignores DIRECTORY_NOT_EMPTY conflicts, but
     // that may not be the right thing to do.
-    return makeFuture();
+    return InvalidationRequired::No;
   }
 
   // We need to remove this directory (and possibly replace it with a file).
@@ -2724,69 +2775,97 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
   // exactly what we want.  checkout() will even remove the directory before it
   // returns if the directory is empty.
   return treeInode->checkout(ctx, std::move(oldTree), nullptr)
-      .thenValue([ctx,
-                  name = PathComponent{name},
-                  parentInode = inodePtrFromThis(),
-                  treeInode,
-                  newScmEntry](auto&&) {
-        // Make sure the treeInode was completely removed by the checkout.
-        // If there were still untracked files inside of it, it won't have
-        // been deleted, and we have a conflict that we cannot resolve.
-        if (!treeInode->isUnlinked()) {
-          ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-          return;
-        }
+      .thenValue(
+          [ctx,
+           name = PathComponent{name},
+           parentInode = inodePtrFromThis(),
+           treeInode,
+           newScmEntry](auto &&) -> folly::Future<InvalidationRequired> {
+            // Make sure the treeInode was completely removed by the checkout.
+            // If there were still untracked files inside of it, it won't have
+            // been deleted, and we have a conflict that we cannot resolve.
+            if (!treeInode->isUnlinked()) {
+              ctx->addConflict(
+                  ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+              return InvalidationRequired::No;
+            }
 
-        if (!newScmEntry) {
-          // We're done
-          return;
-        }
+            if (!newScmEntry) {
+              // checkout() will invalidate the parent inode if it removes a
+              // child because it becomes an empty tree, so we don't need to
+              // invalidate here.
+              return InvalidationRequired::No;
+            }
 
-        // Add the new entry
-        bool inserted;
-        {
-          auto contents = parentInode->contents_.wlock();
-          DCHECK(!newScmEntry->isTree());
-          auto ret = contents->entries.emplace(
-              name,
-              modeFromTreeEntryType(newScmEntry->getType()),
-              parentInode->getOverlay()->allocateInodeNumber(),
-              newScmEntry->getHash());
-          inserted = ret.second;
-        }
-        if (inserted) {
-          parentInode->invalidateFuseCache(name);
-        } else {
-          // Hmm.  Someone else already created a new entry in this location
-          // before we had a chance to add our new entry.  We don't block new
-          // file or directory creations during a checkout operation, so this
-          // is possible.  Just report an error in this case.
-          ctx->addError(
-              parentInode.get(),
-              name,
-              InodeError(
-                  EEXIST,
-                  parentInode,
+            // Add the new entry
+            bool inserted;
+            {
+              auto contents = parentInode->contents_.wlock();
+              DCHECK(!newScmEntry->isTree());
+              auto ret = contents->entries.emplace(
                   name,
-                  "new file created with this name while checkout operation "
-                  "was in progress"));
-        }
-      });
+                  modeFromTreeEntryType(newScmEntry->getType()),
+                  parentInode->getOverlay()->allocateInodeNumber(),
+                  newScmEntry->getHash());
+              inserted = ret.second;
+            }
+
+            // This code is running asynchronously during checkout, so
+            // flush the readdir cache right here.
+            parentInode->invalidateFuseInodeCache();
+
+            if (!inserted) {
+              // Hmm.  Someone else already created a new entry in this location
+              // before we had a chance to add our new entry.  We don't block
+              // new file or directory creations during a checkout operation, so
+              // this is possible.  Just report an error in this case.
+              ctx->addError(
+                  parentInode.get(),
+                  name,
+                  InodeError(
+                      EEXIST,
+                      parentInode,
+                      name,
+                      "new file created with this name while checkout operation "
+                      "was in progress"));
+            }
+
+            // Return false because the code above has already invalidated
+            // this inode's readdir cache, so we don't technically need to
+            // do it again unless something else modifies the contents.
+            return InvalidationRequired::No;
+          });
 }
 
-void TreeInode::invalidateFuseCache(PathComponentPiece name) {
-  auto* fuseChannel = getMount()->getFuseChannel();
-  if (fuseChannel) {
-    fuseChannel->invalidateEntry(getNodeId(), name);
+void TreeInode::invalidateFuseInodeCache() {
+  if (auto* fuseChannel = getMount()->getFuseChannel()) {
+    // FUSE_NOTIFY_INVAL_ENTRY is the appropriate invalidation function
+    // when an entry is removed or modified. But when new entries are
+    // added, the inode itself must be invalidated.
+    fuseChannel->invalidateInode(getNodeId(), 0, 0);
   }
 }
 
-void TreeInode::invalidateFuseCacheIfRequired(PathComponentPiece name) {
+void TreeInode::invalidateFuseInodeCacheIfRequired() {
   if (RequestData::isFuseRequest()) {
     // no need to flush the cache if we are inside a FUSE request handler
     return;
   }
-  invalidateFuseCache(name);
+  invalidateFuseInodeCache();
+}
+
+void TreeInode::invalidateFuseEntryCache(PathComponentPiece name) {
+  if (auto* fuseChannel = getMount()->getFuseChannel()) {
+    fuseChannel->invalidateEntry(getNodeId(), name);
+  }
+}
+
+void TreeInode::invalidateFuseEntryCacheIfRequired(PathComponentPiece name) {
+  if (RequestData::isFuseRequest()) {
+    // no need to flush the cache if we are inside a FUSE request handler
+    return;
+  }
+  invalidateFuseEntryCache(name);
 }
 
 void TreeInode::saveOverlayPostCheckout(
@@ -2936,7 +3015,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     DirContents& /* contents */,
     PathComponentPiece name,
     DirEntry& entry,
-    std::vector<IncompleteInodeLoad>* pendingLoads) {
+    std::vector<IncompleteInodeLoad>& pendingLoads) {
   DCHECK(!entry.getInode());
 
   folly::Promise<InodePtr> promise;
@@ -2946,7 +3025,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
       this, name, childNumber, std::move(promise));
   if (startLoad) {
     auto loadFuture = startLoadingInodeNoThrow(entry, name);
-    pendingLoads->emplace_back(
+    pendingLoads.emplace_back(
         this, std::move(loadFuture), name, entry.getInodeNumber());
   }
 
@@ -3274,7 +3353,7 @@ void TreeInode::prefetch() {
         // tree metadata, so just load all of the children so that lookup()
         // returns cheaply.
         inodeFutures.emplace_back(
-            self->loadChildLocked(contents->entries, name, entry, &pendingLoads)
+            self->loadChildLocked(contents->entries, name, entry, pendingLoads)
                 .unit());
       }
     }

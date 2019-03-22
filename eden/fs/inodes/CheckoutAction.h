@@ -28,6 +28,11 @@ class CheckoutContext;
 class ObjectStore;
 class Tree;
 
+enum class InvalidationRequired : bool {
+  No,
+  Yes,
+};
+
 /**
  * A helper class representing an action that must be taken as part of a
  * checkout operation.
@@ -90,7 +95,15 @@ class CheckoutAction {
 
   PathComponentPiece getEntryName() const;
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> run(
+  /**
+   * Run the CheckoutAction.
+   *
+   * If this completes successfully, the result returned via the Future
+   * indicates if the change updated the parent directory's entries. Returns
+   * whether the caller is responsible for invalidating the directory's inode
+   * cache in the kernel.
+   */
+  FOLLY_NODISCARD folly::Future<InvalidationRequired> run(
       CheckoutContext* ctx,
       ObjectStore* store);
 
@@ -117,7 +130,12 @@ class CheckoutAction {
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
   folly::Future<bool> hasConflict();
-  FOLLY_NODISCARD folly::Future<folly::Unit> doAction();
+
+  /**
+   * Return whether the directory's contents have changed and the
+   * inode's readdir cache must be flushed.
+   */
+  FOLLY_NODISCARD folly::Future<InvalidationRequired> doAction();
 
   /**
    * The context for the in-progress checkout operation.
@@ -180,7 +198,7 @@ class CheckoutAction {
   /**
    * The promise that we will fulfil when the CheckoutAction is complete.
    */
-  folly::Promise<folly::Unit> promise_;
+  folly::Promise<InvalidationRequired> promise_;
 };
 } // namespace eden
 } // namespace facebook

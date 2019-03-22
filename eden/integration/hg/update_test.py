@@ -12,7 +12,7 @@ import os
 import threading
 import unittest
 from textwrap import dedent
-from typing import Dict
+from typing import Dict, List, Set
 
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from eden.integration.lib import hgrepo
@@ -468,3 +468,108 @@ class UpdateTest(EdenHgTestCase):
                 for thread_id in range(num_rename_threads)
             }
         )
+
+
+@hg_test
+class UpdateCacheInvalidationTest(EdenHgTestCase):
+    commit1: str
+
+    def edenfs_logging_settings(self) -> Dict[str, str]:
+        return {
+            "eden.fs.inodes.TreeInode": "DBG5",
+            "eden.fs.inodes.CheckoutAction": "DBG5",
+            "eden.fs.inodes.CheckoutContext": "DBG5",
+            "eden.fs.fuse.FuseChannel": "DBG3",
+        }
+
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
+        repo.write_file("dir/file1", "one")
+        repo.write_file("dir/file2", "two")
+        self.commit1 = repo.commit("Initial commit.")
+
+        repo.remove_file("dir/file1")
+        self.commit2 = repo.commit("Remove file1")
+
+        repo.write_file("dir/file3", "three")
+        self.commit3 = repo.commit("Add file3")
+
+        repo.update(self.commit1)
+        repo.write_file("dir/file2", "new two")
+        self.commit4 = repo.commit("Change file2")
+
+    def _populate_kernel_caches(self):
+        # Populate the kernel's readdir caches.
+        for _dirpath, _dirnames, _filenames in os.walk(self.repo.path):
+            pass
+
+    def _list_contents(self, path) -> Set[str]:
+        return set(os.listdir(os.path.join(self.repo.path, path)))
+
+    def _scan_contents(self, path) -> List[os.DirEntry]:
+        entries = list(os.scandir(os.path.join(self.repo.path, path)))
+        entries.sort(key=lambda entry: entry.name)
+        return entries
+
+    def test_update_adding_file_invalidates_tree_inode_caches(self):
+        self.repo.update(self.commit2)
+        self._populate_kernel_caches()
+        self.assertEqual({"file2"}, self._list_contents("dir"))
+
+        # The checkout operation should invalidate the kernel's caches.
+        self.repo.update(self.commit3)
+        self.assertEqual({"file2", "file3"}, self._list_contents("dir"))
+
+    def test_update_removing_file_invalidates_tree_inode_caches(self):
+        self.repo.update(self.commit1)
+        self._populate_kernel_caches()
+
+        self.assertEqual({"file1", "file2"}, self._list_contents("dir"))
+
+        # The checkout operation should invalidate the kernel's caches.
+        self.repo.update(self.commit2)
+        self.assertEqual({"file2"}, self._list_contents("dir"))
+
+    def test_changing_file_contents_creates_new_inode_and_flushes_dcache(self):
+        self.repo.update(self.commit1)
+        self._populate_kernel_caches()
+
+        before = self._scan_contents("dir")
+
+        self.repo.update(self.commit4)
+
+        after = self._scan_contents("dir")
+
+        self.assertEqual(["file1", "file2"], [x.name for x in before])
+        self.assertEqual(["file1", "file2"], [x.name for x in after])
+
+        self.assertEqual(before[0].inode(), after[0].inode())
+        self.assertNotEqual(before[1].inode(), after[1].inode())
+
+    def test_clean_update_removes_added_file(self) -> None:
+        self.repo.update(self.commit1)
+
+        self.write_file("dir/new_file.txt", "new file")
+        self.hg("add", "dir/new_file.txt")
+        self.assertTrue(os.path.isfile(self.get_path("dir/new_file.txt")))
+        self.assert_status({"dir/new_file.txt": "A"})
+
+        self._populate_kernel_caches()
+        self.repo.update(".", clean=True)
+        self.assert_status({"dir/new_file.txt": "?"})
+        self.assertTrue(os.path.isfile(self.get_path("dir/new_file.txt")))
+        self.assert_dirstate_empty()
+
+        self.assertEqual({"file1", "file2", "new_file.txt"}, self._list_contents("dir"))
+
+    def test_clean_update_adds_removed_file(self) -> None:
+        self.hg("remove", "dir/file1")
+        self.assertFalse(os.path.isfile(self.get_path("dir/file1")))
+        self.assert_status({"dir/file1": "R"})
+
+        self._populate_kernel_caches()
+        self.repo.update(".", clean=True)
+        self.assert_status({})
+        self.assertTrue(os.path.isfile(self.get_path("dir/file1")))
+        self.assert_dirstate_empty()
+
+        self.assertEqual({"file1", "file2"}, self._list_contents("dir"))

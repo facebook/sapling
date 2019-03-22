@@ -111,7 +111,7 @@ class CheckoutAction::LoadingRefcount {
   CheckoutAction* action_;
 };
 
-Future<Unit> CheckoutAction::run(
+Future<InvalidationRequired> CheckoutAction::run(
     CheckoutContext* /* ctx */,
     ObjectStore* store) {
   // Immediately create one LoadingRefcount, to ensure that our
@@ -237,8 +237,9 @@ void CheckoutAction::allLoadsComplete() noexcept {
   }
 
   try {
-    doAction().thenTry(
-        [this](folly::Try<Unit>&& t) { this->promise_.setTry(std::move(t)); });
+    doAction().thenTry([this](folly::Try<InvalidationRequired>&& t) {
+      this->promise_.setTry(std::move(t));
+    });
   } catch (const std::exception& ex) {
     exception_wrapper ew{std::current_exception(), ex};
     promise_.setException(ew);
@@ -283,38 +284,43 @@ bool CheckoutAction::ensureDataReady() noexcept {
   return true;
 }
 
-Future<Unit> CheckoutAction::doAction() {
+Future<InvalidationRequired> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
 
   // Check for conflicts first.
-  return hasConflict().thenValue([this](bool conflictWasAddedToCtx) {
-    // Note that even if we know we are not going to apply the changes, we must
-    // still run hasConflict() first because we rely on its side-effects.
-    if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
-      // We only report conflicts for files, not directories. The only possible
-      // conflict that can occur here if this inode is a TreeInode is that the
-      // old source control state was for a file. There aren't really any other
-      // conflicts than this to report, even if we recurse. Anything inside this
-      // directory is basically just untracked (or possibly ignored) files.
-      return makeFuture();
-    }
+  return hasConflict().thenValue(
+      [this](
+          bool conflictWasAddedToCtx) -> folly::Future<InvalidationRequired> {
+        // Note that even if we know we are not going to apply the changes, we
+        // must still run hasConflict() first because we rely on its
+        // side-effects.
+        if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
+          // We only report conflicts for files, not directories. The only
+          // possible conflict that can occur here if this inode is a TreeInode
+          // is that the old source control state was for a file. There aren't
+          // really any other conflicts than this to report, even if we recurse.
+          // Anything inside this directory is basically just untracked (or
+          // possibly ignored) files.
+          return InvalidationRequired::No;
+        }
 
-    // Call TreeInode::checkoutUpdateEntry() to actually do the work.
-    //
-    // Note that we are moving most of our state into the checkoutUpdateEntry()
-    // arguments.  We have to be slightly careful here: getEntryName() returns a
-    // PathComponentPiece that is pointing into a PathComponent owned either by
-    // oldScmEntry_ or newScmEntry_.  Therefore don't move these scm entries,
-    // to make sure we don't invalidate the PathComponentPiece data.
-    auto parent = inode_->getParent(ctx_->renameLock());
-    return parent->checkoutUpdateEntry(
-        ctx_,
-        getEntryName(),
-        std::move(inode_),
-        std::move(oldTree_),
-        std::move(newTree_),
-        newScmEntry_);
-  });
+        // Call TreeInode::checkoutUpdateEntry() to actually do the work.
+        //
+        // Note that we are moving most of our state into the
+        // checkoutUpdateEntry() arguments.  We have to be slightly careful
+        // here: getEntryName() returns a PathComponentPiece that is pointing
+        // into a PathComponent owned either by oldScmEntry_ or newScmEntry_.
+        // Therefore don't move these scm entries, to make sure we don't
+        // invalidate the PathComponentPiece data.
+        auto parent = inode_->getParent(ctx_->renameLock());
+        return parent->checkoutUpdateEntry(
+            ctx_,
+            getEntryName(),
+            std::move(inode_),
+            std::move(oldTree_),
+            std::move(newTree_),
+            newScmEntry_);
+      });
 }
 
 Future<bool> CheckoutAction::hasConflict() {

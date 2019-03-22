@@ -32,6 +32,7 @@ class RenameLock;
 class Tree;
 class TreeEntry;
 class TreeInodeDebugInfo;
+enum class InvalidationRequired : bool;
 
 constexpr folly::StringPiece kDotEdenName{".eden"};
 
@@ -334,6 +335,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /*
    * Update a tree entry as part of a checkout operation.
    *
+   * Returns whether or not the tree's contents were updated and the inode's
+   * readdir cache must be flushed.
+   *
    * This helper function is only to be used by CheckoutAction.
    *
    * @param ctx The CheckoutContext for the current checkout operation.
@@ -355,7 +359,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> checkoutUpdateEntry(
+  FOLLY_NODISCARD folly::Future<InvalidationRequired> checkoutUpdateEntry(
       CheckoutContext* ctx,
       PathComponentPiece name,
       InodePtr inode,
@@ -553,7 +557,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       DirContents& dir,
       PathComponentPiece name,
       DirEntry& entry,
-      std::vector<IncompleteInodeLoad>* pendingLoads);
+      std::vector<IncompleteInodeLoad>& pendingLoads);
 
   /**
    * Load the .gitignore file for this directory, then call computeDiff() once
@@ -607,25 +611,52 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       CheckoutContext* ctx,
       const Tree* fromTree,
       const Tree* toTree,
-      std::vector<std::unique_ptr<CheckoutAction>>* actions,
-      std::vector<IncompleteInodeLoad>* pendingLoads);
+      std::vector<std::unique_ptr<CheckoutAction>>& actions,
+      std::vector<IncompleteInodeLoad>& pendingLoads,
+      bool& wasDirectoryListModified);
+  /**
+   * Sets wasDirectoryListModified true if this checkout entry operation has
+   * modified the directory contents, which implies the return value is nullptr.
+   *
+   * This function could return a std::variant of InvalidationRequired and
+   * std::unique_ptr<CheckoutAction> instead of setting a boolean.
+   */
   std::unique_ptr<CheckoutAction> processCheckoutEntry(
       CheckoutContext* ctx,
       DirContents& contents,
       const TreeEntry* oldScmEntry,
       const TreeEntry* newScmEntry,
-      std::vector<IncompleteInodeLoad>* pendingLoads);
+      std::vector<IncompleteInodeLoad>& pendingLoads,
+      bool& wasDirectoryListModified);
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
   /**
-   * Send a request to the kernel to invalidate the FUSE cache for the given
-   * child entry name.
+   * Send a request to the kernel to invalidate the pagecache for this inode,
+   * which flushes the readdir cache. This is required when the child entry list
+   * has changed. invalidateFuseEntryCache(name) only works if the entry name is
+   * known to FUSE, which is not true for new entries.
+   */
+  void invalidateFuseInodeCache();
+
+  /**
+   * If running outside of a FUSE request (in which case the kernel already
+   * knows to flush the appropriate caches), call invalidateFuseInodeCache().
+   */
+  void invalidateFuseInodeCacheIfRequired();
+
+  /**
+   * Send a request to the kernel to invalidate the dcache entry for the given
+   * child entry name. The dcache caches name lookups to child inodes.
+   *
+   * This should be called when an entry is added, removed, or changed.
+   * Invalidating upon removal is required because the kernel maintains a
+   * negative cache on lookup failures.
    *
    * This is safe to call while holding the contents_ lock, but it is not
    * required.  Calling it without the contents_ lock held is preferable when
    * possible.
    */
-  void invalidateFuseCache(PathComponentPiece name);
+  void invalidateFuseEntryCache(PathComponentPiece name);
 
   /**
    * Invalidate the kernel FUSE cache for this entry name only if we are not
@@ -634,7 +665,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * If we are being invoked because of a FUSE request for this entry we don't
    * need to tell the kernel about the change--it will automatically know.
    */
-  void invalidateFuseCacheIfRequired(PathComponentPiece name);
+  void invalidateFuseEntryCacheIfRequired(PathComponentPiece name);
 
   /**
    * Attempt to remove an empty directory during a checkout operation.
