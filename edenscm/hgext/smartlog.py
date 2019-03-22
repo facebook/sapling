@@ -19,8 +19,6 @@ to the user.
     names = @, master, stable
     # move the top non-public stack to the second column
     indentnonpublic = True
-    # whether to use ancestor cache (speed up on huge repos)
-    useancestorcache = False
 
     # Data. Hide draft commits before "hide-before".
     # This is used to migrate away from the "recent days" behavior and
@@ -64,15 +62,6 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 
-try:
-    # gdbm is preferred for its performance
-    import gdbm as dbm
-
-    dbm.open
-except ImportError:
-    # fallback to anydbm
-    import anydbm as dbm
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 revsetpredicate = registrar.revsetpredicate()
@@ -88,37 +77,6 @@ try:
     xrange(0)
 except NameError:
     xrange = range
-
-
-@contextlib.contextmanager
-def ancestorcache(path):
-    # simple cache to speed up revlog.ancestors
-    try:
-        db = dbm.open(path, "c")
-    except dbm.error:
-        # database locked, fail gracefully
-        yield
-    else:
-
-        def revlogancestor(orig, self, a, b):
-            key = a + b
-            try:
-                return db[key]
-            except KeyError:
-                result = orig(self, a, b)
-                db[key] = result
-                return result
-
-        extensions.wrapfunction(revlog.revlog, "ancestor", revlogancestor)
-        try:
-            yield
-        finally:
-            extensions.unwrapfunction(revlog.revlog, "ancestor", revlogancestor)
-            try:
-                db.close()
-            except Exception:
-                # database corruption, we just nuke the database
-                util.tryunlink(path)
 
 
 def _drawendinglines(orig, lines, extra, edgemap, seen):
@@ -640,17 +598,7 @@ Excludes:
 
 - All commits under master that aren't related to your commits
 - Your local commits that are older than a specified date"""
-    if ui.configbool("smartlog", "useancestorcache"):
-        cachevfs = repo.cachevfs
-
-        # The cache directory must exist before we pass the db path to
-        # ancestorcache.
-        if not cachevfs.exists(""):
-            cachevfs.makedir()
-        with ancestorcache(cachevfs.join("smartlog-ancestor.db")):
-            return _smartlog(ui, repo, *pats, **opts)
-    else:
-        return _smartlog(ui, repo, *pats, **opts)
+    return _smartlog(ui, repo, *pats, **opts)
 
 
 def _smartlog(ui, repo, *pats, **opts):

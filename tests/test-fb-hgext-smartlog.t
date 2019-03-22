@@ -1,5 +1,3 @@
-#testcases default useancestorcache
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > smartlog=
@@ -7,13 +5,6 @@
   > graphstyle.grandparent=|
   > graphstyle.missing=|
   > EOF
-
-#if useancestorcache
-  $ cat >> $HGRCPATH <<EOF
-  > [smartlog]
-  > useancestorcache=1
-  > EOF
-#endif
 
 Build up a repo
 
