@@ -6,17 +6,10 @@
 
 #![deny(warnings)]
 
-extern crate failure_ext as failure;
-extern crate futures;
-
-extern crate futures_ext;
-extern crate rocksdb;
-
-extern crate blobstore;
-extern crate context;
-extern crate mononoke_types;
-
 use std::path::Path;
+
+use failure_ext as failure;
+use rocksdb;
 
 use crate::failure::Error;
 use futures::{Async, Future, Poll};
