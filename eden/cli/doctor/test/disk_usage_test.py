@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 import eden.cli.doctor as doctor
 from eden.cli.config import EdenInstance
+from eden.cli.doctor.problem import ProblemBase, ProblemTracker
 from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 
@@ -34,19 +35,16 @@ class DiskUsageTest(DoctorTestBase):
         self.addCleanup(lambda: mock_getmountpt_and_deviceid.stop())
         mock_getmountpt_and_deviceid.return_value = "/"
 
-    @patch("eden.cli.doctor.ProblemFixer")
-    def _check_disk_usage(self, mock_problem_fixer) -> List[doctor.Problem]:
+    def _check_disk_usage(self) -> List[ProblemBase]:
+        problem_collector = ProblemCollector()
         instance = FakeEdenInstance(self.make_temporary_directory())
 
         doctor.check_filesystems.check_disk_usage(
-            tracker=mock_problem_fixer,
+            tracker=problem_collector,
             mount_paths=["/"],
             instance=typing.cast(EdenInstance, instance),
         )
-        if mock_problem_fixer.add_problem.call_args:
-            problem = mock_problem_fixer.add_problem.call_args[0][0]
-            return [problem]
-        return []
+        return problem_collector.problems
 
     def test_low_free_absolute_disk_is_major(self):
         self._mock_disk_usage(blocks=100_000_000, avail=500_000)
@@ -88,3 +86,14 @@ class DiskUsageTest(DoctorTestBase):
         self._mock_disk_usage(blocks=100_000_000, avail=50_000_000)
         problems = self._check_disk_usage()
         self.assertEqual(len(problems), 0)
+
+
+class ProblemCollector(ProblemTracker):
+    problems: List[ProblemBase]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.problems = []
+
+    def add_problem(self, problem: ProblemBase) -> None:
+        self.problems.append(problem)
