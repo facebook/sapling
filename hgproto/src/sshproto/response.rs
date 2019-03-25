@@ -121,6 +121,15 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             Bytes::from(out)
         }
 
+        Knownnodes(knowns) => {
+            let out: Vec<_> = knowns
+                .into_iter()
+                .map(|known| if known { b'1' } else { b'0' })
+                .collect();
+
+            Bytes::from(out)
+        }
+
         ReadyForStream => Bytes::from(b"0\n".as_ref()),
 
         // TODO(luk, T25574469) The response for Unbundle should be chunked stream of bundle2

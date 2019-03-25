@@ -21,7 +21,6 @@ extern crate futures_ext;
 extern crate futures_stats;
 extern crate itertools;
 #[macro_use]
-#[cfg(test)]
 extern crate maplit;
 extern crate percent_encoding;
 extern crate rand;

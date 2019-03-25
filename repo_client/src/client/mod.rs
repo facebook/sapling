@@ -4,28 +4,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
-use std::mem;
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
+use blobrepo::BlobRepo;
+use blobrepo::HgBlobChangeset;
+use bookmarks::Bookmark;
+use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
+use context::CoreContext;
+use errors::*;
 use failure::err_msg;
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, stream::empty, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt, StreamTimeoutError};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
+use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
+use hooks::HookManager;
 use itertools::Itertools;
-use stats::Histogram;
-use time_ext::DurationExt;
-
-use blobrepo::HgBlobChangeset;
-use bookmarks::Bookmark;
-use bundle2_resolver;
-use context::CoreContext;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
 use mercurial_types::manifest_utils::{
     changed_entry_stream_with_pruner, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
@@ -37,28 +31,29 @@ use mercurial_types::{
     NULL_HASH,
 };
 use metaconfig_types::{LfsParams, RepoReadOnly};
+use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use percent_encoding;
-use phases::Phases;
+use phases::{Phase, Phases};
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
-use scribe::ScribeClient;
-use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
-use serde_json;
-use tokio::timer::timeout::Error as TimeoutError;
-use tokio::util::FutureExt as TokioFutureExt;
-use tracing::Traced;
-
-use blobrepo::BlobRepo;
-use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
-
 use remotefilelog::{
     self, create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes,
 };
+use scribe::ScribeClient;
+use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
+use serde_json;
+use stats::Histogram;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
+use std::mem;
+use std::str::FromStr;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use streaming_clone::RevlogStreamingChunks;
-
-use errors::*;
-use hooks::HookManager;
-use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
+use time_ext::DurationExt;
+use tokio::timer::timeout::Error as TimeoutError;
+use tokio::util::FutureExt as TokioFutureExt;
+use tracing::Traced;
 
 const MAX_NODES_TO_LOG: usize = 5;
 
@@ -80,6 +75,7 @@ mod ops {
     pub static LOOKUP: &str = "lookup";
     pub static LISTKEYS: &str = "listkeys";
     pub static KNOWN: &str = "known";
+    pub static KNOWNNODES: &str = "knownnodes";
     pub static BETWEEN: &str = "between";
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
@@ -141,6 +137,7 @@ fn wireprotocaps() -> Vec<String> {
         "stream_option".to_string(),
         "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
         "treeonly".to_string(),
+        "knownnodes".to_string(),
     ]
 }
 
@@ -734,38 +731,103 @@ impl HgCommands for RepoClient {
         let nodes: Vec<_> = nodes.into_iter().map(HgChangesetId::new).collect();
         let nodes_len = nodes.len();
 
-        ({
-            let ref_nodes: Vec<_> = nodes.iter().cloned().collect();
-            blobrepo.many_changesets_exists(self.ctx.clone(), &ref_nodes[..])
-        })
-        .map(move |cs| {
-            let cs: HashSet<_> = cs.into_iter().collect();
-            let known_nodes: Vec<_> = nodes
-                .into_iter()
-                .map(move |node| cs.contains(&node))
-                .collect();
-            known_nodes
-        })
-        .timeout(timeout_duration())
-        .map_err(process_timeout_error)
-        .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
-        .timed(move |stats, known_nodes| {
-            if let Ok(known) = known_nodes {
-                let extra_context = json!({
-                    "num_known": known.len(),
-                    "num_unknown": nodes_len - known.len(),
-                })
-                .to_string();
+        let phases_hint = self.phases_hint.clone();
 
-                scuba_logger.add("extra_context", extra_context);
-            }
+        cloned!(self.ctx);
+        blobrepo
+            .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
+            .map(|hg_bcs_mapping| {
+                let mut bcs_ids = vec![];
+                let mut bcs_hg_mapping = hashmap! {};
 
-            scuba_logger
-                .add_future_stats(&stats)
-                .log_with_msg("Command processed", None);
-            Ok(())
-        })
-        .boxify()
+                for (hg, bcs) in hg_bcs_mapping {
+                    bcs_ids.push(bcs);
+                    bcs_hg_mapping.insert(bcs, hg);
+                }
+                (bcs_ids, bcs_hg_mapping)
+            })
+            .and_then(move |(bcs_ids, bcs_hg_mapping)| {
+                phases_hint
+                    .get_all(ctx, blobrepo, bcs_ids)
+                    .map(move |phases| (phases, bcs_hg_mapping))
+            })
+            .map(|(phases, bcs_hg_mapping)| {
+                phases
+                    .calculated
+                    .into_iter()
+                    .filter_map(|(cs, phase)| {
+                        if phase == Phase::Public {
+                            bcs_hg_mapping.get(&cs).cloned()
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<HashSet<_>>()
+            })
+            .map(move |found_hg_changesets| {
+                nodes
+                    .into_iter()
+                    .map(move |node| found_hg_changesets.contains(&node))
+                    .collect::<Vec<_>>()
+            })
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
+            .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
+            .timed(move |stats, known_nodes| {
+                if let Ok(known) = known_nodes {
+                    let extra_context = json!({
+                        "num_known": known.len(),
+                        "num_unknown": nodes_len - known.len(),
+                    })
+                    .to_string();
+
+                    scuba_logger.add("extra_context", extra_context);
+                }
+
+                scuba_logger
+                    .add_future_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
+            .boxify()
+    }
+
+    fn knownnodes(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
+        let blobrepo = self.repo.blobrepo().clone();
+
+        let mut scuba_logger = self.prepared_ctx(ops::KNOWNNODES, None).scuba().clone();
+
+        let nodes_len = nodes.len();
+
+        blobrepo
+            .get_hg_bonsai_mapping(self.ctx.clone(), nodes.clone())
+            .map(|hg_bcs_mapping| {
+                let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
+                nodes
+                    .into_iter()
+                    .map(move |node| hg_bcs_mapping.contains_key(&node))
+                    .collect::<Vec<_>>()
+            })
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
+            .traced(self.ctx.trace(), ops::KNOWNNODES, trace_args!())
+            .timed(move |stats, known_nodes| {
+                if let Ok(known) = known_nodes {
+                    let extra_context = json!({
+                        "num_known": known.len(),
+                        "num_unknown": nodes_len - known.len(),
+                    })
+                    .to_string();
+
+                    scuba_logger.add("extra_context", extra_context);
+                }
+
+                scuba_logger
+                    .add_future_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
+            .boxify()
     }
 
     // @wireprotocommand('getbundle', '*')
@@ -1206,8 +1268,7 @@ impl HgCommands for RepoClient {
                             LfsParams::default(),
                             validate_hash,
                         );
-                        let fut = fut
-                            .map(move |(content, _)| (filenode, content));
+                        let fut = fut.map(move |(content, _)| (filenode, content));
                         contents.push(fut);
                     }
                     future::join_all(contents)
@@ -1454,8 +1515,7 @@ fn fetch_treepack_part_input(
                         path,
                         expected,
                         actual,
-                    }
-                    .into())
+                    }.into())
                 }
             })
             .left_future()

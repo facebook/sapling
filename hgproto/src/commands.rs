@@ -26,7 +26,7 @@ use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_bundles::Bundle2Item;
-use mercurial_types::MPath;
+use mercurial_types::{HgChangesetId, MPath};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 use HgFileNodeId;
@@ -163,6 +163,15 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Known { nodes } => (
                 hgcmds
                     .known(nodes)
+                    .map(SingleResponse::Known)
+                    .map_err(self::Error::into)
+                    .into_stream()
+                    .boxify(),
+                ok(instream).boxify(),
+            ),
+            SingleRequest::Knownnodes { nodes } => (
+                hgcmds
+                    .knownnodes(nodes)
                     .map(SingleResponse::Known)
                     .map_err(self::Error::into)
                     .into_stream()
@@ -664,6 +673,11 @@ pub trait HgCommands {
     // @wireprotocommand('known', 'nodes *')
     fn known(&self, _nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
         unimplemented("known")
+    }
+
+    // @wireprotocommand('known', 'nodes *')
+    fn knownnodes(&self, _nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
+        unimplemented("knownnodes")
     }
 
     // @wireprotocommand('unbundle', 'heads')

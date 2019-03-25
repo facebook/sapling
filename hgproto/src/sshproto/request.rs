@@ -11,7 +11,7 @@ use std::str::{self, FromStr};
 use bytes::{Bytes, BytesMut};
 use nom::{is_alphanumeric, is_digit, Err, ErrorKind, FindSubstring, IResult, Needed, Slice};
 
-use HgNodeHash;
+use {HgChangesetId, HgNodeHash};
 
 use batch;
 use errors;
@@ -202,6 +202,18 @@ named!(
 named!(
     hashlist<Vec<HgNodeHash>>,
     separated_list_complete!(tag!(" "), nodehash)
+);
+
+/// A changeset is simply 40 hex digits.
+named!(
+    hg_changeset_id<HgChangesetId>,
+    map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
+);
+
+/// A space-separated list of hg changesets
+named!(
+    hg_changeset_list<Vec<HgChangesetId>>,
+    separated_list_complete!(tag!(" "), hg_changeset_id)
 );
 
 /// A space-separated list of strings
@@ -543,6 +555,9 @@ fn parse_with_params(
           })
         | command_star!("known", Known, parse_params, {
               nodes => hashlist,
+          })
+        | command_star!("knownnodes", Knownnodes, parse_params, {
+              nodes => hg_changeset_list,
           })
         | command!("unbundle", Unbundle, parse_params, {
               heads => stringlist,

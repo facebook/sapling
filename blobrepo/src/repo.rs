@@ -50,7 +50,6 @@ use slog::Logger;
 use stats::Timeseries;
 use std::collections::HashMap;
 use std::convert::From;
-use std::iter::FromIterator;
 use std::str::FromStr;
 use std::sync::Arc;
 use time_ext::DurationExt;
@@ -500,20 +499,6 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn many_changesets_exists(
-        &self,
-        ctx: CoreContext,
-        changesetids: &[HgChangesetId],
-    ) -> BoxFuture<Vec<HgChangesetId>, Error> {
-        STATS::many_changesets_exists.add_value(1);
-        let param = BonsaiOrHgChangesetIds::Hg(Vec::from_iter(changesetids.iter().cloned()));
-
-        self.bonsai_hg_mapping.get(ctx, self.repoid, param)
-            .map(|entries| entries.into_iter().map(|entry| entry.hg_cs_id).collect())
-            // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
-            .boxify()
-    }
-
     pub fn changeset_exists_by_bonsai(
         &self,
         ctx: CoreContext,
@@ -822,6 +807,7 @@ impl BlobRepo {
                     .map(|entry| (entry.hg_cs_id, entry.bcs_id))
                     .collect()
             })
+            // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
             .boxify()
     }
 

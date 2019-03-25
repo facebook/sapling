@@ -54,7 +54,7 @@ use std::sync::Mutex;
 
 use bytes::Bytes;
 
-use mercurial_types::{HgFileNodeId, HgNodeHash};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash};
 
 mod batch;
 mod commands;
@@ -108,6 +108,9 @@ pub enum SingleRequest {
     Known {
         nodes: Vec<HgNodeHash>,
     },
+    Knownnodes {
+        nodes: Vec<HgChangesetId>,
+    },
     Unbundle {
         heads: Vec<String>,
     },
@@ -131,6 +134,7 @@ impl SingleRequest {
             &SingleRequest::Listkeys { .. } => "listkeys",
             &SingleRequest::Lookup { .. } => "lookup",
             &SingleRequest::Known { .. } => "known",
+            &SingleRequest::Knownnodes { .. } => "knownnodes",
             &SingleRequest::Unbundle { .. } => "unbundle",
             &SingleRequest::Gettreepack(_) => "gettreepack",
             &SingleRequest::Getfiles => "getfiles",
@@ -219,6 +223,7 @@ pub enum SingleResponse {
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
     Lookup(Bytes),
     Known(Vec<bool>),
+    Knownnodes(Vec<bool>),
     ReadyForStream,
     Unbundle(Bytes),
     Gettreepack(Bytes),
