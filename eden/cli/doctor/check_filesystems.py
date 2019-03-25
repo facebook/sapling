@@ -145,13 +145,23 @@ def check_disk_usage(
 
             used = size - avail
             used_percent = float(used) / size
+
+            message = (
+                "Eden lazily loads your files and needs enough disk space to "
+                "store these files when loaded."
+            )
+            extra_message = instance.get_config_value(
+                "doctor.low-disk-space-message", ""
+            )
+            if extra_message:
+                message = f"{message} {extra_message}"
+
             if avail <= prob_error_absolute_space_used_threshold:
                 tracker.add_problem(
                     Problem(
                         f"{eden_mount_pt} "
                         f"has only {str(avail)} bytes available. "
-                        f"Eden lazily loads your files and needs enough disk "
-                        f"space to store these files when loaded.",
+                        f"{message}",
                         severity=ProblemSeverity.ERROR,
                     )
                 )
@@ -160,8 +170,7 @@ def check_disk_usage(
                     Problem(
                         f"{eden_mount_pt} "
                         f"is {used_percent:.2%} full. "
-                        f"Eden lazily loads your files and needs enough disk "
-                        f"space to store these files when loaded.",
+                        f"{message}",
                         severity=ProblemSeverity.ADVICE,
                     )
                 )

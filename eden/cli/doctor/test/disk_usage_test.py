@@ -9,7 +9,7 @@
 
 import collections
 import typing
-from typing import List
+from typing import List, Optional
 from unittest.mock import patch
 
 import eden.cli.doctor as doctor
@@ -35,9 +35,12 @@ class DiskUsageTest(DoctorTestBase):
         self.addCleanup(lambda: mock_getmountpt_and_deviceid.stop())
         mock_getmountpt_and_deviceid.return_value = "/"
 
-    def _check_disk_usage(self) -> List[ProblemBase]:
+    def _check_disk_usage(
+        self, instance: Optional[FakeEdenInstance] = None
+    ) -> List[ProblemBase]:
         problem_collector = ProblemCollector()
-        instance = FakeEdenInstance(self.make_temporary_directory())
+        if instance is None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
 
         doctor.check_filesystems.check_disk_usage(
             tracker=problem_collector,
@@ -86,6 +89,39 @@ class DiskUsageTest(DoctorTestBase):
         self._mock_disk_usage(blocks=100_000_000, avail=50_000_000)
         problems = self._check_disk_usage()
         self.assertEqual(len(problems), 0)
+
+    def test_issue_includes_custom_message_from_config(self) -> None:
+        self._mock_disk_usage(blocks=100_000_000, avail=500_000)
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(),
+            config={
+                "doctor.low-disk-space-message": "Ask your administrator for help."
+            },
+        )
+        problems = self._check_disk_usage(instance=instance)
+        self.assertEqual(
+            problems[0].description(),
+            "/ has only 512000000 bytes available. "
+            "Eden lazily loads your files and needs enough disk "
+            "space to store these files when loaded. Ask your administrator "
+            "for help.",
+        )
+
+        self._mock_disk_usage(blocks=100_000_000, avail=2_000_000)
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(),
+            config={
+                "doctor.low-disk-space-message": "Ask your administrator for help."
+            },
+        )
+        problems = self._check_disk_usage(instance=instance)
+        self.assertEqual(
+            problems[0].description(),
+            "/ is 98.00% full. "
+            "Eden lazily loads your files and needs enough disk "
+            "space to store these files when loaded. Ask your administrator "
+            "for help.",
+        )
 
 
 class ProblemCollector(ProblemTracker):
