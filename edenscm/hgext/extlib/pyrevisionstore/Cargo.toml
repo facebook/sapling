@@ -3,9 +3,6 @@ name = "pyrevisionstore"
 version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
-[profile.release]
-lto = true
-
 [lib]
 name = "pyrevisionstore"
 crate-type = ["cdylib"]
