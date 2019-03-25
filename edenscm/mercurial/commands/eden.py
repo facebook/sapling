@@ -722,6 +722,59 @@ def _open_repo(orig_ui, repo_path):
     return hg.repository(repo_ui, repo_path)
 
 
+def runedenimporthelper(repo, **opts):
+    server = HgServer(repo, in_fd=opts.get("in_fd"), out_fd=opts.get("out_fd"))
+
+    if opts.get("get_manifest_node"):
+        node = server.get_manifest_node(opts.get("get_manifest_node"))
+        print(hex(node))
+        return 0
+
+    if opts.get("manifest"):
+        request = Request(0, CMD_MANIFEST, flags=0, body=opts.get("manifest"))
+        server.dump_manifest(opts.get("manifest"), request)
+        return 0
+
+    if opts.get("cat_file"):
+        path, file_rev_str = opts.get("cat_file").rsplit(":", -1)
+        path = path.encode(sys.getfilesystemencoding())
+        file_rev = binascii.unhexlify(file_rev_str)
+        data = server.get_file(path, file_rev)
+        sys.stdout.write(data)
+        return 0
+
+    if opts.get("fetch_tree"):
+        parts = opts.get("fetch_tree").rsplit(":", -1)
+        if len(parts) == 1:
+            path = parts[0]
+            if path == "":
+                manifest_node = server.get_manifest_node(".")
+            else:
+                # TODO: It would be nice to automatically look up the current
+                # manifest node ID for this path and use that here, assuming
+                # we have sufficient data locally for this
+                raise RuntimeError("a manifest node ID is required when using a path")
+        else:
+            path, manifest_node_str = parts
+            manifest_node = binascii.unhexlify(manifest_node_str)
+            if len(manifest_node) != 20:
+                raise RuntimeError("manifest node should be a 40-byte hex string")
+
+        server.fetch_tree(path, manifest_node)
+        return 0
+
+    # If one of the above debug options wasn't used, require the --out-fd flag.
+    # This flag is required to ensure that other mercurial code that prints to stdout
+    # cannot interfere with our output.
+    if not opts.get("out_fd"):
+        raise error.Abort(_("the --out-fd argument is required"))
+
+    try:
+        return server.serve()
+    except KeyboardInterrupt:
+        logging.debug("hg_import_helper received interrupt; shutting down")
+
+
 @command(
     "debugedenimporthelper",
     [
@@ -798,6 +851,7 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
     txnutil.mayhavepending = always_allow_pending
     txnutil.mayhavesharedpending = always_allow_shared_pending
 
+    openedrepo = False
     if len(repo_args) > 1:
         raise error.Abort(_("only 1 repository path argument is allowed"))
     elif len(repo_args) == 1:
@@ -806,56 +860,14 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
         # compatibility with old edenfs processes that didn't use the normal hg repo
         # path arguments.
         repo = _open_repo(ui, repo_args[0])
+        openedrepo = True
     elif repo is None:
         raise error.Abort(_("no repository specified"))
 
-    server = HgServer(repo, in_fd=opts.get("in_fd"), out_fd=opts.get("out_fd"))
-
-    if opts.get("get_manifest_node"):
-        node = server.get_manifest_node(opts.get("get_manifest_node"))
-        print(hex(node))
-        return 0
-
-    if opts.get("manifest"):
-        request = Request(0, CMD_MANIFEST, flags=0, body=opts.get("manifest"))
-        server.dump_manifest(opts.get("manifest"), request)
-        return 0
-
-    if opts.get("cat_file"):
-        path, file_rev_str = opts.get("cat_file").rsplit(":", -1)
-        path = path.encode(sys.getfilesystemencoding())
-        file_rev = binascii.unhexlify(file_rev_str)
-        data = server.get_file(path, file_rev)
-        sys.stdout.write(data)
-        return 0
-
-    if opts.get("fetch_tree"):
-        parts = opts.get("fetch_tree").rsplit(":", -1)
-        if len(parts) == 1:
-            path = parts[0]
-            if path == "":
-                manifest_node = server.get_manifest_node(".")
-            else:
-                # TODO: It would be nice to automatically look up the current
-                # manifest node ID for this path and use that here, assuming
-                # we have sufficient data locally for this
-                raise RuntimeError("a manifest node ID is required when using a path")
-        else:
-            path, manifest_node_str = parts
-            manifest_node = binascii.unhexlify(manifest_node_str)
-            if len(manifest_node) != 20:
-                raise RuntimeError("manifest node should be a 40-byte hex string")
-
-        server.fetch_tree(path, manifest_node)
-        return 0
-
-    # If one of the above debug options wasn't used, require the --out-fd flag.
-    # This flag is required to ensure that other mercurial code that prints to stdout
-    # cannot interfere with our output.
-    if not opts.get("out_fd"):
-        raise error.Abort(_("the --out-fd argument is required"))
-
     try:
-        return server.serve()
-    except KeyboardInterrupt:
-        logging.debug("hg_import_helper received interrupt; shutting down")
+        return runedenimporthelper(repo, **opts)
+    finally:
+        # If the repo wasn't passed through -R, we need to close it to clean it
+        # up properly.
+        if openedrepo:
+            repo.close()
