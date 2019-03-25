@@ -196,12 +196,13 @@ impl MutationStore {
         let succ_start = 1usize;
         let pred_count_start = succ_start + node_len;
         let succ_index = move |_data: &[u8]| {
-            vec![
-                IndexOutput::Reference(succ_start as u64..pred_count_start as u64),
-            ]
+            vec![IndexOutput::Reference(
+                succ_start as u64..pred_count_start as u64,
+            )]
         };
         let pred_index = move |data: &[u8]| {
-            let (pred_count, pred_start) = data.read_vlq_at(pred_count_start)
+            let (pred_count, pred_start) = data
+                .read_vlq_at(pred_count_start)
                 .map(|(pred_count, vlq_size)| (pred_count, pred_count_start + vlq_size))
                 .unwrap_or((0, 0));
             (0..pred_count)
@@ -210,7 +211,8 @@ impl MutationStore {
                 .collect()
         };
         let split_index = move |data: &[u8]| {
-            let (split_count, split_start) = data.read_vlq_at(pred_count_start)
+            let (split_count, split_start) = data
+                .read_vlq_at(pred_count_start)
                 .and_then(|(pred_count, vlq1_size): (usize, usize)| {
                     data.read_vlq_at(pred_count_start + vlq1_size + node_len * pred_count)
                         .map(|(split_count, vlq2_size)| {
@@ -277,7 +279,8 @@ impl MutationStore {
     }
 
     pub fn get_predecessors(&self, node: Node) -> Fallible<Vec<Node>> {
-        let mut lookup = self.log
+        let mut lookup = self
+            .log
             .lookup(INDEX_SUCC, &node)?
             .chain(self.log.lookup(INDEX_SPLIT, &node)?);
         let predecessors = if let Some(entry) = lookup.next() {
@@ -309,8 +312,8 @@ impl MutationStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
+    use rand::SeedableRng;
     use tempdir::TempDir;
 
     #[test]
@@ -330,13 +333,12 @@ mod tests {
                 user: Box::from(&b"test"[..]),
                 time: 123456789.5,
                 tz: -7200,
-                extra: vec![
-                    (
-                        Box::from(&b"note"[..]),
-                        Box::from(&b"note about folding"[..]),
-                    ),
-                ],
-            }).expect("can add to the store");
+                extra: vec![(
+                    Box::from(&b"note"[..]),
+                    Box::from(&b"note about folding"[..]),
+                )],
+            })
+            .expect("can add to the store");
             ms.add(&MutationEntry {
                 origin: MutationEntryOrigin::Synthetic,
                 succ: nodes[4],
@@ -347,7 +349,8 @@ mod tests {
                 time: 123456789.5,
                 tz: -7200,
                 extra: vec![],
-            }).expect("can add to the store");
+            })
+            .expect("can add to the store");
 
             ms.flush().expect("can flush the store");
         }
@@ -356,7 +359,8 @@ mod tests {
             let mut expected_successors_sets =
                 vec![vec![nodes[1]], vec![nodes[4], nodes[5], nodes[6]]];
             expected_successors_sets.sort_unstable();
-            let mut successors_sets = ms.get_successors_sets(nodes[0])
+            let mut successors_sets = ms
+                .get_successors_sets(nodes[0])
                 .expect("can get successors sets");
             successors_sets.sort_unstable();
             assert_eq!(successors_sets, expected_successors_sets);
