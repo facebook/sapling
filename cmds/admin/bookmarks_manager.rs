@@ -4,15 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use clap::{App, Arg, ArgMatches, SubCommand};
+use failure_ext::Error;
+use futures::{future, Future};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use serde_json::{json, to_string_pretty};
+use slog::Logger;
+
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkUpdateReason};
-use clap::{App, Arg, ArgMatches, SubCommand};
 use context::CoreContext;
-use failure::Error;
-use futures::{future, Future};
-use futures_ext::{BoxFuture, FutureExt};
-use serde_json::to_string_pretty;
-use slog::Logger;
 
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
@@ -103,7 +104,7 @@ fn handle_get<'a>(
 
         "bonsai" => repo
             .and_then(move |repo| {
-                ::fetch_bonsai_changeset(ctx, bookmark.to_string().as_str(), &repo).and_then(
+                crate::fetch_bonsai_changeset(ctx, bookmark.to_string().as_str(), &repo).and_then(
                     move |bonsai_cs| {
                         let changeset_id_str = bonsai_cs.get_changeset_id().to_string();
                         let output = format_output(json_flag, changeset_id_str, "bonsai");
@@ -129,7 +130,7 @@ fn handle_set<'a>(
     let bookmark = Bookmark::new(bookmark_name).unwrap();
 
     repo.and_then(move |repo| {
-        ::fetch_bonsai_changeset(ctx.clone(), &rev, &repo).and_then(move |bonsai_cs| {
+        crate::fetch_bonsai_changeset(ctx.clone(), &rev, &repo).and_then(move |bonsai_cs| {
             let mut transaction = repo.update_bookmark_transaction(ctx);
             try_boxfuture!(transaction.force_set(
                 &bookmark,

@@ -6,46 +6,11 @@
 
 #![deny(warnings)]
 
-extern crate clap;
-#[macro_use]
-extern crate cloned;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate promptly;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate serde_json;
-extern crate tokio_process;
-
-extern crate blobrepo;
-extern crate blobstore;
-extern crate bonsai_utils;
-extern crate bookmarks;
-extern crate cacheblob;
-extern crate changeset_fetcher;
-extern crate changesets;
-extern crate cmdlib;
-extern crate context;
-extern crate dbbookmarks;
-extern crate prefixblob;
-#[macro_use]
-extern crate futures_ext;
-extern crate manifoldblob;
-extern crate mercurial_types;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-extern crate mutable_counters;
-extern crate revset;
-extern crate rust_thrift;
-extern crate skiplist;
-#[macro_use]
-extern crate slog;
-extern crate tempdir;
-extern crate tokio;
 
 mod bookmarks_manager;
+
+use cloned::cloned;
+use serde_derive::Serialize;
 
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -58,11 +23,11 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure::{err_msg, Error, Result};
+use failure_ext::{err_msg, format_err, Error, Result};
 use futures::future::{self, loop_fn, ok, Loop};
 use futures::prelude::*;
 use futures::stream::iter_ok;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
@@ -79,7 +44,7 @@ use prefixblob::PrefixBlobstore;
 use revset::RangeNodeStream;
 use rust_thrift::compact_protocol;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
-use slog::Logger;
+use slog::{debug, info, warn, Logger};
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -247,7 +212,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn fetch_content_from_manifest(
     ctx: CoreContext,
     logger: Logger,
-    mf: Box<Manifest + Sync>,
+    mf: Box<dyn Manifest + Sync>,
     element: MPathElement,
 ) -> BoxFuture<Content, Error> {
     match mf.lookup(&element) {
@@ -542,7 +507,7 @@ fn fetch_all_changesets(
 #[derive(Clone)]
 struct InMemoryChangesetFetcher {
     fetched_changesets: Arc<HashMap<ChangesetId, ChangesetEntry>>,
-    inner: Arc<ChangesetFetcher>,
+    inner: Arc<dyn ChangesetFetcher>,
 }
 
 impl ChangesetFetcher for InMemoryChangesetFetcher {
