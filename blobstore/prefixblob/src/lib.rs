@@ -4,14 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::failure::Error;
+use failure_ext::Error;
 use inlinable_string::InlinableString;
 
 use futures_ext::BoxFuture;
 
 use context::CoreContext;
 
-use crate::{Blobstore, BlobstoreBytes};
+use blobstore::{Blobstore, BlobstoreBytes};
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone, Debug)]
@@ -67,7 +67,7 @@ mod test {
     use bytes::Bytes;
     use futures::Future;
 
-    use crate::memblob::EagerMemblob;
+    use memblob::EagerMemblob;
 
     #[test]
     fn test_prefix() {

@@ -19,7 +19,7 @@ use crate::memory_manifest::MemoryRootManifest;
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
-use blobstore::{Blobstore, PrefixBlobstore};
+use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use bytes::Bytes;
@@ -45,6 +45,7 @@ use mononoke_types::{
     ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
     RepositoryId,
 };
+use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::Timeseries;

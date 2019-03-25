@@ -23,6 +23,7 @@ extern crate itertools;
 #[macro_use]
 extern crate maplit;
 extern crate percent_encoding;
+extern crate prefixblob;
 extern crate rand;
 extern crate scribe;
 extern crate scribe_cxx;

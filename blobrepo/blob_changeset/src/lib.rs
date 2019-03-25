@@ -12,7 +12,8 @@ use bytes::Bytes;
 use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
 use futures::future::{Either, Future, IntoFuture};
 
-use blobstore::{Blobstore, PrefixBlobstore};
+use blobstore::Blobstore;
+use prefixblob::PrefixBlobstore;
 
 use context::CoreContext;
 use mercurial;

@@ -24,6 +24,8 @@ extern crate changesets;
 extern crate context;
 extern crate dbbookmarks;
 extern crate fixtures;
+extern crate memblob;
+extern crate prefixblob;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial;
@@ -33,12 +35,13 @@ extern crate mononoke_types;
 extern crate tests_utils;
 
 use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
-use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
+use blobstore::Blobstore;
 use context::CoreContext;
 use failure::Error;
 use fixtures::{many_files_dirs, merge_uneven};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use memblob::LazyMemblob;
 use mercurial_types::{
     manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
     MPath, MPathElement, RepoPath,
@@ -48,6 +51,7 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents, MononokeId,
     RepositoryId,
 };
+use prefixblob::PrefixBlobstore;
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::marker::PhantomData;

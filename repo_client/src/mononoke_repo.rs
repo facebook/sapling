@@ -5,12 +5,15 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, PrefixBlobstore};
+use blobstore::Blobstore;
 use errors::*;
 use futures_ext::BoxFuture;
 use hooks::HookManager;
-use metaconfig_types::{BookmarkOrRegex, BookmarkParams, LfsParams, PushrebaseParams, RepoReadOnly};
+use metaconfig_types::{
+    BookmarkOrRegex, BookmarkParams, LfsParams, PushrebaseParams, RepoReadOnly,
+};
 use mononoke_types::RepositoryId;
+use prefixblob::PrefixBlobstore;
 use read_write::RepoReadWriteFetcher;
 use std::fmt::{self, Debug};
 use std::sync::Arc;

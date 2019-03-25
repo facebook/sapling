@@ -25,12 +25,6 @@ use context::CoreContext;
 mod counted_blobstore;
 pub use crate::counted_blobstore::CountedBlobstore;
 
-mod memblob;
-pub use crate::memblob::{EagerMemblob, LazyMemblob};
-
-mod prefix;
-pub use crate::prefix::PrefixBlobstore;
-
 mod errors;
 pub use crate::errors::ErrorKind;
 

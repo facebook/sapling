@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
-use crate::failure::Error;
+use failure_ext::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
-use crate::{Blobstore, BlobstoreBytes};
+use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
 
 /// In-memory "blob store"

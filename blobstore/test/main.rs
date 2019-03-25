@@ -18,10 +18,11 @@ use rand::prelude::*;
 use tempdir::TempDir;
 use tokio::{prelude::*, runtime::Runtime};
 
-use blobstore::{Blobstore, EagerMemblob};
+use blobstore::Blobstore;
 use context::CoreContext;
 use fileblob::Fileblob;
 use glusterblob::Glusterblob;
+use memblob::EagerMemblob;
 use mononoke_types::BlobstoreBytes;
 use rocksblob::Rocksblob;
 

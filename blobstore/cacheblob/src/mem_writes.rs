@@ -13,7 +13,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use blobstore::{Blobstore, EagerMemblob};
+use blobstore::Blobstore;
+use memblob::EagerMemblob;
 
 /// A blobstore wrapper that reads from the underlying blobstore but writes to memory.
 #[derive(Clone, Debug)]

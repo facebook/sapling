@@ -9,9 +9,10 @@ use std::sync::Arc;
 
 use failure_ext::Error;
 
-use blobstore::{Blobstore, CountedBlobstore, PrefixBlobstore};
+use blobstore::{Blobstore, CountedBlobstore};
 use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use prefixblob::PrefixBlobstore;
 use tokio;
 
 use context::CoreContext;

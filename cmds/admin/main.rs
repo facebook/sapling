@@ -29,6 +29,7 @@ extern crate changesets;
 extern crate cmdlib;
 extern crate context;
 extern crate dbbookmarks;
+extern crate prefixblob;
 #[macro_use]
 extern crate futures_ext;
 extern crate manifoldblob;
@@ -47,7 +48,7 @@ extern crate tokio;
 mod bookmarks_manager;
 
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, PrefixBlobstore};
+use blobstore::Blobstore;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::{Bookmark, Bookmarks};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
@@ -74,6 +75,7 @@ use mononoke_types::{
     FileContents, Generation, RepositoryId,
 };
 use mutable_counters::{MutableCounters, SqlMutableCounters};
+use prefixblob::PrefixBlobstore;
 use revset::RangeNodeStream;
 use rust_thrift::compact_protocol;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};

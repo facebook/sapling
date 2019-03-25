@@ -11,8 +11,7 @@ mod dummy;
 mod healer;
 mod rate_limiter;
 
-use crate::rate_limiter::RateLimiter;
-use blobstore::{Blobstore, PrefixBlobstore};
+use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
 use cmdlib::args;
@@ -29,6 +28,8 @@ use healer::RepoHealer;
 use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{RemoteBlobstoreArgs, RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
+use prefixblob::PrefixBlobstore;
+use rate_limiter::RateLimiter;
 use slog::{error, info, o, Logger};
 use sql::myrouter;
 use sqlblob::Sqlblob;

@@ -20,8 +20,8 @@ use blobrepo::{
     UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };
 use blobrepo_factory::new_memblob_empty;
-use blobstore::{EagerMemblob, LazyMemblob};
 use context::CoreContext;
+use memblob::{EagerMemblob, LazyMemblob};
 use mercurial_types::{FileType, HgBlobNode, HgFileNodeId, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
