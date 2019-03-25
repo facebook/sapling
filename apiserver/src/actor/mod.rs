@@ -6,11 +6,15 @@
 
 use std::collections::HashMap;
 
+use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
-use futures::{future::join_all, Future, IntoFuture};
+use futures::{
+    future::{join_all, lazy},
+    Future, IntoFuture,
+};
 use futures_ext::{BoxFuture, FutureExt};
-use slog::Logger;
+use slog::{debug, info, Logger};
 
 use metaconfig_parser::RepoConfigs;
 
@@ -45,8 +49,15 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        MononokeRepo::new(logger.clone(), config, myrouter_port, with_skiplist)
-                            .map(|repo| (name, repo))
+                        cloned!(logger);
+                        lazy(move || {
+                            info!(logger, "Initializing repo: {}", &name);
+                            MononokeRepo::new(logger.clone(), config, myrouter_port, with_skiplist)
+                                .map(move |repo| {
+                                    debug!(logger, "Initialized {}", &name);
+                                    (name, repo)
+                                })
+                        })
                     }
                 }),
         )
