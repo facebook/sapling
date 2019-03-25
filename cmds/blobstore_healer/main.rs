@@ -38,7 +38,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio_timer::Delay;
 
-const MIN_HEALER_ITERATION_DELAY: Duration = Duration::from_secs(60);
+const MIN_HEALER_ITERATION_DELAY: Duration = Duration::from_secs(1);
 
 fn maybe_schedule_healer_for_repo(
     dry_run: bool,

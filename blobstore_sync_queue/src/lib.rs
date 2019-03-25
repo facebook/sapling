@@ -167,7 +167,6 @@ queries! {
                FROM blobstore_sync_queue
                WHERE repo_id = {repo_id}
                  AND add_timestamp <= {older_than}
-               ORDER BY id
                LIMIT {limit}
          ) b
          ON blobstore_sync_queue.blobstore_key = b.blobstore_key

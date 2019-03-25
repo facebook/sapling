@@ -12,6 +12,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, prelude::*};
 use futures::{
+    self,
     future::{join_all, loop_fn, Loop},
     prelude::*,
 };
@@ -105,7 +106,12 @@ impl RepoHealer {
                     healing_futures.len()
                 );
 
-                join_all(healing_futures)
+                futures::stream::futures_unordered(healing_futures.into_iter())
+                    .collect()
+                    .and_then(move |cleaned_entries| {
+                        let v = cleaned_entries.into_iter().flatten().collect();
+                        cleanup_after_healing(ctx, sync_queue, v)
+                    })
             })
             .map(|_| ())
     }
@@ -119,7 +125,7 @@ fn heal_blob(
     healing_deadline: DateTime,
     key: String,
     entries: Vec<BlobstoreSyncQueueEntry>,
-) -> Option<impl Future<Item = (), Error = Error>> {
+) -> Option<impl Future<Item = Vec<BlobstoreSyncQueueEntry>, Error = Error>> {
     let seen_blobstores: HashSet<_> = entries
         .iter()
         .filter_map(|entry| {
@@ -145,7 +151,7 @@ fn heal_blob(
 
     if missing_blobstores.is_empty() {
         // All blobstores have been synchronized
-        return Some(cleanup_after_healing(ctx, sync_queue, entries).left_future());
+        return Some(futures::future::ok(entries).left_future());
     }
 
     if !entries
@@ -177,13 +183,15 @@ fn heal_blob(
 
         join_all(heal_blobstores).and_then(move |heal_results| {
             if heal_results.iter().all(|(_, result)| *result) {
-                cleanup_after_healing(ctx, sync_queue, entries).left_future()
+                futures::future::ok(entries).left_future()
             } else {
                 let healed_blobstores =
                     heal_results
                         .into_iter()
                         .filter_map(|(id, result)| if result { Some(id) } else { None });
-                report_partial_heal(ctx, repo_id, sync_queue, key, healed_blobstores).right_future()
+                report_partial_heal(ctx, repo_id, sync_queue, key, healed_blobstores)
+                    .map(|_| vec![])
+                    .right_future()
             }
         })
     });
