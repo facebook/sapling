@@ -12,5 +12,6 @@ vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
 rand = "0.5"
+rand_chacha = "0.1.0"
 tempdir = "0.3.7"
 types = { path = "../types", default-features = false, features = ["for-tests"] }

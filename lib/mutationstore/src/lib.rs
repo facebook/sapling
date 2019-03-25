@@ -33,6 +33,8 @@ extern crate indexedlog;
 #[cfg(test)]
 extern crate rand;
 #[cfg(test)]
+extern crate rand_chacha;
+#[cfg(test)]
 extern crate tempdir;
 extern crate types;
 extern crate vlqencoding;
@@ -312,8 +314,8 @@ impl MutationStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::chacha::ChaChaRng;
     use rand::SeedableRng;
+    use rand_chacha::ChaChaRng;
     use tempdir::TempDir;
 
     #[test]
