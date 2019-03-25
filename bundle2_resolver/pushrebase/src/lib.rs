@@ -436,19 +436,18 @@ fn find_closest_ancestor_root(
                 if roots.contains(&id) {
                     ok(Loop::Break(id)).left_future()
                 } else {
-                    repo.get_bonsai_changeset(ctx.clone(), id)
+                    repo.get_changeset_parents_by_bonsai(ctx.clone(), id)
                         .from_err()
-                        .and_then(move |bcs| {
-                            let mut all_parents = bcs.parents();
-                            let parent = all_parents.next();
-                            if let Some(parent) = parent {
-                                if all_parents.next().is_some() {
-                                    return err(PushrebaseError::RebaseOverMerge);
-                                } else {
-                                    queue.push_back(parent);
+                        .and_then(move |parents| {
+                            match parents.as_slice() {
+                                [] => (),
+                                [parent] => {
+                                    queue.push_back(*parent);
                                 }
-                            }
-
+                                _ => {
+                                    return err(PushrebaseError::RebaseOverMerge);
+                                }
+                            };
                             ok(Loop::Continue((queue, depth + 1)))
                         })
                         .right_future()

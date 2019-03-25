@@ -97,10 +97,9 @@ pub fn resolve(
                         match (readonly, bypass_readonly) {
                             (RepoReadOnly::ReadOnly(reason), false) => {
                                 future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
-                            },
-                            _ => {
-                                future::ok((maybe_pushvars, maybe_commonheads, bundle2)).right_future()
                             }
+                            _ => future::ok((maybe_pushvars, maybe_commonheads, bundle2))
+                                .right_future(),
                         }
                     },
                 )
@@ -1335,17 +1334,23 @@ impl Bundle2Resolver {
             .boxify();
         }
 
-        pushrebase::do_pushrebase(
+        futures::lazy({
+            cloned!(self.repo, self.pushrebase, onto_bookmark);
+            move || {
+                ctx.scuba().clone().log_with_msg("pushrebase started", None);
+                pushrebase::do_pushrebase(
                     ctx,
-                    self.repo.clone(),
-                    self.pushrebase.clone(),
-                    onto_bookmark.clone(),
+                    repo,
+                    pushrebase,
+                    onto_bookmark,
                     changesets
                         .into_iter()
                         .map(|(hg_cs_id, _)| hg_cs_id)
                         .collect(),
                     maybe_raw_bundle2_id,
-        )
+                )
+            }
+        })
         .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
         .timed({
             let mut scuba_logger = self.ctx.scuba().clone();
