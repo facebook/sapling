@@ -102,3 +102,86 @@ def tracefunc(name):
         return executer
 
     return wrapper
+
+
+def asciirender(span):
+    return _AsciiRenderer(span).render()
+
+
+class _AsciiRenderer(object):
+    def __init__(self, span):
+        self.indentamount = 2
+        self.span = span
+        self.start = self.span.start
+
+        # Width of the start column, so we can right justify everything
+        self.start_width = len("{0:0.1f}".format(self.span.end - self.span.start))
+
+        # Seconds of missing data to consider as a gap
+        self.gap_threshold = 1
+
+    def render(self):
+        output = []
+        self._render(output, self.span, 0)
+        duration = self.span.end - self.span.start
+        output.append("{0:0.1f}".format(duration))
+
+        return "\n".join(output) + "\n"
+
+    def _render(self, output, span, indent):
+        start = span.start - self.start
+        duration = span.duration()
+
+        details = _format_duration(duration)
+        if span.flags:
+            details += "; %s" % ("; ".join(sorted(span.flags)))
+
+        output.append(
+            "{start} {indent} {name} ({details})".format(
+                start=("{0:0.1f}".format(start)).rjust(self.start_width),
+                indent=" " * indent,
+                name=span.name,
+                details=details,
+            )
+        )
+
+        for name, value in sorted(span.values.iteritems()):
+            output.append(
+                "{mark} {indent} * {name}: {value}".format(
+                    mark=":".rjust(self.start_width),
+                    indent=" " * (indent + self.indentamount),
+                    name=name,
+                    value=value,
+                )
+            )
+
+        last = span.start
+        for child in span.children:
+            gap = child.start - last
+            self._render_gap(output, last, gap, indent + self.indentamount)
+            self._render(output, child, indent + self.indentamount)
+            last = child.end
+        if len(span.children) > 0:
+            gap = span.end - last
+            self._render_gap(output, last, gap, indent + self.indentamount)
+
+    def _render_gap(self, output, start, gap, indent):
+        if gap > self.gap_threshold:
+            output.append(
+                "{start} {indent} {name} ({duration})".format(
+                    start=("{0:0.1f}".format(start - self.start)).rjust(
+                        self.start_width
+                    ),
+                    indent=" " * indent,
+                    name="--missing--",
+                    duration=_format_duration(gap),
+                )
+            )
+
+
+def _format_duration(seconds):
+    if seconds < 60:
+        return "{0:0.1f}s".format(seconds)
+    if seconds < 3600:
+        return "{0}m {1}s".format(int(seconds / 60), seconds % 60)
+    return "{0}h {1}m".format(int(seconds / 3600), int((seconds % 3600) / 60))
