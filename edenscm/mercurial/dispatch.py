@@ -32,6 +32,7 @@ from . import (
     hintutil,
     hook,
     i18n,
+    perftrace,
     profiling,
     pycompat,
     registrar,
@@ -1310,76 +1311,79 @@ def _dispatch(req):
         elif not cmd:
             return commands.help_(ui)
 
-        repo = None
-        deferred = []
-        if func.cmdtemplate:
-            templ = cmdtemplatestate(ui, cmdoptions)
-            args.insert(0, templ)
-            deferred.append(lambda: templ.end())
-        cmdpats = args[:]
-        if not func.norepo:
-            # use the repo from the request only if we don't have -R
-            if not rpath and not cwd:
-                repo = req.repo
-
-            if repo:
-                # set the descriptors of the repo ui to those of ui
-                repo.ui.fin = ui.fin
-                repo.ui.fout = ui.fout
-                repo.ui.ferr = ui.ferr
-            else:
-                try:
-                    repo = hg.repository(ui, path=path, presetupfuncs=req.prereposetups)
-                    if not repo.local():
-                        raise error.Abort(_("repository '%s' is not local") % path)
-                    repo.ui.setconfig("bundle", "mainreporoot", repo.root, "repo")
-                except error.RequirementError:
-                    raise
-                except error.RepoError:
-                    if rpath:  # invalid -R path
-                        raise
-                    if not func.optionalrepo:
-                        if func.inferrepo and args and not path:
-                            # try to infer -R from command args
-                            repos = pycompat.maplist(cmdutil.findrepo, args)
-                            guess = repos[0]
-                            if guess and repos.count(guess) == len(repos):
-                                req.args = ["--repository", guess] + fullargs
-                                req.earlyoptions["repository"] = guess
-                                return _dispatch(req)
-                        if not path:
-                            raise error.RepoError(
-                                _("no repository found in" " '%s' (.hg not found)")
-                                % pycompat.getcwd()
-                            )
-                        raise
-            if repo:
-                ui = repo.ui
-                if options["hidden"]:
-                    repo = repo.unfiltered()
-                if repo != req.repo:
-                    deferred.append(repo.close)
-            args.insert(0, repo)
-        elif rpath:
-            ui.warn(_("warning: --repository ignored\n"))
-
-        from . import mdiff
-
-        mdiff.init(ui)
-
         msg = _formatargs(fullargs)
-        ui.log("command", "%s\n", msg)
-        strcmdopt = pycompat.strkwargs(cmdoptions)
-        d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
-        try:
-            ret = runcommand(
-                lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
-            )
-            hintutil.show(lui)
-            return ret
-        finally:
-            for func in deferred:
-                func()
+        with perftrace.trace("hg " + msg):
+            repo = None
+            deferred = []
+            if func.cmdtemplate:
+                templ = cmdtemplatestate(ui, cmdoptions)
+                args.insert(0, templ)
+                deferred.append(lambda: templ.end())
+            cmdpats = args[:]
+            if not func.norepo:
+                # use the repo from the request only if we don't have -R
+                if not rpath and not cwd:
+                    repo = req.repo
+
+                if repo:
+                    # set the descriptors of the repo ui to those of ui
+                    repo.ui.fin = ui.fin
+                    repo.ui.fout = ui.fout
+                    repo.ui.ferr = ui.ferr
+                else:
+                    try:
+                        repo = hg.repository(
+                            ui, path=path, presetupfuncs=req.prereposetups
+                        )
+                        if not repo.local():
+                            raise error.Abort(_("repository '%s' is not local") % path)
+                        repo.ui.setconfig("bundle", "mainreporoot", repo.root, "repo")
+                    except error.RequirementError:
+                        raise
+                    except error.RepoError:
+                        if rpath:  # invalid -R path
+                            raise
+                        if not func.optionalrepo:
+                            if func.inferrepo and args and not path:
+                                # try to infer -R from command args
+                                repos = pycompat.maplist(cmdutil.findrepo, args)
+                                guess = repos[0]
+                                if guess and repos.count(guess) == len(repos):
+                                    req.args = ["--repository", guess] + fullargs
+                                    req.earlyoptions["repository"] = guess
+                                    return _dispatch(req)
+                            if not path:
+                                raise error.RepoError(
+                                    _("no repository found in" " '%s' (.hg not found)")
+                                    % pycompat.getcwd()
+                                )
+                            raise
+                if repo:
+                    ui = repo.ui
+                    if options["hidden"]:
+                        repo = repo.unfiltered()
+                    if repo != req.repo:
+                        deferred.append(repo.close)
+                args.insert(0, repo)
+            elif rpath:
+                ui.warn(_("warning: --repository ignored\n"))
+
+            from . import mdiff
+
+            mdiff.init(ui)
+
+            ui.log("command", "%s\n", msg)
+            strcmdopt = pycompat.strkwargs(cmdoptions)
+            d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
+            try:
+                ret = runcommand(
+                    lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
+                )
+                hintutil.show(lui)
+                return ret
+            finally:
+                for func in deferred:
+                    func()
 
 
 def _runcommand(ui, options, cmd, cmdfunc):
