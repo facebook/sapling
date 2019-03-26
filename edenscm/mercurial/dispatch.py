@@ -74,7 +74,26 @@ class request(object):
         self.prereposetups = prereposetups or []
 
     def _runexithandlers(self):
+        # Silence potential EPIPE or SIGPIPE errors when writing to stdout or
+        # stderr.
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+
+        class ignoreerrorui(self.ui.__class__):
+            def _write(self, *args, **kwargs):
+                try:
+                    return super(ignoreerrorui, self)._write(*args, **kwargs)
+                except (OSError, IOError):
+                    pass
+
+            def _write_err(self, *args, **kwargs):
+                try:
+                    return super(ignoreerrorui, self)._write_err(*args, **kwargs)
+                except (OSError, IOError):
+                    pass
+
         exc = None
+        self.ui.__class__ = ignoreerrorui
+
         handlers = self.ui._exithandlers
         try:
             while handlers:
