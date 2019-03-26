@@ -7,6 +7,7 @@ setup
   > blackbox=
   > mock=$TESTDIR/mockblackbox.py
   > EOF
+  $ setconfig tracing.threshold=10000
 
 Helper functions:
 

@@ -37,6 +37,7 @@ from edenscm.mercurial import (
     obsolete,
     obsutil,
     patch,
+    perftrace,
     phases,
     progress,
     pycompat,
@@ -549,6 +550,7 @@ class rebaseruntime(object):
                 try:
                     self._performrebaseone(rev, ctx, desc, tr, dest)
                 except error.InMemoryMergeConflictsError as e:
+                    perftrace.traceflag("disk-fallback")
                     # in-memory merge doesn't support conflicts, so if we hit any, abort
                     # and re-run as an on-disk merge.
                     clearstatus(repo)
@@ -1025,6 +1027,7 @@ def rebase(ui, repo, templ=None, **opts):
         return _origrebase(ui, repo, rbsrt, **opts)
 
 
+@perftrace.tracefunc("Rebase")
 def _origrebase(ui, repo, rbsrt, **opts):
     with repo.wlock(), repo.lock():
         # Validate input and define rebasing points

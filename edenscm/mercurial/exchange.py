@@ -19,6 +19,7 @@ from . import (
     error,
     lock as lockmod,
     obsolete,
+    perftrace,
     phases,
     pushkey,
     pycompat,
@@ -1318,6 +1319,7 @@ class transactionmanager(util.transactional):
 
 
 @util.timefunction("pull", 0, "ui")
+@perftrace.tracefunc("Pull")
 def pull(
     repo,
     remote,
@@ -1432,6 +1434,7 @@ def pulldiscovery(stepname):
     return dec
 
 
+@perftrace.tracefunc("Pull Discovery")
 def _pulldiscovery(pullop):
     """Run all discovery steps"""
     for stepname in pulldiscoveryorder:

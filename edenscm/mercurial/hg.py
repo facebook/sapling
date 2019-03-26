@@ -28,6 +28,7 @@ from . import (
     lock,
     merge as mergemod,
     node,
+    perftrace,
     phases,
     progress,
     repoview,
@@ -159,6 +160,7 @@ def openpath(ui, path):
 wirepeersetupfuncs = []
 
 
+@perftrace.tracefunc("Repo Setup")
 def _peerorrepo(ui, path, create=False, presetupfuncs=None):
     """return a repository object for the specified path"""
     obj = _peerlookup(path).instance(ui, path, create)
@@ -170,8 +172,12 @@ def _peerorrepo(ui, path, create=False, presetupfuncs=None):
         if hook:
             hook(ui, obj)
     if not obj.local():
+        perftrace.traceflag("remote")
         for f in wirepeersetupfuncs:
             f(ui, obj)
+    else:
+        perftrace.traceflag("local")
+
     return obj
 
 

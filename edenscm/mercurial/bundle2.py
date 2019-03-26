@@ -160,6 +160,7 @@ from . import (
     mutation,
     node as nodemod,
     obsolete,
+    perftrace,
     phases,
     pushkey,
     pycompat,
@@ -506,6 +507,7 @@ def processparts(repo, op, unbundler):
             _processpart(op, part)
 
 
+@perftrace.tracefunc("Apply Changegroup")
 def _processchangegroup(op, cg, tr, source, url, **kwargs):
     ret = cg.apply(op.repo, tr, source, url, **kwargs)
     op.records.add("changegroup", {"return": ret})

@@ -17,7 +17,7 @@ import random
 import socket
 import string
 
-from edenscm.mercurial import dispatch, extensions, hg, util, wireproto
+from edenscm.mercurial import dispatch, extensions, hg, perftrace, util, wireproto
 from edenscm.mercurial.i18n import _
 
 
@@ -102,6 +102,7 @@ def _peersetup(ui, peer):
             ann = not ui.plain() and ui._isatty(ui.ferr)
         if ann and not ui.quiet:
             ui.warn(_("connected to %s\n") % peername)
+            perftrace.tracevalue("Server", peername)
 
 
 def uisetup(ui):

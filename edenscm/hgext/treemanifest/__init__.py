@@ -144,6 +144,7 @@ from edenscm.mercurial import (
     localrepo,
     manifest,
     mdiff,
+    perftrace,
     phases,
     policy,
     progress,
@@ -422,13 +423,18 @@ def wraprepo(repo):
             if draftparents:
                 self.prefetchtrees([c.manifestnode() for c in draftparents])
 
+        @perftrace.tracefunc("Prefetch Trees")
         def prefetchtrees(self, mfnodes, basemfnodes=None):
             if not treeenabled(self.ui):
                 return
 
+            mfnodes = list(mfnodes)
+            perftrace.tracevalue("Keys", len(mfnodes))
+
             mfstore = self.manifestlog.datastore
             missingentries = mfstore.getmissing(("", n) for n in mfnodes)
             mfnodes = list(n for path, n in missingentries)
+            perftrace.tracevalue("Missing", len(mfnodes))
             if not mfnodes:
                 return
 
@@ -1788,6 +1794,7 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start, d
         for reply in receivednodes:
             missingnodes.difference_update(n for d, n in reply if d == rootdir)
             count += len(reply)
+        perftrace.tracevalue("Fetched", count)
         if op.repo.ui.configbool("remotefilelog", "debug"):
             op.repo.ui.warn(
                 _("%s trees fetched over %0.2fs\n") % (count, time.time() - start)

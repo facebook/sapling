@@ -19,6 +19,7 @@ from . import (
     hintutil,
     match as matchmod,
     pathutil,
+    perftrace,
     policy,
     pycompat,
     scmutil,
@@ -1117,6 +1118,7 @@ class dirstate(object):
                     results[next(iv)] = st
         return results
 
+    @perftrace.tracefunc("Status")
     def status(self, match, ignored, clean, unknown):
         """Determine the status of the working copy relative to the
         dirstate and return a pair of (unsure, status), where status is of type
@@ -1269,6 +1271,11 @@ class dirstate(object):
         if cleanmarked:
             self._dirty = True
 
+        perftrace.tracevalue("A/M/R Files", len(modified) + len(added) + len(removed))
+        if len(unknown) > 0:
+            perftrace.tracevalue("Unknown Files", len(unknown))
+        if len(ignored) > 0:
+            perftrace.tracevalue("Ignored Files", len(ignored))
         return (
             lookup,
             scmutil.status(modified, added, removed, deleted, unknown, ignored, clean),

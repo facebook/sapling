@@ -103,7 +103,7 @@ from __future__ import absolute_import
 import errno
 import struct
 
-from . import error, pycompat, smartset, txnutil, util, visibility
+from . import error, perftrace, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, short
 
@@ -584,6 +584,7 @@ def subsetphaseheads(repo, subset):
     return headsbyphase
 
 
+@perftrace.tracefunc("Update Phases")
 def updatephases(repo, trgetter, headsbyphase):
     """Updates the repo with the given phase heads"""
     # Now advance phase boundaries of all but secret phase

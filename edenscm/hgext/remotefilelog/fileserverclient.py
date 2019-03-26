@@ -21,6 +21,7 @@ from edenscm.mercurial import (
     encoding,
     error,
     httppeer,
+    perftrace,
     progress,
     revlog,
     sshpeer,
@@ -408,6 +409,7 @@ class fileserverclient(object):
 
     def httprequestpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTP using the Eden API"""
+        perftrace.traceflag("http")
         if fetchdata:
             self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
             self.ui.metrics.gauge("http_getfiles_calls", 1)
@@ -421,6 +423,7 @@ class fileserverclient(object):
     def requestpacks(self, fileids, fetchdata, fetchhistory):
         if not self.remotecache.connected:
             self.connect()
+        perftrace.traceflag("packs")
         cache = self.remotecache
 
         total = len(fileids)
@@ -495,6 +498,8 @@ class fileserverclient(object):
         """
         if not self.remotecache.connected:
             self.connect()
+        perftrace.traceflag("loose")
+
         cache = self.remotecache
         writedata = self.writedata
 
@@ -836,6 +841,7 @@ class fileserverclient(object):
         if self.remotecache.connected:
             self.remotecache.close()
 
+    @perftrace.tracefunc("Prefetch Files")
     def prefetch(self, fileids, force=False, fetchdata=True, fetchhistory=True):
         """downloads the given file versions to the cache
         """
@@ -857,11 +863,15 @@ class fileserverclient(object):
             datastore = unioncontentstore(*repo.fileslog.shareddatastores)
             historystore = unionmetadatastore(*repo.fileslog.sharedhistorystores)
 
+        perftrace.tracevalue("Keys", len(idstocheck))
         missingids = set()
         if fetchdata:
             missingids.update(datastore.getmissing(idstocheck))
+            perftrace.tracevalue("Missing Data", len(missingids))
         if fetchhistory:
-            missingids.update(historystore.getmissing(idstocheck))
+            missinghistory = historystore.getmissing(idstocheck)
+            missingids.update(missinghistory)
+            perftrace.tracevalue("Missing History", len(missinghistory))
 
         # partition missing nodes into nullid and not-nullid so we can
         # warn about this filtering potentially shadowing bugs.
@@ -904,6 +914,7 @@ class fileserverclient(object):
         if batchlfsdownloads and dolfsprefetch:
             self._lfsprefetch(fileids)
 
+    @perftrace.tracefunc("LFS Prefetch")
     def _lfsprefetch(self, fileids):
         if not _lfsmod or not util.safehasattr(self.repo.svfs, "lfslocalblobstore"):
             return
@@ -923,6 +934,7 @@ class fileserverclient(object):
                     pointers.append(p)
                     filenames[oid] = file
         if len(pointers) > 0:
+            perftrace.tracevalue("Missing", len(pointers))
             self.repo.svfs.lfsremoteblobstore.readbatch(
                 pointers, store, objectnames=filenames
             )

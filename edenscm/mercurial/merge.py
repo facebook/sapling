@@ -22,6 +22,7 @@ from . import (
     match as matchmod,
     mutation,
     obsutil,
+    perftrace,
     progress,
     pycompat,
     scmutil,
@@ -753,6 +754,7 @@ class _unknowndirschecker(object):
         return None
 
 
+@perftrace.tracefunc("Check Unknown Files")
 def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     """
     Considers any actions that care about the presence of conflicting unknown
@@ -775,8 +777,10 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                 warnconflicts.update(conflicts)
 
         checkunknowndirs = _unknowndirschecker()
+        count = 0
         for f, (m, args, msg) in actions.iteritems():
             if m in ("c", "dc"):
+                count += 1
                 if _checkunknownfile(repo, wctx, mctx, f):
                     fileconflicts.add(f)
                 elif pathconfig and f not in wctx:
@@ -784,6 +788,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                     if path is not None:
                         pathconflicts.add(path)
             elif m == "dg":
+                count += 1
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
                     fileconflicts.add(f)
 
@@ -1300,6 +1305,7 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
             del actions[f]  # don't get = keep local deleted
 
 
+@perftrace.tracefunc("Calculate Updates")
 def calculateupdates(
     repo,
     wctx,
@@ -1509,6 +1515,7 @@ def batchget(repo, mctx, wctx, actions):
 
 
 @util.timefunction("applyupdates", 0, "ui")
+@perftrace.tracefunc("Apply Updates")
 def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None):
     """apply the merge action list to the working directory
 
@@ -1518,6 +1525,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     Return a tuple of counts (updated, merged, removed, unresolved) that
     describes how many files were affected by the update.
     """
+    perftrace.tracevalue("Actions", sum(len(v) for k, v in actions.iteritems()))
 
     updated, merged, removed = 0, 0, 0
 

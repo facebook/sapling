@@ -12,7 +12,17 @@ import struct
 import tempfile
 import weakref
 
-from . import dagutil, error, mdiff, phases, progress, pycompat, util, visibility
+from . import (
+    dagutil,
+    error,
+    mdiff,
+    perftrace,
+    phases,
+    progress,
+    pycompat,
+    util,
+    visibility,
+)
 from .i18n import _
 from .node import hex, nullrev, short
 
@@ -318,6 +328,12 @@ class cg1unpacker(object):
                 deltas = self.deltaiter()
                 cgnodes = cl.addgroup(deltas, csmap, trp, addrevisioncb=onchangelog)
                 efiles = len(efiles)
+
+            perftrace.tracevalue("Commits", len(cgnodes))
+            if cgnodes:
+                perftrace.tracevalue(
+                    "Range", "%s:%s" % (hex(cgnodes[0])[:12], hex(cgnodes[-1])[:12])
+                )
             self.progress = None
 
             if not cgnodes:

@@ -9,6 +9,7 @@ setup
   > confuse = log --limit 3
   > so-confusing = confuse --style compact
   > EOF
+  $ setconfig tracing.threshold=100000
   $ hg init blackboxtest
   $ cd blackboxtest
 
