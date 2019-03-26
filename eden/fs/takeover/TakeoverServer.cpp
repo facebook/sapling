@@ -222,8 +222,10 @@ void TakeoverServer::start() {
 }
 
 void TakeoverServer::connectionAccepted(
-    int fd,
+    folly::NetworkSocket fdNetworkSocket,
     const folly::SocketAddress& /* clientAddr */) noexcept {
+  int fd = fdNetworkSocket.toFd();
+
   folly::File socket(fd, /* ownsFd */ true);
   std::unique_ptr<ConnHandler> handler;
   try {
