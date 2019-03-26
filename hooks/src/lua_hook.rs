@@ -399,11 +399,11 @@ fn cached_regex_match(
     const REGEX_CACHE_SIZE: usize = 128;
 
     lazy_static! {
-        static ref hook_regex_cache: Arc<RwLock<LinkedHashMap<String, Regex>>> =
+        static ref HOOK_REGEX_CACHE: Arc<RwLock<LinkedHashMap<String, Regex>>> =
             Arc::new(RwLock::new(LinkedHashMap::with_capacity(REGEX_CACHE_SIZE)));
     }
 
-    let future = if let Some(r) = hook_regex_cache.read().unwrap().get(&pattern) {
+    let future = if let Some(r) = HOOK_REGEX_CACHE.read().unwrap().get(&pattern) {
         ok(r.is_match(&string)).left_future()
     } else {
         result(
@@ -412,10 +412,10 @@ fn cached_regex_match(
                 .build(),
         )
         .and_then(move |r| {
-            if hook_regex_cache.read().unwrap().len() > REGEX_CACHE_SIZE {
-                hook_regex_cache.write().unwrap().pop_front();
+            if HOOK_REGEX_CACHE.read().unwrap().len() > REGEX_CACHE_SIZE {
+                HOOK_REGEX_CACHE.write().unwrap().pop_front();
             }
-            hook_regex_cache.write().unwrap().insert(pattern, r.clone());
+            HOOK_REGEX_CACHE.write().unwrap().insert(pattern, r.clone());
             ok(r.is_match(&string))
         })
         .right_future()

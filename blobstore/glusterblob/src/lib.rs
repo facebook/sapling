@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![feature(duration_as_u128)]
-
 #[macro_use]
 extern crate stats;
 
