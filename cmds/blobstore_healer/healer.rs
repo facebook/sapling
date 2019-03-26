@@ -35,8 +35,8 @@ pub struct RepoHealer {
     blobstore_sync_queue_limit: usize,
     repo_id: RepositoryId,
     rate_limiter: RateLimiter,
-    sync_queue: Arc<BlobstoreSyncQueue>,
-    blobstores: Arc<HashMap<BlobstoreId, Arc<Blobstore>>>,
+    sync_queue: Arc<dyn BlobstoreSyncQueue>,
+    blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
 }
 
 impl RepoHealer {
@@ -45,8 +45,8 @@ impl RepoHealer {
         blobstore_sync_queue_limit: usize,
         repo_id: RepositoryId,
         rate_limiter: RateLimiter,
-        sync_queue: Arc<BlobstoreSyncQueue>,
-        blobstores: Arc<HashMap<BlobstoreId, Arc<Blobstore>>>,
+        sync_queue: Arc<dyn BlobstoreSyncQueue>,
+        blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     ) -> Self {
         Self {
             logger,
@@ -120,8 +120,8 @@ impl RepoHealer {
 fn heal_blob(
     ctx: CoreContext,
     repo_id: RepositoryId,
-    sync_queue: Arc<BlobstoreSyncQueue>,
-    blobstores: Arc<HashMap<BlobstoreId, Arc<Blobstore>>>,
+    sync_queue: Arc<dyn BlobstoreSyncQueue>,
+    blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     healing_deadline: DateTime,
     key: String,
     entries: Vec<BlobstoreSyncQueueEntry>,
@@ -201,7 +201,7 @@ fn heal_blob(
 
 fn fetch_blob(
     ctx: CoreContext,
-    blobstores: Arc<HashMap<BlobstoreId, Arc<Blobstore>>>,
+    blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     key: String,
     seen_blobstores: HashSet<BlobstoreId>,
 ) -> impl Future<Item = BlobstoreBytes, Error = Error> {
@@ -245,7 +245,7 @@ fn fetch_blob(
 
 fn cleanup_after_healing(
     ctx: CoreContext,
-    sync_queue: Arc<BlobstoreSyncQueue>,
+    sync_queue: Arc<dyn BlobstoreSyncQueue>,
     entries: Vec<BlobstoreSyncQueueEntry>,
 ) -> impl Future<Item = (), Error = Error> {
     sync_queue.del(ctx, entries)
@@ -254,7 +254,7 @@ fn cleanup_after_healing(
 fn report_partial_heal(
     ctx: CoreContext,
     repo_id: RepositoryId,
-    sync_queue: Arc<BlobstoreSyncQueue>,
+    sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstore_key: String,
     healed_blobstores: impl IntoIterator<Item = BlobstoreId>,
 ) -> impl Future<Item = (), Error = Error> {

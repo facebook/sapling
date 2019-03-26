@@ -68,17 +68,17 @@ fn maybe_schedule_healer_for_repo(
                         .chain_err("While opening ThriftManifoldBlob")?;
                     let blobstore =
                         PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));
-                    let blobstore: Arc<Blobstore> = Arc::new(blobstore);
+                    let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
                     blobstores.insert(id, ok(blobstore).boxify());
                 }
                 RemoteBlobstoreArgs::Gluster(args) => {
                     let blobstore = Glusterblob::with_smc(args.tier, args.export, args.basepath)
-                        .map(|blobstore| -> Arc<Blobstore> { Arc::new(blobstore) })
+                        .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) })
                         .boxify();
                     blobstores.insert(id, blobstore);
                 }
                 RemoteBlobstoreArgs::Mysql(args) => {
-                    let blobstore: Arc<Blobstore> = Arc::new(Sqlblob::with_myrouter(
+                    let blobstore: Arc<dyn Blobstore> = Arc::new(Sqlblob::with_myrouter(
                         RepositoryId::new(config.repoid),
                         args.shardmap,
                         myrouter_port,
@@ -100,7 +100,7 @@ fn maybe_schedule_healer_for_repo(
                 .map(|(id, blobstore)| {
                     let logger = logger.new(o!("blobstore" => format!("{:?}", id)));
                     let blobstore = blobstore
-                        .map(move |blobstore| -> Arc<Blobstore> {
+                        .map(move |blobstore| -> Arc<dyn Blobstore> {
                             Arc::new(DummyBlobstore::new(blobstore, logger))
                         })
                         .boxify();
@@ -116,8 +116,8 @@ fn maybe_schedule_healer_for_repo(
     )
     .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
 
-    let sync_queue: Arc<BlobstoreSyncQueue> = {
-        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(db_address.clone(), myrouter_port);
+    let sync_queue: Arc<dyn BlobstoreSyncQueue> = {
+        let sync_queue = SqlBlobstoreSyncQueue::with_myrouter(&db_address, myrouter_port);
 
         if !dry_run {
             Arc::new(sync_queue)
