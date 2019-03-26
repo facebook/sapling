@@ -1,7 +1,10 @@
 include "common/fb303/if/fb303.thrift"
 
+namespace cpp2 scm.mononoke.apiserver.thrift
 namespace py scm.mononoke.apiserver.thrift.apiserver
 namespace py3 scm.mononoke.apiserver.thrift
+
+typedef binary (cpp2.type = "std::unique_ptr<folly::IOBuf>") IOBufPointer
 
 enum MononokeAPIExceptionKind {
   InvalidInput = 1,
@@ -93,7 +96,7 @@ struct MononokeFile {
 }
 
 struct MononokeBlob {
-  1: binary content,
+  1: IOBufPointer content,
 }
 
 enum MononokeFileType {
