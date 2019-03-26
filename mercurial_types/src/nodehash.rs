@@ -308,6 +308,14 @@ impl HgManifestId {
     }
 }
 
+impl FromStr for HgManifestId {
+    type Err = <HgNodeHash as FromStr>::Err;
+
+    fn from_str(s: &str) -> result::Result<HgManifestId, Self::Err> {
+        HgNodeHash::from_str(s).map(HgManifestId)
+    }
+}
+
 impl Display for HgManifestId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
@@ -325,6 +333,14 @@ impl Arbitrary for HgManifestId {
 pub struct HgFileNodeId(HgNodeHash);
 
 impl HgFileNodeId {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        HgNodeHash::from_bytes(bytes).map(HgFileNodeId)
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }

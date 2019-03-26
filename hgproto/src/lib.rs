@@ -54,7 +54,7 @@ use std::sync::Mutex;
 
 use bytes::Bytes;
 
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash};
+use mercurial_types::{HgChangesetId, HgManifestId};
 
 mod batch;
 mod commands;
@@ -84,7 +84,7 @@ impl Request {
 #[derive(Debug, Eq, PartialEq)]
 pub enum SingleRequest {
     Between {
-        pairs: Vec<(HgNodeHash, HgNodeHash)>,
+        pairs: Vec<(HgChangesetId, HgChangesetId)>,
     },
     Branchmap,
     Capabilities,
@@ -106,7 +106,7 @@ pub enum SingleRequest {
         key: String,
     },
     Known {
-        nodes: Vec<HgNodeHash>,
+        nodes: Vec<HgChangesetId>,
     },
     Knownnodes {
         nodes: Vec<HgChangesetId>,
@@ -149,9 +149,9 @@ impl SingleRequest {
 #[derive(Eq, PartialEq)]
 pub struct GetbundleArgs {
     /// List of space-delimited hex nodes of heads to retrieve
-    pub heads: Vec<HgNodeHash>,
+    pub heads: Vec<HgChangesetId>,
     /// List of space-delimited hex nodes that the client has in common with the server
-    pub common: Vec<HgNodeHash>,
+    pub common: Vec<HgChangesetId>,
     /// Comma-delimited set of strings defining client bundle capabilities.
     pub bundlecaps: HashSet<Vec<u8>>,
     /// Comma-delimited list of strings of ``pushkey`` namespaces. For each namespace listed, a bundle2 part will be included with the content of that namespace.
@@ -194,9 +194,9 @@ pub struct GettreepackArgs {
     /// "root of the repo".
     pub rootdir: Bytes,
     /// The manifest nodes of the specified root directory to send.
-    pub mfnodes: Vec<HgNodeHash>,
+    pub mfnodes: Vec<HgManifestId>,
     /// The manifest nodes of the rootdir that are already on the client.
-    pub basemfnodes: Vec<HgNodeHash>,
+    pub basemfnodes: Vec<HgManifestId>,
     /// The fullpath (not relative path) of directories underneath
     /// the rootdir that should be sent.
     pub directories: Vec<Bytes>,
@@ -212,13 +212,13 @@ pub enum Response {
 
 #[derive(Debug)]
 pub enum SingleResponse {
-    Between(Vec<Vec<HgNodeHash>>),
-    Branchmap(HashMap<String, HashSet<HgNodeHash>>),
+    Between(Vec<Vec<HgChangesetId>>),
+    Branchmap(HashMap<String, HashSet<HgChangesetId>>),
     Capabilities(Vec<String>),
     ClientTelemetry(String),
     Debugwireargs(Bytes),
     Getbundle(Bytes),
-    Heads(HashSet<HgNodeHash>),
+    Heads(HashSet<HgChangesetId>),
     Hello(HashMap<String, Vec<String>>),
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
     Lookup(Bytes),

@@ -11,7 +11,7 @@ use std::str::{self, FromStr};
 use bytes::{Bytes, BytesMut};
 use nom::{is_alphanumeric, is_digit, Err, ErrorKind, FindSubstring, IResult, Needed, Slice};
 
-use {HgChangesetId, HgNodeHash};
+use mercurial_types::{HgChangesetId, HgManifestId};
 
 use batch;
 use errors;
@@ -182,25 +182,31 @@ named_args!(batch_params(_count: usize)<HashMap<Vec<u8>, Vec<u8>>>,
 
 /// A nodehash is simply 40 hex digits.
 named!(
-    nodehash<HgNodeHash>,
+    nodehash<HgChangesetId>,
+    map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
+);
+
+/// A manifestid is simply 40 hex digits.
+named!(
+    manifestid<HgManifestId>,
     map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
 );
 
 /// A pair of nodehashes, separated by '-'
 named!(
-    pair<(HgNodeHash, HgNodeHash)>,
+    pair<(HgChangesetId, HgChangesetId)>,
     do_parse!(a: nodehash >> tag!("-") >> b: nodehash >> ((a, b)))
 );
 
 /// A space-separated list of pairs.
 named!(
-    pairlist<Vec<(HgNodeHash, HgNodeHash)>>,
+    pairlist<Vec<(HgChangesetId, HgChangesetId)>>,
     separated_list_complete!(tag!(" "), pair)
 );
 
-/// A space-separated list of node hashes
+/// A space-separated list of changeset IDs
 named!(
-    hashlist<Vec<HgNodeHash>>,
+    hashlist<Vec<HgChangesetId>>,
     separated_list_complete!(tag!(" "), nodehash)
 );
 
@@ -214,6 +220,12 @@ named!(
 named!(
     hg_changeset_list<Vec<HgChangesetId>>,
     separated_list_complete!(tag!(" "), hg_changeset_id)
+);
+
+/// A space-separated list of manifest IDs
+named!(
+    manifestlist<Vec<HgManifestId>>,
+    separated_list_complete!(tag!(" "), manifestid)
 );
 
 /// A space-separated list of strings
@@ -565,8 +577,8 @@ fn parse_with_params(
         | call!(parse_command, "gettreepack", parse_params, 0+1,
             |kv| Ok(Gettreepack(GettreepackArgs {
                 rootdir: parseval(&kv, "rootdir", bytes_complete)?,
-                mfnodes: parseval(&kv, "mfnodes", hashlist)?,
-                basemfnodes: parseval(&kv, "basemfnodes", hashlist)?,
+                mfnodes: parseval(&kv, "mfnodes", manifestlist)?,
+                basemfnodes: parseval(&kv, "basemfnodes", manifestlist)?,
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
                 depth: parseval_option(&kv, "depth", closure!(
                     map_res!(
@@ -874,7 +886,7 @@ mod test {
     fn test_nodehash() {
         assert_eq!(
             nodehash(b"0000000000000000000000000000000000000000"),
-            IResult::Done(&b""[..], NULL_HASH)
+            IResult::Done(&b""[..], HgChangesetId::new(NULL_HASH))
         );
 
         assert_eq!(
@@ -921,7 +933,13 @@ mod test {
     fn test_pair() {
         let p =
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
-        assert_eq!(pair(p), IResult::Done(&b""[..], (NULL_HASH, NULL_HASH)));
+        assert_eq!(
+            pair(p),
+            IResult::Done(
+                &b""[..],
+                (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))
+            )
+        );
 
         assert_eq!(pair(&p[..80]), IResult::Incomplete(Needed::Size(81)));
 
@@ -939,7 +957,10 @@ mod test {
             pairlist(p),
             IResult::Done(
                 &b""[..],
-                vec![(NULL_HASH, NULL_HASH), (NULL_HASH, NULL_HASH)]
+                vec![
+                    (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH)),
+                    (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))
+                ]
             )
         );
 
@@ -947,7 +968,10 @@ mod test {
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(&b""[..], vec![(NULL_HASH, NULL_HASH)])
+            IResult::Done(
+                &b""[..],
+                vec![(HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))]
+            )
         );
 
         let p = b"";
@@ -970,11 +994,22 @@ mod test {
               0000000000000000000000000000000000000000 0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(&b""[..], vec![NULL_HASH, NULL_HASH, NULL_HASH, NULL_HASH])
+            IResult::Done(
+                &b""[..],
+                vec![
+                    HgChangesetId::new(NULL_HASH),
+                    HgChangesetId::new(NULL_HASH),
+                    HgChangesetId::new(NULL_HASH),
+                    HgChangesetId::new(NULL_HASH)
+                ]
+            )
         );
 
         let p = b"0000000000000000000000000000000000000000";
-        assert_eq!(hashlist(p), IResult::Done(&b""[..], vec![NULL_HASH]));
+        assert_eq!(
+            hashlist(p),
+            IResult::Done(&b""[..], vec![HgChangesetId::new(NULL_HASH)])
+        );
 
         let p = b"";
         assert_eq!(hashlist(p), IResult::Done(&b""[..], vec![]));
@@ -1062,20 +1097,28 @@ mod test_parse {
     use super::*;
     use std::fmt::Debug;
 
-    fn hash_ones() -> HgNodeHash {
-        "1111111111111111111111111111111111111111".parse().unwrap()
+    fn hash_ones() -> HgChangesetId {
+        HgChangesetId::new("1111111111111111111111111111111111111111".parse().unwrap())
     }
 
-    fn hash_twos() -> HgNodeHash {
-        "2222222222222222222222222222222222222222".parse().unwrap()
+    fn hash_twos() -> HgChangesetId {
+        HgChangesetId::new("2222222222222222222222222222222222222222".parse().unwrap())
     }
 
-    fn hash_threes() -> HgNodeHash {
-        "3333333333333333333333333333333333333333".parse().unwrap()
+    fn hash_threes() -> HgChangesetId {
+        HgChangesetId::new("3333333333333333333333333333333333333333".parse().unwrap())
     }
 
-    fn hash_fours() -> HgNodeHash {
-        "4444444444444444444444444444444444444444".parse().unwrap()
+    fn hash_fours() -> HgChangesetId {
+        HgChangesetId::new("4444444444444444444444444444444444444444".parse().unwrap())
+    }
+
+    fn hash_ones_manifest() -> HgManifestId {
+        HgManifestId::new("1111111111111111111111111111111111111111".parse().unwrap())
+    }
+
+    fn hash_twos_manifest() -> HgManifestId {
+        HgManifestId::new("2222222222222222222222222222222222222222".parse().unwrap())
     }
 
     /// Common code for testing parsing:
@@ -1348,8 +1391,8 @@ mod test_parse {
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
                 rootdir: Bytes::new(),
-                mfnodes: vec![hash_ones()],
-                basemfnodes: vec![hash_ones()],
+                mfnodes: vec![hash_ones_manifest()],
+                basemfnodes: vec![hash_ones_manifest()],
                 directories: vec![],
                 depth: None,
             })),
@@ -1373,8 +1416,8 @@ mod test_parse {
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
                 rootdir: Bytes::from("ololo".as_bytes()),
-                mfnodes: vec![hash_ones(), hash_twos()],
-                basemfnodes: vec![hash_twos(), hash_ones()],
+                mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
+                basemfnodes: vec![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
                 depth: Some(1),
             })),

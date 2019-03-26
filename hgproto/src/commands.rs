@@ -26,11 +26,9 @@ use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_bundles::Bundle2Item;
-use mercurial_types::{HgChangesetId, MPath};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
-use HgFileNodeId;
-use HgNodeHash;
 
 use {GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 
@@ -320,7 +318,7 @@ struct GetfilesArgDecoder {}
 // Parses one (hash, path) pair
 impl Decoder for GetfilesArgDecoder {
     // If None has been decoded, then that means that client has sent all the data
-    type Item = Option<(HgNodeHash, MPath)>;
+    type Item = Option<(HgFileNodeId, MPath)>;
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
@@ -360,7 +358,7 @@ impl Decoder for GetfilesArgDecoder {
                     let nodehashstr = String::from_utf8(nodehashbytes.to_vec())?;
                     let nodehash = HgNodeHash::from_str(&nodehashstr)?;
                     // Some here means that new entry has been parsed
-                    let parsed_res = Some((nodehash, MPath::new(&buf)?));
+                    let parsed_res = Some((HgFileNodeId::new(nodehash), MPath::new(&buf)?));
                     // 'Ok' means no error, 'Some' means that no more bytes needed.
                     Ok(Some(parsed_res))
                 }
@@ -543,7 +541,7 @@ impl Decoder for Getpackv1ArgDecoder {
                     }
 
                     let node = src.split_to(node_size);
-                    let node = HgFileNodeId::new(HgNodeHash::from_bytes(&node)?);
+                    let node = HgFileNodeId::from_bytes(&node)?;
                     file_nodes.push(node);
                     ParsingFileNodes(file, file_nodes_count, file_nodes)
                 }
@@ -623,12 +621,15 @@ pub type HgCommandRes<T> = BoxFuture<T, Error>;
 // TODO: placeholder types are generally `()`
 pub trait HgCommands {
     // @wireprotocommand('between', 'pairs')
-    fn between(&self, _pairs: Vec<(HgNodeHash, HgNodeHash)>) -> HgCommandRes<Vec<Vec<HgNodeHash>>> {
+    fn between(
+        &self,
+        _pairs: Vec<(HgChangesetId, HgChangesetId)>,
+    ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
         unimplemented("between")
     }
 
     // @wireprotocommand('branchmap')
-    fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<HgNodeHash>>> {
+    fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<HgChangesetId>>> {
         // We have no plans to support mercurial branches and hence no plans for branchmap,
         // so just return fake response.
         future::ok(HashMap::new()).boxify()
@@ -651,7 +652,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('heads')
-    fn heads(&self) -> HgCommandRes<HashSet<HgNodeHash>> {
+    fn heads(&self) -> HgCommandRes<HashSet<HgChangesetId>> {
         unimplemented("heads")
     }
 
@@ -671,7 +672,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('known', 'nodes *')
-    fn known(&self, _nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
+    fn known(&self, _nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
         unimplemented("known")
     }
 
@@ -697,7 +698,10 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(&self, _params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
+    fn getfiles(
+        &self,
+        _params: BoxStream<(HgFileNodeId, MPath), Error>,
+    ) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getfiles".into()).into())).boxify()
     }
 
@@ -748,12 +752,12 @@ mod test {
         vs.into_iter().next().unwrap()
     }
 
-    fn hash_ones() -> HgNodeHash {
-        "1111111111111111111111111111111111111111".parse().unwrap()
+    fn hash_ones() -> HgFileNodeId {
+        HgFileNodeId::new("1111111111111111111111111111111111111111".parse().unwrap())
     }
 
-    fn hash_twos() -> HgNodeHash {
-        "2222222222222222222222222222222222222222".parse().unwrap()
+    fn hash_twos() -> HgFileNodeId {
+        HgFileNodeId::new("2222222222222222222222222222222222222222".parse().unwrap())
     }
 
     #[test]
@@ -855,7 +859,7 @@ mod test {
             decoder
                 .decode(&mut BytesMut::from(buf))
                 .expect("unexpected error"),
-            Some(Some((path, vec![HgFileNodeId::new(hash_ones())])))
+            Some(Some((path, vec![hash_ones()])))
         );
     }
 

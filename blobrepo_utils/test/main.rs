@@ -37,7 +37,6 @@ mod test {
 
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
                 use context::CoreContext;
-                use mercurial_types::HgChangesetId;
 
                 use $repo;
 
@@ -49,9 +48,7 @@ mod test {
                         let logger = Logger::root(drain, o![]);
 
                         let repo = $repo::getrepo(Some(logger.clone()));
-                        let heads = repo.get_heads_maybe_stale(ctx.clone())
-                            .collect()
-                            .map(|heads| heads.into_iter().map(HgChangesetId::new));
+                        let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
 
                         let verify = BonsaiMFVerify {
                             ctx: ctx.clone(),
@@ -69,18 +66,20 @@ mod test {
                         tokio::spawn(
                             results
                                 .and_then(move |results| {
-                                    let diffs = results.into_iter().filter_map(move |(res, meta)| {
-                                        match res {
+                                    let diffs = results.into_iter().filter_map(
+                                        move |(res, meta)| match res {
                                             BonsaiMFVerifyResult::Invalid(difference) => {
                                                 let cs_id = meta.changeset_id;
-                                                Some(difference
-                                                    .changes(ctx.clone())
-                                                    .collect()
-                                                    .map(move |changes| (cs_id, changes)))
+                                                Some(
+                                                    difference
+                                                        .changes(ctx.clone())
+                                                        .collect()
+                                                        .map(move |changes| (cs_id, changes)),
+                                                )
                                             }
                                             _ => None,
-                                        }
-                                    });
+                                        },
+                                    );
 
                                     futures::future::join_all(diffs)
                                 })
@@ -94,23 +93,29 @@ mod test {
                                             changeset_id,
                                         ));
                                         for changed_entry in changes {
-                                            desc.push(format!("  - Changed entry: {:?}", changed_entry));
+                                            desc.push(format!(
+                                                "  - Changed entry: {:?}",
+                                                changed_entry
+                                            ));
                                         }
                                         desc.push("".to_string());
                                     }
                                     let desc = desc.join("\n");
                                     if failed {
-                                        panic!("Inconsistencies detected, roundtrip test failed\n\n{}", desc);
+                                        panic!(
+                                            "Inconsistencies detected, roundtrip test failed\n\n{}",
+                                            desc
+                                        );
                                     }
                                 })
                                 .map_err(|err| {
                                     panic!("verify error {}", err);
-                                })
+                                }),
                         );
                     })
                 }
             }
-        }
+        };
     }
 
     test_verify!(branch_even);

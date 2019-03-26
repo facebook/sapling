@@ -27,8 +27,7 @@ use mercurial_types::manifest_utils::{
 };
 use mercurial_types::{
     convert_parents_to_remotefilelog_format, percent_encode, Delta, Entry, HgBlobNode,
-    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_CSID,
-    NULL_HASH,
+    HgChangesetId, HgFileNodeId, HgManifestId, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::{LfsParams, RepoReadOnly};
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
@@ -84,7 +83,11 @@ mod ops {
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
-fn format_nodes_list(nodes: &Vec<HgNodeHash>) -> String {
+fn format_nodes_list(nodes: &Vec<HgChangesetId>) -> String {
+    nodes.iter().map(|node| format!("{}", node)).join(" ")
+}
+
+fn format_manifests_list(nodes: &Vec<HgManifestId>) -> String {
     nodes.iter().map(|node| format!("{}", node)).join(" ")
 }
 
@@ -358,14 +361,8 @@ impl RepoClient {
         bundle2_parts.append(&mut bundle2_resolver::create_getbundle_response(
             self.ctx.clone(),
             blobrepo.clone(),
-            args.common
-                .into_iter()
-                .map(|head| HgChangesetId::new(head))
-                .collect(),
-            args.heads
-                .into_iter()
-                .map(|head| HgChangesetId::new(head))
-                .collect(),
+            args.common,
+            args.heads,
             self.lca_hint.clone(),
             if use_phases {
                 Some(self.phases_hint.clone())
@@ -409,7 +406,11 @@ impl RepoClient {
 
         // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
         // already has can be sent to the client.
-        let basemfnode = params.basemfnodes.get(0).cloned().unwrap_or(NULL_HASH);
+        let basemfnode = params
+            .basemfnodes
+            .get(0)
+            .cloned()
+            .unwrap_or(HgManifestId::new(NULL_HASH));
 
         let rootpath = if params.rootdir.is_empty() {
             None
@@ -498,14 +499,17 @@ impl RepoClient {
 
 impl HgCommands for RepoClient {
     // @wireprotocommand('between', 'pairs')
-    fn between(&self, pairs: Vec<(HgNodeHash, HgNodeHash)>) -> HgCommandRes<Vec<Vec<HgNodeHash>>> {
+    fn between(
+        &self,
+        pairs: Vec<(HgChangesetId, HgChangesetId)>,
+    ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
         info!(self.ctx.logger(), "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
             ctx: CoreContext,
             repo: MononokeRepo,
-            n: HgNodeHash,
-            bottom: HgNodeHash,
+            n: HgChangesetId,
+            bottom: HgChangesetId,
             wait_cs: Option<CS>,
         };
 
@@ -513,8 +517,8 @@ impl HgCommands for RepoClient {
             fn new(
                 ctx: CoreContext,
                 repo: &MononokeRepo,
-                top: HgNodeHash,
-                bottom: HgNodeHash,
+                top: HgChangesetId,
+                bottom: HgChangesetId,
             ) -> Self {
                 ParentStream {
                     ctx,
@@ -527,26 +531,26 @@ impl HgCommands for RepoClient {
         }
 
         impl Stream for ParentStream<BoxFuture<HgBlobChangeset, hgproto::Error>> {
-            type Item = HgNodeHash;
+            type Item = HgChangesetId;
             type Error = hgproto::Error;
 
             fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-                if self.n == self.bottom || self.n == NULL_HASH {
+                if self.n == self.bottom || self.n.into_nodehash() == NULL_HASH {
                     return Ok(Async::Ready(None));
                 }
 
-                self.wait_cs =
-                    self.wait_cs.take().or_else(|| {
-                        Some(self.repo.blobrepo().get_changeset_by_changesetid(
-                            self.ctx.clone(),
-                            HgChangesetId::new(self.n),
-                        ))
-                    });
+                self.wait_cs = self.wait_cs.take().or_else(|| {
+                    Some(
+                        self.repo
+                            .blobrepo()
+                            .get_changeset_by_changesetid(self.ctx.clone(), self.n),
+                    )
+                });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
                 self.wait_cs = None; // got it
 
                 let p = cs.p1().unwrap_or(NULL_HASH);
-                let prev_n = mem::replace(&mut self.n, p);
+                let prev_n = mem::replace(&mut self.n, HgChangesetId::new(p));
 
                 Ok(Async::Ready(Some(prev_n)))
             }
@@ -615,7 +619,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('heads')
-    fn heads(&self) -> HgCommandRes<HashSet<HgNodeHash>> {
+    fn heads(&self) -> HgCommandRes<HashSet<HgChangesetId>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         info!(self.ctx.logger(), "heads");
@@ -672,12 +676,12 @@ impl HgCommands for RepoClient {
                 .boxify()
         }
 
-        let node = HgNodeHash::from_str(&key).ok();
+        let node = HgChangesetId::from_str(&key).ok();
         let bookmark = Bookmark::new(&key).ok();
 
         let lookup_fut = match (node, bookmark) {
             (Some(node), Some(bookmark)) => {
-                let csid = HgChangesetId::new(node);
+                let csid = node;
                 repo.changeset_exists(self.ctx.clone(), csid)
                     .and_then({
                         cloned!(self.ctx);
@@ -714,7 +718,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
-    fn known(&self, nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
+    fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
         if nodes.len() > MAX_NODES_TO_LOG {
             info!(
                 self.ctx.logger(),
@@ -728,7 +732,6 @@ impl HgCommands for RepoClient {
 
         let mut scuba_logger = self.prepared_ctx(ops::KNOWN, None).scuba().clone();
 
-        let nodes: Vec<_> = nodes.into_iter().map(HgChangesetId::new).collect();
         let nodes_len = nodes.len();
 
         let phases_hint = self.phases_hint.clone();
@@ -974,8 +977,8 @@ impl HgCommands for RepoClient {
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         let args = json!({
             "rootdir": String::from_utf8_lossy(&params.rootdir),
-            "mfnodes": format_nodes_list(&params.mfnodes),
-            "basemfnodes": format_nodes_list(&params.basemfnodes),
+            "mfnodes": format_manifests_list(&params.mfnodes),
+            "basemfnodes": format_manifests_list(&params.basemfnodes),
             "directories": format_utf8_bytes_list(&params.directories),
         });
         let args = json!(vec![args]);
@@ -1006,7 +1009,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(&self, params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
+    fn getfiles(&self, params: BoxStream<(HgFileNodeId, MPath), Error>) -> BoxStream<Bytes, Error> {
         info!(self.ctx.logger(), "getfiles");
 
         let mut wireproto_logger = self.wireproto_logger(ops::GETFILES, None);
@@ -1034,7 +1037,7 @@ impl HgCommands for RepoClient {
                     create_remotefilelog_blob(
                         ctx.clone(),
                         repo.blobrepo().clone(),
-                        HgFileNodeId::new(node),
+                        node,
                         path.clone(),
                         repo.lfs_params().clone(),
                         validate_hash,
@@ -1373,19 +1376,17 @@ impl HgCommands for RepoClient {
 fn get_changed_manifests_stream(
     ctx: CoreContext,
     repo: &BlobRepo,
-    mfid: HgNodeHash,
-    basemfid: HgNodeHash,
+    mfid: HgManifestId,
+    basemfid: HgManifestId,
     rootpath: Option<MPath>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
-    let mfid = HgManifestId::new(mfid);
     let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid).traced(
         ctx.trace(),
         "fetch rootmf",
         trace_args!(),
     );
-    let basemfid = HgManifestId::new(basemfid);
     let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid).traced(
         ctx.trace(),
         "fetch baserootmf",

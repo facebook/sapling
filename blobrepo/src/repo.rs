@@ -454,16 +454,13 @@ impl BlobRepo {
     pub fn get_heads_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = HgNodeHash, Error = Error> {
+    ) -> impl Stream<Item = HgChangesetId, Error = Error> {
         STATS::get_heads_maybe_stale.add_value(1);
         self.bookmarks
             .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
             .and_then({
                 let repo = self.clone();
-                move |(_, cs)| {
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
-                        .map(|cs| cs.into_nodehash())
-                }
+                move |(_, cs)| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
             })
     }
 
@@ -1897,10 +1894,7 @@ pub fn save_bonsai_changesets(
                 parents: bcs.parents().into_iter().collect(),
             };
 
-            bonsai_complete_futs.push(
-                complete_changesets
-                    .add(ctx.clone(), completion_record)
-                );
+            bonsai_complete_futs.push(complete_changesets.add(ctx.clone(), completion_record));
         }
     }
 
@@ -1986,10 +1980,7 @@ impl CreateChangeset {
                     let expected_files = self.expected_files;
                     let cs_metadata = self.cs_metadata;
 
-                    move |(
-                        root_mf_id,
-                        (parents, parent_manifest_hashes, bonsai_parents),
-                    )| {
+                    move |(root_mf_id, (parents, parent_manifest_hashes, bonsai_parents))| {
                         let files = if let Some(expected_files) = expected_files {
                             STATS::create_changeset_expected_cf.add_value(1);
                             // We are trusting the callee to provide a list of changed files, used
