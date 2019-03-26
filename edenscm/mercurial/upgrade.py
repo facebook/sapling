@@ -49,7 +49,6 @@ def blocksourcerequirements(repo):
     return {
         # The upgrade code does not yet support these experimental features.
         # This is an artificial limitation.
-        "manifestv2",
         "treemanifest",
         # This was a precursor to generaldelta and was never enabled by default.
         # It should (hopefully) not exist in the wild.

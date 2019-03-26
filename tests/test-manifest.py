@@ -9,7 +9,6 @@ from edenscm.mercurial import manifest as manifestmod, match as matchmod
 
 
 EMTPY_MANIFEST = b""
-EMTPY_MANIFEST_V2 = b"\0\n"
 
 HASH_1 = b"1" * 40
 BIN_HASH_1 = binascii.unhexlify(HASH_1)
@@ -20,20 +19,6 @@ BIN_HASH_3 = binascii.unhexlify(HASH_3)
 A_SHORT_MANIFEST = (
     b"bar/baz/qux.py\0%(hash2)s%(flag2)s\n" b"foo\0%(hash1)s%(flag1)s\n"
 ) % {b"hash1": HASH_1, b"flag1": b"", b"hash2": HASH_2, b"flag2": b"l"}
-
-# Same data as A_SHORT_MANIFEST
-A_SHORT_MANIFEST_V2 = (
-    b"\0\n"
-    b"\x00bar/baz/qux.py\0%(flag2)s\n%(hash2)s\n"
-    b"\x00foo\0%(flag1)s\n%(hash1)s\n"
-) % {b"hash1": BIN_HASH_1, b"flag1": b"", b"hash2": BIN_HASH_2, b"flag2": b"l"}
-
-# Same data as A_SHORT_MANIFEST
-A_METADATA_MANIFEST = (
-    b"\0foo\0bar\n"
-    b"\x00bar/baz/qux.py\0%(flag2)s\0foo\0bar\n%(hash2)s\n"  # flag and metadata
-    b"\x00foo\0%(flag1)s\0foo\n%(hash1)s\n"  # no flag, but metadata
-) % {b"hash1": BIN_HASH_1, b"flag1": b"", b"hash2": BIN_HASH_2, b"flag2": b"l"}
 
 A_STEM_COMPRESSED_MANIFEST = (
     b"\0\n"
@@ -104,11 +89,6 @@ class basemanifesttests(object):
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
-    def testEmptyManifestv2(self):
-        m = self.parsemanifest(EMTPY_MANIFEST_V2)
-        self.assertEqual(0, len(m))
-        self.assertEqual([], list(m))
-
     def testManifest(self):
         m = self.parsemanifest(A_SHORT_MANIFEST)
         self.assertEqual([b"bar/baz/qux.py", b"foo"], list(m))
@@ -118,31 +98,6 @@ class basemanifesttests(object):
         self.assertEqual(b"", m.flags(b"foo"))
         with self.assertRaises(KeyError):
             m[b"wat"]
-
-    def testParseManifestV2(self):
-        m1 = self.parsemanifest(A_SHORT_MANIFEST)
-        m2 = self.parsemanifest(A_SHORT_MANIFEST_V2)
-        # Should have same content as A_SHORT_MANIFEST
-        self.assertEqual(m1.text(), m2.text())
-
-    def testParseManifestMetadata(self):
-        # Metadata is for future-proofing and should be accepted but ignored
-        m = self.parsemanifest(A_METADATA_MANIFEST)
-        self.assertEqual(A_SHORT_MANIFEST, m.text())
-
-    def testParseManifestStemCompression(self):
-        m = self.parsemanifest(A_STEM_COMPRESSED_MANIFEST)
-        self.assertIn(b"bar/baz/qux.py", m)
-        self.assertIn(b"bar/qux/foo.py", m)
-        self.assertIn(b"bar/qux/foz.py", m)
-        self.assertIn(256 * b"x" + b"/x", m)
-        self.assertIn(256 * b"x" + b"/y", m)
-        self.assertEqual(A_STEM_COMPRESSED_MANIFEST, m.text(usemanifestv2=True))
-
-    def testTextV2(self):
-        m1 = self.parsemanifest(A_SHORT_MANIFEST)
-        v2text = m1.text(usemanifestv2=True)
-        self.assertEqual(A_SHORT_MANIFEST_V2, v2text)
 
     def testSetItem(self):
         want = BIN_HASH_1

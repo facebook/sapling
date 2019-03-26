@@ -502,12 +502,9 @@ class fastmanifestdict(object):
         c = fastmanifestdict(self._fm.copy())
         return c
 
-    def text(self, usemanifestv2=False):
-        if usemanifestv2:
-            raise NotImplementedError("v2 not supported")
-        else:
-            # use (probably) native version for v1
-            return self._fm.text()
+    def text(self):
+        # use (probably) native version for v1
+        return self._fm.text()
 
     def fastdelta(self, base, changes):
         """Given a base manifest text as an array.array and a list of changes
@@ -894,19 +891,6 @@ class hybridmanifestctx(object):
             return mf._converttohybridmanifest(result)
 
         rl = self.revlog
-        if rl._usemanifestv2:
-            # Need to perform a slow delta
-            r0 = revlog.deltaparent(revlog.rev(self._node))
-            m0 = manifest.manifestctx(self._manifestlog, rl.node(r0)).read()
-            m1 = self.read()
-            md = manifest.manifestdict()
-            for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
-                if n1:
-                    md[f] = n1
-                    if fl1:
-                        md.setflag(f, fl1)
-            return md
-
         r = rl.rev(self._node)
         d = mdiff.patchtext(rl.revdiff(rl.deltaparent(r), r))
         return manifest.manifestdict(d)

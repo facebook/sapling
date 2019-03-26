@@ -99,15 +99,6 @@ Support for this requirement was added in Mercurial 1.9 (released
 July 2011). The requirement was disabled on new repositories by
 default until Mercurial 3.7 (released February 2016).
 
-manifestv2
-==========
-
-Denotes that version 2 of manifests are being used.
-
-Support for this requirement was added in Mercurial 3.4 (released
-May 2015). The requirement is currently experimental and is disabled
-by default.
-
 treemanifest
 ============
 

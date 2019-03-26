@@ -341,7 +341,7 @@ class localrepository(object):
     reduces the amount of stat-like system calls and thus saves time.
     This option should be safe if symlinks are not used in the repo"""
 
-    supportedformats = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
+    supportedformats = {"revlogv1", "generaldelta", "treemanifest"}
     _basesupported = supportedformats | {
         edenfs.requirement,
         "store",
@@ -354,7 +354,7 @@ class localrepository(object):
         "storerequirements",
     }
     _basestoresupported = {"visibleheads"}
-    openerreqs = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
+    openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
     # sets of (ui, featureset) functions for repo and store features.
     # only functions defined in module of enabled extensions are invoked
@@ -2621,8 +2621,6 @@ def newreporequirements(repo):
         requirements.add("generaldelta")
     if ui.configbool("experimental", "treemanifest"):
         requirements.add("treemanifest")
-    if ui.configbool("experimental", "manifestv2"):
-        requirements.add("manifestv2")
 
     return requirements
 

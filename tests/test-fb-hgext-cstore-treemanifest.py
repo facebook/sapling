@@ -396,13 +396,13 @@ class ctreemanifesttests(unittest.TestCase):
         a.set("abc/z", *zflags)
 
         treetext = a.text()
-        treetextv2 = a.text(usemanifestv2=True)
+        treetextv2 = a.text()
 
         b = manifest.manifestdict()
         b["abc/z"] = zflags[0]
         b.setflag("abc/z", zflags[1])
         fulltext = b.text()
-        fulltextv2 = b.text(usemanifestv2=True)
+        fulltextv2 = b.text()
 
         self.assertEquals(treetext, fulltext)
         self.assertEquals(treetextv2, fulltextv2)
