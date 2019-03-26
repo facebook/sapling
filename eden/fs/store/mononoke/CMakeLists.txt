@@ -6,6 +6,7 @@ if (EDEN_WIN_NOMONONOKE)
     REMOVE_ITEM
     STORE_MONONOKE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/MononokeHttpBackingStore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/MononokeThriftBackingStore.cpp
   )
 endif()
 
