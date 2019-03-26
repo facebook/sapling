@@ -18,7 +18,7 @@ use revisionstore::{
     DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableHistoryPack,
     MutablePack,
 };
-use types::{HistoryEntry, Key};
+use types::{HistoryEntry, Key, WireHistoryEntry};
 use url_ext::UrlExt;
 
 use crate::client::{EdenApiHttpClient, HyperClient};
@@ -193,12 +193,14 @@ fn get_history(
                     Ok(body)
                 })
         })
-        .map(move |body: Bytes| {
-            let entries = Deserializer::from_reader(body.into_buf().reader()).into_iter();
-            stream::iter_result(entries).from_err()
-        })
+        .map(process_body)
         .flatten_stream()
         .map(move |entry| HistoryEntry::from_wire(entry, key.name().to_vec()))
+}
+
+fn process_body(body: Bytes) -> impl Stream<Item = WireHistoryEntry, Error = Error> {
+    let entries = Deserializer::from_reader(body.into_buf().reader()).into_iter();
+    stream::iter_result(entries).from_err()
 }
 
 /// Create a new datapack in the given directory, and populate it with the file
