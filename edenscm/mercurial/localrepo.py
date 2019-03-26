@@ -333,11 +333,6 @@ class locallegacypeer(repository.legacypeer, localpeer):
     # End of baselegacywirecommands interface.
 
 
-# Increment the sub-version when the revlog v2 format changes to lock out old
-# clients.
-REVLOGV2_REQUIREMENT = "exp-revlogv2.0"
-
-
 class localrepository(object):
     """local repository object
 
@@ -346,13 +341,7 @@ class localrepository(object):
     reduces the amount of stat-like system calls and thus saves time.
     This option should be safe if symlinks are not used in the repo"""
 
-    supportedformats = {
-        "revlogv1",
-        "generaldelta",
-        "treemanifest",
-        "manifestv2",
-        REVLOGV2_REQUIREMENT,
-    }
+    supportedformats = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
     _basesupported = supportedformats | {
         edenfs.requirement,
         "store",
@@ -471,7 +460,7 @@ class localrepository(object):
                     # create an invalid changelog
                     self.localvfs.append(
                         "00changelog.i",
-                        "\0\0\0\2"  # represents revlogv2
+                        "\0\0\0\1"
                         " dummy changelog to prevent using the old repo layout",
                     )
             else:
@@ -724,10 +713,6 @@ class localrepository(object):
         for r in self.requirements:
             if r.startswith("exp-compression-"):
                 self.svfs.options["compengine"] = r[len("exp-compression-") :]
-
-        # TODO move "revlogv2" to openerreqs once finalized.
-        if REVLOGV2_REQUIREMENT in self.requirements:
-            self.svfs.options["revlogv2"] = True
 
         treemanifestserver = self.ui.configbool("treemanifest", "server")
         self.svfs.options["treemanifest-server"] = treemanifestserver
@@ -2638,13 +2623,6 @@ def newreporequirements(repo):
         requirements.add("treemanifest")
     if ui.configbool("experimental", "manifestv2"):
         requirements.add("manifestv2")
-
-    revlogv2 = ui.config("experimental", "revlogv2")
-    if revlogv2 == "enable-unstable-format-and-corrupt-my-data":
-        requirements.remove("revlogv1")
-        # generaldelta is implied by revlogv2.
-        requirements.discard("generaldelta")
-        requirements.add(REVLOGV2_REQUIREMENT)
 
     return requirements
 

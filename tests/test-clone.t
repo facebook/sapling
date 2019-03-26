@@ -565,11 +565,17 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
   $ echo foo > src/foo
   $ hg -R src add src/foo
   $ hg -R src commit -m '#0'
+  abort: repo is corrupted
+  [255]
   $ hg -R src log -q
-  0:e1bab28bca43
+  abort: repo is corrupted
+  [255]
   $ hg clone -U -q src dst
+  abort: repo is corrupted
+  [255]
   $ hg -R dst log -q
-  0:e1bab28bca43
+  abort: repository dst not found!
+  [255]
 
 Create repositories to test auto sharing functionality
 

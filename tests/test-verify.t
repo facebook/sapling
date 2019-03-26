@@ -446,12 +446,8 @@ test revlog format 0
   $ revlog-formatv0.py
   $ cd formatv0
   $ hg verify
-  repository uses revlog format 0
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  abort: repo is corrupted
+  [255]
   $ cd ..
 
 test flag processor and skipflags

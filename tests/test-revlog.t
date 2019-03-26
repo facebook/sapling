@@ -7,7 +7,7 @@ Flags on revlog version 0 are rejected
   ...     fh.write('\x00\x01\x00\x00')
 
   $ hg log
-  abort: unknown flags (0x01) in version 0 revlog 00changelog.i!
+  abort: repo is corrupted
   [255]
 
 Unknown flags on revlog version 1 are rejected

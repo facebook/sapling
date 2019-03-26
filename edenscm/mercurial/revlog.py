@@ -37,16 +37,12 @@ _zlibdecompress = zlib.decompress
 # revlog header flags
 REVLOGV0 = 0
 REVLOGV1 = 1
-# Dummy value until file format is finalized.
-# Reminder: change the bounds check in revlog.__init__ when this is changed.
-REVLOGV2 = 0xDEAD
 FLAG_INLINE_DATA = 1 << 16
 FLAG_GENERALDELTA = 1 << 17
 REVLOG_DEFAULT_FLAGS = FLAG_INLINE_DATA
 REVLOG_DEFAULT_FORMAT = REVLOGV1
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 REVLOGV1_FLAGS = FLAG_INLINE_DATA | FLAG_GENERALDELTA
-REVLOGV2_FLAGS = REVLOGV1_FLAGS
 
 # revlog index flags
 REVIDX_ISCENSORED = 1 << 15  # revision has censor metadata, must be verified
@@ -245,68 +241,6 @@ def _slicechunk(revlog, revs):
         yield chunk
 
 
-# index v0:
-#  4 bytes: offset
-#  4 bytes: compressed length
-#  4 bytes: base rev
-#  4 bytes: link rev
-# 20 bytes: parent 1 nodeid
-# 20 bytes: parent 2 nodeid
-# 20 bytes: nodeid
-indexformatv0 = struct.Struct(">4l20s20s20s")
-indexformatv0_pack = indexformatv0.pack
-indexformatv0_unpack = indexformatv0.unpack
-
-
-class revlogoldio(object):
-    def __init__(self):
-        self.size = indexformatv0.size
-
-    def parseindex(self, data, inline):
-        s = self.size
-        index = []
-        nodemap = {nullid: nullrev}
-        n = off = 0
-        l = len(data)
-        while off + s <= l:
-            cur = data[off : off + s]
-            off += s
-            e = indexformatv0_unpack(cur)
-            # transform to revlogv1 format
-            e2 = (
-                offset_type(e[0], 0),
-                e[1],
-                -1,
-                e[2],
-                e[3],
-                nodemap.get(e[4], nullrev),
-                nodemap.get(e[5], nullrev),
-                e[6],
-            )
-            index.append(e2)
-            nodemap[e[6]] = n
-            n += 1
-
-        # add the magic null revision at -1
-        index.append((0, 0, 0, -1, -1, -1, -1, nullid))
-
-        return index, nodemap, None
-
-    def packentry(self, entry, node, version, rev):
-        if gettype(entry[0]):
-            raise RevlogError(_("index entry flags need revlog version 1"))
-        e2 = (
-            getoffset(entry[0]),
-            entry[1],
-            entry[3],
-            entry[4],
-            node(entry[5]),
-            node(entry[6]),
-            entry[7],
-        )
-        return indexformatv0_pack(*e2)
-
-
 # index ng:
 #  6 bytes: offset
 #  2 bytes: flags
@@ -418,10 +352,7 @@ class revlog(object):
         v = REVLOG_DEFAULT_VERSION
         opts = getattr(opener, "options", None)
         if opts is not None:
-            if "revlogv2" in opts:
-                # version 2 revlogs always use generaldelta.
-                v = REVLOGV2 | FLAG_GENERALDELTA | FLAG_INLINE_DATA
-            elif "revlogv1" in opts:
+            if "revlogv1" in opts:
                 if "generaldelta" in opts:
                     v |= FLAG_GENERALDELTA
             else:
@@ -479,19 +410,9 @@ class revlog(object):
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0:
-            if flags:
-                raise RevlogError(
-                    _("unknown flags (%#04x) in version %d " "revlog %s")
-                    % (flags >> 16, fmt, self.indexfile)
-                )
+            raise error.Abort(_("repo is corrupted"))
         elif fmt == REVLOGV1:
             if flags & ~REVLOGV1_FLAGS:
-                raise RevlogError(
-                    _("unknown flags (%#04x) in version %d " "revlog %s")
-                    % (flags >> 16, fmt, self.indexfile)
-                )
-        elif fmt == REVLOGV2:
-            if flags & ~REVLOGV2_FLAGS:
                 raise RevlogError(
                     _("unknown flags (%#04x) in version %d " "revlog %s")
                     % (flags >> 16, fmt, self.indexfile)
@@ -504,8 +425,6 @@ class revlog(object):
         self.storedeltachains = True
 
         self._io = revlogio()
-        if self.version == REVLOGV0:
-            self._io = revlogoldio()
         try:
             d = self._io.parseindex(indexdata, self._inline)
         except (ValueError, IndexError):

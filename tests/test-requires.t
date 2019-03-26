@@ -5,7 +5,7 @@
   $ hg commit -m test
   $ rm .hg/requires
   $ hg tip
-  abort: unknown version (2) in revlog 00changelog.i!
+  abort: index 00changelog.i is corrupted!
   [255]
   $ echo indoor-pool > .hg/requires
   $ hg tip

@@ -148,14 +148,6 @@ length from bytes 8-11 define how to access this data.
 The first 4 bytes of the revlog are shared between the revlog header
 and the 6 byte absolute offset field from the first revlog entry.
 
-Version 2 Format
-================
-
-(In development. Format not finalized or stable.)
-
-Version 2 is currently identical to version 1. This will obviously
-change.
-
 Delta Chains
 ============
 
