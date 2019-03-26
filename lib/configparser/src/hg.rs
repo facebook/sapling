@@ -514,8 +514,18 @@ mod tests {
 
     use crate::config::tests::write_file;
 
+    use lazy_static::lazy_static;
+    use std::sync::Mutex;
+
+    lazy_static! {
+        /// Lock for the environment.  This should be acquired by tests that rely on particular
+        /// environment variable values that might be overwritten by other tests.
+        static ref ENV_LOCK: Mutex<()> = Mutex::new(());
+    }
+
     #[test]
     fn test_basic_hgplain() {
+        let _guard = ENV_LOCK.lock().unwrap();
         env::set_var(HGPLAIN, "1");
         env::remove_var(HGPLAINEXCEPT);
 
@@ -540,6 +550,7 @@ mod tests {
 
     #[test]
     fn test_hgplainexcept() {
+        let _guard = ENV_LOCK.lock().unwrap();
         env::remove_var(HGPLAIN);
         env::set_var(HGPLAINEXCEPT, "alias,revsetalias");
 
