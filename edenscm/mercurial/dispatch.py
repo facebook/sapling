@@ -1344,11 +1344,10 @@ def _dispatch(req):
         msg = _formatargs(fullargs)
         with perftrace.trace("hg " + msg):
             repo = None
-            deferred = []
             if func.cmdtemplate:
                 templ = cmdtemplatestate(ui, cmdoptions)
                 args.insert(0, templ)
-                deferred.append(lambda: templ.end())
+                ui.atexit(templ.end)
             cmdpats = args[:]
             if not func.norepo:
                 # use the repo from the request only if we don't have -R
@@ -1393,7 +1392,7 @@ def _dispatch(req):
                     if options["hidden"]:
                         repo = repo.unfiltered()
                     if repo != req.repo:
-                        deferred.append(repo.close)
+                        ui.atexit(repo.close)
                 args.insert(0, repo)
             elif rpath:
                 ui.warn(_("warning: --repository ignored\n"))
@@ -1405,15 +1404,11 @@ def _dispatch(req):
             ui.log("command", "%s\n", msg)
             strcmdopt = pycompat.strkwargs(cmdoptions)
             d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
-            try:
-                ret = runcommand(
-                    lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
-                )
-                hintutil.show(lui)
-                return ret
-            finally:
-                for func in deferred:
-                    func()
+            ret = runcommand(
+                lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
+            )
+            hintutil.show(lui)
+            return ret
 
 
 def _runcommand(ui, options, cmd, cmdfunc):

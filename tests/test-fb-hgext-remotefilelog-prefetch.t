@@ -235,8 +235,8 @@
   $ clearcache
   $ hg up tip
   x: untracked file differs
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
   abort: untracked files in working directory differ from files in requested revision
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
   [255]
   $ hg revert --all
 
@@ -318,8 +318,8 @@
   forgetting y2
   adding z
   forgetting z3
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
   abort: z2@109c3a557a73: not found in manifest! (?)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
 
 # Test connection pool lifetime
   $ clearcache

@@ -148,19 +148,19 @@ The local data for n is still available
 
 The history for n is lost
   $ hg log -qf n
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   abort: error downloading file contents:
   'connection closed early for filename n and node c972a0820002b32c6fec4b7ca47d3aecdad8e1c5'
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   [255]
 
 The local data and history for o is lost
   $ hg cat -q o
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   abort: error downloading file contents:
   'connection closed early for filename o and node fd94f81d01bf8c9d960bb57abdd4e8375309ae43'
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   [255]
   $ hg log -qf o
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   abort: error downloading file contents:
   'connection closed early for filename o and node fd94f81d01bf8c9d960bb57abdd4e8375309ae43'
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   [255]

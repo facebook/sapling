@@ -34,6 +34,6 @@ Verify error message when no fallback specified
   $ rm .hg/hgrc
   $ clearcache
   $ hg up tip
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
   abort: no remotefilelog server configured - is your .hg/hgrc trusted?
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
   [255]
