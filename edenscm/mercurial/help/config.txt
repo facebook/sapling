@@ -1995,6 +1995,19 @@ Alias definitions for templates. See :hg:`help templates` for details.
 Use the ``[templates]`` section to define template strings.
 See :hg:`help templates` for details.
 
+``tracing``
+-------------
+
+``stderr``
+    Whether to print the trace to stderr if it meets the ``tracing.threshold``
+    cutoff.
+    (default: false).
+
+``threshold``
+    Integer. Minimum duration, in seconds, a command must run in order for the
+    trace to be logged (usually to the blackbox).
+    (default: 10)
+
 ``treestate``
 -------------
 

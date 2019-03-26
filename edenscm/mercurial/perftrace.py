@@ -8,7 +8,7 @@ import time
 
 from contextlib import contextmanager
 
-from . import error
+from . import encoding, error
 
 spans = []
 
@@ -34,6 +34,18 @@ def traces():
     return finished_traces
 
 
+lasttime = 0
+
+
+def gettime():
+    # Make it "run-tests.py -i" friendly
+    if "TESTTMP" in encoding.environ:
+        global lasttime
+        lasttime += 1
+        return lasttime
+    return time.time()
+
+
 @contextmanager
 def trace(name):
     try:
@@ -46,10 +58,10 @@ def trace(name):
         if latest:
             latest.children.append(span)
 
-        span.start = time.time()
+        span.start = gettime()
         yield
     finally:
-        span.end = time.time()
+        span.end = gettime()
         spans.pop(-1)
         if not spans:
             finished_traces.append(span)

@@ -452,6 +452,17 @@ def dispatch(req):
             ret or 0,
             duration,
         )
+
+        traces = perftrace.traces()
+        if traces:
+            threshold = req.ui.configint("tracing", "threshold")
+            for trace in traces:
+                if trace.duration() > threshold:
+                    output = perftrace.asciirender(trace)
+                    if req.ui.configbool("tracing", "stderr"):
+                        req.ui.warn("%s\n" % output)
+                    req.ui.log("perftrace", "Trace:\n%s\n" % output)
+
         req.ui._measuredtimes["command_duration"] = duration * 1000
         retmask = req.ui.configint("ui", "exitcodemask")
 
