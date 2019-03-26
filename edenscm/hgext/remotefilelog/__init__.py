@@ -584,8 +584,11 @@ def onetimeclientsetup(ui):
 
         repo = ctx._repo
         if shallowrepo.requirement in repo.requirements:
-            mf = ctx.manifest()
-            repo.fileservice.prefetch(list((f, hex(mf.get(f))) for f in files))
+            # Don't run on memory commits, since they may contain files without
+            # hashes, which can screw up prefetch.
+            if ctx.node() is not None:
+                mf = ctx.manifest()
+                repo.fileservice.prefetch(list((f, hex(mf.get(f))) for f in files))
 
         return files
 
