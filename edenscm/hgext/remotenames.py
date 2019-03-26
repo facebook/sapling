@@ -1456,6 +1456,8 @@ def activepath(ui, remote):
         except AttributeError:
             # Handled by "isinstance(rpath, basestring)" below
             pass
+    else:
+        rpath = _normalizeremote(rpath)
 
     candidates = []
     for path, uri in ui.configitems("paths"):
