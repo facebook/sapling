@@ -28,7 +28,6 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 #include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
@@ -39,6 +38,11 @@
 #include "scm/hg/lib/configparser/ConfigParser.h"
 #endif
 #endif // EDEN_HAVE_HG_TREEMANIFEST
+
+#ifndef EDEN_WIN_NOMONONOKE
+#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
+#include "eden/fs/store/mononoke/MononokeThriftBackingStore.h"
+#endif
 
 #ifdef EDEN_HAVE_CURL
 #include "eden/fs/store/mononoke/MononokeCurlBackingStore.h"
@@ -410,6 +414,18 @@ void HgBackingStore::initializeHttpMononokeBackingStore(
                << ", using tier " << tierName;
   }
 }
+
+void HgBackingStore::initializeThriftMononokeBackingStore(
+    const ImporterOptions& options) {
+  auto edenConfig = config_->getEdenConfig();
+  auto tierName = edenConfig->getMononokeTierName();
+  auto executor = folly::getIOExecutor();
+  mononoke_ = std::make_unique<MononokeThriftBackingStore>(
+      tierName, options.repoName, executor);
+
+  XLOG(DBG2) << "Thrift Mononoke enabled for repository " << options.repoName
+             << ", using tier " << tierName;
+}
 #endif
 
 #ifdef EDEN_HAVE_CURL
@@ -467,6 +483,8 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
 #ifndef EDEN_WIN_NOMONONOKE
   if (connectionType == "http") {
     initializeHttpMononokeBackingStore(options);
+  } else if (connectionType == "thrift") {
+    initializeThriftMononokeBackingStore(options);
   } else if (connectionType == "curl") {
 #ifdef EDEN_HAVE_CURL
     initializeCurlMononokeBackingStore(options);

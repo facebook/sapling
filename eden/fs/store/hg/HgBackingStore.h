@@ -111,6 +111,12 @@ class HgBackingStore : public BackingStore {
    * This leaves mononoke_ null if SSLContext cannot be constructed.
    */
   void initializeHttpMononokeBackingStore(const ImporterOptions& options);
+
+  /**
+   * Initialize the mononoke_ with MononokeThriftBackingStore, which uses
+   * thrift protocol to talk with Mononoke API Server.
+   */
+  void initializeThriftMononokeBackingStore(const ImporterOptions& options);
 #endif
 
   /** Returns true if we should use mononoke for a fetch */
