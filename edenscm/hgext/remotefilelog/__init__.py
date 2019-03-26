@@ -85,6 +85,9 @@ Configs:
 
     ``remotefilelog.userustrepack`` use rust based repack implementation.
 
+    ``remotefilelog.packsonlyrepack`` only repack packfiles during background
+    repacks.
+
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
 
@@ -1116,9 +1119,9 @@ def pull(orig, ui, repo, *pats, **opts):
             else:
                 repo.prefetch(revs, base=base)
                 if bgrepack:
-                    repackmod.backgroundrepack(repo, incremental=True)
+                    repackmod.domaintenancerepack(repo)
         elif bgrepack:
-            repackmod.backgroundrepack(repo, incremental=True)
+            repackmod.domaintenancerepack(repo)
 
     return result
 
@@ -1315,7 +1318,7 @@ def prefetch(ui, repo, *pats, **opts):
 
     # Run repack in background
     if opts.get("repack"):
-        repackmod.backgroundrepack(repo, incremental=True)
+        repackmod.domaintenancerepack(repo)
 
 
 @command(

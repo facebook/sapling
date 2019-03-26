@@ -34,7 +34,7 @@ from . import constants, shallowutil, wirepack
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .metadatastore import unionmetadatastore
-from .repack import backgroundrepack
+from .repack import domaintenancerepack
 
 
 # Statistics for debugging
@@ -190,7 +190,7 @@ class cacheconnection(object):
             # quickly, killing the performance of other commands. To avoid this
             # pathological case, we can run a quick repack on these files.
             if self.repo.ui.configbool("remotefilelog", "fetchpacks"):
-                backgroundrepack(self.repo, incremental=True, packsonly=True)
+                domaintenancerepack(self.repo)
 
             # The cacheclient may be executing expensive set commands in the
             # background, As soon as the exit command, or the pipe above is

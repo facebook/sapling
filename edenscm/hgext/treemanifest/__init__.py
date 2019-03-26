@@ -190,7 +190,7 @@ from ..remotefilelog.repack import (
     _computeincrementalhistorypack,
     _runrepack,
     _topacks,
-    backgroundrepack,
+    domaintenancerepack,
 )
 
 
@@ -1738,7 +1738,7 @@ def _prefetchwrapper(orig, ui, repo, *pats, **opts):
     _prefetchonlyfiles(orig, ui, repo, *pats, **opts)
 
     if repackrequested:
-        backgroundrepack(repo, incremental=True)
+        domaintenancerepack(repo)
 
 
 # Wrapper around the 'prefetch' command which overrides the command completely

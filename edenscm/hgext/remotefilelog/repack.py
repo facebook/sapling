@@ -47,6 +47,17 @@ class RepackAlreadyRunning(error.Abort):
     pass
 
 
+def domaintenancerepack(repo):
+    """Perform a background repack if necessary.
+    """
+    packsonly = False
+
+    if repo.ui.configbool("remotefilelog", "packsonlyrepack"):
+        packsonly = True
+
+    backgroundrepack(repo, incremental=True, packsonly=packsonly, looseonly=False)
+
+
 def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
     cmd = [util.hgexecutable(), "-R", repo.origroot, "repack"]
     msg = _("(running background repack)\n")
@@ -54,8 +65,8 @@ def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
         cmd.append("--incremental")
         msg = _("(running background incremental repack)\n")
 
-    if looseonly and packsonly:
-        raise error.Abort("can't specify both looseonly and packsonly")
+    if not looseonly and repo.ui.configbool("remotefilelog", "packsonlyrepack"):
+        packsonly = True
 
     if packsonly:
         cmd.append("--packsonly")
