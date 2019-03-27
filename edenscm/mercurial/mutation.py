@@ -257,24 +257,28 @@ def fate(repo, node):
     clrev = repo.changelog.rev
     phasecache = repo._phasecache
     fate = []
-    for succset in successorssets(repo, node, closest=True):
-        if succset == [node]:
-            pass
-        elif len(succset) > 1:
-            fate.append((succset, "split"))
-        else:
-            succ = succset[0]
-            preds = None
-            entry = lookup(repo, succ)
-            if entry is not None:
-                preds = entry.preds()
-                op = entry.op()
-            if preds is not None and node in preds:
-                fate.append((succset, op))
-            elif succ in repo and phasecache.phase(repo, clrev(succ)) == phases.public:
-                fate.append((succset, "land"))
+    if isobsolete(repo, node):
+        for succset in successorssets(repo, node, closest=True):
+            if succset == [node]:
+                pass
+            elif len(succset) > 1:
+                fate.append((succset, "split"))
             else:
-                fate.append((succset, "rewrite"))
+                succ = succset[0]
+                preds = None
+                entry = lookup(repo, succ)
+                if entry is not None:
+                    preds = entry.preds()
+                    op = entry.op()
+                if preds is not None and node in preds:
+                    fate.append((succset, op))
+                elif (
+                    succ in repo
+                    and phasecache.phase(repo, clrev(succ)) == phases.public
+                ):
+                    fate.append((succset, "land"))
+                else:
+                    fate.append((succset, "rewrite"))
     return fate
 
 
