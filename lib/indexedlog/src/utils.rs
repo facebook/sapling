@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use memmap::{Mmap, MmapOptions};
-use std::fs::{self, File};
+use std::fs::File;
 use std::hash::Hasher;
 use std::io;
 use std::path::Path;
@@ -62,6 +62,7 @@ pub fn open_dir(lock_path: impl AsRef<Path>) -> io::Result<File> {
     }
     #[cfg(not(unix))]
     {
+        use std::fs;
         let mut path = path.to_path_buf();
         path.push("lock");
         File::open(&path).or_else(|_| {
