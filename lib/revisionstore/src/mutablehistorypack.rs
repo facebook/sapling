@@ -71,6 +71,16 @@ impl MutableHistoryPack {
         self.add(&entry.key, &entry.nodeinfo)
     }
 
+    pub fn add_entries(
+        &mut self,
+        entries: impl IntoIterator<Item = types::HistoryEntry>,
+    ) -> Fallible<()> {
+        for entry in entries {
+            self.add(&entry.key, &entry.nodeinfo)?;
+        }
+        Ok(())
+    }
+
     fn write_section<'a>(
         &self,
         writer: &mut Vec<u8>,

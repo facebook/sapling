@@ -234,9 +234,7 @@ fn write_historypack(
     entries: impl IntoIterator<Item = HistoryEntry>,
 ) -> Fallible<PathBuf> {
     let mut historypack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
-    for entry in entries {
-        historypack.add_entry(&entry)?;
-    }
+    historypack.add_entries(entries)?;
     historypack.close()
 }
 
