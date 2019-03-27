@@ -3284,6 +3284,7 @@ def debugmutation(ui, repo, *revs, **opts):
                 origin = entry.origin()
                 origin = {
                     None: "",
+                    mutation.ORIGIN_LOCAL: "",
                     mutation.ORIGIN_COMMIT: " (from remote commit)",
                     mutation.ORIGIN_OBSMARKER: " (from obsmarker)",
                     mutation.ORIGIN_SYNTHETIC: " (synthetic)",

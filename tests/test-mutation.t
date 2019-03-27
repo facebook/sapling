@@ -1055,26 +1055,23 @@ Landing
   $ cd ..
   $ newrepo
   $ drawdag << EOS
-  > X         # amend: A -> B -> C
-  > |         # rebase: C -> X
-  > Y  A B C
+  > Y  A B C  # amend: A -> B -> C
   > |   \|/
   > Z    Z
   > EOS
-  $ hg unhide $B
-  $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
-  o  X
-  |
-  | x  B (Rewritten into X)
-  | |
-  o |  Y
-  |/
-  o  Z
-  
-Because we don't have a successor index for the changelog, and we only build the cache
-for draft commits, we lose the fact that B was landed.
 
+Simulate pushrebase happening remotely and stripping the mutation information.
+
+  $ drawdag --config mutation.record=false << EOS
+  > X
+  > |
+  > $Y  $C  # rebase: $C -> X
+  > EOS
   $ hg phase -p $X
+
+If we unhide B, we don't know that it was landed.
+
+  $ hg unhide $B
   $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
   o  X
   |
@@ -1089,7 +1086,6 @@ hack until we write an indexed changelog that lets us do the successor lookup fo
 commit cheaply.  Normally the pullcreatemarkers and pushrebase extensions will do this
 for us, but for this test we do it manually.
 
-  $ hg debugsh --hidden -c "from edenscm.mercurial import mutation; mutation.recordentries(repo, [mutation.createsyntheticentry(repo, mutation.ORIGIN_SYNTHETIC, [repo[\"$B\"].node()], repo[\"$C\"].node(), \"land\")], skipexisting=False)"
   $ hg debugsh --hidden -c "from edenscm.mercurial import mutation; mutation.recordentries(repo, [mutation.createsyntheticentry(repo, mutation.ORIGIN_SYNTHETIC, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
   $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
   o  X

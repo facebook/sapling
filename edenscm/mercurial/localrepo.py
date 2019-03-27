@@ -2280,6 +2280,7 @@ class localrepository(object):
             # update changelog
             self.ui.note(_("committing changelog\n"))
             self.changelog.delayupdate(tr)
+            extra = ctx.extra().copy()
             n = self.changelog.add(
                 mn,
                 files,
@@ -2289,7 +2290,7 @@ class localrepository(object):
                 p2.node(),
                 user,
                 ctx.date(),
-                ctx.extra().copy(),
+                extra,
             )
             xp1, xp2 = p1.hex(), p2 and p2.hex() or ""
             self.hook("pretxncommit", throw=True, node=hex(n), parent1=xp1, parent2=xp2)
@@ -2307,6 +2308,11 @@ class localrepository(object):
             # Newly committed commits should be visible.
             if targetphase > phases.public:
                 visibility.add(self, [n])
+            if mutation.recording(self) and "mutpred" in extra:
+                entry = mutation.mutationentry(n, extra).tostoreentry(
+                    mutation.ORIGIN_LOCAL
+                )
+                mutation.recordentries(self, [entry], skipexisting=False)
             tr.close()
             return n
         finally:

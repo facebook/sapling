@@ -16,6 +16,7 @@ from . import (
     dagutil,
     error,
     mdiff,
+    mutation,
     perftrace,
     phases,
     progress,
@@ -420,6 +421,17 @@ class cg1unpacker(object):
                 phases.registernew(repo, tr, targetphase, added)
                 if targetphase > phases.public:
                     visibility.add(repo, added)
+                    if mutation.recording(repo):
+                        entries = [
+                            mutation.createcommitentry(repo, node) for node in added
+                        ]
+                        entries = [
+                            entry.tostoreentry()
+                            for entry in entries
+                            if entry is not None
+                        ]
+                        mutation.recordentries(repo, entries, skipexisting=False)
+
             if phaseall is not None:
                 phases.advanceboundary(repo, tr, phaseall, cgnodes)
 

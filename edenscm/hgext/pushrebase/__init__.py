@@ -514,7 +514,7 @@ class replacementtracker(object):
         clnode = op.repo.changelog.node
         for rev in tr.changes["revs"]:
             node = clnode(rev)
-            entry = mutation.lookup(op.repo, node)
+            entry = mutation.createcommitentry(op.repo, node)
             if entry is not None:
                 preds = entry.preds() or []
                 for pred in preds:

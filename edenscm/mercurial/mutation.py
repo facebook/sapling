@@ -14,6 +14,7 @@ from .rust.bindings import mutationstore
 ORIGIN_COMMIT = mutationstore.ORIGIN_COMMIT
 ORIGIN_OBSMARKER = mutationstore.ORIGIN_OBSMARKER
 ORIGIN_SYNTHETIC = mutationstore.ORIGIN_SYNTHETIC
+ORIGIN_LOCAL = mutationstore.ORIGIN_LOCAL
 
 
 def identfromnode(node):
@@ -113,6 +114,12 @@ def createsyntheticentry(
     return mutationstore.mutationentry(
         origin, succ, preds, splitting, op, user, date[0], date[1], None
     )
+
+
+def createcommitentry(repo, node):
+    extra = repo.changelog.changelogrevision(node).extra
+    if "mutpred" in extra:
+        return mutationentry(node, extra)
 
 
 def recordentries(repo, entries, skipexisting=True):
@@ -232,37 +239,22 @@ def lookup(repo, node, extra=None):
     For the fastpath case where the commit extras are already known, these
     can optionally be passed in through the ``extra`` parameter.
     """
-    unfi = repo.unfiltered()
-    if extra is None and node in unfi:
-        extra = unfi.changelog.changelogrevision(node).extra
-    if extra is not None and "mutpred" in extra:
-        return mutationentry(node, extra)
-    else:
-        return repo._mutationcache.store.get(node)
+    return repo._mutationcache.store.get(node)
 
 
 def lookupsplit(repo, node):
     """Look up mutation information for the given node, or the main split node
     if this node is the result of a split.
     """
-    unfi = repo.unfiltered()
     mc = repo._mutationcache
-    extra = None
-    mainnode = mc._splitheads.get(node) or mc.store.getsplithead(node) or node
-    if mainnode in unfi:
-        extra = unfi.changelog.changelogrevision(mainnode).extra
-    if extra is not None and "mutpred" in extra:
-        return mutationentry(mainnode, extra)
-    else:
-        return mc.store.get(mainnode)
+    mainnode = mc.store.getsplithead(node) or node
+    return mc.store.get(mainnode)
 
 
 def lookupsuccessors(repo, node):
     """Look up the immediate successors sets for the given node"""
     mc = repo._mutationcache
-    cachesuccsets = sorted(mc._successorssets.get(node, []))
-    storesuccsets = sorted(mc.store.getsuccessorssets(node))
-    return util.mergelists(cachesuccsets, storesuccsets) or None
+    return sorted(mc.store.getsuccessorssets(node))
 
 
 def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):

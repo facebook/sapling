@@ -28,6 +28,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "ORIGIN_COMMIT", ::mutationstore::ORIGIN_COMMIT)?;
     m.add(py, "ORIGIN_OBSMARKER", ::mutationstore::ORIGIN_OBSMARKER)?;
     m.add(py, "ORIGIN_SYNTHETIC", ::mutationstore::ORIGIN_SYNTHETIC)?;
+    m.add(py, "ORIGIN_LOCAL", ::mutationstore::ORIGIN_LOCAL)?;
     m.add_class::<mutationentry>(py)?;
     m.add_class::<mutationstore>(py)?;
     m.add(

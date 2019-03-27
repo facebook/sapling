@@ -88,9 +88,9 @@ Pushrebase some commits from the client
     a7d6a32ae4ecf473d6f934e731f1868dda4d3fc9
     06569a64c14156339463c64337f9cb5dc3a25442
     1f850c9f0d599261fce148d3d19cdc89d8eb391f
-    466bbcaf803c40b7121013141b842e654ee07f7f pushrebase by test at 1970-01-01T00:00:00 from:
+    466bbcaf803c40b7121013141b842e654ee07f7f pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       b0c40d8745c83226015263d45e60a0d12722c515
-    bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 from:
+    bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       e52ebff2630810cbc8bc0e3a8de78cb662f0865f amend by test at 1970-01-01T00:00:00 from:
         f558c5855324eea33b5f046b45b85db1fb98bca7
 
@@ -185,7 +185,7 @@ Push this commit to the server.  We should create local mutation information.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg debugmutation ".~4::."
-    bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 from:
+    bc165ecd11df56066a4d73e8294a85ecb255d3cf pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       e52ebff2630810cbc8bc0e3a8de78cb662f0865f amend by test at 1970-01-01T00:00:00 from:
         f558c5855324eea33b5f046b45b85db1fb98bca7
     5cfa12ac15aca3668b5f91e5a7b92aa309b320a9
@@ -249,7 +249,7 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   o  0: a7d6a32ae4ec public 'base'
   
   $ hg debugmutation .
-    7a5f07a2de1e5def6fa3288bde454239ed183ac1 pushrebase by test at 1970-01-01T00:00:00 from:
+    7a5f07a2de1e5def6fa3288bde454239ed183ac1 pushrebase by test at 1970-01-01T00:00:00 (synthetic) from:
       6b21e03c2693b7ccaea8bbc2ed465bf0f20669ea amend by test at 1970-01-01T00:00:00 from:
         9407986f3421a1339098ddb424e7f4652626e70d
 

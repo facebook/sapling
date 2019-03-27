@@ -60,6 +60,7 @@ pub enum MutationEntryOrigin {
     Commit,
     Obsmarker,
     Synthetic,
+    Local,
 }
 
 #[derive(Clone, PartialEq, PartialOrd)]
@@ -78,6 +79,7 @@ pub struct MutationEntry {
 pub const ORIGIN_COMMIT: u8 = 1u8;
 pub const ORIGIN_OBSMARKER: u8 = 2u8;
 pub const ORIGIN_SYNTHETIC: u8 = 3u8;
+pub const ORIGIN_LOCAL: u8 = 4u8;
 
 /// Default size for a buffer that will be used for serializing a mutation entry.
 ///
@@ -99,6 +101,7 @@ impl MutationEntryOrigin {
             MutationEntryOrigin::Commit => ORIGIN_COMMIT,
             MutationEntryOrigin::Obsmarker => ORIGIN_OBSMARKER,
             MutationEntryOrigin::Synthetic => ORIGIN_SYNTHETIC,
+            MutationEntryOrigin::Local => ORIGIN_LOCAL,
         }
     }
 
@@ -107,6 +110,7 @@ impl MutationEntryOrigin {
             ORIGIN_COMMIT => Ok(MutationEntryOrigin::Commit),
             ORIGIN_OBSMARKER => Ok(MutationEntryOrigin::Obsmarker),
             ORIGIN_SYNTHETIC => Ok(MutationEntryOrigin::Synthetic),
+            ORIGIN_LOCAL => Ok(MutationEntryOrigin::Local),
             t => Err(InvalidMutationEntryOrigin(t))?,
         }
     }
@@ -261,8 +265,9 @@ impl MutationStore {
         let mut successors_sets = Vec::new();
         for entry in self.log.lookup(INDEX_PRED, &node)? {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-            let mut successors = vec![mutation_entry.succ];
+            let mut successors = Vec::new();
             successors.extend(&mutation_entry.split);
+            successors.push(mutation_entry.succ);
             successors_sets.push(successors);
         }
         Ok(successors_sets)
@@ -347,7 +352,7 @@ mod tests {
         {
             let ms = MutationStore::open(dir.path()).expect("can re-open the store");
             let mut expected_successors_sets =
-                vec![vec![nodes[1]], vec![nodes[4], nodes[5], nodes[6]]];
+                vec![vec![nodes[1]], vec![nodes[5], nodes[6], nodes[4]]];
             expected_successors_sets.sort_unstable();
             let mut successors_sets = ms
                 .get_successors_sets(nodes[0])
