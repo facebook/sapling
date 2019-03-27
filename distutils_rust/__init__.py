@@ -286,7 +286,7 @@ replace-with = "vendored-sources"
         rc = subprocess.call(cmd, env=env)
         if rc:
             raise distutils.errors.CompileError(
-                "compilation of Rust targetension '%s' failed" % target.name
+                "compilation of Rust target '%s' failed" % target.name
             )
 
         src = os.path.join(self.get_cargo_target(), self.get_temp_output(target))
