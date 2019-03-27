@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn untagged_serializtaion() {
+    fn untagged_serialization() {
         let parents = Parents::None;
         let none = serde_json::to_value(&parents).unwrap();
         assert_eq!(none, json!(null));
