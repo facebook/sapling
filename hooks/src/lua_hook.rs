@@ -167,9 +167,13 @@ impl Hook<HookChangeset> for LuaHook {
                     ))));
                 }
 
-                let user = Identity::with_user(&user);
+                let regular_user = Identity::with_user(&user);
+                let system_user = Identity::with_system_user(&user);
                 let valid = match *reviewers_acl_checker {
-                    Some(ref reviewers_acl_checker) => reviewers_acl_checker.is_member(&[&user]),
+                    Some(ref reviewers_acl_checker) => {
+                        reviewers_acl_checker.is_member(&[&regular_user])
+                            || reviewers_acl_checker.is_member(&[&system_user])
+                    }
                     None => false,
                 };
                 Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(valid))))
@@ -427,7 +431,7 @@ fn cached_regex_match(
 #[cfg(test)]
 mod test {
     use super::super::{
-        ChangedFileType, HookChangeset, HookChangesetParents, InMemoryFileContentStore,
+        facebook, ChangedFileType, HookChangeset, HookChangesetParents, InMemoryFileContentStore,
     };
     use super::*;
     use aclchecker::AclChecker;
@@ -592,6 +596,40 @@ mod test {
             let code = String::from(
                 "hook = function (ctx)\n\
                  return not ctx.is_valid_reviewer('uyqdyqduygqwduygqwuydgqdfgbducbe2ubjweuhqwudh37')\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(ctx.clone(), code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_valid_reviewer() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.is_valid_reviewer('zuck')\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(ctx.clone(), code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_valid_reviewer_other() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.is_valid_reviewer('svcscm')\n\
                  end",
             );
             assert_matches!(
@@ -1693,8 +1731,10 @@ end"#;
     }
 
     fn acl_checker() -> Arc<Option<AclChecker>> {
-        let checker = AclChecker::new(&Identity::from_groupname("engineers"))
-            .expect("couldnt get acl checker");
+        let checker = AclChecker::new(&Identity::from_groupname(
+            facebook::REVIEWERS_ACL_GROUP_NAME,
+        ))
+        .expect("couldnt get acl checker");
         assert!(checker.do_wait_updated(10000));
         Arc::new(Some(checker))
     }
