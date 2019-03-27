@@ -8,7 +8,7 @@ extern crate radixbuf;
 extern crate rand;
 
 use minibench::{bench, elapsed};
-use rand::{ChaChaRng, Rng};
+use rand::{ChaChaRng, RngCore};
 
 use radixbuf::key::{FixedKey, KeyId};
 use radixbuf::radix::{radix_insert, radix_lookup};
