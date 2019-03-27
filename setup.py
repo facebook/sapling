@@ -2136,40 +2136,10 @@ def build_libraries(self, libraries):
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
 rustvendoredcrates = []
-cargoconfig = """
-# On OS X targets, configure the linker to perform dynamic lookup of undefined
-# symbols.  This allows the library to be used as a Python extension.
-
-[target.i686-apple-darwin]
-rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
-
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
-"""
-
 if havefb:
     rustvendoredcrates.append(
         RustVendoredCrates("tp2-crates-io", dest="build/tp2-crates-io")
     )
-    cargoconfig += """
-# Use vendored crates in "build/tp2-crates-io".
-
-[source.crates-io]
-replace-with = "vendored-sources"
-
-[source.vendored-sources]
-directory = "build/tp2-crates-io/vendor"
-    """
-
-try:
-    os.mkdir(".cargo")
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
-
-with open(".cargo/config", "w") as f:
-    f.write(cargoconfig)
-
 
 rustextmodules = [
     RustExtension(

@@ -10,6 +10,7 @@ import distutils.command.build
 import distutils.core
 import distutils.errors
 import distutils.util
+import errno
 import os
 import shutil
 import subprocess
@@ -180,6 +181,9 @@ class BuildRustExt(distutils.core.Command):
         self.set_undefined_options("build_scripts", ("build_dir", "build_exe"))
 
     def run(self):
+        # write cargo config
+        self.write_cargo_config()
+
         # Download vendored crates
         for ven in self.distribution.rust_vendored_crates:
             self.download_vendored_crates(ven)
@@ -192,9 +196,8 @@ class BuildRustExt(distutils.core.Command):
         for target in self.distribution.rust_ext_binaries:
             self.build_binary(target)
 
-    def get_temp_path(self):
-        """Returns the path of the temporary directory to build in."""
-        return os.path.join(self.build_temp, "cargo-target")
+    def get_cargo_target(self):
+        return os.path.abspath(os.path.join("build", "cargo-target"))
 
     def get_temp_output(self, target):
         """Returns the location in the temp directory of the output file."""
@@ -220,6 +223,46 @@ class BuildRustExt(distutils.core.Command):
         else:
             raise distutils.errors.CompileError("Unknown Rust target type")
 
+    def write_cargo_config(self):
+        config = """
+# On OS X targets, configure the linker to perform dynamic lookup of undefined
+# symbols.  This allows the library to be used as a Python extension.
+
+[target.i686-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[build]
+"""
+        config += 'target-dir = "{}"\n'.format(self.get_cargo_target())
+        paths = self.rust_binary_paths()
+        for key in ["rustc", "rustdoc"]:
+            if key in paths:
+                config += '{} = "{}"\n'.format(key, paths[key])
+
+        if self.distribution.rust_vendored_crates:
+            config += """
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+"""
+            for rust_vendor_crate in self.distribution.rust_vendored_crates:
+                config += 'directory = "{}/vendor"\n'.format(rust_vendor_crate.dest)
+
+        if os.name == "nt":
+            config = config.replace("\\", "\\\\")
+
+        try:
+            os.mkdir(".cargo")
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+        with open(".cargo/config", "w") as f:
+            f.write(config)
+
     def build_target(self, target):
         """Build Rust target"""
         # Cargo.lock may become out-of-date and make complication fail if
@@ -238,12 +281,7 @@ class BuildRustExt(distutils.core.Command):
             cmd.append(target.features)
 
         env = os.environ.copy()
-        env["CARGO_TARGET_DIR"] = self.get_temp_path()
         env["LIB_DIRS"] = os.path.abspath(self.build_temp)
-        if "rustc" in paths:
-            env["RUSTC"] = paths["rustc"]
-        if "rustdoc" in paths:
-            env["RUSTDOC"] = paths["rustdoc"]
 
         rc = subprocess.call(cmd, env=env)
         if rc:
@@ -251,7 +289,7 @@ class BuildRustExt(distutils.core.Command):
                 "compilation of Rust targetension '%s' failed" % target.name
             )
 
-        src = os.path.join(self.get_temp_path(), self.get_temp_output(target))
+        src = os.path.join(self.get_cargo_target(), self.get_temp_output(target))
 
         if (
             target.type == "binary"
