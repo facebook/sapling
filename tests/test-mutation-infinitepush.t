@@ -55,7 +55,7 @@ Pull the branch back into the original repo.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
-  new changesets b42a7fa2d221
+  new changesets f1f3b31bcda8
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up -q tip
 
@@ -63,9 +63,9 @@ We have the predecessor chain that links all versions of the commits.
 This works even though we are missing the third amended version.
   $ hg log -r 'predecessors(.)' -T '{node|short} {desc}\n' --hidden
   20759b6926ce scratchcommit
-  222104ff180d scratchcommit (amended 1)
-  1390a0214cc8 scratchcommit (amended 2)
-  b42a7fa2d221 scratchcommit (amended 4)
+  ef7d26c88be0 scratchcommit (amended 1)
+  598fd30ad501 scratchcommit (amended 2)
+  f1f3b31bcda8 scratchcommit (amended 4)
 
 Something more complicated involving splits and folds.
   $ drawdag --print <<EOS
@@ -75,15 +75,15 @@ Something more complicated involving splits and folds.
   >  |  |/
   >  A  C
   >  |  |
-  >  b42a7f
+  >  f1f3b
   > EOS
-  510bf251fcdd A
-  52c49f83ef29 B
-  a57a136f203a C
-  5c8631331116 D
-  4db554408513 E
-  949e9bbd0789 F
-  b42a7fa2d221 b42a7f
+  f9407b1692b9 A
+  80b4b0467fc6 B
+  91713f37cee7 C
+  113fbb421191 D
+  798e89a318d8 E
+  9d3e6062ef0c F
+  f1f3b31bcda8 f1f3b
   $ hg up -q $F
 
 Push commit A to a scratch branch, simulating a pushbackup.
@@ -91,17 +91,17 @@ Push commit A to a scratch branch, simulating a pushbackup.
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 2 commits:
-  remote:     b42a7fa2d221  scratchcommit (amended 4)
-  remote:     510bf251fcdd  A
+  remote:     f1f3b31bcda8  scratchcommit (amended 4)
+  remote:     f9407b1692b9  A
 
 Push the current commit to the scratch branch.
   $ hg push --to scratch/mybranch -r .
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 3 commits:
-  remote:     b42a7fa2d221  scratchcommit (amended 4)
-  remote:     a57a136f203a  C
-  remote:     949e9bbd0789  F
+  remote:     f1f3b31bcda8  scratchcommit (amended 4)
+  remote:     91713f37cee7  C
+  remote:     9d3e6062ef0c  F
 
 Pull the scratch branch and commit A into the repo.
   $ cd ..
@@ -112,11 +112,11 @@ Pull the scratch branch and commit A into the repo.
 
 The predecessor information successfully reaches from F to A
   $ hg log -r "predecessors(.)" -T "{node|short} {desc}\n" --hidden
-  949e9bbd0789 F
-  510bf251fcdd A
+  9d3e6062ef0c F
+  f9407b1692b9 A
 
 The successor information succesfully reaches from A to C and F (it was split)
   $ hg log -r "successors($A)" -T "{node|short} {desc}\n" --hidden
-  a57a136f203a C
-  949e9bbd0789 F
-  510bf251fcdd A
+  91713f37cee7 C
+  9d3e6062ef0c F
+  f9407b1692b9 A

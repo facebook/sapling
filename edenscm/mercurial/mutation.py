@@ -16,12 +16,22 @@ ORIGIN_OBSMARKER = mutationstore.ORIGIN_OBSMARKER
 ORIGIN_SYNTHETIC = mutationstore.ORIGIN_SYNTHETIC
 
 
+def identfromnode(node):
+    return "hg/%s" % nodemod.hex(node)
+
+
+def nodefromident(ident):
+    if ident.startswith("hg/"):
+        return nodemod.bin(ident[3:])
+    raise error.Abort("Unrecognised commit identifier: %s" % ident)
+
+
 def record(repo, extra, prednodes, op=None, splitting=None):
     for key in "mutpred", "mutuser", "mutdate", "mutop", "mutsplit":
         if key in extra:
             del extra[key]
     if recording(repo):
-        extra["mutpred"] = ",".join(nodemod.hex(p) for p in prednodes)
+        extra["mutpred"] = ",".join(identfromnode(p) for p in prednodes)
         extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
         date = repo.ui.config("mutation", "date")
         if date is None:
@@ -32,7 +42,7 @@ def record(repo, extra, prednodes, op=None, splitting=None):
         if op is not None:
             extra["mutop"] = op
         if splitting is not None:
-            extra["mutsplit"] = ",".join(nodemod.hex(n) for n in splitting)
+            extra["mutsplit"] = ",".join(identfromnode(n) for n in splitting)
 
 
 def recording(repo):
@@ -56,11 +66,11 @@ class mutationentry(object):
 
     def preds(self):
         if "mutpred" in self.extra:
-            return [nodemod.bin(x) for x in self.extra["mutpred"].split(",")]
+            return [nodefromident(x) for x in self.extra["mutpred"].split(",")]
 
     def split(self):
         if "mutsplit" in self.extra:
-            return [nodemod.bin(x) for x in self.extra["mutsplit"].split(",")]
+            return [nodefromident(x) for x in self.extra["mutsplit"].split(",")]
 
     def op(self):
         return self.extra.get("mutop")

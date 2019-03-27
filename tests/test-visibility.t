@@ -26,13 +26,13 @@ Simple creation and amending of draft commits
   v1
   $ hg amend -m "draft1 amend1"
   $ sort < .hg/store/visibleheads
-  492be1647de8620d0b468b7948cd9d3cef868d39
+  bc066ca12b451d14668c7a3e38757449b7d6a104
   v1
   $ mkcommit draft2
   $ tglogp --hidden
-  @  5: dd47114a5019 draft 'draft2'
+  @  5: 467d8aa13aef draft 'draft2'
   |
-  o  4: 492be1647de8 draft 'draft1 amend1'
+  o  4: bc066ca12b45 draft 'draft1 amend1'
   |
   | x  3: ca9d66205aca draft 'draft1'
   |/
@@ -43,14 +43,14 @@ Simple creation and amending of draft commits
   o  0: 1e4be0697311 public 'root'
   
   $ sort < .hg/store/visibleheads
-  dd47114a501991a983cb0c412ad60653386bc29c
+  467d8aa13aef105d18160ea682d5cf20d8941d06
   v1
 
   $ hg debugstrip -r . --config amend.safestrip=False
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/* (glob)
   $ tglogp --hidden
-  @  4: 492be1647de8 draft 'draft1 amend1'
+  @  4: bc066ca12b45 draft 'draft1 amend1'
   |
   | x  3: ca9d66205aca draft 'draft1'
   |/
@@ -61,17 +61,17 @@ Simple creation and amending of draft commits
   o  0: 1e4be0697311 public 'root'
   
   $ sort < .hg/store/visibleheads
-  492be1647de8620d0b468b7948cd9d3cef868d39
+  bc066ca12b451d14668c7a3e38757449b7d6a104
   v1
 
   $ mkcommit draft2a
   $ hg rebase -s ".^" -d 1
-  rebasing 4:492be1647de8 "draft1 amend1"
-  rebasing 5:10bf4507befa "draft2a" (tip)
+  rebasing 4:bc066ca12b45 "draft1 amend1"
+  rebasing 5:2ccd7cddaa94 "draft2a" (tip)
   $ tglogp
-  @  7: e1d231b878f2 draft 'draft2a'
+  @  7: ecfc0c412bb8 draft 'draft2a'
   |
-  o  6: 5fc86ee2448a draft 'draft1 amend1'
+  o  6: 96b7359a7ee5 draft 'draft1 amend1'
   |
   | o  2: 4f416a252ac8 public 'public2'
   |/
@@ -80,14 +80,14 @@ Simple creation and amending of draft commits
   o  0: 1e4be0697311 public 'root'
   
   $ sort < .hg/store/visibleheads
-  e1d231b878f2f175c6d17bf6aa13c05a511d9813
+  ecfc0c412bb878c3e7b1b3468cae773b473fd3ec
   v1
   $ hg rebase -s . -d 2
-  rebasing 7:e1d231b878f2 "draft2a" (tip)
+  rebasing 7:ecfc0c412bb8 "draft2a" (tip)
   $ tglogp
-  @  8: 4985030cb61e draft 'draft2a'
+  @  8: af54c09bb37d draft 'draft2a'
   |
-  | o  6: 5fc86ee2448a draft 'draft1 amend1'
+  | o  6: 96b7359a7ee5 draft 'draft1 amend1'
   | |
   o |  2: 4f416a252ac8 public 'public2'
   |/
@@ -96,32 +96,32 @@ Simple creation and amending of draft commits
   o  0: 1e4be0697311 public 'root'
   
   $ sort < .hg/store/visibleheads
-  4985030cb61e3c2980862680502dc3185c10fbcd
-  5fc86ee2448abe888ca0aacfc6def87882fee994
+  96b7359a7ee5350b94be6e5c5dd480751a031498
+  af54c09bb37da36975b8d482f660f62f95697a35
   v1
 
 Simple phase adjustments
 
   $ hg phase -p 6
   $ sort < .hg/store/visibleheads
-  4985030cb61e3c2980862680502dc3185c10fbcd
+  af54c09bb37da36975b8d482f660f62f95697a35
   v1
   $ hg phase -df 6
   $ sort < .hg/store/visibleheads
-  4985030cb61e3c2980862680502dc3185c10fbcd
-  5fc86ee2448abe888ca0aacfc6def87882fee994
+  96b7359a7ee5350b94be6e5c5dd480751a031498
+  af54c09bb37da36975b8d482f660f62f95697a35
   v1
 
   $ mkcommit draft3
   $ mkcommit draft4
   $ tglogp
-  @  10: 685d49b9a3be draft 'draft4'
+  @  10: f3f5679a1c9c draft 'draft4'
   |
-  o  9: 2893394e4a13 draft 'draft3'
+  o  9: 5dabc7b08ef9 draft 'draft3'
   |
-  o  8: 4985030cb61e draft 'draft2a'
+  o  8: af54c09bb37d draft 'draft2a'
   |
-  | o  6: 5fc86ee2448a draft 'draft1 amend1'
+  | o  6: 96b7359a7ee5 draft 'draft1 amend1'
   | |
   o |  2: 4f416a252ac8 public 'public2'
   |/
@@ -130,36 +130,36 @@ Simple phase adjustments
   o  0: 1e4be0697311 public 'root'
   
   $ sort < .hg/store/visibleheads
-  5fc86ee2448abe888ca0aacfc6def87882fee994
-  685d49b9a3bee3b19da1b52e461b9f616fa03b85
+  96b7359a7ee5350b94be6e5c5dd480751a031498
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ hg phase -p 9
   $ sort < .hg/store/visibleheads
-  5fc86ee2448abe888ca0aacfc6def87882fee994
-  685d49b9a3bee3b19da1b52e461b9f616fa03b85
+  96b7359a7ee5350b94be6e5c5dd480751a031498
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ hg phase -p 10
   $ sort < .hg/store/visibleheads
-  5fc86ee2448abe888ca0aacfc6def87882fee994
+  96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg phase -sf 9
   $ sort < .hg/store/visibleheads
-  5fc86ee2448abe888ca0aacfc6def87882fee994
-  685d49b9a3bee3b19da1b52e461b9f616fa03b85
+  96b7359a7ee5350b94be6e5c5dd480751a031498
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ hg phase -df 8
   $ sort < .hg/store/visibleheads
-  5fc86ee2448abe888ca0aacfc6def87882fee994
-  685d49b9a3bee3b19da1b52e461b9f616fa03b85
+  96b7359a7ee5350b94be6e5c5dd480751a031498
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
   v1
   $ tglogp
-  @  10: 685d49b9a3be secret 'draft4'
+  @  10: f3f5679a1c9c secret 'draft4'
   |
-  o  9: 2893394e4a13 secret 'draft3'
+  o  9: 5dabc7b08ef9 secret 'draft3'
   |
-  o  8: 4985030cb61e draft 'draft2a'
+  o  8: af54c09bb37d draft 'draft2a'
   |
-  | o  6: 5fc86ee2448a draft 'draft1 amend1'
+  | o  6: 96b7359a7ee5 draft 'draft1 amend1'
   | |
   o |  2: 4f416a252ac8 public 'public2'
   |/
@@ -173,17 +173,17 @@ Simple phase adjustments
   $ hg merge -q 10
   $ hg commit -m "merge2"
   $ tglogp
-  @    12: a091c732061e secret 'merge2'
+  @    12: 8a541e4b5b52 secret 'merge2'
   |\
-  +---o  11: 1fe51d588234 secret 'merge1'
+  +---o  11: 00c8b0f0741e secret 'merge1'
   | |/
-  | o  10: 685d49b9a3be secret 'draft4'
+  | o  10: f3f5679a1c9c secret 'draft4'
   | |
-  | o  9: 2893394e4a13 secret 'draft3'
+  | o  9: 5dabc7b08ef9 secret 'draft3'
   | |
-  | o  8: 4985030cb61e draft 'draft2a'
+  | o  8: af54c09bb37d draft 'draft2a'
   | |
-  o |  6: 5fc86ee2448a draft 'draft1 amend1'
+  o |  6: 96b7359a7ee5 draft 'draft1 amend1'
   | |
   | o  2: 4f416a252ac8 public 'public2'
   |/
@@ -192,43 +192,43 @@ Simple phase adjustments
   o  0: 1e4be0697311 public 'root'
   
   $ sort < .hg/store/visibleheads
-  1fe51d58823409175cc32bfbe9092540e1a8d294
-  a091c732061ecac40da7a627cdb3008e8ef4680f
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
 
   $ hg phase -p 11
   $ sort < .hg/store/visibleheads
-  a091c732061ecac40da7a627cdb3008e8ef4680f
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ hg phase -p 12
   $ sort < .hg/store/visibleheads
   v1
   $ hg phase -df 11
   $ sort < .hg/store/visibleheads
-  1fe51d58823409175cc32bfbe9092540e1a8d294
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38
   v1
   $ hg phase -df 10
   $ sort < .hg/store/visibleheads
-  1fe51d58823409175cc32bfbe9092540e1a8d294
-  a091c732061ecac40da7a627cdb3008e8ef4680f
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ hg phase -df 1
   $ sort < .hg/store/visibleheads
-  1fe51d58823409175cc32bfbe9092540e1a8d294
-  a091c732061ecac40da7a627cdb3008e8ef4680f
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ tglogp
-  @    12: a091c732061e draft 'merge2'
+  @    12: 8a541e4b5b52 draft 'merge2'
   |\
-  +---o  11: 1fe51d588234 draft 'merge1'
+  +---o  11: 00c8b0f0741e draft 'merge1'
   | |/
-  | o  10: 685d49b9a3be draft 'draft4'
+  | o  10: f3f5679a1c9c draft 'draft4'
   | |
-  | o  9: 2893394e4a13 draft 'draft3'
+  | o  9: 5dabc7b08ef9 draft 'draft3'
   | |
-  | o  8: 4985030cb61e draft 'draft2a'
+  | o  8: af54c09bb37d draft 'draft2a'
   | |
-  o |  6: 5fc86ee2448a draft 'draft1 amend1'
+  o |  6: 96b7359a7ee5 draft 'draft1 amend1'
   | |
   | o  2: 4f416a252ac8 draft 'public2'
   |/
@@ -240,53 +240,53 @@ Hide and unhide
 
   $ hg up -q 0
   $ hg hide 11
-  hiding commit 1fe51d588234 "merge1"
+  hiding commit 00c8b0f0741e "merge1"
   1 changesets hidden
   $ sort < .hg/store/visibleheads
-  a091c732061ecac40da7a627cdb3008e8ef4680f
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
   $ hg hide 8
-  hiding commit 4985030cb61e "draft2a"
-  hiding commit 2893394e4a13 "draft3"
-  hiding commit 685d49b9a3be "draft4"
-  hiding commit a091c732061e "merge2"
+  hiding commit af54c09bb37d "draft2a"
+  hiding commit 5dabc7b08ef9 "draft3"
+  hiding commit f3f5679a1c9c "draft4"
+  hiding commit 8a541e4b5b52 "merge2"
   4 changesets hidden
   $ sort < .hg/store/visibleheads
   4f416a252ac81004d9b35542cb1dc8892b6879eb
-  5fc86ee2448abe888ca0aacfc6def87882fee994
+  96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg unhide 9
   $ sort < .hg/store/visibleheads
-  2893394e4a132dc350d18e58e3407e0e09c40f50
-  5fc86ee2448abe888ca0aacfc6def87882fee994
+  5dabc7b08ef934b9e6720285205b2c17695f6491
+  96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg hide 2 6
   hiding commit 4f416a252ac8 "public2"
-  hiding commit 5fc86ee2448a "draft1 amend1"
-  hiding commit 4985030cb61e "draft2a"
-  hiding commit 2893394e4a13 "draft3"
+  hiding commit 96b7359a7ee5 "draft1 amend1"
+  hiding commit af54c09bb37d "draft2a"
+  hiding commit 5dabc7b08ef9 "draft3"
   4 changesets hidden
   $ sort < .hg/store/visibleheads
   175dbab47dccefd3ece5916c4f92a6c69f65fcf0
   v1
   $ hg unhide 6
   $ sort < .hg/store/visibleheads
-  5fc86ee2448abe888ca0aacfc6def87882fee994
+  96b7359a7ee5350b94be6e5c5dd480751a031498
   v1
   $ hg hide 1
   hiding commit 175dbab47dcc "public1"
-  hiding commit 5fc86ee2448a "draft1 amend1"
+  hiding commit 96b7359a7ee5 "draft1 amend1"
   2 changesets hidden
   $ sort < .hg/store/visibleheads
   v1
   $ hg unhide 11
   $ sort < .hg/store/visibleheads
-  1fe51d58823409175cc32bfbe9092540e1a8d294
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38
   v1
   $ hg unhide 12
   $ sort < .hg/store/visibleheads
-  1fe51d58823409175cc32bfbe9092540e1a8d294
-  a091c732061ecac40da7a627cdb3008e8ef4680f
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1
 
 Stack navigation and rebases
@@ -309,7 +309,7 @@ Stack navigation and rebases
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ tglog
-  @  5: b233f9788d1b 'B amended'
+  @  5: e60094faeb72 'B amended'
   |
   | o  4: 9bc730a19041 'E'
   | |
@@ -324,11 +324,11 @@ Stack navigation and rebases
   $ hg next --rebase
   rebasing 2:26805aba1e60 "C"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [a7e6d0] C
+  [23910a] C
   $ tglog
-  @  6: a7e6d053d5ff 'C'
+  @  6: 23910a6fe564 'C'
   |
-  o  5: b233f9788d1b 'B amended'
+  o  5: e60094faeb72 'B amended'
   |
   | o  4: 9bc730a19041 'E'
   | |
@@ -343,13 +343,13 @@ Stack navigation and rebases
   $ hg next --rebase
   rebasing 3:f585351a92f8 "D"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [7e1a7a] D
+  [1d30cc] D
   $ tglog
-  @  7: 7e1a7a6f8549 'D'
+  @  7: 1d30cc995ea7 'D'
   |
-  o  6: a7e6d053d5ff 'C'
+  o  6: 23910a6fe564 'C'
   |
-  o  5: b233f9788d1b 'B amended'
+  o  5: e60094faeb72 'B amended'
   |
   | o  4: 9bc730a19041 'E'
   | |
@@ -364,15 +364,15 @@ Stack navigation and rebases
   $ hg next --rebase
   rebasing 4:9bc730a19041 "E"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [4547ce] E
+  [ec992f] E
   $ tglog
-  @  8: 4547ceca9959 'E'
+  @  8: ec992ff1fd78 'E'
   |
-  o  7: 7e1a7a6f8549 'D'
+  o  7: 1d30cc995ea7 'D'
   |
-  o  6: a7e6d053d5ff 'C'
+  o  6: 23910a6fe564 'C'
   |
-  o  5: b233f9788d1b 'B amended'
+  o  5: e60094faeb72 'B amended'
   |
   o  0: 426bada5c675 'A'
   

@@ -29,13 +29,13 @@ Amend
   >   hg amend -m "c1 (amended $i)"
   > done
   $ hg debugmutation .
-    c5fb4c2b7fcf4b995e8cd8f6b0cb5186d9b5b935 amend by test at 1970-01-01T00:00:00 from:
-      61fdcd12ad98987cfda8da08c8e4d69f63c5fd89 amend by test at 1970-01-01T00:00:00 from:
-        661239d41405ed7e61d05a207ea470ba2a81b593 amend by test at 1970-01-01T00:00:00 from:
-          ac4fa5bf18651efbc4aea658be1f662cf6957b52 amend by test at 1970-01-01T00:00:00 from:
-            815e611f4a75e6752f30d74f243c48cdccf4bd1e amend by test at 1970-01-01T00:00:00 from:
-              c8d40e41915aa2f98b88954ce404025953dbc12a amend by test at 1970-01-01T00:00:00 from:
-                4c8af5bba994ede28e843f607374031db8abd043 amend by test at 1970-01-01T00:00:00 from:
+    cc809964b02448cb4c84c772b9beba99d4159cff amend by test at 1970-01-01T00:00:00 from:
+      8b2e1bbf6c0bea98beb5615f7b1c49b8dc38a593 amend by test at 1970-01-01T00:00:00 from:
+        4c454f4e96edd98561fa548e4c24acdcd11b4f75 amend by test at 1970-01-01T00:00:00 from:
+          0b4427c985ad41ac0876748733cff668be15cb88 amend by test at 1970-01-01T00:00:00 from:
+            5e4af9f7ddb8b12225ad17fadd7e3e6031d52f00 amend by test at 1970-01-01T00:00:00 from:
+              5aeb3a2d36afb4cb50a6c491bc05584a1da2018d amend by test at 1970-01-01T00:00:00 from:
+                6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 amend by test at 1970-01-01T00:00:00 from:
                   c5d0fa8770bdde6ef311cc640a78a2f686be28b4
 
 Rebase
@@ -48,24 +48,24 @@ Rebase
   $ hg rebase -q -s ".^" -d 1 --hidden
   $ hg rebase -q -s ".^" -d 8 --hidden
   $ hg debugmutation ".^::."
-    ded4fa782bd8c1051c8be550cebbc267572e15d0 rebase by test at 1970-01-01T00:00:00 from:
-      33905c5919f60e31c4e4f00ad5956a06848cbe10 rebase by test at 1970-01-01T00:00:00 from:
-        afdb4ea72e8cb14b34dfae49b9cc9be698468edf rebase by test at 1970-01-01T00:00:00 from:
-          561937d12f41e7d2f5ade2799de1bc21b92ddc51
-    8462f4f357413f9f1c76a798d6ccdfc1e4337bd7 rebase by test at 1970-01-01T00:00:00 from:
-      8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
-        afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
-          1e2c46af1a22b8949201aee655b53f2aba83c490
+    33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
+      30184ea7dbf74f751464657e167173d1d531e700 rebase by test at 1970-01-01T00:00:00 from:
+        dfd7d11783056958dfd2bb5479b3f84c71b698b9 rebase by test at 1970-01-01T00:00:00 from:
+          a0d726ccf2422e2cbfe7b06d3dc3f81b064b05aa
+    054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
+      f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
+        38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
+          d139edd196dd2b5a298932fdd696b96cd8101982
 
 Metaedit
 
   $ hg meta -m "c3 (metaedited)"
   $ hg debugmutation .
-    60f9e7d031c5b05f8ff106d39a20d67c40dc7411 metaedit by test at 1970-01-01T00:00:00 from:
-      8462f4f357413f9f1c76a798d6ccdfc1e4337bd7 rebase by test at 1970-01-01T00:00:00 from:
-        8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
-          afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
-            1e2c46af1a22b8949201aee655b53f2aba83c490
+    374724d5279b5992bf6ec2ccb3d326844e36b4ba metaedit by test at 1970-01-01T00:00:00 from:
+      054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
+        f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
+          38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
+            d139edd196dd2b5a298932fdd696b96cd8101982
 
 Fold
 
@@ -73,16 +73,16 @@ Fold
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugmutation .
-    2fd85d288d1b25636df6532b000fbb150e43646e fold by test at 1970-01-01T00:00:00 from:
-      ded4fa782bd8c1051c8be550cebbc267572e15d0 rebase by test at 1970-01-01T00:00:00 from:
-        33905c5919f60e31c4e4f00ad5956a06848cbe10 rebase by test at 1970-01-01T00:00:00 from:
-          afdb4ea72e8cb14b34dfae49b9cc9be698468edf rebase by test at 1970-01-01T00:00:00 from:
-            561937d12f41e7d2f5ade2799de1bc21b92ddc51
-      60f9e7d031c5b05f8ff106d39a20d67c40dc7411 metaedit by test at 1970-01-01T00:00:00 from:
-        8462f4f357413f9f1c76a798d6ccdfc1e4337bd7 rebase by test at 1970-01-01T00:00:00 from:
-          8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
-            afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
-              1e2c46af1a22b8949201aee655b53f2aba83c490
+    f05234144e37d59b175fa4283563aac4dfe81ec0 fold by test at 1970-01-01T00:00:00 from:
+      33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
+        30184ea7dbf74f751464657e167173d1d531e700 rebase by test at 1970-01-01T00:00:00 from:
+          dfd7d11783056958dfd2bb5479b3f84c71b698b9 rebase by test at 1970-01-01T00:00:00 from:
+            a0d726ccf2422e2cbfe7b06d3dc3f81b064b05aa
+      374724d5279b5992bf6ec2ccb3d326844e36b4ba metaedit by test at 1970-01-01T00:00:00 from:
+        054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
+          f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
+            38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
+              d139edd196dd2b5a298932fdd696b96cd8101982
 
 Split, leaving some changes left over at the end
 
@@ -113,9 +113,9 @@ Split, leaving some changes left over at the end
   
   Done splitting? [yN] y
   $ hg debugmutation ".^::."
-    a7e46e8d9faf725274ea4cde6d202dd8d74991b0
-    b23a10bc8972610ae489b044312b4e89e89fa08e split by test at 1970-01-01T00:00:00 (split into this and: a7e46e8d9faf725274ea4cde6d202dd8d74991b0) from:
-      618c9a83fb832b6742123bd06fa829aa32bdb1bf
+    7d383d1b236d896a5adeea8dc390b681e4ccb217
+    9c2c451b82d046da459d807b11c42992324e4e33 split by test at 1970-01-01T00:00:00 (split into this and: 7d383d1b236d896a5adeea8dc390b681e4ccb217) from:
+      07f94070ed0943f8108119a726522ec4879ed36a
 
 Split parent, selecting all changes at the end
 
@@ -161,28 +161,28 @@ Split parent, selecting all changes at the end
   record this change to 'file3'? [Ynesfdaq?] y
   
   no more change to split
-  rebasing 23:2802b58ff916 "c6"
+  rebasing 23:0529c1ec7df6 "c6"
 
 Split leaves the checkout at the top of the split commits
 
   $ hg debugmutation ".^::tip"
-    9f5728118af072cb4d27b2e87c1c4abf1d744c54
-    94fde643eeb6b11e10eb5de6268ce62601f8c185 split by test at 1970-01-01T00:00:00 (split into this and: 9f5728118af072cb4d27b2e87c1c4abf1d744c54) from:
-      98372bb0c913529155d64663575faf5698fe8b1b
-    e536de343881687fa51ea0174bd3333686cb4ced rebase by test at 1970-01-01T00:00:00 from:
-      2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+    36e4e93ec194346c3e5a0afefd426dbc14dcaf4a
+    aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
+      be81d74b508c48b66c74f7c111188be611bb56a7
+    0623f07d148d6446aeb15deb7ead4cb6f62135ef rebase by test at 1970-01-01T00:00:00 from:
+      0529c1ec7df66092602017d0a5f372316d0bc360
 
 Amend with rebase afterwards (split info should not be propagated)
 
   $ hg amend --rebase -m "c5 (split)"
-  rebasing 26:e536de343881 "c6"
+  rebasing 26:0623f07d148d "c6"
   $ hg debugmutation ".::tip"
-    383692dec8a1036c5b62a49a9808738c5ab72075 amend by test at 1970-01-01T00:00:00 from:
-      94fde643eeb6b11e10eb5de6268ce62601f8c185 split by test at 1970-01-01T00:00:00 (split into this and: 9f5728118af072cb4d27b2e87c1c4abf1d744c54) from:
-        98372bb0c913529155d64663575faf5698fe8b1b
-    d0b31d57fee70727f54b94594aec20afaa8bb34c rebase by test at 1970-01-01T00:00:00 from:
-      e536de343881687fa51ea0174bd3333686cb4ced rebase by test at 1970-01-01T00:00:00 from:
-        2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+    48b076c1640c53afc98cc99922d034e17830a65d amend by test at 1970-01-01T00:00:00 from:
+      aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
+        be81d74b508c48b66c74f7c111188be611bb56a7
+    c3b5428c707bb5ec79935064ec9a83084fee1afb rebase by test at 1970-01-01T00:00:00 from:
+      0623f07d148d6446aeb15deb7ead4cb6f62135ef rebase by test at 1970-01-01T00:00:00 from:
+        0529c1ec7df66092602017d0a5f372316d0bc360
 
 Histedit
 
@@ -197,149 +197,147 @@ Histedit
   $ echo "g" >> file4
   $ hg commit -Aqm c9
   $ hg histedit 8 --commands - 2>&1 <<EOF | fixbundle
-  > pick c5fb4c2b7fcf
-  > pick 2fd85d288d1b
-  > fold a7e46e8d9faf
-  > roll b23a10bc8972
-  > fold 9f5728118af0
-  > roll 383692dec8a1
-  > pick d0b31d57fee7
-  > roll c0807ccf7001
-  > roll 7cc715a98301
-  > pick 3df81c50780f
+  > pick cc809964b024
+  > pick f05234144e37
+  > fold 7d383d1b236d
+  > roll 9c2c451b82d0
+  > fold 36e4e93ec194
+  > roll 48b076c1640c
+  > pick c3b5428c707b
+  > roll c4484fcb5ac0
+  > roll 64a3bc96c043
+  > pick b6ea0faadebf
   > EOF
   $ hg debugmutation 8::tip
-    c5fb4c2b7fcf4b995e8cd8f6b0cb5186d9b5b935 amend by test at 1970-01-01T00:00:00 from:
-      61fdcd12ad98987cfda8da08c8e4d69f63c5fd89 amend by test at 1970-01-01T00:00:00 from:
-        661239d41405ed7e61d05a207ea470ba2a81b593 amend by test at 1970-01-01T00:00:00 from:
-          ac4fa5bf18651efbc4aea658be1f662cf6957b52 amend by test at 1970-01-01T00:00:00 from:
-            815e611f4a75e6752f30d74f243c48cdccf4bd1e amend by test at 1970-01-01T00:00:00 from:
-              c8d40e41915aa2f98b88954ce404025953dbc12a amend by test at 1970-01-01T00:00:00 from:
-                4c8af5bba994ede28e843f607374031db8abd043 amend by test at 1970-01-01T00:00:00 from:
+    cc809964b02448cb4c84c772b9beba99d4159cff amend by test at 1970-01-01T00:00:00 from:
+      8b2e1bbf6c0bea98beb5615f7b1c49b8dc38a593 amend by test at 1970-01-01T00:00:00 from:
+        4c454f4e96edd98561fa548e4c24acdcd11b4f75 amend by test at 1970-01-01T00:00:00 from:
+          0b4427c985ad41ac0876748733cff668be15cb88 amend by test at 1970-01-01T00:00:00 from:
+            5e4af9f7ddb8b12225ad17fadd7e3e6031d52f00 amend by test at 1970-01-01T00:00:00 from:
+              5aeb3a2d36afb4cb50a6c491bc05584a1da2018d amend by test at 1970-01-01T00:00:00 from:
+                6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 amend by test at 1970-01-01T00:00:00 from:
                   c5d0fa8770bdde6ef311cc640a78a2f686be28b4
-    2a2702418db0647c75b35bffa75ad7b4ea377e44 histedit by test at 1970-01-01T00:00:00 from:
-      16c4bfbbca18238ddc7bb3946a0b6b230464799b histedit by test at 1970-01-01T00:00:00 from:
-        e086d79182ddf80b13bf03020e7955d523f78afc histedit by test at 1970-01-01T00:00:00 from:
-          f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3 histedit by test at 1970-01-01T00:00:00 from:
-            2fd85d288d1b25636df6532b000fbb150e43646e fold by test at 1970-01-01T00:00:00 from:
-              ded4fa782bd8c1051c8be550cebbc267572e15d0 rebase by test at 1970-01-01T00:00:00 from:
-                33905c5919f60e31c4e4f00ad5956a06848cbe10 rebase by test at 1970-01-01T00:00:00 from:
-                  afdb4ea72e8cb14b34dfae49b9cc9be698468edf rebase by test at 1970-01-01T00:00:00 from:
-                    561937d12f41e7d2f5ade2799de1bc21b92ddc51
-              60f9e7d031c5b05f8ff106d39a20d67c40dc7411 metaedit by test at 1970-01-01T00:00:00 from:
-                8462f4f357413f9f1c76a798d6ccdfc1e4337bd7 rebase by test at 1970-01-01T00:00:00 from:
-                  8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
-                    afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
-                      1e2c46af1a22b8949201aee655b53f2aba83c490
-            a7e46e8d9faf725274ea4cde6d202dd8d74991b0
-          b23a10bc8972610ae489b044312b4e89e89fa08e split by test at 1970-01-01T00:00:00 (split into this and: a7e46e8d9faf725274ea4cde6d202dd8d74991b0) from:
-            618c9a83fb832b6742123bd06fa829aa32bdb1bf
-        9f5728118af072cb4d27b2e87c1c4abf1d744c54
-      383692dec8a1036c5b62a49a9808738c5ab72075 amend by test at 1970-01-01T00:00:00 from:
-        94fde643eeb6b11e10eb5de6268ce62601f8c185 split by test at 1970-01-01T00:00:00 (split into this and: 9f5728118af072cb4d27b2e87c1c4abf1d744c54) from:
-          98372bb0c913529155d64663575faf5698fe8b1b
-    e9a8adc18ebd9ab4986c3fb217d22ba95cefd11d histedit by test at 1970-01-01T00:00:00 from:
-      cb252f4e4ec4a9befec9f4768dae810b234a03f4 histedit by test at 1970-01-01T00:00:00 from:
-        47809cc234477ee2398d713e78c07c0411c569d4 histedit by test at 1970-01-01T00:00:00 from:
-          d0b31d57fee70727f54b94594aec20afaa8bb34c rebase by test at 1970-01-01T00:00:00 from:
-            e536de343881687fa51ea0174bd3333686cb4ced rebase by test at 1970-01-01T00:00:00 from:
-              2802b58ff916d7dbca8462b9843ce7fca4ca18f4
-        c0807ccf7001eeffe906fee1a5fb19223ab3740d
-      7cc715a98301d3f6ae271c9b218c2c90694d005c
-    6367a1362725a82dfa430133126f72113634b084 histedit by test at 1970-01-01T00:00:00 from:
-      3df81c50780f689db64a5ff6ea06be268a046cf0
+    1851fa2d6ef001f121536b4d076e8ec6c01e3b34 histedit by test at 1970-01-01T00:00:00 from:
+      76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 from:
+        5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 from:
+          419fc47d2ae4909d2cdff5f873c3d9c18eeaa057 histedit by test at 1970-01-01T00:00:00 from:
+            f05234144e37d59b175fa4283563aac4dfe81ec0 fold by test at 1970-01-01T00:00:00 from:
+              33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
+                30184ea7dbf74f751464657e167173d1d531e700 rebase by test at 1970-01-01T00:00:00 from:
+                  dfd7d11783056958dfd2bb5479b3f84c71b698b9 rebase by test at 1970-01-01T00:00:00 from:
+                    a0d726ccf2422e2cbfe7b06d3dc3f81b064b05aa
+              374724d5279b5992bf6ec2ccb3d326844e36b4ba metaedit by test at 1970-01-01T00:00:00 from:
+                054edf9500f5e849563bf6515446d74654e14fd0 rebase by test at 1970-01-01T00:00:00 from:
+                  f6dac11b6941b475383af15d69cd0b7363e045d0 rebase by test at 1970-01-01T00:00:00 from:
+                    38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04 rebase by test at 1970-01-01T00:00:00 from:
+                      d139edd196dd2b5a298932fdd696b96cd8101982
+            7d383d1b236d896a5adeea8dc390b681e4ccb217
+          9c2c451b82d046da459d807b11c42992324e4e33 split by test at 1970-01-01T00:00:00 (split into this and: 7d383d1b236d896a5adeea8dc390b681e4ccb217) from:
+            07f94070ed0943f8108119a726522ec4879ed36a
+        36e4e93ec194346c3e5a0afefd426dbc14dcaf4a
+      48b076c1640c53afc98cc99922d034e17830a65d amend by test at 1970-01-01T00:00:00 from:
+        aa10382521dc0799a9ebc1235aa0783149ffcc4e split by test at 1970-01-01T00:00:00 (split into this and: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) from:
+          be81d74b508c48b66c74f7c111188be611bb56a7
+    dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8 histedit by test at 1970-01-01T00:00:00 from:
+      e1a0d5ae83cecdbf2a65995535ea1a3cd2009ab8 histedit by test at 1970-01-01T00:00:00 from:
+        e0e94ae5d0b0429f35bb3e14d1532fc861122e32 histedit by test at 1970-01-01T00:00:00 from:
+          c3b5428c707bb5ec79935064ec9a83084fee1afb rebase by test at 1970-01-01T00:00:00 from:
+            0623f07d148d6446aeb15deb7ead4cb6f62135ef rebase by test at 1970-01-01T00:00:00 from:
+              0529c1ec7df66092602017d0a5f372316d0bc360
+        c4484fcb5ac0f15058c6595a56d239d4ed707bee
+      64a3bc96c043ea50b808b3ace4a4c6d2ca92b2d2
+    3c3b86a5a351839b5fe6905587497121b4b05777 histedit by test at 1970-01-01T00:00:00 from:
+      b6ea0faadebf4576be2b7cff316c5f9aa9fbc295
 
 Revsets
 
-  $ hg log -T '{node}\n' -r 'predecessors(2a2702418db)' --hidden
-  561937d12f41e7d2f5ade2799de1bc21b92ddc51
-  1e2c46af1a22b8949201aee655b53f2aba83c490
-  afdb4ea72e8cb14b34dfae49b9cc9be698468edf
-  afcbdd90543ac6273d77ce2b6e967fb73373e5a4
-  33905c5919f60e31c4e4f00ad5956a06848cbe10
-  8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885
-  ded4fa782bd8c1051c8be550cebbc267572e15d0
-  8462f4f357413f9f1c76a798d6ccdfc1e4337bd7
-  60f9e7d031c5b05f8ff106d39a20d67c40dc7411
-  2fd85d288d1b25636df6532b000fbb150e43646e
-  618c9a83fb832b6742123bd06fa829aa32bdb1bf
-  a7e46e8d9faf725274ea4cde6d202dd8d74991b0
-  b23a10bc8972610ae489b044312b4e89e89fa08e
-  98372bb0c913529155d64663575faf5698fe8b1b
-  9f5728118af072cb4d27b2e87c1c4abf1d744c54
-  94fde643eeb6b11e10eb5de6268ce62601f8c185
-  383692dec8a1036c5b62a49a9808738c5ab72075
-  f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3
-  e086d79182ddf80b13bf03020e7955d523f78afc
-  16c4bfbbca18238ddc7bb3946a0b6b230464799b
-  2a2702418db0647c75b35bffa75ad7b4ea377e44
-  $ hg log -T '{node}\n' -r 'predecessors(2a2702418db,3)' --hidden
-  b23a10bc8972610ae489b044312b4e89e89fa08e
-  98372bb0c913529155d64663575faf5698fe8b1b
-  9f5728118af072cb4d27b2e87c1c4abf1d744c54
-  94fde643eeb6b11e10eb5de6268ce62601f8c185
-  383692dec8a1036c5b62a49a9808738c5ab72075
-  f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3
-  e086d79182ddf80b13bf03020e7955d523f78afc
-  16c4bfbbca18238ddc7bb3946a0b6b230464799b
-  2a2702418db0647c75b35bffa75ad7b4ea377e44
-  $ hg log -T '{node}\n' -r 'predecessors(d0b31d57fee)' --hidden
-  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
-  e536de343881687fa51ea0174bd3333686cb4ced
-  d0b31d57fee70727f54b94594aec20afaa8bb34c
-  $ hg log -T '{node}\n' -r 'predecessors(2802b58ff91)' --hidden
-  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
+  $ hg log -T '{node}\n' -r 'predecessors(1851fa2d6ef0)' --hidden
+  a0d726ccf2422e2cbfe7b06d3dc3f81b064b05aa
+  d139edd196dd2b5a298932fdd696b96cd8101982
+  dfd7d11783056958dfd2bb5479b3f84c71b698b9
+  38dc6e5d067f289d0a1ad9c6eae9bb9ed111cd04
+  30184ea7dbf74f751464657e167173d1d531e700
+  f6dac11b6941b475383af15d69cd0b7363e045d0
+  33ca17be2228dc288194daade1265b5de0222653
+  054edf9500f5e849563bf6515446d74654e14fd0
+  374724d5279b5992bf6ec2ccb3d326844e36b4ba
+  f05234144e37d59b175fa4283563aac4dfe81ec0
+  07f94070ed0943f8108119a726522ec4879ed36a
+  7d383d1b236d896a5adeea8dc390b681e4ccb217
+  9c2c451b82d046da459d807b11c42992324e4e33
+  be81d74b508c48b66c74f7c111188be611bb56a7
+  36e4e93ec194346c3e5a0afefd426dbc14dcaf4a
+  aa10382521dc0799a9ebc1235aa0783149ffcc4e
+  48b076c1640c53afc98cc99922d034e17830a65d
+  419fc47d2ae4909d2cdff5f873c3d9c18eeaa057
+  5dbe0bac3aa7743362af3b46d69ea19ea84fd35a
+  76fad0d9f8585b5d315b140cf784130e4a23ba28
+  1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+  $ hg log -T '{node}\n' -r 'predecessors(1851fa2d6ef0,3)' --hidden
+  9c2c451b82d046da459d807b11c42992324e4e33
+  be81d74b508c48b66c74f7c111188be611bb56a7
+  36e4e93ec194346c3e5a0afefd426dbc14dcaf4a
+  aa10382521dc0799a9ebc1235aa0783149ffcc4e
+  48b076c1640c53afc98cc99922d034e17830a65d
+  419fc47d2ae4909d2cdff5f873c3d9c18eeaa057
+  5dbe0bac3aa7743362af3b46d69ea19ea84fd35a
+  76fad0d9f8585b5d315b140cf784130e4a23ba28
+  1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+  $ hg log -T '{node}\n' -r 'predecessors(c3b5428c707b)' --hidden
+  0529c1ec7df66092602017d0a5f372316d0bc360
+  0623f07d148d6446aeb15deb7ead4cb6f62135ef
+  c3b5428c707bb5ec79935064ec9a83084fee1afb
+  $ hg log -T '{node}\n' -r 'predecessors(0529c1ec7df6)' --hidden
+  0529c1ec7df66092602017d0a5f372316d0bc360
 
-  $ hg log -T '{node}\n' -r 'successors(2802b58ff91)' --hidden
-  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
-  e536de343881687fa51ea0174bd3333686cb4ced
-  d0b31d57fee70727f54b94594aec20afaa8bb34c
-  47809cc234477ee2398d713e78c07c0411c569d4
-  cb252f4e4ec4a9befec9f4768dae810b234a03f4
-  e9a8adc18ebd9ab4986c3fb217d22ba95cefd11d
-  $ hg log -T '{node}\n' -r 'successors(2802b58ff91,2)' --hidden
-  2802b58ff916d7dbca8462b9843ce7fca4ca18f4
-  e536de343881687fa51ea0174bd3333686cb4ced
-  d0b31d57fee70727f54b94594aec20afaa8bb34c
-  $ hg log -T '{node}\n' -r 'successors(561937d12f4)' --hidden
-  561937d12f41e7d2f5ade2799de1bc21b92ddc51
-  afdb4ea72e8cb14b34dfae49b9cc9be698468edf
-  33905c5919f60e31c4e4f00ad5956a06848cbe10
-  ded4fa782bd8c1051c8be550cebbc267572e15d0
-  2fd85d288d1b25636df6532b000fbb150e43646e
-  f9036a3722b2b4cdbd55d08cb6cba9a38bdd01a3
-  e086d79182ddf80b13bf03020e7955d523f78afc
-  16c4bfbbca18238ddc7bb3946a0b6b230464799b
-  2a2702418db0647c75b35bffa75ad7b4ea377e44
+  $ hg log -T '{node}\n' -r 'successors(0529c1ec7df6)' --hidden
+  0529c1ec7df66092602017d0a5f372316d0bc360
+  0623f07d148d6446aeb15deb7ead4cb6f62135ef
+  c3b5428c707bb5ec79935064ec9a83084fee1afb
+  e0e94ae5d0b0429f35bb3e14d1532fc861122e32
+  e1a0d5ae83cecdbf2a65995535ea1a3cd2009ab8
+  dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
+  $ hg log -T '{node}\n' -r 'successors(0529c1ec7df6,2)' --hidden
+  0529c1ec7df66092602017d0a5f372316d0bc360
+  0623f07d148d6446aeb15deb7ead4cb6f62135ef
+  c3b5428c707bb5ec79935064ec9a83084fee1afb
+  $ hg log -T '{node}\n' -r 'successors(a0d726ccf242)' --hidden
+  a0d726ccf2422e2cbfe7b06d3dc3f81b064b05aa
+  dfd7d11783056958dfd2bb5479b3f84c71b698b9
+  30184ea7dbf74f751464657e167173d1d531e700
+  33ca17be2228dc288194daade1265b5de0222653
+  f05234144e37d59b175fa4283563aac4dfe81ec0
+  419fc47d2ae4909d2cdff5f873c3d9c18eeaa057
+  5dbe0bac3aa7743362af3b46d69ea19ea84fd35a
+  76fad0d9f8585b5d315b140cf784130e4a23ba28
+  1851fa2d6ef001f121536b4d076e8ec6c01e3b34
   $ hg log -T '{node}\n' -r 'successors(.)' --hidden
-  6367a1362725a82dfa430133126f72113634b084
+  3c3b86a5a351839b5fe6905587497121b4b05777
 
 Unhide some old commits and show their mutations in the log
-  $ hg unhide -q cb252f4e4ec4a9befec9f4768dae810b234a03f4
-  $ hg unhide -q 618c9a83fb832b6742123bd06fa829aa32bdb1bf
-  $ hg unhide -q e086d79182ddf80b13bf03020e7955d523f78afc
-  $ hg unhide -q 4c8af5bba994ede28e843f607374031db8abd043
+  $ hg unhide -q dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
+  $ hg unhide -q 07f94070ed0943f8108119a726522ec4879ed36a
+  $ hg unhide -q 5dbe0bac3aa7743362af3b46d69ea19ea84fd35a
+  $ hg unhide -q 6d60953c6009fdd3d6bd870ad37c7f48ea6d1311
   $ hg unhide -q c5d0fa8770bdde6ef311cc640a78a2f686be28b4
   $ hg log -G -T "{node} {sl_mutations}\n" -r "all()"
-  @  6367a1362725a82dfa430133126f72113634b084
+  @  3c3b86a5a351839b5fe6905587497121b4b05777
   |
-  o  e9a8adc18ebd9ab4986c3fb217d22ba95cefd11d
+  o  dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
   |
-  | x  cb252f4e4ec4a9befec9f4768dae810b234a03f4 (Histedited to e9a8adc18ebd)
+  o  1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+  |
+  | x  5dbe0bac3aa7743362af3b46d69ea19ea84fd35a (Rewritten into 1851fa2d6ef0)
   |/
-  o  2a2702418db0647c75b35bffa75ad7b4ea377e44
-  |
-  | x  e086d79182ddf80b13bf03020e7955d523f78afc (Rewritten into 2a2702418db0)
-  |/
-  | x  618c9a83fb832b6742123bd06fa829aa32bdb1bf (Rewritten into e086d79182dd)
+  | x  07f94070ed0943f8108119a726522ec4879ed36a (Rewritten into 5dbe0bac3aa7)
   | |
-  | x  2fd85d288d1b25636df6532b000fbb150e43646e (Rewritten into e086d79182dd)
+  | x  f05234144e37d59b175fa4283563aac4dfe81ec0 (Rewritten into 5dbe0bac3aa7)
   |/
-  o  c5fb4c2b7fcf4b995e8cd8f6b0cb5186d9b5b935
+  o  cc809964b02448cb4c84c772b9beba99d4159cff
   |
-  | x  4c8af5bba994ede28e843f607374031db8abd043 (Rewritten into c5fb4c2b7fcf)
+  | x  6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 (Rewritten into cc809964b024)
   |/
-  | x  c5d0fa8770bdde6ef311cc640a78a2f686be28b4 (Amended as 4c8af5bba994)
+  | x  c5d0fa8770bdde6ef311cc640a78a2f686be28b4 (Amended as 6d60953c6009)
   |/
   o  d20a80d4def38df63a4b330b7fb688f3d4cae1e3
   
@@ -361,7 +359,7 @@ Histedit with exec that amends in between folds
   > EOF
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
-  @  8: d2088eba6321 'commit 3 amended
+  @  8: a2235e1011a0 'commit 3 amended
   |  ***
   |  commit 4'
   o  0: c2a29f8b7d7a 'commit 1'
@@ -371,20 +369,20 @@ Histedit with exec that amends in between folds
     08d8367dafb9bb90c58101707eca32b726ca635a
     15a208dbcdc54b4f841ffecf9d13f98675933242
     0d4155d128bf7fff3f12582a65b52be84ad44809
-    3ad6b7b42196d53e1ed074932ed4459226226b5c histedit by test at 1970-01-01T00:00:00 from:
+    f1153a6a5f2db8f8567d7e31efbf8096731ea1ef histedit by test at 1970-01-01T00:00:00 from:
       15a208dbcdc54b4f841ffecf9d13f98675933242
-    79c325ae812da98473285ea807b9757dc1f18eb8 histedit by test at 1970-01-01T00:00:00 from:
+    7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
       08d8367dafb9bb90c58101707eca32b726ca635a
       15a208dbcdc54b4f841ffecf9d13f98675933242
-    33fc94d0b2e3e9a44dd6dc39e585c88cfb3e671e amend by test at 1970-01-01T00:00:00 from:
-      79c325ae812da98473285ea807b9757dc1f18eb8 histedit by test at 1970-01-01T00:00:00 from:
+    cc92d7c90d06d08784aed399397f8cb68eb25325 amend by test at 1970-01-01T00:00:00 from:
+      7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
         08d8367dafb9bb90c58101707eca32b726ca635a
         15a208dbcdc54b4f841ffecf9d13f98675933242
-    116e0130b71eee9e37a533150eb6630a42df21d2 histedit by test at 1970-01-01T00:00:00 from:
+    9ba93d4b6c80837572711b838b670dde6cf34803 histedit by test at 1970-01-01T00:00:00 from:
       0d4155d128bf7fff3f12582a65b52be84ad44809
-    d2088eba6321240e6ab71ae17917d8db3a92abb1 histedit by test at 1970-01-01T00:00:00 from:
-      33fc94d0b2e3e9a44dd6dc39e585c88cfb3e671e amend by test at 1970-01-01T00:00:00 from:
-        79c325ae812da98473285ea807b9757dc1f18eb8 histedit by test at 1970-01-01T00:00:00 from:
+    a2235e1011a071a02b80aadd371c2fb15308ce15 histedit by test at 1970-01-01T00:00:00 from:
+      cc92d7c90d06d08784aed399397f8cb68eb25325 amend by test at 1970-01-01T00:00:00 from:
+        7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
           08d8367dafb9bb90c58101707eca32b726ca635a
           15a208dbcdc54b4f841ffecf9d13f98675933242
       0d4155d128bf7fff3f12582a65b52be84ad44809
@@ -404,16 +402,16 @@ Histedit with stop, extra commit, and fold
   > stop 15a208dbcdc5
   > fold 0d4155d128bf
   > EOF
-  Changes committed as 11e6d8f98417. You may amend the changeset now.
+  Changes committed as f8ba6373a87e. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
   $ echo extra >> file2
   $ hg commit -Aqm "extra commit"
   $ hg histedit --continue | fixbundle
   $ tglog
-  @  7: ef799246f6e1 'extra commit
+  @  7: d313be93f9b7 'extra commit
   |  ***
   |  commit 4'
-  o  4: 11e6d8f98417 'commit 3'
+  o  4: f8ba6373a87e 'commit 3'
   |
   o  1: 08d8367dafb9 'commit 2'
   |
@@ -424,13 +422,13 @@ Histedit with stop, extra commit, and fold
     08d8367dafb9bb90c58101707eca32b726ca635a
     15a208dbcdc54b4f841ffecf9d13f98675933242
     0d4155d128bf7fff3f12582a65b52be84ad44809
-    11e6d8f98417984c3d82c3ef6c4366d3b72beb04 histedit by test at 1970-01-01T00:00:00 from:
+    f8ba6373a87ea735d0ec10f15816ea7121c25257 histedit by test at 1970-01-01T00:00:00 from:
       15a208dbcdc54b4f841ffecf9d13f98675933242
-    0b78a069a4a88e74e534c80cce8e3983db06271e
-    5abf9ab6d9c5268bab2aff811d4561f052f99d9e histedit by test at 1970-01-01T00:00:00 from:
+    59401578013ab5382082b65eed82d6a465c081a0
+    4ed766be66c60ad571e4f938b9b786ab1786882a histedit by test at 1970-01-01T00:00:00 from:
       0d4155d128bf7fff3f12582a65b52be84ad44809
-    ef799246f6e1caab4e24a094396f91970d71703d histedit by test at 1970-01-01T00:00:00 from:
-      0b78a069a4a88e74e534c80cce8e3983db06271e
+    d313be93f9b7ee46e11581641241d356c346a001 histedit by test at 1970-01-01T00:00:00 from:
+      59401578013ab5382082b65eed82d6a465c081a0
       0d4155d128bf7fff3f12582a65b52be84ad44809
 
 Drawdag
@@ -448,21 +446,21 @@ Drawdag
   > EOS
 
   $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node} {sl_mutations}'
-  -  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
+  -  I b2faf047aa50279686b1635bfad505cd51300b3c
   |
-  o  H 45d7378ca81d4ce1e9b31f0e3d567b8292dffc77
+  o  H a1093b439e1bc272490fd1749b526a3f1463a41e
   |
-  | o  G 63a5789cbb56b401dcf1c5d228d75c645df293d8
+  | o  G dd319aacbb516094646b9ee5a24a942e62110121
   | |
   | o  F 64a8289d249234b9886244d379f15e6b650b28e3
   | |
   | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
   |/
-  | x  D 78698f46e6eb5de39fc18042f71f03cb7a21285c (Rebased to 45d7378ca81d)
+  | x  D 17d61397e601357ae1dd94c787f794ff95aa2d59 (Rebased to a1093b439e1b)
   | |
-  | | x  C 26805aba1e600a82e93661149f2313866a221a7b (Rebased to 78698f46e6eb)
+  | | x  C 26805aba1e600a82e93661149f2313866a221a7b (Rebased to 17d61397e601)
   | |/
-  | x  B 112478962961147124edd43549aedd1a335e44bf (Split into 7fb047a69f22, 64a8289d2492, 63a5789cbb56)
+  | x  B 112478962961147124edd43549aedd1a335e44bf (Split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
   |/
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
@@ -471,15 +469,15 @@ Drawdag
     112478962961147124edd43549aedd1a335e44bf
     26805aba1e600a82e93661149f2313866a221a7b
     7fb047a69f220c21711122dfd94305a9efb60cba
-    78698f46e6eb5de39fc18042f71f03cb7a21285c rebase by test at 1970-01-01T00:00:00 from:
+    17d61397e601357ae1dd94c787f794ff95aa2d59 rebase by test at 1970-01-01T00:00:00 from:
       26805aba1e600a82e93661149f2313866a221a7b
     64a8289d249234b9886244d379f15e6b650b28e3
-    63a5789cbb56b401dcf1c5d228d75c645df293d8 split by test at 1970-01-01T00:00:00 (split into this and: 7fb047a69f220c21711122dfd94305a9efb60cba, 64a8289d249234b9886244d379f15e6b650b28e3) from:
+    dd319aacbb516094646b9ee5a24a942e62110121 split by test at 1970-01-01T00:00:00 (split into this and: 7fb047a69f220c21711122dfd94305a9efb60cba, 64a8289d249234b9886244d379f15e6b650b28e3) from:
       112478962961147124edd43549aedd1a335e44bf
-    45d7378ca81d4ce1e9b31f0e3d567b8292dffc77 rebase by test at 1970-01-01T00:00:00 from:
-      78698f46e6eb5de39fc18042f71f03cb7a21285c rebase by test at 1970-01-01T00:00:00 from:
+    a1093b439e1bc272490fd1749b526a3f1463a41e rebase by test at 1970-01-01T00:00:00 from:
+      17d61397e601357ae1dd94c787f794ff95aa2d59 rebase by test at 1970-01-01T00:00:00 from:
         26805aba1e600a82e93661149f2313866a221a7b
-    9d3d3e8bcf0521804d5d14513461a1b43f2722ef
+    b2faf047aa50279686b1635bfad505cd51300b3c
 
 Revsets obey visibility rules
 
@@ -496,25 +494,25 @@ Revsets obey visibility rules
   $ hg debugmutation "all()"
     426bada5c67598ca65036d57d9e4b64b0c1ce7a0
     112478962961147124edd43549aedd1a335e44bf
-    948823afc5bdb8c69913d366d7220f812ecf0d41 amend by test at 1970-01-01T00:00:00 from:
+    2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
       112478962961147124edd43549aedd1a335e44bf
     49cb92066bfd0763fff729c354345650b7428554
-    c746b20d1d04f32a7466f736807eeef36a33b3dd amend by test at 1970-01-01T00:00:00 from:
-      948823afc5bdb8c69913d366d7220f812ecf0d41 amend by test at 1970-01-01T00:00:00 from:
+    82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af amend by test at 1970-01-01T00:00:00 from:
+      2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
         112478962961147124edd43549aedd1a335e44bf
   $ hg log -T '{node} {desc}\n' -r "successors($B)"
   112478962961147124edd43549aedd1a335e44bf B
-  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+  2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
   $ hg log -T '{node} {desc}\n' -r "successors($B)" --hidden
   112478962961147124edd43549aedd1a335e44bf B
-  948823afc5bdb8c69913d366d7220f812ecf0d41 C
-  c746b20d1d04f32a7466f736807eeef36a33b3dd D
+  2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
+  82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af D
   $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
   112478962961147124edd43549aedd1a335e44bf B
-  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+  2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
   $ hg hide -q $B
   $ hg log -T '{node} {desc}\n' -r "predecessors($C)"
-  948823afc5bdb8c69913d366d7220f812ecf0d41 C
+  2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
 
 Revsets for filtering commits based on mutated status
 
@@ -590,14 +588,14 @@ Divergence and Successors Sets
   >                     # amend: Z -> P
   > EOS
   a3d17304151f A
-  29f5c7cacb84 B
-  9263b98dea84 C
-  e91ad3fd8cd0 D
+  a3a02814b8b7 B
+  2f9a29935e68 C
+  02f5790aa53c D
   8bab98b2a161 E
-  fd2cd4536115 F
-  b6d2081d9c92 G
-  ea4b6a4451ab H
-  55bd6ca2c9c5 P
+  f6c9a27925b0 F
+  5236c38a7e4b G
+  6583166b698f H
+  131b22b23838 P
   ba2b7fa7166d X
   54fe561aeb5b Y
   e67cd4473b7c Z
@@ -615,67 +613,67 @@ Divergence and Successors Sets
   54fe561aeb5b
       54fe561aeb5b
   e67cd4473b7c
-      55bd6ca2c9c5
-  9263b98dea84
-      9263b98dea84
-  55bd6ca2c9c5
-      55bd6ca2c9c5
-  b6d2081d9c92
-      b6d2081d9c92
-  ea4b6a4451ab
-      ea4b6a4451ab
+      131b22b23838
+  2f9a29935e68
+      2f9a29935e68
+  131b22b23838
+      131b22b23838
+  5236c38a7e4b
+      5236c38a7e4b
+  6583166b698f
+      6583166b698f
   $ hg debugsuccessorssets 'all()' --hidden
   ba2b7fa7166d
       ba2b7fa7166d
   a3d17304151f
-      9263b98dea84
-      b6d2081d9c92 ea4b6a4451ab
+      2f9a29935e68
+      5236c38a7e4b 6583166b698f
   54fe561aeb5b
       54fe561aeb5b
-  29f5c7cacb84
-      9263b98dea84
-  e91ad3fd8cd0
-      b6d2081d9c92 ea4b6a4451ab
+  a3a02814b8b7
+      2f9a29935e68
+  02f5790aa53c
+      5236c38a7e4b 6583166b698f
   e67cd4473b7c
-      55bd6ca2c9c5
-  9263b98dea84
-      9263b98dea84
+      131b22b23838
+  2f9a29935e68
+      2f9a29935e68
   8bab98b2a161
-      b6d2081d9c92
-  55bd6ca2c9c5
-      55bd6ca2c9c5
-  fd2cd4536115
-      ea4b6a4451ab
-  b6d2081d9c92
-      b6d2081d9c92
-  ea4b6a4451ab
-      ea4b6a4451ab
+      5236c38a7e4b
+  131b22b23838
+      131b22b23838
+  f6c9a27925b0
+      6583166b698f
+  5236c38a7e4b
+      5236c38a7e4b
+  6583166b698f
+      6583166b698f
   $ hg debugsuccessorssets 'all()' --hidden --closest
   ba2b7fa7166d
       ba2b7fa7166d
   a3d17304151f
-      29f5c7cacb84
-      e91ad3fd8cd0
+      02f5790aa53c
+      a3a02814b8b7
   54fe561aeb5b
       54fe561aeb5b
-  29f5c7cacb84
-      9263b98dea84
-  e91ad3fd8cd0
-      8bab98b2a161 fd2cd4536115
+  a3a02814b8b7
+      2f9a29935e68
+  02f5790aa53c
+      8bab98b2a161 f6c9a27925b0
   e67cd4473b7c
-      55bd6ca2c9c5
-  9263b98dea84
-      9263b98dea84
+      131b22b23838
+  2f9a29935e68
+      2f9a29935e68
   8bab98b2a161
-      b6d2081d9c92
-  55bd6ca2c9c5
-      55bd6ca2c9c5
-  fd2cd4536115
-      ea4b6a4451ab
-  b6d2081d9c92
-      b6d2081d9c92
-  ea4b6a4451ab
-      ea4b6a4451ab
+      5236c38a7e4b
+  131b22b23838
+      131b22b23838
+  f6c9a27925b0
+      6583166b698f
+  5236c38a7e4b
+      5236c38a7e4b
+  6583166b698f
+      6583166b698f
 
   $ cd ..
   $ newrepo
@@ -688,14 +686,14 @@ Divergence and Successors Sets
   >   Z   Z    Z
   > EOS
   ac2f7407182b A
-  36f08465dc73 B
-  40c31c9360c7 C
+  d0b9032f313b B
+  f102e5df2a1d C
   6c7c301750f1 D
-  5713d5fbff8b E
+  ecd3acbeabe4 E
   847007ced9a7 F
   e1beb503e4fb G
-  996cee015648 H
-  bbb2c6c770b0 I
+  9e63cfda1f79 H
+  e0ad3106c6e7 I
   48b9aae0607f Z
 
   $ hg log -r "contentdivergent()" -T '{desc}\n'
@@ -711,65 +709,65 @@ Divergence and Successors Sets
   48b9aae0607f
       48b9aae0607f
   ac2f7407182b
-      36f08465dc73
-      40c31c9360c7
-      6c7c301750f1 5713d5fbff8b
+      6c7c301750f1 ecd3acbeabe4
+      d0b9032f313b
+      f102e5df2a1d
   847007ced9a7
-      996cee015648
-      bbb2c6c770b0
-  36f08465dc73
-      36f08465dc73
-  40c31c9360c7
-      40c31c9360c7
+      9e63cfda1f79
+      e0ad3106c6e7
+  d0b9032f313b
+      d0b9032f313b
+  f102e5df2a1d
+      f102e5df2a1d
   6c7c301750f1
       6c7c301750f1
   e1beb503e4fb
-      996cee015648
-  bbb2c6c770b0
-      bbb2c6c770b0
-  5713d5fbff8b
-      5713d5fbff8b
-  996cee015648
-      996cee015648
+      9e63cfda1f79
+  e0ad3106c6e7
+      e0ad3106c6e7
+  ecd3acbeabe4
+      ecd3acbeabe4
+  9e63cfda1f79
+      9e63cfda1f79
   $ hg debugsuccessorssets 'all()' --closest
   48b9aae0607f
       48b9aae0607f
-  36f08465dc73
-      36f08465dc73
-  40c31c9360c7
-      40c31c9360c7
+  d0b9032f313b
+      d0b9032f313b
+  f102e5df2a1d
+      f102e5df2a1d
   6c7c301750f1
       6c7c301750f1
-  bbb2c6c770b0
-      bbb2c6c770b0
-  5713d5fbff8b
-      5713d5fbff8b
-  996cee015648
-      996cee015648
+  e0ad3106c6e7
+      e0ad3106c6e7
+  ecd3acbeabe4
+      ecd3acbeabe4
+  9e63cfda1f79
+      9e63cfda1f79
   $ hg debugsuccessorssets 'all()' --closest --hidden
   48b9aae0607f
       48b9aae0607f
   ac2f7407182b
-      36f08465dc73
-      40c31c9360c7
-      6c7c301750f1 5713d5fbff8b
+      6c7c301750f1 ecd3acbeabe4
+      d0b9032f313b
+      f102e5df2a1d
   847007ced9a7
-      996cee015648
-      bbb2c6c770b0
-  36f08465dc73
-      36f08465dc73
-  40c31c9360c7
-      40c31c9360c7
+      9e63cfda1f79
+      e0ad3106c6e7
+  d0b9032f313b
+      d0b9032f313b
+  f102e5df2a1d
+      f102e5df2a1d
   6c7c301750f1
       6c7c301750f1
   e1beb503e4fb
-      996cee015648
-  bbb2c6c770b0
-      bbb2c6c770b0
-  5713d5fbff8b
-      5713d5fbff8b
-  996cee015648
-      996cee015648
+      9e63cfda1f79
+  e0ad3106c6e7
+      e0ad3106c6e7
+  ecd3acbeabe4
+      ecd3acbeabe4
+  9e63cfda1f79
+      9e63cfda1f79
 
   $ cd ..
   $ newrepo
@@ -786,20 +784,20 @@ Divergence and Successors Sets
   >                         # rebase: C -> O
   > EOS
   ac2f7407182b A
-  36f08465dc73 B
-  40c31c9360c7 C
+  d0b9032f313b B
+  f102e5df2a1d C
   6c7c301750f1 D
-  5713d5fbff8b E
+  ecd3acbeabe4 E
   847007ced9a7 F
   e1beb503e4fb G
-  996cee015648 H
-  bbb2c6c770b0 I
-  4aebccbe0e17 J
-  846a43ee5a88 K
-  2ee9ab4882bd L
-  84dbc8e53ce0 M
-  74065e09cc11 N
-  f019b41d3b77 O
+  9e63cfda1f79 H
+  e0ad3106c6e7 I
+  da7ad28f0dba J
+  4411f298bdd6 K
+  c784f3cd8bdc L
+  22d356388a54 M
+  a50d498b7a3c N
+  5f50ab0b5b00 O
   48b9aae0607f Z
 
   $ hg log -r "contentdivergent()" -T '{desc}\n'
@@ -812,101 +810,101 @@ Divergence and Successors Sets
   $ hg debugsuccessorssets 'all()'
   48b9aae0607f
       48b9aae0607f
-  bbb2c6c770b0
-      bbb2c6c770b0
-  996cee015648
-      996cee015648
-  f019b41d3b77
-      f019b41d3b77
-  74065e09cc11
-      74065e09cc11
-  2ee9ab4882bd
-      2ee9ab4882bd
+  e0ad3106c6e7
+      e0ad3106c6e7
+  9e63cfda1f79
+      9e63cfda1f79
+  5f50ab0b5b00
+      5f50ab0b5b00
+  a50d498b7a3c
+      a50d498b7a3c
+  c784f3cd8bdc
+      c784f3cd8bdc
   $ hg debugsuccessorssets 'all()' --hidden
   48b9aae0607f
       48b9aae0607f
   ac2f7407182b
-      2ee9ab4882bd
-      74065e09cc11
-      f019b41d3b77
+      5f50ab0b5b00
+      a50d498b7a3c
+      c784f3cd8bdc
   847007ced9a7
-      996cee015648
-      bbb2c6c770b0
-  36f08465dc73
-      74065e09cc11
-  40c31c9360c7
-      f019b41d3b77
+      9e63cfda1f79
+      e0ad3106c6e7
+  d0b9032f313b
+      a50d498b7a3c
+  f102e5df2a1d
+      5f50ab0b5b00
   6c7c301750f1
-      2ee9ab4882bd
+      c784f3cd8bdc
   e1beb503e4fb
-      996cee015648
-  bbb2c6c770b0
-      bbb2c6c770b0
-  5713d5fbff8b
-      2ee9ab4882bd
-  996cee015648
-      996cee015648
-  4aebccbe0e17
-      2ee9ab4882bd
-  84dbc8e53ce0
-      74065e09cc11
-  f019b41d3b77
-      f019b41d3b77
-  846a43ee5a88
-      2ee9ab4882bd
-  74065e09cc11
-      74065e09cc11
-  2ee9ab4882bd
-      2ee9ab4882bd
+      9e63cfda1f79
+  e0ad3106c6e7
+      e0ad3106c6e7
+  ecd3acbeabe4
+      c784f3cd8bdc
+  9e63cfda1f79
+      9e63cfda1f79
+  da7ad28f0dba
+      c784f3cd8bdc
+  22d356388a54
+      a50d498b7a3c
+  5f50ab0b5b00
+      5f50ab0b5b00
+  4411f298bdd6
+      c784f3cd8bdc
+  a50d498b7a3c
+      a50d498b7a3c
+  c784f3cd8bdc
+      c784f3cd8bdc
   $ hg debugsuccessorssets 'all()' --closest
   48b9aae0607f
       48b9aae0607f
-  bbb2c6c770b0
-      bbb2c6c770b0
-  996cee015648
-      996cee015648
-  f019b41d3b77
-      f019b41d3b77
-  74065e09cc11
-      74065e09cc11
-  2ee9ab4882bd
-      2ee9ab4882bd
+  e0ad3106c6e7
+      e0ad3106c6e7
+  9e63cfda1f79
+      9e63cfda1f79
+  5f50ab0b5b00
+      5f50ab0b5b00
+  a50d498b7a3c
+      a50d498b7a3c
+  c784f3cd8bdc
+      c784f3cd8bdc
   $ hg debugsuccessorssets 'all()' --closest --hidden
   48b9aae0607f
       48b9aae0607f
   ac2f7407182b
-      36f08465dc73
-      40c31c9360c7
-      6c7c301750f1 5713d5fbff8b
+      6c7c301750f1 ecd3acbeabe4
+      d0b9032f313b
+      f102e5df2a1d
   847007ced9a7
-      996cee015648
-      bbb2c6c770b0
-  36f08465dc73
-      84dbc8e53ce0
-  40c31c9360c7
-      f019b41d3b77
+      9e63cfda1f79
+      e0ad3106c6e7
+  d0b9032f313b
+      22d356388a54
+  f102e5df2a1d
+      5f50ab0b5b00
   6c7c301750f1
-      4aebccbe0e17
+      da7ad28f0dba
   e1beb503e4fb
-      996cee015648
-  bbb2c6c770b0
-      bbb2c6c770b0
-  5713d5fbff8b
-      846a43ee5a88
-  996cee015648
-      996cee015648
-  4aebccbe0e17
-      2ee9ab4882bd
-  84dbc8e53ce0
-      74065e09cc11
-  f019b41d3b77
-      f019b41d3b77
-  846a43ee5a88
-      2ee9ab4882bd
-  74065e09cc11
-      74065e09cc11
-  2ee9ab4882bd
-      2ee9ab4882bd
+      9e63cfda1f79
+  e0ad3106c6e7
+      e0ad3106c6e7
+  ecd3acbeabe4
+      4411f298bdd6
+  9e63cfda1f79
+      9e63cfda1f79
+  da7ad28f0dba
+      c784f3cd8bdc
+  22d356388a54
+      a50d498b7a3c
+  5f50ab0b5b00
+      5f50ab0b5b00
+  4411f298bdd6
+      c784f3cd8bdc
+  a50d498b7a3c
+      a50d498b7a3c
+  c784f3cd8bdc
+      c784f3cd8bdc
 
 Many splits and folds:
 
@@ -925,22 +923,22 @@ Many splits and folds:
   > EOS
   ac2f7407182b A
   f0a671a46792 B
-  5c43be2708c4 C
+  e8d08dcdab1d C
   6c7c301750f1 D
-  cabf2db621a7 E
-  d2478cddeb08 F
-  a6215fa93efa G
+  7cd6c6978add E
+  5ac9f6030240 F
+  4c1829ae45a4 G
   45724aa2168b H
   34d53c2267d8 I
-  2bcf00cdb39b J
-  207ff838d27e K
-  813b6aa1d16f L
-  029c898a0df7 M
-  448ce1426237 N
-  396902f0a26c O
-  1c4d29f9f72d P
+  70dd76fd55e1 J
+  d91873bbc3e2 K
+  7acf57a544c8 L
+  096075241d66 M
+  cfe3132d4f90 N
+  c3cd5a5aad51 O
+  b5712e65f604 P
   444227ba9301 Q
-  ff341471414e R
+  114f9718bb14 R
   48b9aae0607f Z
 
   $ hg log -r "contentdivergent()" -T '{desc}\n'
@@ -976,32 +974,32 @@ Many splits and folds:
 
   $ hg debugsuccessorssets $A --hidden
   ac2f7407182b
-      207ff838d27e 029c898a0df7 396902f0a26c 1c4d29f9f72d
-      207ff838d27e 444227ba9301 ff341471414e
-      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+      6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
+      d91873bbc3e2 096075241d66 c3cd5a5aad51 b5712e65f604
+      d91873bbc3e2 444227ba9301 114f9718bb14
   $ hg debugsuccessorssets $A --closest --hidden
   ac2f7407182b
-      45724aa2168b 34d53c2267d8 2bcf00cdb39b
-      f0a671a46792 5c43be2708c4
+      45724aa2168b 34d53c2267d8 70dd76fd55e1
+      f0a671a46792 e8d08dcdab1d
   $ hg unhide $A $L
   $ hg debugsuccessorssets $A
   ac2f7407182b
-      207ff838d27e 029c898a0df7 396902f0a26c 1c4d29f9f72d
-      207ff838d27e 444227ba9301 ff341471414e
-      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+      6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
+      d91873bbc3e2 096075241d66 c3cd5a5aad51 b5712e65f604
+      d91873bbc3e2 444227ba9301 114f9718bb14
   $ hg debugsuccessorssets $A --closest
   ac2f7407182b
-      45724aa2168b 34d53c2267d8 444227ba9301 ff341471414e
-      45724aa2168b 34d53c2267d8 813b6aa1d16f
-      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+      45724aa2168b 34d53c2267d8 444227ba9301 114f9718bb14
+      45724aa2168b 34d53c2267d8 7acf57a544c8
+      6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
   $ hg hide $P
-  hiding commit 1c4d29f9f72d "P"
+  hiding commit b5712e65f604 "P"
   1 changesets hidden
   $ hg debugsuccessorssets $A
   ac2f7407182b
-      207ff838d27e 029c898a0df7 396902f0a26c
-      207ff838d27e 444227ba9301 ff341471414e
-      6c7c301750f1 cabf2db621a7 d2478cddeb08 a6215fa93efa
+      6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
+      d91873bbc3e2 096075241d66 c3cd5a5aad51
+      d91873bbc3e2 444227ba9301 114f9718bb14
   $ hg log -r "all()" -T "{desc} {sl_mutation_descs}\n"
   Z 
   A (Split into H, I, Q, R) (Split into H, I, L) (Split into D, E, F, G)
@@ -1038,9 +1036,9 @@ Rebase of amended commit
   rebasing 3:917a077edb8d "B"
   rebasing 4:b45c90359798 "C"
   rebasing 6:01f26f1a10b2 "D"
-  rebasing 7:93a74dbee093 "C2"
-  rebasing 9:516f559bdadf "E"
-  rebasing 10:c0c251cf4c45 "C4" (tip)
+  rebasing 7:9df062337510 "C2"
+  rebasing 9:1c7520bf51f0 "E"
+  rebasing 10:80102b688282 "C4" (tip)
   $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
   o  C4
   |
@@ -1094,7 +1092,7 @@ Rebase of folded commit
   rebasing 3:917a077edb8d "B"
   rebasing 4:b45c90359798 "C"
   rebasing 5:01f26f1a10b2 "D"
-  rebasing 7:9eb924bd504e "F" (tip)
+  rebasing 7:e7dba301a292 "F" (tip)
   $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
   o  F
   |

@@ -289,7 +289,7 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, filemap, mutation, date):
+    def __init__(self, repo, name, parentctxs, filemap, mutationinfo, date):
         added = []
         removed = []
         for path, data in filemap.items():
@@ -305,14 +305,18 @@ class simplecommitctx(context.committablectx):
                     raise error.Abort(_("%s: both added and removed") % path)
                 added.append(path)
         extra = {b"branch": b"default"}
-        if mutation is not None:
-            predctxs, cmd, split = mutation
-            extra["mutpred"] = ",".join([p.hex() for p in predctxs])
+        if mutationinfo is not None:
+            predctxs, cmd, split = mutationinfo
+            extra["mutpred"] = ",".join(
+                [mutation.identfromnode(p.node()) for p in predctxs]
+            )
             extra["mutdate"] = date
             extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
             extra["mutop"] = cmd
             if split:
-                extra["mutsplit"] = ",".join([s.hex() for s in split])
+                extra["mutsplit"] = ",".join(
+                    [mutation.identfromnode(s.node()) for s in split]
+                )
         opts = {
             "changes": scmutil.status([], added, removed, [], [], [], []),
             "date": date,
