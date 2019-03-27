@@ -47,7 +47,7 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
 
   // AcceptCallback methods
   void connectionAccepted(
-      folly::NetworkSocket fdNetworkSocket,
+      int fd,
       const folly::SocketAddress& clientAddr) noexcept override;
   void acceptError(const std::exception& ex) noexcept override;
 
