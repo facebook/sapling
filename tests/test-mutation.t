@@ -1086,7 +1086,7 @@ hack until we write an indexed changelog that lets us do the successor lookup fo
 commit cheaply.  Normally the pullcreatemarkers and pushrebase extensions will do this
 for us, but for this test we do it manually.
 
-  $ hg debugsh --hidden -c "from edenscm.mercurial import mutation; mutation.recordentries(repo, [mutation.createsyntheticentry(repo, mutation.ORIGIN_SYNTHETIC, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
+  $ hg debugsh --hidden -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, m.mutation.ORIGIN_SYNTHETIC, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
   $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
   o  X
   |

@@ -127,16 +127,16 @@ def createcommitentry(repo, node):
 
 
 def recordentries(repo, entries, skipexisting=True):
-    unfi = repo.unfiltered()
-    ms = repo._mutationstore
-    for entry in entries:
-        if skipexisting:
-            succ = entry.succ()
-            if succ in unfi or ms.has(succ):
-                continue
-        ms.add(entry)
-    # TODO(mbthomas): take part in transactions
-    ms.flush()
+    with repo.transaction("record-mutation") as tr:
+        unfi = repo.unfiltered()
+        ms = repo._mutationstore
+        tr.addfinalize("mutation", lambda _tr: ms.flush())
+        for entry in entries:
+            if skipexisting:
+                succ = entry.succ()
+                if succ in unfi or ms.has(succ):
+                    continue
+            ms.add(entry)
 
 
 def lookup(repo, node, extra=None):
