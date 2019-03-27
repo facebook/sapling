@@ -61,12 +61,13 @@ class visibleheads(object):
             fp.write("%s\n" % (node.hex(h),))
         self.dirty = False
 
-    def _updateheads(self, newheads, tr):
+    def _updateheads(self, repo, newheads, tr):
         newheads = set(newheads)
         if self.heads != newheads:
             self.heads = newheads
             self.dirty = True
             self._invisiblerevs = None
+            repo.filteredrevcache.clear()
         if self.dirty:
             tr.addfilegenerator("visibility", ("visibleheads",), self._write)
 
@@ -74,7 +75,7 @@ class visibleheads(object):
         unfi = repo.unfiltered()
         newheads = self.heads.union(newnodes)
         newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
-        self._updateheads(newheads, tr)
+        self._updateheads(repo, newheads, tr)
 
     def remove(self, repo, oldnodes, tr):
         unfi = repo.unfiltered()
@@ -107,7 +108,7 @@ class visibleheads(object):
             else:
                 newheads.add(n)
         newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
-        self._updateheads(newheads, tr)
+        self._updateheads(repo, newheads, tr)
 
     def phaseadjust(self, repo, tr, newdraft=None, newpublic=None):
         """update visibility following a phase adjustment.
@@ -122,7 +123,7 @@ class visibleheads(object):
         if newdraft:
             newheads.update(newdraft)
         newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
-        self._updateheads(newheads, tr)
+        self._updateheads(repo, newheads, tr)
 
     def invisiblerevs(self, repo):
         if self._invisiblerevs is not None:
