@@ -1243,12 +1243,15 @@ def smarthide(repo, revhide, revshow, local=False):
 
 
 def hidecommits(repo, curctx, predctxs):
-    obsolete.createmarkers(repo, [(curctx, predctxs)], operation="undo")
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        obsolete.createmarkers(repo, [(curctx, predctxs)], operation="undo")
+    visibility.remove(repo, [curctx.node()])
 
 
 def revealcommits(repo, rev):
     ctxs = list(repo.set(rev))
-    obsolete.revive(ctxs)
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        obsolete.revive(ctxs)
     visibility.add(repo, [ctx.node() for ctx in ctxs])
 
 

@@ -1,7 +1,13 @@
-  $ enable amend rebase
+  $ enable amend rebase undo
   $ setconfig experimental.evolution=
   $ setconfig visibility.tracking=on
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
+  $ setconfig hint.ack=undo
+  $ cat >> $HGRCPATH <<EOF
+  > [templatealias]
+  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as")
+  > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
+  > EOF
 
 Useful functions
   $ mkcommit()
@@ -9,6 +15,11 @@ Useful functions
   >   echo "$1" > "$1"
   >   hg add "$1"
   >   hg commit -m "$1"
+  > }
+
+  $ tglogm()
+  > {
+  >   hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {sl_mutations}" "$@"
   > }
 
 Setup
@@ -308,7 +319,7 @@ Stack navigation and rebases
   $ hg amend -m "B amended" --no-rebase
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ tglog
+  $ tglogm
   @  5: e60094faeb72 'B amended'
   |
   | o  4: 9bc730a19041 'E'
@@ -317,7 +328,7 @@ Stack navigation and rebases
   | |
   | o  2: 26805aba1e60 'C'
   | |
-  | x  1: 112478962961 'B'
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -325,7 +336,7 @@ Stack navigation and rebases
   rebasing 2:26805aba1e60 "C"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [23910a] C
-  $ tglog
+  $ tglogm
   @  6: 23910a6fe564 'C'
   |
   o  5: e60094faeb72 'B amended'
@@ -334,9 +345,9 @@ Stack navigation and rebases
   | |
   | o  3: f585351a92f8 'D'
   | |
-  | x  2: 26805aba1e60 'C'
+  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -344,7 +355,7 @@ Stack navigation and rebases
   rebasing 3:f585351a92f8 "D"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [1d30cc] D
-  $ tglog
+  $ tglogm
   @  7: 1d30cc995ea7 'D'
   |
   o  6: 23910a6fe564 'C'
@@ -353,11 +364,11 @@ Stack navigation and rebases
   |
   | o  4: 9bc730a19041 'E'
   | |
-  | x  3: f585351a92f8 'D'
+  | x  3: f585351a92f8 'D'  (Rebased to 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'
+  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -365,7 +376,7 @@ Stack navigation and rebases
   rebasing 4:9bc730a19041 "E"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [ec992f] E
-  $ tglog
+  $ tglogm
   @  8: ec992ff1fd78 'E'
   |
   o  7: 1d30cc995ea7 'D'
@@ -374,5 +385,102 @@ Stack navigation and rebases
   |
   o  5: e60094faeb72 'B amended'
   |
+  o  0: 426bada5c675 'A'
+  
+
+Undo
+
+  $ hg undo
+  undone to *, before next --rebase (glob)
+  $ tglogm
+  @  7: 1d30cc995ea7 'D'
+  |
+  o  6: 23910a6fe564 'C'
+  |
+  o  5: e60094faeb72 'B amended'
+  |
+  | o  4: 9bc730a19041 'E'
+  | |
+  | x  3: f585351a92f8 'D'  (Rebased to 1d30cc995ea7)
+  | |
+  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | |
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |/
+  o  0: 426bada5c675 'A'
+  
+  $ hg undo
+  undone to *, before next --rebase (glob)
+  $ tglogm
+  @  6: 23910a6fe564 'C'
+  |
+  o  5: e60094faeb72 'B amended'
+  |
+  | o  4: 9bc730a19041 'E'
+  | |
+  | o  3: f585351a92f8 'D'
+  | |
+  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | |
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |/
+  o  0: 426bada5c675 'A'
+  
+  $ hg undo
+  undone to *, before next --rebase (glob)
+  $ tglogm
+  @  5: e60094faeb72 'B amended'
+  |
+  | o  4: 9bc730a19041 'E'
+  | |
+  | o  3: f585351a92f8 'D'
+  | |
+  | o  2: 26805aba1e60 'C'
+  | |
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |/
+  o  0: 426bada5c675 'A'
+  
+Viewing the log graph with filtering disabled shows the commits that have been undone
+from as invisible commits.
+  $ tglogm --hidden
+  -  8: ec992ff1fd78 'E'
+  |
+  -  7: 1d30cc995ea7 'D'
+  |
+  -  6: 23910a6fe564 'C'
+  |
+  @  5: e60094faeb72 'B amended'
+  |
+  | o  4: 9bc730a19041 'E'
+  | |
+  | o  3: f585351a92f8 'D'
+  | |
+  | o  2: 26805aba1e60 'C'
+  | |
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |/
+  o  0: 426bada5c675 'A'
+  
+Unhiding them reveals them as new commits and now the old ones show their relationship
+to the new ones.
+  $ hg unhide ec992ff1fd78
+  $ tglogm
+  o  8: ec992ff1fd78 'E'
+  |
+  o  7: 1d30cc995ea7 'D'
+  |
+  o  6: 23910a6fe564 'C'
+  |
+  @  5: e60094faeb72 'B amended'
+  |
+  | x  4: 9bc730a19041 'E'  (Rebased to ec992ff1fd78)
+  | |
+  | x  3: f585351a92f8 'D'  (Rebased to 1d30cc995ea7)
+  | |
+  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | |
+  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |/
   o  0: 426bada5c675 'A'
   
