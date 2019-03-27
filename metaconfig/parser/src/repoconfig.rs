@@ -211,9 +211,7 @@ impl RepoConfigs {
                     "xdb tier was not specified".into(),
                 ))?;
 
-                let write_lock_db_address = this.write_lock_db_address.ok_or(ErrorKind::InvalidConfig(
-                    "xdb tier for the write lock db was not specified".into(),
-                ))?;
+                let write_lock_db_address = this.write_lock_db_address;
 
                 let mut blobstores = HashMap::new();
                 for blobstore in remote_blobstores {
@@ -328,14 +326,12 @@ impl RepoConfigs {
                         }
                     };
 
-                    let only_fast_forward =  bookmark.only_fast_forward.unwrap_or(false);
+                    let only_fast_forward = bookmark.only_fast_forward.unwrap_or(false);
 
                     bookmark_params.push(BookmarkParams {
                         bookmark: bookmark_or_regex,
                         hooks: match bookmark.hooks {
-                            Some(hooks) => {
-                                hooks.into_iter().map(|rbmh| rbmh.hook_name).collect()
-                            }
+                            Some(hooks) => hooks.into_iter().map(|rbmh| rbmh.hook_name).collect(),
                             None => vec![],
                         },
                         only_fast_forward,
@@ -354,7 +350,7 @@ impl RepoConfigs {
                     rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
                     recursion_limit: raw.recursion_limit.unwrap_or(default.recursion_limit),
                     commit_scribe_category: raw.commit_scribe_category,
-                    block_merges: raw.block_merges.unwrap_or(default.block_merges)
+                    block_merges: raw.block_merges.unwrap_or(default.block_merges),
                 }
             })
             .unwrap_or_default();
@@ -662,7 +658,7 @@ mod test {
                     db_address: "db_address".into(),
                     blobstores_args,
                     filenode_shards: None,
-                    write_lock_db_address: "write_lock_db_address".into(),
+                    write_lock_db_address: Some("write_lock_db_address".into()),
                 },
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,

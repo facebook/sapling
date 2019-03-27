@@ -117,14 +117,14 @@ pub fn repo_handlers(
                     _ => None,
                 };
 
-                let read_write_fetcher = match config.repotype {
+                let read_write_fetcher = match &config.repotype {
                     RepoType::BlobRemote {
-                        ref write_lock_db_address,
+                        write_lock_db_address: Some(addr),
                         ..
                     } => RepoReadWriteFetcher::with_myrouter(
                         config.readonly.clone(),
                         reponame.clone(),
-                        write_lock_db_address,
+                        addr.clone(),
                         myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
                     ),
                     _ => RepoReadWriteFetcher::new(config.readonly.clone(), reponame.clone()),
@@ -170,14 +170,18 @@ pub fn repo_handlers(
                     None => ok(Arc::new(SkiplistIndex::new())).right_future(),
                 };
 
-                let repotype = config.repotype.clone();
+                let RepoConfig {
+                    repotype,
+                    cache_warmup: cache_warmup_params,
+                    ..
+                } = config;
 
                 // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
                 let initial_warmup = ensure_myrouter_ready.and_then({
                     cloned!(ctx, reponame, listen_log);
                     let blobrepo = repo.blobrepo().clone();
                     move |()| {
-                        cache_warmup(ctx, blobrepo, config.cache_warmup, listen_log)
+                        cache_warmup(ctx, blobrepo, cache_warmup_params, listen_log)
                             .chain_err(format!("while warming up cache for repo: {}", reponame))
                             .from_err()
                     }

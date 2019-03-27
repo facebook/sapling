@@ -374,7 +374,7 @@ pub enum RepoType {
         /// If present, the number of shards to spread filenodes across
         filenode_shards: Option<usize>,
         /// Address of the SQL database used to lock writes to a repo.
-        write_lock_db_address: String,
+        write_lock_db_address: Option<String>,
     },
 }
 
