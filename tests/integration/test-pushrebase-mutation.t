@@ -33,13 +33,13 @@ create a commit with mutation extras
   $ echo 1 > 1 && hg add 1 && hg commit -m 1
   $ echo 1a > 1 && hg amend -m 1a --config mutation.record=true
   $ hg debugmutation .
-    62fddca11dc5682b0377a89881b0fff7c042b7c4 amend by test at 1970-01-01T00:00:00 from:
+    6ad95cdc8ab9aab92b341e8a7b90296d04885b30 amend by test at 1970-01-01T00:00:00 from:
       f0161ad23099c690115006c21e96f780f5d740b6
 
 pushrebase it directly onto master - it will be rewritten without the mutation extras
   $ hgmn push -r . --to master
   remote: * Session with Mononoke started with uuid: * (glob)
-  pushing rev 62fddca11dc5 to destination ssh://user@dummy/repo bookmark master
+  pushing rev 6ad95cdc8ab9 to destination ssh://user@dummy/repo bookmark master
   searching for changes
   adding changesets
   adding manifests
@@ -50,7 +50,7 @@ pushrebase it directly onto master - it will be rewritten without the mutation e
   $ tglog
   o  3: a05b3505b7d1 '1a'
   |
-  | @  2: 62fddca11dc5 '1a'
+  | @  2: 6ad95cdc8ab9 '1a'
   |/
   o  0: d20a80d4def3 'base'
   
@@ -63,13 +63,13 @@ create another commit on the base commit with mutation extras
   $ echo 2 > 2 && hg add 2 && hg commit -m 2
   $ echo 2a > 2 && hg amend -m 2a --config mutation.record=true
   $ hg debugmutation .
-    a805bbad06476c09727930617acfe8d6623f8d88 amend by test at 1970-01-01T00:00:00 from:
+    fd935a5d42c4be474397d87ab7810b0b006722af amend by test at 1970-01-01T00:00:00 from:
       1b9fe529321657f93e84f23afaf9c855b9af34ff
 
 pushrebase it onto master - it will be rebased and rewritten without the mutation extras
   $ hgmn push -r . --to master
   remote: * Session with Mononoke started with uuid: * (glob)
-  pushing rev a805bbad0647 to destination ssh://user@dummy/repo bookmark master
+  pushing rev fd935a5d42c4 to destination ssh://user@dummy/repo bookmark master
   searching for changes
   adding changesets
   adding manifests
@@ -80,11 +80,11 @@ pushrebase it onto master - it will be rebased and rewritten without the mutatio
   $ tglog
   o  6: 7042a534cddc '2a'
   |
-  | @  5: a805bbad0647 '2a'
+  | @  5: fd935a5d42c4 '2a'
   | |
   o |  3: a05b3505b7d1 '1a'
   |/
-  | o  2: 62fddca11dc5 '1a'
+  | o  2: 6ad95cdc8ab9 '1a'
   |/
   o  0: d20a80d4def3 'base'
   
