@@ -29,23 +29,14 @@ pub struct NodeMap {
 impl NodeMap {
     pub fn open(dir: impl AsRef<Path>) -> Fallible<Self> {
         // Update the index every 100KB, i.e. every 256 entries
-        let lag = 100 * 1024;
         let first_index = |_data: &[u8]| vec![IndexOutput::Reference(0..20)];
         let second_index = |_data: &[u8]| vec![IndexOutput::Reference(20..40)];
         Ok(NodeMap {
             log: Log::open(
                 dir,
                 vec![
-                    IndexDef {
-                        func: Box::new(first_index),
-                        name: "first",
-                        lag_threshold: lag,
-                    },
-                    IndexDef {
-                        func: Box::new(second_index),
-                        name: "second",
-                        lag_threshold: lag,
-                    },
+                    IndexDef::new("first", first_index),
+                    IndexDef::new("second", second_index),
                 ],
             )?,
         })

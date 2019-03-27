@@ -43,31 +43,28 @@ impl BookmarkStore {
         //   of the previous bullet point) and check whether it is currently associated with
         //   the node.
 
-        let lag_threshold = 100;
         Ok(Self {
             log: Log::open(
                 dir_path,
                 vec![
-                    IndexDef {
-                        func: Box::new(|data: &[u8]| match data[0] {
+                    IndexDef::new(
+                        "bookmark",
+                        |data: &[u8]| match data[0] {
                             b'R' => vec![IndexOutput::Reference(1u64..data.len() as u64)],
-                            b'U' => vec![
-                                IndexOutput::Reference((Node::len() + 1) as u64..data.len() as u64),
-                            ],
+                            b'U' => vec![IndexOutput::Reference(
+                                (Node::len() + 1) as u64..data.len() as u64,
+                            )],
                             c => panic!("invalid BookmarkEntry type '{}'", c),
-                        }),
-                        name: "bookmark",
-                        lag_threshold,
-                    },
-                    IndexDef {
-                        func: Box::new(|data: &[u8]| match data[0] {
+                        },
+                    ),
+                    IndexDef::new(
+                        "node",
+                        |data: &[u8]| match data[0] {
                             b'R' => vec![],
                             b'U' => vec![IndexOutput::Reference(1u64..(Node::len() + 1) as u64)],
                             c => panic!("invalid BookmarkEntry type '{}'", c),
-                        }),
-                        name: "node",
-                        lag_threshold,
-                    },
+                        },
+                    ),
                 ],
             )?,
         })

@@ -37,11 +37,7 @@ fn main() {
     bench("log insertion with index", || {
         let dir = TempDir::new("log").expect("TempDir::new");
         let index_func = |_data: &[u8]| vec![IndexOutput::Reference(0..20)];
-        let index_def = IndexDef {
-            func: Box::new(index_func),
-            name: "i",
-            lag_threshold: 0,
-        };
+        let index_def = IndexDef::new("i", index_func).lag_threshold(0);
         let mut log = Log::open(dir.path(), vec![index_def]).unwrap();
         let buf = gen_buf(N * 20);
         elapsed(move || {

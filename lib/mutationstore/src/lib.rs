@@ -237,21 +237,9 @@ impl MutationStore {
             log: Log::open(
                 path.as_ref(),
                 vec![
-                    IndexDef {
-                        func: Box::new(pred_index),
-                        name: "pred",
-                        lag_threshold,
-                    },
-                    IndexDef {
-                        func: Box::new(succ_index),
-                        name: "succ",
-                        lag_threshold,
-                    },
-                    IndexDef {
-                        func: Box::new(split_index),
-                        name: "split",
-                        lag_threshold,
-                    },
+                    IndexDef::new("pred", pred_index).lag_threshold(lag_threshold),
+                    IndexDef::new("succ", succ_index).lag_threshold(lag_threshold),
+                    IndexDef::new("split", split_index).lag_threshold(lag_threshold),
                 ],
             )?,
         })

@@ -109,7 +109,7 @@ pub struct IndexDef {
     /// This function gets the commit metadata as input. It then parses the
     /// input, and extract parent commit hashes as the output. A git commit can
     /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
-    pub func: Box<Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync>,
+    func: Box<Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync>,
 
     /// Name of the index.
     ///
@@ -118,7 +118,7 @@ pub struct IndexDef {
     ///
     /// When adding new or changing index functions, make sure a different
     /// `name` is used so the existing index won't be reused incorrectly.
-    pub name: &'static str,
+    name: &'static str,
 
     /// How many bytes (as counted in the file backing [Log]) could be left not
     /// indexed on-disk.
@@ -131,7 +131,7 @@ pub struct IndexDef {
     /// [Log::open].
     ///
     /// Practically, this correlates to how fast `func` is.
-    pub lag_threshold: u64,
+    lag_threshold: u64,
 }
 
 /// Output of an index function. Bytes that can be used for lookups.
@@ -685,16 +685,17 @@ impl Log {
         let (checksum, offset) = match checksum_flags {
             0 => (0, offset),
             ENTRY_FLAG_HAS_XXHASH64 => {
-                let checksum = LittleEndian::read_u64(&buf.get(
-                    offset as usize..offset as usize + 8,
-                ).ok_or_else(|| invalid(format!("xxhash cannot be read at {}", offset)))?);
+                let checksum = LittleEndian::read_u64(
+                    &buf.get(offset as usize..offset as usize + 8)
+                        .ok_or_else(|| invalid(format!("xxhash cannot be read at {}", offset)))?,
+                );
                 (checksum, offset + 8)
             }
             ENTRY_FLAG_HAS_XXHASH32 => {
-                let checksum = LittleEndian::read_u32(&buf.get(
-                    offset as usize..offset as usize + 4,
-                ).ok_or_else(|| invalid(format!("xxhash32 cannot be read at {}", offset)))?)
-                    as u64;
+                let checksum = LittleEndian::read_u32(
+                    &buf.get(offset as usize..offset as usize + 4)
+                        .ok_or_else(|| invalid(format!("xxhash32 cannot be read at {}", offset)))?,
+                ) as u64;
                 (checksum, offset + 4)
             }
             _ => {
@@ -749,6 +750,69 @@ impl Log {
             Err(io::Error::new(io::ErrorKind::InvalidData, msg))
         } else {
             Ok(())
+        }
+    }
+}
+
+impl IndexDef {
+    /// Create an index definition.
+    ///
+    /// `index_func` is the function to extract index keys from an entry.
+    ///
+    /// The input is bytes of an entry (ex. the data passed to [Log::append]).
+    /// The output is an array of index keys. An entry can have zero or more
+    /// than one index keys for a same index.
+    ///
+    /// The output can be an allocated slice of bytes, or a reference to offsets
+    /// in the input. See [IndexOutput] for details.
+    ///
+    /// The function should be pure and fast. i.e. It should not use inputs
+    /// from other things, like the network, filesystem, or an external random
+    /// generator.
+    ///
+    /// For example, if the [Log] is to store git commits, and the index is to
+    /// help finding child commits given parent commit hashes as index keys.
+    /// This function gets the commit metadata as input. It then parses the
+    /// input, and extract parent commit hashes as the output. A git commit can
+    /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
+    ///
+    /// `name` is the name of the index.
+    ///
+    /// The name will be used as part of the index file name. Therefore do not
+    /// use user-generated content here. And do not abuse this by using `..` or `/`.
+    ///
+    /// When adding new or changing index functions, make sure a different
+    /// `name` is used so the existing index won't be reused incorrectly.
+    pub fn new(
+        name: &'static str,
+        index_func: impl Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            func: Box::new(index_func),
+            name,
+            // For a typical commit hash index (20-byte). IndexedLog insertion
+            // overhead is about 1500 entries per millisecond. Allow about 3ms
+            // lagging in that case.
+            lag_threshold: 5000,
+        }
+    }
+
+    /// Set how many bytes (as counted in the file backing [Log]) could be left
+    /// not indexed on-disk.
+    ///
+    /// This is related to [Index] implementation detail. Since it's append-only
+    /// and needs to write `O(log N)` data for updating a single entry. Allowing
+    /// lagged indexes reduces writes and saves disk space.
+    ///
+    /// The lagged part of the index will be built on-demand in-memory by
+    /// [Log::open].
+    ///
+    /// Practically, this correlates to how fast `func` is.
+    pub fn lag_threshold(self, lag_threshold: u64) -> Self {
+        Self {
+            func: self.func,
+            name: self.name,
+            lag_threshold,
         }
     }
 }
@@ -933,12 +997,14 @@ impl LogMetadata {
 impl IndexOutput {
     fn into_cow(self, data: &[u8]) -> io::Result<Cow<[u8]>> {
         Ok(match self {
-            IndexOutput::Reference(range) => Cow::Borrowed(&data.get(
-                range.start as usize..range.end as usize,
-            ).ok_or_else(|| {
-                let msg = format!("invalid range {:?} (len={})", range, data.len());
-                io::Error::new(io::ErrorKind::InvalidData, msg)
-            })?),
+            IndexOutput::Reference(range) => Cow::Borrowed(
+                &data
+                    .get(range.start as usize..range.end as usize)
+                    .ok_or_else(|| {
+                        let msg = format!("invalid range {:?} (len={})", range, data.len());
+                        io::Error::new(io::ErrorKind::InvalidData, msg)
+                    })?,
+            ),
             IndexOutput::Owned(key) => Cow::Owned(key.into_vec()),
         })
     }
@@ -1036,16 +1102,8 @@ mod tests {
                 .collect()
         };
         vec![
-            IndexDef {
-                func: Box::new(index_func0),
-                name: "x",
-                lag_threshold,
-            },
-            IndexDef {
-                func: Box::new(index_func1),
-                name: "y",
-                lag_threshold,
-            },
+            IndexDef::new("x", index_func0).lag_threshold(lag_threshold),
+            IndexDef::new("y", index_func1).lag_threshold(lag_threshold),
         ]
     }
 
@@ -1147,14 +1205,9 @@ mod tests {
         let index_func = |data: &[u8]| vec![IndexOutput::Reference(0..(data.len() - 1) as u64)];
         let mut log = Log::open(
             dir.path(),
-            vec![
-                IndexDef {
-                    func: Box::new(index_func),
-                    name: "simple",
-                    lag_threshold: 0,
-                },
-            ],
-        ).unwrap();
+            vec![IndexDef::new("simple", index_func).lag_threshold(0)],
+        )
+        .unwrap();
 
         let entries = vec![&b"aaa"[..], b"bb", b"bb"];
 
@@ -1199,18 +1252,11 @@ mod tests {
         let mut log = Log::open(
             dir.path(),
             vec![
-                IndexDef {
-                    func: Box::new(first_index),
-                    name: "first",
-                    lag_threshold: 0,
-                },
-                IndexDef {
-                    func: Box::new(second_index),
-                    name: "second",
-                    lag_threshold: 0,
-                },
+                IndexDef::new("first", first_index).lag_threshold(0),
+                IndexDef::new("second", second_index).lag_threshold(0),
             ],
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut expected_keys1 = vec![];
         let mut expected_keys2 = vec![];
