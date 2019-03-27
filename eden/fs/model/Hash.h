@@ -108,9 +108,10 @@ class Hash : boost::totally_ordered<Hash> {
       return 10 + c - 'a';
     } else if ('A' <= c && c <= 'F') {
       return 10 + c - 'A';
+    } else {
+      throw std::invalid_argument(
+          "invalid hex digit supplied to Hash constructor from string");
     }
-    throw std::invalid_argument(
-        "invalid hex digit supplied to Hash constructor from string");
   }
 
   Storage bytes_;
