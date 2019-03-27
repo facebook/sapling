@@ -946,10 +946,6 @@ class localrepository(object):
         """
         return hook.hook(self.ui, self, name, throw, **args)
 
-    @filteredpropertycache
-    def _mutationcache(self):
-        return mutation.mutationcache(self)
-
     @unfilteredpropertycache
     def _mutationstore(self):
         return mutation.makemutationstore(self)

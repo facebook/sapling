@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from . import error, node as nodemod, phases, util
+from . import error, node as nodemod, phases, repoview, util
 from .rust.bindings import mutationstore
 
 
@@ -139,103 +139,6 @@ def recordentries(repo, entries, skipexisting=True):
     ms.flush()
 
 
-class mutationcache(object):
-    """Cache of derived mutation information for a local repo."""
-
-    def __init__(self, repo):
-        self._precomputesuccessorssets(repo)
-        self._precomputeobsolete(repo)
-
-    def _precomputesuccessorssets(self, repo):
-        """"""
-        unfi = repo.unfiltered()
-        clrevision = unfi.changelog.changelogrevision
-        unfimutable = set(unfi.nodes("not public()"))
-
-        # successorssets maps mutated commits to the sets of successors.  This
-        # is a map from commit node to lists of successors sets.  In the cache
-        # these are the immediate successors, whether or not they are obsolete.
-        successorssets = {}
-
-        # splitheads maps split destinations to the top of the stack that they
-        # were split into.  The top of the stack contains the split metadata
-        # and is the real successor of the commit that was split.
-        splitheads = {}
-
-        def addsuccs(pred, succs):
-            succsets = successorssets.setdefault(pred, [])
-            if succs not in succsets:
-                succsets.append(succs)
-
-        # Compute successor relationships
-        for current in unfimutable:
-            entry = mutationentry(current, clrevision(current).extra)
-
-            # Compute the full set of successors, this is the current commit,
-            # plus any commits mentioned in `mutsplit`.
-            succs = [current]
-            split = entry.split()
-            if split is not None:
-                for splitnode in split:
-                    # Record that this split successor was a result of this
-                    # split operation by linking it to the current commit.
-                    splitheads[splitnode] = current
-                succs = split + succs
-
-            # Now add `succs` as a successor set for all predecessors.
-            preds = entry.preds()
-            if preds is not None:
-                for pred in preds:
-                    addsuccs(pred, succs)
-
-        # ``successorssets`` is a map from a mutated commit to the sets of
-        # commits that immediately replace it.
-        self._successorssets = successorssets
-
-        # ``splitheads`` is a map of commits that were created by splitting
-        # another commit to the top of the stack that they were split into.
-        # The top-of-stack commit contains the mutation record.
-        self._splitheads = splitheads
-
-    def _precomputeobsolete(self, repo):
-        successorssets = self._successorssets
-
-        # Compute obsolete commits by traversing the commit graph looking for
-        # commits that have a visible or obsolete successor.
-        obsolete = set()
-        for current in repo.nodes("not public()"):
-            thislevel = {current}
-            nextlevel = set()
-            seen = set()
-            while thislevel:
-                for node in thislevel:
-                    if node in seen:
-                        continue
-                    seen.add(node)
-                    # Get successors from both this cache and the store.  We
-                    # can't use lookupsuccessors as we're still building the
-                    # cache.
-                    for succset in successorssets.get(node, ()):
-                        nextlevel.update(succset)
-                    for succset in repo._mutationstore.getsuccessorssets(node):
-                        nextlevel.update(succset)
-                # This node is obsolete if any successor is visible in the repo.
-                # If any successor is already known to be obsolete, we can also
-                # assume that the current node is obsolete without checking
-                # further.
-                if any(
-                    nextnode in obsolete or nextnode in repo for nextnode in nextlevel
-                ):
-                    obsolete.add(current)
-                    break
-                thislevel = nextlevel
-                nextlevel = set()
-
-        # ``obsolete`` is the set of all visible commits that have been mutated
-        # (i.e., have a visible successor).
-        self._obsolete = obsolete
-
-
 def lookup(repo, node, extra=None):
     """Look up mutation information for the given node
 
@@ -310,6 +213,40 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
         nextlevel = set()
 
 
+def obsoletenodes(repo):
+    # Compute obsolete commits by traversing the commit graph looking for
+    # commits that have a visible or obsolete successor.
+    obsolete = set()
+    ms = repo._mutationstore
+    unfi = repo.unfiltered()
+    clnode = unfi.changelog.node
+    hidden = {clnode(r) for r in repoview.filterrevs(repo, "visible")}
+    for current in unfi.nodes("not public()"):
+        thislevel = {current}
+        nextlevel = set()
+        seen = set()
+        while thislevel:
+            for node in thislevel:
+                if node in seen:
+                    continue
+                seen.add(node)
+                for succset in ms.getsuccessorssets(node):
+                    nextlevel.update(succset)
+            # The current node is obsolete if any successor is visible in the
+            # repo.  If any successor is already known to be obsolete, we can
+            # also assume that the current node is obsolete without checking
+            # further.
+            if any(
+                nextnode in obsolete or (nextnode not in hidden and nextnode in unfi)
+                for nextnode in nextlevel
+            ):
+                obsolete.add(current)
+                break
+            thislevel = nextlevel
+            nextlevel = set()
+    return [n for n in obsolete if n in repo]
+
+
 def fate(repo, node):
     """Returns the fate of a node.
 
@@ -338,10 +275,6 @@ def fate(repo, node):
             else:
                 fate.append((succset, "rewrite"))
     return fate
-
-
-def obsoletenodes(repo):
-    return repo._mutationcache._obsolete
 
 
 def predecessorsset(repo, startnode, closest=False):
