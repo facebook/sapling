@@ -135,7 +135,6 @@ class mutationcache(object):
         self.store = mutationstore.mutationstore(repo.svfs.join("mutation"))
         self._precomputesuccessorssets(repo)
         self._precomputeobsolete(repo)
-        self._precomputeorphans(repo)
 
     def _precomputesuccessorssets(self, repo):
         """"""
@@ -153,22 +152,10 @@ class mutationcache(object):
         # and is the real successor of the commit that was split.
         splitheads = {}
 
-        # contentdivergenceroots is the set of draft commits for which there
-        # are multiple visible successors sets.  The visibile mutable successors
-        # are "content-divergent".
-        contentdivergenceroots = set()
-
-        # phasedivergenceroots is the set of public commits for which there
-        # are visible mutable successors.  The visible mutable successors are
-        # "phase-divergent".
-        phasedivergenceroots = set()
-
         def addsuccs(pred, succs):
             succsets = successorssets.setdefault(pred, [])
             if succs not in succsets:
                 succsets.append(succs)
-            if len(succsets) > 1:
-                contentdivergenceroots.add(pred)
 
         # Compute successor relationships
         for current in unfimutable:
@@ -190,11 +177,6 @@ class mutationcache(object):
             if preds is not None:
                 for pred in preds:
                     addsuccs(pred, succs)
-                    if pred in unfi and pred not in unfimutable:
-                        # We have traversed back to a public (immutable) commit.
-                        # This means its successors might be phase divergent, so
-                        # mark the public commit as a phase divergence root.
-                        phasedivergenceroots.add(pred)
 
         # ``successorssets`` is a map from a mutated commit to the sets of
         # commits that immediately replace it.
@@ -204,15 +186,6 @@ class mutationcache(object):
         # another commit to the top of the stack that they were split into.
         # The top-of-stack commit contains the mutation record.
         self._splitheads = splitheads
-
-        # ``phasedivergenceroots`` is a set of public commits that have visible
-        # draft successors.  The successors are all "phase divergent".
-        self._phasedivergenceroots = phasedivergenceroots
-
-        # ``contentdivergenceroots`` is a set of draft commits that have
-        # multiple visible eventual successors sets.  These eventual successors
-        # sets are all "content divergent".
-        self._contentdivergenceroots = contentdivergenceroots
 
     def _precomputeobsolete(self, repo):
         successorssets = self._successorssets
@@ -251,60 +224,6 @@ class mutationcache(object):
         # ``obsolete`` is the set of all visible commits that have been mutated
         # (i.e., have a visible successor).
         self._obsolete = obsolete
-
-    def _precomputeorphans(self, repo):
-        obsolete = self._obsolete
-        unfi = repo.unfiltered()
-        clparents = unfi.changelog.parents
-        mutable = set(repo.nodes("not public()"))
-
-        # Compute orphaned and extinct commits by traversing the commit graph looking for
-        # obsolete commits.
-        #
-        # Orphaned commits are equivalent to `obsolete():: - obsolete()`,  and
-        # extinct commits are equivalent to `obsolete() - ::orphan()`,
-        # except that these won't perform well until we have a fast child
-        # look-up.
-        orphan = set()
-        extinct = set(obsolete)
-        for head in repo.nodes("heads(not public())"):
-            stack = [head]
-            visited = [0]
-            # True if all commits up to this point are obsolete.
-            allobsolete = [head in obsolete]
-            # Stack index of the most recent obsolete commit, or -1 if none are.
-            lastobsolete = [0 if head in obsolete else -1]
-            while stack:
-                current = stack[-1]
-                isobsolete = current in obsolete
-                if visited[-1] == 0:
-                    if isobsolete:
-                        orphan.update(stack[lastobsolete[-1] + 1 : -1])
-                        if not allobsolete[-1]:
-                            extinct.discard(current)
-                if visited[-1] < 2:
-                    parent = clparents(current)[visited[-1]]
-                    visited[-1] += 1
-                    if parent != nodemod.nullid and parent in mutable:
-                        lastobsolete.append(
-                            len(stack) - 1 if isobsolete else lastobsolete[-1]
-                        )
-                        stack.append(parent)
-                        allobsolete.append(allobsolete[-1] and isobsolete)
-                        visited.append(0)
-                else:
-                    stack.pop()
-                    allobsolete.pop()
-                    lastobsolete.pop()
-                    visited.pop()
-
-        # ``orphan`` is the set of all visible but not obsolete commits that
-        # have an obsolete ancestor.
-        self._orphan = orphan
-
-        # ``extinct`` is the set of all obsolete commits that do not have any
-        # orphaned descendants.
-        self._extinct = extinct
 
 
 def lookup(repo, node, extra=None):
@@ -429,34 +348,6 @@ def fate(repo, node):
 
 def obsoletenodes(repo):
     return repo._mutationcache._obsolete
-
-
-def extinctnodes(repo):
-    return repo._mutationcache._extinct
-
-
-def orphannodes(repo):
-    return repo._mutationcache._orphan
-
-
-def phasedivergentnodes(repo):
-    return (
-        n
-        for n in allsuccessors(
-            repo, repo._mutationcache._phasedivergenceroots, startdepth=1
-        )
-        if n in repo
-    )
-
-
-def contentdivergentnodes(repo):
-    return (
-        n
-        for n in allsuccessors(
-            repo, repo._mutationcache._contentdivergenceroots, startdepth=1
-        )
-        if n in repo
-    )
 
 
 def predecessorsset(repo, startnode, closest=False):

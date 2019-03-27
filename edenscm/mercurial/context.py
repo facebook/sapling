@@ -221,18 +221,26 @@ class basectx(object):
 
     def extinct(self):
         """True if the changeset is extinct"""
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'extinct' is not supported with mutation"))
         return self.rev() in obsmod.getrevs(self._repo, "extinct")
 
     def unstable(self):
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'unstable' is not supported with mutation"))
         msg = "'context.unstable' is deprecated, " "use 'context.orphan'"
         self._repo.ui.deprecwarn(msg, "4.4")
         return self.orphan()
 
     def orphan(self):
         """True if the changeset is not obsolete but it's ancestor are"""
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'orphan' is not supported with mutation"))
         return self.rev() in obsmod.getrevs(self._repo, "orphan")
 
     def bumped(self):
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'bumped' is not supported with mutation"))
         msg = "'context.bumped' is deprecated, " "use 'context.phasedivergent'"
         self._repo.ui.deprecwarn(msg, "4.4")
         return self.phasedivergent()
@@ -242,9 +250,13 @@ class basectx(object):
 
         Only non-public and non-obsolete changesets may be bumped.
         """
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'phasedivergent' is not supported with mutation"))
         return self.rev() in obsmod.getrevs(self._repo, "phasedivergent")
 
     def divergent(self):
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'divergent' is not supported with mutation"))
         msg = "'context.divergent' is deprecated, " "use 'context.contentdivergent'"
         self._repo.ui.deprecwarn(msg, "4.4")
         return self.contentdivergent()
@@ -254,21 +266,29 @@ class basectx(object):
 
         Only non-public and non-obsolete changesets may be divergent.
         """
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'contentdivergent' is not supported with mutation"))
         return self.rev() in obsmod.getrevs(self._repo, "contentdivergent")
 
     def troubled(self):
+        if mutation.enabled(self._repo):
+            raise error.Abort(_("'troubled' is not supported with mutation"))
         msg = "'context.troubled' is deprecated, " "use 'context.isunstable'"
         self._repo.ui.deprecwarn(msg, "4.4")
         return self.isunstable()
 
     def isunstable(self):
         """True if the changeset is either unstable, bumped or divergent"""
+        if mutation.enabled(self._repo):
+            return False
         return self.orphan() or self.phasedivergent() or self.contentdivergent()
 
     def troubles(self):
         """Keep the old version around in order to avoid breaking extensions
         about different return values.
         """
+        if mutation.enabled(self._repo):
+            return []
         msg = "'context.troubles' is deprecated, " "use 'context.instabilities'"
         self._repo.ui.deprecwarn(msg, "4.4")
 
@@ -289,6 +309,8 @@ class basectx(object):
         - phase-divergent,
         - content-divergent.
         """
+        if mutation.enabled(self._repo):
+            return []
         instabilities = []
         if self.orphan():
             instabilities.append("orphan")

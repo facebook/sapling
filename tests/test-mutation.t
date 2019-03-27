@@ -534,11 +534,6 @@ Revsets for filtering commits based on mutated status
   Q
   R
   E
-  $ hg log -r "orphan()" -T '{desc}\n'
-  S
-  F
-  P
-  $ hg log -r "extinct()" -T '{desc}\n'
   $ hg log -r "obsolete()" -T '{desc}\n' --hidden
   Q
   C
@@ -547,35 +542,8 @@ Revsets for filtering commits based on mutated status
   D
   E
   M
-  $ hg log -r "orphan()" -T '{desc}\n' --hidden
-  S
-  F
-  P
-  $ hg log -r "extinct()" -T '{desc}\n' --hidden
-  C
-  L
-  D
-  M
 
-  $ cd ..
-  $ newrepo
-  $ drawdag << EOS
-  > E
-  > |
-  > D
-  > |
-  > C
-  > |
-  > B  B1  D1    # rebase: B -> B1
-  > |  |   |     # rebase: D -> D1
-  > A  A   A
-  > EOS
-  $ hg log -r "orphan()" -T '{desc}\n'
-  C
-  E
-  $ hg log -r "extinct()" -T '{desc}\n'
-
-Divergence and Successors Sets
+Successors Sets
 
   $ cd ..
   $ newrepo
@@ -600,12 +568,6 @@ Divergence and Successors Sets
   54fe561aeb5b Y
   e67cd4473b7c Z
   $ hg phase -p $Z --hidden
-  $ hg log -r "contentdivergent()" -T '{desc}\n'
-  C
-  G
-  H
-  $ hg log -r "phasedivergent()" -T '{desc}\n'
-  P
 
   $ hg debugsuccessorssets 'all()'
   ba2b7fa7166d
@@ -695,15 +657,6 @@ Divergence and Successors Sets
   9e63cfda1f79 H
   e0ad3106c6e7 I
   48b9aae0607f Z
-
-  $ hg log -r "contentdivergent()" -T '{desc}\n'
-  B
-  C
-  D
-  I
-  E
-  H
-  $ hg log -r "phasedivergent()" -T '{desc}\n'
 
   $ hg debugsuccessorssets 'all()' --hidden
   48b9aae0607f
@@ -799,13 +752,6 @@ Divergence and Successors Sets
   a50d498b7a3c N
   5f50ab0b5b00 O
   48b9aae0607f Z
-
-  $ hg log -r "contentdivergent()" -T '{desc}\n'
-  I
-  H
-  O
-  N
-  L
 
   $ hg debugsuccessorssets 'all()'
   48b9aae0607f
@@ -940,37 +886,6 @@ Many splits and folds:
   444227ba9301 Q
   114f9718bb14 R
   48b9aae0607f Z
-
-  $ hg log -r "contentdivergent()" -T '{desc}\n'
-  H
-  D
-  I
-  E
-  K
-  F
-  Q
-  G
-  M
-  R
-  O
-  P
-  $ hg log -r "contentdivergent()" -T '{desc}\n' --hidden
-  B
-  H
-  C
-  D
-  I
-  E
-  K
-  F
-  L
-  Q
-  G
-  M
-  R
-  N
-  O
-  P
 
   $ hg debugsuccessorssets $A --hidden
   ac2f7407182b

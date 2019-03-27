@@ -40,6 +40,7 @@ from .. import (
     hintutil,
     lock as lockmod,
     merge as mergemod,
+    mutation,
     obsolete,
     patch,
     phases,
@@ -6042,7 +6043,9 @@ def summary(ui, repo, **opts):
     if draft or secret:
         ui.status(_("phases: %s\n") % ", ".join(t))
 
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+    if obsolete.isenabled(repo, obsolete.createmarkersopt) and not mutation.enabled(
+        repo
+    ):
         for trouble in ("orphan", "contentdivergent", "phasedivergent"):
             numtrouble = len(repo.revs(trouble + "()"))
             # We write all the possibilities to ease translation

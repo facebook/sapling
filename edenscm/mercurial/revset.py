@@ -672,6 +672,8 @@ def phasedivergent(repo, subset, x):
     Only non-public and non-obsolete changesets can be `phasedivergent`.
     (EXPERIMENTAL)
     """
+    if mutation.enabled(repo):
+        raise error.Abort(_("'phasedivergent' is not supported with mutation"))
     # i18n: "phasedivergent" is a keyword
     getargs(x, 0, 0, _("phasedivergent takes no arguments"))
     if mutation.enabled(repo):
@@ -901,6 +903,8 @@ def contentdivergent(repo, subset, x):
     Final successors of changesets with an alternative set of final
     successors. (EXPERIMENTAL)
     """
+    if mutation.enabled(repo):
+        raise error.Abort(_("'contentdivergent' is not supported with mutation"))
     # i18n: "contentdivergent" is a keyword
     getargs(x, 0, 0, _("contentdivergent takes no arguments"))
     if mutation.enabled(repo):
@@ -931,13 +935,11 @@ def extdata(repo, subset, x):
 def extinct(repo, subset, x):
     """Obsolete changesets with obsolete descendants only.
     """
+    if mutation.enabled(repo):
+        raise error.Abort(_("'extinct' is not supported with mutation"))
     # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
-    if mutation.enabled(repo):
-        clrev = repo.changelog.rev
-        extinct = baseset([clrev(n) for n in mutation.extinctnodes(repo)])
-    else:
-        extinct = obsmod.getrevs(repo, "extinct")
+    extinct = obsmod.getrevs(repo, "extinct")
     return subset & extinct
 
 
@@ -2295,13 +2297,11 @@ def unstable(repo, subset, x):
 def orphan(repo, subset, x):
     """Non-obsolete changesets with obsolete ancestors. (EXPERIMENTAL)
     """
+    if mutation.enabled(repo):
+        raise error.Abort(_("'orphan' is not supported with mutation"))
     # i18n: "orphan" is a keyword
     getargs(x, 0, 0, _("orphan takes no arguments"))
-    if mutation.enabled(repo):
-        clrev = repo.changelog.rev
-        orphan = baseset([clrev(n) for n in mutation.orphannodes(repo)])
-    else:
-        orphan = obsmod.getrevs(repo, "orphan")
+    orphan = obsmod.getrevs(repo, "orphan")
     return subset & orphan
 
 
