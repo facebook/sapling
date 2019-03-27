@@ -13,7 +13,7 @@ use rand::{ChaChaRng, RngCore};
 use radixbuf::key::{FixedKey, KeyId};
 use radixbuf::radix::{radix_insert, radix_lookup};
 
-const N: usize = 20480;
+const N: usize = 204800;
 
 /// Generate random buffer
 fn gen_buf(size: usize) -> Vec<u8> {

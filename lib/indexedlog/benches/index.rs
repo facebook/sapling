@@ -14,7 +14,7 @@ use rand::{ChaChaRng, Rng};
 use std::sync::Arc;
 use tempdir::TempDir;
 
-const N: usize = 20480;
+const N: usize = 204800;
 
 /// Generate random buffer
 fn gen_buf(size: usize) -> Vec<u8> {
