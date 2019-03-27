@@ -54,6 +54,10 @@ def enabled(repo):
     return repo.ui.configbool("mutation", "enabled")
 
 
+def makemutationstore(repo):
+    return mutationstore.mutationstore(repo.svfs.join("mutation"))
+
+
 class mutationentry(object):
     def __init__(self, node, extra):
         self.extra = extra
@@ -124,22 +128,21 @@ def createcommitentry(repo, node):
 
 def recordentries(repo, entries, skipexisting=True):
     unfi = repo.unfiltered()
-    mc = repo._mutationcache
+    ms = repo._mutationstore
     for entry in entries:
         if skipexisting:
             succ = entry.succ()
-            if succ in unfi or mc.store.has(succ):
+            if succ in unfi or ms.has(succ):
                 continue
-        repo._mutationcache.store.add(entry)
+        ms.add(entry)
     # TODO(mbthomas): take part in transactions
-    repo._mutationcache.store.flush()
+    ms.flush()
 
 
 class mutationcache(object):
     """Cache of derived mutation information for a local repo."""
 
     def __init__(self, repo):
-        self.store = mutationstore.mutationstore(repo.svfs.join("mutation"))
         self._precomputesuccessorssets(repo)
         self._precomputeobsolete(repo)
 
@@ -214,7 +217,7 @@ class mutationcache(object):
                     # cache.
                     for succset in successorssets.get(node, ()):
                         nextlevel.update(succset)
-                    for succset in self.store.getsuccessorssets(node):
+                    for succset in repo._mutationstore.getsuccessorssets(node):
                         nextlevel.update(succset)
                 # This node is obsolete if any successor is visible in the repo.
                 # If any successor is already known to be obsolete, we can also
@@ -239,22 +242,21 @@ def lookup(repo, node, extra=None):
     For the fastpath case where the commit extras are already known, these
     can optionally be passed in through the ``extra`` parameter.
     """
-    return repo._mutationcache.store.get(node)
+    return repo._mutationstore.get(node)
 
 
 def lookupsplit(repo, node):
     """Look up mutation information for the given node, or the main split node
     if this node is the result of a split.
     """
-    mc = repo._mutationcache
-    mainnode = mc.store.getsplithead(node) or node
-    return mc.store.get(mainnode)
+    ms = repo._mutationstore
+    mainnode = ms.getsplithead(node) or node
+    return ms.get(mainnode)
 
 
 def lookupsuccessors(repo, node):
     """Look up the immediate successors sets for the given node"""
-    mc = repo._mutationcache
-    return sorted(mc.store.getsuccessorssets(node))
+    return sorted(repo._mutationstore.getsuccessorssets(node))
 
 
 def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):

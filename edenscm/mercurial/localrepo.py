@@ -950,6 +950,10 @@ class localrepository(object):
     def _mutationcache(self):
         return mutation.mutationcache(self)
 
+    @unfilteredpropertycache
+    def _mutationstore(self):
+        return mutation.makemutationstore(self)
+
     @filteredpropertycache
     def _tagscache(self):
         """Returns a tagscache object that contains various tags related
