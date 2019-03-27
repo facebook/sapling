@@ -215,7 +215,7 @@ class basectx(object):
     def obsolete(self):
         """True if the changeset is obsolete"""
         if mutation.enabled(self._repo):
-            return self.node() in mutation.obsoletenodes(self._repo)
+            return mutation.isobsolete(self._repo, self.node())
         else:
             return self.rev() in obsmod.getrevs(self._repo, "obsolete")
 

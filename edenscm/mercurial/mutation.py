@@ -213,38 +213,39 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
         nextlevel = set()
 
 
-def obsoletenodes(repo):
-    # Compute obsolete commits by traversing the commit graph looking for
-    # commits that have a visible or obsolete successor.
-    obsolete = set()
-    ms = repo._mutationstore
+def isobsolete(repo, node):
+    """Returns true if the node is obsolete in the repository."""
+    if node not in repo:
+        return False
+    if not util.safehasattr(repo, "_mutationobsolete"):
+        repo._mutationobsolete = set()
+    obsolete = repo._mutationobsolete
+    if node in obsolete:
+        return True
     unfi = repo.unfiltered()
-    clnode = unfi.changelog.node
-    hidden = {clnode(r) for r in repoview.filterrevs(repo, "visible")}
-    for current in unfi.nodes("not public()"):
-        thislevel = {current}
-        nextlevel = set()
-        seen = set()
-        while thislevel:
-            for node in thislevel:
-                if node in seen:
-                    continue
-                seen.add(node)
-                for succset in ms.getsuccessorssets(node):
-                    nextlevel.update(succset)
-            # The current node is obsolete if any successor is visible in the
-            # repo.  If any successor is already known to be obsolete, we can
-            # also assume that the current node is obsolete without checking
-            # further.
-            if any(
-                nextnode in obsolete or (nextnode not in hidden and nextnode in unfi)
-                for nextnode in nextlevel
-            ):
-                obsolete.add(current)
-                break
-            thislevel = nextlevel
-            nextlevel = set()
-    return [n for n in obsolete if n in repo]
+    clrev = unfi.changelog.rev
+    hiddenrevs = repoview.filterrevs(repo, "visible")
+
+    for succ in allsuccessors(repo, [node], startdepth=1):
+        # If any successor is already known to be obsolete, we can
+        # assume that the current node is obsolete without checking further.
+        if succ in obsolete:
+            return True
+        # The node is obsolete if any successor is visible in the repo.
+        if succ in unfi:
+            if clrev(succ) not in hiddenrevs:
+                obsolete.add(node)
+                return True
+    return False
+
+
+def obsoletenodes(repo):
+    return {node for node in repo.nodes("not public()") if isobsolete(repo, node)}
+
+
+def clearobsoletecache(repo):
+    if util.safehasattr(repo, "_mutationobsolete"):
+        del repo._mutationobsolete
 
 
 def fate(repo, node):

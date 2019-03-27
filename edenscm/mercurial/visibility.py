@@ -67,7 +67,7 @@ class visibleheads(object):
             self.heads = newheads
             self.dirty = True
             self._invisiblerevs = None
-            repo.filteredrevcache.clear()
+            repo.invalidatevolatilesets()
         if self.dirty:
             tr.addfilegenerator("visibility", ("visibleheads",), self._write)
 

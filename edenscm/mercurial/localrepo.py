@@ -1705,6 +1705,7 @@ class localrepository(object):
     def invalidatevolatilesets(self):
         self.filteredrevcache.clear()
         obsolete.clearobscaches(self)
+        mutation.clearobsoletecache(self)
 
     def invalidatedirstate(self):
         """Invalidates the dirstate, causing the next call to dirstate
