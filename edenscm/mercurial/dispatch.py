@@ -76,7 +76,8 @@ class request(object):
     def _runexithandlers(self):
         # Silence potential EPIPE or SIGPIPE errors when writing to stdout or
         # stderr.
-        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+        if util.safehasattr(signal, "SIGPIPE"):
+            signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 
         class ignoreerrorui(self.ui.__class__):
             def _write(self, *args, **kwargs):
