@@ -326,10 +326,10 @@ class basepackstore(object):
                         yield func(pack)
                     except KeyError:
                         pass
-                    except Exception:
+                    except Exception as ex:
                         # Other exceptions indicate an issue with the pack file, so
                         # remove it.
-                        badpacks.append(pack)
+                        badpacks.append((pack, getattr(ex, "errno", None)))
                     oldpacks.add(pack)
 
             # Let's refresh the packs, what is being looked for might be on-disk.
@@ -338,16 +338,20 @@ class basepackstore(object):
 
         if badpacks:
             if self.deletecorruptpacks:
-                for pack in badpacks:
-                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
+                for pack, err in badpacks:
                     self.packs.remove(pack)
-                    util.tryunlink(pack.packpath())
-                    util.tryunlink(pack.indexpath())
+
+                    if err != errno.ENOENT:
+                        self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
+                        util.tryunlink(pack.packpath())
+                        util.tryunlink(pack.indexpath())
             else:
-                for pack in badpacks:
-                    self.ui.warn(
-                        _("detected corrupt pack '%s' - ignoring it\n") % pack.path()
-                    )
+                for pack, err in badpacks:
+                    if err != errno.ENOENT:
+                        self.ui.warn(
+                            _("detected corrupt pack '%s' - ignoring it\n")
+                            % pack.path()
+                        )
 
 
 class versionmixin(object):

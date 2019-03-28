@@ -3,6 +3,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::io;
+
 use cpython::{
     exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
@@ -14,7 +16,12 @@ use revisionstore::error::KeyError;
 use types::{Key, Node};
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
-    if error.downcast_ref::<KeyError>().is_some() {
+    if let Some(io_error) = error.downcast_ref::<io::Error>() {
+        PyErr::new::<exc::OSError, _>(
+            py,
+            (io_error.raw_os_error(), format!("{}", error.as_fail())),
+        )
+    } else if error.downcast_ref::<KeyError>().is_some() {
         PyErr::new::<exc::KeyError, _>(py, format!("{}", error.as_fail()))
     } else {
         PyErr::new::<exc::RuntimeError, _>(py, format!("{}", error.as_fail()))
@@ -61,10 +68,7 @@ pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
         Some(base) => from_key(py, &base),
         None => from_key(
             py,
-            &Key::new(
-                delta.key.name().to_vec(),
-                Node::null_id().clone(),
-            ),
+            &Key::new(delta.key.name().to_vec(), Node::null_id().clone()),
         ),
     };
     let bytes = PyBytes::new(py, &delta.data);
@@ -75,7 +79,8 @@ pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
         base_name.into_object(),
         base_node.into_object(),
         bytes.into_object(),
-    ).into_py_object(py)
+    )
+        .into_py_object(py)
         .into_object()
 }
 
