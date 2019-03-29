@@ -29,7 +29,7 @@ if(LIBGIT2_FOUND)
     libgit2 INTERFACE
     "${LIBGIT2_INCLUDE_DIR}"
   )
-  target_link_libraries(
+  target_link_options(
     libgit2 INTERFACE
     "${LIBGIT2_LDFLAGS}"
   )
