@@ -9,3 +9,7 @@ target_link_libraries(
     eden_model
     ${LIBGIT2_LIBRARY}
 )
+target_include_directories(
+  eden_store_git
+  PRIVATE
+)

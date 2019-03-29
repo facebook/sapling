@@ -6,5 +6,6 @@ add_library(
 target_link_libraries(
   eden_utils
   PUBLIC
+    eden_service
     Folly::folly
 )
