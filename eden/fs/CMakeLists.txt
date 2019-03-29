@@ -9,6 +9,7 @@ add_executable(
   edenfs
   service/oss/main.cpp
 )
+install(TARGETS edenfs RUNTIME DESTINATION bin)
 target_include_directories(
   edenfs
   PUBLIC
