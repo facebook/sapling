@@ -24,6 +24,11 @@ include_directories(
 
 if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/osxfuse")
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/external/osxfuse/common")
+else()
+  find_path(OSXFUSE_INCLUDE_DIR NAMES "fuse_ioctl.h")
+  if (OSXFUSE_INCLUDE_DIR)
+    include_directories(${OSXFUSE_INCLUDE_DIR})
+  endif()
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
