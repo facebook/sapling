@@ -9,6 +9,7 @@ import collections
 import errno
 import hashlib
 import os
+import stat as statmod
 import struct
 import time
 
@@ -131,42 +132,48 @@ class basepackstore(object):
 
         self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
 
-    def _getavailablepackfiles(self):
+    def _getavailablepackfiles(self, currentpacks=None):
         """For each pack file (a index/data file combo), yields:
           (full path without extension, mtime, size)
 
         mtime will be the mtime of the index/data file (whichever is newer)
         size is the combined size of index/data file
         """
-        indexsuffixlen = len(self.INDEXSUFFIX)
-        packsuffixlen = len(self.PACKSUFFIX)
+        if currentpacks is None:
+            currentpacks = set()
 
         ids = set()
         sizes = collections.defaultdict(lambda: 0)
         mtimes = collections.defaultdict(lambda: [])
         try:
-            for filename, type, stat in osutil.listdir(self.path, stat=True):
-                id = None
-                if filename[-indexsuffixlen:] == self.INDEXSUFFIX:
-                    id = filename[:-indexsuffixlen]
-                elif filename[-packsuffixlen:] == self.PACKSUFFIX:
-                    id = filename[:-packsuffixlen]
+            for filename in os.listdir(self.path):
+                filename = os.path.join(self.path, filename)
+                id, ext = os.path.splitext(filename)
 
-                # Since we expect to have two files corresponding to each ID
-                # (the index file and the pack file), we can yield once we see
-                # it twice.
-                if id:
-                    sizes[id] += stat.st_size  # Sum both files' sizes together
-                    mtimes[id].append(stat.st_mtime)
-                    if id in ids:
-                        yield (os.path.join(self.path, id), max(mtimes[id]), sizes[id])
-                    else:
-                        ids.add(id)
+                if id not in currentpacks:
+                    # Since we expect to have two files corresponding to each ID
+                    # (the index file and the pack file), we can yield once we see
+                    # it twice.
+                    if ext == self.INDEXSUFFIX or ext == self.PACKSUFFIX:
+                        st = os.lstat(filename)
+                        if statmod.S_ISDIR(st.st_mode):
+                            continue
+
+                        sizes[id] += st.st_size  # Sum both files' sizes together
+                        mtimes[id].append(st.st_mtime)
+                        if id in ids:
+                            yield (
+                                os.path.join(self.path, id),
+                                max(mtimes[id]),
+                                sizes[id],
+                            )
+                        else:
+                            ids.add(id)
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise
 
-    def _getavailablepackfilessorted(self):
+    def _getavailablepackfilessorted(self, currentpacks):
         """Like `_getavailablepackfiles`, but also sorts the files by mtime,
         yielding newest files first.
 
@@ -174,11 +181,11 @@ class basepackstore(object):
         desirable data.
         """
         files = []
-        for path, mtime, size in self._getavailablepackfiles():
+        for path, mtime, size in self._getavailablepackfiles(currentpacks):
             files.append((mtime, size, path))
         files = sorted(files, reverse=True)
-        for mtime, size, path in files:
-            yield path, mtime, size
+        for __, __, path in files:
+            yield path
 
     def gettotalsizeandcount(self):
         """Returns the total disk size (in bytes) of all the pack files in
@@ -281,32 +288,29 @@ class basepackstore(object):
         # to have that happen twice in quick succession.
         newpacks = []
         if now > self.lastrefresh + REFRESHRATE:
-            previous = set(p.path() for p in self.packs)
-            for filepath, __, __ in self._getavailablepackfilessorted():
-                if filepath not in previous:
-                    try:
-                        newpack = self.getpack(filepath)
-                        newpacks.append(newpack)
-                    except Exception as ex:
-                        # An exception may be thrown if the pack file is corrupted
-                        # somehow.  Log a warning but keep going in this case, just
-                        # skipping this pack file.
-                        #
-                        # If this is an ENOENT error then don't even bother logging.
-                        # Someone could have removed the file since we retrieved the
-                        # list of paths.
-                        if getattr(ex, "errno", None) != errno.ENOENT:
-                            if self.deletecorruptpacks:
-                                self.ui.warn(
-                                    _("deleting corrupt pack '%s'\n") % filepath
-                                )
-                                util.tryunlink(filepath + self.PACKSUFFIX)
-                                util.tryunlink(filepath + self.INDEXSUFFIX)
-                            else:
-                                self.ui.warn(
-                                    _("detected corrupt pack '%s' - ignoring it\n")
-                                    % filepath
-                                )
+            previous = set(p.path() for p in self.packs._packs)
+            for filepath in self._getavailablepackfilessorted(previous):
+                try:
+                    newpack = self.getpack(filepath)
+                    newpacks.append(newpack)
+                except Exception as ex:
+                    # An exception may be thrown if the pack file is corrupted
+                    # somehow.  Log a warning but keep going in this case, just
+                    # skipping this pack file.
+                    #
+                    # If this is an ENOENT error then don't even bother logging.
+                    # Someone could have removed the file since we retrieved the
+                    # list of paths.
+                    if getattr(ex, "errno", None) != errno.ENOENT:
+                        if self.deletecorruptpacks:
+                            self.ui.warn(_("deleting corrupt pack '%s'\n") % filepath)
+                            util.tryunlink(filepath + self.PACKSUFFIX)
+                            util.tryunlink(filepath + self.INDEXSUFFIX)
+                        else:
+                            self.ui.warn(
+                                _("detected corrupt pack '%s' - ignoring it\n")
+                                % filepath
+                            )
 
             self.lastrefresh = time.time()
 
