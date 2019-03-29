@@ -182,7 +182,7 @@ class DirEntry {
   // macOS: mode_t is only 16 bits wide, so use its full width here
   mode_t initialMode_;
   static_assert(
-      sizeof(mode_t) <= 30,
+      sizeof(mode_t) <= 2,
       "expected mode_t to be smaller than 30 bits on Mac OS X");
 #else
   mode_t initialMode_ : 30;
