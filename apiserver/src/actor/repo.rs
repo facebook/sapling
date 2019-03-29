@@ -164,8 +164,9 @@ impl MononokeRepo {
         filenode: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let filenode = try_boxfuture!(FS::get_nodehash(&filenode));
+        let validate_hash = false;
         self.repo
-            .get_raw_hg_content(ctx, HgFileNodeId::new(filenode))
+            .get_raw_hg_content(ctx, HgFileNodeId::new(filenode), validate_hash)
             .map(|content| MononokeRepoResponse::GetHgFile {
                 content: content.into_inner(),
             })

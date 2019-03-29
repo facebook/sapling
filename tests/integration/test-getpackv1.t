@@ -119,8 +119,25 @@ Rename a file and then prefetch it
   $ hgmn pull -q
   $ hgmn prefetch -r 4 --debug 2>&1 | grep packv1
   sending getpackv1 command
+  $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
+  $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
+  \x01 (esc)
+  copy: A
+  copyrev: bb3317de12b1232de9b883d9026c1ffa9291e3e6
+  \x01 (esc)
+  AA
   $ hg up -q 4 --config paths.default=badpath
   $ hg st --change . -C --config paths.default=badpath
   A AA
     A
   R A
+
+Make sure the push succeeds - we had a problem when an incorrect delta was
+generated because copy metadata wasn't added
+  $ echo B > AA
+  $ hg ci -m 'commit on top of a rename'
+  $ hgmn push -r . --to master_bookmark --config extensions.remotenames=
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 0ce8239858c4 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  updating bookmark master_bookmark

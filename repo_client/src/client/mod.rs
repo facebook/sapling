@@ -29,15 +29,13 @@ use mercurial_types::{
     convert_parents_to_remotefilelog_format, percent_encode, Delta, Entry, HgBlobNode,
     HgChangesetId, HgFileNodeId, HgManifestId, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
-use metaconfig_types::{LfsParams, RepoReadOnly};
+use metaconfig_types::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use percent_encoding;
 use phases::{Phase, Phases};
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
-use remotefilelog::{
-    self, create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes,
-};
+use remotefilelog::{create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes};
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json;
@@ -1262,16 +1260,12 @@ impl HgCommands for RepoClient {
 
                     let mut contents = vec![];
                     for filenode in filenodes {
-                        let fut = remotefilelog::get_raw_content(
+                        // TODO(stash): T41600715 - getpackv1 doesn't seem to support lfs
+                        let fut = repo.get_raw_hg_content(
                             ctx.clone(),
-                            repo.clone(),
                             filenode,
-                            RepoPath::FilePath(path.clone()),
-                            // TODO(stash): T41600715 - getpackv1 doesn't seem to support lfs
-                            LfsParams::default(),
                             validate_hash,
-                        );
-                        let fut = fut.map(move |(content, _)| (filenode, content));
+                        ).map(move |content| (filenode, content));
                         contents.push(fut);
                     }
                     future::join_all(contents)
@@ -1311,7 +1305,7 @@ impl HgCommands for RepoClient {
                         entry_count: contents.len() as u32,
                     });
                     for (filenode, content) in contents {
-                        let content = content.into_bytes().to_vec();
+                        let content = content.into_inner().to_vec();
                         ctx.perf_counters()
                             .set_max_counter("getpackv1_max_file_size", content.len() as i64);
                         res.push(wirepack::Part::Data(wirepack::DataEntry {

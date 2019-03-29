@@ -432,9 +432,10 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         key: HgFileNodeId,
+        validate_hash: bool,
     ) -> BoxFuture<HgBlob, Error> {
         STATS::get_raw_hg_content.add_value(1);
-        fetch_raw_filenode_bytes(ctx, &self.blobstore, key)
+        fetch_raw_filenode_bytes(ctx, &self.blobstore, key, validate_hash)
     }
 
     // Fetches copy data from blobstore instead of from filenodes db. This should be used only

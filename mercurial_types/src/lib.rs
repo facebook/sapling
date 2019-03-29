@@ -107,7 +107,7 @@ pub mod sql_types;
 pub mod utils;
 
 pub use blob::HgBlob;
-pub use blobnode::{HgBlobNode, HgParents};
+pub use blobnode::{calculate_hg_node_id, HgBlobNode, HgParents};
 pub use changeset::Changeset;
 pub use delta::Delta;
 pub use envelope::{

@@ -236,9 +236,11 @@ impl DeltaCache {
                                         .map_err(Error::from)
                                 })
                                 .boxify(),
-                            None => self
+                            None => {
+                                let validate_hash = false;
+                                self
                                 .repo
-                                .get_raw_hg_content(ctx, HgFileNodeId::new(base))
+                                .get_raw_hg_content(ctx, HgFileNodeId::new(base), validate_hash)
                                 .and_then(move |blob| {
                                     let bytes = blob.into_inner();
                                     delta::apply(bytes.as_ref(), &delta)
@@ -247,7 +249,8 @@ impl DeltaCache {
                                         })
                                         .map_err(Error::from)
                                 })
-                                .boxify(),
+                                .boxify()
+                            },
                         };
                         fut.map_err(move |err| {
                             Error::from(err.context(format_err!(

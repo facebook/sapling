@@ -115,25 +115,27 @@ impl HgBlobNode {
     // sha1(p1 || p2 || sha1(content)), so we can't compute a filenode for
     // a blob we don't have
     pub fn nodeid(&self) -> HgNodeHash {
-        let null = hash::NULL;
-
-        let (h1, h2) = match &self.parents {
-            &HgParents::None => (&null, &null),
-            &HgParents::One(ref p1) => (&null, &p1.0),
-            &HgParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
-            &HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
-        };
-
-        let data = self.as_blob().as_slice();
-
-        let mut ctxt = Context::new();
-
-        ctxt.update(h1);
-        ctxt.update(h2);
-        ctxt.update(data);
-
-        HgNodeHash(ctxt.finish())
+        calculate_hg_node_id(self.as_blob().as_slice(), &self.parents)
     }
+}
+
+pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
+    let null = hash::NULL;
+
+    let (h1, h2) = match &parents {
+        &HgParents::None => (&null, &null),
+        &HgParents::One(ref p1) => (&null, &p1.0),
+        &HgParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
+        &HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
+    };
+
+    let mut ctxt = Context::new();
+
+    ctxt.update(h1);
+    ctxt.update(h2);
+    ctxt.update(data);
+
+    HgNodeHash(ctxt.finish())
 }
 
 #[cfg(test)]

@@ -16,8 +16,8 @@ use mercurial::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{
-    FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
-    MPathElement,
+    calculate_hg_node_id, FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, MPath, MPathElement,
 };
 use mononoke_types::{hash::Sha256, ContentId, FileContents, MononokeId};
 
@@ -50,6 +50,7 @@ pub fn fetch_raw_filenode_bytes(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgFileNodeId,
+    validate_hash: bool,
 ) -> BoxFuture<HgBlob, Error> {
     fetch_file_envelope(ctx.clone(), blobstore, node_id)
         .and_then({
@@ -59,20 +60,41 @@ pub fn fetch_raw_filenode_bytes(
                 let file_contents_fut = fetch_file_contents(ctx, &blobstore, envelope.content_id);
 
                 let mut metadata = envelope.metadata;
-                if metadata.is_empty() {
+                let f = if metadata.is_empty() {
                     file_contents_fut
-                        .map(|contents| HgBlob::from(contents.into_bytes()))
-                        .boxify()
+                        .map(|contents| contents.into_bytes())
+                        .left_future()
                 } else {
                     file_contents_fut
                         .map(move |contents| {
                             // The copy info and the blob have to be joined together.
                             // TODO (T30456231): avoid the copy
                             metadata.extend_from_slice(contents.into_bytes().as_ref());
-                            HgBlob::from(metadata)
+                            metadata
                         })
-                        .boxify()
-                }
+                        .right_future()
+                };
+
+                let p1 = envelope.p1.map(|p| p.into_nodehash());
+                let p2 = envelope.p2.map(|p| p.into_nodehash());
+                f.and_then(move |content| {
+                    if validate_hash {
+                        let actual = HgFileNodeId::new(calculate_hg_node_id(
+                            &content,
+                            &HgParents::new(p1, p2),
+                        ));
+
+                        if actual != node_id {
+                            return Err(ErrorKind::CorruptHgFileNode {
+                                expected: node_id,
+                                actual,
+                            }
+                            .into());
+                        }
+                    }
+                    Ok(content)
+                })
+                .map(HgBlob::from)
             }
         })
         .from_err()
@@ -223,12 +245,14 @@ impl HgBlobEntry {
     }
 
     fn get_raw_content_inner(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
+        let validate_hash = false;
         match self.ty {
             Type::Tree => fetch_raw_manifest_bytes(ctx, &self.blobstore, self.id.into_nodehash()),
             Type::File(_) => fetch_raw_filenode_bytes(
                 ctx,
                 &self.blobstore,
                 HgFileNodeId::new(self.id.into_nodehash()),
+                validate_hash,
             ),
         }
     }
