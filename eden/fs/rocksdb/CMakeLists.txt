@@ -7,4 +7,5 @@ target_link_libraries(
   eden_rocksdb
   PUBLIC
     RocksDB::rocksdb
+    Folly::folly
 )
