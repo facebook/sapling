@@ -31,10 +31,20 @@
   $ setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
   $ echo >> dir/x
   $ hg commit -m "Modify dir/x"
-# BUG: This push should succeed
   $ hg push --to master
   pushing rev 6b73ab2c9773 to destination ssh://user@dummy/master bookmark master
   searching for changes
-  remote: abort: data/dir/x.i@82cfab960bb0: no match found!
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
+  remote: pushing 1 changeset:
+  remote:     6b73ab2c9773  Modify dir/x
+  updating bookmark master
+  $ hg --cwd ../master log -G -l 1 --stat
+  o  changeset:   1:6b73ab2c9773
+  |  bookmark:    master
+  ~  tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     Modify dir/x
+  
+      dir/x |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
+  

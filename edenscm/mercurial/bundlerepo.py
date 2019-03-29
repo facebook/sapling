@@ -406,6 +406,15 @@ class bundlerepository(localrepo.localrepository):
         self._cgunpacker.manifestheader()
         for delta in self._cgunpacker.deltaiter():
             pass
+
+        # Changegroup v3 supports additional manifest entries that we need to
+        # skip.
+        if self._cgunpacker.version == "03":
+            for chunkdata in iter(self._cgunpacker.filelogheader, {}):
+                # If we get here, there are directory manifests in the changegroup
+                for delta in self._cgunpacker.deltaiter():
+                    pass
+
         self.filestart = self._cgunpacker.tell()
 
     @localrepo.unfilteredpropertycache
