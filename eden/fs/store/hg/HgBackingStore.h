@@ -122,7 +122,7 @@ class HgBackingStore : public BackingStore {
   /** Returns true if we should use mononoke for a fetch */
   bool useMononoke() const;
 
-#ifdef EDEN_HAVE_CURL
+#if defined(EDEN_HAVE_CURL) && EDEN_HAVE_HG_TREEMANIFEST
   /**
    * Initialize the mononoke_ with MononokeCurlBackingStore, that is available
    * on macOS

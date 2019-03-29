@@ -428,7 +428,7 @@ void HgBackingStore::initializeThriftMononokeBackingStore(
 }
 #endif
 
-#ifdef EDEN_HAVE_CURL
+#if defined(EDEN_HAVE_CURL) && EDEN_HAVE_HG_TREEMANIFEST
 void HgBackingStore::initializeCurlMononokeBackingStore(
     const ImporterOptions& options) {
   auto edenConfig = config_->getEdenConfig();
