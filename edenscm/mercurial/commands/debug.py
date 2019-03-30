@@ -3078,13 +3078,22 @@ def debugdrawdag(ui, repo, **opts):
         ("s", "spinner", False, _("use a progress spinner")),
         ("n", "nototal", False, _("don't include the total")),
         ("b", "bytes", False, _("use a bytes format function")),
+        ("", "sleep", 0, _("milliseconds to sleep for each tick")),
+        ("", "nested", False, _("use nested progress bars")),
         ("", "with-output", False, _("also print output every 10%")),
     ],
     _("NUMBER"),
     norepo=True,
 )
 def debugprogress(
-    ui, number, spinner=False, nototal=False, bytes=False, with_output=False
+    ui,
+    number,
+    spinner=False,
+    nototal=False,
+    bytes=False,
+    with_output=False,
+    sleep=0,
+    nested=False,
 ):
     """
     Initiate a progress bar and increment the progress NUMBER times.
@@ -3094,6 +3103,7 @@ def debugprogress(
     """
     num = int(number)
     _spinning = _("spinning")
+    sleep = (sleep or 0) / 1000.0
 
     formatfunc = util.bytecount if bytes else None
 
@@ -3107,17 +3117,35 @@ def debugprogress(
     if spinner:
         with progress.spinner(ui, _spinning):
             for i in xrange(num):
+                if nested:
+                    with progress.spinner(ui, _("nested spinning")):
+                        pass
+                if sleep:
+                    time.sleep(sleep)
                 if outputfreq and i % outputfreq == 0:
                     ui.write(("processed %d items") % i)
     elif nototal:
         with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
             for i in xrange(num):
+                if nested:
+                    with progress.bar(ui, _spinning, formatfunc=formatfunc):
+                        pass
+                if sleep:
+                    time.sleep(sleep)
                 p.value = (i, "item %s" % i)
                 if outputfreq and i % outputfreq == 0:
                     ui.write(("processed %d items") % i)
     else:
         with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
             for i in xrange(num):
+                if nested:
+                    with progress.bar(
+                        ui, _spinning, total=5, formatfunc=formatfunc
+                    ) as p2:
+                        for j in xrange(5):
+                            p2.value = (j, "item %s" % j)
+                if sleep:
+                    time.sleep(sleep)
                 p.value = (i, "item %s" % i)
                 if outputfreq and i % outputfreq == 0:
                     ui.write(("processed %d items\n") % i)
