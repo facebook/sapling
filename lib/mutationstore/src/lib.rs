@@ -198,40 +198,40 @@ const INDEX_SPLIT: usize = 2;
 
 impl MutationStore {
     pub fn open(path: impl AsRef<Path>) -> Fallible<MutationStore> {
-        let node_len = Node::len();
-        let succ_start = 1usize;
-        let pred_count_start = succ_start + node_len;
-        let succ_index = move |_data: &[u8]| {
+        const NODE_LEN: usize = Node::len();
+        const SUCC_START: usize = 1usize;
+        const PRED_COUNT_START: usize = SUCC_START + NODE_LEN;
+        let succ_index = |_data: &[u8]| {
             vec![IndexOutput::Reference(
-                succ_start as u64..pred_count_start as u64,
+                SUCC_START as u64..PRED_COUNT_START as u64,
             )]
         };
-        let pred_index = move |data: &[u8]| {
+        let pred_index = |data: &[u8]| {
             let (pred_count, pred_start) = data
-                .read_vlq_at(pred_count_start)
-                .map(|(pred_count, vlq_size)| (pred_count, pred_count_start + vlq_size))
+                .read_vlq_at(PRED_COUNT_START)
+                .map(|(pred_count, vlq_size)| (pred_count, PRED_COUNT_START + vlq_size))
                 .unwrap_or((0, 0));
             (0..pred_count)
-                .map(|i| pred_start + node_len * i)
-                .map(|i: usize| IndexOutput::Reference(i as u64..i as u64 + node_len as u64))
+                .map(|i| pred_start + NODE_LEN * i)
+                .map(|i: usize| IndexOutput::Reference(i as u64..i as u64 + NODE_LEN as u64))
                 .collect()
         };
-        let split_index = move |data: &[u8]| {
+        let split_index = |data: &[u8]| {
             let (split_count, split_start) = data
-                .read_vlq_at(pred_count_start)
+                .read_vlq_at(PRED_COUNT_START)
                 .and_then(|(pred_count, vlq1_size): (usize, usize)| {
-                    data.read_vlq_at(pred_count_start + vlq1_size + node_len * pred_count)
+                    data.read_vlq_at(PRED_COUNT_START + vlq1_size + NODE_LEN * pred_count)
                         .map(|(split_count, vlq2_size)| {
                             (
                                 split_count,
-                                pred_count_start + vlq1_size + node_len * pred_count + vlq2_size,
+                                PRED_COUNT_START + vlq1_size + NODE_LEN * pred_count + vlq2_size,
                             )
                         })
                 })
                 .unwrap_or((0, 0));
             (0..split_count)
-                .map(|i| split_start + node_len * i)
-                .map(|i: usize| IndexOutput::Reference(i as u64..i as u64 + node_len as u64))
+                .map(|i| split_start + NODE_LEN * i)
+                .map(|i: usize| IndexOutput::Reference(i as u64..i as u64 + NODE_LEN as u64))
                 .collect()
         };
         // Allow some lag to make the indexing more efficient.  Set to 10KB, which is roughly

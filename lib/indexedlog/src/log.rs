@@ -90,6 +90,7 @@ pub struct Log {
 
 /// Definition of an index. It includes: name, function to extract index keys,
 /// and how much the index can lag on disk.
+#[derive(Clone)]
 pub struct IndexDef {
     /// Function to extract index keys from an entry.
     ///
@@ -109,7 +110,7 @@ pub struct IndexDef {
     /// This function gets the commit metadata as input. It then parses the
     /// input, and extract parent commit hashes as the output. A git commit can
     /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
-    func: Box<Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync>,
+    func: fn(&[u8]) -> Vec<IndexOutput>,
 
     /// Name of the index.
     ///
@@ -783,12 +784,9 @@ impl IndexDef {
     ///
     /// When adding new or changing index functions, make sure a different
     /// `name` is used so the existing index won't be reused incorrectly.
-    pub fn new(
-        name: &'static str,
-        index_func: impl Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static,
-    ) -> Self {
+    pub fn new(name: &'static str, index_func: fn(&[u8]) -> Vec<IndexOutput>) -> Self {
         Self {
-            func: Box::new(index_func),
+            func: index_func,
             name,
             // For a typical commit hash index (20-byte). IndexedLog insertion
             // overhead is about 1500 entries per millisecond. Allow about 3ms
