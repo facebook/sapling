@@ -450,7 +450,9 @@ class engine(object):
             self._recalculatedisplay(now)
             global suspend
             suspend = self._lockclear
-            self._cond.notify_all()
+            # Do not redraw when registering a nested bar
+            if len(self._bars) <= 1:
+                self._cond.notify_all()
 
     def unregister(self, bar):
         with self.lock():
@@ -469,7 +471,9 @@ class engine(object):
                 if not self._bars:
                     global suspend
                     suspend = util.nullcontextmanager
-                self._cond.notify_all()
+                # Do not redraw when unregistering a nested bar
+                if len(self._bars) < 1:
+                    self._cond.notify_all()
             bar._enginerenderer = None
 
     def _activate(self, ui):
