@@ -496,6 +496,7 @@ def debugwaitonprefetch(repo):
 
 def debughttp(ui, repo, **opts):
     """Perform a health check of the API server."""
+    edenapi.bailifdisabled(ui)
     try:
         repo.edenapi.health_check()
         ui.write(_("successfully connected to: %s\n") % edenapi.getbaseurl(ui))
@@ -504,6 +505,7 @@ def debughttp(ui, repo, **opts):
 
 
 def debuggetfiles(ui, repo, **opts):
+    edenapi.bailifdisabled(ui)
     input = (line.split() for line in sys.stdin.readlines())
     keys = [(path, node) for node, path in input]
     packpath = repo.edenapi.get_files(keys)
@@ -511,6 +513,7 @@ def debuggetfiles(ui, repo, **opts):
 
 
 def debuggethistory(ui, repo, **opts):
+    edenapi.bailifdisabled(ui)
     input = (line.split() for line in sys.stdin.readlines())
     keys = [(path, node) for node, path in input]
     depth = opts.get("depth") or None

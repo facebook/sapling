@@ -12,6 +12,17 @@ from edenscm.mercurial.rust.bindings import edenapi
 from . import shallowutil
 
 
+def enabled(ui):
+    """Check whether HTTP data fetching is enabled."""
+    return ui.configbool("edenapi", "enabled")
+
+
+def bailifdisabled(ui):
+    """Abort if HTTP data fetching is disabled."""
+    if not enabled(ui):
+        raise error.Abort(_("HTTP data fetching is disabled"))
+
+
 def getbaseurl(ui):
     """Get the base URL of the API server."""
     url = ui.config("edenapi", "url")

@@ -423,7 +423,7 @@ def setupclient(ui, repo):
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
 
-    if ui.configbool("edenapi", "enabled"):
+    if edenapi.enabled(ui):
         repo.edenapi = edenapi.initclient(ui, repo)
 
 
