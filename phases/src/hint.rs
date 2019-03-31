@@ -15,9 +15,10 @@ use errors::*;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
-use reachabilityindex::ReachabilityIndex;
+use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier};
 use skiplist::SkiplistIndex;
 use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 use std::sync::Arc;
 use Phase;
 
@@ -44,21 +45,44 @@ impl PhasesReachabilityHint {
         if bookmarks_cs_ids.contains(&cs_id) {
             return future::ok(Phase::Public).boxify();
         }
+
         let mut vecf = Vec::new();
         for public_cs in bookmarks_cs_ids.iter() {
-            cloned!(ctx, self.index, changeset_fetcher);
-            vecf.push(index.query_reachability(ctx, changeset_fetcher, public_cs.clone(), cs_id));
+            cloned!(ctx, changeset_fetcher);
+            vecf.push(
+                changeset_fetcher
+                    .get_generation_number(ctx, public_cs.clone())
+                    .map({
+                        cloned!(public_cs);
+                        move |gen_num| (public_cs, gen_num)
+                    }),
+            );
         }
+
+        let cs_and_gen_num = changeset_fetcher
+            .get_generation_number(ctx.clone(), cs_id.clone())
+            .map({
+                cloned!(cs_id);
+                move |gen_num| (cs_id, gen_num)
+            });
+
+        cloned!(self.index);
         stream::futures_unordered(vecf)
-            .skip_while(|&x| future::ok(!x))
-            .take(1)
             .collect()
-            .map(|vec| {
-                if vec.is_empty() {
-                    Phase::Draft
-                } else {
-                    Phase::Public
-                }
+            .join(cs_and_gen_num)
+            .and_then(move |(heads_and_gen_nums, (cs_id, gen_num))| {
+                let nf = NodeFrontier::from_iter(heads_and_gen_nums);
+                index
+                    .lca_hint(ctx.clone(), changeset_fetcher, nf, gen_num)
+                    .map(move |moved_node_frontier| {
+                        if let Some(cs_ids_for_gen_num) = moved_node_frontier.get(&gen_num) {
+                            if cs_ids_for_gen_num.contains(&cs_id) {
+                                return Phase::Public;
+                            }
+                        }
+
+                        Phase::Draft
+                    })
             })
             .boxify()
     }
