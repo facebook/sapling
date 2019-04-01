@@ -674,3 +674,28 @@ repository.
   $ getglobalrev 'm5004'
   abort: unknown revision 'm5004'!
   
+
+
+- Test that the lookup works as expected when the configuration
+`globalrevs.fastlookup` is true.
+
+  $ cd ../client
+  $ setconfig globalrevs.fastlookup=True
+
+  $ testlookup
+
+  $ getglobalrev 'globalrev(4999)'
+  
+
+  $ getglobalrev 'globalrev(-1)'
+  
+
+  $ hg updateglobalrevmeta
+
+  $ testlookup
+
+  $ getglobalrev 'globalrev(4999)'
+  
+
+  $ getglobalrev 'globalrev(-1)'
+  

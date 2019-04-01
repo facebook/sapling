@@ -54,6 +54,10 @@ template.
     # revision number.
     svnrevinteroperation = False
 
+    # If this configuration is true, we use a cached mapping from `globalrev ->
+    # hash` to enable fast lookup of commits based on the globalrev. This
+    # mapping can be built using the `updateglobalrevmeta` command.
+    fastlookup = False
 """
 from __future__ import absolute_import
 
@@ -79,6 +83,7 @@ from .pushrebase import isnonpushrebaseblocked
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
+configitem("globalrevs", "fastlookup", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
@@ -335,6 +340,12 @@ def _lookupglobalrev(repo, grev):
     def matchglobalrev(rev):
         commitglobalrev = changelogrevision(rev).extra.get(EXTRASGLOBALREVKEY)
         return commitglobalrev is not None and int(commitglobalrev) == grev
+
+    if repo.ui.configbool("globalrevs", "fastlookup"):
+        globalrevmap = _globalrevmap(repo)
+        hgnode = globalrevmap.gethgnode(str(grev))
+        if hgnode:
+            return [hgnode]
 
     matchedrevs = []
     for rev in repo.revs("reverse(all())"):
