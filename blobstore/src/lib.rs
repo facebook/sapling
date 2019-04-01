@@ -17,7 +17,7 @@ use std::sync::Arc;
 use crate::failure::Error;
 use asyncmemo::Weight;
 use bytes::Bytes;
-use futures::{future, Future};
+use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
 use context::CoreContext;
@@ -27,6 +27,9 @@ pub use crate::counted_blobstore::CountedBlobstore;
 
 mod errors;
 pub use crate::errors::ErrorKind;
+
+mod disabled;
+pub use crate::disabled::DisabledBlob;
 
 /// A type representing bytes written to or read from a blobstore. The goal here is to ensure
 /// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
