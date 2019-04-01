@@ -301,7 +301,7 @@ RocksDbLocalStore::getBatch(
             .via(&ioPool_)
             .thenValue(
                 [this, keySpace, keys = std::move(batch)](folly::Unit&&) {
-                  XLOG(INFO) << __func__ << " starting to actually do work";
+                  XLOG(DBG3) << __func__ << " starting to actually do work";
                   std::vector<Slice> keySlices;
                   std::vector<std::string> values;
                   std::vector<rocksdb::ColumnFamilyHandle*> columns;
