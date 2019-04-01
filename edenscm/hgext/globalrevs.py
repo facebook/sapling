@@ -88,6 +88,8 @@ namespacepredicate = registrar.namespacepredicate()
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
+EXTRASGLOBALREVKEY = "global_rev"
+
 
 @templatekeyword("globalrev")
 def globalrevkw(repo, ctx, **kwargs):
@@ -95,7 +97,7 @@ def globalrevkw(repo, ctx, **kwargs):
 
 
 def _globalrevkw(repo, ctx, **kwargs):
-    grev = ctx.extra().get("global_rev")
+    grev = ctx.extra().get(EXTRASGLOBALREVKEY)
     # If the revision number associated with the commit is before the supported
     # starting revision, nothing to do.
     if grev is not None and repo.ui.configint("globalrevs", "startrev") <= int(grev):
@@ -186,7 +188,7 @@ def _sqllocalrepowrapper(orig, repo):
         def commitctx(self, ctx, error=False):
             # Assign global revs automatically
             extra = dict(ctx.extra())
-            extra["global_rev"] = self.nextrevisionnumber()
+            extra[EXTRASGLOBALREVKEY] = self.nextrevisionnumber()
             ctx.extra = lambda: extra
             return super(globalrevsrepo, self).commitctx(ctx, error)
 
@@ -301,7 +303,7 @@ def _lookupglobalrev(repo, grev):
     tonode = cl.node
 
     def matchglobalrev(rev):
-        commitglobalrev = changelogrevision(rev).extra.get("global_rev")
+        commitglobalrev = changelogrevision(rev).extra.get(EXTRASGLOBALREVKEY)
         return commitglobalrev is not None and int(commitglobalrev) == grev
 
     matchedrevs = []
