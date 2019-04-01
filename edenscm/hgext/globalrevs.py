@@ -61,6 +61,8 @@ template.
 """
 from __future__ import absolute_import
 
+import struct
+
 from edenscm.mercurial import (
     error,
     extensions,
@@ -304,6 +306,11 @@ def _lookuprev(svnrevlookupfunc, globalrevlookupfunc, repo, rev):
     return lookupfunc(repo, rev)
 
 
+_u64lestruct = struct.Struct("<Q")
+_bin2u64le = _u64lestruct.unpack
+_u64le2bin = _u64lestruct.pack
+
+
 class _globalrevmap(object):
     def __init__(self, repo):
         self.map = nodemapmod.nodemap(repo.sharedvfs.join(MAPFILE))
@@ -311,11 +318,11 @@ class _globalrevmap(object):
 
     @staticmethod
     def _globalrevtonode(grev):
-        return bin(grev.rjust(40, "0"))
+        return _u64le2bin(grev).ljust(20, "\0")
 
     @staticmethod
     def _nodetoglobalrev(grevnode):
-        return str(int(hex(grevnode)))
+        return _bin2u64le(grevnode[:8])
 
     def add(self, grev, hgnode):
         self.map.add(self._globalrevtonode(grev), hgnode)
@@ -403,6 +410,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
                 extra = commitdata.extra
                 grev = extra.get(EXTRASGLOBALREVKEY)
                 if grev:
+                    grev = int(grev)
                     hgnode = clnode(rev)
                     globalrevmap.add(grev, hgnode)
                 else:
@@ -411,6 +419,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
                         # ex. svn:uuid/path@1234
                         svnrev = convertrev.rsplit("@", 1)[-1]
                         if svnrev:
+                            svnrev = int(svnrev)
                             hgnode = clnode(rev)
                             globalrevmap.add(svnrev, hgnode)
                 prog.value += 1
