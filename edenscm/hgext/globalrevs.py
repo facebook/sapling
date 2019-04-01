@@ -97,7 +97,9 @@ revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
 EXTRASGLOBALREVKEY = "global_rev"
-MAPFILE = "globalrev-indexed-log"
+EXTRACONVERTKEY = "convert_revision"
+MAPFILE = "globalrev-nodemap"
+LASTREVFILE = "globalrev-nodemap/last-rev"
 
 
 @templatekeyword("globalrev")
@@ -304,6 +306,7 @@ def _lookuprev(svnrevlookupfunc, globalrevlookupfunc, repo, rev):
 class _globalrevmap(object):
     def __init__(self, repo):
         self.map = nodemapmod.nodemap(repo.sharedvfs.join(MAPFILE))
+        self.lastrev = int(repo.sharedvfs.tryread(LASTREVFILE) or "0")
 
     @staticmethod
     def _globalrevtonode(grev):
@@ -323,8 +326,9 @@ class _globalrevmap(object):
         grevnode = self.map.lookupbysecond(hgnode)
         return self._nodetoglobalrev(grevnode) if grevnode is not None else None
 
-    def save(self):
+    def save(self, repo):
         self.map.flush()
+        repo.sharedvfs.write(LASTREVFILE, "%s" % self.lastrev)
 
 
 def _lookupglobalrev(repo, grev):
@@ -385,41 +389,31 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
     """Reads globalrevs from the latest hg commits and adds them to the
     globalrev-hg mapping."""
     with repo.wlock(), repo.lock():
-        clrev = repo.changelog.rev
-        clrevision = repo.changelog.changelogrevision
-        globalrevmap = _globalrevmap(repo)
-        parents = repo.changelog.parents
-        phase = repo._phasecache.phase
-        public = phases.public
-        stack = repo.heads()
-        startrev = repo.ui.configint("globalrevs", "startrev")
+        unfi = repo.unfiltered()
+        clnode = unfi.changelog.node
+        clrevision = unfi.changelog.changelogrevision
+        globalrevmap = _globalrevmap(unfi)
 
-        seen = set(stack)
-        seen.add(nullid)
-        while stack:
-            hgnode = stack.pop()
-            grev = globalrevmap.getglobalrev(hgnode)
+        lastrev = globalrevmap.lastrev
+        repolen = len(unfi)
+        for rev in xrange(lastrev, repolen):
+            commitdata = clrevision(rev)
+            extra = commitdata.extra
+            grev = extra.get(EXTRASGLOBALREVKEY)
+            if grev:
+                hgnode = clnode(rev)
+                globalrevmap.add(grev, hgnode)
+            else:
+                convertrev = extra.get(EXTRACONVERTKEY)
+                if convertrev:
+                    # ex. svn:uuid/path@1234
+                    svnrev = convertrev.rsplit("@", 1)[-1]
+                    if svnrev:
+                        hgnode = clnode(rev)
+                        globalrevmap.add(svnrev, hgnode)
 
-            # If the globalrev is not already known, add it if we can.
-            if grev is None:
-                commitdata = clrevision(hgnode)
-                rawextra = commitdata._rawextra
-                if rawextra and EXTRASGLOBALREVKEY in rawextra:
-                    grev = commitdata.extra.get(EXTRASGLOBALREVKEY)
-
-                    # If there is no globalrev, it may be a local commit. Just
-                    # walk past it.
-                    if grev:
-                        globalrevmap.add(grev, hgnode)
-                        grev = int(grev)
-
-                if grev > startrev or phase(repo, clrev(hgnode)) != public:
-                    for pnode in parents(hgnode):
-                        if pnode not in seen:
-                            seen.add(pnode)
-                            stack.append(pnode)
-
-        globalrevmap.save()
+        globalrevmap.lastrev = repolen
+        globalrevmap.save(unfi)
 
 
 @command("^globalrev", [], _("hg globalrev"))
