@@ -149,6 +149,17 @@ queries! {
          LIMIT 1"
     }
 
+    read SelectBookmarkLogs(repo_id: RepositoryId, name: Bookmark, max_records: u32) -> (
+        Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+    ) {
+        "SELECT to_changeset_id, reason, timestamp
+         FROM bookmarks_update_log
+         WHERE repo_id = {repo_id}
+           AND name = {name}
+         ORDER BY id DESC
+         LIMIT {max_records}"
+      }
+
     read SelectAll(repo_id: RepositoryId) -> (Bookmark, ChangesetId) {
         "SELECT name, changeset_id
          FROM bookmarks
@@ -220,6 +231,19 @@ impl Bookmarks for SqlBookmarks {
         STATS::get_bookmark.add_value(1);
         SelectBookmark::query(&self.read_master_connection, &repo_id, &name)
             .map(|rows| rows.into_iter().next().map(|row| row.0))
+            .boxify()
+    }
+
+    fn list_bookmark_log_entries(
+        &self,
+        _ctx: CoreContext,
+        name: Bookmark,
+        repo_id: RepositoryId,
+        max_rec: u32,
+    ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
+        SelectBookmarkLogs::query(&self.read_master_connection, &repo_id, &name, &max_rec)
+            .map(|rows| stream::iter_ok(rows))
+            .flatten_stream()
             .boxify()
     }
 

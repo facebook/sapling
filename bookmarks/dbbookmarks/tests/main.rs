@@ -1081,3 +1081,98 @@ fn test_read_log_entry_many_repos() {
         .unwrap()
         .is_none());
 }
+
+#[test]
+fn test_list_bookmark_log_entries() {
+    let ctx = CoreContext::test_mock();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
+    let name_1 = create_bookmark("book");
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.force_set(
+        &name_1,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().is_ok());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        TWOS_CSID,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        THREES_CSID,
+        TWOS_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        FOURS_CSID,
+        THREES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        FIVES_CSID,
+        FOURS_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    assert_eq!(
+        bookmarks
+            .list_bookmark_log_entries(ctx.clone(), name_1, REPO_ZERO, 3)
+            .map(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+            .collect()
+            .wait()
+            .unwrap(),
+        vec![
+            (
+                Some(FIVES_CSID),
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                }
+            ),
+            (
+                Some(FOURS_CSID),
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                }
+            ),
+            (
+                Some(THREES_CSID),
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                }
+            ),
+        ]
+    );
+}

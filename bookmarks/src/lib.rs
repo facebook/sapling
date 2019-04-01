@@ -171,6 +171,15 @@ pub trait Bookmarks: Send + Sync + 'static {
         repoid: RepositoryId,
     ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error>;
 
+    /// Read the log entry for specific bookmark with specified to changeset id.
+    fn list_bookmark_log_entries(
+        &self,
+        _ctx: CoreContext,
+        name: Bookmark,
+        repo_id: RepositoryId,
+        max_rec: u32,
+    ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>;
+
     /// Count the number of BookmarkUpdateLog entries wiht id greater than the give value
     fn count_further_bookmark_log_entries(
         &self,

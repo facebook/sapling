@@ -5,18 +5,22 @@
 // GNU General Public License version 2 or any later version.
 
 use clap::{App, Arg, ArgMatches, SubCommand};
+use cloned::cloned;
+use context::CoreContext;
 use failure_ext::Error;
-use futures::{future, Future};
+use futures::{future, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use mercurial_types::HgChangesetId;
+use mononoke_types::{DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkUpdateReason};
-use context::CoreContext;
 
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
+const LOG_CMD: &'static str = "log";
 
 pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     let set = SubCommand::with_name(SET_CMD)
@@ -47,20 +51,48 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("What changeset type to return, either bonsai or hg. Defaults to hg."),
         );
 
+    let log = SubCommand::with_name(LOG_CMD)
+        .about("gets the log of changesets for a specific bookmark")
+        .args_from_usage(
+            r#"
+            <BOOKMARK_NAME>        'bookmark to target'
+            --json                 'if provided json will be returned'
+            "#,
+        )
+        .arg(
+            Arg::with_name("changeset-type")
+                .long("changeset-type")
+                .short("cs")
+                .takes_value(true)
+                .possible_values(&["bonsai", "hg"])
+                .required(false)
+                .help("What changeset type to return, either bonsai or hg. Defaults to hg."),
+        )
+        .arg(
+            Arg::with_name("limit")
+                .long("limit")
+                .short("l")
+                .takes_value(true)
+                .required(false)
+                .help("Imposes the limit on number of log records in output."),
+        );
+
     app.about("set of commands to manipulate bookmarks")
         .subcommand(set)
         .subcommand(get)
+        .subcommand(log)
 }
 
 pub fn handle_command<'a>(
     ctx: CoreContext,
     repo: BoxFuture<BlobRepo, Error>,
     matches: &ArgMatches<'a>,
-    logger: Logger,
+    _logger: Logger,
 ) -> BoxFuture<(), Error> {
     match matches.subcommand() {
-        (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, logger, repo),
-        (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, logger, repo),
+        (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, repo),
+        (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, repo),
+        (LOG_CMD, Some(sub_m)) => handle_log(sub_m, ctx, repo),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -83,7 +115,6 @@ fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) ->
 fn handle_get<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    _logger: Logger,
     repo: BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
@@ -119,10 +150,117 @@ fn handle_get<'a>(
     }
 }
 
+fn format_log_output(
+    json_flag: bool,
+    changeset_id: String,
+    reason: BookmarkUpdateReason,
+    timestamp: Timestamp,
+    changeset_type: &str,
+) -> String {
+    let reason_str = reason.to_string();
+    if json_flag {
+        let answer = json!({
+            "changeset_type": changeset_type,
+            "changeset_id": changeset_id,
+            "reason": reason_str,
+            "timestamp_sec": timestamp.timestamp_seconds()
+        });
+        to_string_pretty(&answer).unwrap()
+    } else {
+        let dt: DateTime = timestamp.into();
+        let dts = dt.as_chrono().format("%b %e %T %Y");
+        format!(
+            "({}) {} {} {}",
+            changeset_type.to_uppercase(),
+            changeset_id,
+            reason,
+            dts
+        )
+    }
+}
+
+fn list_hg_bookmark_log_entries(
+    repo: BlobRepo,
+    ctx: CoreContext,
+    name: Bookmark,
+    max_rec: u32,
+) -> impl Stream<
+    Item = BoxFuture<(Option<HgChangesetId>, BookmarkUpdateReason, Timestamp), Error>,
+    Error = Error,
+> {
+    repo.list_bookmark_log_entries(ctx.clone(), name, max_rec)
+        .map({
+            cloned!(ctx, repo);
+            move |(cs_id, rs, ts)| match cs_id {
+                Some(x) => repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), x)
+                    .map(move |cs| (Some(cs), rs, ts))
+                    .boxify(),
+                None => future::ok((None, rs, ts)).boxify(),
+            }
+        })
+}
+
+fn handle_log<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    repo: BoxFuture<BlobRepo, Error>,
+) -> BoxFuture<(), Error> {
+    let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
+    let bookmark = Bookmark::new(bookmark_name).unwrap();
+    let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
+    let json_flag = args.is_present("json");
+    let output_limit_as_string = args.value_of("limit").unwrap_or("25");
+    let max_rec = match output_limit_as_string.parse::<u32>() {
+        Ok(n) => n,
+        Err(e) => panic!(
+            "Bad limit value supplied: \"{}\" - {}",
+            output_limit_as_string, e
+        ),
+    };
+    match changeset_type {
+        "hg" => repo
+            .and_then(move |repo| {
+                list_hg_bookmark_log_entries(repo, ctx, bookmark, max_rec)
+                    .buffered(100)
+                    .map(move |rows| {
+                        let (cs_id, reason, timestamp) = rows;
+                        let cs_id_str = match cs_id {
+                            None => String::new(),
+                            Some(x) => x.to_string(),
+                        };
+                        let output =
+                            format_log_output(json_flag, cs_id_str, reason, timestamp, "hg");
+                        println!("{}", output);
+                    })
+                    .for_each(|_x| Ok(()))
+            })
+            .boxify(),
+
+        "bonsai" => repo
+            .and_then(move |repo| {
+                repo.list_bookmark_log_entries(ctx, bookmark, max_rec)
+                    .map(move |rows| {
+                        let (cs_id, reason, timestamp) = rows;
+                        let cs_id_str = match cs_id {
+                            None => String::new(),
+                            Some(x) => x.to_string(),
+                        };
+                        let output =
+                            format_log_output(json_flag, cs_id_str, reason, timestamp, "bonsai");
+                        println!("{}", output);
+                    })
+                    .for_each(|_| Ok(()))
+            })
+            .boxify(),
+
+        _ => panic!("Unknown changeset-type supplied"),
+    }
+}
+
 fn handle_set<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    _logger: Logger,
     repo: BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();

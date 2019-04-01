@@ -21,7 +21,7 @@ use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
-use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
+use bookmarks::{self, Bookmark, BookmarkPrefix, BookmarkUpdateReason, Bookmarks};
 use bytes::Bytes;
 use cacheblob::MemWritesBlobstore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
@@ -43,7 +43,7 @@ use mercurial_types::{
 use mononoke_types::{
     hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
     ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
-    RepositoryId,
+    RepositoryId, Timestamp,
 };
 use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -630,6 +630,17 @@ impl BlobRepo {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks.get(ctx, name, self.repoid)
+    }
+
+    pub fn list_bookmark_log_entries(
+        &self,
+        ctx: CoreContext,
+        name: Bookmark,
+        max_rec: u32,
+    ) -> impl Stream<Item=(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error=Error> {
+        self.bookmarks
+            .list_bookmark_log_entries(ctx.clone(), name, self.repoid, max_rec)
+
     }
 
     /// Heads maybe read from replica, so they may be out of date. Prefer to use this method
