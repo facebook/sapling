@@ -122,11 +122,6 @@ def _globalrevkwwrapper(orig, repo, ctx, **kwargs):
     return orig(repo, ctx, **kwargs) or svnrevkw(repo=repo, ctx=ctx, **kwargs)
 
 
-cls = localrepo.localrepository
-for reqs in ["_basesupported", "supportedformats"]:
-    getattr(cls, reqs).add("globalrevs")
-
-
 def _newreporequirementswrapper(orig, repo):
     reqs = orig(repo)
     if repo.ui.configbool("format", "useglobalrevs"):
@@ -167,6 +162,10 @@ def uisetup(ui):
     # extension if that is not the case.
     if not ui.configbool("globalrevs", "readonly") and not ishgsqlbypassed(ui):
         extensions.afterloaded("hgsql", _hgsqlwrapper)
+
+    cls = localrepo.localrepository
+    for reqs in ["_basesupported", "supportedformats"]:
+        getattr(cls, reqs).add("globalrevs")
 
 
 def reposetup(ui, repo):
