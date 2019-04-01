@@ -7,7 +7,7 @@ use std::fmt;
 
 extern crate boxfnonce;
 pub extern crate failure;
-extern crate failure_derive;
+pub extern crate failure_derive;
 extern crate futures;
 extern crate slog;
 
