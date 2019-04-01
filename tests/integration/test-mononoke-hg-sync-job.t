@@ -140,10 +140,13 @@ Sync with incorrect timestamps, make sure replay fails
 
   $ cat >>$TESTTMP/replayverification.py <<EOF
   > import os, sys
-  > expected_book = os.environ["HG_EXPECTED_ONTOBOOK"]
-  > expected_head = os.environ["HG_EXPECTED_REBASEDHEAD"]
-  > actual_book = os.environ["HG_KEY"]
-  > actual_head = os.environ["HG_NEW"]
+  > expected_book = os.environ.get("HG_EXPECTED_ONTOBOOK")
+  > expected_head = os.environ.get("HG_EXPECTED_REBASEDHEAD")
+  > actual_book = os.environ.get("HG_KEY")
+  > actual_head = os.environ.get("HG_NEW")
+  > if expected_book is None and expected_head is None:
+  >     print "[ReplayVerification] Not blocking a non-replay push"
+  >     sys.exit(0)
   > if expected_book == actual_book and expected_head == actual_head:
   >     print "[ReplayVerification] Everything seems in order"
   >     sys.exit(0)
@@ -151,10 +154,21 @@ Sync with incorrect timestamps, make sure replay fails
   > sys.exit(1)
   > EOF
 
+  $ cat >> $TESTTMP/repo_lock.py << EOF
+  > def run(*args, **kwargs):
+  >     """Repo is locked for everything except replays
+  >     In-process style hook."""
+  >     if kwargs.get("EXPECTED_ONTOBOOK"):
+  >         return 0
+  >     print "[RepoLock] Repo locked for non-unbundlereplay pushes"
+  >     return 1
+  > EOF
+
   $ cd repo-hg-2
   $ cat >>.hg/hgrc <<CONFIG
   > [hooks]
   > prepushkey = python "$TESTTMP/replayverification.py"
+  > prepushkey.lock = python:$TESTTMP/repo_lock.py:run
   > CONFIG
   $ hg log -r master_bookmark
   changeset:   1:add0c792bfce
@@ -290,3 +304,20 @@ Continue replay
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     symlink
   
+Verify that repo-hg-2 is locked for normal pushes
+  $ cd $TESTTMP/client-push
+  $ hg up 0 -q
+  $ echo >> ababagalamaga && hg ci -qAm ababagalamaga
+  $ hg push -r . --to master_bookmark ssh://user@dummy/repo-hg-2
+  pushing rev 24e27c11427d to destination ssh://user@dummy/repo-hg-2 bookmark master_bookmark
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     24e27c11427d  ababagalamaga
+  remote: 1 new changeset from the server will be downloaded
+  remote: [ReplayVerification] Not blocking a non-replay push
+  remote: [RepoLock] Repo locked for non-unbundlereplay pushes
+  remote: pushkey-abort: prepushkey.lock hook failed
+  remote: transaction abort!
+  remote: rollback completed
+  abort: updating bookmark master_bookmark failed!
+  [255]
