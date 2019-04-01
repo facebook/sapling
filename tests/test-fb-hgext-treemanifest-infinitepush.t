@@ -110,6 +110,7 @@ Pull a non-tree scratch branch into a normal client
   (run 'hg update' to get a working copy)
   $ hg log -r tip -vp
   changeset:   2:6a9819ced061
+  bookmark:    scratch/nontree
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -204,6 +205,7 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   (run 'hg update' to get a working copy)
   $ hg log -G
   o  changeset:   2:5a7a7de8a420
+  |  bookmark:    scratch/foo
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -229,8 +231,8 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   drwxrwxr-x         packs
   -rw-r--r--      43 phaseroots
   -rw-r--r--       0 requires
-  -rw-r--r--      18 undo
-  -rw-r--r--       2 undo.backupfiles
+  -rw-r--r--       0 undo
+  -rw-r--r--      21 undo.backupfiles
   -rw-r--r--      43 undo.phaseroots
 
 Pull just part of a normal scratch branch (this causes rebundling on the server)

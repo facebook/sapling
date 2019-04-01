@@ -23,11 +23,8 @@ scratchmutationparttype = "b2x:infinitepushmutation"
 
 
 def getscratchbranchparts(
-    repo, peer, outgoing, confignonforwardmove, ui, bookmark, create
+    repo, peer, outgoing, confignonforwardmove, ui, bookmark, create, bookmarknode=None
 ):
-    if not outgoing.missing:
-        raise error.Abort(_("no commits to push"))
-
     if scratchbranchparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_("no server support for %r") % scratchbranchparttype)
 
@@ -45,6 +42,8 @@ def getscratchbranchparts(
     params["cgversion"] = cgversion
     if bookmark:
         params["bookmark"] = bookmark
+        if bookmarknode:
+            params["bookmarknode"] = bookmarknode
         if create:
             params["create"] = "1"
     if confignonforwardmove:
@@ -100,7 +99,7 @@ def getscratchbookmarkspart(peer, bookmarks):
 
 def _validaterevset(repo, revset, bookmark):
     """Abort if the revs to be pushed aren't valid for a scratch branch."""
-    if not repo.revs(revset):
+    if not bookmark and not repo.revs(revset):
         raise error.Abort(_("nothing to push"))
     if bookmark:
         # Allow bundle with many heads only if no bookmark is specified

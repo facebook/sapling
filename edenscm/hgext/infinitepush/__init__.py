@@ -136,6 +136,7 @@ from edenscm.mercurial import (
     peer,
     phases,
     pushkey,
+    scmutil,
     ui as uimod,
     util,
     visibility,
@@ -159,6 +160,7 @@ encodelist = wireproto.encodelist
 future = peer.future
 hex = nodemod.hex
 _ = i18n._
+_n = i18n._n
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
 unwrapfunction = extensions.unwrapfunction
@@ -167,6 +169,7 @@ repository = hg.repository
 pushrebaseparttype = "b2x:rebase"
 experimental = "experimental"
 configbookmark = "server-bundlestore-bookmark"
+configbookmarknode = "server-bundlestore-bookmarknode"
 configcreate = "server-bundlestore-create"
 configscratchpush = "infinitepush-scratchpush"
 confignonforwardmove = "non-forward-move"
@@ -991,13 +994,17 @@ def _dopull(orig, ui, repo, source="default", **opts):
     scratchbookmarks = {}
     unfi = repo.unfiltered()
     unknownnodes = []
+    pullbookmarks = opts.get("bookmark") or []
     for rev in opts.get("rev", []):
-        if rev not in unfi:
+        if _scratchbranchmatcher(rev):
+            # rev is a scratch bookmark, treat it as a bookmark
+            pullbookmarks.append(rev)
+        elif rev not in unfi:
             unknownnodes.append(rev)
-    if opts.get("bookmark"):
+    if pullbookmarks:
         bookmarks = []
         revs = opts.get("rev") or []
-        for bookmark in opts.get("bookmark"):
+        for bookmark in pullbookmarks:
             if _scratchbranchmatcher(bookmark):
                 # rev is not known yet
                 # it will be fetched with listkeyspatterns next
@@ -1016,7 +1023,7 @@ def _dopull(orig, ui, repo, source="default", **opts):
                 scratchbookmarks[bookmark] = fetchedbookmarks[bookmark]
                 revs.append(fetchedbookmarks[bookmark])
         opts["bookmark"] = bookmarks
-        opts["rev"] = revs
+        opts["rev"] = [rev for rev in revs if rev not in scratchbookmarks]
 
     # Pulling revisions that were filtered results in a error.
     # Let's revive them.
@@ -1125,6 +1132,28 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
     with ui.configoverride(overrides, "infinitepush"):
         scratchpush = opts.get("bundle_store")
         if _scratchbranchmatcher(bookmark):
+            # We are pushing to a scratch bookmark.  Check that there is
+            # exactly one revision that is being pushed (this will be the
+            # new bookmarked node).
+            revs = opts.get("rev")
+            if revs:
+                revs = [repo[r] for r in scmutil.revrange(repo, revs)]
+            else:
+                revs = [repo["."]]
+            if len(revs) != 1:
+                msg = _("--to requires exactly one commit to push")
+                hint = _("use --rev HASH or omit --rev for current commit (.)")
+                raise error.Abort(msg, hint=hint)
+
+            # Put the bookmarked node hash in the bundle to avoid ambiguity.
+            ui.setconfig(experimental, configbookmarknode, revs[0].hex())
+
+            # If the bookmark destination is a public commit, then there will
+            # be nothing to push.  We still need to send a changegroup part
+            # to update the bookmark, so send the null rev instead.
+            if not revs[0].mutable():
+                opts["rev"] = ["null"]
+
             # Hack to fix interaction with remotenames. Remotenames push
             # '--to' bookmark to the server but we don't want to push scratch
             # bookmark to the server. Let's delete '--to' and '--create' and
@@ -1234,6 +1263,7 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
 @exchange.b2partsgenerator(scratchbranchparttype)
 def partgen(pushop, bundler):
     bookmark = pushop.ui.config(experimental, configbookmark)
+    bookmarknode = pushop.ui.config(experimental, configbookmarknode)
     create = pushop.ui.configbool(experimental, configcreate)
     scratchpush = pushop.ui.configbool(experimental, configscratchpush)
     if "changesets" in pushop.stepsdone or not scratchpush:
@@ -1244,7 +1274,7 @@ def partgen(pushop, bundler):
 
     pushop.stepsdone.add("changesets")
     pushop.stepsdone.add("treepack")
-    if not pushop.outgoing.missing:
+    if not bookmark and not pushop.outgoing.missing:
         pushop.ui.status(_("no changes found\n"))
         pushop.cgresult = 0
         return
@@ -1265,6 +1295,7 @@ def partgen(pushop, bundler):
         pushop.ui,
         bookmark,
         create,
+        bookmarknode,
     )
 
     for scratchpart in scratchparts:
@@ -1487,8 +1518,9 @@ def storebundle(op, params, bundlefile):
         revs = _getrevs(bundle, oldnode, force, bookmark)
 
         # Notify the user of what is being pushed
-        plural = "s" if len(revs) > 1 else ""
-        op.repo.ui.warn(_("pushing %s commit%s:\n") % (len(revs), plural))
+        op.repo.ui.warn(
+            _n("pushing %s commit:\n", "pushing %s commits:\n", len(revs)) % len(revs)
+        )
         maxoutput = 10
         for i in range(0, min(len(revs), maxoutput)):
             firstline = bundle[revs[i]].description().split("\n")[0][:50]
@@ -1505,11 +1537,14 @@ def storebundle(op, params, bundlefile):
             newheadscount = sum(not inindex(rev) for rev in bundleheads)
         else:
             newheadscount = 0
-        # If there's a bookmark specified, there should be only one head,
-        # so we choose the last node, which will be that head.
+        # If there's a bookmark specified, the bookmarked node should also be
+        # provided.  Older clients may omit this, in which case there should be
+        # only one head, so we choose the last node, which will be that head.
         # If a bug or malicious client allows there to be a bookmark
         # with multiple heads, we will place the bookmark on the last head.
-        bookmarknode = nodesctx[-1].hex() if nodesctx else None
+        bookmarknode = params.get(
+            "bookmarknode", nodesctx[-1].hex() if nodesctx else None
+        )
         key = None
         if newheadscount:
             with open(bundlefile, "r") as f:
@@ -1529,7 +1564,7 @@ def storebundle(op, params, bundlefile):
         with logservicecall(log, "index", newheadscount=newheadscount), index:
             if key:
                 index.addbundle(key, nodesctx)
-            if bookmark:
+            if bookmark and bookmarknode:
                 index.addbookmark(bookmark, bookmarknode)
         log(
             scratchbranchparttype,
@@ -1755,6 +1790,7 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
                 ui=ui,
                 bookmark=None,
                 create=False,
+                bookmarknode=None,
             )
             for part in parts:
                 bundler.addpart(part)
