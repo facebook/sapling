@@ -42,6 +42,7 @@ enum State {
     Init,
     Push,
     Pop,
+    Next,
     Done,
 }
 
@@ -59,7 +60,7 @@ impl<'a, S> Cursor<'a, S> {
 
     /// Returns `false` until [`step()`] returns [`Step::End`] and return `true` afterwards.
     pub fn finished(&self) -> bool {
-        return self.state == State::Done;
+        self.state == State::Done
     }
 
     /// Returns the [`RepoPath`] for the link that the [`Cursor`] is currently visiting.
@@ -79,8 +80,19 @@ impl<'a, S> Cursor<'a, S> {
     /// Will skip all the subtrees under the current [`Link`]. Assuming that the current link is a
     /// directory then this will skip the entire contents (including `evaluation`).
     pub fn skip_subtree(&mut self) {
-        if self.state != State::Done {
-            self.state = State::Pop;
+        match self.state {
+            State::Init => {
+                self.state = State::Next;
+            }
+            State::Push => {
+                self.state = State::Pop;
+            }
+            State::Pop => (),
+            State::Next => {
+                // We don't have any scenario this would be reached.
+                panic!("Calling skip_subtree on cursor is not implemented for State::Next");
+            }
+            State::Done => (),
         }
     }
 }
@@ -92,13 +104,16 @@ impl<'a, S: Store> Cursor<'a, S> {
     /// infinite loops, when an error is returned from [`step()`], the cursor is transitioned to
     /// State::Done.
     pub fn step(&mut self) -> Step {
-        // There are two important states phases to this code: State::Push and State::Pop.
+        // There are two important states phases to this code: State::Push and State::Next.
         // The Push phase is related to the lazy nature of our durable link. We want to evaluate
         // the children of Links as late as possible. We keep track of the last Link that
-        // we visited and push the iterator over the children of that link into our stack.
-        // The Pop phase involves calling next on the iterators of the stack until we get a link.
+        // we visited and push the iterator over the children of that link into our stack. The
+        // nuances of this code are related to the separate `push` and `pop` operations on
+        // `stack` and `path`.
+        // The Next phase involves calling next on the iterators of the stack until we get a link.
         // Step::Init is also related to the lazy nature of the DurableEntry. The first time
         // we call `step()`, it should "visit" the initial values for path and link.
+        // Step::Pop manages removing elements from the path.
         // Step::Done means that there are no more links to step over.
         loop {
             match self.state {
@@ -109,7 +124,10 @@ impl<'a, S: Store> Cursor<'a, S> {
                 State::Push => {
                     match self.link {
                         // Directories will insert an iterator over their elements in the stack.
-                        Link::Ephemeral(links) => self.stack.push(links.iter()),
+                        Link::Ephemeral(links) => {
+                            self.stack.push(links.iter());
+                            self.state = State::Next;
+                        }
                         Link::Durable(durable_entry) => {
                             match durable_entry.get_links(self.store, &self.path) {
                                 Err(err) => {
@@ -118,16 +136,20 @@ impl<'a, S: Store> Cursor<'a, S> {
                                 }
                                 Ok(links) => self.stack.push(links.iter()),
                             }
+                            self.state = State::Next;
                         }
                         Link::Leaf(_) => {
-                            // Remove the component that we added when this link was added to the
-                            // stack.
-                            self.path.pop();
+                            self.state = State::Pop;
                         }
                     };
-                    self.state = State::Pop;
                 }
                 State::Pop => {
+                    // There are no subtree elements that are going to be explored so the current
+                    // path element should be removed.
+                    self.path.pop();
+                    self.state = State::Next;
+                }
+                State::Next => {
                     match self.stack.last_mut() {
                         // We did not find any iterator with items on the stack.
                         // No more links to iterate over.
@@ -139,8 +161,8 @@ impl<'a, S: Store> Cursor<'a, S> {
                             match last.next() {
                                 None => {
                                     // No more elements in this iterator. Remove it from the stack.
-                                    self.path.pop();
                                     self.stack.pop();
+                                    self.state = State::Pop;
                                 }
                                 Some((component, link)) => {
                                     // Found an element. Updating the cursor to point to it.

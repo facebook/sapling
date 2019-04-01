@@ -580,6 +580,53 @@ mod tests {
     }
 
     #[test]
+    fn test_cursor_skip_on_root() {
+        let tree = Tree::ephemeral(TestStore::new());
+        let mut cursor = tree.root_cursor();
+        cursor.skip_subtree();
+        match cursor.step() {
+            Step::Success => panic!("should have reached the end of the tree"),
+            Step::End => (), // success
+            Step::Err(error) => panic!(error),
+        }
+    }
+    #[test]
+    fn test_cursor_skip() {
+        fn step<'a, S: Store>(cursor: &mut Cursor<'a, S>) {
+            match cursor.step() {
+                Step::Success => (),
+                Step::End => panic!("reached the end too soon"),
+                Step::Err(error) => panic!(error),
+            }
+        }
+        let mut tree = Tree::ephemeral(TestStore::new());
+        tree.insert(repo_path_buf("a1"), meta(10)).unwrap();
+        tree.insert(repo_path_buf("a2/b2"), meta(20)).unwrap();
+        tree.insert(repo_path_buf("a3"), meta(30)).unwrap();
+
+        let mut cursor = tree.root_cursor();
+        step(&mut cursor);
+        assert_eq!(cursor.path(), RepoPath::from_str("").unwrap());
+        step(&mut cursor);
+        assert_eq!(cursor.path(), RepoPath::from_str("a1").unwrap());
+        // Skip leaf
+        cursor.skip_subtree();
+        step(&mut cursor);
+        assert_eq!(cursor.path(), RepoPath::from_str("a2").unwrap());
+        // Skip directory
+        cursor.skip_subtree();
+        step(&mut cursor);
+        assert_eq!(cursor.path(), RepoPath::from_str("a3").unwrap());
+        // Skip on the element before State::End
+        cursor.skip_subtree();
+        match cursor.step() {
+            Step::Success => panic!("should have reached the end of the tree"),
+            Step::End => (), // success
+            Step::Err(error) => panic!(error),
+        }
+    }
+
+    #[test]
     fn test_files_empty() {
         let tree = Tree::ephemeral(TestStore::new());
         assert!(tree.files().next().is_none());
