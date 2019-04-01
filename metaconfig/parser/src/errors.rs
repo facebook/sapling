@@ -6,7 +6,8 @@
 
 //! Definition of errors used in this crate by the error_chain crate
 
-pub use failure::{Error, Result};
+use failure_ext::failure_derive::Fail;
+pub use failure_ext::{Error, Result};
 
 /// Types of errors we can raise
 #[derive(Debug, Fail)]

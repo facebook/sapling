@@ -7,9 +7,19 @@
 //! Contains structures describing configuration of the entire repo. Those structures are
 //! deserialized from TOML files from metaconfig repo
 
+use serde_derive::Deserialize;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, Read},
+    num::NonZeroUsize,
+    path::{Path, PathBuf},
+    str,
+};
+
+use crate::errors::*;
 use bookmarks::Bookmark;
-use errors::*;
-use failure::ResultExt;
+use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
     GlusterArgs, HookBypass, HookConfig, HookManagerParams, HookParams, HookType, LfsParams,
@@ -17,12 +27,6 @@ use metaconfig_types::{
     RepoReadOnly, RepoType,
 };
 use regex::Regex;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::num::NonZeroUsize;
-use std::path::{Path, PathBuf};
-use std::str;
 use toml;
 
 /// Configuration of a metaconfig repository
@@ -43,7 +47,9 @@ impl RepoConfigs {
     pub fn read_configs<P: AsRef<Path>>(config_path: P) -> Result<Self> {
         let repos_dir = config_path.as_ref().join("repos");
         if !repos_dir.is_dir() {
-            return Err(ErrorKind::InvalidFileStructure("expected 'repos' directory".into()).into());
+            return Err(
+                ErrorKind::InvalidFileStructure("expected 'repos' directory".into()).into(),
+            );
         }
         let mut repo_configs = HashMap::new();
         for entry in repos_dir.read_dir()? {
@@ -532,6 +538,7 @@ struct RawBundle2ReplayParams {
 #[cfg(test)]
 mod test {
     use super::*;
+    use maplit::{btreemap, hashmap};
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
 

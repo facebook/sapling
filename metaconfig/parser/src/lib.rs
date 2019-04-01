@@ -10,28 +10,10 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-extern crate bookmarks;
-extern crate bytes;
-extern crate scuba;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-#[macro_use]
-#[cfg(test)]
-extern crate maplit;
-extern crate metaconfig_types;
-extern crate regex;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_regex;
-extern crate sql;
-#[cfg(test)]
-extern crate tempdir;
-extern crate toml;
+use failure_ext as failure;
 
 pub mod errors;
 pub mod repoconfig;
 
-pub use errors::{Error, ErrorKind};
-pub use repoconfig::RepoConfigs;
+pub use crate::errors::{Error, ErrorKind};
+pub use crate::repoconfig::RepoConfigs;
