@@ -67,6 +67,7 @@ from edenscm.mercurial import (
     localrepo,
     namespaces,
     phases,
+    progress,
     registrar,
     revset,
     smartset,
@@ -396,21 +397,23 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
 
         lastrev = globalrevmap.lastrev
         repolen = len(unfi)
-        for rev in xrange(lastrev, repolen):
-            commitdata = clrevision(rev)
-            extra = commitdata.extra
-            grev = extra.get(EXTRASGLOBALREVKEY)
-            if grev:
-                hgnode = clnode(rev)
-                globalrevmap.add(grev, hgnode)
-            else:
-                convertrev = extra.get(EXTRACONVERTKEY)
-                if convertrev:
-                    # ex. svn:uuid/path@1234
-                    svnrev = convertrev.rsplit("@", 1)[-1]
-                    if svnrev:
-                        hgnode = clnode(rev)
-                        globalrevmap.add(svnrev, hgnode)
+        with progress.bar(ui, _("indexing"), _("revs"), repolen - lastrev) as prog:
+            for rev in xrange(lastrev, repolen):
+                commitdata = clrevision(rev)
+                extra = commitdata.extra
+                grev = extra.get(EXTRASGLOBALREVKEY)
+                if grev:
+                    hgnode = clnode(rev)
+                    globalrevmap.add(grev, hgnode)
+                else:
+                    convertrev = extra.get(EXTRACONVERTKEY)
+                    if convertrev:
+                        # ex. svn:uuid/path@1234
+                        svnrev = convertrev.rsplit("@", 1)[-1]
+                        if svnrev:
+                            hgnode = clnode(rev)
+                            globalrevmap.add(svnrev, hgnode)
+                prog.value += 1
 
         globalrevmap.lastrev = repolen
         globalrevmap.save(unfi)
