@@ -138,20 +138,31 @@ Sync a pushrebase bookmark move
 Sync with incorrect timestamps, make sure replay fails
   $ cd $TESTTMP
 
+Use the same code here as in the actual opsfiles hook
   $ cat >>$TESTTMP/replayverification.py <<EOF
-  > import os, sys
-  > expected_book = os.environ.get("HG_EXPECTED_ONTOBOOK")
-  > expected_head = os.environ.get("HG_EXPECTED_REBASEDHEAD")
-  > actual_book = os.environ.get("HG_KEY")
-  > actual_head = os.environ.get("HG_NEW")
-  > if expected_book is None and expected_head is None:
-  >     print "[ReplayVerification] Not blocking a non-replay push"
-  >     sys.exit(0)
-  > if expected_book == actual_book and expected_head == actual_head:
-  >     print "[ReplayVerification] Everything seems in order"
-  >     sys.exit(0)
-  > print "[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)" % (expected_book, expected_head, actual_book, actual_head)
-  > sys.exit(1)
+  > def verify_replay(ui, repo, *args, **kwargs):
+  >     EXP_ONTO = "EXPECTED_ONTOBOOK"
+  >     EXP_HEAD = "EXPECTED_REBASEDHEAD"
+  > 
+  >     expected_book = kwargs.get(EXP_ONTO)
+  >     expected_head = kwargs.get(EXP_HEAD)
+  >     actual_book = kwargs.get("key")
+  >     actual_head = kwargs.get("new")
+  >     allowed_replay_books = ui.configlist("facebook", "hooks.unbundlereplaybooks", [])
+  >     if expected_book is None and expected_head is None:
+  >         # We are allowing non-unbundle-replay pushes to go through
+  >         return 0
+  > 
+  >     if allowed_replay_books and actual_book not in allowed_replay_books:
+  >         ui.warn("[ReplayVerification] only allowed to unbundlereplay on %r\n" % (allowed_replay_books, ))
+  >         return 1
+  > 
+  >     if expected_book == actual_book and expected_head == actual_head:
+  >        ui.note("[ReplayVerification] Everything seems in order\n")
+  >        return 0
+  > 
+  >     ui.warn("[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)\n" % (expected_book, expected_head, actual_book, actual_head))
+  >     return 1
   > EOF
 
   $ cat >> $TESTTMP/repo_lock.py << EOF
@@ -167,8 +178,10 @@ Sync with incorrect timestamps, make sure replay fails
   $ cd repo-hg-2
   $ cat >>.hg/hgrc <<CONFIG
   > [hooks]
-  > prepushkey = python "$TESTTMP/replayverification.py"
+  > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
   > prepushkey.lock = python:$TESTTMP/repo_lock.py:run
+  > [facebook]
+  > hooks.unbundlereplaybooks=other_bookmark
   > CONFIG
   $ hg log -r master_bookmark
   changeset:   1:add0c792bfce
@@ -186,8 +199,27 @@ Sync with incorrect timestamps, make sure replay fails
   * sync failed for #2 (glob)
   * caused by: hg command failed: stdout: '', stderr: 'remote: pushing 1 changeset: (glob)
   remote:     1e43292ffbb3  pushcommit
+  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
+  remote: pushkey-abort: prepushkey hook failed
+  remote: transaction abort!
+  remote: rollback completed
+  error:pushkey
+  '
+Oops, we allowed a wrong bookmark to be unbundlereplayed onto
+  $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
+  > [facebook]
+  > hooks.unbundlereplaybooks=master_bookmark,blabla
+  > CONFIG
+
+Now bookmark is not blocked
+  $ mononoke_hg_sync repo-hg-2 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #2 ... (glob)
+  * sync failed for #2 (glob)
+  * caused by: hg command failed: stdout: '', stderr: 'remote: pushing 1 changeset: (glob)
+  remote:     1e43292ffbb3  pushcommit
   remote: [ReplayVerification] Expected: (master_bookmark, 1e43292ffbb38fa183e7f21fb8e8a8450e61c890). Actual: (master_bookmark, acc06228d802cbe9e2a6740c0abacf017f3be65c)
-  remote: pushkey-abort: prepushkey hook exited with status 1
+  remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
   error:pushkey
@@ -314,7 +346,6 @@ Verify that repo-hg-2 is locked for normal pushes
   remote: pushing 1 changeset:
   remote:     24e27c11427d  ababagalamaga
   remote: 1 new changeset from the server will be downloaded
-  remote: [ReplayVerification] Not blocking a non-replay push
   remote: [RepoLock] Repo locked for non-unbundlereplay pushes
   remote: pushkey-abort: prepushkey.lock hook failed
   remote: transaction abort!
