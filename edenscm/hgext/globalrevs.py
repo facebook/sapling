@@ -62,11 +62,14 @@ from edenscm.mercurial import (
     extensions,
     localrepo,
     namespaces,
+    phases,
     registrar,
     revset,
     smartset,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid
+from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .hgsubversion import svnrevkw, util as svnutil
@@ -89,6 +92,7 @@ revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
 EXTRASGLOBALREVKEY = "global_rev"
+MAPFILE = "globalrev-indexed-log"
 
 
 @templatekeyword("globalrev")
@@ -292,6 +296,32 @@ def _lookuprev(svnrevlookupfunc, globalrevlookupfunc, repo, rev):
     return lookupfunc(repo, rev)
 
 
+class _globalrevmap(object):
+    def __init__(self, repo):
+        self.map = nodemapmod.nodemap(repo.sharedvfs.join(MAPFILE))
+
+    @staticmethod
+    def _globalrevtonode(grev):
+        return bin(grev.rjust(40, "0"))
+
+    @staticmethod
+    def _nodetoglobalrev(grevnode):
+        return str(int(hex(grevnode)))
+
+    def add(self, grev, hgnode):
+        self.map.add(self._globalrevtonode(grev), hgnode)
+
+    def gethgnode(self, grev):
+        return self.map.lookupbyfirst(self._globalrevtonode(grev))
+
+    def getglobalrev(self, hgnode):
+        grevnode = self.map.lookupbysecond(hgnode)
+        return self._nodetoglobalrev(grevnode) if grevnode is not None else None
+
+    def save(self):
+        self.map.flush()
+
+
 def _lookupglobalrev(repo, grev):
     # If the revision number being looked up is before the supported starting
     # global revision, nothing to do.
@@ -337,6 +367,48 @@ def _revsetglobalrev(repo, subset, x):
     )
 
     return subset & smartset.baseset(_lookupglobalrev(repo, globalrev))
+
+
+@command("^updateglobalrevmeta", [], _("hg updateglobalrevmeta"))
+def updateglobalrevmeta(ui, repo, *args, **opts):
+    """Reads globalrevs from the latest hg commits and adds them to the
+    globalrev-hg mapping."""
+    with repo.wlock(), repo.lock():
+        clrev = repo.changelog.rev
+        clrevision = repo.changelog.changelogrevision
+        globalrevmap = _globalrevmap(repo)
+        parents = repo.changelog.parents
+        phase = repo._phasecache.phase
+        public = phases.public
+        stack = repo.heads()
+        startrev = repo.ui.configint("globalrevs", "startrev")
+
+        seen = set(stack)
+        seen.add(nullid)
+        while stack:
+            hgnode = stack.pop()
+            grev = globalrevmap.getglobalrev(hgnode)
+
+            # If the globalrev is not already known, add it if we can.
+            if grev is None:
+                commitdata = clrevision(hgnode)
+                rawextra = commitdata._rawextra
+                if rawextra and EXTRASGLOBALREVKEY in rawextra:
+                    grev = commitdata.extra.get(EXTRASGLOBALREVKEY)
+
+                    # If there is no globalrev, it may be a local commit. Just
+                    # walk past it.
+                    if grev:
+                        globalrevmap.add(grev, hgnode)
+                        grev = int(grev)
+
+                if grev > startrev or phase(repo, clrev(hgnode)) != public:
+                    for pnode in parents(hgnode):
+                        if pnode not in seen:
+                            seen.add(pnode)
+                            stack.append(pnode)
+
+        globalrevmap.save()
 
 
 @command("^globalrev", [], _("hg globalrev"))
