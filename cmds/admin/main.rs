@@ -185,7 +185,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(
             SubCommand::with_name(HG_SYNC_REMAINS)
-                .about("get the value of the last mononoke-hg-sync counter to be processed"),
+                .about("get the value of the last mononoke-hg-sync counter to be processed")
+                .arg(
+                    Arg::with_name("quiet")
+                        .long("quiet")
+                        .required(false)
+                        .takes_value(false)
+                        .help("only print the number if present"),
+                ),
         );
 
     let app = args::MononokeApp {
@@ -712,7 +719,8 @@ fn process_hg_sync_subcommand<'a>(
                 })
                 .boxify(),
         },
-        (HG_SYNC_REMAINS, Some(_sub_m)) => {
+        (HG_SYNC_REMAINS, Some(sub_m)) => {
+            let quiet = sub_m.is_present("quiet");
             mutable_counters
                 .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
                 .map(|maybe_counter| {
@@ -732,7 +740,11 @@ fn process_hg_sync_subcommand<'a>(
                 .map({
                     cloned!(logger, repo_id);
                     move |remaining| {
-                        info!(logger, "Remaining bundles to replay in {:?}: {}", repo_id, remaining);
+                        if quiet {
+                            println!("{}", remaining);
+                        } else {
+                            info!(logger, "Remaining bundles to replay in {:?}: {}", repo_id, remaining);
+                        }
                     }
                 })
                 .map_err({
