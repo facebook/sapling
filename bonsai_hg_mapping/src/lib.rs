@@ -220,18 +220,6 @@ queries! {
          WHERE repo_id = {repo_id}
            AND hg_cs_id IN {hg_cs_id}"
     }
-
-    read SelectAnyMapping(
-        repo_id: RepositoryId,
-        hg_cs_id: HgChangesetId,
-        bcs_id: ChangesetId,
-    ) -> (HgChangesetId, ChangesetId) {
-        "SELECT hg_cs_id, bcs_id
-         FROM bonsai_hg_mapping
-         WHERE repo_id = {repo_id}
-           AND (hg_cs_id = {hg_cs_id} OR bcs_id = {bcs_id})
-         LIMIT 1"
-    }
 }
 
 impl SqlConstructors for SqlBonsaiHgMapping {
@@ -252,10 +240,44 @@ impl SqlConstructors for SqlBonsaiHgMapping {
     }
 }
 
+impl SqlBonsaiHgMapping {
+    fn verify_consistency(
+        &self,
+        entry: BonsaiHgMappingEntry,
+    ) -> impl Future<Item = (), Error = Error> {
+        let BonsaiHgMappingEntry {
+            repo_id,
+            hg_cs_id,
+            bcs_id,
+        } = entry.clone();
+        cloned!(self.read_master_connection);
+
+        let by_hg = SelectMappingByHg::query(&read_master_connection, &repo_id, &[&hg_cs_id]);
+        let by_bcs = SelectMappingByBonsai::query(&read_master_connection, &repo_id, &[&bcs_id]);
+
+        by_hg
+            .join(by_bcs)
+            .and_then(move |(by_hg_rows, by_bcs_rows)| {
+                match by_hg_rows.into_iter().chain(by_bcs_rows.into_iter()).next() {
+                    Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
+                    Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
+                        BonsaiHgMappingEntry {
+                            repo_id,
+                            hg_cs_id,
+                            bcs_id,
+                        },
+                        entry,
+                    )
+                    .into()),
+                    None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
+                }
+            })
+    }
+}
+
 impl BonsaiHgMapping for SqlBonsaiHgMapping {
     fn add(&self, _ctxt: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
-        cloned!(self.read_master_connection);
 
         let BonsaiHgMappingEntry {
             repo_id,
@@ -263,25 +285,14 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             bcs_id,
         } = entry.clone();
 
+        let this = self.clone();
         InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
             .and_then(move |result| {
                 if result.affected_rows() == 1 {
                     Ok(true).into_future().left_future()
                 } else {
-                    SelectAnyMapping::query(&read_master_connection, &repo_id, &hg_cs_id, &bcs_id)
-                        .and_then(move |rows| match rows.into_iter().next() {
-                            Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(false),
-                            Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
-                                BonsaiHgMappingEntry {
-                                    repo_id,
-                                    hg_cs_id,
-                                    bcs_id,
-                                },
-                                entry,
-                            )
-                            .into()),
-                            None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
-                        })
+                    this.verify_consistency(entry)
+                        .map(|()| false)
                         .right_future()
                 }
             })
