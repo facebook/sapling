@@ -393,6 +393,10 @@ impl HgEntryId {
         HgEntryId(hash)
     }
 
+    pub fn from_manifest_id(manifest: HgManifestId) -> Self {
+        HgEntryId::new(manifest.into_nodehash())
+    }
+
     #[inline]
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()

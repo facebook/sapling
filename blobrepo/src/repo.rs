@@ -37,8 +37,9 @@ use futures_stats::{FutureStats, Timed};
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
-    Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut, HgFileNodeId,
-    HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath, Type,
+    Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgEntryId, HgFileEnvelopeMut,
+    HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath,
+    Type,
 };
 use mononoke_types::{
     hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
@@ -637,10 +638,10 @@ impl BlobRepo {
         ctx: CoreContext,
         name: Bookmark,
         max_rec: u32,
-    ) -> impl Stream<Item=(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error=Error> {
+    ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
+    {
         self.bookmarks
             .list_bookmark_log_entries(ctx.clone(), name, self.repoid, max_rec)
-
     }
 
     /// Heads maybe read from replica, so they may be out of date. Prefer to use this method
@@ -1175,7 +1176,7 @@ impl BlobRepo {
                                             fullpath,
                                             child_mf_id.clone(),
                                         )
-                                        .map(|content| content.is_some());
+                                        .map(|content_and_node| content_and_node.is_some());
                                     check_futs.push(check_fut);
                                 }
 
@@ -1197,29 +1198,42 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: Option<MPath>,
-        manifest: HgManifestId,
-    ) -> impl Future<Item = Option<Content>, Error = Error> + Send {
+        manifest_id: HgManifestId,
+    ) -> impl Future<Item = Option<(Content, HgEntryId)>, Error = Error> + Send {
         // single fold step, converts path elemnt in content to content, if any
         fn find_content_in_content(
             ctx: CoreContext,
-            content: BoxFuture<Option<Content>, Error>,
+            content: BoxFuture<Option<(Content, HgEntryId)>, Error>,
             path_element: MPathElement,
-        ) -> BoxFuture<Option<Content>, Error> {
+        ) -> BoxFuture<Option<(Content, HgEntryId)>, Error> {
             content
-                .and_then(move |content| match content {
+                .and_then(move |content_and_node| match content_and_node {
                     None => future::ok(None).left_future(),
-                    Some(Content::Tree(manifest)) => match manifest.lookup(&path_element) {
+                    Some((Content::Tree(manifest), _)) => match manifest.lookup(&path_element) {
                         None => future::ok(None).left_future(),
-                        Some(entry) => entry.get_content(ctx).map(Some).right_future(),
+                        Some(entry) => {
+                            let hash = entry.get_hash();
+                            entry
+                                .get_content(ctx)
+                                .map(move |content| (content, hash))
+                                .map(Some)
+                                .right_future()
+                        }
                     },
                     Some(_) => future::ok(None).left_future(),
                 })
                 .boxify()
         }
 
-        self.get_manifest_by_nodeid(ctx.clone(), manifest)
+        self.get_manifest_by_nodeid(ctx.clone(), manifest_id)
             .and_then(move |manifest| {
-                let content_init = future::ok(Some(Content::Tree(manifest))).boxify();
+                let content_init = {
+                    future::ok(Some((
+                        Content::Tree(manifest),
+                        HgEntryId::from_manifest_id(manifest_id),
+                    )))
+                    .boxify()
+                };
                 match path {
                     None => content_init,
                     Some(path) => {
@@ -1241,9 +1255,10 @@ impl BlobRepo {
         let (dirname, basename) = path.split_dirname();
         self.find_path_in_manifest(ctx, dirname, manifest).map({
             let basename = basename.clone();
-            move |content| match content {
+            move |content_and_node| {
+                match content_and_node {
                 None => None,
-                Some(Content::Tree(manifest)) => match manifest.lookup(&basename) {
+                Some((Content::Tree(manifest), _)) => match manifest.lookup(&basename) {
                     None => None,
                     Some(entry) => {
                         if let Type::File(t) = entry.get_type() {
@@ -1254,6 +1269,7 @@ impl BlobRepo {
                     }
                 },
                 Some(_) => None,
+            }
             }
         })
     }

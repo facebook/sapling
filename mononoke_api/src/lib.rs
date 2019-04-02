@@ -37,6 +37,7 @@ pub fn get_content_by_path(
             content.ok_or_else(move || {
                 ErrorKind::NotFound(path.map(|p| p.to_string()).unwrap_or("/".to_string())).into()
             })
+            .map(|(content, _)| content)
         })
 }
 
