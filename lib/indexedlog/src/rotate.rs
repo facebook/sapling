@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! Rotation support for a set of [Log]s.
+//! Rotation support for a set of [`Log`]s.
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use bytes::Bytes;
@@ -15,10 +15,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use utils::open_dir;
 
-/// A collection of [Log]s that get rotated or deleted automatically when they
+/// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
 ///
-/// Writes go to the active [Log]. Reads scan through all [Log]s.
+/// Writes go to the active [`Log`]. Reads scan through all [`Log`]s.
 pub struct LogRotate {
     dir: PathBuf,
     open_options: OpenOptions,
@@ -32,7 +32,7 @@ pub struct LogRotate {
 
 const LATEST_FILE: &str = "latest";
 
-/// Options used to configure how a [LogRotate] is opened.
+/// Options used to configure how a [`LogRotate`] is opened.
 pub struct OpenOptions {
     max_bytes_per_log: u64,
     max_log_count: u64,
@@ -58,14 +58,14 @@ impl OpenOptions {
         }
     }
 
-    /// Set the maximum [Log] count.
+    /// Set the maximum [`Log`] count.
     pub fn max_log_count(mut self, count: u64) -> Self {
         assert!(count >= 1);
         self.max_log_count = count;
         self
     }
 
-    /// Set the maximum bytes per [Log].
+    /// Set the maximum bytes per [`Log`].
     pub fn max_bytes_per_log(mut self, bytes: u64) -> Self {
         assert!(bytes > 0);
         self.max_bytes_per_log = bytes;
@@ -80,7 +80,7 @@ impl OpenOptions {
         self
     }
 
-    /// Set whether create the [LogRotate] structure if it does not exist.
+    /// Set whether create the [`LogRotate`] structure if it does not exist.
     pub fn create(mut self, create: bool) -> Self {
         self.log_open_options = self.log_open_options.create(create);
         self
@@ -88,13 +88,13 @@ impl OpenOptions {
 
     /// Set the index definitions.
     ///
-    /// See [IndexDef] for details.
+    /// See [`IndexDef`] for details.
     pub fn index_defs(mut self, index_defs: Vec<IndexDef>) -> Self {
         self.log_open_options = self.log_open_options.index_defs(index_defs);
         self
     }
 
-    /// Open [LogRotate] at given location.
+    /// Open [`LogRotate`] at given location.
     pub fn open(self, dir: impl AsRef<Path>) -> io::Result<LogRotate> {
         let dir = dir.as_ref();
 
@@ -125,13 +125,13 @@ impl OpenOptions {
 }
 
 impl LogRotate {
-    /// Append data to the writable [Log].
+    /// Append data to the writable [`Log`].
     pub fn append(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
         self.writable_log().append(data)
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
-    /// `index_defs` stored in [OpenOptions].
+    /// `index_defs` stored in [`OpenOptions`].
     pub fn lookup(
         &self,
         index_id: usize,
@@ -150,7 +150,7 @@ impl LogRotate {
 
     /// Write in-memory entries to disk.
     ///
-    /// Return the index of the latest [Log].
+    /// Return the index of the latest [`Log`].
     pub fn flush(&mut self) -> io::Result<u64> {
         let mut lock_file = open_dir(&self.dir)?;
         let _lock = ScopedFileLock::new(&mut lock_file, true)?;
@@ -221,13 +221,13 @@ impl LogRotate {
     // store file contents chained with deltas. It might be desirable to make
     // sure the delta parent is within a same log. That can be done by using
     // writable_log().lookup to check the delta parent candidate.
-    /// Get the writable [Log].
+    /// Get the writable [`Log`].
     pub fn writable_log(&mut self) -> &mut Log {
         &mut self.logs[0]
     }
 }
 
-/// Iterator over [LogRotate] entries selected by an index lookup.
+/// Iterator over [`LogRotate`] entries selected by an index lookup.
 pub struct LogRotateLookupIter<'a> {
     inner_iter: log::LogLookupIter<'a>,
     end: bool,

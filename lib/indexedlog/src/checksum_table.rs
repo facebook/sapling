@@ -5,7 +5,7 @@
 
 //! Integrity check support for `index`.
 //!
-//! See [ChecksumTable] for details.
+//! See [`ChecksumTable`] for details.
 
 // Format details:
 //
@@ -39,13 +39,13 @@ use utils::{mmap_readonly, xxhash};
 /// The table is backed by a file on disk, and can be updated incrementally
 /// for append-only files.
 ///
-/// To use [ChecksumTable], make sure:
+/// To use [`ChecksumTable`], make sure:
 /// - Before reading, call [ChecksumTable::check_range] to verify a range.
-/// - After appending to the source of truth, call [ChecksumTable::update].
+/// - After appending to the source of truth, call [`ChecksumTable::update`].
 ///
-/// [ChecksumTable] is only designed to support append-only files efficiently.
+/// [`ChecksumTable`] is only designed to support append-only files efficiently.
 /// However, it could also be used for non-append-only files in a less efficient
-/// way by always using [ChecksumTable::clear] to reset the existing table
+/// way by always using [`ChecksumTable::clear`] to reset the existing table
 /// before updating.
 pub struct ChecksumTable {
     // The file to be checked. Maintain a separate mmap buffer so
@@ -132,7 +132,7 @@ impl ChecksumTable {
         }
     }
 
-    /// Construct [ChecksumTable] for checking the given path.
+    /// Construct [`ChecksumTable`] for checking the given path.
     ///
     /// The checksum table uses a separate file name: `path + ".sum"`. If
     /// that file exists, load the table from it. Otherwise, the table
@@ -295,7 +295,7 @@ impl ChecksumTable {
     /// Reset the table as if it's recreated from an empty file. Do not write to
     /// disk immediately.
     ///
-    /// Usually this is followed by [ChecksumTable::update].
+    /// Usually this is followed by [`ChecksumTable::update`].
     pub fn clear(&mut self) {
         self.end = 0;
         self.checksums = vec![];

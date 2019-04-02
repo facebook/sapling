@@ -5,8 +5,8 @@
 
 //! Append-only storage with indexes and integrity checks.
 //!
-//! See [Log] for the main structure. This module also provides surrounding
-//! types needed to construct the [Log], including [IndexDef] and some
+//! See [`Log`] for the main structure. This module also provides surrounding
+//! types needed to construct the [`Log`], including [`IndexDef`] and some
 //! iterators.
 
 // Detailed file formats:
@@ -59,7 +59,7 @@ const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 
 /// An append-only storage with indexes and integrity checks.
 ///
-/// The [Log] is backed by a directory in the filesystem. The
+/// The [`Log`] is backed by a directory in the filesystem. The
 /// directory includes:
 ///
 /// - An append-only "log" file. It can be seen as a serialization
@@ -94,22 +94,22 @@ pub struct Log {
 pub struct IndexDef {
     /// Function to extract index keys from an entry.
     ///
-    /// The input is bytes of an entry (ex. the data passed to [Log::append]).
+    /// The input is bytes of an entry (ex. the data passed to [`Log::append`]).
     /// The output is an array of index keys. An entry can have zero or more
     /// than one index keys for a same index.
     ///
     /// The output can be an allocated slice of bytes, or a reference to offsets
-    /// in the input. See [IndexOutput] for details.
+    /// in the input. See [`IndexOutput`] for details.
     ///
     /// The function should be pure and fast. i.e. It should not use inputs
     /// from other things, like the network, filesystem, or an external random
     /// generator.
     ///
-    /// For example, if the [Log] is to store git commits, and the index is to
+    /// For example, if the [`Log`] is to store git commits, and the index is to
     /// help finding child commits given parent commit hashes as index keys.
     /// This function gets the commit metadata as input. It then parses the
     /// input, and extract parent commit hashes as the output. A git commit can
-    /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
+    /// have 0 or 1 or 2 or even more parents. Therefore the output is a [`Vec`].
     func: fn(&[u8]) -> Vec<IndexOutput>,
 
     /// Name of the index.
@@ -121,15 +121,15 @@ pub struct IndexDef {
     /// `name` is used so the existing index won't be reused incorrectly.
     name: &'static str,
 
-    /// How many bytes (as counted in the file backing [Log]) could be left not
+    /// How many bytes (as counted in the file backing [`Log`]) could be left not
     /// indexed on-disk.
     ///
-    /// This is related to [Index] implementation detail. Since it's append-only
+    /// This is related to [`Index`] implementation detail. Since it's append-only
     /// and needs to write `O(log N)` data for updating a single entry. Allowing
     /// lagged indexes reduces writes and saves disk space.
     ///
     /// The lagged part of the index will be built on-demand in-memory by
-    /// [Log::open].
+    /// [`Log::open`].
     ///
     /// Practically, this correlates to how fast `func` is.
     lag_threshold: u64,
@@ -171,14 +171,14 @@ pub enum ChecksumType {
     Xxhash32,
 }
 
-/// Iterator over all entries in a [Log].
+/// Iterator over all entries in a [`Log`].
 pub struct LogIter<'a> {
     next_offset: u64,
     errored: bool,
     log: &'a Log,
 }
 
-/// Iterator over [Log] entries selected by an index lookup.
+/// Iterator over [`Log`] entries selected by an index lookup.
 ///
 /// It is a wrapper around [index::LeafValueIter].
 pub struct LogLookupIter<'a> {
@@ -187,7 +187,7 @@ pub struct LogLookupIter<'a> {
     log: &'a Log,
 }
 
-/// Iterator over keys and [LogLookupIter], filtered by an index prefix.
+/// Iterator over keys and [`LogLookupIter`], filtered by an index prefix.
 ///
 /// It is a wrapper around [index::PrefixIter].
 pub struct LogPrefixIter<'a> {
@@ -197,7 +197,7 @@ pub struct LogPrefixIter<'a> {
     index: &'a Index,
 }
 
-/// Metadata about index names, logical [Log] and [Index] file lengths.
+/// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
 /// Used internally.
 #[derive(PartialEq, Eq, Debug)]
 struct LogMetadata {
@@ -208,7 +208,7 @@ struct LogMetadata {
     indexes: BTreeMap<String, u64>,
 }
 
-/// Options used to configured how an [Log] is opened.
+/// Options used to configured how an [`Log`] is opened.
 #[derive(Clone)]
 pub struct OpenOptions {
     index_defs: Vec<IndexDef>,
@@ -223,12 +223,12 @@ pub struct OpenOptions {
 //   easier to verify correctness - just make sure `flush` is properly handled (ex. by locking).
 
 impl Log {
-    /// Construct [Log] at given directory. Incrementally build up specified
+    /// Construct [`Log`] at given directory. Incrementally build up specified
     /// indexes.
     ///
-    /// Create the [Log] if it does not exist.
+    /// Create the [`Log`] if it does not exist.
     ///
-    /// See [OpenOptions::open] for details.
+    /// See [`OpenOptions::open`] for details.
     pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
         OpenOptions::new()
             .index_defs(index_defs)
@@ -238,10 +238,10 @@ impl Log {
 
     /// Append an entry in-memory. Update related indexes in-memory.
     ///
-    /// The memory part is not shared. Therefore other [Log] instances won't see
+    /// The memory part is not shared. Therefore other [`Log`] instances won't see
     /// the change immediately.
     ///
-    /// To write in-memory entries and indexes to disk, call [Log::flush].
+    /// To write in-memory entries and indexes to disk, call [`Log::flush`].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> io::Result<()> {
         let data = data.as_ref();
 
@@ -314,10 +314,10 @@ impl Log {
     /// update on-disk indexes. These happen in a same critical section,
     /// protected by a lock on the directory.
     ///
-    /// Even if [Log::append] is never called, this function has a side effect
-    /// updating the [Log] to contain latest entries on disk.
+    /// Even if [`Log::append`] is never called, this function has a side effect
+    /// updating the [`Log`] to contain latest entries on disk.
     ///
-    /// Other [Log] instances living in a same process or other processes won't
+    /// Other [`Log`] instances living in a same process or other processes won't
     /// be notified about the change and they can only access the data
     /// "snapshotted" at open time.
     ///
@@ -388,7 +388,7 @@ impl Log {
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
-    /// `index_defs` passed to [Log::open].
+    /// `index_defs` passed to [`Log::open`].
     ///
     /// Return an iterator of `Result<&[u8]>`, in reverse insertion order.
     pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> io::Result<LogLookupIter> {
@@ -409,10 +409,10 @@ impl Log {
     }
 
     /// Look up keys and entries using the given prefix.
-    /// The `index_id` is the index of `index_defs` passed to [Log::open].
+    /// The `index_id` is the index of `index_defs` passed to [`Log::open`].
     ///
     /// Return an iterator that yields `(key, iter)`, where `key` is the full
-    /// key, `iter` is [LogLookupIter] that allows iteration through matched
+    /// key, `iter` is [`LogLookupIter`] that allows iteration through matched
     /// entries.
     pub fn lookup_prefix<K: AsRef<[u8]>>(
         &self,
@@ -433,7 +433,7 @@ impl Log {
     /// The length of the hex string can be odd.
     ///
     /// Return an iterator that yields `(key, iter)`, where `key` is the full
-    /// key, `iter` is [LogLookupIter] that allows iteration through matched
+    /// key, `iter` is [`LogLookupIter`] that allows iteration through matched
     /// entries.
     pub fn lookup_prefix_hex<K: AsRef<[u8]>>(
         &self,
@@ -566,7 +566,7 @@ impl Log {
         Ok(())
     }
 
-    /// Read [LogMetadata] from the given directory. If `create` is `true`,
+    /// Read [`LogMetadata`] from the given directory. If `create` is `true`,
     /// create an empty one on demand.
     ///
     /// The caller should ensure the directory exists and take a lock on it to
@@ -750,22 +750,22 @@ impl IndexDef {
     ///
     /// `index_func` is the function to extract index keys from an entry.
     ///
-    /// The input is bytes of an entry (ex. the data passed to [Log::append]).
+    /// The input is bytes of an entry (ex. the data passed to [`Log::append`]).
     /// The output is an array of index keys. An entry can have zero or more
     /// than one index keys for a same index.
     ///
     /// The output can be an allocated slice of bytes, or a reference to offsets
-    /// in the input. See [IndexOutput] for details.
+    /// in the input. See [`IndexOutput`] for details.
     ///
     /// The function should be pure and fast. i.e. It should not use inputs
     /// from other things, like the network, filesystem, or an external random
     /// generator.
     ///
-    /// For example, if the [Log] is to store git commits, and the index is to
+    /// For example, if the [`Log`] is to store git commits, and the index is to
     /// help finding child commits given parent commit hashes as index keys.
     /// This function gets the commit metadata as input. It then parses the
     /// input, and extract parent commit hashes as the output. A git commit can
-    /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
+    /// have 0 or 1 or 2 or even more parents. Therefore the output is a [`Vec`].
     ///
     /// `name` is the name of the index.
     ///
@@ -785,15 +785,15 @@ impl IndexDef {
         }
     }
 
-    /// Set how many bytes (as counted in the file backing [Log]) could be left
+    /// Set how many bytes (as counted in the file backing [`Log`]) could be left
     /// not indexed on-disk.
     ///
-    /// This is related to [Index] implementation detail. Since it's append-only
+    /// This is related to [`Index`] implementation detail. Since it's append-only
     /// and needs to write `O(log N)` data for updating a single entry. Allowing
     /// lagged indexes reduces writes and saves disk space.
     ///
     /// The lagged part of the index will be built on-demand in-memory by
-    /// [Log::open].
+    /// [`Log::open`].
     ///
     /// Practically, this correlates to how fast `func` is.
     pub fn lag_threshold(self, lag_threshold: u64) -> Self {
@@ -820,16 +820,16 @@ impl OpenOptions {
 
     /// Sets index definitions.
     ///
-    /// See [IndexDef::new] for details.
+    /// See [`IndexDef::new`] for details.
     pub fn index_defs(mut self, index_defs: Vec<IndexDef>) -> Self {
         self.index_defs = index_defs;
         self
     }
 
-    /// Sets the option for whether creating a new [Log] if it does not exist.
+    /// Sets the option for whether creating a new [`Log`] if it does not exist.
     ///
-    /// If set to `true`, [OpenOptions::open] will create the [Log] on demand if
-    /// it does not already exist. If set to `false`, [OpenOptions::open] will
+    /// If set to `true`, [`OpenOptions::open`] will create the [`Log`] on demand if
+    /// it does not already exist. If set to `false`, [`OpenOptions::open`] will
     /// fail if the log does not exist.
     pub fn create(mut self, create: bool) -> Self {
         self.create = create;
@@ -838,20 +838,20 @@ impl OpenOptions {
 
     /// Sets the checksum type.
     ///
-    /// See [ChecksumType] for details.
+    /// See [`ChecksumType`] for details.
     pub fn checksum_type(mut self, checksum_type: ChecksumType) -> Self {
         self.checksum_type = checksum_type;
         self
     }
 
-    /// Construct [Log] at given directory. Incrementally build up specified
+    /// Construct [`Log`] at given directory. Incrementally build up specified
     /// indexes.
     ///
     /// If the directory does not exist and `create` is set to `true`, it will
-    /// be created with essential files populated. After that, an empty [Log]
+    /// be created with essential files populated. After that, an empty [`Log`]
     /// will be returned. Otherwise, `open` will fail.
     ///
-    /// See [IndexDef] for index definitions. Indexes can be added, removed, or
+    /// See [`IndexDef`] for index definitions. Indexes can be added, removed, or
     /// reordered, as long as a same `name` indicates a same index function.
     /// That is, when an index function is changed, the caller is responsible
     /// for changing the index name.
@@ -860,11 +860,11 @@ impl OpenOptions {
     /// properties, this structure is different from some traditional *mutable*
     /// databases backed by the filesystem:
     /// - Data are kind of "snapshotted and frozen" at open time. Mutating
-    ///   files do not affect the view of instantiated [Log]s.
-    /// - Writes are buffered until [Log::flush] is called.
-    /// This maps to traditional "database transaction" concepts: a [Log] is
-    /// always bounded to a transaction. [Log::flush] is like committing the
-    /// transaction. Dropping the [Log] instance is like abandoning a
+    ///   files do not affect the view of instantiated [`Log`]s.
+    /// - Writes are buffered until [`Log::flush`] is called.
+    /// This maps to traditional "database transaction" concepts: a [`Log`] is
+    /// always bounded to a transaction. [`Log::flush`] is like committing the
+    /// transaction. Dropping the [`Log`] instance is like abandoning a
     /// transaction.
     pub fn open(self, dir: impl AsRef<Path>) -> io::Result<Log> {
         let dir = dir.as_ref();

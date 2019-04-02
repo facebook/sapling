@@ -5,7 +5,7 @@
 
 //! Index support for `log`.
 //!
-//! See [Index] for the main structure.
+//! See [`Index`] for the main structure.
 
 // File format:
 //
@@ -182,7 +182,7 @@ struct LeafOffset(Offset);
 
 /// Offset to a linked list entry.
 ///
-/// The entry stores a [u64] integer and optionally, the next [LinkOffset].
+/// The entry stores a [u64] integer and optionally, the next [`LinkOffset`].
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
 pub struct LinkOffset(Offset);
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
@@ -654,7 +654,7 @@ impl<'a> Iterator for LeafValueIter<'a> {
 }
 
 /// Iterator returned by [Index::scan_prefix_base16].
-/// Provide access to full keys and values (as [LinkOffset]), sorted by key.
+/// Provide access to full keys and values (as [`LinkOffset`]), sorted by key.
 pub struct PrefixIter<'a> {
     index: &'a Index,
 
@@ -686,7 +686,7 @@ impl<'a> PrefixIter<'a> {
 impl<'a> Iterator for PrefixIter<'a> {
     type Item = io::Result<(Cow<'a, [u8]>, LinkOffset)>;
 
-    /// Return the next key and corresponding [LinkOffset].
+    /// Return the next key and corresponding [`LinkOffset`].
     fn next(&mut self) -> Option<Self::Item> {
         if self.stack.is_empty() {
             return None;
@@ -1353,7 +1353,7 @@ impl OffsetMap {
 
 /// Insertion-only mapping from `bytes` to a list of [u64]s.
 ///
-/// An [Index] is backed by an append-only file in the filesystem. Internally,
+/// An [`Index`] is backed by an append-only file in the filesystem. Internally,
 /// it uses base16 radix trees for keys and linked list for [u64] values. The
 /// file format was designed to be able to support other types of indexes (ex.
 /// non-radix-trees). Though none of them are implemented.
@@ -1396,11 +1396,11 @@ pub enum InsertKey<'a> {
     Reference((u64, u64)),
 }
 
-/// Options used to configured how an [Index] is opened.
+/// Options used to configured how an [`Index`] is opened.
 ///
 /// Similar to [std::fs::OpenOptions], to use this, first call `new`, then
 /// chain calls to methods to set each option, finally call `open` to get
-/// an [Index] structure.
+/// an [`Index`] structure.
 #[derive(Clone)]
 pub struct OpenOptions {
     checksum_chunk_size: u64,
@@ -1410,7 +1410,7 @@ pub struct OpenOptions {
 }
 
 impl OpenOptions {
-    /// Create [OpenOptions] with default configuration:
+    /// Create [`OpenOptions`] with default configuration:
     /// - no checksum
     /// - no external key buffer
     /// - read root entry from the end of the file
@@ -1457,7 +1457,7 @@ impl OpenOptions {
     /// This is useful for lock-free reads, or accessing to multiple versions of
     /// the index at the same time.
     ///
-    /// To get a valid logical length, check the return value of [Index::flush].
+    /// To get a valid logical length, check the return value of [`Index::flush`].
     pub fn logical_len(&mut self, len: Option<u64>) -> &mut Self {
         self.len = len;
         self
@@ -1475,8 +1475,8 @@ impl OpenOptions {
     /// Open the index file with given options.
     ///
     /// Driven by the "immutable by default" idea, together with append-only
-    /// properties, [OpenOptions::open] returns a "snapshotted" view of the
-    /// index. Changes to the filesystem won't change instantiated [Index]es.
+    /// properties, [`OpenOptions::open`] returns a "snapshotted" view of the
+    /// index. Changes to the filesystem won't change instantiated [`Index`]es.
     pub fn open<P: AsRef<Path>>(&self, path: P) -> io::Result<Index> {
         let open_result = if self.write == Some(false) {
             fs::OpenOptions::new().read(true).open(path.as_ref())
@@ -1559,7 +1559,7 @@ impl OpenOptions {
 }
 
 impl Index {
-    /// Return a cloned [Index].
+    /// Return a cloned [`Index`].
     pub fn clone(&self) -> io::Result<Index> {
         let file = self.file.duplicate()?;
         let mmap = mmap_readonly(&file, Some(self.len))?.0;
@@ -1591,7 +1591,7 @@ impl Index {
     }
 
     /// Set metadata attached to the root node. Will be written at
-    /// [Index::flush] time.
+    /// [`Index::flush`] time.
     pub fn set_meta<B: AsRef<[u8]>>(&mut self, meta: B) {
         self.root.meta = meta.as_ref().to_vec().into_boxed_slice()
     }
@@ -1618,7 +1618,7 @@ impl Index {
     ///
     /// Then key "p" does not exist in Z. This allows some advanced usecases.
     /// On the other hand, if "merging changes" is the desired behavior, the
-    /// caller needs to take another lock, re-instantiate [Index] and re-insert
+    /// caller needs to take another lock, re-instantiate [`Index`] and re-insert
     /// keys.
     pub fn flush(&mut self) -> io::Result<u64> {
         if self.read_only {
@@ -1738,10 +1738,10 @@ impl Index {
         Ok(new_len)
     }
 
-    /// Lookup by `key`. Return [LinkOffset].
+    /// Lookup by `key`. Return [`LinkOffset`].
     ///
     /// To test if the key exists or not, use [Offset::is_null].
-    /// To obtain all values, use [LinkOffset::values].
+    /// To obtain all values, use [`LinkOffset::values`].
     pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> io::Result<LinkOffset> {
         let mut offset: Offset = self.root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
@@ -1779,7 +1779,7 @@ impl Index {
     }
 
     /// Scan entries which match the given prefix in base16 form.
-    /// Return [PrefixIter] which allows accesses to keys and values.
+    /// Return [`PrefixIter`] which allows accesses to keys and values.
     pub fn scan_prefix_base16(
         &self,
         mut base16: impl Iterator<Item = u8>,
@@ -1829,13 +1829,13 @@ impl Index {
     }
 
     /// Scan entries which match the given prefix in base256 form.
-    /// Return [PrefixIter] which allows accesses to keys and values.
+    /// Return [`PrefixIter`] which allows accesses to keys and values.
     pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> io::Result<PrefixIter> {
         self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
     }
 
     /// Scan entries which match the given prefix in hex form.
-    /// Return [PrefixIter] which allows accesses to keys and values.
+    /// Return [`PrefixIter`] which allows accesses to keys and values.
     pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> io::Result<PrefixIter> {
         // Invalid hex chars will be caught by `radix.child`
         let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
@@ -1853,9 +1853,9 @@ impl Index {
     ///
     /// If `link` is None, behave like `insert`. Otherwise, ignore the existing
     /// values `key` mapped to, create a new link entry that chains to the given
-    /// [LinkOffset].
+    /// [`LinkOffset`].
     ///
-    /// `key` could be a reference, or an embedded value. See [InsertKey] for
+    /// `key` could be a reference, or an embedded value. See [`InsertKey`] for
     /// details.
     ///
     /// This is a low-level API.
