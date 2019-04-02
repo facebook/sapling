@@ -1015,7 +1015,9 @@ impl Bundle2Resolver {
                 repo.clone(),
             ));
 
-            p1.join(p2)
+            // DO NOT replace and_then() with join() or futures_ordered()!
+            // It may result in a combinatoral explosion in mergy repos (see D14100259)
+            p1.and_then(|p1| p2.map(|p2| (p1, p2)))
                 .with_context(move |_| format!("While fetching parents for Changeset {}", node))
                 .from_err()
                 .and_then(move |(p1, p2)| {
