@@ -456,6 +456,15 @@ impl Log {
         }
     }
 
+    /// Return an iterator for in-memory entries that haven't been flushed to disk.
+    pub fn iter_dirty(&self) -> LogIter {
+        LogIter {
+            log: self,
+            next_offset: self.meta.primary_len,
+            errored: false,
+        }
+    }
+
     /// Applies the given index function to the entry data and returns the index keys.
     pub fn index_func<'a>(
         &self,
@@ -1168,6 +1177,49 @@ mod tests {
                 .map(|v| v.unwrap().to_vec())
                 .collect::<Vec<Vec<u8>>>(),
             expected,
+        );
+    }
+
+    #[test]
+    fn test_iter_and_iter_dirty() {
+        let dir = TempDir::new("log").unwrap();
+        let log_path = dir.path().join("log");
+        let mut log = Log::open(&log_path, Vec::new()).unwrap();
+
+        log.append(b"2").unwrap();
+        log.append(b"4").unwrap();
+        log.append(b"3").unwrap();
+
+        assert_eq!(
+            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            vec![b"2", b"4", b"3"]
+        );
+        assert_eq!(
+            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            log.iter_dirty().collect::<io::Result<Vec<_>>>().unwrap(),
+        );
+
+        log.flush().unwrap();
+
+        assert!(log
+            .iter_dirty()
+            .collect::<io::Result<Vec<_>>>()
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            vec![b"2", b"4", b"3"]
+        );
+
+        log.append(b"5").unwrap();
+        log.append(b"1").unwrap();
+        assert_eq!(
+            log.iter_dirty().collect::<io::Result<Vec<_>>>().unwrap(),
+            vec![b"5", b"1"]
+        );
+        assert_eq!(
+            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            vec![b"2", b"4", b"3", b"5", b"1"]
         );
     }
 
