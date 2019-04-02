@@ -2295,7 +2295,7 @@ mod tests {
     use std::collections::HashMap;
     use std::fs::File;
     use std::io::prelude::*;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     fn open_opts() -> OpenOptions {
         let mut opts = OpenOptions::new();
@@ -2306,7 +2306,7 @@ mod tests {
 
     #[test]
     fn test_scan_prefix() {
-        let dir = TempDir::new("index").unwrap();
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).unwrap();
         let keys: Vec<&[u8]> = vec![b"01", b"02", b"03", b"031", b"0410", b"042", b"05000"];
         for (i, key) in keys.iter().enumerate() {
@@ -2363,7 +2363,7 @@ mod tests {
 
     #[test]
     fn test_distinct_one_byte_keys() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
         assert_eq!(
             format!("{:?}", index),
@@ -2410,7 +2410,7 @@ mod tests {
 
     #[test]
     fn test_distinct_one_byte_keys_flush() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // 1st flush.
@@ -2462,7 +2462,7 @@ mod tests {
 
     #[test]
     fn test_leaf_split() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // Example 1: two keys are not prefixes of each other
@@ -2543,7 +2543,7 @@ mod tests {
     fn test_leaf_split_flush() {
         // Similar with test_leaf_split, but flush the first key before inserting the second.
         // This triggers some new code paths.
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("1")).expect("open");
 
         // Example 1: two keys are not prefixes of each other
@@ -2656,7 +2656,7 @@ mod tests {
     #[test]
     fn test_external_keys() {
         let buf = Arc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts()
             .key_buf(Some(buf.clone()))
             .open(dir.path().join("a"))
@@ -2690,7 +2690,7 @@ mod tests {
     #[test]
     fn test_inline_leafs() {
         let buf = Arc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts()
             .key_buf(Some(buf.clone()))
             .open(dir.path().join("a"))
@@ -2752,7 +2752,7 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         index.insert(&[], 55).expect("insert");
@@ -2766,7 +2766,7 @@ mod tests {
 
     #[test]
     fn test_open_options_write() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = OpenOptions::new().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12], 77).expect("insert");
         index.flush().expect("flush");
@@ -2785,7 +2785,7 @@ mod tests {
 
     #[test]
     fn test_linked_list_values() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = OpenOptions::new().open(dir.path().join("a")).expect("open");
         let list = vec![11u64, 17, 19, 31];
         for i in list.iter().rev() {
@@ -2823,7 +2823,7 @@ mod tests {
 
     #[test]
     fn test_checksum_bitflip() {
-        let dir = TempDir::new("index").expect("tempdir");
+        let dir = tempdir().unwrap();
 
         // Debug build is much slower than release build. Limit the key length to 1-byte.
         #[cfg(debug_assertions)]
@@ -2897,7 +2897,7 @@ mod tests {
     }
 
     fn test_root_meta() {
-        let dir = TempDir::new("rootmeta").expect("tempdir");
+        let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
         assert!(index.get_meta().is_empty());
         let meta = vec![200; 4000];
@@ -2910,7 +2910,7 @@ mod tests {
 
     quickcheck! {
         fn test_single_value(map: HashMap<Vec<u8>, u64>, flush: bool) -> bool {
-            let dir = TempDir::new("index").expect("tempdir");
+            let dir = tempdir().unwrap();
             let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
             for (key, value) in &map {
@@ -2930,7 +2930,7 @@ mod tests {
         }
 
         fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
-            let dir = TempDir::new("index").expect("tempdir");
+            let dir = tempdir().unwrap();
             let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
             for (key, values) in &map {

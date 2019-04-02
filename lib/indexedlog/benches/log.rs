@@ -6,12 +6,12 @@
 extern crate indexedlog;
 extern crate minibench;
 extern crate rand;
-extern crate tempdir;
+extern crate tempfile;
 
 use indexedlog::log::{self, ChecksumType, IndexDef, IndexOutput, Log};
 use minibench::{bench, elapsed};
 use rand::{ChaChaRng, Rng};
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 const N: usize = 204800;
 
@@ -24,7 +24,7 @@ fn gen_buf(size: usize) -> Vec<u8> {
 
 fn main() {
     bench("log insertion", || {
-        let dir = TempDir::new("log").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), vec![]).unwrap();
         let buf = gen_buf(N * 20);
         elapsed(move || {
@@ -35,7 +35,7 @@ fn main() {
     });
 
     bench("log insertion (no checksum)", || {
-        let dir = TempDir::new("log").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut log = log::OpenOptions::new()
             .create(true)
             .checksum_type(ChecksumType::None)
@@ -50,7 +50,7 @@ fn main() {
     });
 
     bench("log insertion with index", || {
-        let dir = TempDir::new("log").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let index_func = |_data: &[u8]| vec![IndexOutput::Reference(0..20)];
         let index_def = IndexDef::new("i", index_func).lag_threshold(0);
         let mut log = Log::open(dir.path(), vec![index_def]).unwrap();
@@ -63,7 +63,7 @@ fn main() {
     });
 
     bench("log flush", || {
-        let dir = TempDir::new("log").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), vec![]).unwrap();
         let buf = gen_buf(N * 20);
         for i in 0..N {
@@ -75,7 +75,7 @@ fn main() {
     });
 
     bench("log iteration (memory)", || {
-        let dir = TempDir::new("log").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), vec![]).unwrap();
         let buf = gen_buf(N * 20);
         for i in 0..N {
@@ -87,7 +87,7 @@ fn main() {
     });
 
     bench("log iteration (disk)", || {
-        let dir = TempDir::new("log").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), vec![]).unwrap();
         let buf = gen_buf(N * 20);
         for i in 0..N {

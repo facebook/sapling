@@ -1126,11 +1126,11 @@ fn invalid(message: String) -> io::Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     #[test]
     fn test_empty_log() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let log_path = dir.path().join("log");
         let log1 = Log::open(&log_path, Vec::new()).unwrap();
         assert_eq!(log1.iter().count(), 0);
@@ -1140,7 +1140,7 @@ mod tests {
 
     #[test]
     fn test_open_options_create() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let log_path = dir.path().join("log1");
 
         let opts = OpenOptions::new();
@@ -1159,7 +1159,7 @@ mod tests {
 
     #[test]
     fn test_checksum_type() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let log_path = dir.path().join("log");
 
         let open = |checksum_type| {
@@ -1216,7 +1216,7 @@ mod tests {
 
     #[test]
     fn test_iter_and_iter_dirty() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let log_path = dir.path().join("log");
         let mut log = Log::open(&log_path, Vec::new()).unwrap();
 
@@ -1283,7 +1283,7 @@ mod tests {
         // - Index lag_threshold: 0, 20, 1000.
         // - Entries: Mixed on-disk and in-memory ones.
         for lag in [0u64, 20, 1000].iter().cloned() {
-            let dir = TempDir::new("log").expect("tempdir");
+            let dir = tempdir().unwrap();
             let mut log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
             let entries: [&[u8]; 6] = [b"1", b"", b"2345", b"", b"78", b"3456"];
             for bytes in entries.iter() {
@@ -1315,7 +1315,7 @@ mod tests {
 
     #[test]
     fn test_index_reorder() {
-        let dir = TempDir::new("log").expect("tempdir");
+        let dir = tempdir().unwrap();
         let indexes = get_index_defs(0);
         let mut log = Log::open(dir.path(), indexes).unwrap();
         let entries: [&[u8]; 2] = [b"123", b"234"];
@@ -1337,7 +1337,7 @@ mod tests {
     #[cfg(not(windows))]
     #[test]
     fn test_index_mark_corrupt() {
-        let dir = TempDir::new("log").expect("tempdir");
+        let dir = tempdir().unwrap();
         let indexes = get_index_defs(0);
 
         let mut log = Log::open(dir.path(), indexes).unwrap();
@@ -1370,7 +1370,7 @@ mod tests {
 
     #[test]
     fn test_lookup_prefix() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let index_func = |data: &[u8]| vec![IndexOutput::Reference(0..(data.len() - 1) as u64)];
         let mut log = Log::open(
             dir.path(),
@@ -1406,7 +1406,7 @@ mod tests {
 
     #[test]
     fn test_index_func() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let entries = vec![
             b"abcdefghij",
             b"klmnopqrst",
@@ -1472,7 +1472,7 @@ mod tests {
         }
 
         fn test_roundtrip_meta_file(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
-            let dir = TempDir::new("log").expect("tempdir");
+            let dir = tempdir().unwrap();
             let meta = LogMetadata { primary_len, indexes };
             let path = dir.path().join("meta");
             meta.write_file(&path).expect("write_file");
@@ -1481,7 +1481,7 @@ mod tests {
         }
 
         fn test_roundtrip_entries(entries: Vec<(Vec<u8>, bool, bool)>) -> bool {
-            let dir = TempDir::new("log").unwrap();
+            let dir = tempdir().unwrap();
             let mut log = Log::open(dir.path(), Vec::new()).unwrap();
             for &(ref data, flush, reload) in &entries {
                 log.append(data).expect("append");

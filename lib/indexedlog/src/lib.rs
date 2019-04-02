@@ -25,7 +25,7 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
 #[cfg(test)]
-extern crate tempdir;
+extern crate tempfile;
 extern crate twox_hash;
 extern crate vlqencoding;
 

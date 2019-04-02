@@ -307,10 +307,10 @@ impl ChecksumTable {
 mod tests {
     use super::*;
     use std::io::{Seek, SeekFrom};
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     fn setup() -> (File, Box<Fn() -> io::Result<ChecksumTable>>) {
-        let dir = TempDir::new("checksum").expect("tempdir");
+        let dir = tempdir().unwrap();
 
         // Checksum an non-existed file is an error.
         assert!(ChecksumTable::new(&dir.path().join("non-existed")).is_err());
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn test_non_existed() {
         // Checksum an non-existed file is an error.
-        let dir = TempDir::new("checksum").expect("tempdir");
+        let dir = tempdir().unwrap();
         assert!(ChecksumTable::new(&dir.path().join("non-existed")).is_err());
     }
 

@@ -326,13 +326,13 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     use log::IndexOutput;
 
     #[test]
     fn test_open() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let path = dir.path().join("rotate");
 
         assert!(OpenOptions::new().create(false).open(&path).is_err());
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_trivial_append_lookup() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let mut rotate = OpenOptions::new()
             .create(true)
             .index_defs(vec![IndexDef::new("two-bytes", |_| {
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_simple_rotate() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let mut rotate = OpenOptions::new()
             .create(true)
             .max_bytes_per_log(100)
@@ -410,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_writes() {
-        let dir = TempDir::new("log").unwrap();
+        let dir = tempdir().unwrap();
         let mut rotate1 = OpenOptions::new()
             .create(true)
             .max_bytes_per_log(100)

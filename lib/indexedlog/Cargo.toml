@@ -15,7 +15,7 @@ vlqencoding = { path = "../vlqencoding" }
 minibench = { path = "../minibench" }
 quickcheck = "0.6"
 rand = "0.4"
-tempdir = "0.3.7"
+tempfile = "3.0.7"
 
 [[bench]]
 name = "index"

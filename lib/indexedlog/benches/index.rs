@@ -6,13 +6,13 @@
 extern crate indexedlog;
 extern crate minibench;
 extern crate rand;
-extern crate tempdir;
+extern crate tempfile;
 
 use indexedlog::index::{InsertKey, OpenOptions};
 use minibench::{bench, bench_once, elapsed};
 use rand::{ChaChaRng, Rng};
 use std::sync::Arc;
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 const N: usize = 204800;
 
@@ -32,7 +32,7 @@ fn open_opts() -> OpenOptions {
 
 fn main() {
     bench("index insertion (owned key)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         elapsed(move || {
@@ -44,7 +44,7 @@ fn main() {
     });
 
     bench("index insertion (referred key)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
         let mut idx = open_opts()
             .key_buf(Some(Arc::new(buf.clone())))
@@ -59,7 +59,7 @@ fn main() {
     });
 
     bench("index flush", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
@@ -72,7 +72,7 @@ fn main() {
     });
 
     bench("index lookup (memory)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
@@ -87,7 +87,7 @@ fn main() {
     });
 
     bench("index lookup (disk, no verify)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut idx = open_opts()
             .checksum_chunk_size(0)
             .open(dir.path().join("i"))
@@ -106,7 +106,7 @@ fn main() {
     });
 
     bench("index lookup (disk, verified)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
@@ -123,7 +123,7 @@ fn main() {
 
     bench_once("index size (5M owned keys)", || {
         const N: usize = 5000000;
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
@@ -135,7 +135,7 @@ fn main() {
 
     bench_once("index size (5M referred keys)", || {
         const N: usize = 5000000;
-        let dir = TempDir::new("index").expect("TempDir::new");
+        let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
         let mut idx = open_opts()
             .key_buf(Some(Arc::new(buf.clone())))

@@ -47,11 +47,11 @@ mod tests {
     use std::fs::OpenOptions;
     use std::io::{Read, Seek, SeekFrom, Write};
     use std::thread;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     #[test]
     fn test_file_lock() {
-        let dir = TempDir::new("flock").expect("tempdir");
+        let dir = tempdir().unwrap();
         let _file = OpenOptions::new()
             .write(true)
             .create(true)
