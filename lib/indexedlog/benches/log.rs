@@ -8,7 +8,7 @@ extern crate minibench;
 extern crate rand;
 extern crate tempdir;
 
-use indexedlog::log::{ChecksumType, IndexDef, IndexOutput, Log};
+use indexedlog::log::{self, ChecksumType, IndexDef, IndexOutput, Log};
 use minibench::{bench, elapsed};
 use rand::{ChaChaRng, Rng};
 use tempdir::TempDir;
@@ -36,12 +36,15 @@ fn main() {
 
     bench("log insertion (no checksum)", || {
         let dir = TempDir::new("log").expect("TempDir::new");
-        let mut log = Log::open(dir.path(), vec![]).unwrap();
+        let mut log = log::OpenOptions::new()
+            .create(true)
+            .checksum_type(ChecksumType::None)
+            .open(dir.path())
+            .unwrap();
         let buf = gen_buf(N * 20);
         elapsed(move || {
             for i in 0..N {
-                log.append_advanced(&buf[20 * i..20 * (i + 1)], ChecksumType::None)
-                    .unwrap();
+                log.append(&buf[20 * i..20 * (i + 1)]).unwrap();
             }
         })
     });

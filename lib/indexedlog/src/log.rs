@@ -152,8 +152,11 @@ pub enum IndexOutput {
 }
 
 /// What checksum function to use for an entry.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ChecksumType {
+    /// Choose xxhash64 or xxhash32 automatically based on data size.
+    Auto,
+
     /// No checksum. Suitable for data that have their own checksum logic.
     /// For example, source control commit data might have SHA1 that can
     /// verify themselves.
@@ -210,6 +213,7 @@ struct LogMetadata {
 pub struct OpenOptions {
     index_defs: Vec<IndexDef>,
     create: bool,
+    checksum_type: ChecksumType,
 }
 
 // Some design notes:
@@ -239,40 +243,35 @@ impl Log {
     ///
     /// To write in-memory entries and indexes to disk, call [Log::flush].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> io::Result<()> {
-        // xxhash64 is slower for smaller data. A quick benchmark on x64 platform shows:
-        //
-        // bytes  xxhash32  xxhash64 (MB/s)
-        //   32       1882      1600
-        //   40       1739      1538
-        //   48       2285      1846
-        //   56       2153      2000
-        //   64       2666      2782
-        //   72       2400      2322
-        //   80       2962      2758
-        //   88       2750      2750
-        //   96       3200      3692
-        //  104       2810      3058
-        //  112       3393      3500
-        //  120       3000      3428
-        //  128       3459      4266
-        const XXHASH64_THRESHOLD: usize = 88;
         let data = data.as_ref();
-        let checksum_type = if data.len() >= XXHASH64_THRESHOLD {
-            ChecksumType::Xxhash64
-        } else {
-            ChecksumType::Xxhash32
-        };
-        self.append_advanced(data, checksum_type)
-    }
 
-    /// Advanced version of [Log::append], with more controls, like specifying
-    /// the checksum algorithm.
-    pub fn append_advanced<T: AsRef<[u8]>>(
-        &mut self,
-        data: T,
-        checksum_type: ChecksumType,
-    ) -> io::Result<()> {
-        let data = data.as_ref();
+        let checksum_type = if self.open_options.checksum_type == ChecksumType::Auto {
+            // xxhash64 is slower for smaller data. A quick benchmark on x64 platform shows:
+            //
+            // bytes  xxhash32  xxhash64 (MB/s)
+            //   32       1882      1600
+            //   40       1739      1538
+            //   48       2285      1846
+            //   56       2153      2000
+            //   64       2666      2782
+            //   72       2400      2322
+            //   80       2962      2758
+            //   88       2750      2750
+            //   96       3200      3692
+            //  104       2810      3058
+            //  112       3393      3500
+            //  120       3000      3428
+            //  128       3459      4266
+            const XXHASH64_THRESHOLD: usize = 88;
+            if data.len() >= XXHASH64_THRESHOLD {
+                ChecksumType::Xxhash64
+            } else {
+                ChecksumType::Xxhash32
+            }
+        } else {
+            self.open_options.checksum_type
+        };
+
         let offset = self.meta.primary_len + self.mem_buf.len() as u64;
 
         // Design note: Currently checksum_type is the only thing that decides
@@ -287,6 +286,7 @@ impl Log {
             ChecksumType::None => 0,
             ChecksumType::Xxhash64 => ENTRY_FLAG_HAS_XXHASH64,
             ChecksumType::Xxhash32 => ENTRY_FLAG_HAS_XXHASH32,
+            ChecksumType::Auto => unreachable!(),
         };
 
         self.mem_buf.write_vlq(entry_flags)?;
@@ -300,6 +300,7 @@ impl Log {
             ChecksumType::Xxhash32 => {
                 self.mem_buf.write_u32::<LittleEndian>(xxhash32(data))?;
             }
+            ChecksumType::Auto => unreachable!(),
         };
 
         self.mem_buf.write_all(data)?;
@@ -813,6 +814,7 @@ impl OpenOptions {
         Self {
             create: false,
             index_defs: Vec::new(),
+            checksum_type: ChecksumType::Auto,
         }
     }
 
@@ -831,6 +833,14 @@ impl OpenOptions {
     /// fail if the log does not exist.
     pub fn create(mut self, create: bool) -> Self {
         self.create = create;
+        self
+    }
+
+    /// Sets the checksum type.
+    ///
+    /// See [ChecksumType] for details.
+    pub fn checksum_type(mut self, checksum_type: ChecksumType) -> Self {
+        self.checksum_type = checksum_type;
         self
     }
 
@@ -1139,27 +1149,41 @@ mod tests {
     }
 
     #[test]
-    fn test_append_advanced() {
+    fn test_checksum_type() {
         let dir = TempDir::new("log").unwrap();
         let log_path = dir.path().join("log");
-        let mut log = Log::open(&log_path, Vec::new()).unwrap();
+
+        let open = |checksum_type| {
+            OpenOptions::new()
+                .checksum_type(checksum_type)
+                .create(true)
+                .open(&log_path)
+                .unwrap()
+        };
 
         let short_bytes = vec![12; 20];
         let long_bytes = vec![24; 200];
         let mut expected = Vec::new();
 
+        let mut log = open(ChecksumType::Auto);
         log.append(&short_bytes).unwrap();
         expected.push(short_bytes.clone());
         log.append(&long_bytes).unwrap();
         expected.push(long_bytes.clone());
-        log.append_advanced(&short_bytes, ChecksumType::None)
-            .unwrap();
+        log.flush().unwrap();
+
+        let mut log = open(ChecksumType::None);
+        log.append(&short_bytes).unwrap();
         expected.push(short_bytes.clone());
-        log.append_advanced(&long_bytes, ChecksumType::Xxhash32)
-            .unwrap();
+        log.flush().unwrap();
+
+        let mut log = open(ChecksumType::Xxhash32);
+        log.append(&long_bytes).unwrap();
         expected.push(long_bytes.clone());
-        log.append_advanced(&short_bytes, ChecksumType::Xxhash64)
-            .unwrap();
+        log.flush().unwrap();
+
+        let mut log = open(ChecksumType::Xxhash64);
+        log.append(&short_bytes).unwrap();
         expected.push(short_bytes.clone());
 
         assert_eq!(

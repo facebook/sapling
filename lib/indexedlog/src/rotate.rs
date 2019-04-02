@@ -36,6 +36,7 @@ const LATEST_FILE: &str = "latest";
 pub struct OpenOptions {
     max_bytes_per_log: u64,
     max_log_count: u64,
+    checksum_type: log::ChecksumType,
     create: bool,
     index_defs: Vec<IndexDef>,
 }
@@ -56,6 +57,7 @@ impl OpenOptions {
             max_bytes_per_log,
             max_log_count,
             index_defs: Vec::new(),
+            checksum_type: log::ChecksumType::Auto,
             create: false,
         }
     }
@@ -71,6 +73,14 @@ impl OpenOptions {
     pub fn max_bytes_per_log(mut self, bytes: u64) -> Self {
         assert!(bytes > 0);
         self.max_bytes_per_log = bytes;
+        self
+    }
+
+    /// Sets the checksum type.
+    ///
+    /// See [log::ChecksumType] for details.
+    pub fn checksum_type(mut self, checksum_type: log::ChecksumType) -> Self {
+        self.checksum_type = checksum_type;
         self
     }
 
@@ -273,6 +283,7 @@ fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::
     let log_path = dir.join(&latest_str);
     let log = log::OpenOptions::new()
         .create(true)
+        .checksum_type(open_options.checksum_type)
         .index_defs(open_options.index_defs.clone())
         .open(log_path)?;
     AtomicFile::new(&latest_path, AllowOverwrite).write(|f| f.write_all(latest_str.as_bytes()))?;
@@ -293,6 +304,7 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::Result<
         let log_path = dir.join(format!("{}", current));
         if let Ok(log) = log::OpenOptions::new()
             .create(false)
+            .checksum_type(open_options.checksum_type)
             .index_defs(open_options.index_defs.clone())
             .open(&log_path)
         {
@@ -328,7 +340,11 @@ mod tests {
 
         assert!(OpenOptions::new().create(false).open(&path).is_err());
         assert!(OpenOptions::new().create(true).open(&path).is_ok());
-        assert!(OpenOptions::new().create(false).open(&path).is_ok());
+        assert!(OpenOptions::new()
+            .checksum_type(log::ChecksumType::None)
+            .create(false)
+            .open(&path)
+            .is_ok());
     }
 
     // lookup via index 0
