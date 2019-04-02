@@ -353,14 +353,23 @@ def _lookupglobalrev(repo, grev):
         commitglobalrev = changelogrevision(rev).extra.get(EXTRASGLOBALREVKEY)
         return commitglobalrev is not None and int(commitglobalrev) == grev
 
-    if repo.ui.configbool("globalrevs", "fastlookup"):
+    usefastlookup = repo.ui.configbool("globalrevs", "fastlookup")
+    if usefastlookup:
         globalrevmap = _globalrevmap(repo)
+        lastrev = globalrevmap.lastrev
         hgnode = globalrevmap.gethgnode(grev)
         if hgnode:
             return [hgnode]
 
     matchedrevs = []
     for rev in repo.revs("reverse(all())"):
+        # While using fast lookup, we have already searched the indexed commits
+        # upto lastrev and therefore, we can safely say that there is no commit
+        # which has the specified globalrev if we are looking at a revision
+        # before the lastrev.
+        if usefastlookup and rev < lastrev:
+            break
+
         if matchglobalrev(rev):
             matchedrevs.append(tonode(rev))
             break
