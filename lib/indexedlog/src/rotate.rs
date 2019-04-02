@@ -168,7 +168,6 @@ impl LogRotate {
             self.latest = latest;
         }
 
-        // TODO: Scan directory and delete old logs.
         let size = self.writable_log().flush()?;
 
         if size >= self.open_options.max_bytes_per_log {
@@ -180,9 +179,36 @@ impl LogRotate {
             }
             self.logs.insert(0, log);
             self.latest = next;
+            self.try_remove_old_logs();
         }
 
         Ok(self.latest)
+    }
+
+    fn try_remove_old_logs(&self) {
+        if let Ok(read_dir) = self.dir.read_dir() {
+            let latest = self.latest;
+            let earliest = latest.wrapping_sub(self.open_options.max_log_count - 1);
+            for entry in read_dir {
+                if let Ok(entry) = entry {
+                    let name = entry.file_name();
+                    if let Some(name) = name.to_str() {
+                        if let Ok(id) = name.parse::<u64>() {
+                            if (latest >= earliest && (id > latest || id < earliest))
+                                || (latest < earliest && (id > latest && id < earliest))
+                            {
+                                // Errors are not fatal. On Windows, this can fail if
+                                // other processes have files in entry.path() mmap-ed.
+                                // Newly opened or flushed LogRotate will umap files.
+                                // New rotation would trigger remove_dir_all to try
+                                // remove old logs again.
+                                let _ = fs::remove_dir_all(entry.path());
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // `writable_log` is public for advanced use-cases. Ex. if a Log is used to
@@ -359,6 +385,7 @@ mod tests {
         assert_eq!(lookup(&rotate, b"a").len(), 2);
 
         // Trigger rotate again. Only new entries are accessible.
+        // Older directories should be deleted automatically.
         rotate.append(vec![b'c'; 50]).unwrap();
         assert_eq!(rotate.flush().unwrap(), 1);
         rotate.append(vec![b'd'; 50]).unwrap();
@@ -367,6 +394,7 @@ mod tests {
         assert_eq!(lookup(&rotate, b"b").len(), 0);
         assert_eq!(lookup(&rotate, b"c").len(), 1);
         assert_eq!(lookup(&rotate, b"d").len(), 1);
+        assert!(!dir.path().join("0").exists());
     }
 
     #[test]
@@ -397,14 +425,16 @@ mod tests {
                 .len()
         };
 
-        let size0 = size(0);
         let size1 = size(1);
 
         // rotate2 writes to the right location ("1"), not "0";
         rotate2.append(vec![b'b'; 100]).unwrap();
         assert_eq!(rotate2.flush().unwrap(), 2);
 
-        assert_eq!(size(0), size0);
+        #[cfg(unix)]
+        {
+            assert!(!dir.path().join("0").exists());
+        }
         assert!(size(1) > size1 + 100);
         assert!(size(2) > 0);
     }
