@@ -15,25 +15,30 @@ use cachelib::LruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
-use futures::future::{join_all, ok};
-use futures::Stream;
-use futures::{Future, IntoFuture};
+use futures::{
+    future::{join_all, ok},
+    lazy,
+    stream::iter_ok,
+    Future, IntoFuture, Stream,
+};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use http::uri::Uri;
-use mercurial_types::manifest::Content;
 use mononoke_api;
 use remotefilelog;
 use scuba_ext::ScubaSampleBuilder;
-use slog::Logger;
+use slog::{debug, Logger};
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use uuid::Uuid;
 
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
+use mercurial_types::{manifest::Content, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
-use types::WireHistoryEntry;
+use types::{
+    FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse, Key,
+    WireHistoryEntry,
+};
 
-use mononoke_types::{FileContents, RepositoryId};
+use mononoke_types::{FileContents, MPath, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 
@@ -46,6 +51,7 @@ use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 
 pub struct MononokeRepo {
     repo: BlobRepo,
+    logger: Logger,
     skiplist_index: Arc<SkiplistIndex>,
     sha1_cache: Option<LruCachePool>,
 }
@@ -99,6 +105,7 @@ impl MononokeRepo {
                 };
                 skiplist_index.map(|skiplist_index| Self {
                     repo,
+                    logger,
                     skiplist_index,
                     sha1_cache,
                 })
@@ -405,6 +412,74 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn eden_get_data(
+        &self,
+        ctx: CoreContext,
+        keys: Vec<Key>,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let mut fetches = Vec::new();
+        for key in keys {
+            let filenode = HgFileNodeId::new(key.node().clone().into());
+            let fut = self.repo.get_raw_hg_content(ctx.clone(), filenode, false);
+
+            let logger = self.logger.clone();
+            let fut = lazy(move || {
+                debug!(&logger, "fetching data for key: {}", &key);
+                fut.map(move |blob| (key, blob.into_inner()))
+            });
+
+            fetches.push(fut);
+        }
+
+        iter_ok(fetches)
+            .buffer_unordered(10)
+            .collect()
+            .map(|files| MononokeRepoResponse::EdenGetData {
+                response: FileDataResponse::new(files),
+            })
+            .from_err()
+            .boxify()
+    }
+
+    fn eden_get_history(
+        &self,
+        ctx: CoreContext,
+        keys: Vec<Key>,
+        depth: Option<u32>,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let mut fetches = Vec::new();
+        for key in keys {
+            let ctx = ctx.clone();
+            let repo = self.repo.clone();
+            let filenode = HgFileNodeId::new(key.node().clone().into());
+            let logger = self.logger.clone();
+
+            let fut = MPath::new(key.name())
+                .into_future()
+                .from_err()
+                .and_then(move |path| {
+                    debug!(&logger, "fetching history for key: {}", &key);
+                    remotefilelog::get_file_history(ctx, repo, filenode, path, depth)
+                        .map(move |entry| {
+                            let entry = WireHistoryEntry::from(entry);
+                            (key.name().to_vec(), entry)
+                        })
+                        .collect()
+                        .from_err()
+                });
+
+            fetches.push(fut);
+        }
+
+        iter_ok(fetches)
+            .buffer_unordered(10)
+            .collect()
+            .map(|history| MononokeRepoResponse::EdenGetHistory {
+                response: FileHistoryResponse::new(history.into_iter().flatten()),
+            })
+            .boxify()
+    }
+
     pub fn send_query(
         &self,
         ctx: CoreContext,
@@ -437,6 +512,10 @@ impl MononokeRepo {
                 lfs_url,
             } => self.lfs_batch(repo_name, req, lfs_url),
             UploadLargeFile { oid, body } => self.upload_large_file(ctx, oid, body),
+            EdenGetData(FileDataRequest { keys }) => self.eden_get_data(ctx, keys),
+            EdenGetHistory(FileHistoryRequest { keys, depth }) => {
+                self.eden_get_history(ctx, keys, depth)
+            }
         }
     }
 }

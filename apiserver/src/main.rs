@@ -7,13 +7,15 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
+use std::sync::Arc;
+
 use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use failure::Fallible;
 use futures::Future;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
-use std::sync::Arc;
+use tokio::runtime::Runtime;
 use uuid::Uuid;
 
 use context::CoreContext;
@@ -26,8 +28,8 @@ use slog::{info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use sshrelay::SshEnvVars;
-use tokio::runtime::Runtime;
 use tracing::TraceContext;
+use types::{FileDataRequest, FileHistoryRequest};
 
 mod actor;
 mod errors;
@@ -43,6 +45,7 @@ use crate::middleware::ScubaMiddleware;
 
 mod config {
     pub const SCUBA_TABLE: &str = "mononoke_apiserver";
+    pub const MAX_PAYLOAD_SIZE: usize = 1024 * 1024 * 1024;
 }
 
 // Currently logging and scuba is handled using the middleware service
@@ -336,6 +339,52 @@ fn upload_large_file(
     )
 }
 
+#[derive(Deserialize)]
+struct EdenGetDataParams {
+    repo: String,
+}
+
+fn eden_get_data(
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<EdenGetDataParams>,
+        Json<FileDataRequest>,
+    ),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
+    let req = req.into_inner();
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::EdenGetData(req),
+        },
+    )
+}
+
+#[derive(Deserialize)]
+struct EdenGetHistoryParams {
+    repo: String,
+}
+
+fn eden_get_history(
+    (state, params, req): (
+        State<HttpServerState>,
+        Path<EdenGetHistoryParams>,
+        Json<FileHistoryRequest>,
+    ),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
+    let req = req.into_inner();
+    state.mononoke.send_query(
+        prepare_fake_ctx(&state),
+        MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::EdenGetHistory(req),
+        },
+    )
+}
+
 fn setup_logger(debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
@@ -582,6 +631,18 @@ fn main() -> Fallible<()> {
                 })
                 .resource("/lfs/upload/{oid}", |r| {
                     r.method(http::Method::PUT).with_async(upload_large_file)
+                })
+                .resource("/eden/data", |r| {
+                    r.method(http::Method::POST)
+                        .with_async_config(eden_get_data, |cfg| {
+                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                        })
+                })
+                .resource("/eden/history", |r| {
+                    r.method(http::Method::POST)
+                        .with_async_config(eden_get_history, |cfg| {
+                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                        })
                 })
             })
     });

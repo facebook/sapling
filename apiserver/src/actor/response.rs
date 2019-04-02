@@ -10,6 +10,8 @@ use actix_web::{self, dev::BodyStream, Body, HttpRequest, HttpResponse, Json, Re
 use bytes::Bytes;
 use futures::Stream;
 
+use types::{FileDataResponse, FileHistoryResponse};
+
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
 
@@ -50,6 +52,12 @@ pub enum MononokeRepoResponse {
         response: BatchResponse,
     },
     UploadLargeFile {},
+    EdenGetData {
+        response: FileDataResponse,
+    },
+    EdenGetHistory {
+        response: FileHistoryResponse,
+    },
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -90,6 +98,8 @@ impl Responder for MononokeRepoResponse {
             DownloadLargeFile { content } => Ok(binary_response(content.into())),
             LfsBatch { response } => Json(response).respond_to(req),
             UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
+            EdenGetData { response } => Json(response).respond_to(req),
+            EdenGetHistory { response } => Json(response).respond_to(req),
         }
     }
 }

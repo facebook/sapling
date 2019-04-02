@@ -125,6 +125,12 @@ impl From<HgNodeHash> for HgTypesNode {
     }
 }
 
+impl From<HgTypesNode> for HgNodeHash {
+    fn from(node: HgTypesNode) -> Self {
+        Self::from_bytes(node.as_ref()).unwrap()
+    }
+}
+
 struct StringVisitor;
 
 impl<'de> serde::de::Visitor<'de> for StringVisitor {
