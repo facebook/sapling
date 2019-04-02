@@ -139,7 +139,8 @@ impl BookmarkStore {
     }
 
     pub fn flush(&mut self) -> Result<()> {
-        Ok(self.log.flush()?)
+        self.log.flush()?;
+        Ok(())
     }
 }
 

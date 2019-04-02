@@ -43,7 +43,8 @@ impl NodeMap {
     }
 
     pub fn flush(&mut self) -> Fallible<()> {
-        Ok(self.log.flush()?)
+        self.log.flush()?;
+        Ok(())
     }
 
     pub fn add(&mut self, first: &Node, second: &Node) -> Fallible<()> {

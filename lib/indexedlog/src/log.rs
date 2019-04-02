@@ -319,7 +319,9 @@ impl Log {
     /// Other [Log] instances living in a same process or other processes won't
     /// be notified about the change and they can only access the data
     /// "snapshotted" at open time.
-    pub fn flush(&mut self) -> io::Result<()> {
+    ///
+    /// Return the size of the updated primary log file in bytes.
+    pub fn flush(&mut self) -> io::Result<u64> {
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
         let mut dir_file = open_dir(&self.dir)?;
@@ -379,7 +381,7 @@ impl Log {
         // Step 5: Write the updated meta file.
         self.meta.write_file(self.dir.join(META_FILE))?;
 
-        Ok(())
+        Ok(self.meta.primary_len)
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
@@ -1158,7 +1160,8 @@ mod tests {
         );
 
         // Reload and verify
-        log.flush().unwrap();
+        assert_eq!(log.flush().unwrap(), 508);
+
         let log = Log::open(&log_path, Vec::new()).unwrap();
         assert_eq!(
             log.iter()
