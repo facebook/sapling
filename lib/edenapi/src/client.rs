@@ -1,19 +1,23 @@
 // Copyright Facebook, Inc. 2019
 
 use std::{
+    fs::{self, File},
+    io::BufReader,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use bytes::{Buf, Bytes, IntoBuf};
-use failure::{ensure, Error, Fallible};
+use failure::{bail, ensure, format_err, Error, Fallible};
 use futures::{stream, Future, IntoFuture, Stream};
 use hyper::{client::HttpConnector, Body, Chunk, Client};
 use hyper_rustls::HttpsConnector;
 use percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use rustls::{internal::pemfile, Certificate, ClientConfig, PrivateKey};
 use serde_json::Deserializer;
 use tokio::runtime::Runtime;
 use url::Url;
+use webpki_roots::TLS_SERVER_ROOTS;
 
 use revisionstore::{
     DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableHistoryPack,
@@ -23,30 +27,10 @@ use types::{HistoryEntry, Key, WireHistoryEntry};
 use url_ext::UrlExt;
 
 use crate::api::EdenApi;
-use crate::builder::Builder;
+use crate::config::{ClientCreds, Config};
 
 pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
-/// An HTTP client for the Eden API.
-///
-/// # Example
-/// ```rust,ignore
-/// use failure::Fallible;
-/// use edenapi::{EdenApi, EdenApiHttpClient};
-///
-/// fn main() -> Fallible<()> {
-///     let cert = "/var/facebook/credentials/user/x509/user.pem";
-///     let key = "/var/facebook/credentials/user/x509/user.pem";
-///     let client = EdenApiHttpClient::builder()
-///         .base_url_str("https://mononoke-api.internal.tfbnw.net")?
-///         .repo("fbsource")
-///         .cache_path("/var/cache/hgcache")
-///         .client_creds(cert, key)?
-///         .build()?;
-///
-///     client.health_check()
-/// }
-/// ```
 pub struct EdenApiHttpClient {
     pub(crate) client: Arc<HyperClient>,
     pub(crate) base_url: Url,
@@ -55,8 +39,40 @@ pub struct EdenApiHttpClient {
 }
 
 impl EdenApiHttpClient {
-    pub fn builder() -> Builder {
-        Builder::new()
+    pub fn new(config: Config) -> Fallible<Self> {
+        let base_url = match config.base_url {
+            Some(url) => url,
+            None => bail!("No base URL specified"),
+        };
+
+        let repo = match config.repo {
+            Some(repo) => repo,
+            None => bail!("No repo name specified"),
+        };
+
+        let cache_path = match config.cache_path {
+            Some(path) => path,
+            None => bail!("No cache path specified"),
+        };
+        ensure!(
+            cache_path.is_dir(),
+            "Configured cache path {:?} is not a directory",
+            &cache_path
+        );
+
+        let hyper_client = build_hyper_client(config.creds)?;
+
+        let client = EdenApiHttpClient {
+            client: Arc::new(hyper_client),
+            base_url,
+            repo,
+            cache_path,
+        };
+
+        // Create repo/packs directory in cache if it doesn't already exist.
+        fs::create_dir_all(client.pack_cache_path())?;
+
+        Ok(client)
     }
 
     /// Return the base URL of the API server joined with the repo name
@@ -280,4 +296,57 @@ fn write_historypack(
 
 fn url_encode(bytes: &[u8]) -> String {
     percent_encode(bytes, DEFAULT_ENCODE_SET).to_string()
+}
+
+/// Set up a Hyper client that configured to support HTTP/2 over TLS (with ALPN).
+/// Optionally takes client credentials to be used for TLS mutual authentication.
+fn build_hyper_client(creds: Option<ClientCreds>) -> Fallible<HyperClient> {
+    let num_dns_threads = 1;
+    let mut http = HttpConnector::new(num_dns_threads);
+
+    // Allow URLs to begin with "https://" since we intend to use TLS.
+    http.enforce_http(false);
+
+    let mut config = ClientConfig::new();
+    config
+        .root_store
+        .add_server_trust_anchors(&TLS_SERVER_ROOTS);
+    if let Some(creds) = creds {
+        let certs = read_cert_chain(creds.certs)?;
+        let key = read_key(creds.key)?;
+        config.set_single_client_cert(certs, key);
+    }
+
+    // Tell the server to use HTTP/2 during protocol negotiation.
+    config.alpn_protocols.push("h2".to_string());
+
+    let connector = HttpsConnector::from((http, config));
+    let client = Client::builder()
+        .http2_only(true)
+        .build::<_, Body>(connector);
+    Ok(client)
+}
+
+/// Read and parse a PEM-encoded X.509 client certificate chain.
+fn read_cert_chain(path: impl AsRef<Path>) -> Fallible<Vec<Certificate>> {
+    let mut reader = BufReader::new(File::open(path.as_ref())?);
+    pemfile::certs(&mut reader).map_err(|()| {
+        format_err!(
+            "failed to read certificates from PEM file: {:?}",
+            path.as_ref()
+        )
+    })
+}
+
+/// Read and parse a PEM-encoded RSA or ECDSA private key.
+fn read_key(path: impl AsRef<Path>) -> Fallible<PrivateKey> {
+    let mut reader = BufReader::new(File::open(path.as_ref())?);
+    pemfile::pkcs8_private_keys(&mut reader)
+        .and_then(|mut keys| keys.pop().ok_or(()))
+        .map_err(|()| {
+            format_err!(
+                "failed to read private key from PEM file: {:?}",
+                path.as_ref()
+            )
+        })
 }

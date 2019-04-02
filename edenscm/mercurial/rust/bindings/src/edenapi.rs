@@ -8,7 +8,7 @@ use std::str;
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
 
-use ::edenapi::{EdenApi, EdenApiHttpClient};
+use ::edenapi::{Config, EdenApi, EdenApiHttpClient};
 use encoding::{local_bytes_to_path, path_to_local_bytes};
 use types::{Key, Node};
 
@@ -33,21 +33,19 @@ py_class!(class client |py| {
         let cache_path = str::from_utf8(cache_path.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
 
-        let mut builder = EdenApiHttpClient::builder();
+        let mut config = Config::new()
+            .base_url_str(base_url)
+            .map_pyerr::<exc::RuntimeError>(py)?
+            .cache_path(cache_path)
+            .repo(repo);
 
         if let Some((cert, key)) = client_creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
             let key = local_bytes_to_path(key.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-            builder = builder.client_creds(cert, key).map_pyerr::<exc::RuntimeError>(py)?;
+            config = config.client_creds(cert, key);
         }
 
-        let inner = builder.base_url_str(base_url)
-            .map_pyerr::<exc::RuntimeError>(py)?
-            .cache_path(cache_path)
-            .repo(repo)
-            .build()
-            .map_pyerr::<exc::RuntimeError>(py)?;
-
+        let inner = EdenApiHttpClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
         client::create_instance(py, inner)
     }
 
