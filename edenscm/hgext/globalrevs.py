@@ -312,8 +312,9 @@ _u64le2bin = _u64lestruct.pack
 
 class _globalrevmap(object):
     def __init__(self, repo):
-        self.map = nodemapmod.nodemap(repo.sharedvfs.join(MAPFILE))
         self.lastrev = int(repo.sharedvfs.tryread(LASTREVFILE) or "0")
+        self.map = nodemapmod.nodemap(repo.sharedvfs.join(MAPFILE))
+        self.repo = repo
 
     @staticmethod
     def _globalrevtonode(grev):
@@ -333,9 +334,9 @@ class _globalrevmap(object):
         grevnode = self.map.lookupbysecond(hgnode)
         return self._nodetoglobalrev(grevnode) if grevnode is not None else None
 
-    def save(self, repo):
+    def save(self):
         self.map.flush()
-        repo.sharedvfs.write(LASTREVFILE, "%s" % self.lastrev)
+        self.repo.sharedvfs.write(LASTREVFILE, "%s" % self.lastrev)
 
 
 def _lookupglobalrev(repo, grev):
@@ -424,7 +425,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
                 prog.value += 1
 
         globalrevmap.lastrev = repolen
-        globalrevmap.save(unfi)
+        globalrevmap.save()
 
 
 @command("^globalrev", [], _("hg globalrev"))
