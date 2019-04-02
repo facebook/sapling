@@ -205,6 +205,12 @@ struct LogMetadata {
     indexes: BTreeMap<String, u64>,
 }
 
+/// Options used to configured how an [Log] is opened.
+#[derive(Clone)]
+pub struct OpenOptions {
+    index_defs: Vec<IndexDef>,
+}
+
 // Some design notes:
 // - Public APIs do not expose internal offsets of entries. This avoids issues when an in-memory
 //   entry gets moved after `flush`.
@@ -215,46 +221,9 @@ impl Log {
     /// Construct [Log] at given directory. Incrementally build up specified
     /// indexes.
     ///
-    /// If the directory does not exist, it will be created with essential files
-    /// populated. After that, an empty [Log] will be returned.
-    ///
-    /// See [IndexDef] for index definitions. Indexes can be added, removed, or
-    /// reordered, as long as a same `name` indicates a same index function.
-    /// That is, when an index function is changed, the caller is responsible
-    /// for changing the index name.
-    ///
-    /// Driven by the "immutable by default" idea, together with append-only
-    /// properties, this structure is different from some traditional *mutable*
-    /// databases backed by the filesystem:
-    /// - Data are kind of "snapshotted and frozen" at open time. Mutating
-    ///   files do not affect the view of instantiated [Log]s.
-    /// - Writes are buffered until [Log::flush] is called.
-    /// This maps to traditional "database transaction" concepts: a [Log] is
-    /// always bounded to a transaction. [Log::flush] is like committing the
-    /// transaction. Dropping the [Log] instance is like abandoning a
-    /// transaction.
+    /// See [OpenOptions::open] for details.
     pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
-        let dir = dir.as_ref();
-
-        fs::create_dir_all(dir)?;
-
-        // Make sure check and write happens atomically.
-        let mut dir_file = open_dir(dir)?;
-        let _lock = ScopedFileLock::new(&mut dir_file, true)?;
-
-        let meta = Self::load_or_create_meta(dir)?;
-        let (disk_buf, indexes) = Self::load_log_and_indexes(dir, &meta, &index_defs)?;
-        let mut log = Log {
-            dir: dir.to_path_buf(),
-            disk_buf,
-            mem_buf: Vec::new(),
-            meta,
-            indexes,
-            index_defs,
-            index_corrupted: false,
-        };
-        log.update_indexes_for_on_disk_entries()?;
-        Ok(log)
+        OpenOptions::new().index_defs(index_defs).open(dir)
     }
 
     /// Append an entry in-memory. Update related indexes in-memory.
@@ -812,6 +781,71 @@ impl IndexDef {
             name: self.name,
             lag_threshold,
         }
+    }
+}
+
+impl OpenOptions {
+    /// Creates a blank new set of options ready for configuration.
+    ///
+    /// `index_defs` is initially empty.
+    pub fn new() -> Self {
+        Self {
+            index_defs: Vec::new(),
+        }
+    }
+
+    /// Sets index definitions.
+    ///
+    /// See [IndexDef::new] for details.
+    pub fn index_defs(mut self, index_defs: Vec<IndexDef>) -> Self {
+        self.index_defs = index_defs;
+        self
+    }
+
+    /// Construct [Log] at given directory. Incrementally build up specified
+    /// indexes.
+    ///
+    /// If the directory does not exist, it will be created with essential files
+    /// populated. After that, an empty [Log] will be returned.
+    ///
+    /// See [IndexDef] for index definitions. Indexes can be added, removed, or
+    /// reordered, as long as a same `name` indicates a same index function.
+    /// That is, when an index function is changed, the caller is responsible
+    /// for changing the index name.
+    ///
+    /// Driven by the "immutable by default" idea, together with append-only
+    /// properties, this structure is different from some traditional *mutable*
+    /// databases backed by the filesystem:
+    /// - Data are kind of "snapshotted and frozen" at open time. Mutating
+    ///   files do not affect the view of instantiated [Log]s.
+    /// - Writes are buffered until [Log::flush] is called.
+    /// This maps to traditional "database transaction" concepts: a [Log] is
+    /// always bounded to a transaction. [Log::flush] is like committing the
+    /// transaction. Dropping the [Log] instance is like abandoning a
+    /// transaction.
+    pub fn open(self, dir: impl AsRef<Path>) -> io::Result<Log> {
+        let dir = dir.as_ref();
+
+        fs::create_dir_all(dir)?;
+
+        // Make sure check and write happens atomically.
+        let mut dir_file = open_dir(dir)?;
+        let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+
+        let index_defs = self.index_defs;
+        let meta = Log::load_or_create_meta(dir)?;
+        let (disk_buf, indexes) = Log::load_log_and_indexes(dir, &meta, &index_defs)?;
+        let mut log = Log {
+            dir: dir.to_path_buf(),
+            disk_buf,
+            mem_buf: Vec::new(),
+            meta,
+            indexes,
+            index_defs,
+            index_corrupted: false,
+        };
+        log.update_indexes_for_on_disk_entries()?;
+        Ok(log)
     }
 }
 
