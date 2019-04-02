@@ -354,7 +354,7 @@ def _lookupglobalrev(repo, grev):
 
     if repo.ui.configbool("globalrevs", "fastlookup"):
         globalrevmap = _globalrevmap(repo)
-        hgnode = globalrevmap.gethgnode(str(grev))
+        hgnode = globalrevmap.gethgnode(grev)
         if hgnode:
             return [hgnode]
 
