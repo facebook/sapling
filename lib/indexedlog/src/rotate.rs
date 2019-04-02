@@ -6,6 +6,7 @@
 //! Rotation support for a set of [Log]s.
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
+use bytes::Bytes;
 use lock::ScopedFileLock;
 use log::{self, IndexDef, Log};
 use std::fs;
@@ -117,6 +118,86 @@ impl OpenOptions {
     }
 }
 
+impl LogRotate {
+    /// Append data to the writable [Log].
+    pub fn append(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+        self.writable_log().append(data)
+    }
+
+    /// Look up an entry using the given index. The `index_id` is the index of
+    /// `index_defs` stored in [OpenOptions].
+    pub fn lookup(
+        &self,
+        index_id: usize,
+        key: impl Into<Bytes>,
+    ) -> io::Result<LogRotateLookupIter> {
+        let key = key.into();
+        Ok(LogRotateLookupIter {
+            inner_iter: self.logs[0].lookup(index_id, &key)?,
+            end: false,
+            log_rotate: self,
+            log_index: 0,
+            index_id,
+            key,
+        })
+    }
+
+    // `writable_log` is public for advanced use-cases. Ex. if a Log is used to
+    // store file contents chained with deltas. It might be desirable to make
+    // sure the delta parent is within a same log. That can be done by using
+    // writable_log().lookup to check the delta parent candidate.
+    /// Get the writable [Log].
+    pub fn writable_log(&mut self) -> &mut Log {
+        &mut self.logs[0]
+    }
+}
+
+/// Iterator over [LogRotate] entries selected by an index lookup.
+pub struct LogRotateLookupIter<'a> {
+    inner_iter: log::LogLookupIter<'a>,
+    end: bool,
+    log_rotate: &'a LogRotate,
+    log_index: usize,
+    index_id: usize,
+    key: Bytes,
+}
+
+impl<'a> Iterator for LogRotateLookupIter<'a> {
+    type Item = io::Result<&'a [u8]>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.end {
+            return None;
+        }
+        match self.inner_iter.next() {
+            None => {
+                if self.log_index + 1 >= self.log_rotate.logs.len() {
+                    self.end = true;
+                    return None;
+                } else {
+                    // Try the next log
+                    self.log_index += 1;
+                    self.inner_iter = match self.log_rotate.logs[self.log_index]
+                        .lookup(self.index_id, &self.key)
+                    {
+                        Err(err) => {
+                            self.end = true;
+                            return Some(Err(err));
+                        }
+                        Ok(iter) => iter,
+                    };
+                    self.next()
+                }
+            }
+            Some(Err(err)) => {
+                self.end = true;
+                Some(Err(err))
+            }
+            Some(Ok(slice)) => Some(Ok(slice)),
+        }
+    }
+}
+
 fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::Result<Log> {
     let latest_path = dir.join(LATEST_FILE);
     let latest_str = format!("{}", latest);
@@ -169,6 +250,8 @@ mod tests {
     use super::*;
     use tempdir::TempDir;
 
+    use log::IndexOutput;
+
     #[test]
     fn test_open() {
         let dir = TempDir::new("log").unwrap();
@@ -177,6 +260,35 @@ mod tests {
         assert!(OpenOptions::new().create(false).open(&path).is_err());
         assert!(OpenOptions::new().create(true).open(&path).is_ok());
         assert!(OpenOptions::new().create(false).open(&path).is_ok());
+    }
+
+    // lookup via index 0
+    fn lookup<'a>(rotate: &'a LogRotate, key: &[u8]) -> Vec<&'a [u8]> {
+        rotate
+            .lookup(0, key)
+            .unwrap()
+            .collect::<io::Result<Vec<&[u8]>>>()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_trivial_append_lookup() {
+        let dir = TempDir::new("log").unwrap();
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .index_defs(vec![IndexDef::new("two-bytes", |_| {
+                vec![IndexOutput::Reference(0..2)]
+            })])
+            .open(&dir)
+            .unwrap();
+
+        rotate.append(b"aaa").unwrap();
+        rotate.append(b"abbb").unwrap();
+        rotate.append(b"abc").unwrap();
+
+        assert_eq!(lookup(&rotate, b"aa"), vec![b"aaa"]);
+        assert_eq!(lookup(&rotate, b"ab"), vec![&b"abc"[..], b"abbb"]);
+        assert_eq!(lookup(&rotate, b"ac"), Vec::<&[u8]>::new());
     }
 
 }
