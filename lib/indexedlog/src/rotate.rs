@@ -151,8 +151,21 @@ impl LogRotate {
 
         let latest = read_latest(&self.dir)?;
         if latest != self.latest {
-            // Latest changed. Make sure write to the correct Log.
-            unimplemented!();
+            // Latest changed. Re-load and write to the real latest Log.
+            //
+            // This is needed because LogRotate assumes non-latest logs
+            // are read-only. Other processes using LogRotate won't reload
+            // non-latest logs automatically.
+
+            // PERF(minor): This can be smarter by avoiding reloading some logs.
+            let mut new_logs = read_logs(&self.dir, &self.open_options, latest)?;
+            // Copy entries to new Logs.
+            for entry in self.writable_log().iter_dirty() {
+                let bytes = entry?;
+                new_logs[0].append(bytes)?;
+            }
+            self.logs = new_logs;
+            self.latest = latest;
         }
 
         // TODO: Scan directory and delete old logs.
@@ -356,4 +369,43 @@ mod tests {
         assert_eq!(lookup(&rotate, b"d").len(), 1);
     }
 
+    #[test]
+    fn test_concurrent_writes() {
+        let dir = TempDir::new("log").unwrap();
+        let mut rotate1 = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .max_log_count(2)
+            .open(&dir)
+            .unwrap();
+        let mut rotate2 = OpenOptions::new()
+            .max_bytes_per_log(100)
+            .max_log_count(2)
+            .open(&dir)
+            .unwrap();
+
+        // rotate1 triggers a rotation.
+        rotate1.append(vec![b'a'; 100]).unwrap();
+        assert_eq!(rotate1.flush().unwrap(), 1);
+
+        let size = |log_index: u64| {
+            dir.path()
+                .join(format!("{}", log_index))
+                .join(log::PRIMARY_FILE)
+                .metadata()
+                .unwrap()
+                .len()
+        };
+
+        let size0 = size(0);
+        let size1 = size(1);
+
+        // rotate2 writes to the right location ("1"), not "0";
+        rotate2.append(vec![b'b'; 100]).unwrap();
+        assert_eq!(rotate2.flush().unwrap(), 2);
+
+        assert_eq!(size(0), size0);
+        assert!(size(1) > size1 + 100);
+        assert!(size(2) > 0);
+    }
 }

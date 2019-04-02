@@ -48,7 +48,7 @@ use utils::{mmap_readonly, open_dir, xxhash, xxhash32};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
-const PRIMARY_FILE: &str = "log";
+pub(crate) const PRIMARY_FILE: &str = "log";
 const PRIMARY_HEADER: &[u8] = b"indexedlog0\0";
 const PRIMARY_START_OFFSET: u64 = 12; // PRIMARY_HEADER.len() as u64;
 const META_FILE: &str = "meta";
