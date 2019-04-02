@@ -818,6 +818,15 @@ impl OpenOptions {
         }
     }
 
+    /// Add an index function.
+    ///
+    /// This is a convenient way to define indexes without using [`IndexDef`]
+    /// explictly.
+    pub fn index(mut self, name: &'static str, func: fn(&[u8]) -> Vec<IndexOutput>) -> Self {
+        self.index_defs.push(IndexDef::new(name, func));
+        self
+    }
+
     /// Sets index definitions.
     ///
     /// See [`IndexDef::new`] for details.
@@ -1409,14 +1418,16 @@ mod tests {
         let first_index =
             |_data: &[u8]| vec![IndexOutput::Reference(0..2), IndexOutput::Reference(3..5)];
         let second_index = |data: &[u8]| vec![IndexOutput::Owned(Box::from(&data[5..10]))];
-        let mut log = Log::open(
-            dir.path(),
-            vec![
+        let third_index = |_: &[u8]| vec![IndexOutput::Owned(Box::from(&b"x"[..]))];
+        let mut log = OpenOptions::new()
+            .create(true)
+            .index_defs(vec![
                 IndexDef::new("first", first_index).lag_threshold(0),
                 IndexDef::new("second", second_index).lag_threshold(0),
-            ],
-        )
-        .unwrap();
+            ])
+            .index("third", third_index)
+            .open(dir.path())
+            .unwrap();
 
         let mut expected_keys1 = vec![];
         let mut expected_keys2 = vec![];
@@ -1447,6 +1458,7 @@ mod tests {
         }
         assert_eq!(found_keys1, expected_keys1);
         assert_eq!(found_keys2, expected_keys2);
+        assert_eq!(log.iter().count(), log.lookup(2, b"x").unwrap().count());
     }
 
     quickcheck! {

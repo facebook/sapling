@@ -86,6 +86,12 @@ impl OpenOptions {
         self
     }
 
+    /// Add an index function.
+    pub fn index(mut self, name: &'static str, func: fn(&[u8]) -> Vec<log::IndexOutput>) -> Self {
+        self.log_open_options = self.log_open_options.index(name, func);
+        self
+    }
+
     /// Set the index definitions.
     ///
     /// See [`IndexDef`] for details.
@@ -374,9 +380,7 @@ mod tests {
             .create(true)
             .max_bytes_per_log(100)
             .max_log_count(2)
-            .index_defs(vec![IndexDef::new("first-byte", |_| {
-                vec![IndexOutput::Reference(0..1)]
-            })])
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)])
             .open(&dir)
             .unwrap();
 

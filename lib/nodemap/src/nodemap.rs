@@ -4,7 +4,7 @@ use std::ops::Range;
 use std::path::Path;
 
 use failure::Fallible;
-use indexedlog::log::{IndexDef, IndexOutput, Log};
+use indexedlog::log::{self, IndexOutput, Log};
 use types::errors::KeyError;
 use types::node::Node;
 
@@ -32,13 +32,11 @@ impl NodeMap {
         let first_index = |_data: &[u8]| vec![IndexOutput::Reference(0..20)];
         let second_index = |_data: &[u8]| vec![IndexOutput::Reference(20..40)];
         Ok(NodeMap {
-            log: Log::open(
-                dir,
-                vec![
-                    IndexDef::new("first", first_index),
-                    IndexDef::new("second", second_index),
-                ],
-            )?,
+            log: log::OpenOptions::new()
+                .create(true)
+                .index("first", first_index)
+                .index("second", second_index)
+                .open(dir)?,
         })
     }
 
