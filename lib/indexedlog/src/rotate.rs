@@ -142,6 +142,36 @@ impl LogRotate {
         })
     }
 
+    /// Write in-memory entries to disk.
+    ///
+    /// Return the index of the latest [Log].
+    pub fn flush(&mut self) -> io::Result<u64> {
+        let mut lock_file = open_dir(&self.dir)?;
+        let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+
+        let latest = read_latest(&self.dir)?;
+        if latest != self.latest {
+            // Latest changed. Make sure write to the correct Log.
+            unimplemented!();
+        }
+
+        // TODO: Scan directory and delete old logs.
+        let size = self.writable_log().flush()?;
+
+        if size >= self.open_options.max_bytes_per_log {
+            // Create a new Log. Bump latest.
+            let next = self.latest.wrapping_add(1);
+            let log = create_empty_log(&self.dir, &self.open_options, next)?;
+            if self.logs.len() as u64 >= self.open_options.max_log_count {
+                self.logs.pop();
+            }
+            self.logs.insert(0, log);
+            self.latest = next;
+        }
+
+        Ok(self.latest)
+    }
+
     // `writable_log` is public for advanced use-cases. Ex. if a Log is used to
     // store file contents chained with deltas. It might be desirable to make
     // sure the delta parent is within a same log. That can be done by using
@@ -289,6 +319,41 @@ mod tests {
         assert_eq!(lookup(&rotate, b"aa"), vec![b"aaa"]);
         assert_eq!(lookup(&rotate, b"ab"), vec![&b"abc"[..], b"abbb"]);
         assert_eq!(lookup(&rotate, b"ac"), Vec::<&[u8]>::new());
+    }
+
+    #[test]
+    fn test_simple_rotate() {
+        let dir = TempDir::new("log").unwrap();
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .max_log_count(2)
+            .index_defs(vec![IndexDef::new("first-byte", |_| {
+                vec![IndexOutput::Reference(0..1)]
+            })])
+            .open(&dir)
+            .unwrap();
+
+        // No rotate.
+        rotate.append(b"a").unwrap();
+        assert_eq!(rotate.flush().unwrap(), 0);
+        rotate.append(b"a").unwrap();
+        assert_eq!(rotate.flush().unwrap(), 0);
+
+        // Trigger rotate. "a" is still accessible.
+        rotate.append(vec![b'b'; 100]).unwrap();
+        assert_eq!(rotate.flush().unwrap(), 1);
+        assert_eq!(lookup(&rotate, b"a").len(), 2);
+
+        // Trigger rotate again. Only new entries are accessible.
+        rotate.append(vec![b'c'; 50]).unwrap();
+        assert_eq!(rotate.flush().unwrap(), 1);
+        rotate.append(vec![b'd'; 50]).unwrap();
+        assert_eq!(rotate.flush().unwrap(), 2);
+        assert_eq!(lookup(&rotate, b"a").len(), 0);
+        assert_eq!(lookup(&rotate, b"b").len(), 0);
+        assert_eq!(lookup(&rotate, b"c").len(), 1);
+        assert_eq!(lookup(&rotate, b"d").len(), 1);
     }
 
 }
