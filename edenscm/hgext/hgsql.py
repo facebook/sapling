@@ -641,9 +641,8 @@ def wraprepo(repo):
     class sqllocalrepo(repo.__class__):
         def sqlconnect(self):
             if self.sqlconn:
-                raise Exception("SQL connection already open")
-            if self.sqlcursor:
-                raise Exception("SQL cursor already open without connection")
+                return
+
             retry = 3
             while True:
                 try:
@@ -717,6 +716,9 @@ def wraprepo(repo):
             NO_WRITE = 0
             MONONOKE_WRITE = 2
             query = "SELECT state FROM repo_lock WHERE repo = %s"
+
+            self.sqlconnect()
+
             self.sqlcursor.execute(query, (self.sqlreponame,))
             rows = self.sqlcursor.fetchall()
 
