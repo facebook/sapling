@@ -80,12 +80,12 @@ pub struct Log {
     mem_buf: Vec<u8>,
     meta: LogMetadata,
     indexes: Vec<Index>,
-    index_defs: Vec<IndexDef>,
     // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
     // should return errors because it can no longer be trusted.
     // This could be improved to be per index. For now, it's a single state for simplicity. It's
     // probably fine considering index corruptions are rare.
     index_corrupted: bool,
+    open_options: OpenOptions,
 }
 
 /// Definition of an index. It includes: name, function to extract index keys,
@@ -352,7 +352,8 @@ impl Log {
         meta.primary_len += self.mem_buf.len() as u64;
 
         // Step 3: Reload primary log and indexes to get the latest view.
-        let (disk_buf, indexes) = Self::load_log_and_indexes(&self.dir, &meta, &self.index_defs)?;
+        let (disk_buf, indexes) =
+            Self::load_log_and_indexes(&self.dir, &meta, &self.open_options.index_defs)?;
 
         self.meta = meta;
         self.disk_buf = disk_buf;
@@ -361,6 +362,7 @@ impl Log {
 
         // Step 4: Update the indexes. Optionally flush them.
         let indexes_to_flush: Vec<usize> = self
+            .open_options
             .index_defs
             .iter()
             .enumerate()
@@ -374,7 +376,7 @@ impl Log {
         for i in indexes_to_flush {
             let new_length = self.indexes[i].flush();
             let new_length = self.maybe_set_index_error(new_length)?;
-            let name = self.index_defs[i].name.to_string();
+            let name = self.open_options.index_defs[i].name.to_string();
             self.meta.indexes.insert(name, new_length);
         }
 
@@ -471,7 +473,7 @@ impl Log {
         index_id: usize,
         entry: &'a [u8],
     ) -> io::Result<Vec<Cow<'a, [u8]>>> {
-        let index_def = self.index_defs.get(index_id).ok_or_else(|| {
+        let index_def = self.open_options.index_defs.get(index_id).ok_or_else(|| {
             let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
             io::Error::new(io::ErrorKind::InvalidData, msg)
         })?;
@@ -494,7 +496,7 @@ impl Log {
         data: &[u8],
         offset: u64,
     ) -> io::Result<()> {
-        for (mut index, def) in self.indexes.iter_mut().zip(&self.index_defs) {
+        for (mut index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
                     IndexOutput::Reference(range) => {
@@ -523,7 +525,7 @@ impl Log {
     fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> io::Result<()> {
         // It's a programming error to call this when mem_buf is not empty.
         assert!(self.mem_buf.is_empty());
-        for (mut index, def) in self.indexes.iter_mut().zip(&self.index_defs) {
+        for (mut index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             // The index meta is used to store the next offset the index should be built.
             let mut offset = {
                 let index_meta = index.get_meta();
@@ -856,7 +858,6 @@ impl OpenOptions {
     /// transaction.
     pub fn open(self, dir: impl AsRef<Path>) -> io::Result<Log> {
         let dir = dir.as_ref();
-        let index_defs = self.index_defs;
         let create = self.create;
 
         let meta = Log::load_meta(dir, false).or_else(|_| {
@@ -874,15 +875,15 @@ impl OpenOptions {
             }
         })?;
 
-        let (disk_buf, indexes) = Log::load_log_and_indexes(dir, &meta, &index_defs)?;
+        let (disk_buf, indexes) = Log::load_log_and_indexes(dir, &meta, &self.index_defs)?;
         let mut log = Log {
             dir: dir.to_path_buf(),
             disk_buf,
             mem_buf: Vec::new(),
             meta,
             indexes,
-            index_defs,
             index_corrupted: false,
+            open_options: self,
         };
         log.update_indexes_for_on_disk_entries()?;
         Ok(log)
