@@ -212,7 +212,7 @@ struct LogMetadata {
 #[derive(Clone)]
 pub struct OpenOptions {
     index_defs: Vec<IndexDef>,
-    create: bool,
+    pub(crate) create: bool,
     checksum_type: ChecksumType,
 }
 

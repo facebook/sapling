@@ -36,9 +36,7 @@ const LATEST_FILE: &str = "latest";
 pub struct OpenOptions {
     max_bytes_per_log: u64,
     max_log_count: u64,
-    checksum_type: log::ChecksumType,
-    create: bool,
-    index_defs: Vec<IndexDef>,
+    log_open_options: log::OpenOptions,
 }
 
 impl OpenOptions {
@@ -56,9 +54,7 @@ impl OpenOptions {
         Self {
             max_bytes_per_log,
             max_log_count,
-            index_defs: Vec::new(),
-            checksum_type: log::ChecksumType::Auto,
-            create: false,
+            log_open_options: log::OpenOptions::new(),
         }
     }
 
@@ -80,13 +76,13 @@ impl OpenOptions {
     ///
     /// See [log::ChecksumType] for details.
     pub fn checksum_type(mut self, checksum_type: log::ChecksumType) -> Self {
-        self.checksum_type = checksum_type;
+        self.log_open_options = self.log_open_options.checksum_type(checksum_type);
         self
     }
 
     /// Set whether create the [LogRotate] structure if it does not exist.
     pub fn create(mut self, create: bool) -> Self {
-        self.create = create;
+        self.log_open_options = self.log_open_options.create(create);
         self
     }
 
@@ -94,7 +90,7 @@ impl OpenOptions {
     ///
     /// See [IndexDef] for details.
     pub fn index_defs(mut self, index_defs: Vec<IndexDef>) -> Self {
-        self.index_defs = index_defs;
+        self.log_open_options = self.log_open_options.index_defs(index_defs);
         self
     }
 
@@ -103,7 +99,7 @@ impl OpenOptions {
         let dir = dir.as_ref();
 
         let latest_path = dir.join(LATEST_FILE);
-        let (latest, logs) = if !self.create || latest_path.exists() {
+        let (latest, logs) = if !self.log_open_options.create || latest_path.exists() {
             let latest = read_latest(dir)?;
             (latest, read_logs(dir, &self, latest)?)
         } else {
@@ -281,10 +277,10 @@ fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::
     let latest_path = dir.join(LATEST_FILE);
     let latest_str = format!("{}", latest);
     let log_path = dir.join(&latest_str);
-    let log = log::OpenOptions::new()
+    let log = open_options
+        .log_open_options
+        .clone()
         .create(true)
-        .checksum_type(open_options.checksum_type)
-        .index_defs(open_options.index_defs.clone())
         .open(log_path)?;
     AtomicFile::new(&latest_path, AllowOverwrite).write(|f| f.write_all(latest_str.as_bytes()))?;
     Ok(log)
@@ -302,12 +298,7 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::Result<
     let mut remaining = open_options.max_log_count;
     while remaining > 0 {
         let log_path = dir.join(format!("{}", current));
-        if let Ok(log) = log::OpenOptions::new()
-            .create(false)
-            .checksum_type(open_options.checksum_type)
-            .index_defs(open_options.index_defs.clone())
-            .open(&log_path)
-        {
+        if let Ok(log) = open_options.log_open_options.clone().open(&log_path) {
             logs.push(log);
             current = current.wrapping_sub(1);
             remaining -= 1;
