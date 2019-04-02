@@ -209,6 +209,7 @@ struct LogMetadata {
 #[derive(Clone)]
 pub struct OpenOptions {
     index_defs: Vec<IndexDef>,
+    create: bool,
 }
 
 // Some design notes:
@@ -221,9 +222,14 @@ impl Log {
     /// Construct [Log] at given directory. Incrementally build up specified
     /// indexes.
     ///
+    /// Create the [Log] if it does not exist.
+    ///
     /// See [OpenOptions::open] for details.
     pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
-        OpenOptions::new().index_defs(index_defs).open(dir)
+        OpenOptions::new()
+            .index_defs(index_defs)
+            .create(true)
+            .open(dir)
     }
 
     /// Append an entry in-memory. Update related indexes in-memory.
@@ -320,7 +326,7 @@ impl Log {
         let _lock = ScopedFileLock::new(&mut dir_file, true)?;
 
         // Step 1: Reload metadata to get the latest view of the files.
-        let mut meta = Self::load_or_create_meta(&self.dir)?;
+        let mut meta = Self::load_meta(&self.dir, false)?;
 
         // Step 2: Append to the primary log.
         let primary_path = self.dir.join(PRIMARY_FILE);
@@ -546,15 +552,16 @@ impl Log {
         Ok(())
     }
 
-    /// Read `LogMetadata` from given directory. Create an empty one on demand.
+    /// Read [LogMetadata] from the given directory. If `create` is `true`,
+    /// create an empty one on demand.
     ///
     /// The caller should ensure the directory exists and take a lock on it to
     /// avoid filesystem races.
-    fn load_or_create_meta(dir: &Path) -> io::Result<LogMetadata> {
+    fn load_meta(dir: &Path, create: bool) -> io::Result<LogMetadata> {
         let meta_path = dir.join(META_FILE);
         match LogMetadata::read_file(&meta_path) {
             Err(err) => {
-                if err.kind() == io::ErrorKind::NotFound {
+                if err.kind() == io::ErrorKind::NotFound && create {
                     // Create (and truncate) the primary log and indexes.
                     let mut primary_file = File::create(dir.join(PRIMARY_FILE))?;
                     primary_file.write_all(PRIMARY_HEADER)?;
@@ -787,9 +794,11 @@ impl IndexDef {
 impl OpenOptions {
     /// Creates a blank new set of options ready for configuration.
     ///
+    /// `create` is initially `false`.
     /// `index_defs` is initially empty.
     pub fn new() -> Self {
         Self {
+            create: false,
             index_defs: Vec::new(),
         }
     }
@@ -802,11 +811,22 @@ impl OpenOptions {
         self
     }
 
+    /// Sets the option for whether creating a new [Log] if it does not exist.
+    ///
+    /// If set to `true`, [OpenOptions::open] will create the [Log] on demand if
+    /// it does not already exist. If set to `false`, [OpenOptions::open] will
+    /// fail if the log does not exist.
+    pub fn create(mut self, create: bool) -> Self {
+        self.create = create;
+        self
+    }
+
     /// Construct [Log] at given directory. Incrementally build up specified
     /// indexes.
     ///
-    /// If the directory does not exist, it will be created with essential files
-    /// populated. After that, an empty [Log] will be returned.
+    /// If the directory does not exist and `create` is set to `true`, it will
+    /// be created with essential files populated. After that, an empty [Log]
+    /// will be returned. Otherwise, `open` will fail.
     ///
     /// See [IndexDef] for index definitions. Indexes can be added, removed, or
     /// reordered, as long as a same `name` indicates a same index function.
@@ -825,15 +845,24 @@ impl OpenOptions {
     /// transaction.
     pub fn open(self, dir: impl AsRef<Path>) -> io::Result<Log> {
         let dir = dir.as_ref();
-
-        fs::create_dir_all(dir)?;
-
-        // Make sure check and write happens atomically.
-        let mut dir_file = open_dir(dir)?;
-        let _lock = ScopedFileLock::new(&mut dir_file, true)?;
-
         let index_defs = self.index_defs;
-        let meta = Log::load_or_create_meta(dir)?;
+        let create = self.create;
+
+        let meta = Log::load_meta(dir, false).or_else(|_| {
+            if create {
+                fs::create_dir_all(dir)?;
+                // Make sure check and write happens atomically.
+                let mut dir_file = open_dir(dir)?;
+                let _lock = ScopedFileLock::new(&mut dir_file, true)?;
+                Log::load_meta(dir, true)
+            } else {
+                Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("Log {:?} does not exist", &dir),
+                ))
+            }
+        })?;
+
         let (disk_buf, indexes) = Log::load_log_and_indexes(dir, &meta, &index_defs)?;
         let mut log = Log {
             dir: dir.to_path_buf(),
@@ -1076,6 +1105,25 @@ mod tests {
         assert_eq!(log1.iter().count(), 0);
         let log2 = Log::open(&log_path, Vec::new()).unwrap();
         assert_eq!(log2.iter().count(), 0);
+    }
+
+    #[test]
+    fn test_open_options_create() {
+        let dir = TempDir::new("log").unwrap();
+        let log_path = dir.path().join("log1");
+
+        let opts = OpenOptions::new();
+        assert!(opts.open(&log_path).is_err());
+
+        let opts = OpenOptions::new().create(true);
+        assert!(opts.open(&log_path).is_ok());
+
+        let opts = OpenOptions::new().create(false);
+        assert!(opts.open(&log_path).is_ok());
+
+        let log_path = dir.path().join("log2");
+        let opts = OpenOptions::new().create(false);
+        assert!(opts.open(&log_path).is_err());
     }
 
     #[test]
