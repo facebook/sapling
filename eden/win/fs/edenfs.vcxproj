@@ -162,7 +162,6 @@
     <ClCompile Include="..\..\fs\config\ClientConfig.cpp" />
     <ClCompile Include="..\..\fs\config\EdenConfig.cpp" />
     <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp" />
-    <ClCompile Include="..\..\fs\fuse\EdenStats.cpp" />
     <ClCompile Include="..\..\fs\inodes\ServerState.cpp" />
     <ClCompile Include="..\..\fs\journal\Journal.cpp" />
     <ClCompile Include="..\..\fs\journal\JournalDelta.cpp" />
@@ -197,6 +196,7 @@
     <ClCompile Include="..\..\fs\store\SerializedBlobMetadata.cpp" />
     <ClCompile Include="..\..\fs\store\SqliteLocalStore.cpp" />
     <ClCompile Include="..\..\fs\store\StoreResult.cpp" />
+    <ClCompile Include="..\..\fs\tracing\EdenStats.cpp" />
     <ClCompile Include="..\..\fs\tracing\Tracing.cpp" />
     <ClCompile Include="..\..\fs\utils\Bug.cpp" />
     <ClCompile Include="..\..\fs\utils\Clock.cpp" />
@@ -244,7 +244,7 @@
     <ClInclude Include="..\..\fs\config\ClientConfig.h" />
     <ClInclude Include="..\..\fs\config\EdenConfig.h" />
     <ClInclude Include="..\..\fs\config\filechangemonitor.h" />
-    <ClInclude Include="..\..\fs\fuse\EdenStats.h" />
+    <ClInclude Include="..\..\fs\tracing\EdenStats.h" />
     <ClInclude Include="..\..\fs\inodes\ServerState.h" />
     <ClInclude Include="..\..\fs\journal\Journal.h" />
     <ClInclude Include="..\..\fs\journal\JournalDelta.h" />

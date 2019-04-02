@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 #include <folly/container/Array.h>
 #include <chrono>

@@ -12,9 +12,9 @@
 #include <folly/io/async/Request.h>
 #include <atomic>
 #include <utility>
-#include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 namespace facebook {
 namespace eden {

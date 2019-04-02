@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/tracing/EdenStats.h"
 #ifdef EDEN_WIN
 #include "eden/win/fs/mount/EdenMount.h" // @manual
 #include "eden/win/fs/utils/Stub.h" // @manual

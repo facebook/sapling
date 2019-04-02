@@ -15,7 +15,7 @@
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/tracing/EdenStats.h"
 #ifdef EDEN_WIN
 #include "eden/win/fs/utils/Stub.h" // @manual
 #include "eden/win/fs/utils/UserInfo.h" // @manual
