@@ -165,14 +165,14 @@ except NameError:
 def add(ui, repo, *pats, **opts):
     """start tracking the specified files
 
-    Schedule files to be version controlled and added to the
-    repository.
+    Specify files to be tracked by Mercurial. The files will be added to
+    the repository at the next commit.
 
-    The files will be added to the repository at the next commit. To
-    undo an add before that, see :hg:`forget`.
+    To undo an add before files have been committed, use :hg:`forget`.
+    To undo an add after files have been committed, use :hg:`rm`.
 
     If no names are given, add all files to the repository (except
-    files matching ``.gitignore``).
+    files matching ``.hgignore``).
 
     .. container:: verbose
 
@@ -5031,11 +5031,12 @@ def recover(ui, repo):
 def remove(ui, repo, *pats, **opts):
     """delete the specified tracked files
 
-    Schedule the indicated files for removal from the current branch.
+    Remove the specified tracked files from the repository and delete
+    them. The files will be deleted from the repository at the next
+    commit.
 
-    This command schedules the files to be removed at the next commit.
-    To undo a remove before that, see :hg:`revert`. To undo added
-    files, see :hg:`forget`.
+    To undo a remove before files have been committed, use :hg:`revert`.
+    To stop tracking files without deleting them, use :hg:`forget`.
 
     .. container:: verbose
 
@@ -5735,38 +5736,43 @@ def show(ui, repo, *args, **opts):
 def status(ui, repo, *pats, **opts):
     """list files with pending changes
 
-    Show status of files in the repository. If names are given, only
-    files that match are shown. Files that are clean or ignored or
-    the source of a copy/move operation, are not listed unless
-    -c/--clean, -i/--ignored, -C/--copies or -A/--all are given.
-    Unless options described with "show only ..." are given, the
-    options -mardu are used.
-
-    Option -q/--quiet hides untracked (unknown and ignored) files
-    unless explicitly requested with -u/--unknown or -i/--ignored.
-
-    .. note::
-
-       :hg:`status` may appear to disagree with diff if permissions have
-       changed or a merge has occurred. The standard diff format does
-       not report permission changes and diff only reports changes
-       relative to one merge parent.
-
-    If one revision is given, it is used as the base revision.
-    If two revisions are given, the differences between them are
-    shown. The --change option can also be used as a shortcut to list
-    the changed files of a revision from its first parent.
-
-    The codes used to show the status of files are::
+    Show status of files in the repository using the following status
+    indicators::
 
       M = modified
       A = added
       R = removed
       C = clean
-      ! = missing (deleted by non-hg command, but still tracked)
+      ! = missing (deleted by a non-hg command, but still tracked)
       ? = not tracked
       I = ignored
         = origin of the previous file (with --copies)
+
+    By default, shows files that have been modified, added, removed,
+    deleted, or that are unknown (corresponding to the options -mardu).
+    Files that are unmodified, ignored, or the source of a copy/move
+    operation are not listed.
+
+    To control the exact statuses that are shown, specify the relevant
+    flags (like -rd to show only files that are removed or deleted).
+    Additionally, specify -q/--quiet to hide both unknown and ignored
+    files.
+
+    To show the status of specific files, provide an explicit list of
+    files to match. To include or exclude files using regular expressions,
+    use -I or -X.
+
+    If --rev is specified, and only one revision is given, it is used as
+    the base revision. If two revisions are given, the differences between
+    them are shown. The --change option can also be used as a shortcut
+    to list the changed files of a revision from its first parent.
+
+    .. note::
+
+       :hg:`status` might appear to disagree with :hg:`diff` if permissions
+       have changed or a merge has occurred, because the standard diff
+       format does not report permission changes and :hg:`diff` only
+       reports changes relative to one merge parent.
 
     .. container:: verbose
 
