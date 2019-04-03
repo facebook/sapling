@@ -290,9 +290,9 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   | |
   o |    merge 6 and 7 [public;rev=18;4a0002072071]
   |\ \
-  | o |  7 [public;rev=17;7126dfcadf99]
+  | o |  6 [public;rev=17;8ad514b2cb51]
   | | |
-  o | |  6 [public;rev=16;8ad514b2cb51]
+  o | |  7 [public;rev=16;7126dfcadf99]
   |/ /
   o /  5 [public;rev=12;59e5396444cf]
   |/
@@ -328,9 +328,9 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   | |
   o |    merge 6 and 7 [public;rev=18;4a0002072071]
   |\ \
-  | o |  7 [public;rev=17;7126dfcadf99]
+  | o |  6 [public;rev=17;8ad514b2cb51]
   | | |
-  o | |  6 [public;rev=16;8ad514b2cb51]
+  o | |  7 [public;rev=16;7126dfcadf99]
   |/ /
   o /  5 [public;rev=12;59e5396444cf]
   |/
@@ -373,9 +373,9 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   | |
   o |    merge 6 and 7 [public;rev=18;4a0002072071]
   |\ \
-  | o |  7 [public;rev=17;7126dfcadf99]
+  | o |  6 [public;rev=17;8ad514b2cb51]
   | | |
-  o | |  6 [public;rev=16;8ad514b2cb51]
+  o | |  7 [public;rev=16;7126dfcadf99]
   |/ /
   o /  5 [public;rev=12;59e5396444cf]
   |/
