@@ -466,3 +466,15 @@ Test deleting a bookmark
   o  9 [public;rev=20;2f7cc50dc4e5]
   |
   ~
+
+Test creating a bookmark and new head
+  $ echo draft > draft && hg add draft && hg ci -m draft
+  $ hgmn push -r . --to newbook --create
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 7a037594e202 to destination ssh://user@dummy/repo bookmark newbook
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  exporting bookmark newbook

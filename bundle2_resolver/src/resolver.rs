@@ -303,10 +303,8 @@ fn resolve_pushrebase(
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
                     let onto_bookmark = Bookmark::new(onto_bookmark)?;
-                    let create_if_not_exists = cg_push.mparams.get("newhead").is_some();
                     let onto_bookmark = pushrebase::OntoBookmarkParams {
                         bookmark: onto_bookmark,
-                        create_if_not_exists,
                     };
                     Ok((onto_bookmark, cg_push, manifests, bundle2))
                 }

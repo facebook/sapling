@@ -132,7 +132,6 @@ pub struct PushrebaseSuccessResult {
 #[derive(Clone)]
 pub struct OntoBookmarkParams {
     pub bookmark: Bookmark,
-    pub create_if_not_exists: bool,
 }
 
 /// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
@@ -388,26 +387,22 @@ fn find_closest_root(
                 find_closest_ancestor_root(ctx.clone(), repo, config, bookmark.bookmark, roots, id)
             }
             None => {
-                if bookmark.create_if_not_exists {
-                    join_all(roots.into_iter().map(move |root| {
-                        repo.get_generation_number_by_bonsai(ctx.clone(), root)
-                            .and_then(move |maybe_gen_num| {
-                                maybe_gen_num.ok_or(ErrorKind::RootNotFound(root).into())
-                            })
-                            .map(move |gen_num| (root, gen_num))
-                    }))
-                    .and_then(|roots_with_gen_nums| {
-                        roots_with_gen_nums
-                            .into_iter()
-                            .max_by_key(|(_, gen_num)| gen_num.clone())
-                            .ok_or(ErrorKind::NoRoots.into())
-                    })
-                    .map(|(cs_id, _)| cs_id)
-                    .from_err()
-                    .boxify()
-                } else {
-                    err(ErrorKind::PushrebaseBookmarkNotFound(bookmark.bookmark).into()).boxify()
-                }
+                join_all(roots.into_iter().map(move |root| {
+                    repo.get_generation_number_by_bonsai(ctx.clone(), root)
+                        .and_then(move |maybe_gen_num| {
+                            maybe_gen_num.ok_or(ErrorKind::RootNotFound(root).into())
+                        })
+                        .map(move |gen_num| (root, gen_num))
+                }))
+                .and_then(|roots_with_gen_nums| {
+                    roots_with_gen_nums
+                        .into_iter()
+                        .max_by_key(|(_, gen_num)| gen_num.clone())
+                        .ok_or(ErrorKind::NoRoots.into())
+                })
+                .map(|(cs_id, _)| cs_id)
+                .from_err()
+                .boxify()
             }
         }
     })
@@ -660,7 +655,7 @@ fn intersect_changed_files(
 }
 
 /// Returns Some(ChangesetId) if bookmarks exists.
-/// Returns None if bookmarks does not exists, but create_if_not_exists is set to true
+/// Returns None if bookmarks does not exists
 fn get_onto_bookmark_value(
     ctx: CoreContext,
     repo: &BlobRepo,
@@ -668,15 +663,8 @@ fn get_onto_bookmark_value(
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
     get_bookmark_value(ctx.clone(), &repo, &onto_bookmark.bookmark).and_then(
         move |maybe_bookmark_value| match maybe_bookmark_value {
-            Some(bookmark_value) => ok(Some(bookmark_value)).left_future(),
-            None => {
-                if onto_bookmark.create_if_not_exists {
-                    ok(None).left_future()
-                } else {
-                    err(ErrorKind::PushrebaseBookmarkNotFound(onto_bookmark.bookmark).into())
-                        .right_future()
-                }
-            }
+            Some(bookmark_value) => ok(Some(bookmark_value)),
+            None => ok(None),
         },
     )
 }
@@ -978,7 +966,6 @@ mod tests {
         let book = Bookmark::new("master").unwrap();
         let book = OntoBookmarkParams {
             bookmark: book,
-            create_if_not_exists: false,
         };
         book
     }
@@ -2021,25 +2008,6 @@ mod tests {
         let book = Bookmark::new("newbook").unwrap();
         let book = OntoBookmarkParams {
             bookmark: book,
-            create_if_not_exists: false,
-        };
-        assert!(run_future(
-            &mut runtime,
-            do_pushrebase(
-                ctx.clone(),
-                repo.clone(),
-                Default::default(),
-                book,
-                vec![hg_cs],
-                None
-            ),
-        )
-        .is_err());
-
-        let book = Bookmark::new("newbook").unwrap();
-        let book = OntoBookmarkParams {
-            bookmark: book,
-            create_if_not_exists: true,
         };
         assert!(run_future(
             &mut runtime,
@@ -2065,7 +2033,6 @@ mod tests {
             let book = Bookmark::new("newbook").unwrap();
             let book = OntoBookmarkParams {
                 bookmark: book,
-                create_if_not_exists: true,
             };
 
             let num_pushes = 10;
