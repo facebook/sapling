@@ -169,15 +169,15 @@ class Client(object):
     def _getquery(self):
         return """
         query RevisionQuery(
-          $params: [DifferentialRevisionQueryParams!]!
+          $params: [PhabricatorDiffQueryParams!]!
         ) {
-          query: differential_revision_query(query_params: $params) {
+          query: phabricator_diff_query(query_params: $params) {
             results {
               nodes {
                 number
                 diff_status_name
-                latest_active_diff {
-                  local_commit_info: diff_properties (
+                latest_active_diff: latest_active_phabricator_version {
+                  local_commit_info: phabricator_version_properties (
                     property_names: ["local:commits"]
                   ) {
                     nodes {
@@ -188,7 +188,7 @@ class Client(object):
                 created_time
                 updated_time
                 is_landing
-                differential_diffs {
+                differential_diffs: phabricator_versions {
                   count
                 }
               }
