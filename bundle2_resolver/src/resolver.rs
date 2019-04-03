@@ -246,7 +246,6 @@ fn resolve_push(
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
                     let reason = BookmarkUpdateReason::Push {
-                        // TODO (ikostia): set bundle2 handle and changeset timestamps here
                         bundle_replay_data: maybe_raw_bundle2_id
                             .map(|id| BundleReplayData::new(id)),
                     };
@@ -488,7 +487,6 @@ fn resolve_bookmark_only_pushrebase(
                     .boxify()
             }
         })
-        //TODO (ikostia, T40115672): add hook run here. Make sure hooks run even without changesets
         .and_then({
             cloned!(resolver);
             move |(bookmark_push, maybe_raw_bundle2_id)| {
