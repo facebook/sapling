@@ -106,6 +106,7 @@ TODO: Make this test compatibile with obsstore enabled.
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > backgroundrepack=True
+  > incrementalloosefilerepack=False
   > EOF
   $ hg debugstrip tip
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/6b4b6f66ef8c-b4b8bdaf-backup.hg (glob)

@@ -88,6 +88,9 @@ Configs:
     ``remotefilelog.packsonlyrepack`` only repack packfiles during background
     repacks.
 
+    ``remotefilelog.incrementalloosefilerepack`` repack a portion of the
+    loosefiles.
+
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
 

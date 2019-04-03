@@ -9,6 +9,7 @@ import errno
 import hashlib
 import itertools
 import os
+import random
 import shutil
 import stat
 import time
@@ -54,12 +55,17 @@ class basestore(object):
         self._validatehashes = self.ui.configbool(
             "remotefilelog", "validatecachehashes", True
         )
+        self._incrementalloosefilesrepack = self.ui.configbool(
+            "remotefilelog", "incrementalloosefilerepack", True
+        )
         if self._validatecache not in ("on", "strict", "off"):
             self._validatecache = "on"
         if self._validatecache == "off":
             self._validatecache = False
 
         self._mutablepacks = None
+
+        self._repackdir = None
 
         if shared:
             shallowutil.mkstickygroupdir(self.ui, path)
@@ -98,8 +104,12 @@ class basestore(object):
         if options and options.get(constants.OPTION_PACKSONLY):
             return
 
+        incremental = False
+        if options and options.get("incremental") and self._incrementalloosefilesrepack:
+            incremental = True
+
         with ledger.location(self._path):
-            for filename, nodes in self._getfiles():
+            for filename, nodes in self._getfiles(incremental):
                 for node in nodes:
                     ledger.markdataentry(self, filename, node)
                     ledger.markhistoryentry(self, filename, node)
@@ -113,8 +123,9 @@ class basestore(object):
                     util.tryunlink(path)
                 prog.value += 1
 
-        # Clean up the repo cache directory.
-        self._cleanupdirectory(self._getrepocachepath())
+        if self._repackdir is not None:
+            # Clean up the repo cache directory.
+            self._cleanupdirectory(self._repackdir)
 
     def markforrefresh(self):
         # This only applies to stores that keep a snapshot of whats on disk.
@@ -165,7 +176,7 @@ class basestore(object):
             filepath = os.path.join(rootdir, "filename")
             util.tryunlink(filepath)
 
-    def _getfiles(self):
+    def _getfiles(self, incrementalrepack):
         """Return a list of (filename, [node,...]) for all the revisions that
         exist in the store.
 
@@ -174,7 +185,7 @@ class basestore(object):
         name+node keys and not namehash+node keys.
         """
         existing = {}
-        for filenamehash, node in self._listkeys():
+        for filenamehash, node in self._listkeys(incrementalrepack):
             existing.setdefault(filenamehash, []).append(node)
 
         filenamemap = self._resolvefilenames(existing.keys())
@@ -266,26 +277,77 @@ class basestore(object):
     def _getrepocachepath(self):
         return os.path.join(self._path, self._reponame) if self._shared else self._path
 
-    def _listkeys(self):
+    def _getincrementalrootdir(self):
+        rootdir = self._getrepocachepath()
+        entries = os.listdir(rootdir)
+        entries = [os.path.join(rootdir, p) for p in entries]
+        entries = [folder for folder in entries if os.path.isdir(folder)]
+
+        if len(entries) == 0:
+            return None
+
+        # Since the distribution of loosefile should be uniform accross all of
+        # the loosefile directories, let's randomly pick one to repack.
+        for tries in range(10):
+            entry = entries[random.randrange(len(entries))]
+            for root, dirs, files in os.walk(entry):
+                for filename in files:
+                    if len(filename) != 40:
+                        continue
+
+                    try:
+                        int(filename, 16)
+                    except ValueError:
+                        continue
+
+                    parent, d = os.path.split(root)
+                    if self._shared:
+                        d += os.path.basename(parent)
+
+                    if len(d) != 40:
+                        continue
+
+                    try:
+                        int(d, 16)
+                    except ValueError:
+                        continue
+
+                    if self._shared:
+                        return parent
+                    else:
+                        return root
+        return None
+
+    def _listkeys(self, incrementalrepack):
         """List all the remotefilelog keys that exist in the store.
 
         Returns a iterator of (filename hash, filecontent hash) tuples.
         """
 
-        for root, dirs, files in os.walk(self._getrepocachepath()):
-            for filename in files:
-                if len(filename) != 40:
-                    continue
-                node = filename
-                if self._shared:
-                    # .../1a/85ffda..be21
-                    filenamehash = root[-41:-39] + root[-38:]
-                else:
-                    filenamehash = root[-40:]
+        if self._repackdir is not None:
+            rootdir = self._repackdir
+        else:
+            if not incrementalrepack:
+                rootdir = self._getrepocachepath()
+            else:
+                rootdir = self._getincrementalrootdir()
+            self._repackdir = rootdir
 
-                self._reportmetrics(root, filename)
+        if rootdir is not None:
+            for root, dirs, files in os.walk(rootdir):
+                for filename in files:
+                    if len(filename) != 40:
+                        continue
+                    node = filename
+                    if self._shared:
+                        # .../1a/85ffda..be21
+                        filenamehash = root[-41:-39] + root[-38:]
+                    else:
+                        filenamehash = root[-40:]
 
-                yield (bin(filenamehash), bin(node))
+                    self._reportmetrics(root, filename)
+
+                    yield (bin(filenamehash), bin(node))
 
     def _reportmetrics(self, root, filename):
         """Log total remotefilelog blob size and count.

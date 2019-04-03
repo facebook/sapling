@@ -274,6 +274,8 @@ def _manifestrepack(repo, options, incremental):
 def fullrepack(repo, options=None):
     """If ``packsonly`` is True, stores creating only loose objects are skipped.
     """
+    if options:
+        options["incremental"] = False
     _shareddatastoresrepack(repo, options, False)
     _localdatarepack(repo, options, False)
     _manifestrepack(repo, options, False)
@@ -283,6 +285,8 @@ def incrementalrepack(repo, options=None):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
+    if options:
+        options["incremental"] = True
     _shareddatastoresrepack(repo, options, True)
     _localdatarepack(repo, options, True)
     _manifestrepack(repo, options, True)
