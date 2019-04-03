@@ -14,6 +14,7 @@ mod rate_limiter;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use clap::{value_t, App};
+use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
@@ -31,14 +32,14 @@ use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use rate_limiter::RateLimiter;
 use slog::{error, info, o, Logger};
-use sql::myrouter;
+use sql::{myrouter, Connection};
 use sqlblob::Sqlblob;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio_timer::Delay;
 
-const MIN_HEALER_ITERATION_DELAY: Duration = Duration::from_secs(1);
+const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 
 fn maybe_schedule_healer_for_repo(
     dry_run: bool,
@@ -47,6 +48,7 @@ fn maybe_schedule_healer_for_repo(
     rate_limiter: RateLimiter,
     config: RepoConfig,
     myrouter_port: u16,
+    replication_lag_db_regions: Vec<String>,
 ) -> Result<BoxFuture<(), Error>> {
     ensure_msg!(config.enabled, "Repo is disabled");
 
@@ -127,9 +129,22 @@ fn maybe_schedule_healer_for_repo(
         }
     };
 
+    let mut replication_lag_db_conns = vec![];
+    let mut conn_builder = Connection::myrouter_builder();
+    conn_builder
+        .service_type(myrouter::ServiceType::SLAVE)
+        .locality(myrouter::DbLocality::EXPLICIT)
+        .tier(&db_address)
+        .port(myrouter_port);
+
+    for region in replication_lag_db_regions {
+        conn_builder.explicit_region(region);
+        replication_lag_db_conns.push(conn_builder.build_read_only());
+    }
+
     let heal = blobstores.and_then(move |blobstores| {
         let repo_healer = RepoHealer::new(
-            logger,
+            logger.clone(),
             blobstore_sync_queue_limit,
             RepositoryId::new(config.repoid),
             rate_limiter,
@@ -142,7 +157,7 @@ fn maybe_schedule_healer_for_repo(
             let ctx = CoreContext::test_mock();
             repo_healer.heal(ctx).boxify()
         } else {
-            schedule_everlasting_healing(repo_healer)
+            schedule_everlasting_healing(logger, repo_healer, replication_lag_db_conns)
         }
     });
     Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
@@ -150,21 +165,66 @@ fn maybe_schedule_healer_for_repo(
         .boxify())
 }
 
-fn schedule_everlasting_healing(repo_healer: RepoHealer) -> BoxFuture<(), Error> {
+fn schedule_everlasting_healing(
+    logger: Logger,
+    repo_healer: RepoHealer,
+    replication_lag_db_conns: Vec<Connection>,
+) -> BoxFuture<(), Error> {
+    let replication_lag_db_conns = Arc::new(replication_lag_db_conns);
+
     let fut = loop_fn((), move |()| {
-        let start = Instant::now();
         // TODO(luk) use a proper context here and put the logger inside of it
         let ctx = CoreContext::test_mock();
 
+        cloned!(logger, replication_lag_db_conns);
         repo_healer.heal(ctx).and_then(move |()| {
-            let next_iter_deadline = start + MIN_HEALER_ITERATION_DELAY;
-            Delay::new(next_iter_deadline)
+            ensure_small_db_replication_lag(logger, replication_lag_db_conns)
                 .map(|()| Loop::Continue(()))
-                .from_err()
         })
     });
 
     spawn_future(fut).boxify()
+}
+
+fn ensure_small_db_replication_lag(
+    logger: Logger,
+    replication_lag_db_conns: Arc<Vec<Connection>>,
+) -> impl Future<Item = (), Error = Error> {
+    // Make sure we've slept at least once before continuing
+    let already_slept = false;
+
+    loop_fn(already_slept, move |already_slept| {
+        // Check what max replication lag on replicas, and sleep for that long.
+        // This is done in order to avoid overloading the db.
+        let mut lag_secs_futs = vec![];
+        for conn in replication_lag_db_conns.iter() {
+            let f = conn.show_replica_lag_secs().and_then(|maybe_secs| {
+                maybe_secs.ok_or(err_msg(
+                    "Could not fetch db replication lag. Failing to avoid overloading db",
+                ))
+            });
+            lag_secs_futs.push(f);
+        }
+        cloned!(logger);
+
+        join_all(lag_secs_futs).and_then(move |lags| {
+            let max_lag = lags.into_iter().max().unwrap_or(0);
+            info!(logger, "Replication lag is {} secs", max_lag);
+            if max_lag < MAX_ALLOWED_REPLICATION_LAG_SECS && already_slept {
+                ok(Loop::Break(())).left_future()
+            } else {
+                let max_lag = Duration::from_secs(max_lag as u64);
+
+                let start = Instant::now();
+                let next_iter_deadline = start + max_lag;
+
+                Delay::new(next_iter_deadline)
+                    .map(|()| Loop::Continue(true))
+                    .from_err()
+                    .right_future()
+            }
+        })
+    })
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -181,6 +241,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             r#"
             --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
             --dry-run 'performs a single healing and prints what would it do without doing it'
+            --db-regions=[REGIONS] 'comma-separated list of db regions where db replication lag is monitored'
         "#,
         )
 }
@@ -227,6 +288,12 @@ fn main() -> Result<()> {
                 rate_limiter.clone(),
                 config,
                 myrouter_port,
+                matches
+                    .value_of("db-regions")
+                    .unwrap_or("")
+                    .split(',')
+                    .map(|s| s.to_string())
+                    .collect(),
             );
 
             match scheduled {
