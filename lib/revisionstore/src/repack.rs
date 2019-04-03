@@ -247,7 +247,12 @@ pub fn list_packs(dir: &Path, extension: &str) -> Fallible<Vec<PathBuf>> {
 /// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
 pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fallible<Vec<PathBuf>> {
     // XXX: Read these from the configuration.
-    let repackmaxpacksize = 4 * 1024 * 1024 * 1024;
+    let mut repackmaxpacksize = 4 * 1024 * 1024 * 1024;
+    if extension == "histpack" {
+        // Per 100MB of histpack size, the memory consumption is over 1GB, thus repacking 4GB
+        // would need over 40GB of RAM.
+        repackmaxpacksize = 400 * 1024 * 1024;
+    }
     let repacksizelimit = 100 * 1024 * 1024;
 
     let mut packssizes = packs
