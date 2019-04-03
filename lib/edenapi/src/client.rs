@@ -32,10 +32,10 @@ use crate::config::{ClientCreds, Config};
 pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
 pub struct EdenApiHttpClient {
-    pub(crate) client: Arc<HyperClient>,
-    pub(crate) base_url: Url,
-    pub(crate) repo: String,
-    pub(crate) cache_path: PathBuf,
+    client: Arc<HyperClient>,
+    base_url: Url,
+    repo: String,
+    cache_path: PathBuf,
 }
 
 impl EdenApiHttpClient {
