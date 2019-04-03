@@ -37,8 +37,6 @@ extern crate revset;
 extern crate slog;
 extern crate slog_glog_fmt;
 extern crate slog_kvfilter;
-extern crate slog_logview;
-extern crate slog_scuba;
 extern crate slog_stats;
 extern crate slog_term;
 extern crate tokio;
@@ -63,8 +61,6 @@ use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
-use slog_logview::LogViewDrain;
-use slog_scuba::ScubaDrain;
 use std::fmt;
 use std::io;
 use std::path::PathBuf;
@@ -291,11 +287,7 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
     let drain = {
         let drain = {
             let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
-            let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
-            let logview_drain = LogViewDrain::new("mononoke_hook_tailer_log");
-            let scuba_drain = ScubaDrain::new("mononoke_hook_tailer");
-            let drain = slog::Duplicate::new(stderr_drain, logview_drain);
-            slog::Duplicate::new(scuba_drain, drain)
+            GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer)
         };
         let drain = slog_stats::StatsDrain::new(drain);
         drain.filter_level(level)
