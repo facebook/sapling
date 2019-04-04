@@ -17,7 +17,15 @@ import subprocess
 import sys
 import time
 
-from . import debug, debugstatus, debugstrip, eden, fs, uncommit
+from . import (
+    debug,
+    debugcheckoutidentifier,
+    debugstatus,
+    debugstrip,
+    eden,
+    fs,
+    uncommit,
+)
 from .. import (
     archival,
     bookmarks,
@@ -72,6 +80,7 @@ command = registrar.command(table)
 readonly = registrar.command.readonly
 
 table.update(uncommit.cmdtable)
+table.update(debugcheckoutidentifier.command._table)
 table.update(debugstatus.command._table)
 table.update(debugstrip.command._table)
 table.update(eden.command._table)

@@ -375,6 +375,8 @@ class localrepository(object):
         "cache/",
         # XXX shouldn't be dirstate covered by the wlock?
         "dirstate",
+        # XXX checkoutidentifier has same rules as dirstate.
+        "checkoutidentifier",
         # XXX bisect was still a bit too messy at the time
         # this changeset was introduced. Someone should fix
         # the remainig bit and drop this line

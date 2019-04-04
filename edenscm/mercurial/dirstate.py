@@ -768,6 +768,15 @@ class dirstate(object):
         st = self._opener(filename, "w", atomictemp=True, checkambig=True)
         self._writedirstate(st)
 
+    @util.propertycache
+    def checkoutidentifier(self):
+        try:
+            return self._opener.read("checkoutidentifier")
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise
+        return ""
+
     def addparentchangecallback(self, category, callback):
         """add a callback to be called when the wd parents are changed
 
@@ -784,6 +793,11 @@ class dirstate(object):
         if self._origpl is not None and self._origpl != self._pl:
             for c, callback in sorted(self._plchangecallbacks.iteritems()):
                 callback(self, self._origpl, self._pl)
+            # if the first parent has changed then consider this a new checkout
+            if self._origpl[0] != self._pl[0]:
+                with self._opener("checkoutidentifier", "w", atomictemp=True) as f:
+                    f.write(util.makerandomidentifier())
+                util.clearcachedproperty(self, "checkoutidentifier")
             self._origpl = None
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
@@ -1381,7 +1395,11 @@ class dirstate(object):
             # The dirstate may be too corrupt to read.  We don't want to fail
             # just because of logging, so log the parents as unknown.
             parents = ("unknown", "unknown")
-        data = {prefix + "wdirparent1": parents[0], prefix + "wdirparent2": parents[1]}
+        data = {
+            prefix + "checkoutidentifier": self.checkoutidentifier,
+            prefix + "wdirparent1": parents[0],
+            prefix + "wdirparent2": parents[1],
+        }
         ui.log("dirstate_info", "", **data)
 
 

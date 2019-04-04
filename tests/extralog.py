@@ -11,11 +11,18 @@ def uisetup(ui):
         def log(self, event, *msg, **opts):
             items = self.configlist("extralog", "events")
             if event in items:
+                keywords = ""
+                if opts and self.configbool("extralog", "keywords"):
+                    keywords = " (%s)\n" % " ".join(
+                        "%s=%s" % (n, v) for n, v in sorted(opts.items())
+                    )
                 if msg:
                     ui.write("%s: " % event)
                     ui.write(msg[0] % msg[1:])
+                    ui.write("%s" % keywords)
                 else:
-                    ui.write("%s\n" % event)
+                    ui.write("%s%s" % (event, keywords))
+
             return super(extralogui, self).log(event, *msg, **opts)
 
     ui.__class__ = extralogui

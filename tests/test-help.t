@@ -959,6 +959,8 @@ Test list of internal help commands
                  lists the capabilities of a remote peer
    debugcheckcasecollisions
                  check for case collisions against a commit
+   debugcheckoutidentifier
+                 display the current checkout unique identifier
    debugcheckstate
                  validate the correctness of the current dirstate
    debugcolor    show available color, effects or style

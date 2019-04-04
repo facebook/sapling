@@ -85,6 +85,7 @@ Non store repo:
   .hg
   .hg/00changelog.i
   .hg/00manifest.i
+  .hg/checkoutidentifier
   .hg/data
   .hg/data/tst.d.hg
   .hg/data/tst.d.hg/foo.i
@@ -115,6 +116,7 @@ Non fncache repo:
   $ find .hg | sort
   .hg
   .hg/00changelog.i
+  .hg/checkoutidentifier
   .hg/dirstate
   .hg/last-message.txt
   .hg/requires

@@ -82,6 +82,7 @@ Show debug commands if there are no other candidates
   debugbundle
   debugcapabilities
   debugcheckcasecollisions
+  debugcheckoutidentifier
   debugcheckstate
   debugcolor
   debugcommands
@@ -276,6 +277,7 @@ Show all commands + options
   debugbundle: all, part-type, spec
   debugcapabilities: 
   debugcheckcasecollisions: rev
+  debugcheckoutidentifier: 
   debugcheckstate: 
   debugcolor: style
   debugcommands: 

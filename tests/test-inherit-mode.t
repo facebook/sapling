@@ -68,6 +68,7 @@ new directories are setgid
   $ $PYTHON ../printmodes.py .
   00700 ./.hg/
   00600 ./.hg/00changelog.i
+  00660 ./.hg/checkoutidentifier
   00660 ./.hg/dirstate
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
