@@ -13,7 +13,10 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
-from ..extlib.pyrevisionstore import datapack as rustdatapack
+from ..extlib.pyrevisionstore import (
+    datapack as rustdatapack,
+    repackincrementaldatapacks,
+)
 from .lz4wrapper import lz4compress, lz4decompress
 
 
@@ -97,6 +100,10 @@ class datapackstore(basepack.basepackstore):
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to datapackstore")
+
+    def repackstore(self, incremental=True):
+        if self.fetchpacksenabled:
+            repackincrementaldatapacks(self.path, self.path)
 
 
 class datapack(basepack.basepack):

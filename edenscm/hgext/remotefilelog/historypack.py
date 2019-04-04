@@ -12,7 +12,10 @@ from edenscm.mercurial import error, util
 from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
-from ..extlib.pyrevisionstore import historypack as rusthistorypack
+from ..extlib.pyrevisionstore import (
+    historypack as rusthistorypack,
+    repackincrementalhistpacks,
+)
 
 
 # (filename hash, offset, size)
@@ -84,6 +87,10 @@ class historypackstore(basepack.basepackstore):
         raise RuntimeError(
             "cannot add to historypackstore (%s:%s)" % (filename, hex(node))
         )
+
+    def repackstore(self):
+        if self.fetchpacksenabled:
+            repackincrementalhistpacks(self.path, self.path)
 
 
 class historypack(basepack.basepack):
