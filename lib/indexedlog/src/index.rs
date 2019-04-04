@@ -61,10 +61,10 @@ use std::sync::Arc;
 
 use std::io::ErrorKind::InvalidData;
 
-use base16::{Base16Iter, base16_to_base256, single_hex_to_base16};
-use checksum_table::ChecksumTable;
-use lock::ScopedFileLock;
-use utils::mmap_readonly;
+use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
+use crate::checksum_table::ChecksumTable;
+use crate::lock::ScopedFileLock;
+use crate::utils::mmap_readonly;
 
 use fs2::FileExt;
 use memmap::Mmap;
@@ -502,9 +502,10 @@ impl RadixOffset {
     #[inline]
     fn read_bitmap_unchecked(buf: &[u8], bitmap_offset: usize) -> io::Result<u16> {
         debug_assert_eq!(RADIX_BITMAP_BYTES, size_of::<u16>());
-        Ok(LittleEndian::read_u16(buf.get(
-            bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES,
-        ).ok_or_else(integrity_error)?))
+        Ok(LittleEndian::read_u16(
+            buf.get(bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES)
+                .ok_or_else(integrity_error)?,
+        ))
     }
 
     /// Read integer from the given offset without integrity check.
@@ -1088,8 +1089,8 @@ impl MemLeaf {
             if let Ok(TypedOffset::ExtKey(key_offset)) = self.key_offset.to_typed(buf, &None) {
                 let ext_key_index = key_offset.dirty_index();
                 let link_index = self.link_offset.dirty_index();
-                let mut ext_key = dirty_ext_keys.get_mut(ext_key_index).unwrap();
-                let mut link = dirty_links.get_mut(link_index).unwrap();
+                let ext_key = dirty_ext_keys.get_mut(ext_key_index).unwrap();
+                let link = dirty_links.get_mut(link_index).unwrap();
 
                 let next_link_offset = link.next_link_offset;
                 if next_link_offset.is_dirty()
@@ -1190,10 +1191,11 @@ impl MemKey {
         let offset = offset as usize;
         check_type(buf, offset, TYPE_KEY)?;
         let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
-        let key = Vec::from(buf.get(
-            offset + TYPE_BYTES + len..offset + TYPE_BYTES + len + key_len,
-        ).ok_or(InvalidData)?)
-            .into_boxed_slice();
+        let key = Vec::from(
+            buf.get(offset + TYPE_BYTES + len..offset + TYPE_BYTES + len + key_len)
+                .ok_or(InvalidData)?,
+        )
+        .into_boxed_slice();
         verify_checksum(checksum, offset as u64, (TYPE_BYTES + len + key_len) as u64)?;
         Ok(MemKey { key })
     }
@@ -1505,7 +1507,7 @@ impl OpenOptions {
             match self.len {
                 None => {
                     // Take the lock to read file length, since that decides root entry location.
-                    let mut lock = ScopedFileLock::new(&mut file, false)?;
+                    let lock = ScopedFileLock::new(&mut file, false)?;
                     mmap_readonly(lock.as_ref(), None)?
                 }
                 Some(len) => {
@@ -1657,7 +1659,7 @@ impl Index {
 
             // Inlined leafs. They might affect ExtKeys and Links. Need to write first.
             for i in 0..self.dirty_leafs.len() {
-                let mut entry = self.dirty_leafs.get_mut(i).unwrap();
+                let entry = self.dirty_leafs.get_mut(i).unwrap();
                 let offset = buf.len() as u64 + len;
                 if !entry.is_unused()
                     && entry.maybe_write_inline_to(
@@ -1667,7 +1669,8 @@ impl Index {
                         &mut self.dirty_ext_keys,
                         &mut self.dirty_links,
                         &mut offset_map,
-                    )? {
+                    )?
+                {
                     offset_map.leaf_map[i] = offset;
                     entry.mark_unused();
                 }

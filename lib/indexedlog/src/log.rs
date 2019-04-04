@@ -31,10 +31,11 @@
 // Integers are VLQ encoded, except for XXHASH64 and XXHASH32, which uses
 // LittleEndian encoding.
 
+use crate::index::{self, Index, InsertKey, LeafValueIter, PrefixIter};
+use crate::lock::ScopedFileLock;
+use crate::utils::{mmap_readonly, open_dir, xxhash, xxhash32};
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use index::{self, Index, InsertKey, LeafValueIter, PrefixIter};
-use lock::ScopedFileLock;
 use memmap::Mmap;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -44,7 +45,6 @@ use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use utils::{mmap_readonly, open_dir, xxhash, xxhash32};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
@@ -497,7 +497,7 @@ impl Log {
         data: &[u8],
         offset: u64,
     ) -> io::Result<()> {
-        for (mut index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
+        for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
                     IndexOutput::Reference(range) => {
@@ -526,7 +526,7 @@ impl Log {
     fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> io::Result<()> {
         // It's a programming error to call this when mem_buf is not empty.
         assert!(self.mem_buf.is_empty());
-        for (mut index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
+        for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             // The index meta is used to store the next offset the index should be built.
             let mut offset = {
                 let index_meta = index.get_meta();

@@ -14,20 +14,9 @@
 //! check parts can be used independently. See [index::Index] and
 //! [checksum_table::ChecksumTable] for details.
 
-extern crate atomicwrites;
-extern crate byteorder;
-extern crate bytes;
-extern crate fs2;
-extern crate memmap;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
-#[cfg(test)]
-extern crate rand;
-#[cfg(test)]
-extern crate tempfile;
-extern crate twox_hash;
-extern crate vlqencoding;
 
 pub mod base16;
 pub mod checksum_table;

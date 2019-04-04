@@ -5,15 +5,15 @@
 
 //! Rotation support for a set of [`Log`]s.
 
+use crate::lock::ScopedFileLock;
+use crate::log::{self, IndexDef, Log};
+use crate::utils::open_dir;
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use bytes::Bytes;
-use lock::ScopedFileLock;
-use log::{self, IndexDef, Log};
 use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use utils::open_dir;
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.

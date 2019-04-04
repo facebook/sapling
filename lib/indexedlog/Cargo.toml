@@ -1,6 +1,7 @@
 [package]
 name = "indexedlog"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 atomicwrites = "0.2.2"

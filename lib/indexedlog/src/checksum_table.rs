@@ -24,6 +24,7 @@
 // infrequently updated, and are already complex that it's cleaner to not
 // embed checksum logic into them.
 
+use crate::utils::{mmap_readonly, xxhash};
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
@@ -32,7 +33,6 @@ use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
-use utils::{mmap_readonly, xxhash};
 
 /// An table of checksums to verify another file.
 ///
