@@ -20,6 +20,7 @@ Test document extraction
   % extracting documentation from C
   % extracting documentation from da
   % extracting documentation from de
+  missing test-gendoc-de.t
   % extracting documentation from el
   % extracting documentation from fr
   % extracting documentation from it
