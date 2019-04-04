@@ -6,8 +6,9 @@
 use memmap::{Mmap, MmapOptions};
 use std::fs::File;
 use std::hash::Hasher;
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
+use tempfile;
 use twox_hash::{XxHash, XxHash32};
 
 /// Return a read-only mmap view of the entire file, and its length.
@@ -86,4 +87,14 @@ pub fn xxhash32<T: AsRef<[u8]>>(buf: T) -> u32 {
     let mut xx = XxHash32::default();
     xx.write(buf.as_ref());
     xx.finish() as u32
+}
+
+/// Atomically create or replace a file with the given content.
+pub fn atomic_write(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> io::Result<()> {
+    let path = path.as_ref();
+    let dir = path.parent().expect("path has a parent");
+    let mut file = tempfile::NamedTempFile::new_in(dir)?;
+    file.as_file_mut().write_all(content.as_ref())?;
+    file.persist(path)?;
+    Ok(())
 }

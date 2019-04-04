@@ -33,8 +33,7 @@
 
 use crate::index::{self, Index, InsertKey, LeafValueIter, PrefixIter};
 use crate::lock::ScopedFileLock;
-use crate::utils::{mmap_readonly, open_dir, xxhash, xxhash32};
-use atomicwrites::{AllowOverwrite, AtomicFile};
+use crate::utils::{atomic_write, mmap_readonly, open_dir, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use memmap::Mmap;
 use std::borrow::Cow;
@@ -1081,7 +1080,7 @@ impl LogMetadata {
     fn write_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut buf = Vec::new();
         self.write(&mut buf)?;
-        AtomicFile::new(path, AllowOverwrite).write(|f| f.write_all(&buf))?;
+        atomic_write(path, &buf)?;
         Ok(())
     }
 }

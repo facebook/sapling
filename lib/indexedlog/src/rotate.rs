@@ -7,12 +7,10 @@
 
 use crate::lock::ScopedFileLock;
 use crate::log::{self, IndexDef, Log};
-use crate::utils::open_dir;
-use atomicwrites::{AllowOverwrite, AtomicFile};
+use crate::utils::{atomic_write, open_dir};
 use bytes::Bytes;
 use std::fs;
 use std::io;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
@@ -288,7 +286,7 @@ fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::
         .clone()
         .create(true)
         .open(log_path)?;
-    AtomicFile::new(&latest_path, AllowOverwrite).write(|f| f.write_all(latest_str.as_bytes()))?;
+    atomic_write(&latest_path, latest_str.as_bytes())?;
     Ok(log)
 }
 

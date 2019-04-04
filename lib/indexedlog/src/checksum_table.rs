@@ -24,14 +24,13 @@
 // infrequently updated, and are already complex that it's cleaner to not
 // embed checksum logic into them.
 
-use crate::utils::{mmap_readonly, xxhash};
-use atomicwrites::{AllowOverwrite, AtomicFile};
+use crate::utils::{atomic_write, mmap_readonly, xxhash};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use memmap::Mmap;
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Cursor, Read, Write};
+use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
 
 /// An table of checksums to verify another file.
@@ -280,7 +279,7 @@ impl ChecksumTable {
         }
 
         // Write changes to disk
-        AtomicFile::new(&self.checksum_path, AllowOverwrite).write(|f| f.write_all(&buf))?;
+        atomic_write(&self.checksum_path, &buf)?;
 
         // Update fields
         self.buf = mmap;
@@ -306,7 +305,7 @@ impl ChecksumTable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Seek, SeekFrom};
+    use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempdir;
 
     fn setup() -> (File, Box<Fn() -> io::Result<ChecksumTable>>) {
