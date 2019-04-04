@@ -13,7 +13,6 @@
 
 from __future__ import absolute_import
 
-import random
 import socket
 import string
 
@@ -48,8 +47,7 @@ def correlator(ui):
     """
     global _correlator
     if _correlator is None:
-        alphabet = string.ascii_letters + string.digits
-        _correlator = "".join(random.choice(alphabet) for _x in range(16))
+        _correlator = util.makerandomidentifier()
         ui.log("clienttelemetry", "", client_correlator=_correlator)
     return _correlator
 

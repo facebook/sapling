@@ -30,6 +30,7 @@ import itertools
 import mmap
 import os
 import platform as pyplatform
+import random
 import re as remod
 import shutil
 import signal
@@ -4339,3 +4340,9 @@ def mergelists(a, b):
         while j < nb and b[j] == item:
             j += 1
     return result
+
+
+def makerandomidentifier(length=16):
+    """Generate a random identifier"""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(random.choice(alphabet) for _x in range(length))
