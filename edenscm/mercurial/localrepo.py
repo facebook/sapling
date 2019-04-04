@@ -2157,7 +2157,11 @@ class localrepository(object):
             if not force:
                 self.checkcommitpatterns(wctx, vdirs, match, status, fail)
 
-            cctx = context.workingcommitctx(self, status, text, user, date, extra)
+            loginfo = {"checkoutidentifier": self.dirstate.checkoutidentifier}
+
+            cctx = context.workingcommitctx(
+                self, status, text, user, date, extra, loginfo
+            )
 
             # internal config: ui.allowemptycommit
             allowemptycommit = (

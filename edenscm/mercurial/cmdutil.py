@@ -3501,6 +3501,8 @@ def amend(ui, repo, old, extra, pats, opts):
         extra["amend_source"] = old.hex()
         mutation.record(repo, extra, [old.node()], "amend")
 
+        loginfo = {"checkoutidentifier": repo.dirstate.checkoutidentifier}
+
         new = context.memctx(
             repo,
             parents=[base.node(), old.p2().node()],
@@ -3511,6 +3513,7 @@ def amend(ui, repo, old, extra, pats, opts):
             date=date,
             extra=extra,
             editor=editor,
+            loginfo=loginfo,
         )
 
         newdesc = changelog.stripdesc(new.description())
