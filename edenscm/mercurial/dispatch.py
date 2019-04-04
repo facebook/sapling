@@ -1403,12 +1403,16 @@ def _dispatch(req):
             mdiff.init(ui)
 
             ui.log("command", "%s\n", msg)
+            if repo:
+                repo.dirstate.loginfo(ui, "pre")
             strcmdopt = pycompat.strkwargs(cmdoptions)
             d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
             ret = runcommand(
                 lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
             )
             hintutil.show(lui)
+            if repo:
+                repo.dirstate.loginfo(ui, "post")
             return ret
 
 

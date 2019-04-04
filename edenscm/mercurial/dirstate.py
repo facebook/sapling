@@ -29,7 +29,7 @@ from . import (
     util,
 )
 from .i18n import _
-from .node import nullid
+from .node import hex, nullid
 
 
 parsers = policy.importmod(r"parsers")
@@ -1373,6 +1373,16 @@ class dirstate(object):
     def clearbackup(self, tr, backupname):
         """Clear backup file"""
         self._opener.unlink(backupname)
+
+    def loginfo(self, ui, prefix):
+        try:
+            parents = [hex(p) if p != nullid else "" for p in self._pl]
+        except Exception:
+            # The dirstate may be too corrupt to read.  We don't want to fail
+            # just because of logging, so log the parents as unknown.
+            parents = ("unknown", "unknown")
+        data = {prefix + "wdirparent1": parents[0], prefix + "wdirparent2": parents[1]}
+        ui.log("dirstate_info", "", **data)
 
 
 class dirstatemap(object):
