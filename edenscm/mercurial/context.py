@@ -1422,7 +1422,16 @@ class committablectx(basectx):
     """A committablectx object provides common functionality for a context that
     wants the ability to commit, e.g. workingctx or memctx."""
 
-    def __init__(self, repo, text="", user=None, date=None, extra=None, changes=None):
+    def __init__(
+        self,
+        repo,
+        text="",
+        user=None,
+        date=None,
+        extra=None,
+        changes=None,
+        loginfo=None,
+    ):
         self._repo = repo
         self._rev = None
         self._node = None
@@ -1433,6 +1442,7 @@ class committablectx(basectx):
             self._user = user
         if changes:
             self._status = changes
+        self._loginfo = loginfo
 
         self._extra = {}
         if extra:
@@ -1624,6 +1634,9 @@ class committablectx(basectx):
     def dirty(self, missing=False, merge=True, branch=True):
         return False
 
+    def loginfo(self):
+        return self._loginfo or {}
+
 
 class workingctx(committablectx):
     """A workingctx object makes access to data related to
@@ -1635,8 +1648,19 @@ class workingctx(committablectx):
                or None to use the repository status.
     """
 
-    def __init__(self, repo, text="", user=None, date=None, extra=None, changes=None):
-        super(workingctx, self).__init__(repo, text, user, date, extra, changes)
+    def __init__(
+        self,
+        repo,
+        text="",
+        user=None,
+        date=None,
+        extra=None,
+        changes=None,
+        loginfo=None,
+    ):
+        super(workingctx, self).__init__(
+            repo, text, user, date, extra, changes, loginfo
+        )
 
     def __iter__(self):
         d = self._repo.dirstate
@@ -2369,6 +2393,7 @@ class overlayworkingctx(committablectx):
         parents=None,
         user=None,
         editor=None,
+        loginfo=None,
     ):
         """Converts this ``overlayworkingctx`` into a ``memctx`` ready to be
         committed.
@@ -2417,6 +2442,7 @@ class overlayworkingctx(committablectx):
             user=user,
             branch=branch,
             editor=editor,
+            loginfo=loginfo,
         )
 
     def isdirty(self, path):
@@ -2536,8 +2562,12 @@ class workingcommitctx(workingctx):
     committed in this context.
     """
 
-    def __init__(self, repo, changes, text="", user=None, date=None, extra=None):
-        super(workingctx, self).__init__(repo, text, user, date, extra, changes)
+    def __init__(
+        self, repo, changes, text="", user=None, date=None, extra=None, loginfo=None
+    ):
+        super(workingctx, self).__init__(
+            repo, text, user, date, extra, changes, loginfo
+        )
 
     def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         """Return matched files only in ``self._status``
@@ -2676,8 +2706,9 @@ class memctx(committablectx):
         extra=None,
         branch=None,
         editor=False,
+        loginfo=None,
     ):
-        super(memctx, self).__init__(repo, text, user, date, extra)
+        super(memctx, self).__init__(repo, text, user, date, extra, loginfo=loginfo)
         self._rev = None
         self._node = None
         parents = [(p or nullid) for p in parents]
@@ -2910,10 +2941,13 @@ class metadataonlyctx(committablectx):
         date=None,
         extra=None,
         editor=False,
+        loginfo=None,
     ):
         if text is None:
             text = originalctx.description()
-        super(metadataonlyctx, self).__init__(repo, text, user, date, extra)
+        super(metadataonlyctx, self).__init__(
+            repo, text, user, date, extra, loginfo=loginfo
+        )
         self._rev = None
         self._node = None
         self._originalctx = originalctx

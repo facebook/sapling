@@ -2317,6 +2317,7 @@ class localrepository(object):
                 )
                 mutation.recordentries(self, [entry], skipexisting=False)
             tr.close()
+            self.ui.log("commit_info", "", node=hex(n), author=user, **ctx.loginfo())
             return n
         finally:
             if tr:
