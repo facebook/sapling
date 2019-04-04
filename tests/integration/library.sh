@@ -220,6 +220,7 @@ fi
 
   cat >> repos/repo/server.toml <<CONFIG
 [pushrebase]
+forbid_p2_root_rebases=false
 CONFIG
 
 if [[ -v BLOCK_MERGES ]]; then

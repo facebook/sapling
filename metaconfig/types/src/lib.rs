@@ -256,6 +256,8 @@ pub struct PushrebaseParams {
     pub commit_scribe_category: Option<String>,
     /// Block merge commits
     pub block_merges: bool,
+    /// Forbid rebases when root is not a p1 of the rebase set.
+    pub forbid_p2_root_rebases: bool,
 }
 
 impl Default for PushrebaseParams {
@@ -265,6 +267,7 @@ impl Default for PushrebaseParams {
             recursion_limit: 16384, // this number is fairly arbirary
             commit_scribe_category: None,
             block_merges: false,
+            forbid_p2_root_rebases: true,
         }
     }
 }

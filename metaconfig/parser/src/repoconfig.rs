@@ -357,6 +357,9 @@ impl RepoConfigs {
                     recursion_limit: raw.recursion_limit.unwrap_or(default.recursion_limit),
                     commit_scribe_category: raw.commit_scribe_category,
                     block_merges: raw.block_merges.unwrap_or(default.block_merges),
+                    forbid_p2_root_rebases: raw
+                        .forbid_p2_root_rebases
+                        .unwrap_or(default.forbid_p2_root_rebases),
                 }
             })
             .unwrap_or_default();
@@ -523,6 +526,7 @@ struct RawPushrebaseParams {
     recursion_limit: Option<usize>,
     commit_scribe_category: Option<String>,
     block_merges: Option<bool>,
+    forbid_p2_root_rebases: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -600,6 +604,7 @@ mod test {
             [pushrebase]
             rewritedates = false
             recursion_limit = 1024
+            forbid_p2_root_rebases = false
             [lfs]
             threshold = 1000
             [bundle2_replay_params]
@@ -740,6 +745,7 @@ mod test {
                     recursion_limit: 1024,
                     commit_scribe_category: None,
                     block_merges: false,
+                    forbid_p2_root_rebases: false,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

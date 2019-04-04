@@ -61,7 +61,7 @@ use mononoke_types::{
 };
 
 use revset::RangeNodeStream;
-use std::cmp::Ordering;
+use std::cmp::{max, Ordering};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 
@@ -86,6 +86,11 @@ pub enum ErrorKind {
     NoRoots,
     #[fail(display = "Pushrebase failed after too many unsuccessful rebases")]
     TooManyRebaseAttempts,
+    #[fail(
+        display = "Forbid pushrebase because root ({}) is not a p1 of {} bookmark",
+        _0, _1
+    )]
+    P2RootRebaseForbidden(HgChangesetId, Bookmark),
 }
 
 #[derive(Debug)]
@@ -355,17 +360,22 @@ fn find_only_head_or_fail(
     }
 }
 
+/// Reperesents index of current child with regards to its parent
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct ChildIndex(usize);
+
 fn find_roots(
     commits: &Vec<BonsaiChangeset>,
-) -> ::std::result::Result<Vec<ChangesetId>, PushrebaseError> {
+) -> ::std::result::Result<HashMap<ChangesetId, ChildIndex>, PushrebaseError> {
     let commits_set: HashSet<_> =
         HashSet::from_iter(commits.iter().map(|commit| commit.get_changeset_id()));
-
-    let mut roots = vec![];
+    let mut roots = HashMap::new();
     for commit in commits {
-        for p in commit.parents() {
-            if !commits_set.contains(&p) {
-                roots.push(p.clone());
+        for (index, parent) in commit.parents().enumerate() {
+            if !commits_set.contains(&parent) {
+                let ChildIndex(ref mut max_index) =
+                    roots.entry(parent.clone()).or_insert(ChildIndex(0));
+                *max_index = max(index, *max_index);
             }
         }
     }
@@ -377,33 +387,30 @@ fn find_closest_root(
     repo: &BlobRepo,
     config: PushrebaseParams,
     bookmark: OntoBookmarkParams,
-    roots: Vec<ChangesetId>,
+    roots: HashMap<ChangesetId, ChildIndex>,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    let roots: HashSet<_> = roots.into_iter().collect();
     get_bookmark_value(ctx.clone(), repo, &bookmark.bookmark).and_then({
         cloned!(repo);
         move |maybe_id| match maybe_id {
             Some(id) => {
                 find_closest_ancestor_root(ctx.clone(), repo, config, bookmark.bookmark, roots, id)
             }
-            None => {
-                join_all(roots.into_iter().map(move |root| {
-                    repo.get_generation_number_by_bonsai(ctx.clone(), root)
-                        .and_then(move |maybe_gen_num| {
-                            maybe_gen_num.ok_or(ErrorKind::RootNotFound(root).into())
-                        })
-                        .map(move |gen_num| (root, gen_num))
-                }))
-                .and_then(|roots_with_gen_nums| {
-                    roots_with_gen_nums
-                        .into_iter()
-                        .max_by_key(|(_, gen_num)| gen_num.clone())
-                        .ok_or(ErrorKind::NoRoots.into())
-                })
-                .map(|(cs_id, _)| cs_id)
-                .from_err()
-                .boxify()
-            }
+            None => join_all(roots.into_iter().map(move |(root, _)| {
+                repo.get_generation_number_by_bonsai(ctx.clone(), root)
+                    .and_then(move |maybe_gen_num| {
+                        maybe_gen_num.ok_or(ErrorKind::RootNotFound(root).into())
+                    })
+                    .map(move |gen_num| (root, gen_num))
+            }))
+            .and_then(|roots_with_gen_nums| {
+                roots_with_gen_nums
+                    .into_iter()
+                    .max_by_key(|(_, gen_num)| gen_num.clone())
+                    .ok_or(ErrorKind::NoRoots.into())
+            })
+            .map(|(cs_id, _)| cs_id)
+            .from_err()
+            .boxify(),
         }
     })
 }
@@ -413,41 +420,59 @@ fn find_closest_ancestor_root(
     repo: BlobRepo,
     config: PushrebaseParams,
     bookmark: Bookmark,
-    roots: HashSet<ChangesetId>,
+    roots: HashMap<ChangesetId, ChildIndex>,
     onto_bookmark_cs_id: ChangesetId,
 ) -> BoxFuture<ChangesetId, PushrebaseError> {
     let mut queue = VecDeque::new();
     queue.push_back(onto_bookmark_cs_id);
     loop_fn((queue, 0), move |(mut queue, depth)| {
         if depth >= config.recursion_limit {
-            return err(PushrebaseError::RootTooFarBehind).left_future();
+            return err(PushrebaseError::RootTooFarBehind).boxify();
         }
         match queue.pop_front() {
             None => err(PushrebaseError::Error(
-                ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone()).into(),
+                ErrorKind::PushrebaseNoCommonRoot(
+                    bookmark.clone(),
+                    roots.keys().cloned().collect(),
+                )
+                .into(),
             ))
-            .left_future(),
-            Some(id) => {
-                if roots.contains(&id) {
-                    ok(Loop::Break(id)).left_future()
-                } else {
-                    repo.get_changeset_parents_by_bonsai(ctx.clone(), id)
-                        .from_err()
-                        .and_then(move |parents| {
-                            match parents.as_slice() {
-                                [] => (),
-                                [parent] => {
-                                    queue.push_back(*parent);
+            .boxify(),
+            Some(id) => match roots.get(&id) {
+                Some(index) => {
+                    if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
+                        repo.get_hg_from_bonsai_changeset(ctx.clone(), id)
+                            .from_err()
+                            .and_then({
+                                cloned!(bookmark);
+                                move |hgcs| {
+                                    err(PushrebaseError::Error(
+                                        ErrorKind::P2RootRebaseForbidden(hgcs, bookmark).into(),
+                                    ))
                                 }
-                                _ => {
-                                    return err(PushrebaseError::RebaseOverMerge);
-                                }
-                            };
-                            ok(Loop::Continue((queue, depth + 1)))
-                        })
-                        .right_future()
+                            })
+                            .boxify()
+                    } else {
+                        ok(Loop::Break(id)).boxify()
+                    }
                 }
-            }
+                None => repo
+                    .get_changeset_parents_by_bonsai(ctx.clone(), id)
+                    .from_err()
+                    .and_then(move |parents| {
+                        match parents.as_slice() {
+                            [] => (),
+                            [parent] => {
+                                queue.push_back(*parent);
+                            }
+                            _ => {
+                                return err(PushrebaseError::RebaseOverMerge);
+                            }
+                        };
+                        ok(Loop::Continue((queue, depth + 1)))
+                    })
+                    .boxify(),
+            },
         }
     })
     .boxify()
@@ -933,7 +958,7 @@ mod tests {
     use fixtures::{linear, many_files_dirs};
     use futures::future::join_all;
     use futures_ext::spawn_future;
-    use maplit::{btreemap, hashset};
+    use maplit::{btreemap, hashmap, hashset};
     use mononoke_types_mocks::hash::AS;
     use std::str::FromStr;
     use tests_utils::{create_commit, create_commit_with_date, store_files, store_rename};
@@ -964,9 +989,7 @@ mod tests {
 
     fn master_bookmark() -> OntoBookmarkParams {
         let book = Bookmark::new("master").unwrap();
-        let book = OntoBookmarkParams {
-            bookmark: book,
-        };
+        let book = OntoBookmarkParams { bookmark: book };
         book
     }
 
@@ -1204,7 +1227,7 @@ mod tests {
             let bcs_id_2 = create_commit(
                 ctx.clone(),
                 repo.clone(),
-                vec![bcs_id_1, root1],
+                vec![root1, bcs_id_1],
                 store_files(ctx.clone(), btreemap! {"f1" => Some("f1")}, repo.clone()),
             );
             let bcs_id_3 = create_commit(
@@ -1237,7 +1260,7 @@ mod tests {
                     &repo,
                     config.clone(),
                     book.clone(),
-                    vec![root0, root1]
+                    hashmap! {root0 => ChildIndex(0), root1 => ChildIndex(0) },
                 )
                 .wait()
                 .unwrap(),
@@ -2006,9 +2029,7 @@ mod tests {
         .unwrap();
 
         let book = Bookmark::new("newbook").unwrap();
-        let book = OntoBookmarkParams {
-            bookmark: book,
-        };
+        let book = OntoBookmarkParams { bookmark: book };
         assert!(run_future(
             &mut runtime,
             do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs], None),
@@ -2031,9 +2052,7 @@ mod tests {
             let parents = vec![p];
 
             let book = Bookmark::new("newbook").unwrap();
-            let book = OntoBookmarkParams {
-                bookmark: book,
-            };
+            let book = OntoBookmarkParams { bookmark: book };
 
             let num_pushes = 10;
             let mut futs = vec![];
@@ -2203,5 +2222,92 @@ mod tests {
             bcs_rewrite_date.author_date().tz_offset_secs(),
             tz_offset_secs
         );
+    }
+
+    #[test]
+    fn forbid_p2_root_rebases() {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(None);
+
+        let root = run_future(
+            &mut runtime,
+            repo.get_bonsai_from_hg(
+                ctx.clone(),
+                HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+            ),
+        )
+        .unwrap()
+        .unwrap();
+
+        let bcs_id_0 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            Vec::new(),
+            store_files(
+                ctx.clone(),
+                btreemap! {"merge_file" => Some("merge content")},
+                repo.clone(),
+            ),
+        );
+        let bcs_id_1 = create_commit(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id_0, root],
+            store_files(
+                ctx.clone(),
+                btreemap! {"file" => Some("content")},
+                repo.clone(),
+            ),
+        );
+        let hgcss = vec![
+            run_future(
+                &mut runtime,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0),
+            )
+            .unwrap(),
+            run_future(
+                &mut runtime,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1),
+            )
+            .unwrap(),
+        ];
+
+        let book = master_bookmark();
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &book.bookmark,
+            "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+        );
+
+        let config_forbid_p2 = PushrebaseParams {
+            forbid_p2_root_rebases: true,
+            ..Default::default()
+        };
+        match run_future(
+            &mut runtime,
+            do_pushrebase(
+                ctx.clone(),
+                repo.clone(),
+                config_forbid_p2,
+                book.clone(),
+                hgcss.clone(),
+                None,
+            ),
+        ) {
+            Err(_) => (),
+            _ => panic!("push-rebase should have failed"),
+        };
+
+        let config_allow_p2 = PushrebaseParams {
+            forbid_p2_root_rebases: false,
+            ..Default::default()
+        };
+        run_future(
+            &mut runtime,
+            do_pushrebase(ctx, repo, config_allow_p2, book, hgcss, None),
+        )
+        .expect("push-rebase failed");
     }
 }
