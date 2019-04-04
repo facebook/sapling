@@ -78,15 +78,21 @@ std::shared_ptr<datapack_handle_t> DatapackStore::addPack(
   std::string idxPath(path + INDEXSUFFIX);
   std::string dataPath(path + PACKSUFFIX);
 
-  std::shared_ptr<datapack_handle_t> pack(
-      open_datapack(
-          (char*)idxPath.c_str(),
-          idxPath.size(),
-          (char*)dataPath.c_str(),
-          dataPath.size()),
-      // set up the shared_ptr Deleter to close the datapack
-      // when there are no more references
-      close_datapack);
+  auto cpack = open_datapack(
+      (char*)idxPath.c_str(),
+      idxPath.size(),
+      (char*)dataPath.c_str(),
+      dataPath.size());
+
+  // open_datapack might fail and return a NULL handle;
+  if (!cpack) {
+    return nullptr;
+  }
+
+  // set up the shared_ptr Deleter to close the datapack
+  // when there are no more references
+  std::shared_ptr<datapack_handle_t> pack(cpack, close_datapack);
+
   if (pack && pack->status == DATAPACK_HANDLE_OK) {
     packs_[path] = pack;
     return pack;

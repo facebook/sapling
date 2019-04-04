@@ -384,9 +384,9 @@ error_cleanup:
     close(datafd);
   }
 
-  if (handle != NULL) {
-    free(handle->fanout_table);
-  }
+  free(handle->fanout_table);
+  free(handle);
+  handle = NULL;
 
 success_cleanup:
 
