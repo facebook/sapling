@@ -21,7 +21,7 @@ pub struct LogRotate {
     dir: PathBuf,
     open_options: OpenOptions,
     logs: Vec<Log>,
-    latest: u64,
+    latest: u8,
 }
 
 // On disk, a LogRotate is a directory containing:
@@ -33,7 +33,7 @@ const LATEST_FILE: &str = "latest";
 /// Options used to configure how a [`LogRotate`] is opened.
 pub struct OpenOptions {
     max_bytes_per_log: u64,
-    max_log_count: u64,
+    max_log_count: u8,
     log_open_options: log::OpenOptions,
 }
 
@@ -57,7 +57,9 @@ impl OpenOptions {
     }
 
     /// Set the maximum [`Log`] count.
-    pub fn max_log_count(mut self, count: u64) -> Self {
+    ///
+    /// A larger value would hurt lookup performance.
+    pub fn max_log_count(mut self, count: u8) -> Self {
         assert!(count >= 1);
         self.max_log_count = count;
         self
@@ -155,7 +157,7 @@ impl LogRotate {
     /// Write in-memory entries to disk.
     ///
     /// Return the index of the latest [`Log`].
-    pub fn flush(&mut self) -> io::Result<u64> {
+    pub fn flush(&mut self) -> io::Result<u8> {
         let mut lock_file = open_dir(&self.dir)?;
         let _lock = ScopedFileLock::new(&mut lock_file, true)?;
 
@@ -184,7 +186,7 @@ impl LogRotate {
             // Create a new Log. Bump latest.
             let next = self.latest.wrapping_add(1);
             let log = create_empty_log(&self.dir, &self.open_options, next)?;
-            if self.logs.len() as u64 >= self.open_options.max_log_count {
+            if self.logs.len() >= self.open_options.max_log_count as usize {
                 self.logs.pop();
             }
             self.logs.insert(0, log);
@@ -203,7 +205,7 @@ impl LogRotate {
                 if let Ok(entry) = entry {
                     let name = entry.file_name();
                     if let Some(name) = name.to_str() {
-                        if let Ok(id) = name.parse::<u64>() {
+                        if let Ok(id) = name.parse::<u8>() {
                             if (latest >= earliest && (id > latest || id < earliest))
                                 || (latest < earliest && (id > latest && id < earliest))
                             {
@@ -277,7 +279,7 @@ impl<'a> Iterator for LogRotateLookupIter<'a> {
     }
 }
 
-fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::Result<Log> {
+fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u8) -> io::Result<Log> {
     let latest_path = dir.join(LATEST_FILE);
     let latest_str = format!("{}", latest);
     let log_path = dir.join(&latest_str);
@@ -290,13 +292,13 @@ fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::
     Ok(log)
 }
 
-fn read_latest(dir: &Path) -> io::Result<u64> {
+fn read_latest(dir: &Path) -> io::Result<u8> {
     fs::read_to_string(&dir.join(LATEST_FILE))?
         .parse()
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
-fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u64) -> io::Result<Vec<Log>> {
+fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> io::Result<Vec<Log>> {
     let mut logs = Vec::new();
     let mut current = latest;
     let mut remaining = open_options.max_log_count;
@@ -404,6 +406,52 @@ mod tests {
         assert_eq!(lookup(&rotate, b"c").len(), 1);
         assert_eq!(lookup(&rotate, b"d").len(), 1);
         assert!(!dir.path().join("0").exists());
+    }
+
+    fn test_wrapping_rotate(max_log_count: u8) {
+        let dir = tempdir().unwrap();
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(10)
+            .max_log_count(max_log_count)
+            .open(&dir)
+            .unwrap();
+
+        let count = || {
+            fs::read_dir(&dir)
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+                // On Windows, the "lock" file was created by open_dir.
+                .filter(|name| name != "lock")
+                .count()
+        };
+
+        for i in 1..=(max_log_count - 1) {
+            rotate.append(b"abcdefghijklmn").unwrap();
+            assert_eq!(rotate.flush().unwrap(), i);
+            assert_eq!(count(), (i as usize) + 2);
+        }
+
+        for i in max_log_count..=255 {
+            rotate.append(b"abcdefghijklmn").unwrap();
+            assert_eq!(rotate.flush().unwrap(), i);
+            assert_eq!(count(), (max_log_count as usize) + 1);
+        }
+
+        for _ in 0..=max_log_count {
+            rotate.append(b"abcdefghijklmn").unwrap();
+            assert_eq!(count(), (max_log_count as usize) + 1);
+        }
+    }
+
+    #[test]
+    fn test_wrapping_rotate_10() {
+        test_wrapping_rotate(10)
+    }
+
+    #[test]
+    fn test_wrapping_rotate_255() {
+        test_wrapping_rotate(255)
     }
 
     #[test]
