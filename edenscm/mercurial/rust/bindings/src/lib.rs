@@ -3,6 +3,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![allow(non_camel_case_types)]
+
 use cpython::py_module_initializer;
 
 pub mod bookmarkstore;
