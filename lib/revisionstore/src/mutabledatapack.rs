@@ -22,6 +22,7 @@ use types::{Key, Node};
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata};
+use crate::error::EmptyMutablePack;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 use crate::store::Store;
@@ -147,6 +148,10 @@ impl MutableDataPack {
 
 impl MutablePack for MutableDataPack {
     fn build_files(mut self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+        if self.mem_index.is_empty() {
+            return Err(EmptyMutablePack().into());
+        }
+
         let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         DataIndex::write(&mut index_file, &self.mem_index)?;
 
@@ -350,5 +355,14 @@ mod tests {
             .get_missing(&vec![delta.key.clone(), not.clone()])
             .unwrap();
         assert_eq!(missing, vec![not.clone()]);
+    }
+
+    #[test]
+    fn test_empty() {
+        let tempdir = tempdir().unwrap();
+
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        mutdatapack.close().unwrap();
+        assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }
 }

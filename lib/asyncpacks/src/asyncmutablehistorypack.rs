@@ -105,7 +105,7 @@ mod tests {
     use types::Node;
 
     #[test]
-    fn test_close() {
+    fn test_empty_close() {
         let tempdir = tempdir().unwrap();
 
         let mutablehistorypack =
@@ -114,8 +114,7 @@ mod tests {
         let mut runtime = Runtime::new().unwrap();
 
         let historypackpath = runtime.block_on(work).unwrap();
-        let path = historypackpath.with_extension("histpack");;
-        assert!(path.exists());
+        assert_eq!(historypackpath, PathBuf::new());
     }
 
     #[test]

@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_close() {
+    fn test_empty_close() {
         let tempdir = tempdir().unwrap();
 
         let mutabledatapack =
@@ -131,7 +131,6 @@ mod tests {
         let mut runtime = Runtime::new().unwrap();
 
         let datapackbase = runtime.block_on(work).unwrap();
-        let path = datapackbase.with_extension("datapack");
-        assert!(path.exists());
+        assert_eq!(datapackbase, PathBuf::new());
     }
 }

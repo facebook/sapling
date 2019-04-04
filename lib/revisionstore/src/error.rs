@@ -10,6 +10,10 @@ use failure::{Backtrace, Context, Error, Fail};
 #[derive(Debug)]
 pub struct KeyError(Error);
 
+#[derive(Debug, Fail)]
+#[fail(display = "Empty Mutable Pack")]
+pub struct EmptyMutablePack();
+
 impl Fail for KeyError {
     fn backtrace(&self) -> Option<&Backtrace> {
         Some(self.0.backtrace())

@@ -19,6 +19,7 @@ use tempfile::NamedTempFile;
 use types::{Key, NodeInfo};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
+use crate::error::EmptyMutablePack;
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use crate::historystore::{Ancestors, HistoryStore};
@@ -135,6 +136,10 @@ impl MutableHistoryPack {
 
 impl MutablePack for MutableHistoryPack {
     fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+        if self.mem_index.is_empty() {
+            return Err(EmptyMutablePack().into());
+        }
+
         let mut data_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         let mut hasher = Sha1::new();
 
@@ -300,6 +305,8 @@ impl Store for MutableHistoryPack {
 mod tests {
     use super::*;
 
+    use std::fs;
+
     use quickcheck::quickcheck;
     use rand::seq::SliceRandom;
     use rand::SeedableRng;
@@ -377,6 +384,15 @@ mod tests {
         }
 
         assert_eq!(actual_order, expected_order);
+    }
+
+    #[test]
+    fn test_empty() {
+        let tempdir = tempdir().unwrap();
+        let muthistorypack =
+            MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        muthistorypack.close().unwrap();
+        assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }
 
     quickcheck! {

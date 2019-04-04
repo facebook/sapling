@@ -458,13 +458,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_empty() {
-        let tempdir = TempDir::new().unwrap();
-        let pack = make_datapack(&tempdir, &vec![]);
-        assert!(pack.len() > 0);
-    }
-
-    #[test]
     fn test_get_missing() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
@@ -736,6 +729,10 @@ pub mod tests {
 
     quickcheck! {
         fn test_iter_quickcheck(keys: Vec<(Vec<u8>, Key)>) -> bool {
+            if keys.is_empty() {
+                return true;
+            }
+
             let tempdir = TempDir::new().unwrap();
 
             let mut revisions = vec![];

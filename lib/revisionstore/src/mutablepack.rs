@@ -10,6 +10,8 @@ use std::{fs::Permissions, io::ErrorKind, path::PathBuf};
 use failure::Fallible;
 use tempfile::NamedTempFile;
 
+use crate::error::EmptyMutablePack;
+
 /// Mark the permission as read-only for user-group-other.
 #[cfg(not(unix))]
 fn make_readonly(perms: &mut Permissions) {
@@ -56,7 +58,16 @@ pub trait MutablePack {
         let pack_extension = extension.clone() + "pack";
         let index_extension = extension + "idx";
 
-        let (packfile, indexfile, base_filepath) = self.build_files()?;
+        let (packfile, indexfile, base_filepath) = match self.build_files() {
+            Err(err) => {
+                if err.downcast_ref::<EmptyMutablePack>().is_some() {
+                    return Ok(PathBuf::new());
+                } else {
+                    return Err(err);
+                }
+            }
+            Ok(files) => files,
+        };
 
         let mut perms = packfile.as_file().metadata()?.permissions();
         make_readonly(&mut perms);
