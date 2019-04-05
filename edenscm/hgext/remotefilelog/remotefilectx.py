@@ -61,6 +61,9 @@ class remotefilectx(context.filectx):
             repo, path, changeid, fileid, filelog, changectx
         )
         self._ancestormap = ancestormap
+        self._descendantrevfastpath = repo.ui.configbool(
+            "remotefilelog", "descendantrevfastpath", True
+        )
 
     def size(self):
         return self._filelog.size(self._filenode)
@@ -195,10 +198,6 @@ class remotefilectx(context.filectx):
         repo = self._repo
         ancestormap = self.ancestormap()
 
-        descendantrevfastpath = repo.ui.configbool(
-            "remotefilelog", "descendantrevfastpath", True
-        )
-
         p1, p2, linknode, copyfrom = ancestormap[self._filenode]
         results = []
         if p1 != nullid:
@@ -207,7 +206,7 @@ class remotefilectx(context.filectx):
             p1ctx = remotefilectx(
                 repo, path, fileid=p1, filelog=flog, ancestormap=ancestormap
             )
-            if descendantrevfastpath:
+            if self._descendantrevfastpath:
                 p1ctx._descendantrev = self.rev()
             results.append(p1ctx)
 
@@ -217,7 +216,7 @@ class remotefilectx(context.filectx):
             p2ctx = remotefilectx(
                 repo, path, fileid=p2, filelog=flog, ancestormap=ancestormap
             )
-            if descendantrevfastpath:
+            if self._descendantrevfastpath:
                 p2ctx._descendantrev = self.rev()
             results.append(p2ctx)
 
@@ -575,6 +574,9 @@ class remotefilectx(context.filectx):
 class remoteworkingfilectx(context.workingfilectx, remotefilectx):
     def __init__(self, repo, path, filelog=None, workingctx=None):
         self._ancestormap = None
+        self._descendantrevfastpath = repo.ui.configbool(
+            "remotefilelog", "descendantrevfastpath", True
+        )
         return super(remoteworkingfilectx, self).__init__(
             repo, path, filelog, workingctx
         )
