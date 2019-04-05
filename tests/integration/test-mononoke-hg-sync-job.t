@@ -85,6 +85,7 @@ Try to sync blobimport bookmark move, which should fail
   * syncing log entry #1 ... (glob)
   * running a failure handler: "$TESTTMP/onfailure.sh" (glob)
   Failure handling.
+  * finished running a failure handler (glob)
   * sync failed for #1 (glob)
   * caused by: unexpected bookmark move: blobimport (glob)
 
@@ -92,7 +93,7 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #2 (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
   changeset:   2:1e43292ffbb3
@@ -106,7 +107,7 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 2
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #3 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #3 (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
   changeset:   3:6cc06ef82eeb
@@ -126,7 +127,7 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 3
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #4 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #4 (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
   changeset:   2:1e43292ffbb3
@@ -248,11 +249,11 @@ Replay in a loop
   $ mononoke_hg_sync_loop repo-hg-3 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #2 (glob)
   * syncing log entry #3 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #3 (glob)
   * syncing log entry #4 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #4 (glob)
   $ sqlite3 "$TESTTMP/repo/mutable_counters" "select * from mutable_counters";
   0|latest-replayed-request|4
 
@@ -267,7 +268,7 @@ Continue replay
   $ mononoke_hg_sync_loop repo-hg-3 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #5 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #5 (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r tip
   changeset:   4:67d5c96d65a7
@@ -318,9 +319,9 @@ Continue replay
   $ mononoke_hg_sync_loop repo-hg-3 5
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #6 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #6 (glob)
   * syncing log entry #7 ... (glob)
-  * successful sync (glob)
+  * successful sync of entry #7 (glob)
   $ cd repo-hg-3
   $ hg log -r master_bookmark^
   changeset:   5:a7acac33c050
