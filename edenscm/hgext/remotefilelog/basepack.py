@@ -363,7 +363,8 @@ class basepackstore(object):
 
             # Let's refresh the packs, what is being looked for might be on-disk.
             if i == 0:
-                self.refresh()
+                if self.refresh() == []:
+                    break
 
         if badpacks:
             if self.deletecorruptpacks:
