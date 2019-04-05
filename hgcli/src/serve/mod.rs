@@ -42,6 +42,9 @@ mod fdio;
 
 const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 
+// Wait for up to 1sec to let Scuba flush it's data to the server.
+const SCUBA_TIMEOUT_MS: i64 = 1000;
+
 pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
@@ -179,6 +182,8 @@ impl<'a> StdioRelay<'a> {
                         scuba_logger.log_with_msg("Hgcli proxy - Failure", format!("{:#?}", err))
                     }
                 }
+
+                scuba_logger.flush(SCUBA_TIMEOUT_MS);
                 Ok(())
             })
             .then(move |result| match result {
