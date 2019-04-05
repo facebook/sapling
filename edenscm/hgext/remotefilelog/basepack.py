@@ -110,11 +110,12 @@ class _cachebackedpacks(object):
             self._lastpack = pack
             yield pack
 
-        cachedpacks = set(pack for pack in self._lrucache)
-        # Yield for paths not in the cache.
-        for pack in self._packs - cachedpacks:
-            self._lastpack = pack
-            yield pack
+        if len(self._packs) != len(self._lrucache):
+            cachedpacks = set(pack for pack in self._lrucache)
+            # Yield for paths not in the cache.
+            for pack in self._packs - cachedpacks:
+                self._lastpack = pack
+                yield pack
 
         # Data not found in any pack.
         self._lastpack = None
