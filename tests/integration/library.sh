@@ -49,6 +49,15 @@ function mononoke {
 function mononoke_hg_sync {
   $MONONOKE_HG_SYNC \
     --do-not-init-cachelib \
+    --retry-num 1 \
+    --mononoke-config-path mononoke-config  \
+     ssh://user@dummy/"$1" sync-once --start-id "$2"
+}
+
+function mononoke_hg_sync_with_retry {
+  $MONONOKE_HG_SYNC \
+    --do-not-init-cachelib \
+    --base-retry-delay-ms 1 \
     --mononoke-config-path mononoke-config  \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
@@ -56,6 +65,7 @@ function mononoke_hg_sync {
 function mononoke_hg_sync_with_failure_handler {
   $MONONOKE_HG_SYNC \
     --do-not-init-cachelib \
+    --retry-num 1 \
     --mononoke-config-path mononoke-config  \
     --run-on-failure "$3" \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
@@ -81,6 +91,7 @@ function init_mutable_counters_sqlite3_db {
 function mononoke_hg_sync_loop {
   $MONONOKE_HG_SYNC \
     --do-not-init-cachelib \
+    --retry-num 1 \
     --mononoke-config-path mononoke-config \
     ssh://user@dummy/"$1" sync-loop --start-id "$2"
 }

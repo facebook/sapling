@@ -194,8 +194,12 @@ Use the same code here as in the actual opsfiles hook
   
   $ cd $TESTTMP
   $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
-  $ mononoke_hg_sync repo-hg-2 1
+  $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #2 ... (glob)
+  * retrying attempt 2 of 3... (glob)
+  * syncing log entry #2 ... (glob)
+  * retrying attempt 3 of 3... (glob)
   * syncing log entry #2 ... (glob)
   * sync failed for #2 (glob)
   * caused by: hg command failed: stdout: '', stderr: 'remote: pushing 1 changeset: (glob)

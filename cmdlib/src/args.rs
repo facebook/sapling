@@ -650,6 +650,13 @@ pub fn get_u64<'a>(matches: &ArgMatches<'a>, key: &str, default: u64) -> u64 {
         .unwrap_or(default)
 }
 
+pub fn get_u64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<u64> {
+    matches.value_of(key).map(|val| {
+        val.parse::<u64>()
+            .expect(&format!("{} must be integer", key))
+    })
+}
+
 pub fn get_i64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i64> {
     matches.value_of(key).map(|val| {
         val.parse::<i64>()
