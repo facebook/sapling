@@ -2245,6 +2245,18 @@ class localrepository(object):
                 m1 = m1ctx.read()
                 m2 = m2ctx.read()
 
+                # Validate that the files that are checked in can be interpreted
+                # as utf8. This is to protect against potential crashes as we
+                # move to utf8 file paths. Changing encoding is a beast on top
+                # of storage format.
+                try:
+                    for f in ctx.added():
+                        f.decode("utf-8")
+                except UnicodeDecodeError as inst:
+                    raise errormod.Abort(
+                        _("invalid file name encoding: %s!") % inst.object
+                    )
+
                 # check in files
                 added = []
                 changed = []
