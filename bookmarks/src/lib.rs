@@ -264,6 +264,22 @@ impl BookmarkUpdateReason {
             TestMove { .. } => Ok(TestMove { bundle_replay_data }),
         }
     }
+
+    pub fn get_bundle_replay_data(&self) -> Option<&BundleReplayData> {
+        use BookmarkUpdateReason::*;
+        match self {
+            Pushrebase {
+                ref bundle_replay_data,
+            }
+            | Push {
+                ref bundle_replay_data,
+            }
+            | TestMove {
+                ref bundle_replay_data,
+            } => bundle_replay_data.as_ref(),
+            Blobimport | ManualMove => None,
+        }
+    }
 }
 
 impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {

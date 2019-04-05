@@ -44,6 +44,7 @@ use mercurial_types::{
     HgManifestId, MPath, MPathElement, Manifest,
 };
 use metaconfig_types::RemoteBlobstoreArgs;
+use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
     FileContents, Generation, RepositoryId,
@@ -68,6 +69,7 @@ const HG_CHANGESET_DIFF: &'static str = "diff";
 const HG_CHANGESET_RANGE: &'static str = "range";
 const HG_SYNC_BUNDLE: &'static str = "hg-sync-bundle";
 const HG_SYNC_REMAINS: &'static str = "remains";
+const HG_SYNC_FETCH_BUNDLE: &'static str = "fetch-bundle";
 const HG_SYNC_LAST_PROCESSED: &'static str = "last-processed";
 const SKIPLIST_BUILD: &'static str = "build";
 const SKIPLIST_READ: &'static str = "read";
@@ -198,6 +200,24 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .required(false)
                         .takes_value(false)
                         .help("only print the number if present"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_FETCH_BUNDLE)
+                .about("fetches a bundle by id")
+                .arg(
+                    Arg::with_name("id")
+                        .long("id")
+                        .required(true)
+                        .takes_value(true)
+                        .help("bookmark log id. If it has associated bundle it will be fetched."),
+                )
+                .arg(
+                    Arg::with_name("output-file")
+                        .long("output-file")
+                        .required(true)
+                        .takes_value(true)
+                        .help("where a bundle will be saved"),
                 ),
         );
 
@@ -828,6 +848,48 @@ fn process_hg_sync_subcommand<'a>(
                         );
                         e
                     }
+                })
+                .boxify()
+        }
+        (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
+            args::init_cachelib(&matches);
+            let repo_fut = args::open_repo(&logger, &matches);
+            let id = args::get_u64_opt(sub_m, "id");
+            let id = try_boxfuture!(id.ok_or(err_msg("--id is not specified")));
+            if id == 0 {
+                return future::err(err_msg("--id has to be greater than 0")).boxify();
+            }
+
+            let output_file = try_boxfuture!(sub_m
+                .value_of("output-file")
+                .ok_or(err_msg("--output-file is not specified"))
+                .map(std::path::PathBuf::from));
+
+            bookmarks
+                .read_next_bookmark_log_entry(ctx.clone(), id - 1, repo_id)
+                .and_then(move |maybe_log_entry| {
+                    let log_entry =
+                        try_boxfuture!(maybe_log_entry.ok_or(err_msg("no log entries found")));
+                    if log_entry.id != id as i64 {
+                        return future::err(err_msg("no entry with specified id found")).boxify();
+                    }
+                    let bundle_replay_data = try_boxfuture!(log_entry
+                        .reason
+                        .get_bundle_replay_data()
+                        .ok_or(err_msg("no bundle found")));
+                    let bundle_handle = bundle_replay_data.bundle_handle.clone();
+
+                    repo_fut
+                        .and_then(move |repo| {
+                            save_bundle_to_file(
+                                ctx,
+                                repo.get_blobstore(),
+                                &bundle_handle,
+                                output_file,
+                                true, /* create */
+                            )
+                        })
+                        .boxify()
                 })
                 .boxify()
         }
