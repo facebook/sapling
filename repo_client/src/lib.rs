@@ -10,9 +10,6 @@
 
 extern crate failure_ext as failure;
 
-#[macro_use]
-extern crate sql;
-
 mod client;
 mod errors;
 mod mononoke_repo;

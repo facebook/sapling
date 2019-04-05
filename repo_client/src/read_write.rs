@@ -8,7 +8,7 @@ use failure_ext::Error;
 use futures::future::ok;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use sql::Connection;
+use sql::{queries, Connection};
 
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
