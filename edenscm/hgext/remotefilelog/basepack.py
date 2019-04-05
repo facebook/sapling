@@ -134,6 +134,7 @@ class basepackstore(object):
         self.lastrefresh = 0
 
         self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
+        self.packspath = set()
 
         self.fetchpacksenabled = self.ui.configbool("remotefilelog", "fetchpacks")
 
@@ -311,7 +312,7 @@ class basepackstore(object):
         # to have that happen twice in quick succession.
         newpacks = []
         if now > self.lastrefresh + REFRESHRATE:
-            previous = set(p.path() for p in self.packs._packs)
+            previous = self.packspath
             for filepath in self._getavailablepackfilessorted(previous):
                 try:
                     newpack = self.getpack(filepath)
@@ -339,6 +340,7 @@ class basepackstore(object):
 
         for pack in reversed(newpacks):
             self.packs.add(pack)
+            self.packspath.add(pack.path())
 
         return newpacks
 
@@ -367,6 +369,7 @@ class basepackstore(object):
             if self.deletecorruptpacks:
                 for pack, err in badpacks:
                     self.packs.remove(pack)
+                    self.packspath.remove(pack.path())
 
                     if err != errno.ENOENT:
                         self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
