@@ -246,7 +246,7 @@ class datapacktestsbase(object):
         try:
             pack = self.datapackreader(pack.path())
             self.assertTrue(False, "bad version number should have thrown")
-        except RuntimeError:
+        except (RuntimeError, MemoryError):
             pass
 
     def testMissingDeltabase(self):
