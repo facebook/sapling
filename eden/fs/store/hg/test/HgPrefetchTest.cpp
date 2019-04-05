@@ -120,12 +120,13 @@ usecunionstore=True
   serverRepo.writeFile("src/eden/main.py", mainData2, 0755);
   StringPiece abcData = "aaa\nbbb\nccc\n";
   serverRepo.writeFile("src/eden/abc.py", abcData, 0644);
-  // Include a file with binary data in the file name.
-  // For good measure, use data that is not valid UTF-8
+  // Include a file with non-ASCII data in the file name.
+  // Mercurial wants file names to be valid UTF-8.
   auto binaryFileName =
-      "a\xff"
-      "b\xfe"
-      "c\xfd.dat"_pc;
+      "\xc5\xa4"
+      "\xc3\xaa"
+      "\xc5\x9b"
+      "\xc5\xa5.dat"_pc;
   serverRepo.writeFile(
       "src/eden/" + binaryFileName.value().str(), "data", 0755);
   serverRepo.hg("add");
