@@ -360,6 +360,7 @@ impl RepoConfigs {
                     forbid_p2_root_rebases: raw
                         .forbid_p2_root_rebases
                         .unwrap_or(default.forbid_p2_root_rebases),
+                    casefolding_check: raw.casefolding_check.unwrap_or(default.casefolding_check),
                 }
             })
             .unwrap_or_default();
@@ -527,6 +528,7 @@ struct RawPushrebaseParams {
     commit_scribe_category: Option<String>,
     block_merges: Option<bool>,
     forbid_p2_root_rebases: Option<bool>,
+    casefolding_check: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -605,6 +607,7 @@ mod test {
             rewritedates = false
             recursion_limit = 1024
             forbid_p2_root_rebases = false
+            casefolding_check = false
             [lfs]
             threshold = 1000
             [bundle2_replay_params]
@@ -746,6 +749,7 @@ mod test {
                     commit_scribe_category: None,
                     block_merges: false,
                     forbid_p2_root_rebases: false,
+                    casefolding_check: false,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

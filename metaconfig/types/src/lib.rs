@@ -258,6 +258,8 @@ pub struct PushrebaseParams {
     pub block_merges: bool,
     /// Forbid rebases when root is not a p1 of the rebase set.
     pub forbid_p2_root_rebases: bool,
+    /// Whether to do chasefolding check during pushrebase
+    pub casefolding_check: bool,
 }
 
 impl Default for PushrebaseParams {
@@ -268,6 +270,7 @@ impl Default for PushrebaseParams {
             commit_scribe_category: None,
             block_merges: false,
             forbid_p2_root_rebases: true,
+            casefolding_check: true,
         }
     }
 }

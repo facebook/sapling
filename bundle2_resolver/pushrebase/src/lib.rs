@@ -219,12 +219,19 @@ fn rebase_in_loop(
                         latest_rebase_attempt,
                         bookmark_val.unwrap_or(root),
                     )
-                    .and_then(move |server_bcs| {
-                        match check_case_conflicts(
-                            server_bcs.iter().rev().chain(client_bcs.iter().rev()),
-                        ) {
-                            Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
-                            None => Ok(()),
+                    .and_then({
+                        let casefolding_check = config.casefolding_check;
+                        move |server_bcs| {
+                            if casefolding_check {
+                                match check_case_conflicts(
+                                    server_bcs.iter().rev().chain(client_bcs.iter().rev()),
+                                ) {
+                                    Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
+                                    None => Ok(()),
+                                }
+                            } else {
+                                Ok(())
+                            }
                         }
                     })
                     .and_then({
@@ -1743,13 +1750,36 @@ mod tests {
                 "2f866e7e549760934e31bf0420a873f65100ad63",
             );
 
-            let result = do_pushrebase(ctx, repo, Default::default(), book, hgcss, None).wait();
+            let result = do_pushrebase(
+                ctx.clone(),
+                repo.clone(),
+                Default::default(),
+                book.clone(),
+                hgcss.clone(),
+                None,
+            )
+            .wait();
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
                     assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1").unwrap())
                 }
                 _ => panic!("push-rebase should have failed with case conflict"),
-            }
+            };
+
+            // make sure that it is succeeds with disabled casefolding
+            do_pushrebase(
+                ctx,
+                repo,
+                PushrebaseParams {
+                    casefolding_check: false,
+                    ..Default::default()
+                },
+                book,
+                hgcss,
+                None,
+            )
+            .wait()
+            .expect("pushrebase failed");
         })
     }
 
