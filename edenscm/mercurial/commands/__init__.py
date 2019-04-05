@@ -1651,40 +1651,46 @@ def clone(ui, source, dest=None, **opts):
 def commit(ui, repo, *pats, **opts):
     """save all pending changes or specified files in a new commit
 
-    Commit changes to the given files into the repository. Unlike a
-    centralized SCM, this operation is a local operation. See
-    :hg:`push` for a way to actively distribute your changes.
+    Commit changes to the given files to your local repository.
 
-    If a list of files is omitted, all changes reported by :hg:`status`
-    will be committed.
+    By default, all pending changes (in other words, those reported by
+    'hg status') are committed. If you want to commit only some of your
+    changes, choose one of the following options:
 
-    If you are committing the result of a merge, do not provide any
-    filenames or -I/-X filters.
+    - Specify an exact list of files for which you want changes committed.
 
-    If no commit message is specified, Mercurial starts your
-    configured editor where you can enter a message. In case your
-    commit fails, you will find a backup of your message in
-    ``.hg/last-message.txt``.
+    - Use the -I or -X flags to pattern match file names to exclude or
+      include by using a fileset. See 'hg help filesets' for more
+      information.
 
-    The --amend flag can be used to amend the parent of the
-    working directory with a new commit that contains the changes
-    in the parent in addition to those currently reported by :hg:`status`,
-    if there are any. The old commit is stored in a backup bundle in
-    ``.hg/strip-backup`` (see :hg:`help bundle` and :hg:`help unbundle`
-    on how to restore it).
+    - Specify the --interactive flag to open a UI that will enable you
+      to select individual insertions or deletions.
 
-    Message, user and date are taken from the amended commit unless
-    specified. When a message isn't specified on the command line,
-    the editor will open with the message of the amended commit.
+    If you are committing the result of a merge, such as when merge
+    conflicts occur during 'hg checkout', commit all pending changes.
+    Do not specify files or use -I, -X, or -i.
 
-    It is not possible to amend public changesets (see :hg:`help phases`)
-    or changesets that have children.
-
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    Specify the -m flag to include a free-form commit message. If you do
+    not specify -m, Mercurial opens your configured editor where you can
+    enter a message based on a pre-loaded commit template.
 
     Returns 0 on success, 1 if nothing changed.
 
     .. container:: verbose
+
+      If your commit fails, you can find a backup of your commit message in
+      ``.hg/last-message.txt``.
+
+      You can use --amend to replace your current commit with a new commit
+      that contains the contents of the original commit, plus any pending
+      changes. Specify -m to provide a new commit message. If you do not
+      specify -m, Mercurial opens your configured editor where you can
+      enter a message based on a pre-loaded commit template.
+
+      .. note::
+
+         'hg commit --amend' is not recommended. Use 'hg amend' instead.
+         See 'hg help amend' for more information.
 
       Examples:
 
