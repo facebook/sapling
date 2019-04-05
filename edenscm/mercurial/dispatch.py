@@ -1427,71 +1427,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
 def _exceptionwarning(ui):
     """Produce a warning message for the current active exception"""
 
-    # For compatibility checking, we discard the portion of the hg
-    # version after the + on the assumption that if a "normal
-    # user" is running a build with a + in it the packager
-    # probably built from fairly close to a tag and anyone with a
-    # 'make local' copy of hg (where the version number can be out
-    # of date) will be clueful enough to notice the implausible
-    # version number and try updating.
-    ct = util.versiontuple(n=2)
-    worst = None, ct, ""
-    if ui.config("ui", "supportcontact") is None:
-        for name, mod in extensions.extensions():
-            testedwith = getattr(mod, "testedwith", "")
-            if pycompat.ispy3 and isinstance(testedwith, str):
-                testedwith = testedwith.encode(u"utf-8")
-            report = getattr(mod, "buglink", _("the extension author."))
-            if not testedwith.strip():
-                # We found an untested extension. It's likely the culprit.
-                worst = name, "unknown", report
-                break
-
-            # Never blame on extensions bundled with Mercurial.
-            if extensions.ismoduleinternal(mod):
-                continue
-
-            tested = [util.versiontuple(t, 2) for t in testedwith.split()]
-            if ct in tested:
-                continue
-
-            lower = [t for t in tested if t < ct]
-            nearest = max(lower or tested)
-            if worst[0] is None or nearest < worst[1]:
-                worst = name, nearest, report
-    if worst[0] is not None:
-        name, testedwith, report = worst
-        if not isinstance(testedwith, (bytes, str)):
-            testedwith = ".".join([str(c) for c in testedwith])
-        warning = _(
-            "** Unknown exception encountered with "
-            "possibly-broken third-party extension %s.\n"
-            "** Please disable %s and try your action again.\n"
-            "** If that fixes the bug please report it to %s\n"
-        ) % (name, name, report)
-    else:
-        bugtracker = ui.config("ui", "supportcontact")
-        if bugtracker is None:
-            bugtracker = _("https://mercurial-scm.org/wiki/BugTracker")
-        warning = (
-            _("** unknown exception encountered, " "please report by visiting\n** ")
-            + bugtracker
-            + "\n"
-        )
-    if pycompat.ispy3:
-        sysversion = sys.version.encode(u"utf-8")
-    else:
-        sysversion = sys.version
-    sysversion = sysversion.replace("\n", "")
-    warning += (
-        (_("** Python %s\n") % sysversion)
-        + (_("** @LongProduct@ (version %s)\n") % util.version())
-        + (
-            _("** Extensions loaded: %s\n")
-            % ", ".join([x[0] for x in extensions.extensions()])
-        )
-    )
-    return warning
+    return _("** @LongProduct@ (version %s) has crashed:\n") % util.version()
 
 
 def handlecommandexception(ui):

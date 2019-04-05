@@ -336,7 +336,7 @@ blackbox should work if repo.ui.log is not called (issue5518)
 #endif
 
   $ head -1 .hg/blackbox.log
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> ** Unknown exception encountered with possibly-broken third-party extension mock.
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> ** Mercurial Distributed SCM (version *) has crashed: (glob)
   $ tail -2 .hg/blackbox.log
   RuntimeError: raise
   

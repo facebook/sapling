@@ -1051,34 +1051,19 @@ get scanned)
 
 No declared supported version, extension complains:
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
-  ** Unknown exception encountered with possibly-broken third-party extension throw.
-  ** Please disable throw and try your action again.
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
   ** Mercurial Distributed SCM * (glob)
-  ** Extensions loaded: throw, * (glob)
 
 empty declaration of supported version, extension complains:
   $ echo "testedwith = ''" >> throw.py
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
-  ** Unknown exception encountered with possibly-broken third-party extension throw.
-  ** Please disable throw and try your action again.
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (*) (glob)
-  ** Extensions loaded: throw, * (glob)
+  ** * has crashed: (glob)
 
 If the extension specifies a buglink, show that:
   $ echo 'buglink = "http://example.com/bts"' >> throw.py
   $ rm -f throw.pyc throw.pyo
   $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
-  ** Unknown exception encountered with possibly-broken third-party extension throw.
-  ** Please disable throw and try your action again.
-  ** If that fixes the bug please report it to http://example.com/bts
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (*) (glob)
-  ** Extensions loaded: throw, * (glob)
+  ** * has crashed: (glob)
 
 If the extensions declare outdated versions, accuse the older extension first:
   $ echo "from edenscm.mercurial import util" >> older.py
@@ -1089,10 +1074,7 @@ If the extensions declare outdated versions, accuse the older extension first:
   $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (version 2.2)
-  ** Extensions loaded: throw, older, * (glob)
+  ** * has crashed: (glob)
 
 One extension only tested with older, one only with newer versions:
   $ echo "util.version = lambda:'2.1'" >> older.py
@@ -1100,10 +1082,7 @@ One extension only tested with older, one only with newer versions:
   $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (version 2.1)
-  ** Extensions loaded: throw, older, * (glob)
+  ** * has crashed: (glob)
 
 Older extension is tested with current version, the other only with newer:
   $ echo "util.version = lambda:'1.9.3'" >> older.py
@@ -1111,19 +1090,7 @@ Older extension is tested with current version, the other only with newer:
   $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (version 1.9.3)
-  ** Extensions loaded: throw, older, * (glob)
-
-Ability to point to a different point
-  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
-  >   --config ui.supportcontact='Your Local Goat Lenders' throw 2>&1 | egrep '^\*\*'
-  ** unknown exception encountered, please report by visiting
-  ** Your Local Goat Lenders
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (*) (glob)
-  ** Extensions loaded: throw, older, * (glob)
+  ** * has crashed: (glob)
 
 Declare the version as supporting this hg version, show regular bts link:
   $ hgver=`hg debuginstall -T '{hgver}'`
@@ -1134,10 +1101,7 @@ Declare the version as supporting this hg version, show regular bts link:
   $ rm -f throw.pyc throw.pyo
   $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (*) (glob)
-  ** Extensions loaded: throw, * (glob)
+  ** * has crashed: (glob)
 
 Patch version is ignored during compatibility check
   $ echo "testedwith = '3.2'" >> throw.py
@@ -1145,10 +1109,7 @@ Patch version is ignored during compatibility check
   $ rm -f throw.pyc throw.pyo
   $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** If that fixes the bug please report it to the extension author.
-  ** Python * (glob)
-  ** Mercurial Distributed SCM (*) (glob)
-  ** Extensions loaded: throw, * (glob)
+  ** * has crashed: (glob)
 
 Test version number support in 'hg version':
   $ echo '__version__ = (1, 2, 3)' >> throw.py

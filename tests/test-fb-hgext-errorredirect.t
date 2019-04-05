@@ -14,8 +14,8 @@
 
 Test errorredirect will respect original behavior by default
   $ hg init
-  $ hg crash 2>&1 | grep -o 'Unknown exception encountered'
-  Unknown exception encountered
+  $ hg crash 2>&1 | grep -o 'crashed'
+  crashed
 
 Test the errorredirect script will override stack trace output
   $ hg crash --config errorredirect.script='echo overridden-message'
