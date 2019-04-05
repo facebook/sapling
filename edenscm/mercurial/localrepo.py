@@ -29,7 +29,7 @@ from . import (
     discovery,
     edenfs,
     encoding,
-    error,
+    error as errormod,
     exchange,
     extensions,
     filelog,
@@ -256,7 +256,7 @@ class localpeer(repository.peer):
         return self._repo.pushkey(namespace, key, old, new)
 
     def stream_out(self):
-        raise error.Abort(_("cannot perform stream clone against local " "peer"))
+        raise errormod.Abort(_("cannot perform stream clone against local " "peer"))
 
     def unbundle(self, cg, heads, url):
         """apply a bundle on a repo
@@ -290,8 +290,8 @@ class localpeer(repository.peer):
                     b = bundle2.getunbundler(self.ui, stream)
                     bundle2.processbundle(self._repo, b)
                 raise
-        except error.PushRaced as exc:
-            raise error.ResponseError(_("push failed:"), str(exc))
+        except errormod.PushRaced as exc:
+            raise errormod.ResponseError(_("push failed:"), str(exc))
 
     # End of _basewirecommands interface.
 
@@ -466,9 +466,9 @@ class localrepository(object):
                         " dummy changelog to prevent using the old repo layout",
                     )
             else:
-                raise error.RepoError(_("repository %s not found") % path)
+                raise errormod.RepoError(_("repository %s not found") % path)
         elif create:
-            raise error.RepoError(_("repository %s already exists") % path)
+            raise errormod.RepoError(_("repository %s already exists") % path)
         else:
             try:
                 self.requirements = scmutil.readrequires(self.localvfs, self.supported)
@@ -487,7 +487,7 @@ class localrepository(object):
             cachepath = sharedvfs.join("cache")
             s = sharedvfs.base
             if not sharedvfs.exists():
-                raise error.RepoError(
+                raise errormod.RepoError(
                     _(".hg/sharedpath points to nonexistent directory %s") % s
                 )
             self.sharedpath = s
@@ -835,7 +835,7 @@ class localrepository(object):
         try:
             self.changelog.rev(node)
             return node
-        except error.LookupError:
+        except errormod.LookupError:
             if not self._dirstatevalidatewarned:
                 self._dirstatevalidatewarned = True
                 self.ui.warn(
@@ -855,7 +855,7 @@ class localrepository(object):
             ]
         try:
             return context.changectx(self, changeid)
-        except error.WdirUnsupported:
+        except errormod.WdirUnsupported:
             return context.workingctx(self)
 
     def __contains__(self, changeid):
@@ -866,7 +866,7 @@ class localrepository(object):
         try:
             self[changeid]
             return True
-        except error.RepoLookupError:
+        except errormod.RepoLookupError:
             return False
 
     def __nonzero__(self):
@@ -987,7 +987,7 @@ class localrepository(object):
                 # ignore tags to unknown nodes
                 self.changelog.rev(v)
                 t[k] = v
-            except (error.LookupError, ValueError):
+            except (errormod.LookupError, ValueError):
                 pass
         return t
 
@@ -1084,7 +1084,7 @@ class localrepository(object):
             return self.branchmap().branchtip(branch)
         except KeyError:
             if not ignoremissing:
-                raise error.RepoLookupError(_("unknown branch '%s'") % branch)
+                raise errormod.RepoLookupError(_("unknown branch '%s'") % branch)
             else:
                 pass
 
@@ -1255,7 +1255,7 @@ class localrepository(object):
             "devel", "check-locks"
         ):
             if self._currentlock(self._lockref) is None:
-                raise error.ProgrammingError("transaction requires locking")
+                raise errormod.ProgrammingError("transaction requires locking")
         tr = self.currenttransaction()
         if tr is not None:
             scmutil.registersummarycallback(self, tr, desc)
@@ -1263,7 +1263,7 @@ class localrepository(object):
 
         # abort here if the journal already exists
         if self.svfs.exists("journal"):
-            raise error.AbandonedTransactionFoundError(
+            raise errormod.AbandonedTransactionFoundError(
                 _("abandoned transaction found"),
                 hint=_("run 'hg recover' to clean up transaction"),
             )
@@ -1606,7 +1606,7 @@ class localrepository(object):
             desc = None
 
         if not force and self["."] != self["tip"] and desc == "commit":
-            raise error.Abort(
+            raise errormod.Abort(
                 _("rollback of last commit while not checked out " "may lose data"),
                 hint=_("use -f to force"),
             )
@@ -1874,7 +1874,7 @@ class localrepository(object):
 
     def _wlockchecktransaction(self):
         if self.currenttransaction() is not None:
-            raise error.LockInheritanceContractViolation(
+            raise errormod.LockInheritanceContractViolation(
                 "wlock cannot be inherited in the middle of a transaction"
             )
 
@@ -2123,7 +2123,7 @@ class localrepository(object):
             extra = {}
 
         def fail(f, msg):
-            raise error.Abort("%s: %s" % (f, msg))
+            raise errormod.Abort("%s: %s" % (f, msg))
 
         if not match:
             match = matchmod.always(self.root, "")
@@ -2142,7 +2142,7 @@ class localrepository(object):
             merge = len(wctx.parents()) > 1
 
             if not force and merge and not match.always():
-                raise error.Abort(
+                raise errormod.Abort(
                     _(
                         "cannot partially commit a merge "
                         "(do not specify files or patterns)"
@@ -2175,7 +2175,7 @@ class localrepository(object):
                 return None
 
             if merge and cctx.deleted():
-                raise error.Abort(_("cannot commit merge with missing files"))
+                raise errormod.Abort(_("cannot commit merge with missing files"))
 
             ms = mergemod.mergestate.read(self)
             mergeutil.checkunresolved(ms)
@@ -2520,7 +2520,7 @@ class localrepository(object):
             hookargs["old"] = old
             hookargs["new"] = new
             self.hook("prepushkey", throw=True, **hookargs)
-        except error.HookAbort as exc:
+        except errormod.HookAbort as exc:
             self.ui.write_err(_("pushkey-abort: %s\n") % exc)
             if exc.hint:
                 self.ui.write_err(_("(%s)\n") % exc.hint)
@@ -2613,7 +2613,7 @@ def newreporequirements(repo):
 
     compengine = ui.config("experimental", "format.compression")
     if compengine not in util.compengines:
-        raise error.Abort(
+        raise errormod.Abort(
             _(
                 "compression engine %s defined by "
                 "experimental.format.compression not available"
