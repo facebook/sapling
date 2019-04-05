@@ -3,27 +3,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use atomicwrites;
-
-error_chain! {
-    errors {
-        DuplicateBookmark(b: String) {
-            description("duplicate bookmark name"),
-            display("duplicate bookmark name: {}", b),
-        }
-
-        BookmarkNotFound(b: String) {
-            description("bookmark not found"),
-            display("bookmark not found: {}", b),
-        }
-
-        MalformedBookmarkFile(line_num: u32,  line: String) {
-            description("malformed bookmark file"),
-            display("malformed bookmark file at line {}: {}", line_num, line),
-        }
-    }
-    foreign_links {
-        Io(::std::io::Error);
-        AtomicWrites(atomicwrites::Error::<::std::io::Error>);
-    }
+#[derive(Fail, Debug)]
+#[fail(display = "bookmark not found: {}", name)]
+pub struct BookmarkNotFound {
+    pub(crate) name: String,
 }

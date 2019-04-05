@@ -49,7 +49,6 @@
 // - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
-use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use std::borrow::Cow;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
@@ -59,13 +58,14 @@ use std::ops::Deref;
 use std::path::Path;
 use std::sync::Arc;
 
-use std::io::ErrorKind::InvalidData;
-
 use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
+use crate::errors::{data_error, parameter_error};
 use crate::lock::ScopedFileLock;
 use crate::utils::mmap_readonly;
 
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use failure::{self, Fallible};
 use fs2::FileExt;
 use memmap::Mmap;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
@@ -111,25 +111,38 @@ struct MemRoot {
 // Shorter alias to `Option<ChecksumTable>`
 type Checksum = Option<ChecksumTable>;
 
-// Helper method to do checksum
+// Helper method to do checksum.
 #[inline]
-fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> io::Result<()> {
+fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> Fallible<()> {
+    // This method is used in hot code paths. Its instruction size matters.
+    // Be sure to run `cargo bench --bench index verified` when changing this
+    // function, or the inline attributes.
     if let &Some(ref table) = checksum {
-        if !table.check_range(start, length) {
-            return Err(integrity_error());
+        if table.check_range(start, length) {
+            return Ok(());
+        } else {
+            return checksum_error();
         }
     }
     Ok(())
 }
 
-#[inline]
-fn integrity_error() -> io::Error {
-    io::Error::new(InvalidData, "integrity check failed")
+// Intentionally not inlined, and avoiding printing byte ranges.
+// Reduce instruction count in `verify_checksum`.
+#[inline(never)]
+fn checksum_error() -> Fallible<()> {
+    let msg = "integiryt check failed";
+    Err(data_error(msg))
+}
+
+fn range_error(start: usize, length: usize) -> failure::Error {
+    let msg = format!("byte range {}..{} is unavailable", start, start + length);
+    data_error(msg)
 }
 
 /// Read reversed vlq at the given end offset (exclusive).
 /// Return the decoded integer and the bytes used by the VLQ integer.
-fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> io::Result<(u64, usize)> {
+fn read_vlq_reverse(buf: &[u8], end_offset: usize) -> Fallible<(u64, usize)> {
     let buf = buf.as_ref();
     let mut int_buf = Vec::new();
     for i in (0..end_offset).rev() {
@@ -200,12 +213,12 @@ enum TypedOffset {
 }
 
 impl Offset {
-    /// Convert `io::Result<u64>` read from disk to a non-dirty `Offset`.
-    /// Return `InvalidData` error if the offset is dirty.
+    /// Convert `Fallible<u64>` read from disk to a non-dirty `Offset`.
+    /// Return [`errors::IndexError`] if the offset is dirty.
     #[inline]
-    fn from_disk(value: u64) -> io::Result<Self> {
+    fn from_disk(value: u64) -> Fallible<Self> {
         if value >= DIRTY_OFFSET {
-            Err(InvalidData.into())
+            Err(data_error(format!("illegal disk offset {}", value)))
         } else {
             Ok(Offset(value))
         }
@@ -220,7 +233,7 @@ impl Offset {
 
     /// Convert to `TypedOffset`.
     #[inline]
-    fn to_typed(self, buf: &[u8], checksum: &Checksum) -> io::Result<TypedOffset> {
+    fn to_typed(self, buf: &[u8], checksum: &Checksum) -> Fallible<TypedOffset> {
         let type_int = self.type_int(buf, checksum)?;
         match type_int {
             TYPE_RADIX => Ok(TypedOffset::Radix(RadixOffset(self))),
@@ -230,22 +243,22 @@ impl Offset {
             TYPE_EXT_KEY => Ok(TypedOffset::ExtKey(ExtKeyOffset(self))),
             // LeafOffset handles inline transparently.
             TYPE_INLINE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
-            _ => Err(InvalidData.into()),
+            _ => Err(data_error(format!("type {} is unsupported", type_int))),
         }
     }
 
     /// Read the `type_int` value.
     #[inline]
-    fn type_int(self, buf: &[u8], checksum: &Checksum) -> io::Result<u8> {
+    fn type_int(self, buf: &[u8], checksum: &Checksum) -> Fallible<u8> {
         if self.is_null() {
-            Err(InvalidData.into())
+            Err(data_error("illegal read from null"))
         } else if self.is_dirty() {
             Ok(((self.0 - DIRTY_OFFSET) & ((1 << TYPE_BITS) - 1)) as u8)
         } else {
             verify_checksum(checksum, self.0, TYPE_BYTES as u64)?;
             match buf.get(self.0 as usize) {
                 Some(x) => Ok(*x as u8),
-                _ => return Err(InvalidData.into()),
+                _ => return Err(range_error(self.0 as usize, 1)),
             }
         }
     }
@@ -272,7 +285,7 @@ trait TypedOffsetMethods: Sized {
     }
 
     #[inline]
-    fn from_offset(offset: Offset, buf: &[u8], checksum: &Checksum) -> io::Result<Self> {
+    fn from_offset(offset: Offset, buf: &[u8], checksum: &Checksum) -> Fallible<Self> {
         if offset.is_null() {
             Ok(Self::from_offset_unchecked(offset))
         } else {
@@ -280,7 +293,7 @@ trait TypedOffsetMethods: Sized {
             if type_int == Self::type_int() {
                 Ok(Self::from_offset_unchecked(offset))
             } else {
-                Err(InvalidData.into())
+                Err(data_error("inconsistent type"))
             }
         }
     }
@@ -378,12 +391,15 @@ impl_offset!(ExtKeyOffset, TYPE_EXT_KEY, "ExtKey");
 impl RadixOffset {
     /// Link offset of a radix entry.
     #[inline]
-    fn link_offset(self, index: &Index) -> io::Result<LinkOffset> {
+    fn link_offset(self, index: &Index) -> Fallible<LinkOffset> {
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].link_offset)
         } else {
             let flag_start = TYPE_BYTES + usize::from(self);
-            let flag = *index.buf.get(flag_start).ok_or_else(integrity_error)?;
+            let flag = *index
+                .buf
+                .get(flag_start)
+                .ok_or_else(|| range_error(flag_start, 1))?;
             index.verify_checksum(
                 flag_start as u64,
                 (RADIX_FLAG_BYTES + RADIX_BITMAP_BYTES) as u64,
@@ -407,11 +423,9 @@ impl RadixOffset {
     /// Lookup the `i`-th child inside a radix entry.
     /// Return stored offset, or `Offset(0)` if that child does not exist.
     #[inline]
-    fn child(self, index: &Index, i: u8) -> io::Result<Offset> {
-        if i >= 16 {
-            let err = io::Error::new(InvalidData, format!("radix child index {} is invalid", i));
-            return Err(err);
-        }
+    fn child(self, index: &Index, i: u8) -> Fallible<Offset> {
+        // "i" is not derived from user input.
+        assert!(i < 16);
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].offsets[i as usize])
         } else {
@@ -422,7 +436,10 @@ impl RadixOffset {
             let bitmap = Self::read_bitmap_unchecked(&index.buf, bitmap_start)?;
             let has_child = (1u16 << i) & bitmap != 0;
             if has_child {
-                let flag = *index.buf.get(flag_start).ok_or_else(integrity_error)?;
+                let flag = *index
+                    .buf
+                    .get(flag_start)
+                    .ok_or_else(|| range_error(flag_start, 1))?;
                 let int_size = Self::parse_int_size_from_flag(flag);
                 let skip_child_count = (((1u16 << i) - 1) & bitmap).count_ones() as usize;
                 let child_offset = bitmap_start + RADIX_BITMAP_BYTES + skip_child_count * int_size;
@@ -442,7 +459,7 @@ impl RadixOffset {
     /// Copy an on-disk entry to memory so it can be modified. Return new offset.
     /// If the offset is already in-memory, return it as-is.
     #[inline]
-    fn copy(self, index: &mut Index) -> io::Result<RadixOffset> {
+    fn copy(self, index: &mut Index) -> Fallible<RadixOffset> {
         if self.is_dirty() {
             Ok(self)
         } else {
@@ -500,40 +517,45 @@ impl RadixOffset {
 
     /// Read bitmap from the given offset without integrity check.
     #[inline]
-    fn read_bitmap_unchecked(buf: &[u8], bitmap_offset: usize) -> io::Result<u16> {
+    fn read_bitmap_unchecked(buf: &[u8], bitmap_offset: usize) -> Fallible<u16> {
         debug_assert_eq!(RADIX_BITMAP_BYTES, size_of::<u16>());
         Ok(LittleEndian::read_u16(
             buf.get(bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES)
-                .ok_or_else(integrity_error)?,
+                .ok_or_else(|| range_error(bitmap_offset, RADIX_BITMAP_BYTES))?,
         ))
     }
 
     /// Read integer from the given offset without integrity check.
     #[inline]
-    fn read_raw_int_unchecked(buf: &[u8], int_size: usize, offset: usize) -> io::Result<u64> {
+    fn read_raw_int_unchecked(buf: &[u8], int_size: usize, offset: usize) -> Fallible<u64> {
         Ok(match int_size {
-            4 => LittleEndian::read_u32(buf.get(offset..offset + 4).ok_or_else(integrity_error)?)
-                as u64,
-            8 => LittleEndian::read_u64(buf.get(offset..offset + 8).ok_or_else(integrity_error)?),
+            4 => LittleEndian::read_u32(
+                buf.get(offset..offset + 4)
+                    .ok_or_else(|| range_error(offset, 4))?,
+            ) as u64,
+            8 => LittleEndian::read_u64(
+                buf.get(offset..offset + 8)
+                    .ok_or_else(|| range_error(offset, 8))?,
+            ),
             _ => unreachable!(),
         })
     }
 }
 
 /// Extract key_content from an untyped Offset. Internal use only.
-fn extract_key_content(index: &Index, key_offset: Offset) -> io::Result<&[u8]> {
+fn extract_key_content(index: &Index, key_offset: Offset) -> Fallible<&[u8]> {
     let typed_offset = key_offset.to_typed(&index.buf, &index.checksum)?;
     match typed_offset {
         TypedOffset::Key(x) => Ok(x.key_content(index)?),
         TypedOffset::ExtKey(x) => Ok(x.key_content(index)?),
-        _ => Err(InvalidData.into()),
+        _ => Err(data_error("unexpected key type")),
     }
 }
 
 impl LeafOffset {
     /// Key content and link offsets of a leaf entry.
     #[inline]
-    fn key_and_link_offset(self, index: &Index) -> io::Result<(&[u8], LinkOffset)> {
+    fn key_and_link_offset(self, index: &Index) -> Fallible<(&[u8], LinkOffset)> {
         if self.is_dirty() {
             let e = &index.dirty_leafs[self.dirty_index()];
             let key_content = extract_key_content(index, e.key_offset)?;
@@ -601,7 +623,7 @@ impl LeafOffset {
     /// Note: the old leaf is expected to be no longer needed. If that's not true, don't call
     /// this function.
     #[inline]
-    fn set_link(self, index: &mut Index, link_offset: LinkOffset) -> io::Result<LeafOffset> {
+    fn set_link(self, index: &mut Index, link_offset: LinkOffset) -> Fallible<LeafOffset> {
         if self.is_dirty() {
             index.dirty_leafs[self.dirty_index()].link_offset = link_offset;
             Ok(self)
@@ -634,7 +656,7 @@ pub struct LeafValueIter<'a> {
 }
 
 impl<'a> Iterator for LeafValueIter<'a> {
-    type Item = io::Result<u64>;
+    type Item = Fallible<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset.is_null() || self.errored {
@@ -685,7 +707,7 @@ impl<'a> PrefixIter<'a> {
 }
 
 impl<'a> Iterator for PrefixIter<'a> {
-    type Item = io::Result<(Cow<'a, [u8]>, LinkOffset)>;
+    type Item = Fallible<(Cow<'a, [u8]>, LinkOffset)>;
 
     /// Return the next key and corresponding [`LinkOffset`].
     fn next(&mut self) -> Option<Self::Item> {
@@ -721,7 +743,7 @@ impl<'a> Iterator for PrefixIter<'a> {
                                 }
                                 if prefix.len() & 1 == 1 {
                                     // Odd-length key
-                                    Some(Err(InvalidData.into()))
+                                    Some(Err(data_error("unexpected odd-length key")))
                                 } else {
                                     let key = base16_to_base256(&prefix);
                                     Some(Ok((Cow::Owned(key), link_offset)))
@@ -768,7 +790,7 @@ impl<'a> Iterator for PrefixIter<'a> {
 
             _ => {
                 self.stack.clear();
-                Some(Err(InvalidData.into()))
+                Some(Err(data_error("unexpected type during prefix iteration")))
             }
         }
     }
@@ -786,7 +808,7 @@ impl LinkOffset {
 
     /// Get value, and the next link offset.
     #[inline]
-    fn value_and_next(self, index: &Index) -> io::Result<(u64, LinkOffset)> {
+    fn value_and_next(self, index: &Index) -> Fallible<(u64, LinkOffset)> {
         if self.is_dirty() {
             let e = &index.dirty_links[self.dirty_index()];
             Ok((e.value, e.next_link_offset))
@@ -822,7 +844,7 @@ impl LinkOffset {
 impl KeyOffset {
     /// Key content of a key entry.
     #[inline]
-    fn key_content(self, index: &Index) -> io::Result<&[u8]> {
+    fn key_content(self, index: &Index) -> Fallible<&[u8]> {
         if self.is_dirty() {
             Ok(&index.dirty_keys[self.dirty_index()].key[..])
         } else {
@@ -832,7 +854,7 @@ impl KeyOffset {
             let end = start + key_len;
             index.verify_checksum(u64::from(self), end as u64 - u64::from(self))?;
             if end > index.buf.len() {
-                Err(InvalidData.into())
+                Err(range_error(start, end - start))
             } else {
                 Ok(&index.buf[start..end])
             }
@@ -862,7 +884,7 @@ impl KeyOffset {
 impl ExtKeyOffset {
     /// Key content of a key entry.
     #[inline]
-    fn key_content(self, index: &Index) -> io::Result<&[u8]> {
+    fn key_content(self, index: &Index) -> Fallible<&[u8]> {
         let (key_content, entry_size) = self.key_content_and_entry_size_unchecked(index)?;
         if let Some(entry_size) = entry_size {
             index.verify_checksum(u64::from(self), entry_size as u64)?;
@@ -875,7 +897,7 @@ impl ExtKeyOffset {
     fn key_content_and_entry_size_unchecked(
         self,
         index: &Index,
-    ) -> io::Result<(&[u8], Option<usize>)> {
+    ) -> Fallible<(&[u8], Option<usize>)> {
         let (start, len, entry_size) = if self.is_dirty() {
             let e = &index.dirty_ext_keys[self.dirty_index()];
             (e.start, e.len, None)
@@ -910,17 +932,17 @@ impl ExtKeyOffset {
 }
 
 /// Check type for an on-disk entry
-fn check_type(buf: &[u8], offset: usize, expected: u8) -> io::Result<()> {
-    let typeint = *(buf.get(offset).ok_or(InvalidData)?);
+fn check_type(buf: &[u8], offset: usize, expected: u8) -> Fallible<()> {
+    let typeint = *(buf.get(offset).ok_or_else(|| range_error(offset, 1))?);
     if typeint != expected {
-        Err(InvalidData.into())
+        Err(data_error(format!("type mismatch at offset {}", offset)))
     } else {
         Ok(())
     }
 }
 
 impl MemRadix {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         let mut pos = 0;
@@ -929,7 +951,9 @@ impl MemRadix {
         check_type(buf, offset, TYPE_RADIX)?;
         pos += TYPE_BYTES;
 
-        let flag = *buf.get(offset + pos).ok_or_else(integrity_error)?;
+        let flag = *buf
+            .get(offset + pos)
+            .ok_or_else(|| range_error(offset + pos, 1))?;
         pos += RADIX_FLAG_BYTES;
 
         let bitmap = RadixOffset::read_bitmap_unchecked(buf, offset + pos)?;
@@ -965,7 +989,7 @@ impl MemRadix {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
         // Prepare data to write
         let mut flag = 0;
         let mut bitmap = 0;
@@ -1023,7 +1047,7 @@ impl MemRadix {
 }
 
 impl MemLeaf {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         match buf.get(offset) {
@@ -1056,7 +1080,7 @@ impl MemLeaf {
                     link_offset,
                 })
             }
-            _ => Err(integrity_error()),
+            _ => Err(range_error(offset, 1)),
         }
     }
 
@@ -1073,7 +1097,7 @@ impl MemLeaf {
         dirty_ext_keys: &mut Vec<MemExtKey>,
         dirty_links: &mut Vec<MemLink>,
         offset_map: &mut OffsetMap,
-    ) -> io::Result<bool> {
+    ) -> Fallible<bool> {
         debug_assert!(!self.is_unused());
 
         // Conditions to be inlined:
@@ -1127,11 +1151,7 @@ impl MemLeaf {
     }
 
     /// Write a Leaf entry.
-    fn write_noninline_to<W: Write>(
-        &self,
-        writer: &mut W,
-        offset_map: &OffsetMap,
-    ) -> io::Result<()> {
+    fn write_noninline_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
         debug_assert!(!self.is_unused());
         writer.write_all(&[TYPE_LEAF])?;
         writer.write_vlq(self.key_offset.to_disk(offset_map))?;
@@ -1151,7 +1171,7 @@ impl MemLeaf {
 }
 
 impl MemLink {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LINK)?;
@@ -1167,7 +1187,7 @@ impl MemLink {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
         writer.write_all(&[TYPE_LINK])?;
         writer.write_vlq(self.value)?;
         writer.write_vlq(self.next_link_offset.to_disk(offset_map))?;
@@ -1186,21 +1206,21 @@ impl MemLink {
 }
 
 impl MemKey {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_KEY)?;
         let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
         let key = Vec::from(
             buf.get(offset + TYPE_BYTES + len..offset + TYPE_BYTES + len + key_len)
-                .ok_or(InvalidData)?,
+                .ok_or_else(|| range_error(offset + TYPE_BYTES + len, key_len))?,
         )
         .into_boxed_slice();
         verify_checksum(checksum, offset as u64, (TYPE_BYTES + len + key_len) as u64)?;
         Ok(MemKey { key })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> Fallible<()> {
         writer.write_all(&[TYPE_KEY])?;
         writer.write_vlq(self.key.len())?;
         writer.write_all(&self.key)?;
@@ -1219,7 +1239,7 @@ impl MemKey {
 }
 
 impl MemExtKey {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_EXT_KEY)?;
@@ -1233,10 +1253,11 @@ impl MemExtKey {
         Ok(MemExtKey { start, len })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> Fallible<()> {
         writer.write_all(&[TYPE_EXT_KEY])?;
         writer.write_vlq(self.start)?;
-        writer.write_vlq(self.len)
+        writer.write_vlq(self.len)?;
+        Ok(())
     }
 
     /// Mark the entry as unused. An unused entry won't be written to disk.
@@ -1251,7 +1272,7 @@ impl MemExtKey {
 }
 
 impl MemRoot {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> Fallible<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         let mut cur = offset;
@@ -1269,7 +1290,7 @@ impl MemRoot {
 
         let meta = match buf.get(cur..cur + meta_len) {
             Some(meta) => meta,
-            None => return Err(InvalidData.into()),
+            None => return Err(range_error(cur, meta_len)),
         };
         cur += meta_len;
 
@@ -1280,18 +1301,18 @@ impl MemRoot {
         })
     }
 
-    fn read_from_end<B: AsRef<[u8]>>(buf: B, end: u64, checksum: &Checksum) -> io::Result<Self> {
+    fn read_from_end<B: AsRef<[u8]>>(buf: B, end: u64, checksum: &Checksum) -> Fallible<Self> {
         if end > 1 {
             let (root_size, vlq_size) = read_vlq_reverse(buf.as_ref(), end as usize)?;
             let vlq_size = vlq_size as u64;
             verify_checksum(checksum, end - vlq_size, vlq_size)?;
             Self::read_from(buf, end - vlq_size - root_size, checksum)
         } else {
-            Err(InvalidData.into())
+            Err(parameter_error("end is too small"))
         }
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> Fallible<()> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
         buf.write_vlq(self.radix_offset.to_disk(offset_map))?;
@@ -1302,7 +1323,8 @@ impl MemRoot {
         reversed_vlq.write_vlq(len)?;
         reversed_vlq.reverse();
         buf.write_all(&reversed_vlq)?;
-        writer.write_all(&buf)
+        writer.write_all(&buf)?;
+        Ok(())
     }
 }
 
@@ -1479,7 +1501,7 @@ impl OpenOptions {
     /// Driven by the "immutable by default" idea, together with append-only
     /// properties, [`OpenOptions::open`] returns a "snapshotted" view of the
     /// index. Changes to the filesystem won't change instantiated [`Index`]es.
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> io::Result<Index> {
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Fallible<Index> {
         let open_result = if self.write == Some(false) {
             fs::OpenOptions::new().read(true).open(path.as_ref())
         } else {
@@ -1562,7 +1584,7 @@ impl OpenOptions {
 
 impl Index {
     /// Return a cloned [`Index`].
-    pub fn clone(&self) -> io::Result<Index> {
+    pub fn clone(&self) -> Fallible<Index> {
         let file = self.file.duplicate()?;
         let mmap = mmap_readonly(&file, Some(self.len))?.0;
         let checksum = match self.checksum {
@@ -1603,7 +1625,7 @@ impl Index {
     /// Take the file lock when writing.
     ///
     /// Return 0 if nothing needs to be written. Otherwise return the new file
-    /// length on success. Return [io::ErrorKind::PermissionDenied] if the file
+    /// length on success. Return [`io::ErrorKind::PermissionDenied`] if the file
     /// was marked read-only at open time.
     ///
     /// The new file length can be used to obtain the exact same view of the
@@ -1622,9 +1644,10 @@ impl Index {
     /// On the other hand, if "merging changes" is the desired behavior, the
     /// caller needs to take another lock, re-instantiate [`Index`] and re-insert
     /// keys.
-    pub fn flush(&mut self) -> io::Result<u64> {
+    pub fn flush(&mut self) -> Fallible<u64> {
         if self.read_only {
-            return Err(io::ErrorKind::PermissionDenied.into());
+            let err: io::Error = io::ErrorKind::PermissionDenied.into();
+            return Err(err.into());
         }
 
         let mut new_len = self.len;
@@ -1719,7 +1742,7 @@ impl Index {
             // Sanity check - the length should be expected. Otherwise, the lock
             // is somehow ineffective.
             if mmap_len != new_len {
-                return Err(io::ErrorKind::UnexpectedEof.into());
+                return Err(data_error("file changed unexpectedly"));
             }
 
             if let Some(ref mut table) = self.checksum {
@@ -1745,7 +1768,7 @@ impl Index {
     ///
     /// To test if the key exists or not, use [Offset::is_null].
     /// To obtain all values, use [`LinkOffset::values`].
-    pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> io::Result<LinkOffset> {
+    pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> Fallible<LinkOffset> {
         let mut offset: Offset = self.root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
 
@@ -1773,7 +1796,7 @@ impl Index {
                         return Ok(LinkOffset::default());
                     }
                 }
-                _ => return Err(InvalidData.into()),
+                _ => return Err(data_error("unexpected type during key lookup")),
             }
         }
 
@@ -1783,10 +1806,7 @@ impl Index {
 
     /// Scan entries which match the given prefix in base16 form.
     /// Return [`PrefixIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_base16(
-        &self,
-        mut base16: impl Iterator<Item = u8>,
-    ) -> io::Result<PrefixIter> {
+    pub fn scan_prefix_base16(&self, mut base16: impl Iterator<Item = u8>) -> Fallible<PrefixIter> {
         let mut offset: Offset = self.root.radix_offset.into();
         let mut prefix_len = 0;
         let mut prefix: Vec<u8> = Vec::new();
@@ -1823,7 +1843,7 @@ impl Index {
                         return Ok(PrefixIter::new(self, None));
                     }
                 }
-                _ => return Err(InvalidData.into()),
+                _ => return Err(data_error("unexpected type during prefix scan")),
             }
         }
 
@@ -1833,13 +1853,13 @@ impl Index {
 
     /// Scan entries which match the given prefix in base256 form.
     /// Return [`PrefixIter`] which allows accesses to keys and values.
-    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> io::Result<PrefixIter> {
+    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<PrefixIter> {
         self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
     }
 
     /// Scan entries which match the given prefix in hex form.
     /// Return [`PrefixIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> io::Result<PrefixIter> {
+    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<PrefixIter> {
         // Invalid hex chars will be caught by `radix.child`
         let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
         self.scan_prefix_base16(base16)
@@ -1848,7 +1868,7 @@ impl Index {
     /// Insert a key-value pair. The value will be the head of the linked list.
     /// That is, `get(key).values().first()` will return the newly inserted
     /// value.
-    pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> io::Result<()> {
+    pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> Fallible<()> {
         self.insert_advanced(InsertKey::Embed(key.as_ref()), value.into(), None)
     }
 
@@ -1867,7 +1887,7 @@ impl Index {
         key: InsertKey,
         value: u64,
         link: Option<LinkOffset>,
-    ) -> io::Result<()> {
+    ) -> Fallible<()> {
         let mut offset: Offset = self.root.radix_offset.into();
         let mut step = 0;
         let (key, key_buf_offset) = match key {
@@ -1961,7 +1981,7 @@ impl Index {
                     }
                     return Ok(());
                 }
-                _ => return Err(InvalidData.into()),
+                _ => return Err(data_error("unexpected type during insertion")),
             }
 
             step += 1;
@@ -1983,7 +2003,7 @@ impl Index {
         child: u8,
         old_link_offset: LinkOffset,
         new_link_offset: LinkOffset,
-    ) -> io::Result<()> {
+    ) -> Fallible<()> {
         // This is probably the most complex part. Here are some explanation about input parameters
         // and what this function is supposed to do for some cases:
         //
@@ -2095,7 +2115,7 @@ impl Index {
 
     /// Verify checksum for the given range. Internal API used by `*Offset` structs.
     #[inline]
-    fn verify_checksum(&self, start: u64, length: u64) -> io::Result<()> {
+    fn verify_checksum(&self, start: u64, length: u64) -> Fallible<()> {
         verify_checksum(&self.checksum, start, length)
     }
 }
@@ -2327,7 +2347,7 @@ mod tests {
                     // Verify link_offset is correct
                     let ids: Vec<u64> = link_offset
                         .values(&index)
-                        .collect::<io::Result<Vec<u64>>>()
+                        .collect::<Fallible<Vec<u64>>>()
                         .unwrap();
                     assert!(ids.len() == 1);
                     assert_eq!(keys[ids[0] as usize], key);
@@ -2818,9 +2838,9 @@ mod tests {
         // In case error happens, the iteration still stops.
         index.insert(&[], 5).expect("insert");
         index.dirty_links[0].next_link_offset = LinkOffset(Offset(1000));
-        // Note: `collect` can return `io::Result<Vec<u64>>`. But that does not exercises the
+        // Note: `collect` can return `Fallible<Vec<u64>>`. But that does not exercises the
         // infinite loop avoidance logic since `collect` stops iteration at the first error.
-        let list_errored: Vec<io::Result<u64>> = index.get(&[]).unwrap().values(&index).collect();
+        let list_errored: Vec<Fallible<u64>> = index.get(&[]).unwrap().values(&index).collect();
         assert!(list_errored[list_errored.len() - 1].is_err());
     }
 

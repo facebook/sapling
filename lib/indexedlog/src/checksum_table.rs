@@ -24,8 +24,10 @@
 // infrequently updated, and are already complex that it's cleaner to not
 // embed checksum logic into them.
 
+use crate::errors::{data_error, parameter_error};
 use crate::utils::{atomic_write, mmap_readonly, xxhash};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use failure::Fallible;
 use fs2::FileExt;
 use memmap::Mmap;
 use std::cell::RefCell;
@@ -140,7 +142,7 @@ impl ChecksumTable {
     ///
     /// Once the table is loaded from disk, changes on disk won't affect
     /// the table in memory.
-    pub fn new<P: AsRef<Path>>(path: &P) -> io::Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: &P) -> Fallible<Self> {
         // Read the source of truth file as a mmap buffer
         let file = OpenOptions::new().read(true).open(path)?;
         let (mmap, len) = mmap_readonly(&file, None)?;
@@ -154,7 +156,7 @@ impl ChecksumTable {
             }
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
-                    return Err(err);
+                    return Err(err.into());
                 }
             }
         }
@@ -166,7 +168,12 @@ impl ChecksumTable {
             let mut cur = Cursor::new(checksum_buf);
             let chunk_size_log = cur.read_u64::<LittleEndian>()?;
             if chunk_size_log > MAX_CHUNK_SIZE_LOG as u64 {
-                return Err(io::ErrorKind::InvalidData.into());
+                let msg = format!(
+                    "invalid chunk_size_log {:?} when opening {:?} for checksum",
+                    chunk_size_log,
+                    &path.as_ref()
+                );
+                return Err(data_error(msg));
             }
             let chunk_size_log = chunk_size_log as u32;
             let chunk_size = 1 << chunk_size_log;
@@ -192,7 +199,7 @@ impl ChecksumTable {
     }
 
     /// Clone the checksum table.
-    pub fn clone(&self) -> io::Result<Self> {
+    pub fn clone(&self) -> Fallible<Self> {
         let file = self.file.duplicate()?;
         let mmap = mmap_readonly(&file, (self.buf.len() as u64).into())?.0;
         Ok(ChecksumTable {
@@ -223,17 +230,17 @@ impl ChecksumTable {
     ///
     /// Otherwise, update the in-memory checksum table. Then write it in an
     /// atomic-replace way.  Return write errors if write fails.
-    pub fn update(&mut self, chunk_size_log: Option<u32>) -> io::Result<()> {
+    pub fn update(&mut self, chunk_size_log: Option<u32>) -> Fallible<()> {
         let (mmap, len) = mmap_readonly(&self.file, None)?;
         let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
         if chunk_size_log > MAX_CHUNK_SIZE_LOG {
-            return Err(io::ErrorKind::InvalidInput.into());
+            return Err(parameter_error("chunk_size_log is too largee"));
         }
         let chunk_size = 1 << chunk_size_log;
         let old_chunk_size = 1 << self.chunk_size_log;
 
         if chunk_size == 0 {
-            return Err(io::ErrorKind::InvalidInput.into());
+            return Err(parameter_error("chunk_size_log cannot be 0"));
         }
 
         if len == self.end && chunk_size == old_chunk_size {
@@ -242,7 +249,7 @@ impl ChecksumTable {
 
         if len < self.end {
             // Breaks the "append-only" assumption.
-            return Err(io::ErrorKind::InvalidData.into());
+            return Err(data_error("checksum file was truncated"));
         }
 
         let mut checksums = self.checksums.clone();
@@ -259,7 +266,8 @@ impl ChecksumTable {
         // Before recalculating, verify the changed chunks first.
         let start = checksums.len() as u64 * old_chunk_size;
         if !self.check_range(start, self.end - start) {
-            return Err(io::ErrorKind::InvalidData.into());
+            let msg = format!("integrity check failure in range {}..{}", start, self.end);
+            return Err(data_error(msg));
         }
 
         let mut offset = checksums.len() as u64 * chunk_size;
@@ -308,7 +316,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempdir;
 
-    fn setup() -> (File, Box<Fn() -> io::Result<ChecksumTable>>) {
+    fn setup() -> (File, Box<Fn() -> Fallible<ChecksumTable>>) {
         let dir = tempdir().unwrap();
 
         // Checksum an non-existed file is an error.

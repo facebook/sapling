@@ -8,7 +8,7 @@
 
 extern crate atomicwrites;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate indexedlog;
 #[cfg(test)]
 extern crate tempfile;
@@ -18,18 +18,19 @@ use std::io::Write;
 use std::path::Path;
 use std::str;
 
+use failure::Fallible;
+
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use types::node::Node;
 
 pub mod errors;
-pub use errors::{Error, ErrorKind, Result};
 
 pub struct BookmarkStore {
     log: Log,
 }
 
 impl BookmarkStore {
-    pub fn new(dir_path: &Path) -> Result<Self> {
+    pub fn new(dir_path: &Path) -> Fallible<Self> {
         // Log entry encoding:
         //   LOG := UPDATE | REMOVAL
         //   UPDATE := 'U' + NODE_ID + BOOKMARK_NAME
@@ -47,24 +48,18 @@ impl BookmarkStore {
             log: Log::open(
                 dir_path,
                 vec![
-                    IndexDef::new(
-                        "bookmark",
-                        |data: &[u8]| match data[0] {
-                            b'R' => vec![IndexOutput::Reference(1u64..data.len() as u64)],
-                            b'U' => vec![IndexOutput::Reference(
-                                (Node::len() + 1) as u64..data.len() as u64,
-                            )],
-                            c => panic!("invalid BookmarkEntry type '{}'", c),
-                        },
-                    ),
-                    IndexDef::new(
-                        "node",
-                        |data: &[u8]| match data[0] {
-                            b'R' => vec![],
-                            b'U' => vec![IndexOutput::Reference(1u64..(Node::len() + 1) as u64)],
-                            c => panic!("invalid BookmarkEntry type '{}'", c),
-                        },
-                    ),
+                    IndexDef::new("bookmark", |data: &[u8]| match data[0] {
+                        b'R' => vec![IndexOutput::Reference(1u64..data.len() as u64)],
+                        b'U' => vec![IndexOutput::Reference(
+                            (Node::len() + 1) as u64..data.len() as u64,
+                        )],
+                        c => panic!("invalid BookmarkEntry type '{}'", c),
+                    }),
+                    IndexDef::new("node", |data: &[u8]| match data[0] {
+                        b'R' => vec![],
+                        b'U' => vec![IndexOutput::Reference(1u64..(Node::len() + 1) as u64)],
+                        c => panic!("invalid BookmarkEntry type '{}'", c),
+                    }),
                 ],
             )?,
         })
@@ -94,27 +89,31 @@ impl BookmarkStore {
 
     pub fn lookup_node(&self, node: &Node) -> Option<Vec<String>> {
         let iter = self.log.lookup(1, &node).unwrap();
-        let result = iter.filter_map(|data| {
-            let data = data.unwrap();
+        let result = iter
+            .filter_map(|data| {
+                let data = data.unwrap();
 
-            match BookmarkEntry::unpack(data) {
-                BookmarkEntry::Remove { bookmark: _ } => {
-                    panic!("unreachable code");
-                }
-                BookmarkEntry::Update {
-                    bookmark,
-                    node: found_node,
-                } => {
-                    assert_eq!(&found_node, node);
-                    let latest_node = self.lookup_bookmark(bookmark);
-                    match latest_node {
-                        Some(latest_node) if &latest_node == node => Some(String::from(bookmark)),
-                        Some(_) => None, // bookmark still present, but points to another node
-                        None => None,    // bookmark has been removed
+                match BookmarkEntry::unpack(data) {
+                    BookmarkEntry::Remove { bookmark: _ } => {
+                        panic!("unreachable code");
+                    }
+                    BookmarkEntry::Update {
+                        bookmark,
+                        node: found_node,
+                    } => {
+                        assert_eq!(&found_node, node);
+                        let latest_node = self.lookup_bookmark(bookmark);
+                        match latest_node {
+                            Some(latest_node) if &latest_node == node => {
+                                Some(String::from(bookmark))
+                            }
+                            Some(_) => None, // bookmark still present, but points to another node
+                            None => None,    // bookmark has been removed
+                        }
                     }
                 }
-            }
-        }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         if result.is_empty() {
             None
         } else {
@@ -122,23 +121,28 @@ impl BookmarkStore {
         }
     }
 
-    pub fn update(&mut self, bookmark: &str, node: Node) -> Result<()> {
-        Ok(self.log
+    pub fn update(&mut self, bookmark: &str, node: Node) -> Fallible<()> {
+        Ok(self
+            .log
             .append(BookmarkEntry::pack(&BookmarkEntry::Update {
                 bookmark,
                 node,
             }))?)
     }
 
-    pub fn remove(&mut self, bookmark: &str) -> Result<()> {
+    pub fn remove(&mut self, bookmark: &str) -> Fallible<()> {
         if self.lookup_bookmark(bookmark).is_none() {
-            bail!(ErrorKind::BookmarkNotFound(bookmark.to_string()));
+            return Err(errors::BookmarkNotFound {
+                name: bookmark.to_string(),
+            }
+            .into());
         }
-        Ok(self.log
+        Ok(self
+            .log
             .append(BookmarkEntry::pack(&BookmarkEntry::Remove { bookmark }))?)
     }
 
-    pub fn flush(&mut self) -> Result<()> {
+    pub fn flush(&mut self) -> Fallible<()> {
         self.log.flush()?;
         Ok(())
     }

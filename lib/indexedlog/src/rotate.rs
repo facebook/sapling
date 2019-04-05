@@ -9,6 +9,7 @@ use crate::lock::ScopedFileLock;
 use crate::log::{self, IndexDef, Log};
 use crate::utils::{atomic_write, open_dir};
 use bytes::Bytes;
+use failure::Fallible;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -101,7 +102,7 @@ impl OpenOptions {
     }
 
     /// Open [`LogRotate`] at given location.
-    pub fn open(self, dir: impl AsRef<Path>) -> io::Result<LogRotate> {
+    pub fn open(self, dir: impl AsRef<Path>) -> Fallible<LogRotate> {
         let dir = dir.as_ref();
 
         let latest_path = dir.join(LATEST_FILE);
@@ -132,17 +133,13 @@ impl OpenOptions {
 
 impl LogRotate {
     /// Append data to the writable [`Log`].
-    pub fn append(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+    pub fn append(&mut self, data: impl AsRef<[u8]>) -> Fallible<()> {
         self.writable_log().append(data)
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` stored in [`OpenOptions`].
-    pub fn lookup(
-        &self,
-        index_id: usize,
-        key: impl Into<Bytes>,
-    ) -> io::Result<LogRotateLookupIter> {
+    pub fn lookup(&self, index_id: usize, key: impl Into<Bytes>) -> Fallible<LogRotateLookupIter> {
         let key = key.into();
         Ok(LogRotateLookupIter {
             inner_iter: self.logs[0].lookup(index_id, &key)?,
@@ -157,7 +154,7 @@ impl LogRotate {
     /// Write in-memory entries to disk.
     ///
     /// Return the index of the latest [`Log`].
-    pub fn flush(&mut self) -> io::Result<u8> {
+    pub fn flush(&mut self) -> Fallible<u8> {
         let mut lock_file = open_dir(&self.dir)?;
         let _lock = ScopedFileLock::new(&mut lock_file, true)?;
 
@@ -244,7 +241,7 @@ pub struct LogRotateLookupIter<'a> {
 }
 
 impl<'a> Iterator for LogRotateLookupIter<'a> {
-    type Item = io::Result<&'a [u8]>;
+    type Item = Fallible<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.end {
@@ -279,7 +276,7 @@ impl<'a> Iterator for LogRotateLookupIter<'a> {
     }
 }
 
-fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u8) -> io::Result<Log> {
+fn create_empty_log(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Log> {
     let latest_path = dir.join(LATEST_FILE);
     let latest_str = format!("{}", latest);
     let log_path = dir.join(&latest_str);
@@ -298,7 +295,7 @@ fn read_latest(dir: &Path) -> io::Result<u8> {
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
-fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> io::Result<Vec<Log>> {
+fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec<Log>> {
     let mut logs = Vec::new();
     let mut current = latest;
     let mut remaining = open_options.max_log_count;
@@ -317,7 +314,7 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> io::Result<V
         Err(io::Error::new(
             io::ErrorKind::NotFound,
             format!("no logs are found in {:?}", &dir),
-        ))
+        ))?
     } else {
         Ok(logs)
     }
@@ -349,7 +346,7 @@ mod tests {
         rotate
             .lookup(0, key)
             .unwrap()
-            .collect::<io::Result<Vec<&[u8]>>>()
+            .collect::<Fallible<Vec<&[u8]>>>()
             .unwrap()
     }
 

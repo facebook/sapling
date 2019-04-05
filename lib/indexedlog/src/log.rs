@@ -31,10 +31,12 @@
 // Integers are VLQ encoded, except for XXHASH64 and XXHASH32, which uses
 // LittleEndian encoding.
 
+use crate::errors::{data_error, parameter_error};
 use crate::index::{self, Index, InsertKey, LeafValueIter, PrefixIter};
 use crate::lock::ScopedFileLock;
 use crate::utils::{atomic_write, mmap_readonly, open_dir, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use failure::{self, Fallible};
 use memmap::Mmap;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -228,7 +230,7 @@ impl Log {
     /// Create the [`Log`] if it does not exist.
     ///
     /// See [`OpenOptions::open`] for details.
-    pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
+    pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> Fallible<Self> {
         OpenOptions::new()
             .index_defs(index_defs)
             .create(true)
@@ -241,7 +243,7 @@ impl Log {
     /// the change immediately.
     ///
     /// To write in-memory entries and indexes to disk, call [`Log::flush`].
-    pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> io::Result<()> {
+    pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> Fallible<()> {
         let data = data.as_ref();
 
         let checksum_type = if self.open_options.checksum_type == ChecksumType::Auto {
@@ -321,7 +323,7 @@ impl Log {
     /// "snapshotted" at open time.
     ///
     /// Return the size of the updated primary log file in bytes.
-    pub fn flush(&mut self) -> io::Result<u64> {
+    pub fn flush(&mut self) -> Fallible<u64> {
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
         let mut dir_file = open_dir(&self.dir)?;
@@ -340,11 +342,11 @@ impl Log {
         let physical_len = primary_file.seek(SeekFrom::End(0))?;
         if physical_len < meta.primary_len {
             let msg = format!(
-                "corrupted: {} (expected at least {} bytes)",
+                "file was truncated unexpectedly: it has {} bytes now (expected >= {} bytes)",
                 primary_path.to_string_lossy(),
                 meta.primary_len
             );
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, msg));
+            return Err(data_error(msg));
         }
 
         // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
@@ -390,7 +392,7 @@ impl Log {
     /// `index_defs` passed to [`Log::open`].
     ///
     /// Return an iterator of `Result<&[u8]>`, in reverse insertion order.
-    pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> io::Result<LogLookupIter> {
+    pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> Fallible<LogLookupIter> {
         self.maybe_return_index_error()?;
         if let Some(index) = self.indexes.get(index_id) {
             assert!(key.as_ref().len() > 0);
@@ -403,7 +405,7 @@ impl Log {
             })
         } else {
             let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
-            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+            Err(parameter_error(msg))
         }
     }
 
@@ -417,7 +419,7 @@ impl Log {
         &self,
         index_id: usize,
         prefix: K,
-    ) -> io::Result<LogPrefixIter> {
+    ) -> Fallible<LogPrefixIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix(prefix)?;
         Ok(LogPrefixIter {
@@ -438,7 +440,7 @@ impl Log {
         &self,
         index_id: usize,
         hex_prefix: K,
-    ) -> io::Result<LogPrefixIter> {
+    ) -> Fallible<LogPrefixIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix_hex(hex_prefix)?;
         Ok(LogPrefixIter {
@@ -468,11 +470,7 @@ impl Log {
     }
 
     /// Applies the given index function to the entry data and returns the index keys.
-    pub fn index_func<'a>(
-        &self,
-        index_id: usize,
-        entry: &'a [u8],
-    ) -> io::Result<Vec<Cow<'a, [u8]>>> {
+    pub fn index_func<'a>(&self, index_id: usize, entry: &'a [u8]) -> Fallible<Vec<Cow<'a, [u8]>>> {
         let index_def = self.open_options.index_defs.get(index_id).ok_or_else(|| {
             let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
             io::Error::new(io::ErrorKind::InvalidData, msg)
@@ -486,7 +484,7 @@ impl Log {
     }
 
     /// Build in-memory index for the newly added entry.
-    fn update_indexes_for_in_memory_entry(&mut self, data: &[u8], offset: u64) -> io::Result<()> {
+    fn update_indexes_for_in_memory_entry(&mut self, data: &[u8], offset: u64) -> Fallible<()> {
         let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset);
         self.maybe_set_index_error(result)
     }
@@ -495,7 +493,7 @@ impl Log {
         &mut self,
         data: &[u8],
         offset: u64,
-    ) -> io::Result<()> {
+    ) -> Fallible<()> {
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
@@ -517,12 +515,12 @@ impl Log {
     }
 
     /// Build in-memory index so they cover all entries stored in `self.disk_buf`.
-    fn update_indexes_for_on_disk_entries(&mut self) -> io::Result<()> {
+    fn update_indexes_for_on_disk_entries(&mut self) -> Fallible<()> {
         let result = self.update_indexes_for_on_disk_entries_unchecked();
         self.maybe_set_index_error(result)
     }
 
-    fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> io::Result<()> {
+    fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> Fallible<()> {
         // It's a programming error to call this when mem_buf is not empty.
         assert!(self.mem_buf.is_empty());
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
@@ -570,7 +568,7 @@ impl Log {
     ///
     /// The caller should ensure the directory exists and take a lock on it to
     /// avoid filesystem races.
-    fn load_meta(dir: &Path, create: bool) -> io::Result<LogMetadata> {
+    fn load_meta(dir: &Path, create: bool) -> Fallible<LogMetadata> {
         let meta_path = dir.join(META_FILE);
         match LogMetadata::read_file(&meta_path) {
             Err(err) => {
@@ -586,7 +584,7 @@ impl Log {
                     meta.write_file(&meta_path)?;
                     Ok(meta)
                 } else {
-                    Err(err)
+                    Err(data_error("cannot read meta file").context(err).into())
                 }
             }
             Ok(meta) => Ok(meta),
@@ -598,7 +596,7 @@ impl Log {
         dir: &Path,
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
-    ) -> io::Result<(Mmap, Vec<Index>)> {
+    ) -> Fallible<(Mmap, Vec<Index>)> {
         let primary_file = fs::OpenOptions::new()
             .read(true)
             .open(dir.join(PRIMARY_FILE))?;
@@ -624,7 +622,7 @@ impl Log {
         name: &str,
         len: u64,
         buf: Arc<AsRef<[u8]> + Send + Sync>,
-    ) -> io::Result<Index> {
+    ) -> Fallible<Index> {
         // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
         const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;
         let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
@@ -638,7 +636,7 @@ impl Log {
     /// Read the entry at the given offset. Return `None` if offset is out of bound, or the content
     /// of the data, the real offset of the data, and the next offset. Raise errors if
     /// integrity-check failed.
-    fn read_entry(&self, offset: u64) -> io::Result<Option<EntryResult>> {
+    fn read_entry(&self, offset: u64) -> Fallible<Option<EntryResult>> {
         let result = if offset < self.meta.primary_len {
             Self::read_entry_from_buf(&self.disk_buf, offset)?
         } else {
@@ -655,12 +653,12 @@ impl Log {
     /// Read an entry at the given offset of the given buffer. Verify its integrity. Return the
     /// data, the real data offset, and the next entry offset. Return None if the offset is at
     /// the end of the buffer.  Raise errors if there are integrity check issues.
-    fn read_entry_from_buf(buf: &[u8], offset: u64) -> io::Result<Option<EntryResult>> {
+    fn read_entry_from_buf(buf: &[u8], offset: u64) -> Fallible<Option<EntryResult>> {
         if offset == buf.len() as u64 {
             return Ok(None);
         } else if offset > buf.len() as u64 {
             let msg = format!("invalid read offset {}", offset);
-            return Err(io::Error::new(io::ErrorKind::InvalidData, msg));
+            return Err(data_error(msg));
         }
 
         let (entry_flags, vlq_len): (u32, _) = buf.read_vlq_at(offset as usize)?;
@@ -677,19 +675,23 @@ impl Log {
             ENTRY_FLAG_HAS_XXHASH64 => {
                 let checksum = LittleEndian::read_u64(
                     &buf.get(offset as usize..offset as usize + 8)
-                        .ok_or_else(|| invalid(format!("xxhash cannot be read at {}", offset)))?,
+                        .ok_or_else(|| {
+                            data_error(format!("xxhash cannot be read at {}", offset))
+                        })?,
                 );
                 (checksum, offset + 8)
             }
             ENTRY_FLAG_HAS_XXHASH32 => {
                 let checksum = LittleEndian::read_u32(
                     &buf.get(offset as usize..offset as usize + 4)
-                        .ok_or_else(|| invalid(format!("xxhash32 cannot be read at {}", offset)))?,
+                        .ok_or_else(|| {
+                            data_error(format!("xxhash32 cannot be read at {}", offset))
+                        })?,
                 ) as u64;
                 (checksum, offset + 4)
             }
             _ => {
-                return Err(invalid(format!(
+                return Err(data_error(format!(
                     "entry at {} cannot have multiple checksums",
                     offset
                 )))
@@ -699,7 +701,7 @@ impl Log {
         // Read the actual payload
         let end = offset + data_len;
         if end > buf.len() as u64 {
-            return Err(invalid(format!("incomplete entry data at {}", offset)));
+            return Err(data_error(format!("incomplete entry data at {}", offset)));
         }
         let data = &buf[offset as usize..end as usize];
 
@@ -717,14 +719,14 @@ impl Log {
                 next_offset: end,
             }))
         } else {
-            Err(invalid(format!("integrity check failed at {}", offset)))
+            Err(data_error(format!("integrity check failed at {}", offset)))
         }
     }
 
     /// Wrapper around a `Result` returned by an index write operation.
     /// Make sure all index write operations are wrapped by this method.
     #[inline]
-    fn maybe_set_index_error<T>(&mut self, result: io::Result<T>) -> io::Result<T> {
+    fn maybe_set_index_error<T>(&mut self, result: Fallible<T>) -> Fallible<T> {
         if result.is_err() && !self.index_corrupted {
             self.index_corrupted = true;
         }
@@ -734,10 +736,10 @@ impl Log {
     /// Wrapper to return an error if `index_corrupted` is set.
     /// Use this before doing index read operations.
     #[inline]
-    fn maybe_return_index_error(&self) -> io::Result<()> {
+    fn maybe_return_index_error(&self) -> Fallible<()> {
         if self.index_corrupted {
             let msg = format!("index is corrupted");
-            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+            Err(data_error(msg))
         } else {
             Ok(())
         }
@@ -874,7 +876,7 @@ impl OpenOptions {
     /// always bounded to a transaction. [`Log::flush`] is like committing the
     /// transaction. Dropping the [`Log`] instance is like abandoning a
     /// transaction.
-    pub fn open(self, dir: impl AsRef<Path>) -> io::Result<Log> {
+    pub fn open(self, dir: impl AsRef<Path>) -> Fallible<Log> {
         let dir = dir.as_ref();
         let create = self.create;
 
@@ -889,7 +891,8 @@ impl OpenOptions {
                 Err(io::Error::new(
                     io::ErrorKind::NotFound,
                     format!("Log {:?} does not exist", &dir),
-                ))
+                )
+                .into())
             }
         })?;
 
@@ -929,7 +932,7 @@ impl<'a> EntryResult<'a> {
 }
 
 impl<'a> Iterator for LogLookupIter<'a> {
-    type Item = io::Result<&'a [u8]>;
+    type Item = Fallible<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
@@ -955,13 +958,13 @@ impl<'a> Iterator for LogLookupIter<'a> {
 
 impl<'a> LogLookupIter<'a> {
     /// A convenient way to get data.
-    pub fn into_vec(self) -> io::Result<Vec<&'a [u8]>> {
+    pub fn into_vec(self) -> Fallible<Vec<&'a [u8]>> {
         self.collect()
     }
 }
 
 impl<'a> Iterator for LogIter<'a> {
-    type Item = io::Result<&'a [u8]>;
+    type Item = Fallible<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
@@ -983,7 +986,7 @@ impl<'a> Iterator for LogIter<'a> {
 }
 
 impl<'a> Iterator for LogPrefixIter<'a> {
-    type Item = io::Result<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
+    type Item = Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
@@ -1086,7 +1089,7 @@ impl LogMetadata {
 }
 
 impl IndexOutput {
-    fn into_cow(self, data: &[u8]) -> io::Result<Cow<[u8]>> {
+    fn into_cow(self, data: &[u8]) -> Fallible<Cow<[u8]>> {
         Ok(match self {
             IndexOutput::Reference(range) => Cow::Borrowed(
                 &data
@@ -1115,11 +1118,6 @@ impl Debug for Log {
         }
         Ok(())
     }
-}
-
-// Shorter way to construct an "InvalidData" error.
-fn invalid(message: String) -> io::Error {
-    return io::Error::new(io::ErrorKind::InvalidData, message);
 }
 
 #[cfg(test)]
@@ -1224,34 +1222,34 @@ mod tests {
         log.append(b"3").unwrap();
 
         assert_eq!(
-            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
             vec![b"2", b"4", b"3"]
         );
         assert_eq!(
-            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
-            log.iter_dirty().collect::<io::Result<Vec<_>>>().unwrap(),
+            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
+            log.iter_dirty().collect::<Fallible<Vec<_>>>().unwrap(),
         );
 
         log.flush().unwrap();
 
         assert!(log
             .iter_dirty()
-            .collect::<io::Result<Vec<_>>>()
+            .collect::<Fallible<Vec<_>>>()
             .unwrap()
             .is_empty());
         assert_eq!(
-            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
             vec![b"2", b"4", b"3"]
         );
 
         log.append(b"5").unwrap();
         log.append(b"1").unwrap();
         assert_eq!(
-            log.iter_dirty().collect::<io::Result<Vec<_>>>().unwrap(),
+            log.iter_dirty().collect::<Fallible<Vec<_>>>().unwrap(),
             vec![b"5", b"1"]
         );
         assert_eq!(
-            log.iter().collect::<io::Result<Vec<_>>>().unwrap(),
+            log.iter().collect::<Fallible<Vec<_>>>().unwrap(),
             vec![b"2", b"4", b"3", b"5", b"1"]
         );
     }
