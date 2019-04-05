@@ -45,7 +45,7 @@ use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json::{self, json};
 use slog::{debug, info, o};
-use stats::Histogram;
+use stats::{define_stats, Histogram};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::mem;
