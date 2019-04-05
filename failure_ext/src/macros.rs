@@ -42,7 +42,7 @@ macro_rules! bail_msg {
 macro_rules! ensure_err {
     ($cond:expr, $e:expr) => {
         if !($cond) {
-            bail_err!($e);
+            $crate::bail_err!($e);
         }
     };
 }
@@ -51,12 +51,12 @@ macro_rules! ensure_err {
 macro_rules! ensure_msg {
     ($cond:expr, $e:expr) => {
         if !($cond) {
-            bail_msg!($e);
+            $crate::bail_msg!($e);
         }
     };
     ($cond:expr, $fmt:expr, $($arg:tt)+) => {
         if !($cond) {
-            bail_msg!($fmt, $($arg)+);
+            $crate::bail_msg!($fmt, $($arg)+);
         }
     };
 }

@@ -8,7 +8,7 @@
 //!
 //! To implement a Mercurial service, implement `HgCommands` and then use it to handle incominng
 //! connections.
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::{self, BufRead, Cursor};
 use std::mem;
 use std::str::FromStr;
@@ -20,21 +20,18 @@ use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-
-use context::CoreContext;
-use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
-use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
-use mercurial_bundles::Bundle2Item;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 
-use {GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
-
+use crate::dechunker::Dechunker;
+use crate::errors::*;
+use crate::{GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
+use context::CoreContext;
 use hooks::HookManager;
-
-use errors::*;
+use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
+use mercurial_bundles::Bundle2Item;
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
 
 const HASH_SIZE: usize = 40;
 
@@ -144,6 +141,18 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .listkeys(namespace)
                     .map(SingleResponse::Listkeys)
+                    .map_err(self::Error::into)
+                    .into_stream()
+                    .boxify(),
+                ok(instream).boxify(),
+            ),
+            SingleRequest::ListKeysPatterns {
+                namespace,
+                patterns,
+            } => (
+                hgcmds
+                    .listkeyspatterns(namespace, patterns)
+                    .map(SingleResponse::ListKeysPatterns)
                     .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
@@ -666,6 +675,15 @@ pub trait HgCommands {
         unimplemented("listkeys")
     }
 
+    // @wireprotocommand('listkeyspatterns', 'namespace', 'patterns *')
+    fn listkeyspatterns(
+        &self,
+        _namespace: String,
+        _patterns: Vec<String>,
+    ) -> HgCommandRes<BTreeMap<String, HgChangesetId>> {
+        unimplemented("listkeyspatterns")
+    }
+
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, _key: String) -> HgCommandRes<Bytes> {
         unimplemented("lookup")
@@ -901,7 +919,7 @@ mod test {
         let ctx = CoreContext::test_mock();
         let changeset_store = InMemoryChangesetStore::new();
         let content_store = InMemoryFileContentStore::new();
-        let logger = Logger::root(Discard {}.ignore_res(), o!());
+        let logger = Logger::root(Discard {}.ignore_res(), slog::o!());
         Arc::new(HookManager::new(
             ctx,
             Box::new(changeset_store),

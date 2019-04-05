@@ -4,19 +4,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::batch;
+use crate::errors::{self, *};
+use crate::{GetbundleArgs, GettreepackArgs, Request, SingleRequest};
+use bytes::{Bytes, BytesMut};
+use failure::bail_msg;
+use hex::FromHex;
+use mercurial_types::{HgChangesetId, HgManifestId};
+use nom::{
+    alt, apply, call, closure, complete, do_parse, eof, error_position, is_alphanumeric, is_digit,
+    map, map_res, named, named_args, separated_list, separated_list_complete, tag, take,
+    take_until_and_consume1, take_while, take_while1, try_parse, Err, ErrorKind, FindSubstring,
+    IResult, Needed, Slice,
+};
 use std::collections::HashMap;
 use std::iter;
 use std::str::{self, FromStr};
-
-use bytes::{Bytes, BytesMut};
-use nom::{is_alphanumeric, is_digit, Err, ErrorKind, FindSubstring, IResult, Needed, Slice};
-
-use mercurial_types::{HgChangesetId, HgManifestId};
-
-use batch;
-use errors;
-use errors::*;
-use {GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 
 const BAD_UTF8_ERR_CODE: u32 = 111;
 
@@ -238,6 +241,19 @@ named!(
             FromStr::from_str
         )
     )
+);
+
+named!(
+    hex_stringlist<Vec<String>>,
+    map_res!(stringlist, |vs: Vec<String>| {
+        vs.into_iter()
+            .map(|v| {
+                Vec::from_hex(v)
+                    .map_err(Error::from)
+                    .and_then(|v| String::from_utf8(v).map_err(Error::from))
+            })
+            .collect::<Result<Vec<String>>>()
+    })
 );
 
 /// A comma-separated list of arbitrary values. The input is assumed to be
@@ -561,7 +577,11 @@ fn parse_with_params(
         | command!("hello", Hello, parse_params, {})
         | command!("listkeys", Listkeys, parse_params, {
               namespace => ident_string,
-          })
+        })
+        | command!("listkeyspatterns", ListKeysPatterns, parse_params, {
+             namespace => ident_string,
+             patterns => hex_stringlist,
+        })
         | command!("lookup", Lookup, parse_params, {
               key => utf8_string_complete,
           })
@@ -597,6 +617,7 @@ fn parse_with_params(
 #[cfg(test)]
 mod test {
     use super::*;
+    use maplit::hashmap;
     use mercurial_types_mocks::nodehash::NULL_HASH;
 
     #[test]
@@ -1095,6 +1116,7 @@ mod test {
 #[cfg(test)]
 mod test_parse {
     use super::*;
+    use maplit::{hashmap, hashset};
     use std::fmt::Debug;
 
     fn hash_ones() -> HgChangesetId {
@@ -1518,6 +1540,21 @@ mod test_parse {
                    True";
 
         test_parse(inp, Request::Single(SingleRequest::StreamOutShallow));
+    }
+
+    #[test]
+    fn test_parse_listkeyspatterns() {
+        let input = "listkeyspatterns\n\
+                     namespace 9\n\
+                     bookmarkspatterns 27\n\
+                     746573742f2a 6e75636c696465";
+        test_parse(
+            input,
+            Request::Single(SingleRequest::ListKeysPatterns {
+                namespace: "bookmarks".to_string(),
+                patterns: vec!["test/*".to_string(), "nuclide".to_string()],
+            }),
+        );
     }
 
 }

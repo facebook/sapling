@@ -9,9 +9,9 @@
 //! Based on the Mercurial wire protocol documentation. See
 //! https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/wireprotocol.txt.
 
+use crate::errors::*;
 use bytes::Bytes;
-
-use errors::*;
+use failure::bail_err;
 
 /// Unescape a batch-escaped argument key or value.
 pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {
@@ -56,9 +56,8 @@ pub fn escape(res: &Bytes) -> Vec<u8> {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::TestResult;
-
     use super::*;
+    use quickcheck::{quickcheck, TestResult};
 
     const BAD_BYTES: [u8; 3] = [b',', b';', b'='];
     const BYTES_TO_ESCAPE: [u8; 4] = [b':', b',', b';', b'='];

@@ -18,9 +18,10 @@ use bytes::Bytes;
 use std::io::{self, BufRead, Read};
 use std::sync::{Arc, Mutex};
 
+use failure::format_err;
 use futures::future::poll_fn;
 use futures::{Async, Future};
-use tokio_io::AsyncRead;
+use tokio_io::{try_nb, AsyncRead};
 
 /// Structure that wraps around a `AsyncRead + BufRead` object to provide chunked-based encoding
 /// over it. See this module's doc for the description of the format.
@@ -204,12 +205,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use crate::errors::*;
+    use failure::ensure_msg;
+    use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
     use std::io::Cursor;
-
-    use quickcheck::{Arbitrary, Gen, TestResult};
-
-    use errors::*;
 
     // Vec of non empty Vec<u8> for quickcheck::Arbitrary
     #[derive(Clone, Debug)]

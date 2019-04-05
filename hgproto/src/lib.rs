@@ -11,50 +11,13 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 #![deny(warnings)]
-
-// Tokio/IO
-extern crate bytes;
-extern crate futures;
-#[macro_use]
-extern crate tokio_io;
-
-#[cfg(test)]
-#[macro_use]
-extern crate slog;
-
-// Errors
-#[macro_use]
 extern crate failure_ext as failure;
 
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-#[macro_use]
-extern crate nom;
-
-extern crate context;
-extern crate futures_ext;
-extern crate itertools;
-extern crate mercurial;
-extern crate mercurial_bundles;
-extern crate mercurial_types;
-extern crate revset;
-
-#[cfg(test)]
-extern crate mercurial_types_mocks;
-// QuickCheck for randomized testing.
-extern crate hooks;
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
-use std::collections::{HashMap, HashSet};
+use bytes::Bytes;
+use mercurial_types::{HgChangesetId, HgManifestId};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::{self, Debug};
 use std::sync::Mutex;
-
-use bytes::Bytes;
-
-use mercurial_types::{HgChangesetId, HgManifestId};
 
 mod batch;
 mod commands;
@@ -102,6 +65,10 @@ pub enum SingleRequest {
     Listkeys {
         namespace: String,
     },
+    ListKeysPatterns {
+        namespace: String,
+        patterns: Vec<String>,
+    },
     Lookup {
         key: String,
     },
@@ -140,6 +107,7 @@ impl SingleRequest {
             &SingleRequest::Getfiles => "getfiles",
             &SingleRequest::StreamOutShallow => "stream_out_shallow",
             &SingleRequest::GetpackV1 => "getpackv1",
+            &SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
         }
     }
 }
@@ -221,6 +189,7 @@ pub enum SingleResponse {
     Heads(HashSet<HgChangesetId>),
     Hello(HashMap<String, Vec<String>>),
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
+    ListKeysPatterns(BTreeMap<String, HgChangesetId>),
     Lookup(Bytes),
     Known(Vec<bool>),
     Knownnodes(Vec<bool>),

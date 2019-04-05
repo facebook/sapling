@@ -4,22 +4,28 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::errors::*;
+use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use blobrepo::BlobRepo;
 use blobrepo::HgBlobChangeset;
-use bookmarks::Bookmark;
+use bookmarks::{Bookmark, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
+use cloned::cloned;
 use context::CoreContext;
-use errors::*;
-use failure::err_msg;
+use failure::{err_msg, format_err};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
-use futures::{future, stream, stream::empty, Async, Future, IntoFuture, Poll, Stream};
-use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt, StreamTimeoutError};
+use futures::{future, stream, stream::empty, try_ready, Async, Future, IntoFuture, Poll, Stream};
+use futures_ext::{
+    select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt,
+    StreamTimeoutError,
+};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::HookManager;
 use itertools::Itertools;
+use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
 use mercurial_types::manifest_utils::{
     changed_entry_stream_with_pruner, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
@@ -30,7 +36,6 @@ use mercurial_types::{
     HgChangesetId, HgFileNodeId, HgManifestId, MPath, RepoPath, Type, NULL_CSID, NULL_HASH,
 };
 use metaconfig_types::RepoReadOnly;
-use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use percent_encoding;
 use phases::{Phase, Phases};
 use rand::{self, Rng};
@@ -38,9 +43,10 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use remotefilelog::{create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes};
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
-use serde_json;
+use serde_json::{self, json};
+use slog::{debug, info, o};
 use stats::Histogram;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::mem;
 use std::str::FromStr;
@@ -50,7 +56,7 @@ use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
 use tokio::timer::timeout::Error as TimeoutError;
 use tokio::util::FutureExt as TokioFutureExt;
-use tracing::Traced;
+use tracing::{trace_args, Traced};
 
 const MAX_NODES_TO_LOG: usize = 5;
 
@@ -71,6 +77,7 @@ mod ops {
     pub static HEADS: &str = "heads";
     pub static LOOKUP: &str = "lookup";
     pub static LISTKEYS: &str = "listkeys";
+    pub static LISTKEYSPATTERNS: &str = "listkeyspatterns";
     pub static KNOWN: &str = "known";
     pub static KNOWNNODES: &str = "knownnodes";
     pub static BETWEEN: &str = "between";
@@ -924,6 +931,72 @@ impl HgCommands for RepoClient {
         }
     }
 
+    // @wireprotocommand('listkeyspatterns', 'namespace', 'patterns *')
+    fn listkeyspatterns(
+        &self,
+        namespace: String,
+        patterns: Vec<String>,
+    ) -> HgCommandRes<BTreeMap<String, HgChangesetId>> {
+        info!(
+            self.ctx.logger(),
+            "listkeyspatterns: {} {:?}", namespace, patterns
+        );
+        if namespace != "bookmarks" {
+            info!(
+                self.ctx.logger(),
+                "unsupported listkyespatterns namespace: {}", namespace,
+            );
+            return future::err(format_err!(
+                "unsupported listkyespatterns namespace: {}",
+                namespace
+            ))
+            .boxify();
+        }
+
+        let mut scuba_logger = self
+            .prepared_ctx(ops::LISTKEYSPATTERNS, None)
+            .scuba()
+            .clone();
+
+        let queries = patterns.into_iter().map({
+            let repo = self.repo.blobrepo();
+            cloned!(self.ctx);
+            move |pattern| {
+                if pattern.ends_with("*") {
+                    // prefix match
+                    let prefix = try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
+                    repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix)
+                        .map(|(bookmark, cs_id)| (bookmark.to_string(), cs_id))
+                        .collect()
+                        .boxify()
+                } else {
+                    // literal match
+                    let bookmark = try_boxfuture!(Bookmark::new(&pattern));
+                    repo.get_bookmark(ctx.clone(), &bookmark)
+                        .map(move |cs_id| match cs_id {
+                            Some(cs_id) => vec![(pattern, cs_id)],
+                            None => Vec::new(),
+                        })
+                        .boxify()
+                }
+            }
+        });
+
+        stream::futures_unordered(queries)
+            .concat2()
+            .map(|bookmarks| bookmarks.into_iter().collect())
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
+            .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
+            .timed(move |stats, _| {
+                scuba_logger
+                    .add_future_stats(&stats)
+                    .log_with_msg("Command processed", None);
+                Ok(())
+            })
+            .boxify()
+    }
+
     // @wireprotocommand('unbundle')
     fn unbundle(
         &self,
@@ -1261,11 +1334,9 @@ impl HgCommands for RepoClient {
                     let mut contents = vec![];
                     for filenode in filenodes {
                         // TODO(stash): T41600715 - getpackv1 doesn't seem to support lfs
-                        let fut = repo.get_raw_hg_content(
-                            ctx.clone(),
-                            filenode,
-                            validate_hash,
-                        ).map(move |content| (filenode, content));
+                        let fut = repo
+                            .get_raw_hg_content(ctx.clone(), filenode, validate_hash)
+                            .map(move |content| (filenode, content));
                         contents.push(fut);
                     }
                     future::join_all(contents)
@@ -1510,7 +1581,8 @@ fn fetch_treepack_part_input(
                         path,
                         expected,
                         actual,
-                    }.into())
+                    }
+                    .into())
                 }
             })
             .left_future()
@@ -1584,6 +1656,7 @@ fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, Has
 #[cfg(test)]
 mod tests {
     use super::*;
+    use maplit::hashset;
 
     #[test]
     fn test_parsing_caps_simple() {

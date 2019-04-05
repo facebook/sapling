@@ -4,24 +4,20 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::io;
-use std::sync::{Arc, Mutex};
-
+use crate::commands::HgCommandHandler;
+use crate::errors::*;
+use crate::{HgCommands, Request, Response};
+use bytes::Bytes;
+use context::CoreContext;
 use failure::FutureFailureErrorExt;
 use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
 use futures::{stream, Future, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
-use tokio_io::codec::Decoder;
-
-use bytes::Bytes;
-use context::CoreContext;
-
-use commands::HgCommandHandler;
 use hooks::HookManager;
-use {HgCommands, Request, Response};
-
-use errors::*;
+use std::io;
+use std::sync::{Arc, Mutex};
+use tokio_io::codec::Decoder;
 
 pub type OutputStream = BoxStream<Bytes, Error>;
 

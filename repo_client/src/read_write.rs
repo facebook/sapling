@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Error;
+use failure_ext::Error;
 use futures::future::ok;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};

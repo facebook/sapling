@@ -4,9 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::errors::*;
+use crate::read_write::RepoReadWriteFetcher;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use errors::*;
 use futures_ext::BoxFuture;
 use hooks::HookManager;
 use metaconfig_types::{
@@ -14,7 +15,6 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
-use read_write::RepoReadWriteFetcher;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
 use streaming_clone::SqlStreamingChunksFetcher;

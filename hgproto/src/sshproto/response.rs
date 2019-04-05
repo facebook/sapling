@@ -12,8 +12,8 @@ use futures::{stream, Stream};
 use futures_ext::StreamExt;
 use itertools::Itertools;
 
-use handler::OutputStream;
-use {batch, Response, SingleResponse};
+use crate::handler::OutputStream;
+use crate::{batch, Response, SingleResponse};
 
 fn separated<I, W>(write: &mut W, iter: I, sep: &str) -> io::Result<()>
 where
@@ -153,6 +153,13 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             }
             bytes.freeze()
         }
+
+        ListKeysPatterns(res) => res
+            .into_iter()
+            .map(|(bookmark, hash)| format!("{}\t{}", bookmark, hash))
+            .intersperse(String::from("\n"))
+            .collect::<String>()
+            .into(),
 
         Branchmap(_res) => {
             // We have no plans to support mercurial branches and hence no plans for branchmap,

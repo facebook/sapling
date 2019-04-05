@@ -1,0 +1,71 @@
+  $ . $TESTDIR/library.sh
+
+setup configuration
+  $ setup_common_config
+  $ cd $TESTTMP
+
+setup repo
+  $ hg init repo-hg
+
+setup hg server repo
+  $ cd repo-hg
+  $ setup_hg_server
+  $ cd $TESTTMP
+
+setup client repo
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo --noupdate -q
+  $ cd repo
+  $ setup_hg_client
+
+make a few commits on the server
+  $ cd $TESTTMP/repo-hg
+  $ hg debugdrawdag <<EOF
+  > C E G
+  > | | |
+  > B D F
+  >  \|/
+  >   A
+  >   |
+  >   0
+  > EOF
+
+create bookmarks
+  $ hg bookmark test/one -r C
+  $ hg bookmark test/two -r E
+  $ hg bookmark test/three -r G
+
+blobimport them into Mononoke storage and start Mononoke
+  $ cd ..
+  $ blobimport repo-hg/.hg repo
+
+start mononoke
+  $ mononoke
+  $ wait_for_mononoke $TESTTMP/repo
+
+switch to client and enable inifitepush extension
+  $ cd repo
+  $ setconfig extensions.infinitepush=
+
+match with glob pattern
+  $ hgmn book --list-remote test/*
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+     test/one                  26805aba1e600a82e93661149f2313866a221a7b
+     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
+     test/two                  4b61ff5c62e28cff36152201967390a6e7375604
+
+match with literal pattern
+  $ hgmn book --list-remote test
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  $ hgmn book --list-remote test/three
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
+  $ hgmn book --list-remote test/t*
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
+     test/two                  4b61ff5c62e28cff36152201967390a6e7375604
+
+match multiple patterns
+  $ hgmn book --list-remote test/one --list-remote test/th*
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+     test/one                  26805aba1e600a82e93661149f2313866a221a7b
+     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6

@@ -649,10 +649,18 @@ impl BlobRepo {
     pub fn get_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
+        self.get_bookmarks_by_prefix_maybe_stale(ctx, &BookmarkPrefix::empty())
+    }
+
+    pub fn get_bookmarks_by_prefix_maybe_stale(
+        &self,
+        ctx: CoreContext,
+        prefix: &BookmarkPrefix,
+    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
+            .list_by_prefix_maybe_stale(ctx.clone(), prefix, self.repoid)
             .map({
                 let repo = self.clone();
                 move |(bm, cs)| {
@@ -661,7 +669,6 @@ impl BlobRepo {
                 }
             })
             .buffer_unordered(100)
-            .boxify()
     }
 
     pub fn get_bonsai_bookmarks_maybe_stale(
@@ -1255,8 +1262,7 @@ impl BlobRepo {
         let (dirname, basename) = path.split_dirname();
         self.find_path_in_manifest(ctx, dirname, manifest).map({
             let basename = basename.clone();
-            move |content_and_node| {
-                match content_and_node {
+            move |content_and_node| match content_and_node {
                 None => None,
                 Some((Content::Tree(manifest), _)) => match manifest.lookup(&basename) {
                     None => None,
@@ -1269,7 +1275,6 @@ impl BlobRepo {
                     }
                 },
                 Some(_) => None,
-            }
             }
         })
     }

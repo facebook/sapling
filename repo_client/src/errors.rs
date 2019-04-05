@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-pub use failure::{Error, Result, ResultExt};
+pub use failure_ext::{Error, Fail, Result, ResultExt};
 
 use mercurial_types::{HgNodeHash, RepoPath};
 

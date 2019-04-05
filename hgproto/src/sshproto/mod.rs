@@ -45,10 +45,10 @@
 use bytes::BytesMut;
 use tokio_io::codec::Decoder;
 
-use handler::{OutputStream, ResponseEncoder};
-use {Request, Response};
+use crate::handler::{OutputStream, ResponseEncoder};
+use crate::{Request, Response};
 
-use errors::*;
+use crate::errors::*;
 
 pub mod request;
 pub mod response;
