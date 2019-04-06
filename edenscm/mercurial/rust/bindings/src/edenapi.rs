@@ -8,7 +8,7 @@ use std::str;
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
 
-use ::edenapi::{Config, EdenApi, EdenApiHttpClient};
+use ::edenapi::{Config, EdenApi, EdenApiHyperClient};
 use encoding::{local_bytes_to_path, path_to_local_bytes};
 use types::{Key, Node};
 
@@ -20,7 +20,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class client |py| {
-    data inner: EdenApiHttpClient;
+    data inner: EdenApiHyperClient;
 
     def __new__(
         _cls,
@@ -45,7 +45,7 @@ py_class!(class client |py| {
             config = config.client_creds(cert, key);
         }
 
-        let inner = EdenApiHttpClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
+        let inner = EdenApiHyperClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
         client::create_instance(py, inner)
     }
 

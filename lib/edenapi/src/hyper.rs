@@ -19,26 +19,23 @@ use tokio::runtime::Runtime;
 use url::Url;
 use webpki_roots::TLS_SERVER_ROOTS;
 
-use revisionstore::{
-    DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableHistoryPack,
-    MutablePack,
-};
 use types::{HistoryEntry, Key, WireHistoryEntry};
 use url_ext::UrlExt;
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
+use crate::packs::{write_datapack, write_historypack};
 
 pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
-pub struct EdenApiHttpClient {
+pub struct EdenApiHyperClient {
     client: Arc<HyperClient>,
     base_url: Url,
     repo: String,
     cache_path: PathBuf,
 }
 
-impl EdenApiHttpClient {
+impl EdenApiHyperClient {
     pub fn new(config: Config) -> Fallible<Self> {
         let base_url = match config.base_url {
             Some(url) => url,
@@ -62,7 +59,7 @@ impl EdenApiHttpClient {
 
         let hyper_client = build_hyper_client(config.creds)?;
 
-        let client = EdenApiHttpClient {
+        let client = EdenApiHyperClient {
             client: Arc::new(hyper_client),
             base_url,
             repo,
@@ -95,7 +92,7 @@ mod paths {
     pub const GET_HISTORY: &str = "getfilehistory/";
 }
 
-impl EdenApi for EdenApiHttpClient {
+impl EdenApi for EdenApiHyperClient {
     /// Hit the API server's /health_check endpoint.
     /// Returns Ok(()) if the expected response is received, or an Error otherwise
     /// (e.g., if there was a connection problem or an unexpected repsonse).
@@ -259,45 +256,6 @@ fn process_body(body: Bytes) -> impl Stream<Item = WireHistoryEntry, Error = Err
     stream::iter_result(entries).from_err()
 }
 
-/// Create a new datapack in the given directory, and populate it with the file
-/// contents provided by the given iterator. Each Delta written to the datapack is
-/// assumed to contain the full text of the corresponding file, and as a result the
-/// base revision for each file is always specified as None.
-fn write_datapack(
-    pack_dir: impl AsRef<Path>,
-    files: impl IntoIterator<Item = (Key, Bytes)>,
-) -> Fallible<PathBuf> {
-    let mut datapack = MutableDataPack::new(pack_dir, DataPackVersion::One)?;
-    for (key, data) in files {
-        let metadata = Metadata {
-            size: Some(data.len() as u64),
-            flags: None,
-        };
-        let delta = Delta {
-            data,
-            base: None,
-            key,
-        };
-        datapack.add(&delta, &metadata)?;
-    }
-    datapack.close()
-}
-
-/// Create a new historypack in the given directory, and populate it
-/// with the given history entries.
-fn write_historypack(
-    pack_dir: impl AsRef<Path>,
-    entries: impl IntoIterator<Item = HistoryEntry>,
-) -> Fallible<PathBuf> {
-    let mut historypack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
-    historypack.add_entries(entries)?;
-    historypack.close()
-}
-
-fn url_encode(bytes: &[u8]) -> String {
-    percent_encode(bytes, DEFAULT_ENCODE_SET).to_string()
-}
-
 /// Set up a Hyper client that configured to support HTTP/2 over TLS (with ALPN).
 /// Optionally takes client credentials to be used for TLS mutual authentication.
 fn build_hyper_client(creds: Option<ClientCreds>) -> Fallible<HyperClient> {
@@ -349,4 +307,8 @@ fn read_key(path: impl AsRef<Path>) -> Fallible<PrivateKey> {
                 path.as_ref()
             )
         })
+}
+
+fn url_encode(bytes: &[u8]) -> String {
+    percent_encode(bytes, DEFAULT_ENCODE_SET).to_string()
 }
