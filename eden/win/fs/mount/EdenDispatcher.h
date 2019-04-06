@@ -19,6 +19,7 @@
 #include "eden/win/fs/mount/Enumerator.h"
 #include "eden/win/fs/store/WinStore.h"
 #include "eden/win/fs/utils/Guid.h"
+#include "folly/Synchronized.h"
 
 constexpr uint32_t kDispatcherCode = 0x1155aaff;
 
@@ -88,7 +89,8 @@ class EdenDispatcher {
   //  This will have a list of currently active enumeration sessions
   //
   // TODO: add the hash function and convert it to unordered_map (may be).
-  std::map<GUID, std::unique_ptr<Enumerator>, CompareGuid> enumSessions_;
+  folly::Synchronized<std::map<GUID, std::unique_ptr<Enumerator>, CompareGuid>>
+      enumSessions_;
 
   const uint32_t verificationCode_ = kDispatcherCode;
 };

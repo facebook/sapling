@@ -75,7 +75,7 @@ HRESULT EdenDispatcher::startEnumeration(
       return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     }
 
-    auto [iterator, inserted] = enumSessions_.emplace(
+    auto [iterator, inserted] = enumSessions_.wlock()->emplace(
         enumerationId,
         make_unique<Enumerator>(
             enumerationId, std::move(path), std::move(list)));
@@ -88,8 +88,7 @@ HRESULT EdenDispatcher::startEnumeration(
 
 void EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
   try {
-    enumSessions_.erase(enumerationId);
-    auto erasedCount = enumSessions_.erase(enumerationId);
+    auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
     DCHECK(erasedCount == 1);
   } catch (const std::exception& ex) {
     // Don't need to return result here - exceptionToHResult() will log the
@@ -107,8 +106,9 @@ HRESULT EdenDispatcher::getEnumerationData(
     //
     // Error if we don't have the session.
     //
-    auto sessionIterator = enumSessions_.find(enumerationId);
-    if (sessionIterator == enumSessions_.end()) {
+    auto lockedSessions = enumSessions_.rlock();
+    auto sessionIterator = lockedSessions->find(enumerationId);
+    if (sessionIterator == lockedSessions->end()) {
       XLOG(DBG5) << "Enum instance not found: "
                  << wstringToString(callbackData.FilePathName);
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
