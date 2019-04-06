@@ -47,4 +47,5 @@ def initclient(ui, repo):
     url = getbaseurl(ui)
     creds = getcreds(ui, url)
     cachepath = shallowutil.getcachepath(ui)
-    return edenapi.client(url, cachepath, repo.name, creds)
+    backend = ui.config("edenapi", "backend")
+    return edenapi.client(url, cachepath, repo.name, backend, creds)

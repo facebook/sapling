@@ -124,6 +124,8 @@ Configs for Eden API (HTTP data fetching):
 
     ``edenapi.url`` specifies the base URL of the API server.
 
+    ``edenapi.backend`` specifies which HTTP client library to use.
+
 Eden API TLS credentials are configured using the auth section:
 
     ``auth.edenapi.prefix``: base URL (without scheme) for which to set credentials.
@@ -218,6 +220,7 @@ configitem("remotefilelog", "server", default=None)
 # Config items for HTTP data fetching.
 configitem("edenapi", "enabled", default=False)
 configitem("edenapi", "url", default=None)
+configitem("edenapi", "backend", default="curl")
 
 testedwith = "ships-with-fb-hgext"
 

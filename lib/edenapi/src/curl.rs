@@ -101,7 +101,7 @@ impl EdenApi for EdenApiCurlClient {
         Ok(())
     }
 
-    fn get_files(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<PathBuf> {
+    fn get_files(&self, keys: Vec<Key>) -> Fallible<PathBuf> {
         let url = self.repo_base_url()?.join(paths::DATA)?;
 
         let request = FileDataRequest {
@@ -124,11 +124,7 @@ impl EdenApi for EdenApiCurlClient {
         write_datapack(self.pack_cache_path(), response)
     }
 
-    fn get_history(
-        &self,
-        keys: impl IntoIterator<Item = Key>,
-        max_depth: Option<u32>,
-    ) -> Fallible<PathBuf> {
+    fn get_history(&self, keys: Vec<Key>, max_depth: Option<u32>) -> Fallible<PathBuf> {
         let url = self.repo_base_url()?.join(paths::HISTORY)?;
 
         let request = FileHistoryRequest {
