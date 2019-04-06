@@ -19,7 +19,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
     def setUp(self) -> None:
         test_config = {
             "doctor.minimum-kernel-version": "4.11.3-67",
-            "doctor.known-bad-kernel-versions": "^4.*_fbk13,TODO,TEST",
+            "doctor.known-bad-kernel-versions": "TODO,TEST",
         }
         tmp_dir = self.make_temporary_directory()
         self.instance = FakeEdenInstance(tmp_dir, config=test_config)
@@ -49,6 +49,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
             ("4.11", True),
             ("4.11.3", True),
             ("4.11.3.66", True),
+            ("4.11.3-52_fbk13", True),
             ("4.11.3-77_fbk20_4162_g6e876878d18e", False),
             ("4.11.3-77", False),
         )
@@ -60,13 +61,17 @@ class OperatingSystemsCheckTest(DoctorTestBase):
                 self.assertIs(result, expected)
 
     def test_bad_kernel_versions(self) -> None:
-        bad_kernel_versions_tests = ("4.11.3-52_fbk13", "999.2.3-4_TEST", "777.1_TODO")
-        for bad_release in bad_kernel_versions_tests:
-            with self.subTest(bad_release=bad_release):
+        kernel_versions_tests = {
+            "999.2.3-4_TEST": True,
+            "777.1_TODO": True,
+            "4.16.18-151_fbk13": False,
+        }
+        for release, is_bad in kernel_versions_tests.items():
+            with self.subTest(release=release):
                 result = check_os._os_is_bad_release(
-                    typing.cast(EdenInstance, self.instance), bad_release
+                    typing.cast(EdenInstance, self.instance), release
                 )
-                self.assertTrue(result)
+                self.assertEqual(result, is_bad)
 
     def test_custom_kernel_names(self) -> None:
         custom_name = "4.16.18-custom_byme_3744_g7833bc918498"
