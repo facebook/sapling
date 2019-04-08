@@ -30,15 +30,13 @@ mod tests {
 
     use std::collections::HashMap;
 
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
     use tokio::runtime::Runtime;
 
     use cloned::cloned;
     use futures_ext::FutureExt;
     use revisionstore::{Ancestors, HistoryPackVersion, MutableHistoryPack, MutablePack};
-    use types::{Key, Node, NodeInfo};
+    use types::{testutil::*, Key, NodeInfo};
 
     fn make_historypack(
         tempdir: &TempDir,
@@ -53,29 +51,20 @@ mod tests {
         AsyncHistoryPack::new(path)
     }
 
-    // XXX: copy/pasted from historypack.rs
-    fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
-        let file1 = vec![1, 2, 3];
-        let file2 = vec![1, 2, 3, 4, 5];
-        let null = Node::null_id();
-        let node1 = Node::random(&mut rng);
-        let node2 = Node::random(&mut rng);
-        let node3 = Node::random(&mut rng);
-        let node4 = Node::random(&mut rng);
-        let node5 = Node::random(&mut rng);
-        let node6 = Node::random(&mut rng);
+    // XXX: we should unify this and historypack.rs
 
+    fn get_nodes() -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
         let mut nodes = HashMap::new();
         let mut ancestor_map = HashMap::new();
 
+        let file1 = "a";
+        let file2 = "a/b";
+
         // Insert key 1
-        let key1 = Key::new(file1.clone(), node2.clone());
+        let key1 = key(&file1, "2");;
         let info = NodeInfo {
-            parents: [
-                Key::new(file1.clone(), node1.clone()),
-                Key::new(file1.clone(), null.clone()),
-            ],
-            linknode: Node::random(&mut rng),
+            parents: [key(&file1, "1"), null_key(&file1)],
+            linknode: node("101"),
         };
         nodes.insert(key1.clone(), info.clone());
         let mut ancestors = HashMap::new();
@@ -83,13 +72,10 @@ mod tests {
         ancestor_map.insert(key1.clone(), ancestors);
 
         // Insert key 2
-        let key2 = Key::new(file2.clone(), node3.clone());
+        let key2 = key(&file2, "3");
         let info = NodeInfo {
-            parents: [
-                Key::new(file2.clone(), node5.clone()),
-                Key::new(file2.clone(), node6.clone()),
-            ],
-            linknode: Node::random(&mut rng),
+            parents: [key(&file2, "5"), key(&file2, "6")],
+            linknode: node("102"),
         };
         nodes.insert(key2.clone(), info.clone());
         let mut ancestors = HashMap::new();
@@ -97,10 +83,10 @@ mod tests {
         ancestor_map.insert(key2.clone(), ancestors);
 
         // Insert key 3
-        let key3 = Key::new(file1.clone(), node4.clone());
+        let key3 = key(&file1, "4");
         let info = NodeInfo {
             parents: [key2.clone(), key1.clone()],
-            linknode: Node::random(&mut rng),
+            linknode: node("102"),
         };
         nodes.insert(key3.clone(), info.clone());
         let mut ancestors = HashMap::new();
@@ -114,10 +100,9 @@ mod tests {
 
     #[test]
     fn test_get_ancestors() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, ancestors) = get_nodes(&mut rng);
+        let (nodes, ancestors) = get_nodes();
 
         let mut work = make_historypack(&tempdir, &nodes).boxify();
         for (key, _) in nodes.iter() {
@@ -138,10 +123,9 @@ mod tests {
 
     #[test]
     fn test_get_node_info() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, _) = get_nodes(&mut rng);
+        let (nodes, _) = get_nodes();
 
         let mut work = make_historypack(&tempdir, &nodes).boxify();
         for (key, info) in nodes.iter() {

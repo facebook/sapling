@@ -53,3 +53,8 @@ pub fn node(hex: &str) -> Node {
 pub fn key(path: &str, hexnode: &str) -> Key {
     Key::new(path.as_bytes().to_vec(), node(hexnode))
 }
+
+/// The null node id is special and it's semantics vary. A null key contains a null node id.
+pub fn null_key(path: &str) -> Key {
+    Key::new(path.as_bytes().to_vec(), Node::null_id().clone())
+}
