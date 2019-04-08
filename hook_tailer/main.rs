@@ -166,23 +166,28 @@ fn process_hook_results(
             debug!(logger, "==== File hooks results ====");
             file_hooks_results.into_iter().for_each(|(exec_id, exec)| {
                 file_hooks_stat.record_hook_execution(&exec);
-
-                debug!(
-                    logger,
-                    "changeset:{} hook_name:{} path:{} result:{:?}",
-                    exec_id.cs_id,
-                    exec_id.hook_name,
-                    exec_id.file.path,
-                    exec
+                let output = format!(
+                    " changeset:{} hook_name:{} path:{} result: {}",
+                    exec_id.cs_id, exec_id.hook_name, exec_id.file.path, exec
                 );
+
+                match exec {
+                    HookExecution::Accepted => debug!(logger, "{}", output),
+                    HookExecution::Rejected(_) => info!(logger, "{}", output),
+                }
             });
             debug!(logger, "==== Changeset hooks results ====");
             cs_hooks_result.into_iter().for_each(|(exec_id, exec)| {
                 cs_hooks_stat.record_hook_execution(&exec);
-                debug!(
-                    logger,
-                    "changeset:{} hook_name:{} result:{:?}", exec_id.cs_id, exec_id.hook_name, exec
+                let output = format!(
+                    "changeset:{} hook_name:{} result: {}",
+                    exec_id.cs_id, exec_id.hook_name, exec
                 );
+
+                match exec {
+                    HookExecution::Accepted => debug!(logger, "{}", output),
+                    HookExecution::Rejected(_) => info!(logger, "{}", output),
+                }
             });
         });
 

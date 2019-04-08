@@ -740,6 +740,15 @@ pub enum HookExecution {
     Rejected(HookRejectionInfo),
 }
 
+impl fmt::Display for HookExecution {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            HookExecution::Accepted => write!(f, "Accepted"),
+            HookExecution::Rejected(reason) => write!(f, "Rejected: {}", reason.description),
+        }
+    }
+}
+
 impl Weight for HookExecution {
     fn get_weight(&self) -> usize {
         match self {
