@@ -134,7 +134,7 @@ impl RepoReadWriteFetcher {
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure::Result;
+    use failure_ext::Result;
     use metaconfig_types::RepoReadOnly;
     use metaconfig_types::RepoReadOnly::*;
     use sql::rusqlite::Connection as SqliteConnection;
@@ -152,7 +152,7 @@ mod test {
     impl RepoReadWriteFetcher {
         pub fn with_sqlite(readonly_config: RepoReadOnly, repo_name: String) -> Result<Self> {
             let sqlite_con = SqliteConnection::open_in_memory()?;
-            sqlite_con.execute_batch(include_str!("../schemas/sqlite-repo-lock.sql"))?;
+            sqlite_con.execute_batch(include_str!("../../schemas/sqlite-repo-lock.sql"))?;
 
             let con = Connection::with_sqlite(sqlite_con);
 

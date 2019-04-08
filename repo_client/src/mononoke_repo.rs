@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::*;
-use crate::read_write::RepoReadWriteFetcher;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use futures_ext::BoxFuture;
@@ -15,6 +14,7 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
+use repo_read_write_status::RepoReadWriteFetcher;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
 use streaming_clone::SqlStreamingChunksFetcher;

@@ -13,9 +13,8 @@ extern crate failure_ext as failure;
 mod client;
 mod errors;
 mod mononoke_repo;
-mod read_write;
 
 pub use client::RepoClient;
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
-pub use read_write::RepoReadWriteFetcher;
+pub use repo_read_write_status::RepoReadWriteFetcher;
 pub use streaming_clone::SqlStreamingChunksFetcher;
