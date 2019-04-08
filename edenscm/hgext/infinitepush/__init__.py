@@ -260,15 +260,11 @@ def _debugbundle2part(orig, ui, part, all, **opts):
         entries = mutation.mutationstore.unbundle(part.read())
         ui.write(("    %s entries\n") % len(entries))
         for entry in entries:
-            fold = entry.fold()
-            if fold:
-                pred = ",".join([hex(f) for f in fold])
-            else:
-                pred = hex(entry.pred())
+            pred = ",".join([hex(p) for p in entry.preds()])
             succ = hex(entry.succ())
             split = entry.split()
             if split:
-                succ = ",".join([hex(s) for s in split] + succ)
+                succ = ",".join([hex(s) for s in split] + [succ])
             ui.write(
                 ("      %s -> %s (%s by %s at %s)\n")
                 % (pred, succ, entry.op(), entry.user(), entry.time())
