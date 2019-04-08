@@ -30,6 +30,7 @@ use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use slog::{debug, error, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
+use sql::myrouter;
 use std::fmt;
 use std::io;
 use std::path::PathBuf;
@@ -80,7 +81,7 @@ fn main() -> Result<()> {
 
     let manifold_client = ManifoldHttpClient::new(id, rc)?;
 
-    let fut = blobrepo.and_then({
+    let tailer_fut = blobrepo.and_then({
         cloned!(logger, config);
         move |blobrepo| {
             // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
@@ -134,6 +135,13 @@ fn main() -> Result<()> {
             }
         }
     });
+
+    let fut = match (myrouter_port, config.get_db_address()) {
+        (Some(port), Some(db_addr)) => myrouter::wait_for_myrouter(port, db_addr)
+            .and_then(|_| tailer_fut)
+            .left_future(),
+        _ => tailer_fut.right_future(),
+    };
 
     tokio::run(fut.map(|_| ()).map_err(move |err| {
         error!(logger, "Failed to run tailer {:?}", err);
