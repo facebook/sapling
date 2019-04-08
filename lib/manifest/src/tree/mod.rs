@@ -391,6 +391,7 @@ impl<'a, S: Store> Iterator for Diff<'a, S> {
 mod tests {
     use super::*;
 
+    use types::testutil::*;
     use types::PathComponentBuf;
 
     use self::store::TestStore;
@@ -398,15 +399,6 @@ mod tests {
 
     fn meta(node: u8) -> FileMetadata {
         FileMetadata::regular(Node::from_u8(node))
-    }
-    fn repo_path(s: &str) -> &RepoPath {
-        RepoPath::from_str(s).unwrap()
-    }
-    fn repo_path_buf(s: &str) -> RepoPathBuf {
-        RepoPathBuf::from_string(s.to_owned()).unwrap()
-    }
-    fn path_component_buf(s: &str) -> PathComponentBuf {
-        PathComponentBuf::from_string(s.to_owned()).unwrap()
     }
     fn store_element(path: &str, node: u8, flag: store::Flag) -> Fallible<store::Element> {
         Ok(store::Element::new(
@@ -442,7 +434,7 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(repo_path_buf(""), Node::from_u8(1), root_entry)
+            .insert(RepoPathBuf::new(), Node::from_u8(1), root_entry)
             .unwrap();
         let foo_entry = store::Entry::from_elements(vec![store_element(
             "bar",
@@ -511,7 +503,7 @@ mod tests {
         tree.remove(repo_path("a1/b3")).unwrap(); // does nothing
         tree.remove(repo_path("a1/b1/c1/d2")).unwrap(); // does nothing
         tree.remove(repo_path("a1/b1/c1/d1/e1")).unwrap(); // does nothing
-        assert!(tree.remove(repo_path("")).is_err());
+        assert!(tree.remove(RepoPath::empty()).is_err());
         assert_eq!(tree.get(repo_path("a1/b1/c1/d1")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1/b1/c1")).unwrap(), None);
         assert_eq!(tree.get(repo_path("a1/b2")).unwrap(), Some(&meta(20)));
@@ -522,7 +514,7 @@ mod tests {
         tree.remove(repo_path("a2/b2/c2")).unwrap();
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
-        assert!(tree.get_link(repo_path("")).unwrap().is_some());
+        assert!(tree.get_link(RepoPath::empty()).unwrap().is_some());
     }
 
     #[test]
@@ -534,7 +526,7 @@ mod tests {
         ])
         .unwrap();
         store
-            .insert(repo_path_buf(""), Node::from_u8(1), root_entry)
+            .insert(RepoPathBuf::new(), Node::from_u8(1), root_entry)
             .unwrap();
         let a1_entry = store::Entry::from_elements(vec![
             store_element("b1", 11, store::Flag::File(FileType::Regular)),
@@ -559,7 +551,7 @@ mod tests {
         tree.remove(repo_path("a2")).unwrap();
         assert_eq!(tree.get(repo_path("a2")).unwrap(), None);
 
-        assert!(tree.get_link(repo_path("")).unwrap().is_some());
+        assert!(tree.get_link(RepoPath::empty()).unwrap().is_some());
     }
 
     #[test]
@@ -606,7 +598,7 @@ mod tests {
 
         let mut cursor = tree.root_cursor();
         step(&mut cursor);
-        assert_eq!(cursor.path(), RepoPath::from_str("").unwrap());
+        assert_eq!(cursor.path(), RepoPath::empty());
         step(&mut cursor);
         assert_eq!(cursor.path(), RepoPath::from_str("a1").unwrap());
         // Skip leaf

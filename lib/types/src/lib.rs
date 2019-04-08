@@ -21,3 +21,6 @@ pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
 pub use crate::parents::Parents;
 pub use crate::path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+
+#[cfg(any(test, feature = "for-tests"))]
+pub mod testutil;
