@@ -17,8 +17,6 @@
 
 namespace folly {
 template <typename T>
-class Optional;
-template <typename T>
 class Future;
 } // namespace folly
 
