@@ -374,3 +374,43 @@ treemanifest data for the public commits.
   Node          Delta Base    Delta Length  Blob Size
   604088751312  000000000000  92            (missing)
   
+
+# Create a new commit on master with a noticeable number of trees
+  $ cd ../master
+  $ mkdir -p deep/dir/for/many/trees
+  $ echo x > deep/dir/for/many/trees/x
+  $ hg commit -Aqm "add deep x"
+  $ cd ../client1
+  $ hg pull -q
+
+# Create a new root with just one tree
+  $ hg up -q null
+  $ echo z > z
+  $ hg commit -Aqm "add z"
+
+# Merge the root into master and push the merge as a backup
+  $ hg up -q 68b85b727e51
+  fetching tree '' 436be661856777c1b48798d750c2454fbb685305, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 68b85b727e51
+  6 trees fetched over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  $ hg merge d32fd17cb041
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -qm "merge"
+  $ hg pushbackup
+  starting backup to 'ssh://user@dummy/master' at * (glob)
+  backing up stack rooted at d32fd17cb041
+  remote: pushing 2 commits:
+  remote:     d32fd17cb041  add z
+  remote:     5850638a7ae9  merge
+  finished in * seconds (glob)
+
+# Check the bundle.  It should only have 2 trees (one from z and one for the merged
+# root directory)
+  $ hg debugbundle $TESTTMP/master/.hg/scratchbranches/filebundlestore/82/ec/82ec93f9d3effd01782028cf1afdc72a1dae5609
+  Stream params: {}
+  changegroup -- {version: 02}
+      d32fd17cb041b810cad28724776c6d51faad59dc
+      5850638a7ae9213198200d3b85836cf9b4592535
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      7 data items, 7 history items
