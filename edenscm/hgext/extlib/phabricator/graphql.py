@@ -221,7 +221,10 @@ class Client(object):
                 info["updated"] = node["updated_time"]
                 info["is_landing"] = node["is_landing"]
 
-                if "latest_active_diff" not in node:
+                if (
+                    "latest_active_diff" not in node
+                    or node["latest_active_diff"] is None
+                ):
                     continue
                 active_diff = node["latest_active_diff"]
 
