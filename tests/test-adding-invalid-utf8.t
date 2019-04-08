@@ -1,4 +1,4 @@
-#require no-windows
+#require no-windows no-osx
 
 Test that trying to add invalid utf8 files to the repository will fail.
 
