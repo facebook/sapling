@@ -216,13 +216,16 @@ impl Store for TestStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use quickcheck::quickcheck;
+
+    use types::testutil::*;
 
     #[test]
     fn test_element_from_byte_slice() {
         let mut buffer = vec![];
         let path = PathComponent::from_str("foo").unwrap();
-        let node = Node::from_u8(123);
+        let node = node("123");
         assert!(Element::from_byte_slice(&buffer).is_err());
         buffer.extend_from_slice(path.as_byte_slice());
         assert!(Element::from_byte_slice(&buffer).is_err());
