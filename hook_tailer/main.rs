@@ -17,9 +17,8 @@ use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
-use failure::Result;
-use futures::future::Future;
+use failure::{err_msg, Error, Result};
+use futures::future::{err, ok, Future};
 use futures::stream::repeat;
 use futures::Stream;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -28,7 +27,7 @@ use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::HgNodeHash;
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
-use slog::{debug, error, info, o, Drain, Level, Logger};
+use slog::{debug, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use sql::myrouter;
 use std::fmt;
@@ -118,7 +117,7 @@ fn main() -> Result<()> {
                 fut.then(|_| {
                     repeat(()).for_each(move |()| {
                         let fut = tailer.run();
-                        process_hook_results(fut, logger.clone()).and_then(|()| {
+                        process_hook_results(fut, logger.clone()).and_then(|_| {
                             sleep(Duration::new(10, 0))
                                 .map_err(|err| format_err!("Tokio timer error {:?}", err))
                         })
@@ -143,18 +142,15 @@ fn main() -> Result<()> {
         _ => tailer_fut.right_future(),
     };
 
-    tokio::run(fut.map(|_| ()).map_err(move |err| {
-        error!(logger, "Failed to run tailer {:?}", err);
-    }));
-
-    Ok(())
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(fut)
 }
 
 fn process_hook_results(
     fut: BoxFuture<Vec<HookResults>, Error>,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
-    fut.map(move |res| {
+    fut.and_then(move |res| {
         let mut file_hooks_stat = HookExecutionStat::new();
         let mut cs_hooks_stat = HookExecutionStat::new();
 
@@ -194,7 +190,14 @@ fn process_hook_results(
         info!(logger, "==== File hooks stat: {} ====", file_hooks_stat);
         info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
 
-        ()
+        if cs_hooks_stat.rejected > 0 || file_hooks_stat.rejected > 0 {
+            err(err_msg(format!(
+                "Hook rejections: changeset: {} file: {}",
+                cs_hooks_stat.rejected, file_hooks_stat.rejected
+            )))
+        } else {
+            ok(())
+        }
     })
     .boxify()
 }
