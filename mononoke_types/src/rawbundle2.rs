@@ -7,15 +7,14 @@
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure::chain::*;
+use failure_ext::{bail_err, chain::*};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
-
 use rust_thrift::compact_protocol;
 
-use blob::{Blob, BlobstoreValue, RawBundle2Blob};
-use errors::*;
-use thrift;
-use typed_hash::{RawBundle2Id, RawBundle2IdContext};
+use crate::blob::{Blob, BlobstoreValue, RawBundle2Blob};
+use crate::errors::*;
+use crate::thrift;
+use crate::typed_hash::{RawBundle2Id, RawBundle2IdContext};
 
 /// An enum representing contents of a raw bundle2 blob
 #[derive(Clone, Eq, PartialEq)]
@@ -118,6 +117,7 @@ impl Arbitrary for RawBundle2 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn thrift_roundtrip(fc: RawBundle2) -> bool {

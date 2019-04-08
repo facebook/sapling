@@ -12,10 +12,11 @@ use failure::Error;
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{FileContents, FileType, MPathElement};
+use serde_derive::Serialize;
 
-use blob::HgBlob;
-use blobnode::HgParents;
-use nodehash::HgEntryId;
+use crate::blob::HgBlob;
+use crate::blobnode::HgParents;
+use crate::nodehash::HgEntryId;
 
 /// Interface for a manifest
 ///

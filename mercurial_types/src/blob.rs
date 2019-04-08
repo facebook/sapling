@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
+use serde_derive::{Deserialize, Serialize};
 
 use mononoke_types::BlobstoreBytes;
 

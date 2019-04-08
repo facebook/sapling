@@ -18,8 +18,7 @@ use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use super::manifest::{Content, EmptyManifest, Type};
 use super::{Entry, HgNodeHash, MPath, MPathElement, Manifest};
-
-use errors::*;
+use crate::errors::*;
 
 // Note that:
 // * this isn't "left" and "right" because an explicit direction makes the API clearer
@@ -591,8 +590,9 @@ pub fn diff_sorted_vecs(
                     to.push_front(to_entry);
                 } else {
                     if to_entry.get_type().is_tree() == from_entry.get_type().is_tree() {
-                        if to_entry.get_hash() != from_entry.get_hash() ||
-                            to_entry.get_type() != from_entry.get_type() {
+                        if to_entry.get_hash() != from_entry.get_hash()
+                            || to_entry.get_type() != from_entry.get_type()
+                        {
                             res.push(ChangedEntry::new_modified(
                                 path.clone(),
                                 to_entry,

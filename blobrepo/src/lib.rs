@@ -12,21 +12,6 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate cloned;
-#[macro_use]
-extern crate failure_ext as failure;
-#[macro_use]
-extern crate slog;
-#[macro_use]
-extern crate stats;
-#[macro_use]
-extern crate futures_ext;
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-extern crate blobrepo_errors as errors;
-
 pub mod alias;
 mod bonsai_generation;
 mod file;
@@ -53,4 +38,8 @@ pub use crate::repo_commit::compute_changed_files;
 pub mod internal {
     pub use crate::memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
     pub use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
+}
+
+pub mod errors {
+    pub use blobrepo_errors::*;
 }

@@ -6,12 +6,14 @@
 
 use std::fmt;
 
+use failure_ext::bail_err;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
+use serde_derive::Serialize;
 
-use errors::*;
-use path::MPath;
-use thrift;
-use typed_hash::{ChangesetId, ContentId};
+use crate::errors::*;
+use crate::path::MPath;
+use crate::thrift;
+use crate::typed_hash::{ChangesetId, ContentId};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 pub struct FileChange {
@@ -233,6 +235,7 @@ impl Arbitrary for FileType {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn filetype_thrift_roundtrip(ft: FileType) -> bool {

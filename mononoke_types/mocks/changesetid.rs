@@ -6,7 +6,7 @@
 
 use mononoke_types::ChangesetId;
 
-use hash;
+use crate::hash;
 
 // Definitions for hashes 1111...ffff.
 pub const ONES_CSID: ChangesetId = ChangesetId::new(hash::ONES);

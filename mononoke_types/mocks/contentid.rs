@@ -4,9 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::hash;
 use mononoke_types::ContentId;
-
-use hash;
 
 // Definitions for hashes 1111...ffff.
 pub const ONES_CTID: ContentId = ContentId::new(hash::ONES);

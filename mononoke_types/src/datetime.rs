@@ -9,10 +9,12 @@ use std::fmt::{self, Display};
 use chrono::{
     DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, NaiveDateTime, TimeZone,
 };
+use failure_ext::bail_err;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use serde_derive::{Deserialize, Serialize};
 
-use errors::*;
-use thrift;
+use crate::errors::*;
+use crate::thrift;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, Serialize, PartialEq, PartialOrd)]
 pub struct DateTime(ChronoDateTime<FixedOffset>);
@@ -172,6 +174,7 @@ impl From<Timestamp> for DateTime {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn thrift_roundtrip(dt: DateTime) -> bool {

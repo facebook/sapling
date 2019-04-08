@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use mononoke_types::MPath;
 
-use fsencode::fncache_fsencode;
+use crate::fsencode::fncache_fsencode;
 
 fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let mut elements = vec![];

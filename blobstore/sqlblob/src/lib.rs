@@ -6,11 +6,6 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate sql;
-#[macro_use]
-extern crate stats;
-
 mod cache;
 mod store;
 
@@ -28,7 +23,7 @@ use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
-use stats::Timeseries;
+use stats::{define_stats, Timeseries};
 use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;

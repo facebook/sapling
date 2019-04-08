@@ -16,7 +16,7 @@ use tokio_timer;
 use blobstore::{Blobstore, CountedBlobstore};
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
-use stats::Timeseries;
+use stats::{define_stats, Timeseries};
 
 use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
@@ -214,7 +214,8 @@ impl CacheOps for MemcacheOps {
 
         let mc_key = self.keygen.key(key);
         STATS::blob_presence.add_value(1);
-        let blob_presence = self.memcache
+        let blob_presence = self
+            .memcache
             .get(mc_key)
             .map(|blob| blob.is_some())
             .then(move |res| {

@@ -6,41 +6,15 @@
 
 #![deny(warnings)]
 
-extern crate ascii;
-extern crate async_unit;
-extern crate bytes;
-#[macro_use]
-extern crate cloned;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate quickcheck;
-extern crate scuba_ext;
-
-extern crate blobrepo;
-extern crate blobrepo_factory;
-extern crate blobstore;
-extern crate changesets;
-extern crate context;
-extern crate dbbookmarks;
-extern crate fixtures;
-extern crate memblob;
-extern crate prefixblob;
-#[macro_use]
-extern crate maplit;
-extern crate mercurial;
-extern crate mercurial_types;
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-extern crate tests_utils;
-
 use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use blobstore::Blobstore;
+use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use fixtures::{many_files_dirs, merge_uneven};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_types::{
     manifest, Changeset, Entry, FileType, HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
@@ -57,9 +31,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-#[macro_use]
-mod utils;
 mod memory_manifest;
+mod utils;
 
 use tests_utils::{create_commit, store_files};
 use utils::{
@@ -687,10 +660,10 @@ fn test_compute_changed_files_no_parents() {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs = run_future(repo.get_changeset_by_changesetid(
-            ctx.clone(),
-            HgChangesetId::new(nodehash),
-        )).unwrap();
+        let cs = run_future(
+            repo.get_changeset_by_changesetid(ctx.clone(), HgChangesetId::new(nodehash)),
+        )
+        .unwrap();
 
         let diff = run_future(compute_changed_files(
             ctx.clone(),
@@ -698,7 +671,8 @@ fn test_compute_changed_files_no_parents() {
             cs.manifestid(),
             None,
             None,
-        )).unwrap();
+        ))
+        .unwrap();
         assert!(
             diff == expected,
             "Got {:?}, expected {:?}\n",
@@ -966,7 +940,8 @@ fn test_case_conflict_in_manifest() {
                     mf,
                     child_mf,
                     MPath::new(path).unwrap()
-                )).unwrap(),
+                ))
+                .unwrap(),
                 *result,
                 "{} expected to {} cause conflict",
                 path,
@@ -1018,13 +993,12 @@ fn test_case_conflict_two_changeset() {
             )
         };
 
-        assert!(
-            run_future(
-                commit1
-                    .get_completed_changeset()
-                    .join(commit2.get_completed_changeset()),
-            ).is_err()
-        );
+        assert!(run_future(
+            commit1
+                .get_completed_changeset()
+                .join(commit2.get_completed_changeset()),
+        )
+        .is_err());
     });
 }
 
@@ -1100,13 +1074,12 @@ fn test_no_case_conflict_removal() {
             )
         };
 
-        assert!(
-            run_future(
-                commit1
-                    .get_completed_changeset()
-                    .join(commit2.get_completed_changeset()),
-            ).is_ok()
-        );
+        assert!(run_future(
+            commit1
+                .get_completed_changeset()
+                .join(commit2.get_completed_changeset()),
+        )
+        .is_ok());
     });
 }
 
@@ -1171,12 +1144,11 @@ fn test_no_case_conflict_removal_dir() {
             )
         };
 
-        assert!(
-            run_future(
-                commit1
-                    .get_completed_changeset()
-                    .join(commit2.get_completed_changeset()),
-            ).is_ok()
-        );
+        assert!(run_future(
+            commit1
+                .get_completed_changeset()
+                .join(commit2.get_completed_changeset()),
+        )
+        .is_ok());
     });
 }

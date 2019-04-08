@@ -4,10 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use hash::{self, Context};
-use nodehash::HgNodeHash;
+use heapsize_derive::HeapSizeOf;
+use serde_derive::{Deserialize, Serialize};
 
-use blob::HgBlob;
+use crate::blob::HgBlob;
+use crate::hash::{self, Context};
+use crate::nodehash::HgNodeHash;
 
 /// Equivalent type from Mercurial's Rust code representing parents.
 use types::Parents as HgTypesParents;
@@ -141,7 +143,7 @@ pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use blob::HgBlob;
+    use crate::blob::HgBlob;
     use bytes::Bytes;
 
     #[test]

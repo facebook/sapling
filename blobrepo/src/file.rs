@@ -6,12 +6,15 @@
 
 //! Plain files, symlinks
 
-use crate::failure::{Error, FutureFailureErrorExt};
+use super::alias::get_sha256;
+use crate::errors::*;
+use crate::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
+use blob_changeset::RepoBlobstore;
+use blobstore::Blobstore;
+use context::CoreContext;
+use failure_ext::{bail_err, bail_msg, Error, FutureFailureErrorExt};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
-
-use super::alias::get_sha256;
-
 use mercurial::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
@@ -20,15 +23,6 @@ use mercurial_types::{
     HgParents, MPath, MPathElement,
 };
 use mononoke_types::{hash::Sha256, ContentId, FileContents, MononokeId};
-
-use blobstore::Blobstore;
-use context::CoreContext;
-
-use crate::errors::*;
-
-use crate::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
-
-use blob_changeset::RepoBlobstore;
 
 #[derive(Clone)]
 pub struct HgBlobEntry {

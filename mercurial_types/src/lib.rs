@@ -45,47 +45,6 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 
-extern crate abomonation;
-#[macro_use]
-extern crate abomonation_derive;
-extern crate ascii;
-extern crate asyncmemo;
-extern crate bincode;
-#[macro_use]
-extern crate bitflags;
-extern crate bytes;
-extern crate crypto;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate itertools;
-extern crate rust_thrift;
-extern crate slog;
-extern crate sql;
-#[macro_use]
-extern crate url;
-
-extern crate futures;
-
-#[cfg_attr(test, macro_use)]
-extern crate quickcheck;
-
-extern crate heapsize;
-#[macro_use]
-extern crate heapsize_derive;
-
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-
-extern crate context;
-extern crate futures_ext;
-extern crate mercurial_thrift;
-extern crate mononoke_types;
-extern crate mononoke_types_thrift;
-
-// Types from Mercurial client.
-extern crate types;
-
 pub mod bdiff;
 pub mod blob;
 pub mod blobnode;

@@ -4,18 +4,19 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::utils::run_future;
 use async_unit;
 use futures::future::Future;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use utils::run_future;
 
-use blobrepo::HgBlobEntry;
 use blobrepo::internal::{IncompleteFilenodes, MemoryManifestEntry, MemoryRootManifest};
+use blobrepo::HgBlobEntry;
 use context::CoreContext;
 use fixtures::many_files_dirs;
-use mercurial_types::{Entry, FileType, HgManifestId, HgNodeHash, MPath, MPathElement, Type,
-                      nodehash::HgEntryId};
+use mercurial_types::{
+    nodehash::HgEntryId, Entry, FileType, HgManifestId, HgNodeHash, MPath, MPathElement, Type,
+};
 use mercurial_types_mocks::nodehash;
 use mononoke_types::RepoPath;
 
@@ -75,8 +76,9 @@ fn load_manifest() {
             IncompleteFilenodes::new(),
             Some(manifest_id),
             None,
-        ).wait()
-            .expect("Could not load manifest");
+        )
+        .wait()
+        .expect("Could not load manifest");
 
         if let MemoryManifestEntry::MemTree {
             base_manifest_id,

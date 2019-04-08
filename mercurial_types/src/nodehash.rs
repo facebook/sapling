@@ -10,18 +10,20 @@ use std::fmt::{self, Display};
 use std::result;
 use std::str::FromStr;
 
+use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
+use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use serde;
 use slog;
-use thrift;
 
 /// Node hash type from Mercurial's Rust code (essentially equivalent to [HgNodeHash]).
 use types::Node as HgTypesNode;
 
-use errors::*;
-use hash::{self, Sha1};
-use RepoPath;
+use crate::errors::*;
+use crate::hash::{self, Sha1};
+use crate::thrift;
+use crate::RepoPath;
 
 pub const NULL_HASH: HgNodeHash = HgNodeHash(hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);

@@ -7,10 +7,10 @@
 use std::ops::Deref;
 use std::sync::Arc;
 
-use failure::Error;
+use failure_ext::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use stats::Timeseries;
+use stats::{define_stats_struct, Timeseries};
 
 use context::CoreContext;
 

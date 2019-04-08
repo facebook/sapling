@@ -6,13 +6,14 @@
 
 use std::collections::BTreeMap;
 
-use blobstore::Blobstore;
-use crate::failure::prelude::*;
+use cloned::cloned;
+use failure_ext::prelude::*;
 use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::FutureExt;
 
 use blob_changeset::RepoBlobstore;
+use blobstore::Blobstore;
 use bonsai_utils;
 use context::CoreContext;
 use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, MPath};

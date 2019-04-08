@@ -8,8 +8,8 @@
 
 use bytes::Bytes;
 
-use errors::*;
-use typed_hash::{ChangesetId, ContentId, MononokeId, RawBundle2Id};
+use crate::errors::*;
+use crate::typed_hash::{ChangesetId, ContentId, MononokeId, RawBundle2Id};
 
 /// A serialized blob in memory.
 pub struct Blob<Id> {
@@ -63,5 +63,5 @@ impl<Id> From<Blob<Id>> for BlobstoreBytes {
 pub trait BlobstoreValue: Sized + Send {
     type Key;
     fn into_blob(self) -> Blob<Self::Key>;
-    fn from_blob(Blob<Self::Key>) -> Result<Self>;
+    fn from_blob(blob: Blob<Self::Key>) -> Result<Self>;
 }

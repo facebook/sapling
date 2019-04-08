@@ -6,18 +6,17 @@
 
 use std::collections::BTreeMap;
 
-use failure::{chain::*, err_msg};
+use failure_ext::{bail_err, chain::*, err_msg};
 use quickcheck::{Arbitrary, Gen};
-
 use rust_thrift::compact_protocol;
 
-use blob::{Blob, BlobstoreValue, ChangesetBlob};
-use datetime::DateTime;
-use errors::*;
-use file_change::FileChange;
-use path::{self, MPath};
-use thrift;
-use typed_hash::{ChangesetId, ChangesetIdContext};
+use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
+use crate::datetime::DateTime;
+use crate::errors::*;
+use crate::file_change::FileChange;
+use crate::path::{self, MPath};
+use crate::thrift;
+use crate::typed_hash::{ChangesetId, ChangesetIdContext};
 
 /// A struct callers can use to build up a `BonsaiChangeset`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -302,12 +301,12 @@ impl Arbitrary for BonsaiChangeset {
 #[cfg(test)]
 mod test {
     use super::*;
-
+    use crate::file_change::FileType;
+    use crate::hash::Blake2;
+    use crate::typed_hash::ContentId;
+    use maplit::btreemap;
+    use quickcheck::quickcheck;
     use std::str::FromStr;
-
-    use file_change::FileType;
-    use hash::Blake2;
-    use typed_hash::ContentId;
 
     quickcheck! {
         fn thrift_roundtrip(cs: BonsaiChangeset) -> bool {

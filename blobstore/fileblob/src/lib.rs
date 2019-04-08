@@ -6,19 +6,15 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate failure_ext as failure;
-
 use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use crate::failure::{Error, Result};
+use failure_ext::{bail_msg, Error, Result};
 use futures::future::{poll_fn, Future};
 use futures::Async;
-use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
-
 use futures_ext::{BoxFuture, FutureExt};
+use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -71,8 +67,9 @@ impl Blobstore for Fileblob {
                 }
             };
             Ok(Async::Ready(ret))
-        }).from_err()
-            .boxify()
+        })
+        .from_err()
+        .boxify()
     }
 
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
@@ -81,6 +78,7 @@ impl Blobstore for Fileblob {
         poll_fn::<_, Error, _>(move || {
             File::create(&p)?.write_all(value.as_bytes().as_ref())?;
             Ok(Async::Ready(()))
-        }).boxify()
+        })
+        .boxify()
     }
 }

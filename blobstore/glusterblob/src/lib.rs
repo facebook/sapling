@@ -4,9 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#[macro_use]
-extern crate stats;
-
 use std::fmt;
 use std::hash::Hasher;
 use std::io;
@@ -21,7 +18,7 @@ use futures_stats::Timed;
 use libnfs_async::{AsyncNfsContext, Mode, OFlag};
 use rand::prelude::*;
 use serde_derive::{Deserialize, Serialize};
-use stats::{Histogram, Timeseries};
+use stats::{define_stats_struct, Histogram, Timeseries};
 use twox_hash::{XxHash, XxHash32};
 
 use blobstore::Blobstore;

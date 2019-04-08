@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 
 use mononoke_types::{DateTime, MPath};
 
-use blobnode::HgParents;
-use nodehash::HgManifestId;
+use crate::blobnode::HgParents;
+use crate::nodehash::HgManifestId;
 
 pub trait Changeset: Send + 'static {
     fn manifestid(&self) -> HgManifestId;

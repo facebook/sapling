@@ -9,15 +9,14 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure::{chain::*, err_msg};
+use failure_ext::{chain::*, err_msg};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
-
 use rust_thrift::compact_protocol;
 
 use super::HgEnvelopeBlob;
-use errors::*;
-use nodehash::HgNodeHash;
-use thrift;
+use crate::errors::*;
+use crate::nodehash::HgNodeHash;
+use crate::thrift;
 
 /// A mutable representation of a Mercurial changeset node.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -153,6 +152,7 @@ impl Arbitrary for HgChangesetEnvelope {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn thrift_roundtrip(ce: HgChangesetEnvelope) -> bool {

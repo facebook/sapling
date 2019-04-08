@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use url::percent_encoding::{self, USERINFO_ENCODE_SET};
+use url::percent_encoding::{self, define_encode_set, USERINFO_ENCODE_SET};
 
 define_encode_set! {
     // Python urllib also encodes ','

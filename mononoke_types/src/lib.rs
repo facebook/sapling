@@ -11,37 +11,6 @@
 #![allow(dead_code)]
 #![feature(const_fn, try_from)]
 
-extern crate abomonation;
-#[macro_use]
-extern crate abomonation_derive;
-extern crate ascii;
-extern crate asyncmemo;
-extern crate bincode;
-extern crate blake2;
-extern crate bytes;
-extern crate chrono;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate heapsize;
-#[macro_use]
-extern crate heapsize_derive;
-#[macro_use]
-extern crate lazy_static;
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-#[cfg_attr(test, macro_use)]
-extern crate quickcheck;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate blobstore;
-extern crate sql;
-
-extern crate rust_thrift;
-
-extern crate mononoke_types_thrift;
-
 pub mod blob;
 pub mod bonsai_changeset;
 pub mod datetime;

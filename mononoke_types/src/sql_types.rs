@@ -4,15 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use datetime::Timestamp;
-use hash::Blake2;
-use repo::RepositoryId;
+use crate::datetime::Timestamp;
+use crate::hash::Blake2;
+use crate::repo::RepositoryId;
+use crate::typed_hash::ChangesetId;
 use sql::mysql_async::{
     from_value_opt,
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
-use typed_hash::ChangesetId;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 

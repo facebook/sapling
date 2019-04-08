@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use ascii::AsAsciiStr;
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::futures_unordered;
@@ -34,6 +34,7 @@ pub fn get_empty_lazy_repo() -> BlobRepo {
     new_memblob_empty(None, Some(Arc::new(LazyMemblob::new()))).expect("cannot create empty repo")
 }
 
+#[macro_export]
 macro_rules! test_both_repotypes {
     ($impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
         #[test]

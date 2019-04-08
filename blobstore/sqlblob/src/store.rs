@@ -13,7 +13,7 @@ use failure_ext::{err_msg, format_err, Error};
 use futures::prelude::*;
 use futures_ext::FutureExt;
 use rust_thrift::compact_protocol;
-use sql::Connection;
+use sql::{queries, Connection};
 use twox_hash::XxHash32;
 
 use mononoke_types::{BlobstoreBytes, RepositoryId};

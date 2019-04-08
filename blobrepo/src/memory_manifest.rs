@@ -11,11 +11,11 @@ use std::fmt::{self, Debug};
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
-use crate::failure::{Error, Result};
+use cloned::cloned;
+use failure_ext::{Error, Result};
 use futures::future::{self, Either, Future, IntoFuture};
 use futures::stream::{self, Stream};
-use futures_ext::{BoxFuture, FutureExt};
-
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::Logger;
 
 use blob_changeset::RepoBlobstore;
@@ -26,13 +26,12 @@ use mercurial_types::{
 };
 use mononoke_types::{FileContents, FileType};
 
-use crate::file::HgBlobEntry;
-use crate::repo::{UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
-
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use super::BlobRepo;
 use crate::errors::*;
+use crate::file::HgBlobEntry;
 use crate::manifest::BlobManifest;
+use crate::repo::{UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 
 /// An in-memory manifest entry. Clones are *not* separate - they share a single set of changes.
 /// This is because futures require ownership, and I don't want to Arc all of this when there's
@@ -58,9 +57,10 @@ pub enum MemoryManifestEntry {
 impl Debug for MemoryManifestEntry {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MemoryManifestEntry::Blob(blob) => {
-                fmt.debug_tuple("Blob hash").field(&blob.get_hash()).finish()
-            }
+            MemoryManifestEntry::Blob(blob) => fmt
+                .debug_tuple("Blob hash")
+                .field(&blob.get_hash())
+                .finish(),
             MemoryManifestEntry::Conflict(conflicts) => {
                 fmt.debug_list().entries(conflicts.iter()).finish()
             }

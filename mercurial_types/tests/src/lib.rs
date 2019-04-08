@@ -7,18 +7,6 @@
 #![deny(warnings)]
 #![feature(never_type, try_from)]
 
-extern crate async_unit;
-extern crate blobrepo;
-extern crate context;
-extern crate fixtures;
-extern crate futures;
-extern crate futures_ext;
-#[macro_use]
-extern crate maplit;
-extern crate mercurial_types;
-extern crate mercurial_types_mocks;
-extern crate tokio;
-
 use std::collections::{BTreeMap, HashSet};
 use std::iter::repeat;
 use std::str::FromStr;
@@ -30,6 +18,7 @@ use fixtures::{linear, many_files_dirs};
 use futures::executor::spawn;
 use futures::{Future, Stream};
 use futures_ext::select_all;
+use maplit::{btreemap, hashset};
 use mercurial_types::manifest::{Content, EmptyManifest};
 use mercurial_types::manifest_utils::{
     changed_entry_stream, changed_entry_stream_with_pruner, diff_sorted_vecs,

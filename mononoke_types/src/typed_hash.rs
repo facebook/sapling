@@ -7,18 +7,21 @@
 use std::fmt::{self, Display};
 use std::str::FromStr;
 
+use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use asyncmemo;
+use failure_ext::bail_err;
+use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde;
 
-use blob::BlobstoreValue;
-use bonsai_changeset::BonsaiChangeset;
-use errors::*;
-use file_contents::FileContents;
-use hash::{Blake2, Context};
-use rawbundle2::RawBundle2;
-use thrift;
+use crate::blob::BlobstoreValue;
+use crate::bonsai_changeset::BonsaiChangeset;
+use crate::errors::*;
+use crate::file_contents::FileContents;
+use crate::hash::{Blake2, Context};
+use crate::rawbundle2::RawBundle2;
+use crate::thrift;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
@@ -39,18 +42,26 @@ pub trait MononokeId: Copy + Send + 'static {
 }
 
 /// An identifier for a changeset in Mononoke.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation, HeapSizeOf)]
+#[derive(
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Debug,
+    Hash,
+    HeapSizeOf,
+    Abomonation
+)]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for file contents in Mononoke.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct ContentId(Blake2);
 
 /// An identifier for raw bundle2 contents in Mononoke
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)] //TODO(ikostia): which of these are actually needed?
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct RawBundle2Id(Blake2);
 
 /// Implementations of typed hashes.
@@ -235,6 +246,7 @@ impl_typed_hash! {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn changesetid_thrift_roundtrip(h: ChangesetId) -> bool {

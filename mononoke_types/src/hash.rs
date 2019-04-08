@@ -8,13 +8,17 @@ use std::fmt::{self, Debug, Display};
 use std::io::Write;
 use std::str::FromStr;
 
+use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use blake2::digest::{Input, VariableOutput};
 use blake2::VarBlake2b;
+use failure_ext::bail_err;
+use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use serde_derive::{Deserialize, Serialize};
 
-use errors::*;
-use thrift;
+use crate::errors::*;
+use crate::thrift;
 
 // There is no NULL_HASH for Blake2 hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
@@ -28,8 +32,19 @@ use thrift;
 /// hashes.
 ///
 /// For more on BLAKE2b, see https://blake2.net/
-#[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
+#[derive(
+    Abomonation,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Serialize,
+    Deserialize,
+    HeapSizeOf
+)]
 pub struct Blake2([u8; 32]);
 
 const HEX_CHARS: &[u8] = b"0123456789abcdef";
@@ -283,8 +298,7 @@ impl Display for Sha256 {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use quickcheck::TestResult;
+    use quickcheck::{quickcheck, TestResult};
 
     // NULL is not exposed because no production code should use it.
     const NULL: Blake2 = Blake2([0; 32]);

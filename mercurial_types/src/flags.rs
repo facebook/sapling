@@ -4,10 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use errors::ErrorKind;
+use crate::errors::*;
+use bitflags::bitflags;
 use std::fmt;
-
-use errors::*;
 
 bitflags! {
     // names are from hg revlog.py

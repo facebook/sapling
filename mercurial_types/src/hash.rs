@@ -7,13 +7,16 @@
 use std::fmt::{self, Debug, Display};
 use std::str::FromStr;
 
+use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use crypto::{digest::Digest, sha1};
+use failure_ext::bail_err;
+use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
+use serde_derive::{Deserialize, Serialize};
 
-use thrift;
-
-use errors::*;
+use crate::errors::*;
+use crate::thrift;
 
 pub const NULL: Sha1 = Sha1([0; 20]);
 
@@ -190,7 +193,7 @@ impl Context {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::TestResult;
+    use quickcheck::{quickcheck, TestResult};
     use std::str::FromStr;
 
     use super::*;

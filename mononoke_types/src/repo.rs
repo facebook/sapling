@@ -4,9 +4,24 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use abomonation_derive::Abomonation;
+use heapsize_derive::HeapSizeOf;
+use serde_derive::Serialize;
+
 /// Represents a repository. This ID is used throughout storage.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, Abomonation, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Debug,
+    Hash,
+    HeapSizeOf,
+    Abomonation,
+    Serialize
+)]
 pub struct RepositoryId(i32);
 
 impl RepositoryId {

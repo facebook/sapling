@@ -8,7 +8,8 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use crate::failure::{
+use cloned::cloned;
+use failure_ext::{
     err_msg, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
 };
 use futures::future::{self, ok, Future, Shared, SharedError, SharedItem};
@@ -32,6 +33,7 @@ use mercurial_types::{
     RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
+use stats::define_stats;
 
 use crate::errors::*;
 use crate::file::HgBlobEntry;

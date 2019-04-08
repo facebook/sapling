@@ -6,17 +6,12 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate failure_ext as failure;
-#[macro_use]
-extern crate stats;
-
 use std::fmt;
 use std::sync::Arc;
 
-use crate::failure::Error;
 use asyncmemo::Weight;
 use bytes::Bytes;
+use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 

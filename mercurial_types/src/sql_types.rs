@@ -11,7 +11,7 @@ use sql::mysql_async::{
     FromValueError, Value,
 };
 
-use {HgChangesetId, HgFileNodeId, HgNodeHash};
+use crate::{HgChangesetId, HgFileNodeId, HgNodeHash};
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 

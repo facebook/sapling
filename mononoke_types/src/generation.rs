@@ -8,6 +8,9 @@ use std::mem;
 use std::{u64, usize};
 
 use asyncmemo::Weight;
+use heapsize_derive::HeapSizeOf;
+use serde_derive::Serialize;
+
 /// Generation number
 ///
 /// The generation number for a changeset is defined as the max of the changeset's parents'

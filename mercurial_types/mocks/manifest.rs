@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use failure::{Error, ResultExt};
+use failure_ext::{bail_err, Error, ResultExt};
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -20,7 +20,7 @@ use mercurial_types::nodehash::HgEntryId;
 use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
 use mononoke_types::FileContents;
 
-use errors::*;
+use crate::errors::*;
 
 pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
@@ -282,10 +282,9 @@ impl Entry for MockEntry {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use futures::Future;
-
     use async_unit;
+    use futures::Future;
+    use maplit::btreemap;
 
     #[test]
     fn lookup() {

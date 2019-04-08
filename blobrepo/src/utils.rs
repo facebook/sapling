@@ -10,7 +10,8 @@ use std::iter;
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use crate::failure::Error;
+use cloned::cloned;
+use failure_ext::Error;
 use futures::future::Future;
 use futures::stream;
 use futures_ext::StreamExt;
@@ -145,6 +146,7 @@ where
 mod test {
 
     use super::*;
+    use maplit::hashmap;
 
     #[test]
     fn sort_topological_test() {

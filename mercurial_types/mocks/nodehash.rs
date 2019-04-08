@@ -11,7 +11,7 @@ use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNo
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;
 
-use hash;
+use crate::hash;
 
 // Definitions for hashes 1111...ffff.
 pub const ONES_HASH: HgNodeHash = HgNodeHash::new(hash::ONES);

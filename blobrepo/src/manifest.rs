@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 use std::str;
 
-use failure::{Error, FutureFailureErrorExt, Result, ResultExt};
+use failure_ext::{bail_msg, ensure_msg, Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -19,9 +19,9 @@ use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement,
 
 use blobstore::Blobstore;
 
+use crate::errors::*;
 use crate::file::HgBlobEntry;
 use blob_changeset::RepoBlobstore;
-use errors::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {

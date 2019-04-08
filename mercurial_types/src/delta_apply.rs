@@ -5,11 +5,11 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
+use heapsize_derive::HeapSizeOf;
 use std::cmp;
 
-use errors::*;
-
-use super::delta::{Delta, Fragment};
+use crate::delta::{Delta, Fragment};
+use crate::errors::*;
 
 /*
 * Algorithm is taken from fbcode/scm/hg/mercurial/mpatch.c

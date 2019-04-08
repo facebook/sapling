@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use chrono::{FixedOffset, TimeZone};
-
+use lazy_static::lazy_static;
 use mononoke_types::DateTime;
 
 /// Return a `DateTime` corresponding to <year>-01-01 00:00:00 UTC.

@@ -8,7 +8,6 @@ use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::errors::*;
-use crate::failure::{prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use crate::file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
     fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
@@ -26,13 +25,15 @@ use bytes::Bytes;
 use cacheblob::MemWritesBlobstore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
+use cloned::cloned;
 use context::CoreContext;
+use failure_ext::{bail_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
@@ -48,8 +49,8 @@ use mononoke_types::{
 };
 use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::Logger;
-use stats::Timeseries;
+use slog::{trace, Logger};
+use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
 use std::convert::From;
 use std::str::FromStr;

@@ -4,10 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use quickcheck::{Arbitrary, Gen};
+use failure_ext::{bail_err, bail_msg, ensure_msg, format_err};
+use heapsize_derive::HeapSizeOf;
 use quickcheck::rand::distributions::{IndependentSample, LogNormal};
+use quickcheck::{Arbitrary, Gen};
 
-use errors::*;
+use crate::errors::*;
 
 use super::delta_apply::{mpatch_fold, wrap_deltas};
 
@@ -22,19 +24,17 @@ impl Delta {
     /// non-overlapping.
     pub fn new(frags: Vec<Fragment>) -> Result<Self> {
         Self::verify(&frags)?;
-        Ok(Delta { frags: frags })
+        Ok(Delta { frags })
     }
 
     /// Construct a new Delta object given a fulltext (no delta).
     pub fn new_fulltext<T: Into<Vec<u8>>>(text: T) -> Self {
         Self {
-            frags: vec![
-                Fragment {
-                    start: 0,
-                    end: 0,
-                    content: text.into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 0,
+                end: 0,
+                content: text.into(),
+            }],
         }
     }
 
@@ -98,14 +98,14 @@ impl Arbitrary for Delta {
                 start = end + g.gen_range(0, size);
                 end = start + g.gen_range(0, size);
                 let val = Fragment {
-                    start: start,
-                    end: end,
+                    start,
+                    end,
                     content: arbitrary_frag_content(g),
                 };
                 val
             })
             .collect();
-        Delta { frags: frags }
+        Delta { frags }
     }
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
@@ -116,7 +116,7 @@ impl Arbitrary for Delta {
             self.frags
                 .shrink()
                 .filter(|frags| Delta::verify(&frags).is_ok())
-                .map(|frags| Delta { frags: frags }),
+                .map(|frags| Delta { frags }),
         )
     }
 }
@@ -167,8 +167,8 @@ impl Arbitrary for Fragment {
         let end = start + g.gen_range(0, size);
 
         Fragment {
-            start: start,
-            end: end,
+            start,
+            end,
             content: arbitrary_frag_content(g),
         }
     }
@@ -182,9 +182,9 @@ impl Arbitrary for Fragment {
                     start <= end
                 })
                 .map(|(start, end, content)| Fragment {
-                    start: start,
-                    end: end,
-                    content: content,
+                    start,
+                    end,
+                    content,
                 }),
         )
     }
@@ -278,7 +278,7 @@ pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Res
 /// with delta::Delta, and this compatibility module will be removed at that time.
 pub mod compat {
     use super::*;
-    use bdiff;
+    use crate::bdiff;
 
     pub fn convert<T>(deltas: T) -> Delta
     where
@@ -307,6 +307,7 @@ pub mod compat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
 
     /// Test that fragments are verified properly.
     #[test]
@@ -382,13 +383,11 @@ mod tests {
     fn test_apply_1() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
-            frags: vec![
-                Fragment {
-                    start: 5,
-                    end: 10,
-                    content: (&b"xxxx\n"[..]).into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 5,
+                end: 10,
+                content: (&b"xxxx\n"[..]).into(),
+            }],
         };
 
         let res = apply(text, &delta).unwrap();
@@ -421,13 +420,11 @@ mod tests {
     fn test_apply_3a() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
-            frags: vec![
-                Fragment {
-                    start: 0,
-                    end: 15,
-                    content: (&b"zzzz\nyyyy\nxxxx\n"[..]).into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 0,
+                end: 15,
+                content: (&b"zzzz\nyyyy\nxxxx\n"[..]).into(),
+            }],
         };
 
         let res = apply(text, &delta).unwrap();
@@ -465,13 +462,11 @@ mod tests {
     fn test_apply_4() {
         let text = b"aaaa\nbbbb";
         let delta = Delta {
-            frags: vec![
-                Fragment {
-                    start: 5,
-                    end: 9,
-                    content: (&b"bbbbcccc"[..]).into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 5,
+                end: 9,
+                content: (&b"bbbbcccc"[..]).into(),
+            }],
         };
 
         let res = apply(text, &delta).unwrap();
@@ -482,13 +477,11 @@ mod tests {
     fn test_apply_5() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
-            frags: vec![
-                Fragment {
-                    start: 5,
-                    end: 10,
-                    content: (&b""[..]).into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 5,
+                end: 10,
+                content: (&b""[..]).into(),
+            }],
         };
 
         let res = apply(text, &delta).unwrap();
@@ -499,13 +492,11 @@ mod tests {
     fn test_malformed_1() {
         let text = b"aaaa";
         let delta = Delta {
-            frags: vec![
-                Fragment {
-                    start: 5,
-                    end: 10,
-                    content: (&b""[..]).into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 5,
+                end: 10,
+                content: (&b""[..]).into(),
+            }],
         };
 
         match apply(text, &delta) {
@@ -518,13 +509,11 @@ mod tests {
     fn test_malformed_2() {
         let text = b"aaaa";
         let delta = Delta {
-            frags: vec![
-                Fragment {
-                    start: 0,
-                    end: 10,
-                    content: (&b""[..]).into(),
-                },
-            ],
+            frags: vec![Fragment {
+                start: 0,
+                end: 10,
+                content: (&b""[..]).into(),
+            }],
         };
 
         match apply(text, &delta) {
@@ -549,13 +538,11 @@ mod tests {
         ];
         let delta1 = Delta::new(frags1).unwrap();
 
-        let frags2 = vec![
-            Fragment {
-                start: 1,
-                end: 3,
-                content: (&b"bb"[..]).into(),
-            },
-        ];
+        let frags2 = vec![Fragment {
+            start: 1,
+            end: 3,
+            content: (&b"bb"[..]).into(),
+        }];
         let delta2 = Delta::new(frags2).unwrap();
 
         let deltas = vec![delta1, delta2];
@@ -567,13 +554,11 @@ mod tests {
 
     #[test]
     fn test_apply_chain_logarithmic2() {
-        let frags1 = vec![
-            Fragment {
-                start: 1,
-                end: 2,
-                content: (&b"xx"[..]).into(),
-            },
-        ];
+        let frags1 = vec![Fragment {
+            start: 1,
+            end: 2,
+            content: (&b"xx"[..]).into(),
+        }];
         let delta1 = Delta::new(frags1).unwrap();
 
         let deltas = vec![delta1];
@@ -599,13 +584,11 @@ mod tests {
         ];
         let delta1 = Delta::new(frags1).unwrap();
 
-        let frags2 = vec![
-            Fragment {
-                start: 6,
-                end: 7,
-                content: (&b"zzzzzzz"[..]).into(),
-            },
-        ];
+        let frags2 = vec![Fragment {
+            start: 6,
+            end: 7,
+            content: (&b"zzzzzzz"[..]).into(),
+        }];
         let delta2 = Delta::new(frags2).unwrap();
 
         let deltas = vec![delta1, delta2];
@@ -617,22 +600,18 @@ mod tests {
 
     #[test]
     fn test_apply_chain_logarithmic_append() {
-        let frags1 = vec![
-            Fragment {
-                start: 1,
-                end: 1,
-                content: (&b"xxx"[..]).into(),
-            },
-        ];
+        let frags1 = vec![Fragment {
+            start: 1,
+            end: 1,
+            content: (&b"xxx"[..]).into(),
+        }];
         let delta1 = Delta::new(frags1).unwrap();
 
-        let frags2 = vec![
-            Fragment {
-                start: 4,
-                end: 4,
-                content: (&b"zzz"[..]).into(),
-            },
-        ];
+        let frags2 = vec![Fragment {
+            start: 4,
+            end: 4,
+            content: (&b"zzz"[..]).into(),
+        }];
         let delta2 = Delta::new(frags2).unwrap();
 
         let deltas = vec![delta1, delta2];

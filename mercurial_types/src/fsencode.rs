@@ -9,7 +9,7 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 
-use hash::Sha1;
+use crate::hash::Sha1;
 
 use mononoke_types::MPathElement;
 

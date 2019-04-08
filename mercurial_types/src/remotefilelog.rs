@@ -4,11 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::io::Write;
-
-use failure::Result;
-
+use failure_ext::Result;
 use mononoke_types::MPath;
+use std::io::Write;
 use types::{Parents, WireHistoryEntry};
 
 use crate::blobnode::HgParents;

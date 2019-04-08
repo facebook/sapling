@@ -7,15 +7,14 @@
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure::chain::*;
+use failure_ext::{bail_err, chain::*};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
-
 use rust_thrift::compact_protocol;
 
-use blob::{Blob, BlobstoreValue, ContentBlob};
-use errors::*;
-use thrift;
-use typed_hash::{ContentId, ContentIdContext};
+use crate::blob::{Blob, BlobstoreValue, ContentBlob};
+use crate::errors::*;
+use crate::thrift;
+use crate::typed_hash::{ContentId, ContentIdContext};
 
 /// An enum representing contents for a file. In the future this may have
 /// special support for very large files.
@@ -121,6 +120,7 @@ impl Arbitrary for FileContents {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn thrift_roundtrip(fc: FileContents) -> bool {
