@@ -96,13 +96,11 @@ impl AsyncMutableHistoryPack {
 mod tests {
     use super::*;
 
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
     use revisionstore::{HistoryPack, HistoryStore};
-    use types::Node;
+    use types::testutil::*;
 
     #[test]
     fn test_empty_close() {
@@ -119,23 +117,16 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
 
-        let file1 = vec![1, 2, 3];
-        let null = Node::null_id();
-        let node1 = Node::random(&mut rng);
-        let node2 = Node::random(&mut rng);
-        let key = Key::new(file1.clone(), node2.clone());
+        let file = "a/b";
+        let my_key = key(&file, "2");
         let info = NodeInfo {
-            parents: [
-                Key::new(file1.clone(), node1.clone()),
-                Key::new(file1.clone(), null.clone()),
-            ],
-            linknode: Node::random(&mut rng),
+            parents: [key(&file, "1"), null_key(&file)],
+            linknode: node("100"),
         };
 
-        let keycloned = key.clone();
+        let keycloned = my_key.clone();
         let infocloned = info.clone();
 
         let mutablehistorypack =
@@ -152,6 +143,6 @@ mod tests {
 
         let pack = HistoryPack::new(&path).unwrap();
 
-        assert_eq!(pack.get_node_info(&key).unwrap(), info);
+        assert_eq!(pack.get_node_info(&my_key).unwrap(), info);
     }
 }
