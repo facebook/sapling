@@ -27,18 +27,17 @@ impl AsyncDataPack {
 mod tests {
     use super::*;
 
-    use bytes::Bytes;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack};
-    use types::{Key, Node};
+    use revisionstore::{
+        testutil::*, DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack,
+    };
+    use types::testutil::*;
 
     fn make_datapack(
         tempdir: &TempDir,
-        deltas: &Vec<(Delta, Metadata)>,
+        deltas: &[(Delta, Metadata)],
     ) -> impl Future<Item = AsyncDataPack, Error = Error> + 'static {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         for (delta, metadata) in deltas.iter() {
@@ -52,54 +51,36 @@ mod tests {
 
     #[test]
     fn test_one_delta() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(Key::new(vec![0], Node::random(&mut rng))),
-            key: Key::new(vec![0], Node::random(&mut rng)),
-        };
-        let revisions = vec![(delta.clone(), Default::default())];
+        let my_delta = delta("1234", Some(key("a", "1")), key("a", "2"));
+        let revisions = vec![(my_delta.clone(), Default::default())];
 
-        let work = make_datapack(&tempdir, &revisions);
-        let key = delta.key.clone();
-        let work = work.and_then(move |datapack| datapack.get_delta(&key));
+        let work = make_datapack(&tempdir, &revisions)
+            .and_then(move |datapack| datapack.get_delta(&key("a", "2")));
 
         let mut runtime = Runtime::new().unwrap();
         let ret_delta = runtime.block_on(work).unwrap();
-        assert_eq!(delta, ret_delta);
+        assert_eq!(my_delta, ret_delta);
     }
 
     #[test]
     fn test_multiple_delta() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let delta1 = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(Key::new(vec![0], Node::random(&mut rng))),
-            key: Key::new(vec![0], Node::random(&mut rng)),
-        };
-        let delta2 = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(Key::new(vec![0], Node::random(&mut rng))),
-            key: Key::new(vec![0], Node::random(&mut rng)),
-        };
+        let delta1 = delta("1234", Some(key("a", "1")), key("a", "2"));
+        let delta2 = delta("1234", Some(key("a", "3")), key("a", "4"));
         let revisions = vec![
             (delta1.clone(), Default::default()),
             (delta2.clone(), Default::default()),
         ];
 
         let work = make_datapack(&tempdir, &revisions);
-        let key1 = delta1.key.clone();
-        let key2 = delta2.key.clone();
-
         let work = work.and_then(move |datapack| {
-            let delta = datapack.get_delta(&key1);
+            let delta = datapack.get_delta(&key("a", "2"));
             delta.and_then(move |delta| {
                 assert_eq!(delta, delta1);
-                datapack.get_delta(&key2)
+                datapack.get_delta(&key("a", "4"))
             })
         });
 

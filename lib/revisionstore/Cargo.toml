@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
 
+[features]
+default = []
+for-tests = []
+
 [dependencies]
 bytes = { version = "0.4.11", features = ["serde"] }
 byteorder = "1.2.7"

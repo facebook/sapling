@@ -35,3 +35,6 @@ pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::mutablepack::MutablePack;
 pub use crate::repack::IterableStore;
 pub use crate::store::Store;
+
+#[cfg(any(test, feature = "for-tests"))]
+pub mod testutil;
