@@ -9,6 +9,7 @@
 use super::HookResults;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
+use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use failure::Result;
@@ -21,7 +22,7 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
-use slog::Logger;
+use slog::{debug, info, Logger};
 use std::sync::Arc;
 
 pub struct Tailer {

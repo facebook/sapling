@@ -7,46 +7,15 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-#[cfg(test)]
-extern crate async_unit;
-extern crate blobrepo;
-extern crate blobrepo_factory;
-extern crate blobstore;
-extern crate bookmarks;
-extern crate bytes;
-extern crate clap;
-#[macro_use]
-extern crate cloned;
-extern crate cmdlib;
-extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate hooks;
-extern crate hooks_content_stores;
-extern crate manifold;
-extern crate mercurial_types;
-extern crate metaconfig_parser;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-extern crate panichandler;
-extern crate repo_client;
-extern crate revset;
-#[macro_use]
-extern crate slog;
-extern crate slog_glog_fmt;
-extern crate slog_kvfilter;
-extern crate slog_stats;
-extern crate slog_term;
-extern crate tokio;
-extern crate tokio_timer;
 
 pub mod tailer;
 
 use blobrepo_factory::open_blobrepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
+use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use failure::Result;
@@ -59,7 +28,7 @@ use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::HgNodeHash;
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
-use slog::{Drain, Level, Logger};
+use slog::{debug, error, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use std::fmt;
 use std::io;
