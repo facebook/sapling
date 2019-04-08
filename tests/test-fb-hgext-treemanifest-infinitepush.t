@@ -407,10 +407,10 @@ treemanifest data for the public commits.
 
 # Check the bundle.  It should only have 2 trees (one from z and one for the merged
 # root directory)
-  $ hg debugbundle $TESTTMP/master/.hg/scratchbranches/filebundlestore/82/ec/82ec93f9d3effd01782028cf1afdc72a1dae5609
+  $ hg debugbundle $TESTTMP/master/.hg/scratchbranches/filebundlestore/0f/4a/0f4aaffdeb358f045d7cb7ff4b3bb93f8cb2933e
   Stream params: {}
   changegroup -- {version: 02}
       d32fd17cb041b810cad28724776c6d51faad59dc
       5850638a7ae9213198200d3b85836cf9b4592535
   b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
-      7 data items, 7 history items
+      2 data items, 2 history items

@@ -1966,7 +1966,7 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
         if shouldsend(mfnode):
             mfnodes.append(mfnode)
             linknodemap.setdefault(mfnode, node)
-    basectxs = repo.set("parents(roots(%ln))", outgoing.missing)
+    basectxs = repo.set("parents(%ln) - %ln", outgoing.missing, outgoing.missing)
     for basectx in basectxs:
         basemfnodes.append(basectx.manifestnode())
     linknodefixup = (set(outgoing.missing), linknodemap)
