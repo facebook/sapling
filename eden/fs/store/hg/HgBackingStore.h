@@ -36,6 +36,9 @@ namespace eden {
 class Importer;
 class ImporterOptions;
 class LocalStore;
+class MononokeHttpBackingStore;
+class MononokeThriftBackingStore;
+class MononokeCurlBackingStore;
 class UnboundedQueueExecutor;
 class ReloadableConfig;
 
@@ -97,37 +100,49 @@ class HgBackingStore : public BackingStore {
       AbsolutePathPiece repoPath);
 
   /**
-   * Initialize the mononoke_ needed for Mononoke API Server support.
+   * Create a Mononoke backing store based on config_.
    *
-   * This leaves mononoke_ null if mononoke does not support the repository.
+   * Return nullptr if something is wrong (e.g. missing configs).
    */
-  void initializeMononoke(const ImporterOptions& options);
+  std::unique_ptr<BackingStore> initializeMononoke();
+
+  /**
+   * Get an instace of Mononoke backing store as specified in config_. This will
+   * call `initializeMononoke` if no active Mononoke instance is stored.
+   *
+   * Return nullptr if Mononoke is disabled.
+   */
+  std::shared_ptr<BackingStore> getMononoke();
 
 #ifndef EDEN_WIN_NOMONONOKE
   /**
-   * Initialize the mononoke_ with MononokeHttpBackingStore, which uses
-   * HTTP to talk with Mononoke API Server.
+   * Create an instance of MononokeHttpBackingStore with values from config_
+   * (Proxygen based Mononoke client)
    *
-   * This leaves mononoke_ null if SSLContext cannot be constructed.
+   * Return null if SSLContext cannot be constructed.
    */
-  void initializeHttpMononokeBackingStore(const ImporterOptions& options);
+  std::unique_ptr<MononokeHttpBackingStore>
+  initializeHttpMononokeBackingStore();
 
   /**
-   * Initialize the mononoke_ with MononokeThriftBackingStore, which uses
-   * thrift protocol to talk with Mononoke API Server.
+   * Create an instance of MononokeThriftBackingStore with values from config_
+   * (Thrift based Mononoke client)
+   *
+   * Return nullptr if required config is missing.
    */
-  void initializeThriftMononokeBackingStore(const ImporterOptions& options);
+  std::unique_ptr<MononokeThriftBackingStore>
+  initializeThriftMononokeBackingStore();
 #endif
-
-  /** Returns true if we should use mononoke for a fetch */
-  bool useMononoke() const;
 
 #if defined(EDEN_HAVE_CURL) && EDEN_HAVE_HG_TREEMANIFEST
   /**
-   * Initialize the mononoke_ with MononokeCurlBackingStore, that is available
-   * on macOS
+   * Create an instance of MononokeCurlBackingStore with values from config_
+   * (Curl based Mononoke client)
+   *
+   * Return nullptr if required config is missing.
    */
-  void initializeCurlMononokeBackingStore(const ImporterOptions& options);
+  std::unique_ptr<MononokeCurlBackingStore>
+  initializeCurlMononokeBackingStore();
 #endif
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
@@ -182,7 +197,8 @@ class HgBackingStore : public BackingStore {
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
   bool useDatapackGetBlob_{false};
 
-  std::unique_ptr<BackingStore> mononoke_;
+  std::string repoName_;
+  folly::Synchronized<std::shared_ptr<BackingStore>> mononoke_;
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;
 #endif
