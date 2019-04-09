@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use failure::Compat;
+use failure_ext::ensure_msg;
 use futures::{future::Shared, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -19,7 +20,7 @@ use mercurial_types::{HgNodeHash, HgNodeKey};
 use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
 
-use errors::*;
+use crate::errors::*;
 
 /// Represents data that is Mercurial-encoded and can be uploaded to the blobstore.
 pub trait UploadableHgBlob {

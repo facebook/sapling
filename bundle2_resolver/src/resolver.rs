@@ -4,25 +4,29 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
-use std::io::Cursor;
-use std::ops::AddAssign;
-use std::sync::{Arc, Mutex};
-
+use crate::changegroup::{
+    convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
+};
+use crate::errors::*;
+use crate::getbundle_response;
+use crate::stats::*;
+use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use ascii::AsciiString;
 use blobrepo::{
     BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset, HgBlobEntry,
 };
 use bookmarks::{Bookmark, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bytes::{Bytes, BytesMut};
+use cloned::cloned;
 use context::CoreContext;
-use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
+use failure::{err_msg, format_err, Compat};
+use failure_ext::{bail_msg, ensure_msg, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures::{Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
-use getbundle_response;
+use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{
@@ -33,17 +37,16 @@ use mercurial_types::{
 };
 use metaconfig_types::{BookmarkOrRegex, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
+use phases::{Phase, Phases};
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use stats::*;
-
-use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
-use errors::*;
-use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
-use phases::{Phase, Phases};
-use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
+use slog::{debug, trace};
+use std::collections::HashMap;
+use std::io::Cursor;
+use std::ops::AddAssign;
+use std::sync::{Arc, Mutex};
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;

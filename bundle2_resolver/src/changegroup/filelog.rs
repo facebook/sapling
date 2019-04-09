@@ -9,8 +9,10 @@ use std::mem;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
-use failure::Compat;
+use failure::{format_err, Compat};
+use failure_ext::bail_msg;
 use futures::future::Shared;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -28,9 +30,9 @@ use mercurial_types::{
     RevFlags, NULL_HASH,
 };
 
-use errors::*;
-use stats::*;
-use upload_blobs::UploadableHgBlob;
+use crate::errors::*;
+use crate::stats::*;
+use crate::upload_blobs::UploadableHgBlob;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -238,19 +240,21 @@ impl DeltaCache {
                                 .boxify(),
                             None => {
                                 let validate_hash = false;
-                                self
-                                .repo
-                                .get_raw_hg_content(ctx, HgFileNodeId::new(base), validate_hash)
-                                .and_then(move |blob| {
-                                    let bytes = blob.into_inner();
-                                    delta::apply(bytes.as_ref(), &delta)
-                                        .with_context(|_| {
-                                            format!("File content: {:?} delta: {:?}", bytes, delta)
-                                        })
-                                        .map_err(Error::from)
-                                })
-                                .boxify()
-                            },
+                                self.repo
+                                    .get_raw_hg_content(ctx, HgFileNodeId::new(base), validate_hash)
+                                    .and_then(move |blob| {
+                                        let bytes = blob.into_inner();
+                                        delta::apply(bytes.as_ref(), &delta)
+                                            .with_context(|_| {
+                                                format!(
+                                                    "File content: {:?} delta: {:?}",
+                                                    bytes, delta
+                                                )
+                                            })
+                                            .map_err(Error::from)
+                                    })
+                                    .boxify()
+                            }
                         };
                         fut.map_err(move |err| {
                             Error::from(err.context(format_err!(
@@ -354,6 +358,7 @@ mod tests {
     use futures::stream::iter_ok;
     use futures::Future;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
+    use quickcheck::quickcheck;
 
     use mercurial_types::delta::Fragment;
     use mercurial_types::NULL_HASH;

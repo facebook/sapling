@@ -4,15 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use bytes::Bytes;
+use failure_ext::ensure_msg;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
-use bytes::Bytes;
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, HgBlob, HgBlobNode, HgChangesetId, NULL_HASH};
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ChangesetDeltaed {
@@ -61,6 +62,7 @@ mod tests {
     use futures::Future;
     use itertools::equal;
     use mercurial_types::HgNodeHash;
+    use quickcheck::quickcheck;
 
     enum CheckResult {
         ExpectedOk(bool),

@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-pub use failure::prelude::*;
+pub use failure_ext::{prelude::*, Fail};
 
 use bookmarks::Bookmark;
 use mercurial_types::HgChangesetId;

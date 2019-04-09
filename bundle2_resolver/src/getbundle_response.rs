@@ -4,25 +4,24 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use bytes::Bytes;
-use errors::*;
-use failure::err_msg;
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
-use std::sync::Arc;
-
+use crate::errors::*;
 use blobrepo::BlobRepo;
+use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
+use failure::err_msg;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
+use mononoke_types::ChangesetId;
 use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-
-use mononoke_types::ChangesetId;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
+use std::sync::Arc;
 
 pub fn create_getbundle_response(
     ctx: CoreContext,

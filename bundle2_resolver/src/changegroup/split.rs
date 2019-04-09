@@ -4,14 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::{Async, Future, Poll, Stream};
+use failure_ext::{bail_msg, ensure_msg};
+use futures::{try_ready, Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
 use mercurial_bundles::changegroup::{Part, Section};
 
-use changegroup::changeset::ChangesetDeltaed;
-use changegroup::filelog::FilelogDeltaed;
-use errors::*;
+use crate::changegroup::changeset::ChangesetDeltaed;
+use crate::changegroup::filelog::FilelogDeltaed;
+use crate::errors::*;
 
 pub fn split_changegroup<S>(
     cg2s: S,
@@ -172,6 +173,7 @@ mod tests {
 
     use futures::stream::iter_ok;
     use itertools::{assert_equal, equal};
+    use quickcheck::quickcheck;
 
     use mercurial_bundles::changegroup::CgDeltaChunk;
     use mercurial_types::MPath;
