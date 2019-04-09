@@ -2160,17 +2160,18 @@ class Progress(object):
             moveup -= toclear
         if moveup > 0:
             content += "\033[%dA" % moveup
+        # Disable line wrapping while outputing the progress entries
+        content += "\x1b[?7l"
         content += "\n".join("\r\033[K%s" % line.rstrip() for line in lines)
+        content += "\x1b[?7h"
         self._write(content)
         self.lines = lines
 
     def setup(self):
-        # Disable line wrapping
-        self._write("\x1b[?7l")
+        pass
 
     def finalize(self):
-        # Re-enable line wrapping
-        self._write("\x1b[?7h")
+        pass
 
     def _write(self, content):
         with _iolock:
