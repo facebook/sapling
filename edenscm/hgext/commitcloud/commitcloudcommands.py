@@ -64,6 +64,15 @@ pullopts = [
 pushopts = []
 
 
+def _backingupsyncprogress(repo, backingup):
+    backingupmsg = (
+        "backing up %s" % backingup[0][:12]
+        if len(backingup) == 1
+        else "backing up %d commits" % len(backingup)
+    )
+    commitcloudutil.writesyncprogress(repo, backingupmsg, backingup=backingup)
+
+
 @command("cloud", [], "SUBCOMMAND ...", subonly=True)
 def cloud(ui, repo, **opts):
     """synchronise commits via commit cloud
@@ -315,6 +324,42 @@ def checkauthenticated(ui, repo, tokenlocator):
     authenticate(ui, repo, tokenlocator)
 
 
+@subcmd("backup", [("r", "rev", [], _("revisions to back up"))], _("[-r] REV..."))
+def cloudbackup(ui, repo, *revs, **opts):
+    """backs up given commits if they are not already backed up
+
+    Backs up working copy parent if no revision is provided.
+    """
+    if not revs:
+        revs = ["."]
+
+    nodes = [repo[r].hex() for r in scmutil.revrange(repo, revs)]
+
+    remotepath = commitcloudutil.getremotepath(repo, ui, None)
+
+    def getconnection():
+        return repo.connectionpool.get(remotepath, opts)
+
+    notbackedup = {
+        node
+        for node, backedup in zip(
+            nodes, infinitepush.isbackedupnodes(getconnection, nodes)
+        )
+        if not backedup
+    }
+
+    if notbackedup:
+        backingup = list(notbackedup)
+        _backingupsyncprogress(repo, backingup)
+        repo.ui.status(_("pushing to %s\n") % remotepath)
+        infinitepush.pushbackupbundlestacks(repo.ui, repo, getconnection, backingup)
+        recordbackup(repo.ui, repo, remotepath, backingup)
+
+        commitcloudutil.writesyncprogress(repo)
+    else:
+        repo.ui.write(_("nothing to back up\n"))
+
+
 @subcmd(
     "sync",
     [
@@ -560,16 +605,7 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
                     nodemod.hex(n)
                     for n in unfi.nodes("draft() & ::%ls - ::%ls", newheads, oldheads)
                 ]
-                if len(backingup) == 1:
-                    commitcloudutil.writesyncprogress(
-                        repo, "backing up %s" % backingup[0][:12], backingup=backingup
-                    )
-                else:
-                    commitcloudutil.writesyncprogress(
-                        repo,
-                        "backing up %d commits" % len(backingup),
-                        backingup=backingup,
-                    )
+                _backingupsyncprogress(repo, backingup)
                 newheads, failedheads = infinitepush.pushbackupbundlestacks(
                     ui, repo, getconnection, newheads
                 )
@@ -1079,9 +1115,7 @@ def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
 
     if notbackeduplocalheads:
         backingup = list(notbackeduplocalheads)
-        commitcloudutil.writesyncprogress(
-            repo, "backing up %s" % backingup[0][:12], backingup=backingup
-        )
+        _backingupsyncprogress(repo, backingup)
         repo.ui.status(_("pushing to %s\n") % remotepath)
         infinitepush.pushbackupbundlestacks(repo.ui, repo, getconnection, backingup)
         recordbackup(repo.ui, repo, remotepath, backingup)
@@ -1094,9 +1128,7 @@ def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
         pullopts["rev"] = missingheads
         pullcmd(repo.ui, repo.unfiltered(), oldremotepath, **pullopts)
         backingup = list(missingheads)
-        commitcloudutil.writesyncprogress(
-            repo, "backing up %s" % backingup[0][:12], backingup=backingup
-        )
+        _backingupsyncprogress(repo, backingup)
         repo.ui.status(_("pushing to %s\n") % remotepath)
         infinitepush.pushbackupbundlestacks(repo.ui, repo, getconnection, backingup)
         recordbackup(repo.ui, repo, remotepath, backingup)
