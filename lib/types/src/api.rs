@@ -17,7 +17,7 @@ pub struct FileDataRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileDataResponse {
-    files: Vec<(Key, Bytes)>,
+    pub files: Vec<(Key, Bytes)>,
 }
 
 impl FileDataResponse {
@@ -45,7 +45,7 @@ pub struct FileHistoryRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileHistoryResponse {
-    entries: Vec<(Vec<u8>, WireHistoryEntry)>,
+    pub entries: Vec<(Vec<u8>, WireHistoryEntry)>,
 }
 
 impl FileHistoryResponse {

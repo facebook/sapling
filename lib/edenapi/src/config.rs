@@ -11,6 +11,7 @@ pub struct Config {
     pub(crate) creds: Option<ClientCreds>,
     pub(crate) repo: Option<String>,
     pub(crate) cache_path: Option<PathBuf>,
+    pub(crate) batch_size: Option<usize>,
 }
 
 impl Config {
@@ -50,6 +51,14 @@ impl Config {
     /// Should correspond to the remotefilelog.cachepath config item.
     pub fn cache_path(mut self, path: impl AsRef<Path>) -> Self {
         self.cache_path = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    /// Number of keys that should be fetched per HTTP request.
+    /// Settin this to `None` disables batching.
+    /// Only the curl backend will honor this setting.
+    pub fn batch_size(mut self, batch_size: Option<usize>) -> Self {
+        self.batch_size = batch_size;
         self
     }
 }

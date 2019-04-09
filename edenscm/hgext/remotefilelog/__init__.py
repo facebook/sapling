@@ -126,6 +126,9 @@ Configs for Eden API (HTTP data fetching):
 
     ``edenapi.backend`` specifies which HTTP client library to use.
 
+    ``edenapi.batchsize`` specifies the batch size for API server requests
+    for backends that support batching.
+
 Eden API TLS credentials are configured using the auth section:
 
     ``auth.edenapi.prefix``: base URL (without scheme) for which to set credentials.
@@ -221,6 +224,7 @@ configitem("remotefilelog", "server", default=None)
 configitem("edenapi", "enabled", default=False)
 configitem("edenapi", "url", default=None)
 configitem("edenapi", "backend", default="curl")
+configitem("edenapi", "batchsize", default=None)
 
 testedwith = "ships-with-fb-hgext"
 
