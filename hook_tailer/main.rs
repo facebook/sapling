@@ -173,7 +173,7 @@ fn process_hook_results(
             file_hooks_results.into_iter().for_each(|(exec_id, exec)| {
                 file_hooks_stat.record_hook_execution(&exec);
                 let output = format!(
-                    " changeset:{} hook_name:{} path:{} result: {}",
+                    "changeset:{} hook_name:{} path:{} result: {}",
                     exec_id.cs_id, exec_id.hook_name, exec_id.file.path, exec
                 );
 
