@@ -11,7 +11,8 @@ pub struct Config {
     pub(crate) creds: Option<ClientCreds>,
     pub(crate) repo: Option<String>,
     pub(crate) cache_path: Option<PathBuf>,
-    pub(crate) batch_size: Option<usize>,
+    pub(crate) data_batch_size: Option<usize>,
+    pub(crate) history_batch_size: Option<usize>,
 }
 
 impl Config {
@@ -54,11 +55,19 @@ impl Config {
         self
     }
 
-    /// Number of keys that should be fetched per HTTP request.
-    /// Settin this to `None` disables batching.
+    /// Number of keys that should be fetched per file data request.
+    /// Setting this to `None` disables batching.
     /// Only the curl backend will honor this setting.
-    pub fn batch_size(mut self, batch_size: Option<usize>) -> Self {
-        self.batch_size = batch_size;
+    pub fn data_batch_size(mut self, size: Option<usize>) -> Self {
+        self.data_batch_size = size;
+        self
+    }
+
+    /// Number of keys that should be fetched per file history request.
+    /// Setting this to `None` disables batching.
+    /// Only the curl backend will honor this setting.
+    pub fn history_batch_size(mut self, size: Option<usize>) -> Self {
+        self.history_batch_size = size;
         self
     }
 }

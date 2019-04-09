@@ -37,7 +37,8 @@ pub struct EdenApiCurlClient {
     repo: String,
     cache_path: PathBuf,
     creds: Option<ClientCreds>,
-    batch_size: Option<usize>,
+    data_batch_size: Option<usize>,
+    history_batch_size: Option<usize>,
 }
 
 // Public API.
@@ -68,7 +69,8 @@ impl EdenApiCurlClient {
             repo,
             cache_path,
             creds: config.creds,
-            batch_size: config.batch_size,
+            data_batch_size: config.data_batch_size,
+            history_batch_size: config.history_batch_size,
         };
 
         // Create repo/packs directory in cache if it doesn't already exist.
@@ -103,7 +105,7 @@ impl EdenApi for EdenApiCurlClient {
         log::debug!("Fetching {} files", keys.len());
 
         let url = self.repo_base_url()?.join(paths::DATA)?;
-        let batch_size = self.batch_size.unwrap_or(cmp::max(keys.len(), 1));
+        let batch_size = self.data_batch_size.unwrap_or(cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
         log::debug!("Using batch size: {}", batch_size);
@@ -134,7 +136,7 @@ impl EdenApi for EdenApiCurlClient {
         log::debug!("Fetching {} files", keys.len());
 
         let url = self.repo_base_url()?.join(paths::HISTORY)?;
-        let batch_size = self.batch_size.unwrap_or(cmp::max(keys.len(), 1));
+        let batch_size = self.history_batch_size.unwrap_or(cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
         log::debug!("Using batch size: {}", batch_size);

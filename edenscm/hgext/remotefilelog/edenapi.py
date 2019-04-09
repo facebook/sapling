@@ -48,5 +48,8 @@ def initclient(ui, repo):
     creds = getcreds(ui, url)
     cachepath = shallowutil.getcachepath(ui)
     backend = ui.config("edenapi", "backend")
-    batchsize = ui.config("edenapi", "batchsize")
-    return edenapi.client(url, cachepath, repo.name, backend, creds, batchsize)
+    databatchsize = ui.config("edenapi", "databatchsize")
+    historybatchsize = ui.config("edenapi", "historybatchsize")
+    return edenapi.client(
+        url, cachepath, repo.name, backend, creds, databatchsize, historybatchsize
+    )
