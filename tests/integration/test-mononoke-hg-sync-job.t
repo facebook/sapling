@@ -150,6 +150,13 @@ Use the same code here as in the actual opsfiles hook
   >     actual_book = kwargs.get("key")
   >     actual_head = kwargs.get("new")
   >     allowed_replay_books = ui.configlist("facebook", "hooks.unbundlereplaybooks", [])
+  >     # If there is a problem with the mononoke -> hg sync job we need a way to
+  >     # quickly disable the replay verification to let unsynced bundles
+  >     # through.
+  >     # Disable this hook by placing a file in the .hg directory.
+  >     if repo.localvfs.exists('REPLAY_BYPASS'):
+  >         ui.note("[ReplayVerification] Bypassing check as override file is present\n")
+  >         return 0
   >     if expected_book is None and expected_head is None:
   >         # We are allowing non-unbundle-replay pushes to go through
   >         return 0
@@ -357,3 +364,27 @@ Verify that repo-hg-2 is locked for normal pushes
   remote: rollback completed
   abort: updating bookmark master_bookmark failed!
   [255]
+
+Test hook bypass using REPLAY_BYPASS file
+  $ cd $TESTTMP/repo-hg-2
+  $ cat >>.hg/hgrc <<CONFIG
+  > [hooks]
+  > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
+  > [facebook]
+  > hooks.unbundlereplaybooks=other_bookmark
+  > CONFIG
+  $ hg log -r master_bookmark
+  changeset:   1:add0c792bfce
+  bookmark:    master_bookmark
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a => bar
+  
+  $ cd $TESTTMP
+  $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
+  $ touch repo-hg-2/.hg/REPLAY_BYPASS
+  $ mononoke_hg_sync_with_retry repo-hg-2 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * syncing log entry #2 ... (glob)
+  * successful sync of entry #2 (glob)
