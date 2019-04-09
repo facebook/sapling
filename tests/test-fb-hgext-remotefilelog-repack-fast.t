@@ -376,8 +376,8 @@ Test environment variable resolution
   $TESTTMP/envcache
   $TESTTMP/envcache/master
   $TESTTMP/envcache/master/packs
-  $TESTTMP/envcache/master/packs/90e77ccfaa612eed1742db0d53609932cee34b78.dataidx
-  $TESTTMP/envcache/master/packs/90e77ccfaa612eed1742db0d53609932cee34b78.datapack
+  $TESTTMP/envcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.dataidx
+  $TESTTMP/envcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.datapack
   $TESTTMP/envcache/master/packs/dcebd8e8d4d97ee88e40dd8f92d8678c10e1a3ad.histidx
   $TESTTMP/envcache/master/packs/dcebd8e8d4d97ee88e40dd8f92d8678c10e1a3ad.histpack
 

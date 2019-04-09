@@ -434,8 +434,8 @@ Test environment variable resolution
   $TESTTMP/envcache
   $TESTTMP/envcache/master
   $TESTTMP/envcache/master/packs
-  $TESTTMP/envcache/master/packs/90e77ccfaa612eed1742db0d53609932cee34b78.dataidx
-  $TESTTMP/envcache/master/packs/90e77ccfaa612eed1742db0d53609932cee34b78.datapack
+  $TESTTMP/envcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.dataidx
+  $TESTTMP/envcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.datapack
   $TESTTMP/envcache/master/packs/dcebd8e8d4d97ee88e40dd8f92d8678c10e1a3ad.histidx
   $TESTTMP/envcache/master/packs/dcebd8e8d4d97ee88e40dd8f92d8678c10e1a3ad.histpack
 
@@ -461,7 +461,7 @@ Test local remotefilelog blob is correct when based on a pack
 Test limiting the max delta chain length
   $ hg repack --config packs.maxchainlen=1
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.dataidx
-  $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821:
+  $TESTTMP/hgcache/master/packs/a50b6e442479d104497e5dc168e6f077451ecc3f:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
@@ -472,15 +472,15 @@ Test limiting the max delta chain length
   Total:                      36            20        (80.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
-  577959738234  000000000000  8             8
+  577959738234  000000000000  70            70
   
-  Total:                      8             8         (0.0% bigger)
+  Total:                      70            70        (0.0% bigger)
 
 Test huge pack cleanup using different values of packs.maxpacksize:
   $ hg repack --incremental --debug
   $ hg repack --incremental --debug --config packs.maxpacksize=512
-  removing oversize packfile $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821.datapack (365 bytes)
-  removing oversize packfile $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821.dataidx (1.21 KB)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/a50b6e442479d104497e5dc168e6f077451ecc3f.datapack (426 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/a50b6e442479d104497e5dc168e6f077451ecc3f.dataidx (1.21 KB)
 
 Do a repack where the new pack reuses a delta from the old pack
   $ clearcache

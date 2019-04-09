@@ -596,10 +596,9 @@ def _getdeltachain(fl, nodes, stophint):
             # Return a full text if:
             # - the caller requested it (via stophint == -1)
             # - the revlog chain has ended (via base==null or base==node)
-            # - p1 is null. In some situations this can mean it's a copy, so
-            # we need to use fl.read() to remove the copymetadata.
+            # - p1 is null, which can mean a copy in some situations
             if stophint == -1 or base == nullrev or base == cur or p1 == nullrev:
-                delta = fl.read(cur)
+                delta = fl.revision(cur)
                 base = nullrev
             else:
                 delta = fl._chunk(cur)

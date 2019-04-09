@@ -319,10 +319,11 @@
   $ hgcloneshallow ssh://user@dummy/master packprefetch__2 --noupdate -q
   $ cd packprefetch__2
   $ hg prefetch -r tip -q
-  abort: error downloading file contents:
-  'connection closed early for filename z2 and node e94f05dad708cbd2326f74a402b5989f951efd9d'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  [255]
+  $ hg up tip -q
+  $ cat z2
+  z
+  new_change
 
   $ cd ../packprefetch
 
