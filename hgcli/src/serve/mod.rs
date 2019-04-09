@@ -15,7 +15,7 @@ use slog_term;
 
 use dns_lookup::lookup_addr;
 use libc::c_ulong;
-use openssl::ssl::{SslConnector, SslMethod};
+use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
 use tokio_io::codec::{FramedRead, FramedWrite};
 use tokio_io::AsyncRead;
 use tokio_openssl::{SslConnectorExt, SslStream};
@@ -63,6 +63,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
             let common_name = sub
                 .value_of("common-name")
                 .expect("expected SSL common name of the Mononoke server");
+            let insecure = sub.is_present("insecure");
             let is_remote_proxy = main.is_present("remote-proxy");
             let scuba_table = main.value_of("scuba-table");
             let mock_username = sub.value_of("mock-username");
@@ -75,6 +76,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
                 private_key,
                 ca_pem,
                 ssl_common_name: common_name,
+                insecure,
                 is_remote_proxy,
                 scuba_table,
                 mock_username,
@@ -94,6 +96,7 @@ struct StdioRelay<'a> {
     private_key: &'a str,
     ca_pem: &'a str,
     ssl_common_name: &'a str,
+    insecure: bool,
     is_remote_proxy: bool,
     scuba_table: Option<&'a str>,
     mock_username: Option<&'a str>,
@@ -208,6 +211,10 @@ impl<'a> StdioRelay<'a> {
 
         let connector = {
             let mut connector = try_boxfuture!(SslConnector::builder(SslMethod::tls()));
+
+            if self.insecure {
+                connector.set_verify(SslVerifyMode::NONE);
+            }
 
             let pkcs12 = try_boxfuture!(build_identity(
                 self.cert.to_owned(),

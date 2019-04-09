@@ -87,6 +87,7 @@ fn main() {
                 .arg(Arg::from_usage(
                     "--common-name [CN] 'expected SSL common name of the server see https://www.ssl.com/faqs/common-name/'",
                 ))
+                .arg(Arg::from_usage("--insecure 'run hgcli without verifying peer certificate'"))
                 .arg(Arg::from_usage("--stdio 'for remote clients'"))
                 .arg(
                     Arg::from_usage("--cmdserver [MODE] 'for remote clients'")
