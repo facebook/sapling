@@ -11,8 +11,7 @@ use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
-use failure::Result;
+use failure::{err_msg, Error, Result};
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use hooks::{hook_loader::load_hooks, HookManager};
@@ -122,6 +121,34 @@ impl Tailer {
             bookmark,
             self.logger.clone(),
         )
+    }
+
+    pub fn run_single_changeset(
+        &self,
+        changeset: HgChangesetId,
+    ) -> BoxFuture<Vec<HookResults>, Error> {
+        cloned!(
+            self.ctx,
+            self.repo,
+            self.hook_manager,
+            self.bookmark,
+            self.logger
+        );
+        repo.get_bonsai_from_hg(ctx, changeset)
+            .and_then(move |maybe_bonsai| {
+                maybe_bonsai.ok_or(err_msg(format!(
+                    "changeset does not exist {}",
+                    changeset.to_string()
+                )))
+            })
+            .and_then({
+                cloned!(self.ctx);
+                move |bonsai| {
+                    run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, bonsai, logger)
+                }
+            })
+            .map(|(_, result)| vec![result])
+            .boxify()
     }
 
     pub fn run_with_limit(&self, limit: u64) -> BoxFuture<Vec<HookResults>, Error> {

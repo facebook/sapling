@@ -14,7 +14,7 @@ pub mod tailer;
 
 use blobrepo_factory::open_blobrepo;
 use bookmarks::Bookmark;
-use clap::{App, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error, Result};
@@ -24,7 +24,7 @@ use futures::Stream;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
-use mercurial_types::HgNodeHash;
+use mercurial_types::{HgChangesetId, HgNodeHash};
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use slog::{debug, info, o, Drain, Level, Logger};
@@ -58,6 +58,9 @@ fn main() -> Result<()> {
     let init_revision = matches.value_of("init_revision").map(String::from);
     let continuous = matches.is_present("continuous");
     let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
+    let changeset = matches.value_of("changeset").map_or(None, |cs| {
+        Some(HgChangesetId::from_str(cs).expect("Invalid changesetid"))
+    });
 
     cmdlib::args::init_cachelib(&matches);
 
@@ -111,26 +114,33 @@ fn main() -> Result<()> {
                 None => futures::future::ok(()).boxify(),
             };
 
-            if continuous {
-                // Tail new commits and run hooks on them
-                let logger = logger.clone();
-                fut.then(|_| {
-                    repeat(()).for_each(move |()| {
-                        let fut = tailer.run();
-                        process_hook_results(fut, logger.clone()).and_then(|_| {
-                            sleep(Duration::new(10, 0))
-                                .map_err(|err| format_err!("Tokio timer error {:?}", err))
+            match (continuous, changeset) {
+                (true, _) => {
+                    // Tail new commits and run hooks on them
+                    let logger = logger.clone();
+                    fut.then(|_| {
+                        repeat(()).for_each(move |()| {
+                            let fut = tailer.run();
+                            process_hook_results(fut, logger.clone()).and_then(|_| {
+                                sleep(Duration::new(10, 0))
+                                    .map_err(|err| format_err!("Tokio timer error {:?}", err))
+                            })
                         })
                     })
-                })
-                .boxify()
-            } else {
-                let logger = logger.clone();
-                fut.then(move |_| {
-                    let fut = tailer.run_with_limit(limit);
+                    .boxify()
+                }
+                (_, Some(changeset)) => {
+                    let fut = tailer.run_single_changeset(changeset);
                     process_hook_results(fut, logger)
-                })
-                .boxify()
+                }
+                _ => {
+                    let logger = logger.clone();
+                    fut.then(move |_| {
+                        let fut = tailer.run_with_limit(limit);
+                        process_hook_results(fut, logger)
+                    })
+                    .boxify()
+                }
             }
         }
     });
@@ -238,26 +248,64 @@ impl fmt::Display for HookExecutionStat {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app =
-    App::new("mononoke hook server")
+    let app = App::new("mononoke hook server")
         .version("0.0.0")
         .about("run hooks against repo")
-        .args_from_usage(
-            r#"
-            <cpath>      -P, --config_path [PATH]           'path to the config files'
+        .arg(
+            Arg::with_name("cpath")
+                .long("config_path")
+                .short("P")
+                .help("path to the config files")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("bookmark")
+                .long("bookmark")
+                .short("B")
+                .help("bookmark to tail")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("repo_name")
+                .long("repo_name")
+                .short("R")
+                .help("the name of the repo to run hooks for")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("changeset")
+                .long("changeset")
+                .short("c")
+                .help("the changeset to run hooks for")
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("limit")
+                .long("limit")
+                .takes_value(true)
+                .help("limit number of commits to process (non-continuous only). Default: 1000"),
+        )
+        .arg(
+            Arg::with_name("continuous")
+                .long("continuous")
+                .help("continuously run hooks on new commits"),
+        )
+        .arg(
+            Arg::with_name("init_revision")
+                .long("init_revision")
+                .takes_value(true)
+                .help("the initial revision to start at"),
+        )
+        .arg(
+            Arg::with_name("debug")
+                .long("debug")
+                .short("d")
+                .help("print debug level output"),
+        );
 
-            <bookmark>    -B, --bookmark [BOOK]                  'bookmark to tail'
-                           --poll-interval                       'the poll interval in seconds'
-
-            <repo_name>   -R, --repo_name [REPO_NAME]            'the name of the repo to run hooks for'
-
-                          --init_revision [INIT_REVISION]        'the initial revision to start at'
-
-            --continuous                                         'continuously run hooks on new commits'
-            --limit=[LIMIT]                                      'limit number of commits to process (non-continuous only). Default: 1000'
-            -d, --debug                                          'print debug level output'
-        "#,
-    );
     let app = cmdlib::args::add_myrouter_args(app);
     cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */)
 }
