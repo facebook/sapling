@@ -192,6 +192,10 @@ def revsetdiff(repo, diffid):
         # The log walk found the diff, nothing more to do
         return revs
 
+    if resp is None:
+        # The graphql query finished but didn't return anything
+        return []
+
     vcs = resp["source_control_system"]
 
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
