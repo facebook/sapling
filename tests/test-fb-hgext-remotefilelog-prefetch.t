@@ -304,6 +304,28 @@
   move z -> z2
   x
 
+# check pulling renamed and changed file
+  $ echo new_change >> z2
+  $ hg commit -m "changed z2"
+  $ hg push
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ cd ..
+  $ hgcloneshallow ssh://user@dummy/master packprefetch__2 --noupdate -q
+  $ cd packprefetch__2
+  $ hg prefetch -r tip -q
+  abort: error downloading file contents:
+  'connection closed early for filename z2 and node e94f05dad708cbd2326f74a402b5989f951efd9d'
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  [255]
+
+  $ cd ../packprefetch
+
 # Revert across double renames. Note: the scary "abort", error is because
 # https://bz.mercurial-scm.org/5419 .
 
