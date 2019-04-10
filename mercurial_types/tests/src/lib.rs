@@ -1034,3 +1034,21 @@ fn nodehash_option() {
         nodehash::ONES_HASH
     );
 }
+
+#[test]
+fn nodehash_display_opt() {
+    assert_eq!(
+        format!("{}", HgNodeHash::display_opt(Some(&nodehash::ONES_HASH))),
+        "1111111111111111111111111111111111111111"
+    );
+    assert_eq!(format!("{}", HgNodeHash::display_opt(None)), "(none)");
+}
+
+#[test]
+fn changeset_id_display_opt() {
+    assert_eq!(
+        format!("{}", HgChangesetId::display_opt(Some(&nodehash::ONES_CSID))),
+        "1111111111111111111111111111111111111111"
+    );
+    assert_eq!(format!("{}", HgChangesetId::display_opt(None)), "(none)");
+}

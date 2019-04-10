@@ -11,7 +11,8 @@ use std::str::{self, FromStr};
 use bytes::Bytes;
 use errors::*;
 use mercurial_types::{
-    HgBlob, HgBlobNode, HgChangesetEnvelope, HgManifestId, HgNodeHash, HgParents, MPath, NULL_HASH,
+    HgBlob, HgBlobNode, HgChangesetEnvelope, HgChangesetId, HgManifestId, HgNodeHash, HgParents,
+    MPath, NULL_HASH,
 };
 use mononoke_types::DateTime;
 
@@ -203,7 +204,11 @@ impl RevlogChangeset {
 
     pub fn from_envelope(envelope: HgChangesetEnvelope) -> Result<Self> {
         let envelope = envelope.into_mut();
-        Self::parse(envelope.contents.into(), envelope.p1, envelope.p2)
+        Self::parse(
+            envelope.contents.into(),
+            envelope.p1.map(HgChangesetId::into_nodehash),
+            envelope.p2.map(HgChangesetId::into_nodehash),
+        )
     }
 
     pub fn new_null() -> Self {

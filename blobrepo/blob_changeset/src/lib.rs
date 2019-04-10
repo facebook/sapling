@@ -177,7 +177,7 @@ impl HgBlobChangeset {
                     None => Ok(None),
                     Some(bytes) => {
                         let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
-                        if changesetid != HgChangesetId::new(envelope.node_id()) {
+                        if changesetid != envelope.node_id() {
                             bail_msg!(
                                 "Changeset ID mismatch (requested: {}, got: {})",
                                 changesetid,
@@ -219,9 +219,9 @@ impl HgBlobChangeset {
         blob.map_err(Error::from)
             .and_then(|contents| {
                 let envelope = HgChangesetEnvelopeMut {
-                    node_id: self.changesetid.into_nodehash(),
-                    p1: self.content.p1(),
-                    p2: self.content.p2(),
+                    node_id: self.changesetid,
+                    p1: self.content.p1().map(HgChangesetId::new),
+                    p2: self.content.p2().map(HgChangesetId::new),
                     contents,
                 };
                 let envelope = envelope.freeze();

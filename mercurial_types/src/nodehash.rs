@@ -94,19 +94,19 @@ impl HgNodeHash {
     }
 
     #[inline]
-    pub fn display_opt<'a>(opt_hash: Option<&'a HgNodeHash>) -> HgNodeHashOptDisplay<'a> {
-        HgNodeHashOptDisplay { inner: opt_hash }
+    pub fn display_opt<'a>(opt_hash: Option<&'a HgNodeHash>) -> OptDisplay<'a, Self> {
+        OptDisplay { inner: opt_hash }
     }
 }
 
-pub struct HgNodeHashOptDisplay<'a> {
-    inner: Option<&'a HgNodeHash>,
+pub struct OptDisplay<'a, T> {
+    inner: Option<&'a T>,
 }
 
-impl<'a> Display for HgNodeHashOptDisplay<'a> {
+impl<'a, T: Display> Display for OptDisplay<'a, T> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self.inner {
-            Some(hash) => hash.fmt(fmt),
+            Some(inner) => inner.fmt(fmt),
             None => write!(fmt, "(none)"),
         }
     }
@@ -219,12 +219,27 @@ impl HgChangesetId {
         HgNodeHash::from_bytes(bytes).map(HgChangesetId)
     }
 
+    pub fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<Self> {
+        HgNodeHash::from_thrift(thrift_hash).map(HgChangesetId)
+    }
+
+    pub fn from_thrift_opt(thrift_hash_opt: Option<thrift::HgNodeHash>) -> Result<Option<Self>> {
+        match thrift_hash_opt {
+            Some(h) => Ok(Some(Self::from_thrift(h)?)),
+            None => Ok(None),
+        }
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
 
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
+    }
+
+    pub fn into_thrift(self) -> thrift::HgNodeHash {
+        self.into_nodehash().into_thrift()
     }
 
     pub const fn new(hash: HgNodeHash) -> Self {
@@ -240,6 +255,13 @@ impl HgChangesetId {
     #[inline]
     pub fn blobstore_key(&self) -> String {
         format!("hgchangeset.sha1.{}", self.0)
+    }
+
+    #[inline]
+    pub fn display_opt<'a>(opt_changeset_id: Option<&'a HgChangesetId>) -> OptDisplay<'a, Self> {
+        OptDisplay {
+            inner: opt_changeset_id,
+        }
     }
 }
 

@@ -15,15 +15,15 @@ use rust_thrift::compact_protocol;
 
 use super::HgEnvelopeBlob;
 use crate::errors::*;
-use crate::nodehash::HgNodeHash;
+use crate::nodehash::HgChangesetId;
 use crate::thrift;
 
 /// A mutable representation of a Mercurial changeset node.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HgChangesetEnvelopeMut {
-    pub node_id: HgNodeHash,
-    pub p1: Option<HgNodeHash>,
-    pub p2: Option<HgNodeHash>,
+    pub node_id: HgChangesetId,
+    pub p1: Option<HgChangesetId>,
+    pub p2: Option<HgChangesetId>,
     pub contents: Bytes,
 }
 
@@ -36,8 +36,8 @@ impl HgChangesetEnvelopeMut {
 impl fmt::Display for HgChangesetEnvelopeMut {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "node id: {}", self.node_id)?;
-        writeln!(f, "p1: {}", HgNodeHash::display_opt(self.p1.as_ref()))?;
-        writeln!(f, "p2: {}", HgNodeHash::display_opt(self.p2.as_ref()))?;
+        writeln!(f, "p1: {}", HgChangesetId::display_opt(self.p1.as_ref()))?;
+        writeln!(f, "p2: {}", HgChangesetId::display_opt(self.p2.as_ref()))?;
         // TODO: (rain1) T30970792 parse contents and print out in a better fashion
         writeln!(f, "contents: {:?}", self.contents)
     }
@@ -54,9 +54,9 @@ impl HgChangesetEnvelope {
         let catch_block = || {
             Ok(Self {
                 inner: HgChangesetEnvelopeMut {
-                    node_id: HgNodeHash::from_thrift(fe.node_id)?,
-                    p1: HgNodeHash::from_thrift_opt(fe.p1)?,
-                    p2: HgNodeHash::from_thrift_opt(fe.p2)?,
+                    node_id: HgChangesetId::from_thrift(fe.node_id)?,
+                    p1: HgChangesetId::from_thrift_opt(fe.p1)?,
+                    p2: HgChangesetId::from_thrift_opt(fe.p2)?,
                     contents: Bytes::from(
                         fe.contents
                             .ok_or_else(|| err_msg("missing contents field"))?,
@@ -83,13 +83,13 @@ impl HgChangesetEnvelope {
     /// The ID for this changeset, as recorded by Mercurial. This is expected to match the
     /// actual hash computed from the contents.
     #[inline]
-    pub fn node_id(&self) -> HgNodeHash {
+    pub fn node_id(&self) -> HgChangesetId {
         self.inner.node_id
     }
 
     /// The parent hashes for this node. The order matters.
     #[inline]
-    pub fn parents(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
+    pub fn parents(&self) -> (Option<HgChangesetId>, Option<HgChangesetId>) {
         (self.inner.p1, self.inner.p2)
     }
 
@@ -109,8 +109,8 @@ impl HgChangesetEnvelope {
         let inner = self.inner;
         thrift::HgChangesetEnvelope {
             node_id: inner.node_id.into_thrift(),
-            p1: inner.p1.map(HgNodeHash::into_thrift),
-            p2: inner.p2.map(HgNodeHash::into_thrift),
+            p1: inner.p1.map(HgChangesetId::into_thrift),
+            p2: inner.p2.map(HgChangesetId::into_thrift),
             contents: Some(inner.contents.to_vec()),
         }
     }
