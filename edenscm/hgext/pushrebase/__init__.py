@@ -903,6 +903,7 @@ def _graft(op, rev, mapping, lastdestnode, getcommitdate):
 
     extra = rev.extra().copy()
     mutation.record(repo, extra, [rev.node()], "pushrebase")
+    loginfo = {"predecessors": rev.hex(), "mutation": "pushrebase"}
 
     return _commit(
         repo,
@@ -913,10 +914,11 @@ def _graft(op, rev, mapping, lastdestnode, getcommitdate):
         rev.user(),
         date,
         extra,
+        loginfo,
     )
 
 
-def _commit(repo, parents, desc, files, filectx, user, date, extras):
+def _commit(repo, parents, desc, files, filectx, user, date, extras, loginfo):
     """ Make a commit as defined by the passed in parameters in the repository.
     All the commits created by the pushrebase extension should ideally go
     through this method.
@@ -927,7 +929,7 @@ def _commit(repo, parents, desc, files, filectx, user, date, extras):
     """
 
     return context.memctx(
-        repo, parents, desc, files, filectx, user, date, extras
+        repo, parents, desc, files, filectx, user, date, extras, loginfo=loginfo
     ).commit()
 
 

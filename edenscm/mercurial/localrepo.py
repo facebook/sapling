@@ -2112,6 +2112,7 @@ class localrepository(object):
         force=False,
         editor=False,
         extra=None,
+        loginfo=None,
     ):
         """Add a new revision to current repository.
 
@@ -2121,6 +2122,9 @@ class localrepository(object):
         """
         if extra is None:
             extra = {}
+
+        if loginfo is None:
+            loginfo = {}
 
         def fail(f, msg):
             raise errormod.Abort("%s: %s" % (f, msg))
@@ -2157,7 +2161,7 @@ class localrepository(object):
             if not force:
                 self.checkcommitpatterns(wctx, vdirs, match, status, fail)
 
-            loginfo = {"checkoutidentifier": self.dirstate.checkoutidentifier}
+            loginfo.update({"checkoutidentifier": self.dirstate.checkoutidentifier})
 
             cctx = context.workingcommitctx(
                 self, status, text, user, date, extra, loginfo

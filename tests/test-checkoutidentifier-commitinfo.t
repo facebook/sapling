@@ -24,7 +24,7 @@ Commit and Amend
   0000000000000001
   $ echo 1b > 1
   $ hg amend -m 1b
-  commit_info:  (author=test checkoutidentifier=0000000000000001 node=edbfe685c913f3cec015588dbc0f1e03f5146d80)
+  commit_info:  (author=test checkoutidentifier=0000000000000001 mutation=amend node=edbfe685c913f3cec015588dbc0f1e03f5146d80 predecessors=f0161ad23099c690115006c21e96f780f5d740b6)
 
   $ hg debugcheckoutidentifier
   0000000000000002
@@ -89,8 +89,16 @@ Rebase with conflict resolution
   0000000000000008
   $ hg rebase --continue
   rebasing 6:78930e916793 "2z"
-  commit_info:  (author=test checkoutidentifier=0000000000000008 node=2a9f3f40eebf9d189f51eeba40f6d45935255c3e)
+  commit_info:  (author=test checkoutidentifier=0000000000000008 mutation=rebase node=2a9f3f40eebf9d189f51eeba40f6d45935255c3e predecessors=78930e916793ff11b38f4f89f92221c180f922a3)
   rebasing 7:27fd2733660c "3" (tip)
-  commit_info:  (author=test checkoutidentifier=0000000000000009 node=b42c49c8c650d6040d4a4003a30c82e1cde21c50)
+  commit_info:  (author=test checkoutidentifier=0000000000000009 mutation=rebase node=b42c49c8c650d6040d4a4003a30c82e1cde21c50 predecessors=27fd2733660ce0233ef4603cebe6328681aa598d)
   $ hg debugcheckoutidentifier
   0000000000000010
+
+Fold has no checkoutidentifier, but does log other commit info
+  $ hg fold --from ".~2"
+  commit_info:  (author=test mutation=fold node=39938ad744a3c4695743296607b5786b8e1437c6 predecessors=e911dd548c90906d9f6733aa1612274865a7dfd2 2a9f3f40eebf9d189f51eeba40f6d45935255c3e b42c49c8c650d6040d4a4003a30c82e1cde21c50)
+  3 changesets folded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugcheckoutidentifier
+  0000000000000011

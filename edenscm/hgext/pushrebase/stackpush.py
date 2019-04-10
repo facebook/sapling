@@ -266,10 +266,12 @@ class pushrequest(object):
 
         extra = commit.extra.copy()
         date = commit.date
+        loginfo = {}
 
         orignode = commit.orignode
         if orignode:
             mutation.record(repo, extra, [orignode], "pushrebase")
+            loginfo = {"predecessors": hex(orignode), "mutation": "pushrebase"}
             date = getcommitdatefn(repo.ui, hex(orignode), commit.date)
 
         return context.memctx(
@@ -281,4 +283,5 @@ class pushrequest(object):
             commit.user,
             date,
             extra,
+            loginfo=loginfo,
         ).commit()

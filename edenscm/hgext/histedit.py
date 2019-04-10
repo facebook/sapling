@@ -577,6 +577,7 @@ def commitfuncfor(repo, src):
             extra["histedit_source"] = src.hex()
             mutation.record(repo, extra, [src.node()], "histedit")
             kwargs[r"extra"] = extra
+            kwargs[r"loginfo"] = {"predecessors": src.hex, "mutation": "histedit"}
             return repo.commit(**kwargs)
 
     return commitfunc
@@ -652,6 +653,9 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     editor = None
     if not skipprompt:
         editor = cmdutil.getcommiteditor(edit=True, editform="histedit.fold")
+
+    loginfo = {"predecessors": " ".join(c.hex() for c in ctxs), "mutation": "histedit"}
+
     new = context.memctx(
         repo,
         parents=parents,
@@ -662,6 +666,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
         date=date,
         extra=extra,
         editor=editor,
+        loginfo=loginfo,
     )
     return repo.commitctx(new)
 

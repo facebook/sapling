@@ -1344,6 +1344,7 @@ def concludememorynode(
     mutation.record(repo, extra, preds, mutop)
     if extrafn:
         extrafn(ctx, extra)
+    loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
 
     destphase = max(ctx.phase(), phases.draft)
     overrides = {("phases", "new-commit"): destphase}
@@ -1365,6 +1366,7 @@ def concludememorynode(
             user=ctx.user(),
             branch=branch,
             editor=editor,
+            loginfo=loginfo,
         )
         commitres = repo.commitctx(memctx)
         wctx.clean()  # Might be reused
@@ -1402,6 +1404,7 @@ def concludenode(
         mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
+        loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
 
         destphase = max(ctx.phase(), phases.draft)
         overrides = {("phases", "new-commit"): destphase}
@@ -1410,7 +1413,12 @@ def concludenode(
             if date is None:
                 date = ctx.date()
             newnode = repo.commit(
-                text=commitmsg, user=ctx.user(), date=date, extra=extra, editor=editor
+                text=commitmsg,
+                user=ctx.user(),
+                date=date,
+                extra=extra,
+                editor=editor,
+                loginfo=loginfo,
             )
 
         repo.dirstate.setbranch(repo[newnode].branch())
