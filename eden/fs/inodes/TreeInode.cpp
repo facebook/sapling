@@ -32,6 +32,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -42,6 +43,7 @@
 #include "eden/fs/tracing/Tracing.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/TimeUtil.h"
@@ -849,9 +851,19 @@ FileInodePtr TreeInode::createImpl(
   FileInodePtr inode;
   RelativePath targetName;
 
-  // new scope just to help distinguish work done with the contents lock
-  // held vs without it.
+  // New scope to distinguish work done with the contents lock and to help
+  // manage releasing it.
   {
+    // Ensure that we always unlock contents at the end of this scope.
+    // Even if an exception is thrown we need to make sure we release the
+    // contents lock before the local inode variable gets destroyed.
+    // If an error is thrown, destroying the inode may attempt to acquire the
+    // parents contents lock, which will block if we are still holding it.
+    // (T42835005).
+    SCOPE_EXIT {
+      contents.unlock();
+    };
+
     // Make sure that an entry with this name does not already exist.
     //
     // In general FUSE should avoid calling create(), symlink(), or mknod() on
@@ -899,8 +911,9 @@ FileInodePtr TreeInode::createImpl(
     getInodeMap()->inodeCreated(inode);
 
     updateMtimeAndCtimeLocked(contents->entries, now);
+    getMount()->getServerState()->getFaultInjector().check(
+        "createInodeSaveOverlay", name.stringPiece());
     saveOverlayDir(contents->entries);
-    contents.unlock();
   }
 
   invalidateFuseEntryCacheIfRequired(name);

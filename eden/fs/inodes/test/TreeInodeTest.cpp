@@ -9,14 +9,19 @@
  */
 #include "eden/fs/inodes/TreeInode.h"
 
+#include <folly/Exception.h>
 #include <folly/Random.h>
-#include <gtest/gtest.h>
+#include <folly/executors/ManualExecutor.h>
+#include <folly/portability/GTest.h>
+#include <folly/test/TestUtils.h>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -261,4 +266,63 @@ TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
     ++iterations;
   }
   std::cout << "Ran " << iterations << " iterations" << std::endl;
+}
+
+TEST(TreeInode, create) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+
+  // Test creating a new file
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  auto createResult = somedir->create("newfile.txt"_pc, S_IFREG | 0740, 0)
+                          .getTryVia(mount.getServerExecutor().get());
+
+  EXPECT_TRUE(createResult.hasValue());
+  EXPECT_EQ(
+      mount.getFileInode("somedir/newfile.txt"_relpath),
+      createResult.value().inode);
+  EXPECT_FILE_INODE(createResult.value().inode, "", 0740);
+}
+
+TEST(TreeInode, createExists) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+
+  // Test creating a new file
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  auto createResult = folly::makeFutureWith([&] {
+                        return somedir->create("foo.txt"_pc, S_IFREG | 0600, 0);
+                      })
+                          .getTryVia(mount.getServerExecutor().get());
+
+  EXPECT_THROW_ERRNO(createResult.value(), EEXIST);
+  EXPECT_FILE_INODE(
+      mount.getFileInode("somedir/foo.txt"_relpath), "test\n", 0644);
+}
+
+DECLARE_bool(enable_fault_injection);
+
+TEST(TreeInode, createOverlayWriteError) {
+  // TODO: We should make TestMount always enable fault injection.
+  // Ideally I plan to refactor ServerState soon so that this is configurable in
+  // its constructor rather than only controlled through a command line flag.
+  FLAGS_enable_fault_injection = true;
+
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+  mount.getServerState()->getFaultInjector().injectError(
+      "createInodeSaveOverlay",
+      "newfile.txt",
+      folly::makeSystemErrorExplicit(ENOSPC, "too many cat videos"));
+
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  auto createResult =
+      folly::makeFutureWith(
+          [&] { return somedir->create("newfile.txt"_pc, S_IFREG | 0600, 0); })
+          .getTryVia(mount.getServerExecutor().get());
+
+  EXPECT_THROW_ERRNO(createResult.value(), ENOSPC);
 }

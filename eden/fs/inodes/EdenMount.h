@@ -464,6 +464,10 @@ class EdenMount {
     return straceLogger_;
   }
 
+  const std::shared_ptr<ServerState>& getServerState() const {
+    return serverState_;
+  }
+
   /**
    * Returns the last checkout time in the Eden mount.
    */
