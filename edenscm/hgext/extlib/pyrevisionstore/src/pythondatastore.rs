@@ -8,12 +8,13 @@ use cpython::{
 };
 use failure::Fallible;
 
-use pyerror::pyerr_to_error;
-use pythonutil::{
-    bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, to_key,
-};
 use revisionstore::{DataStore, Delta, Metadata, Store};
 use types::Key;
+
+use crate::pyerror::pyerr_to_error;
+use crate::pythonutil::{
+    bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, to_key,
+};
 
 pub struct PythonDataStore {
     py_store: PyObject,

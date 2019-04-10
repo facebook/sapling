@@ -9,7 +9,7 @@ use cpython::{PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, Py
 use revisionstore::datastore::DataStore;
 use types::{Key, Node};
 
-use pythonutil::{
+use crate::pythonutil::{
     from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr,
 };
 

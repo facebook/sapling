@@ -4,9 +4,9 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{exc, PyErr, Python, PythonObjectWithTypeObject};
-use revisionstore::error::KeyError;
+use failure::{Error, Fail};
 
-use failure::Error;
+use revisionstore::error::KeyError;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Python Error: {:?}", _0)]

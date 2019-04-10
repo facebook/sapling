@@ -3,15 +3,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::{ObjectProtocol, PyBytes, PyDict, PyErr, PyObject, PyResult, Python, ToPyObject};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+use cpython::{ObjectProtocol, PyBytes, PyDict, PyErr, PyObject, PyResult, Python, ToPyObject};
+
+use encoding;
 use revisionstore::repack::{RepackOutputType, RepackResult, Repackable};
 use types::Key;
 
-use encoding;
-use pythonutil::{from_key, from_tuple_to_key, to_pyerr};
+use crate::pythonutil::{from_key, from_tuple_to_key, to_pyerr};
 
 pub trait RepackablePyExt {
     fn mark_ledger(&self, py: Python, py_store: &PyObject, ledger: &PyObject) -> PyResult<()>;

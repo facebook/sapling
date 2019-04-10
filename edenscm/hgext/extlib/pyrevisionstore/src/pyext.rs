@@ -1,25 +1,28 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
+
+use std::{
+    cell::{Ref, RefCell},
+    path::PathBuf,
+};
+
 use cpython::{
     ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyObject, PyResult, PyTuple, Python,
     PythonObject,
 };
+
 use encoding;
-use std::cell::{Ref, RefCell};
-
-use failure::Error;
-use std::path::PathBuf;
-
-use datastorepyext::DataStorePyExt;
-use historystorepyext::HistoryStorePyExt;
-use pythondatastore::PythonDataStore;
-use pythonutil::to_pyerr;
-use repackablepyext::RepackablePyExt;
-use revisionstore::datapack::DataPack;
-use revisionstore::historypack::HistoryPack;
-use revisionstore::repack::{
-    filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks,
+use failure::{format_err, Error};
+use revisionstore::{
+    repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
+    DataPack, HistoryPack,
 };
+
+use crate::datastorepyext::DataStorePyExt;
+use crate::historystorepyext::HistoryStorePyExt;
+use crate::pythondatastore::PythonDataStore;
+use crate::pythonutil::to_pyerr;
+use crate::repackablepyext::RepackablePyExt;
 
 py_module_initializer!(
     pyrevisionstore,        // module name
