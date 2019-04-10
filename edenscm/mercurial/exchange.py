@@ -1032,6 +1032,8 @@ def _pushbundle2(pushop):
     stream = util.chunkbuffer(bundler.getchunks())
     try:
         try:
+            import time
+            print("started at %s" % time.time())
             reply = pushop.remote.unbundle(stream, ["force"], pushop.remote.url())
         except error.BundleValueError as exc:
             raise error.Abort(_("missing support for %s") % exc)
