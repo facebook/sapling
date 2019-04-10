@@ -190,10 +190,7 @@ folly::IOBuf GitTreeSerializer::finalize() {
   // Add the header onto the tree buffer
   std::array<char, TREE_PREFIX_HEADROOM> header;
   auto headerLength = snprintf(
-      header.data(),
-      header.size(),
-      "tree %" PRIu64,
-      buf_.computeChainDataLength());
+      header.data(), header.size(), "tree %zu", buf_.computeChainDataLength());
   if (headerLength < 0 || static_cast<size_t>(headerLength) >= header.size()) {
     // This shouldn't ever happen in practice
     throw std::runtime_error("error formatting tree header");
