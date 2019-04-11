@@ -94,36 +94,20 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
         newoptions[constants.OPTION_LOOSEONLY] = True
         pythonrepack(repo, newoptions, packpath, incremental)
 
-    try:
-        failed = False
-        with flock(
-            repacklockvfs(repo).join("repacklock"),
-            _("repacking %s") % repo.origroot,
-            timeout=0,
-        ):
-            repo.hook("prerepack")
+    failed = False
 
-            _cleanuptemppacks(repo.ui, packpath)
+    if incremental:
+        repacks = [repackincrementaldatapacks, repackincrementalhistpacks]
+    else:
+        repacks = [repackdatapacks, repackhistpacks]
 
-            if incremental:
-                repacks = [repackincrementaldatapacks, repackincrementalhistpacks]
-            else:
-                repacks = [repackdatapacks, repackhistpacks]
-
-            for dorepack in repacks:
-                try:
-                    dorepack(packpath, packpath)
-                except Exception as e:
-                    repo.ui.log(
-                        "repack_failure", msg=str(e), traceback=traceback.format_exc()
-                    )
-                    if "Repack successful but with errors" not in str(e):
-                        failed = True
-
-    except error.LockHeld:
-        raise RepackAlreadyRunning(
-            _("skipping repack - another repack is already running")
-        )
+    for dorepack in repacks:
+        try:
+            dorepack(packpath, packpath)
+        except Exception as e:
+            repo.ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
+            if "Repack successful but with errors" not in str(e):
+                failed = True
 
     if failed:
         repo.ui.warn(
@@ -163,6 +147,8 @@ def _shareddatastorespythonrepack(repo, options, packpath, incremental):
 def _shareddatastoresrepack(repo, options, incremental):
     if util.safehasattr(repo.fileslog, "shareddatastores"):
         packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+        _cleanuptemppacks(repo.ui, packpath)
+
         if _userustrepack(repo):
             _runrustrepack(
                 repo, options, packpath, incremental, _shareddatastorespythonrepack
@@ -205,6 +191,7 @@ def _localdatarepack(repo, options, incremental):
         packpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )
+        _cleanuptemppacks(repo.ui, packpath)
 
         if _userustrepack(repo):
             _runrustrepack(repo, options, packpath, incremental, _localdatapythonrepack)
@@ -249,6 +236,7 @@ def _manifestrepack(repo, options, incremental):
         spackpath, sdstores, shstores = shareddata
 
         def _domanifestrepack(packpath, dstores, hstores, shared):
+            _cleanuptemppacks(repo.ui, packpath)
             if _userustrepack(repo):
                 _runrustrepack(
                     repo,
@@ -271,25 +259,37 @@ def _manifestrepack(repo, options, incremental):
         _domanifestrepack(lpackpath, ldstores, lhstores, False)
 
 
-def fullrepack(repo, options=None):
-    """If ``packsonly`` is True, stores creating only loose objects are skipped.
-    """
+def _dorepack(repo, options, incremental):
     if options:
-        options["incremental"] = False
-    _shareddatastoresrepack(repo, options, False)
-    _localdatarepack(repo, options, False)
-    _manifestrepack(repo, options, False)
+        options["incremental"] = incremental
+
+    try:
+        with flock(
+            repacklockvfs(repo).join("repacklock"),
+            _("repacking %s") % repo.origroot,
+            timeout=0,
+        ):
+            repo.hook("prerepack")
+
+            _shareddatastoresrepack(repo, options, incremental)
+            _localdatarepack(repo, options, incremental)
+            _manifestrepack(repo, options, incremental)
+
+    except error.LockHeld:
+        raise RepackAlreadyRunning(
+            _("skipping repack - another repack " "is already running")
+        )
+
+
+def fullrepack(repo, options=None):
+    _dorepack(repo, options, False)
 
 
 def incrementalrepack(repo, options=None):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
-    if options:
-        options["incremental"] = True
-    _shareddatastoresrepack(repo, options, True)
-    _localdatarepack(repo, options, True)
-    _manifestrepack(repo, options, True)
+    _dorepack(repo, options, True)
 
 
 def _getmanifeststores(repo):
@@ -567,12 +567,7 @@ def _runrepack(
 
     with datapack.mutabledatapack(repo.ui, packpath) as dpack:
         with historypack.mutablehistorypack(repo.ui, packpath) as hpack:
-            try:
-                packer.run(packpath, dpack, hpack)
-            except error.LockHeld:
-                raise RepackAlreadyRunning(
-                    _("skipping repack - another repack " "is already running")
-                )
+            packer.run(packpath, dpack, hpack)
 
 
 def keepset(repo, keyfn, lastkeepkeys=None):
@@ -738,18 +733,7 @@ class repacker(object):
     def run(self, packpath, targetdata, targethistory):
         ledger = repackledger()
 
-        with flock(
-            repacklockvfs(self.repo).join("repacklock"),
-            _("repacking %s") % self.repo.origroot,
-            timeout=0,
-        ):
-            self.repo.hook("prerepack")
-
-            _cleanuptemppacks(self.repo.ui, self.packpath)
-
-            self._runpythonrepack(
-                ledger, packpath, targetdata, targethistory, self.options
-            )
+        self._runpythonrepack(ledger, packpath, targetdata, targethistory, self.options)
 
     def _chainorphans(self, ui, filename, nodes, orphans, deltabases):
         """Reorderes ``orphans`` into a single chain inside ``nodes`` and
