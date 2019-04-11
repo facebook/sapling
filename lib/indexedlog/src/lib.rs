@@ -18,6 +18,9 @@
 #[macro_use]
 extern crate quickcheck;
 
+#[macro_use]
+mod macros;
+
 pub mod base16;
 pub mod checksum_table;
 pub mod errors;
