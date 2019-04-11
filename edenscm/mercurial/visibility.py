@@ -22,6 +22,7 @@ def _convertfromobsolete(repo):
 
 
 def starttracking(repo):
+    """start tracking visibility information through visible mutable heads"""
     if "visibleheads" not in repo.storerequirements:
         with repo.lock():
             repo.storerequirements.add("visibleheads")
@@ -29,6 +30,7 @@ def starttracking(repo):
 
 
 def stoptracking(repo):
+    """stop tracking visibility information and revert to using obsmarkers"""
     if "visibleheads" in repo.storerequirements:
         with repo.lock():
             repo.storerequirements.discard("visibleheads")
@@ -162,38 +164,80 @@ class visibleheads(object):
 
 
 def add(repo, newnodes):
+    """add nodes to the visible set
+
+    Adds the given nodes to the set of visible nodes.  This includes any
+    ancestors of the commits that are not currently visible.
+    """
     if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
             repo._visibleheads.add(repo, newnodes, tr)
 
 
 def remove(repo, oldnodes):
+    """remove nodes from the visible set
+
+    Removes the given nodes from the set of visible nodes.  If any of the nodes
+    have any visible descendents, then those nodes are *not* removed.  That is,
+    the removed nodes must be head nodes, or ancestors of other nodes that are
+    being removed together.
+
+    If removal of the nodes causes any obsolete ancestors to become head nodes,
+    those obsolete ancestors are also removed.  This means given a situation
+    like the following:
+
+       o D'
+       |
+       o B
+       |
+       | o D
+       | |
+       | x C
+       |/
+       o A
+
+    If D is being rebased to D', `visibility.remove(D)` will cause both D and C
+    to be removed from the visible set.
+    """
     if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
             repo._visibleheads.remove(repo, oldnodes, tr)
 
 
 def phaseadjust(repo, tr, newdraft=None, newpublic=None):
+    """adjust the phase of visible nodes
+
+    Visibility tracking only cares about non public commits.  If a commit
+    transisitions between draft and public, this function must be called to
+    update the accounting.
+
+    Nodes that were draft and are now public must be provided in the
+    ``newpublic`` list.  Nodes that were public and are now draft must be
+    provided in the ``newdraft`` list.
+    """
     if tracking(repo):
         repo._visibleheads.phaseadjust(repo, tr, newdraft, newpublic)
 
 
 def heads(repo):
+    """returns the current set of visible mutable heads"""
     if tracking(repo):
         return repo._visibleheads.heads
 
 
 def invisiblerevs(repo):
-    """Returns the invisible mutable revs in this repo"""
+    """returns the invisible mutable revs in this repo"""
     if tracking(repo):
         return repo._visibleheads.invisiblerevs(repo)
 
 
 def tracking(repo):
+    """returns true if this repo is explicitly tracking visible mutable heads"""
     return "visibleheads" in repo.storerequirements
 
 
 def enabled(repo):
+    """returns true if this repo is using visibleheads to determine visibility"""
     # TODO(mbthomas): support bundlerepo
     from . import bundlerepo  # avoid import cycle
 
