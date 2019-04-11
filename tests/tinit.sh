@@ -89,3 +89,7 @@ tglog() {
 tglogp() {
   hg log -G -T "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
 }
+
+tglogm() {
+  hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
+}

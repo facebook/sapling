@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import errno
 
-from edenscm.mercurial import error, node
+from edenscm.mercurial import error, node, util
 
 
 def _convertfromobsolete(repo):
@@ -18,7 +18,7 @@ def _convertfromobsolete(repo):
         {("mutation", "enabled"): False, ("visibility", "enabled"): False},
         "convertfromobsolete",
     ):
-        return set(repo.unfiltered().nodes("heads((not public()) - hidden())"))
+        return list(repo.unfiltered().nodes("heads((not public()) - hidden())"))
 
 
 def starttracking(repo):
@@ -65,7 +65,7 @@ class visibleheads(object):
             lines = self.vfs("visibleheads").readlines()
             if not lines or lines[0].strip() != FORMAT_VERSION:
                 raise error.Abort("invalid visibleheads file format")
-            self.heads = set(node.bin(head.strip()) for head in lines[1:])
+            self.heads = [node.bin(head.strip()) for head in lines[1:]]
             self.dirty = False
         except IOError as err:
             if err.errno != errno.ENOENT:
@@ -80,7 +80,15 @@ class visibleheads(object):
         self.dirty = False
 
     def _updateheads(self, repo, newheads, tr):
-        newheads = set(newheads)
+        newheads = list(newheads)
+        # Remove heads that are not actually heads, and preserve the ordering
+        # in self.heads for heads that have not changed.
+        unfi = repo.unfiltered()
+        realnewheads = list(unfi.nodes("heads(%ln::%ln)", newheads, newheads))
+        realnewheadsset = set(realnewheads)
+        newheads = util.removeduplicates(
+            [head for head in self.heads if head in realnewheadsset] + realnewheads
+        )
         if self.heads != newheads:
             self.heads = newheads
             self.dirty = True
@@ -89,10 +97,11 @@ class visibleheads(object):
         if self.dirty:
             tr.addfilegenerator("visibility", ("visibleheads",), self._write)
 
+    def setvisibleheads(self, repo, newheads, tr):
+        self._updateheads(repo, newheads, tr)
+
     def add(self, repo, newnodes, tr):
-        unfi = repo.unfiltered()
-        newheads = self.heads.union(newnodes)
-        newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
+        newheads = set(self.heads).union(newnodes)
         self._updateheads(repo, newheads, tr)
 
     def remove(self, repo, oldnodes, tr):
@@ -101,7 +110,7 @@ class visibleheads(object):
         clparents = unfi.changelog.parents
         phasecache = unfi._phasecache
         newheads = set()
-        candidates = self.heads.copy()
+        candidates = set(self.heads)
         obsolete = set(repo.nodes("obsolete()"))
         oldnodes = set(oldnodes)
 
@@ -125,7 +134,6 @@ class visibleheads(object):
                             oldnodes.add(p)
             else:
                 newheads.add(n)
-        newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
         self._updateheads(repo, newheads, tr)
 
     def phaseadjust(self, repo, tr, newdraft=None, newpublic=None):
@@ -134,13 +142,11 @@ class visibleheads(object):
         The newdraft commits should remain visible.  The newpublic commits
         can be removed, as public commits are always visible.
         """
-        unfi = repo.unfiltered()
-        newheads = self.heads.copy()
+        newheads = set(self.heads)
         if newpublic:
             newheads.difference_update(newpublic)
         if newdraft:
             newheads.update(newdraft)
-        newheads = unfi.nodes("heads(%ln::%ln)", newheads, newheads)
         self._updateheads(repo, newheads, tr)
 
     def invisiblerevs(self, repo):
@@ -161,6 +167,16 @@ class visibleheads(object):
                     visible.append(p)
         self._invisiblerevs = hidden
         return hidden
+
+
+def setvisibleheads(repo, newheads):
+    """set the visible heads
+
+    Updates the set of visible mutable heads to be exactly those specified.
+    """
+    if tracking(repo):
+        with repo.lock(), repo.transaction("update-visibility") as tr:
+            repo._visibleheads.setvisibleheads(repo, newheads, tr)
 
 
 def add(repo, newnodes):

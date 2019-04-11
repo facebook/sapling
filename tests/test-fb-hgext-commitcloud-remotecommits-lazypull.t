@@ -141,9 +141,6 @@ Sync from the second client and `hg unamend` there
   remote:     1cf4a5a0e8fc  feature1
   #commitcloud commits synchronized
   finished in * (glob)
-  obs-cycle detected (happens for "divergence" cases like A obsoletes B; B obsoletes A)
-  #commitcloud current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
-  Please run `hg update` to go to the desired revision
 
   $ cd ..
 
@@ -153,9 +150,12 @@ Sync from the second client and `hg unamend` there
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
   finished in * (glob)
-  obs-cycle detected (happens for "divergence" cases like A obsoletes B; B obsoletes A)
-  #commitcloud current revision b68dd726c6c6 has been replaced remotely with multiple revisions
-  Please run `hg update` to go to the desired revision
+  #commitcloud current revision b68dd726c6c6 has been moved remotely to 1cf4a5a0e8fc
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
+  [commitcloud]
+  updateonmove = true
+  to your .hgrc config file
+  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ tglog
   @  2: b68dd726c6c6 'feature1 renamed'
   |
@@ -163,3 +163,42 @@ Sync from the second client and `hg unamend` there
   |/
   o  0: d20a80d4def3 'base'
   
+Amend twice, unamend, then unhide.  This causes a cycle in the obsgraph.
+  $ hg up -q 1cf4a5a0e8fc
+  $ hg amend -m "feature1 renamed2"
+  $ hg amend -m "feature1 renamed3"
+  $ hg unamend
+  $ hg unhide 74b668b6b779
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at cb45bbd0ae75
+  remote: pushing 1 commit:
+  remote:     cb45bbd0ae75  feature1 renamed2
+  backing up stack rooted at 74b668b6b779
+  remote: pushing 1 commit:
+  remote:     74b668b6b779  feature1 renamed3
+  #commitcloud commits synchronized
+  finished in * sec (glob)
+  #commitcloud current revision cb45bbd0ae75 has been replaced remotely with multiple revisions
+  Please run `hg update` to go to the desired revision
+
+Now cloud sync in the other client.  The cycle means we can't reliably pick a destination.
+  $ cd ../client2
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files (+1 heads)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files (+1 heads)
+  new changesets cb45bbd0ae75:74b668b6b779
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  #commitcloud commits synchronized
+  finished in * sec (glob)
+  #commitcloud current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
+  Please run `hg update` to go to the desired revision

@@ -564,7 +564,6 @@ def _docloudsync(ui, repo, cloudrefs=None, **opts):
             )
             repo._commitcloudskippendingobsmarkers = True
             obsolete.revive(cloudvisibleonly)
-            visibility.add(repo, [ctx.node() for ctx in cloudvisibleonly])
             repo._commitcloudskippendingobsmarkers = False
             localheads = _getheads(repo)
 
@@ -812,6 +811,26 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
         omittedheads = []
     omittedbookmarks = []
 
+    newvisibleheads = None
+    if visibility.tracking(repo):
+        localheads = _getheads(repo)
+        localheadsset = set(localheads)
+        cloudheads = [head for head in cloudrefs.heads if head not in omittedheads]
+        cloudheadsset = set(cloudheads)
+        if localheadsset != cloudheadsset:
+            oldvisibleheads = [
+                head for head in lastsyncstate.heads if head not in omittedheads
+            ]
+            newvisibleheads = util.removeduplicates(
+                oldvisibleheads + cloudheads + localheads
+            )
+            toremove = {
+                head
+                for head in oldvisibleheads
+                if head not in localheadsset or head not in cloudheadsset
+            }
+            newvisibleheads = [head for head in newvisibleheads if head not in toremove]
+
     if len(newheads) > 1:
         commitcloudutil.writesyncprogress(
             repo, "pulling %d new heads" % len(newheads), newheads=newheads
@@ -836,13 +855,18 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
             )
 
         # Replace the exchange pullobsolete function with one which adds the
-        # cloud obsmarkers to the repo.
+        # cloud obsmarkers to the repo and updates visibility to match the
+        # cloud heads.
         def _pullobsolete(orig, pullop):
             if "obsmarkers" in pullop.stepsdone:
                 return
             pullop.stepsdone.add("obsmarkers")
             tr = pullop.gettransaction()
             _mergeobsmarkers(pullop.repo, tr, cloudrefs.obsmarkers)
+            if newvisibleheads is not None:
+                visibility.setvisibleheads(
+                    pullop.repo, [nodemod.bin(n) for n in newvisibleheads]
+                )
 
         # Disable pulling of remotenames.
         def _pullremotenames(orig, repo, remote, bookmarks):
@@ -863,6 +887,10 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
                 _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
             )
             _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
+            if newvisibleheads is not None:
+                visibility.setvisibleheads(
+                    repo, [nodemod.bin(n) for n in newvisibleheads]
+                )
 
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(
@@ -1055,10 +1083,13 @@ def _forkname(ui, name, othernames):
 
 
 def _getheads(repo):
-    headsrevset = repo.set(
-        "heads(draft() & ::((draft() & not obsolete()) + bookmark()))"
-    )
-    return [ctx.hex() for ctx in headsrevset]
+    if visibility.enabled(repo):
+        return [nodemod.hex(n) for n in visibility.heads(repo)]
+    else:
+        headsrevset = repo.set(
+            "heads(draft() & ::((draft() & not obsolete()) + bookmark()))"
+        )
+        return [ctx.hex() for ctx in headsrevset]
 
 
 def _getbookmarks(repo):
@@ -1071,31 +1102,14 @@ def _getcommandandoptions(command):
     return cmd, opts
 
 
-def getsuccessorsnodes(repo, node):
-    successors = repo.obsstore.successors.get(node, ())
-    for successor in successors:
-        m = obsutil.marker(repo, successor)
-        for snode in m.succnodes():
-            if snode and snode != node:
-                yield snode
-
-
-def finddestinationnode(repo, node, visited=set()):
-    visited.add(node)
-    nodes = list(getsuccessorsnodes(repo, node))
-    if len(nodes) == 1:
-        node = nodes[0]
-        if node in visited:
-            repo.ui.status(
-                _(
-                    'obs-cycle detected (happens for "divergence" cases like A obsoletes B; B obsoletes A)\n'
-                )
-            )
-            return None
-        return finddestinationnode(repo, node)
+def finddestinationnode(repo, startnode):
+    nodes = list(repo.nodes("successors(%n) - obsolete()", startnode))
     if len(nodes) == 0:
-        return node
-    return None
+        return startnode
+    elif len(nodes) == 1:
+        return nodes[0]
+    else:
+        return None
 
 
 def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
