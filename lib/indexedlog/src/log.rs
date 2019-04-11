@@ -344,6 +344,12 @@ impl Log {
     ///
     /// Return the size of the updated primary log file in bytes.
     pub fn sync(&mut self) -> Fallible<u64> {
+        // Read-only fast path - no need to take directory lock.
+        if self.mem_buf.is_empty() {
+            *self = self.open_options.clone().open(&self.dir)?;
+            return Ok(self.meta.primary_len);
+        }
+
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
         let mut dir_file = open_dir(&self.dir)?;

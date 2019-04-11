@@ -32,6 +32,7 @@ pub struct LogRotate {
 const LATEST_FILE: &str = "latest";
 
 /// Options used to configure how a [`LogRotate`] is opened.
+#[derive(Clone)]
 pub struct OpenOptions {
     max_bytes_per_log: u64,
     max_log_count: u8,
@@ -190,6 +191,12 @@ impl LogRotate {
     ///
     /// Return the index of the latest [`Log`].
     pub fn sync(&mut self) -> Fallible<u8> {
+        // Read-only fast path - no need to take directory lock.
+        if self.writable_log().iter_dirty().nth(0).is_none() {
+            *self = self.open_options.clone().open(&self.dir)?;
+            return Ok(self.latest);
+        }
+
         let mut lock_file = open_dir(&self.dir)?;
         let _lock = ScopedFileLock::new(&mut lock_file, true)?;
 
