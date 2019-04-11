@@ -1004,6 +1004,8 @@ Test list of internal help commands
                  print merge state
    debugmutation
                  display the mutation history of a commit
+   debugmutationfromobsmarkers
+                 convert obsolescence markers to mutation records
    debugnamecomplete
                  complete "names" - tags, open branch names, bookmark names
    debugobsolete

@@ -20,6 +20,7 @@ import time
 from . import (
     debug,
     debugcheckoutidentifier,
+    debugmutation,
     debugstatus,
     debugstrip,
     eden,
@@ -81,6 +82,7 @@ readonly = registrar.command.readonly
 
 table.update(uncommit.cmdtable)
 table.update(debugcheckoutidentifier.command._table)
+table.update(debugmutation.command._table)
 table.update(debugstatus.command._table)
 table.update(debugstrip.command._table)
 table.update(eden.command._table)
