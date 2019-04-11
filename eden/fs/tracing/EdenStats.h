@@ -10,6 +10,7 @@
 #pragma once
 
 #include "common/stats/ThreadLocalStats.h"
+#include "eden/fs/eden-config.h"
 
 namespace folly {
 template <class T, class Tag, class AccessMode>
@@ -38,6 +39,9 @@ class EdenStats : public facebook::stats::ThreadLocalStatsT<
                       facebook::stats::TLStatsThreadSafe> {
  public:
   using Histogram = TLHistogram;
+#if defined(EDEN_HAVE_STATS)
+  using Timeseries = TLTimeseries;
+#endif
 
   explicit EdenStats();
 
@@ -78,6 +82,19 @@ class EdenStats : public facebook::stats::ThreadLocalStatsT<
   Histogram poll{createHistogram("fuse.poll_us")};
   Histogram forgetmulti{createHistogram("fuse.forgetmulti_us")};
 
+#if defined(EDEN_HAVE_STATS)
+  /**
+   * @see HgImporter
+   */
+  Timeseries hgImporterCatFile{createTimeseries("hg_importer.cat_file")};
+  Timeseries hgImporterFetchTree{createTimeseries("hg_importer.fetch_tree")};
+  Timeseries hgImporterManifest{createTimeseries("hg_importer.manifest")};
+  Timeseries hgImporterManifestNodeForCommit{
+      createTimeseries("hg_importer.manifest_node_for_commit")};
+  Timeseries hgImporterPrefetchFiles{
+      createTimeseries("hg_importer.prefetch_files")};
+#endif
+
   // Since we can potentially finish a request in a different
   // thread from the one used to initiate it, we use HistogramPtr
   // as a helper for referencing the pointer-to-member that we
@@ -98,6 +115,9 @@ class EdenStats : public facebook::stats::ThreadLocalStatsT<
 
  private:
   Histogram createHistogram(const std::string& name);
+#if defined(EDEN_HAVE_STATS)
+  Timeseries createTimeseries(const std::string& name);
+#endif
 };
 
 } // namespace eden

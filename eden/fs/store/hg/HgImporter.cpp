@@ -34,6 +34,7 @@
 
 #include <mutex>
 
+#include "eden/fs/eden-config.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -41,6 +42,7 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
@@ -253,8 +255,9 @@ class HgImporterEofError : public HgImporterError {
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
+    std::shared_ptr<ThreadLocalEdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
-    : repoPath_{repoPath}, store_{store} {
+    : repoPath_{repoPath}, store_{store}, stats_{std::move(stats)} {
   std::vector<string> cmd;
 
   // importHelperScript takes precedence if it was specified; this is used
@@ -705,6 +708,10 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
 
 HgImporter::TransactionID HgImporter::sendManifestRequest(
     folly::StringPiece revName) {
+#if defined(EDEN_HAVE_STATS)
+  stats_->get()->hgImporterManifest.addValue(1);
+#endif
+
   auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_MANIFEST);
@@ -724,6 +731,10 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
 
 HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
     folly::StringPiece revName) {
+#if defined(EDEN_HAVE_STATS)
+  stats_->get()->hgImporterManifestNodeForCommit.addValue(1);
+#endif
+
   auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_MANIFEST_NODE_FOR_COMMIT);
@@ -744,6 +755,10 @@ HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
 HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
     Hash revHash) {
+#if defined(EDEN_HAVE_STATS)
+  stats_->get()->hgImporterCatFile.addValue(1);
+#endif
+
   auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_CAT_FILE);
@@ -766,6 +781,10 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
 
 HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
+#if defined(EDEN_HAVE_STATS)
+  stats_->get()->hgImporterPrefetchFiles.addValue(1);
+#endif
+
   auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_PREFETCH_FILES);
@@ -821,6 +840,10 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
 HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash pathManifestNode) {
+#if defined(EDEN_HAVE_STATS)
+  stats_->get()->hgImporterFetchTree.addValue(1);
+#endif
+
   auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_FETCH_TREE);
@@ -925,9 +948,11 @@ const ImporterOptions& HgImporter::getOptions() const {
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
+    std::shared_ptr<ThreadLocalEdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},
+      stats_{std::move(stats)},
       importHelperScript_{importHelperScript} {}
 
 template <typename Fn>
@@ -995,7 +1020,8 @@ void HgImporterManager::fetchTree(
 
 HgImporter* HgImporterManager::getImporter() {
   if (!importer_) {
-    importer_ = make_unique<HgImporter>(repoPath_, store_, importHelperScript_);
+    importer_ =
+        make_unique<HgImporter>(repoPath_, store_, stats_, importHelperScript_);
   }
   return importer_.get();
 }

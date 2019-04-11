@@ -28,6 +28,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 using namespace facebook::eden;
 using namespace facebook::eden::path_literals;
@@ -155,7 +156,7 @@ class HgImportErrorTest : public ::testing::Test {
     localStore_ = make_shared<MemoryLocalStore>();
 
     importer_ = make_unique<ImporterType>(
-        testPath_, localStore_.get(), fakeImportHelper);
+        testPath_, localStore_.get(), stats_, fakeImportHelper);
     backingStore_ =
         make_shared<HgBackingStore>(importer_.get(), localStore_.get());
     objectStore_ = ObjectStore::create(localStore_, backingStore_);
@@ -180,6 +181,8 @@ class HgImportErrorTest : public ::testing::Test {
   std::shared_ptr<MemoryLocalStore> localStore_;
   std::shared_ptr<HgBackingStore> backingStore_;
   std::shared_ptr<ObjectStore> objectStore_;
+  std::shared_ptr<ThreadLocalEdenStats> stats_ =
+      std::make_shared<ThreadLocalEdenStats>();
 };
 
 AbsolutePath HgImportErrorTest::findFakeImportHelperPath() {

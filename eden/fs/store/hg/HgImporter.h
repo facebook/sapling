@@ -20,6 +20,7 @@
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -136,6 +137,7 @@ class HgImporter : public Importer {
   HgImporter(
       AbsolutePathPiece repoPath,
       LocalStore* store,
+      std::shared_ptr<ThreadLocalEdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   virtual ~HgImporter();
@@ -295,6 +297,7 @@ class HgImporter : public Importer {
 #endif
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
+  std::shared_ptr<ThreadLocalEdenStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
   /**
@@ -333,6 +336,7 @@ class HgImporterManager : public Importer {
   HgImporterManager(
       AbsolutePathPiece repoPath,
       LocalStore* store,
+      std::shared_ptr<ThreadLocalEdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash importFlatManifest(folly::StringPiece revName) override;
@@ -354,6 +358,7 @@ class HgImporterManager : public Importer {
 
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
+  std::shared_ptr<ThreadLocalEdenStats> const stats_;
   const std::optional<AbsolutePath> importHelperScript_;
 };
 

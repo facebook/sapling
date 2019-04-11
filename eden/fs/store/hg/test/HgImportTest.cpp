@@ -22,6 +22,7 @@
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
@@ -45,6 +46,8 @@ class HgImportTest : public ::testing::Test {
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + "repo"_pc};
   MemoryLocalStore localStore_;
+  std::shared_ptr<ThreadLocalEdenStats> stats_ =
+      std::make_shared<ThreadLocalEdenStats>();
 };
 
 } // namespace
@@ -69,7 +72,7 @@ TEST_F(HgImportTest, importTest) {
   auto commit1 = repo_.commit("Initial commit");
 
   // Import the root tree
-  HgImporter importer(repo_.path(), &localStore_);
+  HgImporter importer(repo_.path(), &localStore_, stats_);
   auto rootTreeHash = importer.importFlatManifest(commit1.toString());
   auto rootTree = localStore_.getTree(rootTreeHash).get(10s);
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
@@ -159,7 +162,7 @@ TEST_F(HgImportTest, importTest) {
 // HgImportTest).
 #ifndef EDEN_WIN
 TEST_F(HgImportTest, importerHelperExitsCleanly) {
-  HgImporter importer(repo_.path(), &localStore_);
+  HgImporter importer(repo_.path(), &localStore_, stats_);
   auto status = importer.debugStopHelperProcess();
   EXPECT_EQ(status.str(), "exited with status 0");
 }

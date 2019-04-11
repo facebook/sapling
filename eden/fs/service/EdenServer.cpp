@@ -1038,7 +1038,8 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         repoPath,
         localStore_.get(),
         serverState_->getThreadPool().get(),
-        serverState_);
+        serverState_,
+        getSharedStats());
   } else if (type == "git") {
 #ifndef EDEN_WIN
     const auto repoPath = realpath(name);

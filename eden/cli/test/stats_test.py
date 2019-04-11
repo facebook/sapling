@@ -11,6 +11,7 @@ import unittest
 from io import StringIO
 
 from .. import stats_print
+from ..stats import DiagInfoCounters, get_hg_importer_counters
 
 
 class StatsTest(unittest.TestCase):
@@ -97,3 +98,40 @@ key                1              2              3              4
         self.assertEqual("123.4 MB", stats_print.format_size(123_400_000))
         self.assertEqual("12 B", stats_print.format_size(12))
         self.assertEqual("0", stats_print.format_size(0))
+
+
+class HgImporterStatsTest(unittest.TestCase):
+    def test_call_counts_are_zero_if_no_data_was_logged(self) -> None:
+        counters: DiagInfoCounters = {}
+        table = get_hg_importer_counters(counters)
+        metrics = [
+            "cat_file",
+            "fetch_tree",
+            "manifest",
+            "manifest_node_for_commit",
+            "prefetch_files",
+        ]
+        for metric in metrics:
+            self.assertEqual(
+                table.get(metric), [0, 0, 0, 0], f"Metric {metric} should be zero"
+            )
+
+    def test_cat_file_call_counts_are_extracted_from_counters(self) -> None:
+        counters: DiagInfoCounters = {
+            "hg_importer.cat_file.count": 10,
+            "hg_importer.cat_file.count.3600": 9,
+            "hg_importer.cat_file.count.60": 1,
+            "hg_importer.cat_file.count.600": 7,
+        }
+        table = get_hg_importer_counters(counters)
+        self.assertEqual(table.get("cat_file"), [1, 7, 9, 10])
+
+    def test_table_includes_unknown_counters(self) -> None:
+        counters: DiagInfoCounters = {
+            "hg_importer.dog_file.count": 100,
+            "hg_importer.dog_file.count.3600": 90,
+            "hg_importer.dog_file.count.60": 10,
+            "hg_importer.dog_file.count.600": 70,
+        }
+        table = get_hg_importer_counters(counters)
+        self.assertEqual(table.get("dog_file"), [10, 70, 90, 100])

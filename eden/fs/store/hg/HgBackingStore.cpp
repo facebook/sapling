@@ -118,15 +118,19 @@ Importer& getThreadLocalImporter() {
  */
 class HgImporterThreadFactory : public folly::ThreadFactory {
  public:
-  HgImporterThreadFactory(AbsolutePathPiece repository, LocalStore* localStore)
+  HgImporterThreadFactory(
+      AbsolutePathPiece repository,
+      LocalStore* localStore,
+      std::shared_ptr<ThreadLocalEdenStats> stats)
       : delegate_("HgImporter"),
         repository_(repository),
-        localStore_(localStore) {}
+        localStore_(localStore),
+        stats_(std::move(stats)) {}
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
       threadLocalImporter.reset(
-          new HgImporterManager(repository_, localStore_));
+          new HgImporterManager(repository_, localStore_, stats_));
       func();
     });
   }
@@ -135,6 +139,7 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   folly::NamedThreadFactory delegate_;
   AbsolutePath repository_;
   LocalStore* localStore_;
+  std::shared_ptr<ThreadLocalEdenStats> stats_;
 };
 
 /**
@@ -233,7 +238,8 @@ HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
     UnboundedQueueExecutor* serverThreadPool,
-    std::shared_ptr<ReloadableConfig> config)
+    std::shared_ptr<ReloadableConfig> config,
+    std::shared_ptr<ThreadLocalEdenStats> stats)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
@@ -251,14 +257,17 @@ HgBackingStore::HgBackingStore(
            */
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<HgImporterThreadFactory>(repository, localStore))),
+          std::make_shared<HgImporterThreadFactory>(
+              repository,
+              localStore,
+              stats))),
       config_(config),
       serverThreadPool_(serverThreadPool) {
 #if EDEN_HAVE_HG_TREEMANIFEST
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   initializeDatapackImport(repository);
 #endif
-  HgImporter importer(repository, localStore);
+  HgImporter importer(repository, localStore, std::move(stats));
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;

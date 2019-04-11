@@ -12,12 +12,14 @@
 #include <folly/logging/xlog.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <memory>
 
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
@@ -29,6 +31,7 @@ using testing::HasSubstr;
 
 TEST(HgPrefetch, test) {
   MemoryLocalStore localStore;
+  auto stats = std::make_shared<ThreadLocalEdenStats>();
   TemporaryDirectory testDir("eden_hg_import_test");
   AbsolutePath testPath{testDir.path().string()};
 
@@ -175,7 +178,7 @@ usecunionstore=True
   // Build an HgBackingStore for this repository
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
   HgBackingStore store(
-      clientRepo.path(), &localStore, &resultThreadPool, nullptr);
+      clientRepo.path(), &localStore, &resultThreadPool, nullptr, stats);
 
   // Now test running prefetch
   // Build a list of file blob IDs to prefetch.

@@ -17,10 +17,12 @@
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
 #include "scm/hg/lib/revisionstore/RevisionStore.h"
 #endif
+#include "eden/fs/tracing/EdenStats.h"
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <memory>
 #include <optional>
 
 #if EDEN_HAVE_HG_TREEMANIFEST
@@ -58,7 +60,8 @@ class HgBackingStore : public BackingStore {
       AbsolutePathPiece repository,
       LocalStore* localStore,
       UnboundedQueueExecutor* serverThreadPool,
-      std::shared_ptr<ReloadableConfig> config);
+      std::shared_ptr<ReloadableConfig> config,
+      std::shared_ptr<ThreadLocalEdenStats>);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline

@@ -12,6 +12,8 @@
 #include <folly/container/Array.h>
 #include <chrono>
 
+#include "eden/fs/eden-config.h"
+
 using namespace folly;
 using namespace std::chrono;
 
@@ -37,6 +39,14 @@ EdenStats::Histogram EdenStats::createHistogram(const std::string& name) {
                    90,
                    99};
 }
+
+#if defined(EDEN_HAVE_STATS)
+EdenStats::Timeseries EdenStats::createTimeseries(const std::string& name) {
+  auto timeseries = Timeseries{this, name};
+  timeseries.exportStat(facebook::stats::COUNT);
+  return timeseries;
+}
+#endif
 
 void EdenStats::recordLatency(
     HistogramPtr item,

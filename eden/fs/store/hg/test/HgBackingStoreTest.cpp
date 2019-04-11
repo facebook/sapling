@@ -18,6 +18,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -45,7 +46,9 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
 
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>()};
-  HgImporter importer{repo.path(), localStore.get()};
+  std::shared_ptr<ThreadLocalEdenStats> stats{
+      std::make_shared<ThreadLocalEdenStats>()};
+  HgImporter importer{repo.path(), localStore.get(), stats};
   std::shared_ptr<HgBackingStore> backingStore{
       std::make_shared<HgBackingStore>(&importer, localStore.get())};
   std::shared_ptr<ObjectStore> objectStore{

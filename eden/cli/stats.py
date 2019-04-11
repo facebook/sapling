@@ -291,6 +291,61 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
     return table
 
 
+@stats_cmd(
+    "hgimporter",
+    "Show the number of requests to hg-debugedenimporthelper",
+    aliases=[
+        "debugedenimporthelper",
+        "hg-debugedenimporthelper",
+        "hg",
+        "hg-import",
+        "hg-importer",
+        "hgimport",
+    ],
+)
+class HgImporterCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        out = sys.stdout
+        stats_print.write_heading(
+            "Counts of HgImporter requests performed in EdenFS", out
+        )
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
+            counters = client.getCounters()
+
+        hg_importer_counters = get_hg_importer_counters(counters)
+        stats_print.write_table(hg_importer_counters, "HgImporter Request", out)
+
+        return 0
+
+
+def get_hg_importer_counters(counters: DiagInfoCounters) -> Table:
+    zero = [0, 0, 0, 0]
+    table: Table = {
+        "cat_file": zero,
+        "fetch_tree": zero,
+        "manifest": zero,
+        "manifest_node_for_commit": zero,
+        "prefetch_files": zero,
+    }
+
+    for key in counters:
+        segments = key.split(".")
+        if (
+            len(segments) == 3
+            and segments[0] == "hg_importer"
+            and segments[2] == "count"
+        ):
+            call_name = segments[1]
+            last_minute = counters[key + ".60"]
+            last_10_minutes = counters[key + ".600"]
+            last_hour = counters[key + ".3600"]
+            all_time = counters[key]
+            table[call_name] = [last_minute, last_10_minutes, last_hour, all_time]
+
+    return table
+
+
 @stats_cmd("thrift", "Show the number of received thrift calls")
 class ThriftCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:

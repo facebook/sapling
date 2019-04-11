@@ -19,6 +19,7 @@
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/options_util.h>
 #include <sysexits.h>
+#include <memory>
 #include <optional>
 
 #include "eden/fs/model/Tree.h"
@@ -26,6 +27,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
+#include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -126,9 +128,11 @@ int importTree(
     LocalStore* store,
     AbsolutePathPiece repoPath,
     StringPiece revName,
-    RelativePath subdir) {
+    RelativePath subdir,
+    std::shared_ptr<ThreadLocalEdenStats> stats) {
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
-  HgBackingStore backingStore(repoPath, store, &resultThreadPool, nullptr);
+  HgBackingStore backingStore(
+      repoPath, store, &resultThreadPool, nullptr, stats);
 
   printf(
       "Importing revision \"%s\" using tree manifest\n", revName.str().c_str());
@@ -194,17 +198,18 @@ int main(int argc, char* argv[]) {
 
   FaultInjector faultInjector(/*enabled=*/false);
   RocksDbLocalStore store(rocksPath, &faultInjector);
+  auto stats = std::make_shared<ThreadLocalEdenStats>();
 
   int returnCode = EX_OK;
   if (FLAGS_import_type == "flat") {
-    HgImporter importer(repoPath, &store);
+    HgImporter importer(repoPath, &store, stats);
     printf("Importing revision \"%s\" using flat manifest\n", revName.c_str());
     auto rootHash = importer.importFlatManifest(revName);
     printf("Imported root tree: %s\n", rootHash.toString().c_str());
   } else if (FLAGS_import_type == "tree") {
 #if EDEN_HAVE_HG_TREEMANIFEST
     RelativePath path{FLAGS_subdir};
-    returnCode = importTree(&store, repoPath, revName, path);
+    returnCode = importTree(&store, repoPath, revName, path, stats);
 #else // !EDEN_HAVE_HG_TREEMANIFEST
     fprintf(
         stderr, "error: treemanifest import is not supported by this build\n");
