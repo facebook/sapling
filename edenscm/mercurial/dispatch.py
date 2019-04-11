@@ -14,6 +14,7 @@ import os
 import pdb
 import re
 import signal
+import socket
 import sys
 import time
 import traceback
@@ -481,7 +482,16 @@ def dispatch(req):
                     output = perftrace.asciirender(trace)
                     if req.ui.configbool("tracing", "stderr"):
                         req.ui.warn("%s\n" % output)
-                    req.ui.log("perftrace", "Trace:\n%s\n" % output)
+
+                    key = "flat/perftrace-%(host)s-%(pid)s-%(time)s" % {
+                        "host": socket.gethostname(),
+                        "pid": os.getpid(),
+                        "time": time.time(),
+                    }
+                    req.ui.log(
+                        "perftrace", "Trace:\n%s\n" % output, key=key, payload=output
+                    )
+                    req.ui.log("perftracekey", "Trace key:%s\n" % key, perftracekey=key)
 
         req.ui._measuredtimes["command_duration"] = duration * 1000
         retmask = req.ui.configint("ui", "exitcodemask")
