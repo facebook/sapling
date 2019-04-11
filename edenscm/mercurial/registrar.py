@@ -154,6 +154,11 @@ class command(_funcregistrarbase):
     `recoverablewrite` is for write commands which can be recovered like commit.
     `readonly` is for commands which are read only.
 
+    The `subonly` argument defines whether the command requires a subcommand to
+    be called.  Any command may have subcommands, however if `subonly` is true
+    then there will be an error produced (and help text shown) if the user calls
+    the command without a subcommand.
+
     The signature of the decorated function looks like this:
         def cmd(ui[, repo] [, <args>] [, <options>])
 
