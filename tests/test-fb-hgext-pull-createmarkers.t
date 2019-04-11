@@ -175,10 +175,8 @@ changesets
   added 1 changesets with 0 changes to 1 files (+1 heads)
   new changesets a4884e89c0d5
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  abort: cannot obsolete public changeset: a4884e89c0d5
-  (see 'hg help phases' for details)
-  [255]
+  obsoleted 1 changesets
 
-BUG! Pullcreatemarkers tried to create markers for K1 -> KLanded and K2 -> KLanded,
-and autorels tried to make a KLanded -> KLanded obsmarker, which failed because KLanded
-is public.
+(Note: pullcreatemarkers created two markers, however only one of them was
+counted in the message as the first commit had previously been obsoleted
+and revived)

@@ -1200,7 +1200,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None, operation=N
         # Create the "Q -> Y" marker.
         for x in xs:
             y = relmap[x]
-            if y == p:
+            if y == p or y == q:
                 continue
             # There is no easy way to get a correct "operation", since it could
             # be a chain of actions. Use a name "copy" so it's different from
