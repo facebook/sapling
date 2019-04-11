@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+from collections import defaultdict
+
 from . import error, node as nodemod, phases, repoview, util
 from .rust.bindings import mutationstore
 
@@ -216,34 +218,102 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
         nextlevel = set()
 
 
-def isobsolete(repo, node):
-    """Returns true if the node is obsolete in the repository."""
-    if node not in repo:
-        return False
-    if not util.safehasattr(repo, "_mutationobsolete"):
-        repo._mutationobsolete = set()
-    obsolete = repo._mutationobsolete
-    if node in obsolete:
-        return True
-    unfi = repo.unfiltered()
-    clrev = unfi.changelog.rev
-    hiddenrevs = repoview.filterrevs(repo, "visible")
+class obsoletecache(object):
+    def __init__(self):
+        # Set of commits that are known to be obsolete for each filter level.
+        self.obsolete = defaultdict(set)
 
-    for succ in allsuccessors(repo, [node], startdepth=1):
-        # If any successor is already known to be obsolete, we can
-        # assume that the current node is obsolete without checking further.
-        if succ in obsolete:
+        # Set of commits that are known to be not obsolete for each filter level.
+        self.notobsolete = defaultdict(set)
+
+        # If true, then the full set of obsolete commits is known for this
+        # filter level, and is stored in ``self.obsolete``.
+        self.complete = defaultdict(bool)
+
+    def isobsolete(self, repo, node):
+        """Returns true if the node is obsolete in the repository."""
+        if node not in repo:
+            return False
+        obsolete = self.obsolete[repo.filtername]
+        if node in obsolete:
             return True
-        # The node is obsolete if any successor is visible in the repo.
-        if succ in unfi:
-            if clrev(succ) not in hiddenrevs:
+        if self.complete[repo.filtername] or node in self.notobsolete[repo.filtername]:
+            return False
+        unfi = repo.unfiltered()
+        clhasnode = unfi.changelog.hasnode
+        clrev = unfi.changelog.rev
+        hiddenrevs = repoview.filterrevs(repo, "visible")
+
+        for succ in allsuccessors(repo, [node], startdepth=1):
+            # If any successor is already known to be obsolete, we can
+            # assume that the current node is obsolete without checking further.
+            if succ in obsolete:
                 obsolete.add(node)
                 return True
-    return False
+            # The node is obsolete if any successor is visible in the normal
+            # filtered repo.
+            if clhasnode(succ) and clrev(succ) not in hiddenrevs:
+                obsolete.add(node)
+                return True
+        self.notobsolete[repo.filtername].add(node)
+        return False
+
+    def obsoletenodes(self, repo):
+        if self.complete[repo.filtername]:
+            return self.obsolete[repo.filtername]
+
+        # Testing each node separately will result in lots of repeated tests.
+        # Instead, we can do the following:
+        # - Compute all nodes that are obsolete because one of their closest
+        #   successors is visible.
+        # - Work back from these commits marking all of their predecessors as
+        #   obsolete.
+        # Note that "visible" here means "visible in a normal filtered repo",
+        # even if the filter for this repo includes other commits.
+        clhasnode = repo.changelog.hasnode
+        clrev = repo.changelog.rev
+        obsolete = self.obsolete[repo.filtername]
+        hiddenrevs = repoview.filterrevs(repo, "visible")
+        for node in repo.nodes("not public()"):
+            succsets = successorssets(repo, node, closest=True)
+            if succsets != [[node]]:
+                if any(
+                    clrev(succ) not in hiddenrevs
+                    for succset in succsets
+                    for succ in succset
+                ):
+                    obsolete.add(node)
+        candidates = set(obsolete)
+        seen = set(obsolete)
+        while candidates:
+            candidate = candidates.pop()
+            entry = lookupsplit(repo, candidate)
+            if entry:
+                for pred in entry.preds():
+                    if pred not in obsolete and pred not in seen:
+                        candidates.add(pred)
+                        seen.add(pred)
+                        if clhasnode(pred):
+                            obsolete.add(pred)
+        self.obsolete[repo.filtername] = frozenset(obsolete)
+        self.complete[repo.filtername] = True
+        # Since we know all obsolete commits, no need to remember which ones
+        # are not obsolete.
+        if repo.filtername in self.notobsolete:
+            del self.notobsolete[repo.filtername]
+        return self.obsolete[repo.filtername]
+
+
+def isobsolete(repo, node):
+    if not util.safehasattr(repo, "_mutationobsolete"):
+        repo._mutationobsolete = obsoletecache()
+    return repo._mutationobsolete.isobsolete(repo, node)
 
 
 def obsoletenodes(repo):
-    return {node for node in repo.nodes("not public()") if isobsolete(repo, node)}
+    if not util.safehasattr(repo, "_mutationobsolete"):
+        repo._mutationobsolete = obsoletecache()
+    return repo._mutationobsolete.obsoletenodes(repo)
 
 
 def clearobsoletecache(repo):
@@ -389,11 +459,13 @@ def successorssets(repo, startnode, closest=False, cache=None):
     def getsets(node):
         return lookupsuccessors(repo, node) or [[node]]
 
+    clhasnode = repo.changelog.hasnode
+
     succsets = [[startnode]]
     nextsuccsets = getsets(startnode)
     expanded = nextsuccsets != succsets
     while expanded:
-        if all(s in repo for succset in nextsuccsets for s in succset):
+        if all(clhasnode(s) for succset in nextsuccsets for s in succset):
             # We have found a set of successor sets that all contain visible
             # commits - this is a valid set to return.
             succsets = nextsuccsets
@@ -426,7 +498,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
                 [
                     _succproduct(
                         [
-                            [[succ]] if succ in repo else getsets(succ)
+                            [[succ]] if clhasnode(succ) else getsets(succ)
                             for succ in succset
                         ]
                     )
@@ -441,7 +513,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
             # visible.  Remove the invisible commits, and continue with what's
             # left.
             newnextsuccsets = [
-                [s for s in succset if s in repo] for succset in nextsuccsets
+                [s for s in succset if clhasnode(s)] for succset in nextsuccsets
             ]
             # Remove sets that are now empty.
             newnextsuccsets = [succset for succset in newnextsuccsets if succset]

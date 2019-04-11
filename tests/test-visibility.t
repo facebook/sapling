@@ -462,6 +462,16 @@ from as invisible commits.
   |/
   o  0: 426bada5c675 'A'
   
+Also check the obsolete revset is consistent.
+  $ tglogm -r "obsolete()"
+  x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |
+  ~
+  $ tglogm --hidden -r "obsolete()"
+  x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  |
+  ~
+
 Unhiding them reveals them as new commits and now the old ones show their relationship
 to the new ones.
   $ hg unhide ec992ff1fd78
