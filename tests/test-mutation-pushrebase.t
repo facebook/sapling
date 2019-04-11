@@ -3,15 +3,7 @@
   $ setconfig experimental.evolution=
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
-
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh = python "$RUNTESTDIR/dummyssh"
-  > [templatealias]
-  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as", pushrebase="Pushed as")
-  > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
-  > sl_mutation_descs = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{desc}", ", ")})', ' ')}"
-  > EOF
+  $ setconfig ui.ssh="python \"$RUNTESTDIR/dummyssh\""
 
 #if nostackpush
   $ setconfig pushrebase.trystackpush=false
@@ -249,40 +241,40 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
       6b21e03c2693b7ccaea8bbc2ed465bf0f20669ea amend by test at 1970-01-01T00:00:00 from:
         9407986f3421a1339098ddb424e7f4652626e70d
 
-  $ hg log -G -T '{node|short} {desc} {sl_mutations}' --hidden
-  @  7a5f07a2de1e c5 (amended)
+  $ tglogm --hidden
+  @  17: 7a5f07a2de1e 'c5 (amended)'
   |
-  o  4c6ed9931ef5 s5
+  o  16: 4c6ed9931ef5 's5'
   |
-  | x  6b21e03c2693 c5 (amended) (Pushed as 7a5f07a2de1e)
+  | x  15: 6b21e03c2693 'c5 (amended)'  (Rewritten using pushrebase into 7a5f07a2de1e)
   |/
-  | x  9407986f3421 c5 (Amended as 6b21e03c2693)
+  | x  14: 9407986f3421 'c5'  (Rewritten using amend into 6b21e03c2693)
   |/
-  o  56ff167c1749 c4 (amended)
+  o  13: 56ff167c1749 'c4 (amended)'
   |
-  o  b6dffa66e388 s4
+  o  12: b6dffa66e388 's4'
   |
-  o  34295f2adc09 s3
+  o  11: 34295f2adc09 's3'
   |
-  | x  254a42c0dcef c4 (amended) (Pushed as 56ff167c1749)
+  | x  10: 254a42c0dcef 'c4 (amended)'  (Rewritten using pushrebase into 56ff167c1749)
   |/
-  | x  3f1b3b3d517f c4 (Amended as 254a42c0dcef)
+  | x  9: 3f1b3b3d517f 'c4'  (Rewritten using amend into 254a42c0dcef)
   |/
-  o  5cfa12ac15ac c3
+  o  8: 5cfa12ac15ac 'c3'
   |
-  o  bc165ecd11df c2 (amended)
+  o  7: bc165ecd11df 'c2 (amended)'
   |
-  o  466bbcaf803c c1
+  o  6: 466bbcaf803c 'c1'
   |
-  o  1f850c9f0d59 s2
+  o  5: 1f850c9f0d59 's2'
   |
-  o  06569a64c141 s1
+  o  4: 06569a64c141 's1'
   |
-  | x  e52ebff26308 c2 (amended) (Pushed as bc165ecd11df)
+  | x  3: e52ebff26308 'c2 (amended)'  (Rewritten using pushrebase into bc165ecd11df)
   | |
-  | | x  f558c5855324 c2 (Amended as e52ebff26308)
+  | | x  2: f558c5855324 'c2'  (Rewritten using amend into e52ebff26308)
   | |/
-  | x  b0c40d8745c8 c1 (Pushed as 466bbcaf803c)
+  | x  1: b0c40d8745c8 'c1'  (Rewritten using pushrebase into 466bbcaf803c)
   |/
-  o  a7d6a32ae4ec base
+  o  0: a7d6a32ae4ec 'base'
   

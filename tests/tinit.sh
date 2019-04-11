@@ -91,5 +91,5 @@ tglogp() {
 }
 
 tglogm() {
-  hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
+  hg log -G -T "{rev}: {node|short} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
 }

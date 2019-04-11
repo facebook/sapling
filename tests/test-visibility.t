@@ -3,11 +3,6 @@
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
   $ setconfig hint.ack=undo
-  $ cat >> $HGRCPATH <<EOF
-  > [templatealias]
-  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as")
-  > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
-  > EOF
 
 Useful functions
   $ mkcommit()
@@ -15,11 +10,6 @@ Useful functions
   >   echo "$1" > "$1"
   >   hg add "$1"
   >   hg commit -m "$1"
-  > }
-
-  $ tglogm()
-  > {
-  >   hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {sl_mutations}" "$@"
   > }
 
 Setup
@@ -328,7 +318,7 @@ Stack navigation and rebases
   | |
   | o  2: 26805aba1e60 'C'
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -345,9 +335,9 @@ Stack navigation and rebases
   | |
   | o  3: f585351a92f8 'D'
   | |
-  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -364,11 +354,11 @@ Stack navigation and rebases
   |
   | o  4: 9bc730a19041 'E'
   | |
-  | x  3: f585351a92f8 'D'  (Rebased to 1d30cc995ea7)
+  | x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -401,11 +391,11 @@ Undo
   |
   | o  4: 9bc730a19041 'E'
   | |
-  | x  3: f585351a92f8 'D'  (Rebased to 1d30cc995ea7)
+  | x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -420,9 +410,9 @@ Undo
   | |
   | o  3: f585351a92f8 'D'
   | |
-  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -437,7 +427,7 @@ Undo
   | |
   | o  2: 26805aba1e60 'C'
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -458,17 +448,17 @@ from as invisible commits.
   | |
   | o  2: 26805aba1e60 'C'
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
 Also check the obsolete revset is consistent.
   $ tglogm -r "obsolete()"
-  x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |
   ~
   $ tglogm --hidden -r "obsolete()"
-  x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |
   ~
 
@@ -484,13 +474,13 @@ to the new ones.
   |
   @  5: e60094faeb72 'B amended'
   |
-  | x  4: 9bc730a19041 'E'  (Rebased to ec992ff1fd78)
+  | x  4: 9bc730a19041 'E'  (Rewritten using rebase into ec992ff1fd78)
   | |
-  | x  3: f585351a92f8 'D'  (Rebased to 1d30cc995ea7)
+  | x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'  (Rebased to 23910a6fe564)
+  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Amended as e60094faeb72)
+  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
   
@@ -517,9 +507,9 @@ Test that hiddenoverride has no effect on pinning hidden revisions.
   |
   o  5: 05eb30556340 'E'
   |
-  | @  2: 917a077edb8d 'B'  (Rewritten into a77c932a84af)
+  | @  2: 917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
   | |
-  | x  1: ac2f7407182b 'A'  (Rewritten into 05eb30556340)
+  | x  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
   |/
   o  0: 48b9aae0607f 'Z'
   

@@ -1,16 +1,5 @@
   $ enable amend rebase directaccess
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
-  $ cat >> $HGRCPATH <<EOF
-  > [templatealias]
-  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as")
-  > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
-  > EOF
-
-Useful functions
-  $ tglogm()
-  > {
-  >   hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {sl_mutations}" "$@"
-  > }
 
 Test upgrading from obsmarker-based visibility to explicitly tracked visibility.
 
@@ -40,9 +29,9 @@ a revision to test that.
   |
   o  5: 05eb30556340 'E'
   |
-  | x  2: 917a077edb8d 'B'  (Rewritten into a77c932a84af)
+  | x  2: 917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
   | |
-  | x  1: ac2f7407182b 'A'  (Rewritten into 05eb30556340)
+  | x  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
   |/
   o  0: 48b9aae0607f 'Z'
   
@@ -56,9 +45,9 @@ Enable visibility tracking.
   |
   o  5: 05eb30556340 'E'
   |
-  | x  2: 917a077edb8d 'B'  (Rewritten into a77c932a84af)
+  | x  2: 917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
   | |
-  | x  1: ac2f7407182b 'A'  (Rewritten into 05eb30556340)
+  | x  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
   |/
   o  0: 48b9aae0607f 'Z'
   
@@ -81,7 +70,7 @@ that are hidden are only temporarily revealed when updated to.
   |
   o  5: 05eb30556340 'E'
   |
-  | @  3: f102e5df2a1d 'C'  (Amended as 05eb30556340)
+  | @  3: f102e5df2a1d 'C'  (Rewritten using amend into 05eb30556340)
   |/
   o  0: 48b9aae0607f 'Z'
   
@@ -98,7 +87,7 @@ that are hidden are only temporarily revealed when updated to.
   |
   o  5: 05eb30556340 'E'
   |
-  | x  3: f102e5df2a1d 'C'  (Amended as 05eb30556340)
+  | x  3: f102e5df2a1d 'C'  (Rewritten using amend into 05eb30556340)
   |/
   @  0: 48b9aae0607f 'Z'
   
@@ -110,7 +99,7 @@ We can also downgrade permanently.
   |
   o  5: 05eb30556340 'E'
   |
-  | x  3: f102e5df2a1d 'C'  (Amended as 05eb30556340)
+  | x  3: f102e5df2a1d 'C'  (Rewritten using amend into 05eb30556340)
   |/
   @  0: 48b9aae0607f 'Z'
   
@@ -122,7 +111,7 @@ Re-upgrading includes the pinned revisions.
   |
   o  5: 05eb30556340 'E'
   |
-  | x  3: f102e5df2a1d 'C'  (Amended as 05eb30556340)
+  | x  3: f102e5df2a1d 'C'  (Rewritten using amend into 05eb30556340)
   |/
   @  0: 48b9aae0607f 'Z'
   

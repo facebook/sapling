@@ -6,9 +6,8 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [templatealias]
-  > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as")
-  > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"
-  > sl_mutation_descs = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{desc}", ", ")})', ' ')}"
+  > mutation_nodes = "{join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}"
+  > mutation_descs = "{join(mutations % '(Rewritten using {operation} into {join(successors % \'{desc|firstline}\', \', \')})', ' ')}"
   > EOF
   $ newrepo
   $ echo "base" > base
@@ -315,26 +314,26 @@ Unhide some old commits and show their mutations in the log
   $ hg unhide -q 5dbe0bac3aa7743362af3b46d69ea19ea84fd35a
   $ hg unhide -q 6d60953c6009fdd3d6bd870ad37c7f48ea6d1311
   $ hg unhide -q c5d0fa8770bdde6ef311cc640a78a2f686be28b4
-  $ hg log -G -T "{node} {sl_mutations}\n" -r "all()"
-  @  3c3b86a5a351839b5fe6905587497121b4b05777
+  $ tglogm
+  @  45: 3c3b86a5a351 'c9'
   |
-  o  dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
+  o  44: dd5d0e1bc12e 'c6'
   |
-  o  1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+  o  39: 1851fa2d6ef0 'c2'
   |
-  | x  5dbe0bac3aa7743362af3b46d69ea19ea84fd35a (Rewritten into 1851fa2d6ef0)
+  | x  35: 5dbe0bac3aa7 'c2'  (Rewritten using rewrite into 1851fa2d6ef0)
   |/
-  | x  07f94070ed0943f8108119a726522ec4879ed36a (Rewritten into 5dbe0bac3aa7)
+  | x  19: 07f94070ed09 'c4'  (Rewritten using rewrite into 5dbe0bac3aa7)
   | |
-  | x  f05234144e37d59b175fa4283563aac4dfe81ec0 (Rewritten into 5dbe0bac3aa7)
+  | x  18: f05234144e37 'c2'  (Rewritten using rewrite into 5dbe0bac3aa7)
   |/
-  o  cc809964b02448cb4c84c772b9beba99d4159cff
+  o  8: cc809964b024 'c1 (amended 8)'
   |
-  | x  6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 (Rewritten into cc809964b024)
+  | x  2: 6d60953c6009 'c1 (amended 2)'  (Rewritten using rewrite into cc809964b024)
   |/
-  | x  c5d0fa8770bdde6ef311cc640a78a2f686be28b4 (Amended as 6d60953c6009)
+  | x  1: c5d0fa8770bd 'c1'  (Rewritten using amend into 6d60953c6009)
   |/
-  o  d20a80d4def38df63a4b330b7fb688f3d4cae1e3
+  o  0: d20a80d4def3 'base'
   
 Histedit with exec that amends in between folds
 
@@ -440,24 +439,24 @@ Drawdag
   >     A
   > EOS
 
-  $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node} {sl_mutations}'
-  -  I b2faf047aa50279686b1635bfad505cd51300b3c
+  $ tglogm
+  -  8: b2faf047aa50 'I'
   |
-  o  H a1093b439e1bc272490fd1749b526a3f1463a41e
+  o  7: a1093b439e1b 'H'
   |
-  | o  G dd319aacbb516094646b9ee5a24a942e62110121
+  | o  6: dd319aacbb51 'G'
   | |
-  | o  F 64a8289d249234b9886244d379f15e6b650b28e3
+  | o  5: 64a8289d2492 'F'
   | |
-  | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
-  |/
-  | x  D 17d61397e601357ae1dd94c787f794ff95aa2d59 (Rebased to a1093b439e1b)
-  | |
-  | | x  C 26805aba1e600a82e93661149f2313866a221a7b (Rebased to 17d61397e601)
+  | | x  4: 17d61397e601 'D'  (Rewritten using rebase into a1093b439e1b)
+  | | |
+  | o |  3: 7fb047a69f22 'E'
+  |/ /
+  | | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 17d61397e601)
   | |/
-  | x  B 112478962961147124edd43549aedd1a335e44bf (Split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
+  | x  1: 112478962961 'B'  (Rewritten using split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
   |/
-  o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  o  0: 426bada5c675 'A'
   
   $ hg debugmutation "all()"
     426bada5c67598ca65036d57d9e4b64b0c1ce7a0
@@ -910,16 +909,16 @@ Many splits and folds:
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
       d91873bbc3e2 096075241d66 c3cd5a5aad51
       d91873bbc3e2 444227ba9301 114f9718bb14
-  $ hg log -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  $ hg log -r "all()" -T "{desc} {mutation_descs}\n"
   Z 
-  A (Split into H, I, Q, R) (Split into H, I, L) (Split into D, E, F, G)
-  H (Folded into K)
+  A (Rewritten using split into H, I, Q, R) (Rewritten using split into H, I, L) (Rewritten using split into D, E, F, G)
+  H (Rewritten using fold into K)
   D 
-  I (Folded into K)
+  I (Rewritten using fold into K)
   E 
   K 
   F 
-  L (Split into M, O)
+  L (Rewritten using split into M, O)
   Q 
   G 
   M 
@@ -949,7 +948,7 @@ Rebase of amended commit
   rebasing 7:9df062337510 "C2"
   rebasing 9:1c7520bf51f0 "E"
   rebasing 10:80102b688282 "C4" (tip)
-  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  C4
   |
   | o  E
@@ -983,12 +982,12 @@ Rebase of folded commit
   >   |/
   >   Z
   > EOS
-  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  F
   |
   | o  D
   | |
-  | x  C (Folded into F)
+  | x  C (Rewritten using fold into F)
   |/
   o  B
   |
@@ -1003,7 +1002,7 @@ Rebase of folded commit
   rebasing 4:b45c90359798 "C"
   rebasing 5:01f26f1a10b2 "D"
   rebasing 7:e7dba301a292 "F" (tip)
-  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  F
   |
   | o  D
@@ -1034,7 +1033,7 @@ Metaedit automatic rebase of amended commit
   >    A
   > EOS
   $ hg metaedit -r $B -m B1
-  $ hg log -G -T "{desc} {sl_mutation_descs}\n" -r "all()"
+  $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  C2
   |
   | o  D
@@ -1078,33 +1077,27 @@ Absorb
   26805ab C
   2 of 2 chunks applied
   $ 
-  $ hg log -G -T "{node|short} {desc} {sl_mutations}\n" -r "all()"
-  @  426a0380e890 E
+  $ tglogm
+  @  7: 426a0380e890 'E'
   |
-  o  d36b27fd01db D
+  o  6: d36b27fd01db 'D'
   |
-  o  fe174cefb48c C
+  o  5: fe174cefb48c 'C'
   |
-  o  112478962961 B
+  o  1: 112478962961 'B'
   |
-  o  426bada5c675 A
+  o  0: 426bada5c675 'A'
   
-  $ hg log -G -T "{node|short} {desc} {sl_mutations}\n" -r "all()" --hidden
-  @  426a0380e890 E
+  $ tglogm
+  @  7: 426a0380e890 'E'
   |
-  o  d36b27fd01db D
+  o  6: d36b27fd01db 'D'
   |
-  o  fe174cefb48c C
+  o  5: fe174cefb48c 'C'
   |
-  | x  9bc730a19041 E (Rewritten using absorb into 426a0380e890)
-  | |
-  | x  f585351a92f8 D (Rewritten using absorb into d36b27fd01db)
-  | |
-  | x  26805aba1e60 C (Rewritten using absorb into fe174cefb48c)
-  |/
-  o  112478962961 B
+  o  1: 112478962961 'B'
   |
-  o  426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 
 Landing
@@ -1129,7 +1122,7 @@ Simulate pushrebase happening remotely and stripping the mutation information.
 If we unhide B, we don't know that it was landed.
 
   $ hg unhide $B
-  $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
   |
   | o  B
@@ -1144,10 +1137,10 @@ commit cheaply.  Normally the pullcreatemarkers and pushrebase extensions will d
 for us, but for this test we do it manually.
 
   $ hg debugsh --hidden -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, m.mutation.ORIGIN_SYNTHETIC, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
-  $ hg log -G -r "all()" -T "{desc} {sl_mutation_descs}\n"
+  $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
   |
-  | x  B (Landed as X)
+  | x  B (Rewritten using land into X)
   | |
   o |  Y
   |/
@@ -1179,19 +1172,19 @@ Test pullcreatemarkers can do this
   $ hg phase -p .
   $ cd ../client1
   $ hg pull -q
-  $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {sl_mutations}\n" -r "all()"
+  $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {mutation_nodes}\n" -r "all()"
   o  ec3b92425d5b file1 D1234
   |
   o  27eaac8d0756 file2 D2345
   |
   @  d20a80d4def3 base
   
-  $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {sl_mutations}\n" -r "all()" --hidden
+  $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {mutation_nodes}\n" -r "all()" --hidden
   o  ec3b92425d5b file1 D1234
   |
   o  27eaac8d0756 file2 D2345
   |
-  | x  f07a12cd100a file1 D1234 (Landed as ec3b92425d5b)
+  | x  f07a12cd100a file1 D1234 (Rewritten using land into ec3b92425d5b)
   |/
   @  d20a80d4def3 base
   
