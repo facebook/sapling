@@ -108,7 +108,7 @@ def getmarkersfromdrafts(repo, landeddiffs):
     tocreate = []
     unfiltered = repo.unfiltered()
 
-    for rev in unfiltered.revs("draft() - obsolete()"):
+    for rev in unfiltered.revs("draft() - obsolete() - hidden()"):
         rev = unfiltered[rev]
         diff = getdiff(rev)
 
