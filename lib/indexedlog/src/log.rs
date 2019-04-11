@@ -215,6 +215,27 @@ pub struct OpenOptions {
     index_defs: Vec<IndexDef>,
     pub(crate) create: bool,
     checksum_type: ChecksumType,
+    flush_filter: Option<FlushFilterFunc>,
+}
+
+type FlushFilterFunc = fn(&FlushFilterContext, &[u8]) -> Fallible<FlushFilterOutput>;
+
+/// Potentially useful context for the flush filter function.
+pub struct FlushFilterContext<'a> {
+    /// The [`log`] being flushed.
+    pub log: &'a Log,
+}
+
+/// Output of a flush filter.
+pub enum FlushFilterOutput {
+    /// Insert the entry as is.
+    Keep,
+
+    /// Remove this entry.
+    Drop,
+
+    /// Replace this entry with the specified new content.
+    Replace(Vec<u8>),
 }
 
 // Some design notes:
@@ -331,6 +352,28 @@ impl Log {
 
         // Step 1: Reload metadata to get the latest view of the files.
         let mut meta = Self::load_meta(&self.dir, false)?;
+        let changed = self.meta != meta;
+
+        if changed && self.open_options.flush_filter.is_some() {
+            let filter = self.open_options.flush_filter.unwrap();
+
+            // Start with a clean log that does not have dirty entries.
+            let mut log = self.open_options.clone().open(&self.dir)?;
+
+            for entry in self.iter_dirty() {
+                let content = entry?;
+                let context = FlushFilterContext { log: &log };
+                // Re-insert entries to that clean log.
+                match filter(&context, content)? {
+                    FlushFilterOutput::Drop => (),
+                    FlushFilterOutput::Keep => log.append(content)?,
+                    FlushFilterOutput::Replace(content) => log.append(content)?,
+                }
+            }
+
+            // Replace "self" so we can continue flushing the updated data.
+            *self = log;
+        }
 
         // Step 2: Append to the primary log.
         let primary_path = self.dir.join(PRIMARY_FILE);
@@ -817,6 +860,7 @@ impl OpenOptions {
             create: false,
             index_defs: Vec::new(),
             checksum_type: ChecksumType::Auto,
+            flush_filter: None,
         }
     }
 
@@ -852,6 +896,18 @@ impl OpenOptions {
     /// See [`ChecksumType`] for details.
     pub fn checksum_type(mut self, checksum_type: ChecksumType) -> Self {
         self.checksum_type = checksum_type;
+        self
+    }
+
+    /// Sets the flush filter function.
+    ///
+    /// The function will be called at [`Log::flush`] time, if there are
+    /// changes to the `log` since `open` (or last `flush`) time.
+    ///
+    /// The filter function can be used to avoid writing content that already
+    /// exists in the [`Log`], or rewrite content as needed.
+    pub fn flush_filter(mut self, flush_filter: Option<FlushFilterFunc>) -> Self {
+        self.flush_filter = flush_filter;
         self
     }
 
@@ -1457,6 +1513,51 @@ mod tests {
         assert_eq!(found_keys1, expected_keys1);
         assert_eq!(found_keys2, expected_keys2);
         assert_eq!(log.iter().count(), log.lookup(2, b"x").unwrap().count());
+    }
+
+    #[test]
+    fn test_flush_filter() {
+        let dir = tempdir().unwrap();
+
+        let write_by_log2 = || {
+            let mut log2 = OpenOptions::new()
+                .create(true)
+                .flush_filter(Some(|_, _| panic!("log2 flush filter should not run")))
+                .open(dir.path())
+                .unwrap();
+            log2.append(b"log2").unwrap();
+            log2.flush().unwrap();
+        };
+
+        let mut log1 = OpenOptions::new()
+            .create(true)
+            .flush_filter(Some(|ctx: &FlushFilterContext, bytes: &[u8]| {
+                // "new" changes by log2 are visible.
+                assert_eq!(ctx.log.iter().nth(0).unwrap().unwrap(), b"log2");
+                Ok(match bytes.len() {
+                    1 => FlushFilterOutput::Drop,
+                    2 => FlushFilterOutput::Replace(b"cc".to_vec()),
+                    4 => return Err(data_error("length 4 is unsupported!")),
+                    _ => FlushFilterOutput::Keep,
+                })
+            }))
+            .open(dir.path())
+            .unwrap();
+
+        log1.append(b"a").unwrap(); // dropped
+        log1.append(b"bb").unwrap(); // replaced to "cc"
+        log1.append(b"ccc").unwrap(); // kept
+        write_by_log2();
+        log1.flush().unwrap();
+
+        assert_eq!(
+            log1.iter().collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![&b"log2"[..], b"cc", b"ccc"]
+        );
+
+        log1.append(b"dddd").unwrap(); // error
+        write_by_log2();
+        log1.flush().unwrap_err();
     }
 
     quickcheck! {
