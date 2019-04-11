@@ -136,6 +136,7 @@ Show debug commands if there are no other candidates
   debugtreestate
   debugupdatecaches
   debugupgraderepo
+  debugvisibility
   debugwalk
   debugwireargs
 
@@ -331,6 +332,7 @@ Show all commands + options
   debugtreestate: 
   debugupdatecaches: 
   debugupgraderepo: optimize, run
+  debugvisibility: 
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   files: rev, print0, include, exclude, template

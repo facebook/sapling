@@ -1,14 +1,7 @@
   $ enable amend rebase histedit fbhistedit
-
-We need obsmarkers for now, to allow unstable commits
-  $ enable obsstore
-
-  $ cat >> $HGRCPATH <<EOF
-  > [mutation]
-  > record=true
-  > enabled=true
-  > date=0 0
-  > EOF
+  $ setconfig experimental.evolution=
+  $ setconfig visibility.enabled=true
+  $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

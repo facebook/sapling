@@ -774,7 +774,7 @@ class localrepository(object):
 
     @storecache("visibleheads")
     def _visibleheads(self):
-        return visibility.makevisibleheads(self.ui, self)
+        return visibility.visibleheads(self.ui, self)
 
     @storecache("obsstore")
     def obsstore(self):
@@ -2656,4 +2656,9 @@ def newreporequirements(repo):
 
 
 def newrepostorerequirements(repo):
-    return set()
+    ui = repo.ui
+    requirements = set()
+    if ui.configbool("visibility", "enabled"):
+        requirements.add("visibleheads")
+
+    return requirements

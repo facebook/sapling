@@ -1,6 +1,6 @@
   $ enable amend rebase undo
   $ setconfig experimental.evolution=
-  $ setconfig visibility.tracking=on
+  $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
   $ setconfig hint.ack=undo
   $ cat >> $HGRCPATH <<EOF

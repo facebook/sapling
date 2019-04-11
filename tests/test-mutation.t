@@ -1,16 +1,10 @@
   $ enable amend rebase histedit fbhistedit phabdiff
-  $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\""
+  $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\"" ui.interactive=true
   $ setconfig experimental.evolution=
+  $ setconfig visibility.enabled=true
+  $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
   $ cat >> $HGRCPATH <<EOF
-  > [mutation]
-  > record=true
-  > enabled=true
-  > date=0 0
-  > [visibility]
-  > tracking=on
-  > [ui]
-  > interactive = true
   > [templatealias]
   > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as")
   > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"

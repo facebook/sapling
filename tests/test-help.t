@@ -1047,6 +1047,8 @@ Test list of internal help commands
                  warm all known caches in the repository
    debugupgraderepo
                  upgrade a repository to use different features
+   debugvisibility
+                 control visibility tracking
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)

@@ -9,16 +9,32 @@ from __future__ import absolute_import
 
 import errno
 
-from edenscm.mercurial import error, node, util
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial import error, node
 
 
 def _convertfromobsolete(repo):
     """convert obsolete markers into a set of visible heads"""
     with repo.ui.configoverride(
-        {("mutation", "enabled"): False}, "convertfromobsolete"
+        {("mutation", "enabled"): False, ("visibility", "enabled"): False},
+        "convertfromobsolete",
     ):
-        return set(repo.unfiltered().nodes("heads((not public()) - obsolete())"))
+        return set(repo.unfiltered().nodes("heads((not public()) - hidden())"))
+
+
+def starttracking(repo):
+    if "visibleheads" not in repo.storerequirements:
+        with repo.lock():
+            repo.storerequirements.add("visibleheads")
+            repo._writestorerequirements()
+
+
+def stoptracking(repo):
+    if "visibleheads" in repo.storerequirements:
+        with repo.lock():
+            repo.storerequirements.discard("visibleheads")
+            repo._writestorerequirements()
+    if repo.svfs.lexists("visibleheads"):
+        repo.svfs.tryunlink("visibleheads")
 
 
 # Supported file format version.
@@ -145,71 +161,42 @@ class visibleheads(object):
         return hidden
 
 
-def makevisibleheads(ui, repo):
-    tracking = ui.config("visibility", "tracking", "auto")
-    if tracking != "auto":
-        trackingbool = util.parsebool(tracking)
-        if trackingbool is None:
-            raise error.ConfigError(
-                _("visibility.tracking not valid ('%s' is not 'auto' or boolean)")
-                % tracking
-            )
-        if trackingbool:
-            if "visibleheads" not in repo.storerequirements:
-                repo.storerequirements.add("visibleheads")
-                with repo.lock():
-                    repo._writestorerequirements()
-        else:
-            if "visibleheads" in repo.storerequirements:
-                repo.storerequirements.remove("visibleheads")
-                with repo.lock():
-                    repo._writestorerequirements()
-            if repo.svfs.lexists("visibleheads"):
-                repo.svfs.tryunlink("visibleheads")
-    if "visibleheads" in repo.storerequirements:
-        return visibleheads(ui, repo)
-    else:
-        return None
-
-
 def add(repo, newnodes):
-    vh = repo._visibleheads
-    if vh is not None:
+    if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
-            vh.add(repo, newnodes, tr)
+            repo._visibleheads.add(repo, newnodes, tr)
 
 
 def remove(repo, oldnodes):
-    vh = repo._visibleheads
-    if vh is not None:
+    if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
-            vh.remove(repo, oldnodes, tr)
+            repo._visibleheads.remove(repo, oldnodes, tr)
 
 
 def phaseadjust(repo, tr, newdraft=None, newpublic=None):
-    vh = repo._visibleheads
-    if vh is not None:
-        vh.phaseadjust(repo, tr, newdraft, newpublic)
+    if tracking(repo):
+        repo._visibleheads.phaseadjust(repo, tr, newdraft, newpublic)
 
 
 def heads(repo):
-    vh = repo._visibleheads
-    if vh is not None:
-        return vh.heads
-    return None
+    if tracking(repo):
+        return repo._visibleheads.heads
 
 
 def invisiblerevs(repo):
     """Returns the invisible mutable revs in this repo"""
-    vh = repo._visibleheads
-    if vh is not None:
-        return vh.invisiblerevs(repo)
-    return None
+    if tracking(repo):
+        return repo._visibleheads.invisiblerevs(repo)
 
 
 def tracking(repo):
-    return repo._visibleheads is not None
+    return "visibleheads" in repo.storerequirements
 
 
 def enabled(repo):
-    return tracking(repo) and not repo.ui.configbool("visibility", "forceobsolete")
+    # TODO(mbthomas): support bundlerepo
+    from . import bundlerepo  # avoid import cycle
+
+    if isinstance(repo, bundlerepo.bundlerepository):
+        return False
+    return tracking(repo) and repo.ui.configbool("visibility", "enabled")

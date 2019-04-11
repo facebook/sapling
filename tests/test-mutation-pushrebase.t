@@ -1,16 +1,12 @@
 #testcases nostackpush stackpush
   $ enable pushrebase amend
   $ setconfig experimental.evolution=
+  $ setconfig visibility.enabled=true
+  $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
 
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"
-  > [mutation]
-  > record=true
-  > enabled=true
-  > date=0 0
-  > [visibility]
-  > tracking=on
   > [templatealias]
   > sl_mutation_names = dict(amend="Amended as", rebase="Rebased to", split="Split into", fold="Folded into", histedit="Histedited to", rewrite="Rewritten into", land="Landed as", pushrebase="Pushed as")
   > sl_mutations = "{join(mutations % '({get(sl_mutation_names, operation, "Rewritten using {operation} into")} {join(successors % "{node|short}", ", ")})', ' ')}"

@@ -1,4 +1,4 @@
-# debugmutation.py - command processing for debugmutation* commands
+# debugmutation.py - command processing for debug commands for mutation and visbility
 #
 # Copyright 2019 Facebook, Inc.
 #
@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from .. import mutation, node as nodemod, pycompat, registrar, scmutil, util
+from .. import mutation, node as nodemod, pycompat, registrar, scmutil, util, visibility
 from ..i18n import _
 
 
@@ -183,3 +183,25 @@ def debugmutationfromobsmarkers(ui, repo, **opts):
     with repo.lock():
         count = mutation.recordentries(repo, entries, skipexisting=False)
         repo.ui.write(_("wrote %s entries\n") % count)
+
+
+@command("debugvisibility", [], subonly=True)
+def debugvisibility(ui, repo):
+    """control visibility tracking"""
+
+
+subcmd = debugvisibility.subcommand()
+
+
+@subcmd("start", [])
+def debugvisibilitystart(ui, repo):
+    """start tracking commit visibility explicitly"""
+    visibility.starttracking(repo)
+    return 0
+
+
+@subcmd("stop", [])
+def debugvisibilitystop(ui, repo):
+    """stop tracking commit visibility explicitly"""
+    visibility.stoptracking(repo)
+    return 0
