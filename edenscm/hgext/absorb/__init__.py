@@ -38,12 +38,11 @@ from edenscm.mercurial import (
     error,
     extensions,
     mdiff,
+    mutation,
     node,
-    obsolete,
     patch,
     phases,
     registrar,
-    repair,
     scmutil,
     util,
 )
@@ -855,6 +854,7 @@ class fixupstate(object):
         """
         parents = p1 and (p1, node.nullid)
         extra = ctx.extra()
+        mutation.record(self.repo, extra, [ctx.node()], "absorb")
         loginfo = {"checkoutidentifier": self.checkoutidentifier}
         mctx = overlaycontext(
             memworkingcopy, ctx, parents, extra=extra, loginfo=loginfo

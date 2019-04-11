@@ -1,4 +1,4 @@
-  $ enable amend rebase histedit fbhistedit phabdiff
+  $ enable amend rebase histedit fbhistedit phabdiff absorb
   $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\"" ui.interactive=true
   $ setconfig experimental.evolution=
   $ setconfig visibility.enabled=true
@@ -1045,6 +1045,68 @@ Metaedit automatic rebase of amended commit
   |
   o  A
   
+Absorb
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << 'EOS'
+  > E
+  > |
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg up -q $E
+  $ echo extra >> E
+  $ echo extra >> C
+  $ hg absorb -a
+  showing changes for C
+          @@ -0,1 +0,1 @@
+  26805ab -C
+  26805ab +Cextra
+  showing changes for E
+          @@ -0,1 +0,1 @@
+  9bc730a -E
+  9bc730a +Eextra
+  
+  2 changesets affected
+  9bc730a E
+  26805ab C
+  2 of 2 chunks applied
+  $ 
+  $ hg log -G -T "{node|short} {desc} {sl_mutations}\n" -r "all()"
+  @  426a0380e890 E
+  |
+  o  d36b27fd01db D
+  |
+  o  fe174cefb48c C
+  |
+  o  112478962961 B
+  |
+  o  426bada5c675 A
+  
+  $ hg log -G -T "{node|short} {desc} {sl_mutations}\n" -r "all()" --hidden
+  @  426a0380e890 E
+  |
+  o  d36b27fd01db D
+  |
+  o  fe174cefb48c C
+  |
+  | x  9bc730a19041 E (Rewritten using absorb into 426a0380e890)
+  | |
+  | x  f585351a92f8 D (Rewritten using absorb into d36b27fd01db)
+  | |
+  | x  26805aba1e60 C (Rewritten using absorb into fe174cefb48c)
+  |/
+  o  112478962961 B
+  |
+  o  426bada5c675 A
+  
+
 Landing
 
   $ cd ..
