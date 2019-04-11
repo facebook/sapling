@@ -29,7 +29,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
             let rust_name = rust_name.to_string();
             let rust_hook: Arc<Hook<HookChangeset>> = match rust_name.as_ref() {
                 "check_unittests" => Arc::new(CheckUnittestsHook::new(&hook.config)?),
-                "verify_integrity" => Arc::new(VerifyIntegrityHook::new()),
+                "verify_integrity" => Arc::new(VerifyIntegrityHook::new(&hook.config)?),
                 "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(&hook.config)),
                 "restrict_users" => Arc::new(RestrictUsersHook::new(&hook.config)?),
                 _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),

@@ -23,8 +23,8 @@ use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::{
-    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookParams, HookType, RepoConfig,
-    RepoReadOnly, RepoType,
+    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams, HookType,
+    RepoConfig, RepoReadOnly, RepoType,
 };
 use mononoke_types::FileType;
 use regex::Regex;
@@ -1218,11 +1218,7 @@ fn test_load_hooks() {
             },
             BookmarkParams {
                 bookmark: Regex::new("bm2").unwrap().into(),
-                hooks: vec![
-                    "hook2".into(),
-                    "hook3".into(),
-                    "rust:verify_integrity".into(),
-                ],
+                hooks: vec!["hook2".into(), "hook3".into(), "rust:restrict_users".into()],
                 only_fast_forward: false,
             },
         ];
@@ -1247,10 +1243,13 @@ fn test_load_hooks() {
                 config: Default::default(),
             },
             HookParams {
-                name: "rust:verify_integrity".into(),
+                name: "rust:restrict_users".into(),
                 code: Some("whateva".into()),
                 hook_type: HookType::PerChangeset,
-                config: Default::default(),
+                config: HookConfig {
+                    strings: hashmap! {String::from("allow_users_regex") => String::from(".*")},
+                    ..Default::default()
+                },
             },
         ];
 
@@ -1260,6 +1259,28 @@ fn test_load_hooks() {
             Ok(()) => (),
         };
     });
+}
+
+#[test]
+fn test_verify_integrity_fast_failure() {
+    let mut config = default_repo_config();
+    config.bookmarks = vec![BookmarkParams {
+        bookmark: Regex::new("bm2").unwrap().into(),
+        hooks: vec!["rust:verify_integrity".into()],
+        only_fast_forward: false,
+    }];
+    config.hooks = vec![HookParams {
+        name: "rust:verify_integrity".into(),
+        code: Some("whateva".into()),
+        hook_type: HookType::PerChangeset,
+        config: HookConfig {
+            strings: hashmap! {String::from("verify_integrity_path") => String::from("bad_nonexisting_filename")},
+            ..Default::default()
+        },
+    }];
+
+    let mut hm = hook_manager_blobrepo();
+    load_hooks(&mut hm, config).expect_err("`verify_integrity` hook loading should have failed");
 }
 
 #[test]
