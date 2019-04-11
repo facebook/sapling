@@ -340,10 +340,11 @@ impl Log {
             .open(&primary_path)?;
 
         let physical_len = primary_file.seek(SeekFrom::End(0))?;
-        if physical_len < meta.primary_len {
+        if physical_len != meta.primary_len {
             let msg = format!(
-                "file was truncated unexpectedly: it has {} bytes now (expected >= {} bytes)",
+                "log file {} has {} bytes, expected {} bytes",
                 primary_path.to_string_lossy(),
+                physical_len,
                 meta.primary_len
             );
             return Err(data_error(msg));
@@ -694,7 +695,7 @@ impl Log {
                 return Err(data_error(format!(
                     "entry at {} cannot have multiple checksums",
                     offset
-                )))
+                )));
             }
         };
 
