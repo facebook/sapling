@@ -6,7 +6,7 @@
 //! Rotation support for a set of [`Log`]s.
 
 use crate::lock::ScopedFileLock;
-use crate::log::{self, IndexDef, Log};
+use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
 use crate::utils::{atomic_write, open_dir};
 use bytes::Bytes;
 use failure::Fallible;
@@ -101,6 +101,18 @@ impl OpenOptions {
         self
     }
 
+    /// Sets the flush filter function.
+    ///
+    /// The function will be called at [`LogRotate::flush`] time, if there are
+    /// changes since `open` (or last `flush`) time.
+    ///
+    /// The filter function can be used to avoid writing content that already
+    /// exists in the latest [`Log`], or rewrite content as needed.
+    pub fn flush_filter(mut self, flush_filter: Option<FlushFilterFunc>) -> Self {
+        self.log_open_options = self.log_open_options.flush_filter(flush_filter);
+        self
+    }
+
     /// Open [`LogRotate`] at given location.
     pub fn open(self, dir: impl AsRef<Path>) -> Fallible<LogRotate> {
         let dir = dir.as_ref();
@@ -168,10 +180,23 @@ impl LogRotate {
 
             // PERF(minor): This can be smarter by avoiding reloading some logs.
             let mut new_logs = read_logs(&self.dir, &self.open_options, latest)?;
-            // Copy entries to new Logs.
-            for entry in self.writable_log().iter_dirty() {
-                let bytes = entry?;
-                new_logs[0].append(bytes)?;
+            if let Some(filter) = self.open_options.log_open_options.flush_filter {
+                let log = &mut new_logs[0];
+                for entry in self.writable_log().iter_dirty() {
+                    let content = entry?;
+                    let context = FlushFilterContext { log };
+                    match filter(&context, content)? {
+                        FlushFilterOutput::Drop => (),
+                        FlushFilterOutput::Keep => log.append(content)?,
+                        FlushFilterOutput::Replace(content) => log.append(content)?,
+                    }
+                }
+            } else {
+                // Copy entries to new Logs.
+                for entry in self.writable_log().iter_dirty() {
+                    let bytes = entry?;
+                    new_logs[0].append(bytes)?;
+                }
             }
             self.logs = new_logs;
             self.latest = latest;
@@ -491,5 +516,55 @@ mod tests {
         }
         assert!(size(1) > size1 + 100);
         assert!(size(2) > 0);
+    }
+
+    #[test]
+    fn test_flush_filter() {
+        let dir = tempdir().unwrap();
+
+        let read_log = |name: &str| -> Vec<Vec<u8>> {
+            let log = Log::open(dir.path().join(name), Vec::new()).unwrap();
+            log.iter().map(|v| v.unwrap().to_vec()).collect()
+        };
+
+        let mut rotate1 = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .flush_filter(Some(|ctx, bytes| {
+                // 'aa' is not inserted yet. It should not exist in the log.
+                assert!(!ctx.log.iter().any(|x| x.unwrap() == b"aa"));
+                Ok(match bytes.len() {
+                    1 => FlushFilterOutput::Replace(b"xx".to_vec()),
+                    _ => FlushFilterOutput::Keep,
+                })
+            }))
+            .open(&dir)
+            .unwrap();
+
+        let mut rotate2 = OpenOptions::new()
+            .max_bytes_per_log(100)
+            .open(&dir)
+            .unwrap();
+
+        rotate2.append(vec![b'a'; 3]).unwrap();
+        rotate2.flush().unwrap();
+
+        rotate1.append(vec![b'a'; 1]).unwrap(); // replaced to 'xx'
+        rotate1.append(vec![b'a'; 2]).unwrap();
+        assert_eq!(rotate1.flush().unwrap(), 0); // trigger flush filter by Log
+        assert_eq!(read_log("0"), vec![&b"aaa"[..], b"xx", b"aa"]);
+
+        rotate1.append(vec![b'a'; 1]).unwrap(); // not replaced
+        assert_eq!(rotate1.flush().unwrap(), 0); // do not trigger flush filter
+        assert_eq!(read_log("0").last().unwrap(), b"a");
+
+        rotate1.append(vec![b'a'; 1]).unwrap(); // replaced to 'xx'
+        rotate1.append(vec![b'a'; 2]).unwrap();
+
+        rotate2.append(vec![b'a'; 100]).unwrap(); // rotate
+        assert_eq!(rotate2.flush().unwrap(), 1);
+
+        assert_eq!(rotate1.flush().unwrap(), 1); // trigger flush filter by LogRotate
+        assert_eq!(read_log("1"), vec![b"xx", b"aa"]);
     }
 }

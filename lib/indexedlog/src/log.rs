@@ -215,10 +215,10 @@ pub struct OpenOptions {
     index_defs: Vec<IndexDef>,
     pub(crate) create: bool,
     checksum_type: ChecksumType,
-    flush_filter: Option<FlushFilterFunc>,
+    pub(crate) flush_filter: Option<FlushFilterFunc>,
 }
 
-type FlushFilterFunc = fn(&FlushFilterContext, &[u8]) -> Fallible<FlushFilterOutput>;
+pub(crate) type FlushFilterFunc = fn(&FlushFilterContext, &[u8]) -> Fallible<FlushFilterOutput>;
 
 /// Potentially useful context for the flush filter function.
 pub struct FlushFilterContext<'a> {
