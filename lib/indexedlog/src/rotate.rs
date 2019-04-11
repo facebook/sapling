@@ -163,6 +163,29 @@ impl LogRotate {
         })
     }
 
+    /// Look up an entry using the given index. The `index_id` is the index of
+    /// `index_defs` stored in [`OpenOptions`].
+    ///
+    /// Unlike [`LogRotate::lookup`], this function only checks the "latest"
+    /// (i.e. "writable") [`Log`] without checking others. It is useful to make
+    /// sure certain contents depending on other entries are inserted into
+    /// the same [`Log`].
+    ///
+    /// Practically, a `flush_filter` should also be used to make sure dependent
+    /// entries are stored in a same [`Log`]. So this function will panic if
+    /// `flush_filter` is not set on [`OpenOptions`].
+    pub fn lookup_latest(
+        &self,
+        index_id: usize,
+        key: impl AsRef<[u8]>,
+    ) -> Fallible<log::LogLookupIter> {
+        assert!(
+            self.open_options.log_open_options.flush_filter.is_some(),
+            "programming error: flush_filter should also be set"
+        );
+        self.logs[0].lookup(index_id, key)
+    }
+
     /// Write in-memory entries to disk.
     ///
     /// Return the index of the latest [`Log`].
@@ -245,12 +268,8 @@ impl LogRotate {
         }
     }
 
-    // `writable_log` is public for advanced use-cases. Ex. if a Log is used to
-    // store file contents chained with deltas. It might be desirable to make
-    // sure the delta parent is within a same log. That can be done by using
-    // writable_log().lookup to check the delta parent candidate.
     /// Get the writable [`Log`].
-    pub fn writable_log(&mut self) -> &mut Log {
+    fn writable_log(&mut self) -> &mut Log {
         &mut self.logs[0]
     }
 }
@@ -566,5 +585,47 @@ mod tests {
 
         assert_eq!(rotate1.flush().unwrap(), 1); // trigger flush filter by LogRotate
         assert_eq!(read_log("1"), vec![b"xx", b"aa"]);
+    }
+
+    #[test]
+    fn test_lookup_latest() {
+        let dir = tempdir().unwrap();
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .flush_filter(Some(|_, _| panic!()))
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)])
+            .open(&dir)
+            .unwrap();
+
+        rotate.append(vec![b'a'; 101]).unwrap();
+        rotate.flush().unwrap(); // trigger rotate
+        rotate.append(vec![b'b'; 10]).unwrap();
+
+        assert_eq!(rotate.lookup_latest(0, b"b").unwrap().count(), 1);
+        assert_eq!(rotate.lookup_latest(0, b"a").unwrap().count(), 0);
+
+        rotate.append(vec![b'c'; 101]).unwrap();
+        rotate.flush().unwrap(); // trigger rotate again
+
+        rotate.append(vec![b'd'; 10]).unwrap();
+        rotate.flush().unwrap(); // not trigger rotate
+        rotate.append(vec![b'e'; 10]).unwrap();
+
+        assert_eq!(rotate.lookup_latest(0, b"c").unwrap().count(), 0);
+        assert_eq!(rotate.lookup_latest(0, b"d").unwrap().count(), 1);
+        assert_eq!(rotate.lookup_latest(0, b"e").unwrap().count(), 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_lookup_latest_panic() {
+        let dir = tempdir().unwrap();
+        let rotate = OpenOptions::new()
+            .create(true)
+            .index("first-byte", |_| vec![IndexOutput::Reference(0..1)])
+            .open(&dir)
+            .unwrap();
+        rotate.lookup_latest(0, b"a").unwrap(); // flush_filter is not set
     }
 }
