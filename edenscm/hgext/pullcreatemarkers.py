@@ -11,7 +11,14 @@
 # relationship between a draft commit and its landed counterpart.
 # Thanks to these markers, less information is displayed and rebases can have
 # less irrelevant conflicts.
-from edenscm.mercurial import commands, extensions, obsolete, phases
+from edenscm.mercurial import (
+    commands,
+    extensions,
+    mutation,
+    obsolete,
+    phases,
+    visibility,
+)
 
 from .extlib.phabricator import diffprops
 from .phabstatus import COMMITTEDSTATUS, getdiffstatus
@@ -27,13 +34,16 @@ def extsetup(ui):
 
 
 def _pull(orig, ui, repo, *args, **opts):
-    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+    if (
+        not obsolete.isenabled(repo, obsolete.createmarkersopt)
+        and not mutation.recording(repo)
+        and not visibility.tracking(repo)
+    ):
         return orig(ui, repo, *args, **opts)
 
     maxrevbeforepull = len(repo.changelog)
     r = orig(ui, repo, *args, **opts)
     maxrevafterpull = len(repo.changelog)
-
     createmarkers(r, repo, maxrevbeforepull, maxrevafterpull)
     return r
 
@@ -53,10 +63,29 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
     if not tocreate:
         return
 
-    unfiltered = repo.unfiltered()
-
-    with unfiltered.lock(), unfiltered.transaction("pullcreatemarkers"):
-        obsolete.createmarkers(unfiltered, tocreate)
+    unfi = repo.unfiltered()
+    with unfi.lock(), unfi.transaction("pullcreatemarkers"):
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            obsolete.createmarkers(unfi, tocreate)
+        if mutation.recording(repo) or visibility.tracking(repo):
+            mutationentries = []
+            tohide = []
+            for (pred, succs) in tocreate:
+                if succs and not mutation.lookup(unfi, succs[0].node()):
+                    mutationentries.append(
+                        mutation.createsyntheticentry(
+                            unfi,
+                            mutation.ORIGIN_SYNTHETIC,
+                            [pred.node()],
+                            succs[0].node(),
+                            "land",
+                        )
+                    )
+                tohide.append(pred.node())
+            if mutation.recording(unfi):
+                mutation.recordentries(unfi, mutationentries, skipexisting=False)
+            if visibility.tracking(unfi):
+                visibility.remove(unfi, tohide)
 
 
 def getlandeddiffs(repo, start, stop, onlypublic=True):

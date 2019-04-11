@@ -1,4 +1,5 @@
-  $ enable amend rebase histedit fbhistedit
+  $ enable amend rebase histedit fbhistedit phabdiff
+  $ setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\""
   $ setconfig experimental.evolution=
 
   $ cat >> $HGRCPATH <<EOF
@@ -1095,4 +1096,46 @@ for us, but for this test we do it manually.
   o |  Y
   |/
   o  Z
+  
+Test pullcreatemarkers can do this
+  $ cd ..
+  $ newrepo master
+  $ echo base > base
+  $ hg commit -Aqm base
+  $ hg phase -p .
+  $ cd ..
+  $ hg clone ssh://user@dummy/master client1 -q
+  $ cd client1
+  $ enable pullcreatemarkers
+  $ echo file1 > file1
+  $ hg commit -Aqm "file1
+  > Differential Revision: http://phabricator.fb.com/D1234"
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [d20a80] base
+  $ cd ../master
+  $ echo file2 > file2
+  $ hg commit -Aqm "file2
+  > Differential Revision: http://phabricator.fb.com/D2345"
+  $ echo file1a > file1
+  $ hg commit -Aqm "file1
+  > Differential Revision: http://phabricator.fb.com/D1234"
+  $ hg phase -p .
+  $ cd ../client1
+  $ hg pull -q
+  $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {sl_mutations}\n" -r "all()"
+  o  ec3b92425d5b file1 D1234
+  |
+  o  27eaac8d0756 file2 D2345
+  |
+  @  d20a80d4def3 base
+  
+  $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {sl_mutations}\n" -r "all()" --hidden
+  o  ec3b92425d5b file1 D1234
+  |
+  o  27eaac8d0756 file2 D2345
+  |
+  | x  f07a12cd100a file1 D1234 (Landed as ec3b92425d5b)
+  |/
+  @  d20a80d4def3 base
   
