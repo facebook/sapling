@@ -118,6 +118,8 @@ Configs:
 
     ``remotefilelog.simplecacheserverstore`` use simplecache as cache implementation.
 
+    ``remotefilelog.indexedlogdatastore`` use an experimental IndexedLog content store.
+
 Configs for Eden API (HTTP data fetching):
 
     ``edenapi.enabled`` specifies whether HTTP data fetching should be used.

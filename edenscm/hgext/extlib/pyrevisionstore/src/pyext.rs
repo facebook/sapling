@@ -2,7 +2,7 @@
 //! Python bindings for a Rust hg store
 
 use std::{
-    cell::{Ref, RefCell},
+    cell::{Ref, RefCell, RefMut},
     path::PathBuf,
 };
 
@@ -15,7 +15,7 @@ use encoding;
 use failure::{format_err, Error};
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    DataPack, HistoryPack,
+    DataPack, HistoryPack, IndexedLogDataStore,
 };
 
 use crate::datastorepyext::DataStorePyExt;
@@ -33,6 +33,7 @@ py_module_initializer!(
         m.add_class::<datastore>(py)?;
         m.add_class::<datapack>(py)?;
         m.add_class::<historypack>(py)?;
+        m.add_class::<indexedlogdatastore>(py)?;
         m.add(
             py,
             "repackdatapacks",
@@ -168,6 +169,17 @@ impl<T> OptionalRefCell<T> {
         }
     }
 
+    /// Obtain a mutable reference on the stored value. Will fail if the value was previously
+    /// consumed.
+    pub fn get_mut_value(&self) -> Result<RefMut<T>, failure::Error> {
+        let borrow = self.inner.try_borrow_mut()?;
+        if borrow.as_ref().is_none() {
+            Err(format_err!("OptionalRefCell is None."))
+        } else {
+            Ok(RefMut::map(borrow, |o| o.as_mut().unwrap()))
+        }
+    }
+
     /// Consume the stored value and returns it. Will fail if the value was previously consumed.
     pub fn take_value(&self) -> Result<T, failure::Error> {
         let opt = self.inner.try_borrow_mut()?.take();
@@ -189,6 +201,12 @@ impl<T> PyOptionalRefCell<T> {
 
     pub fn get_value(&self, py: Python) -> PyResult<Ref<T>> {
         self.inner.get_value().map_err(|e| to_pyerr(py, &e.into()))
+    }
+
+    pub fn get_mut_value(&self, py: Python) -> PyResult<RefMut<T>> {
+        self.inner
+            .get_mut_value()
+            .map_err(|e| to_pyerr(py, &e.into()))
     }
 
     pub fn take_value(&self, py: Python) -> PyResult<T> {
@@ -331,6 +349,52 @@ py_class!(class historypack |py| {
     def cleanup(&self, ledger: &PyObject) -> PyResult<PyObject> {
         let historypack = self.store(py).take_value(py)?;
         historypack.cleanup(py, ledger)?;
+        Ok(Python::None(py))
+    }
+});
+
+py_class!(class indexedlogdatastore |py| {
+    data store: PyOptionalRefCell<Box<IndexedLogDataStore>>;
+
+    def __new__(_cls, path: &PyBytes) -> PyResult<indexedlogdatastore> {
+        let path = encoding::local_bytes_to_path(path.data(py))
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        indexedlogdatastore::create_instance(
+            py,
+            PyOptionalRefCell::new(Box::new(match IndexedLogDataStore::new(&path) {
+                Ok(log) => log,
+                Err(e) => return Err(to_pyerr(py, &e)),
+            })),
+        )
+    }
+
+    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+        let store = self.store(py).get_value(py)?;
+        store.get_delta(py, name, node)
+    }
+
+    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+        let store = self.store(py).get_value(py)?;
+        store.get_delta_chain(py, name, node)
+    }
+
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py).get_value(py)?;
+        store.get_meta(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py).get_value(py)?;
+        store.get_missing(py, &mut keys.iter(py)?)
+    }
+
+    def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
+        Ok(Python::None(py))
+    }
+
+    def markforrefresh(&self) -> PyResult<PyObject> {
+        let mut store = self.store(py).get_mut_value(py)?;
+        store.flush().map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(Python::None(py))
     }
 });

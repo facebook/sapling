@@ -15,6 +15,7 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
 from . import constants, fileserverclient, mutablestores, shallowutil
+from ..extlib.pyrevisionstore import indexedlogdatastore
 from .contentstore import (
     remotecontentstore,
     remotefilelogcontentstore,
@@ -559,9 +560,18 @@ class remotefileslog(filelog.fileslog):
         cachecontent, cachemetadata = self.makecachestores()
         localcontent, localmetadata = self.makelocalstores()
 
+        if not self.ui.configbool("remotefilelog", "indexedlogdatastore"):
+            sunioncontentstore = spackcontent
+        else:
+            path = shallowutil.getexperimentalcachepath(repo)
+            path = os.path.join(path, "indexedlogdatastore")
+
+            sindexedlogcontent = indexedlogdatastore(path)
+            sunioncontentstore = unioncontentstore(sindexedlogcontent, spackcontent)
+
         if self.ui.configbool("remotefilelog", "fetchpacks"):
             remotecontent, remotemetadata = self.makeremotestores(
-                spackcontent, spackmetadata
+                sunioncontentstore, spackmetadata
             )
         else:
             remotecontent, remotemetadata = self.makeremotestores(
@@ -572,13 +582,14 @@ class remotefileslog(filelog.fileslog):
 
         # Instantiate union stores
         self.contentstore = unioncontentstore(
-            spackcontent,
+            sunioncontentstore,
             cachecontent,
             lpackcontent,
             localcontent,
             mutablelocalstore,
             remotecontent,
         )
+
         self.metadatastore = unionmetadatastore(
             spackmetadata,
             cachemetadata,
@@ -592,7 +603,7 @@ class remotefileslog(filelog.fileslog):
         fileservicedatawrite = cachecontent
         fileservicehistorywrite = cachemetadata
         if repo.ui.configbool("remotefilelog", "fetchpacks"):
-            fileservicedatawrite = spackcontent
+            fileservicedatawrite = sunioncontentstore
             fileservicehistorywrite = spackmetadata
         repo.fileservice.setstore(
             self.contentstore,

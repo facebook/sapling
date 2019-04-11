@@ -111,9 +111,13 @@ impl IndexedLogDataStore {
         entry.write_to_log(&mut self.log)
     }
 
-    pub fn close(mut self) -> Fallible<()> {
+    pub fn flush(&mut self) -> Fallible<()> {
         self.log.flush()?;
         Ok(())
+    }
+
+    pub fn close(mut self) -> Fallible<()> {
+        self.flush()
     }
 }
 

@@ -524,8 +524,8 @@ class basestore(object):
                     if file == "repos" or file == "filename":
                         continue
 
-                    # Don't delete pack files
-                    if "/packs/" in root:
+                    # Don't delete pack files or indexedlog data.
+                    if "/packs/" in root or "/indexedlogdatastore/" in root:
                         continue
 
                     count += 1
