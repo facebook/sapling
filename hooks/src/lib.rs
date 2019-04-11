@@ -298,15 +298,14 @@ impl HookManager {
         changeset: HookChangeset,
         hooks: Vec<(String, Arc<Hook<HookChangeset>>, HookConfig)>,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
-        let v: Vec<BoxFuture<(String, HookExecution), _>> = hooks
-            .iter()
-            .map(move |(hook_name, hook, config)| {
-                let hook_context: HookContext<HookChangeset> =
-                    HookContext::new(hook_name.clone(), config.clone(), changeset.clone());
-                HookManager::run_changeset_hook(ctx.clone(), hook.clone(), hook_context)
-            })
-            .collect();
-        futures::future::join_all(v).boxify()
+        futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
+            HookManager::run_changeset_hook(
+                ctx.clone(),
+                hook,
+                HookContext::new(hook_name, config, changeset.clone()),
+            )
+        }))
+        .boxify()
     }
 
     fn run_changeset_hook(
@@ -905,7 +904,8 @@ impl FileContentStore for InMemoryFileContentStore {
         changesetid: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<u64>, Error> {
-        let opt = self.map
+        let opt = self
+            .map
             .get(&(changesetid, path.clone()))
             .map(|(_, bytes)| bytes.len() as u64);
         finished(opt).boxify()

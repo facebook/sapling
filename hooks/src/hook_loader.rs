@@ -13,6 +13,7 @@ use super::{Hook, HookChangeset, HookManager};
 use errors::*;
 use facebook::rust_hooks::check_unittests::CheckUnittestsHook;
 use facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
+use facebook::rust_hooks::restrict_users::RestrictUsersHook;
 use facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use failure::Error;
 use metaconfig_types::{HookType, RepoConfig};
@@ -30,6 +31,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                 "check_unittests" => Arc::new(CheckUnittestsHook::new(&hook.config)?),
                 "verify_integrity" => Arc::new(VerifyIntegrityHook::new()),
                 "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(&hook.config)),
+                "restrict_users" => Arc::new(RestrictUsersHook::new(&hook.config)?),
                 _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
             };
             hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
