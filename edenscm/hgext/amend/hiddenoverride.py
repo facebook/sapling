@@ -16,6 +16,7 @@ from edenscm.mercurial import (
     repoview,
     scmutil,
     util,
+    visibility,
 )
 from edenscm.mercurial.node import short
 
@@ -29,11 +30,12 @@ def uisetup(ui):
 
 def pinnedrevs(orig, repo):
     revs = orig(repo)
-    nodemap = repo.changelog.nodemap
-    pinnednodes = set(loadpinnednodes(repo))
-    tounpin = getattr(repo, "_tounpinnodes", set())
-    pinnednodes -= tounpin
-    revs.update(nodemap[n] for n in pinnednodes)
+    if not visibility.enabled(repo):
+        nodemap = repo.changelog.nodemap
+        pinnednodes = set(loadpinnednodes(repo))
+        tounpin = getattr(repo, "_tounpinnodes", set())
+        pinnednodes -= tounpin
+        revs.update(nodemap[n] for n in pinnednodes)
     return revs
 
 

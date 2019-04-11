@@ -1,4 +1,4 @@
-  $ enable amend rebase undo
+  $ enable amend rebase undo directaccess
   $ setconfig experimental.evolution=
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
@@ -483,4 +483,41 @@ to the new ones.
   | x  1: 112478962961 'B'  (Amended as e60094faeb72)
   |/
   o  0: 426bada5c675 'A'
+  
+Test that hiddenoverride has no effect on pinning hidden revisions.
+  $ cd $TESTTMP
+  $ newrepo
+  $ drawdag << EOS
+  > B D F
+  > | | |
+  > A C E  # amend: A -> C -> E
+  >  \|/   # rebase: B -> D -> F
+  >   Z
+  > EOS
+  $ tglogm
+  o  6: a77c932a84af 'F'
+  |
+  o  5: 05eb30556340 'E'
+  |
+  o  0: 48b9aae0607f 'Z'
+  
+  $ hg up -q $B
+  $ tglogm
+  o  6: a77c932a84af 'F'
+  |
+  o  5: 05eb30556340 'E'
+  |
+  | @  2: 917a077edb8d 'B'  (Rewritten into a77c932a84af)
+  | |
+  | x  1: ac2f7407182b 'A'  (Rewritten into 05eb30556340)
+  |/
+  o  0: 48b9aae0607f 'Z'
+  
+  $ hg up -q $F
+  $ tglogm
+  @  6: a77c932a84af 'F'
+  |
+  o  5: 05eb30556340 'E'
+  |
+  o  0: 48b9aae0607f 'Z'
   
