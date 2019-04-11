@@ -263,7 +263,7 @@ impl Log {
     /// The memory part is not shared. Therefore other [`Log`] instances won't see
     /// the change immediately.
     ///
-    /// To write in-memory entries and indexes to disk, call [`Log::flush`].
+    /// To write in-memory entries and indexes to disk, call [`Log::sync`].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> Fallible<()> {
         let data = data.as_ref();
 
@@ -330,11 +330,10 @@ impl Log {
         Ok(())
     }
 
-    /// Write in-memory entries to disk.
+    /// Load the latest data from disk. Write in-memory entries to disk.
     ///
-    /// Load the latest data from disk. Write in-memory entries to disk. Then
-    /// update on-disk indexes. These happen in a same critical section,
-    /// protected by a lock on the directory.
+    /// After writing, update on-disk indexes. These happen in a same critical
+    /// section, protected by a lock on the directory.
     ///
     /// Even if [`Log::append`] is never called, this function has a side effect
     /// updating the [`Log`] to contain latest entries on disk.
@@ -344,7 +343,7 @@ impl Log {
     /// "snapshotted" at open time.
     ///
     /// Return the size of the updated primary log file in bytes.
-    pub fn flush(&mut self) -> Fallible<u64> {
+    pub fn sync(&mut self) -> Fallible<u64> {
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
         let mut dir_file = open_dir(&self.dir)?;
@@ -430,6 +429,11 @@ impl Log {
         self.meta.write_file(self.dir.join(META_FILE))?;
 
         Ok(self.meta.primary_len)
+    }
+
+    /// Renamed. Use [`Log::sync`] instead.
+    pub fn flush(&mut self) -> Fallible<u64> {
+        self.sync()
     }
 
     /// Look up an entry using the given index. The `index_id` is the index of
@@ -901,8 +905,8 @@ impl OpenOptions {
 
     /// Sets the flush filter function.
     ///
-    /// The function will be called at [`Log::flush`] time, if there are
-    /// changes to the `log` since `open` (or last `flush`) time.
+    /// The function will be called at [`Log::sync`] time, if there are
+    /// changes to the `log` since `open` (or last `sync`) time.
     ///
     /// The filter function can be used to avoid writing content that already
     /// exists in the [`Log`], or rewrite content as needed.
@@ -928,9 +932,9 @@ impl OpenOptions {
     /// databases backed by the filesystem:
     /// - Data are kind of "snapshotted and frozen" at open time. Mutating
     ///   files do not affect the view of instantiated [`Log`]s.
-    /// - Writes are buffered until [`Log::flush`] is called.
+    /// - Writes are buffered until [`Log::sync`] is called.
     /// This maps to traditional "database transaction" concepts: a [`Log`] is
-    /// always bounded to a transaction. [`Log::flush`] is like committing the
+    /// always bounded to a transaction. [`Log::sync`] is like committing the
     /// transaction. Dropping the [`Log`] instance is like abandoning a
     /// transaction.
     pub fn open(self, dir: impl AsRef<Path>) -> Fallible<Log> {
@@ -1233,17 +1237,17 @@ mod tests {
         expected.push(short_bytes.clone());
         log.append(&long_bytes).unwrap();
         expected.push(long_bytes.clone());
-        log.flush().unwrap();
+        log.sync().unwrap();
 
         let mut log = open(ChecksumType::None);
         log.append(&short_bytes).unwrap();
         expected.push(short_bytes.clone());
-        log.flush().unwrap();
+        log.sync().unwrap();
 
         let mut log = open(ChecksumType::Xxhash32);
         log.append(&long_bytes).unwrap();
         expected.push(long_bytes.clone());
-        log.flush().unwrap();
+        log.sync().unwrap();
 
         let mut log = open(ChecksumType::Xxhash64);
         log.append(&short_bytes).unwrap();
@@ -1257,7 +1261,7 @@ mod tests {
         );
 
         // Reload and verify
-        assert_eq!(log.flush().unwrap(), 508);
+        assert_eq!(log.sync().unwrap(), 508);
 
         let log = Log::open(&log_path, Vec::new()).unwrap();
         assert_eq!(
@@ -1287,7 +1291,7 @@ mod tests {
             log.iter_dirty().collect::<Fallible<Vec<_>>>().unwrap(),
         );
 
-        log.flush().unwrap();
+        log.sync().unwrap();
 
         assert!(log
             .iter_dirty()
@@ -1345,7 +1349,7 @@ mod tests {
                 // Flush and reload in the middle of entries. This exercises the code paths
                 // handling both on-disk and in-memory parts.
                 if bytes.is_empty() {
-                    log.flush().expect("flush");
+                    log.sync().expect("flush");
                     log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
                 }
             }
@@ -1376,7 +1380,7 @@ mod tests {
         for bytes in entries.iter() {
             log.append(bytes).expect("append");
         }
-        log.flush().expect("flush");
+        log.sync().expect("flush");
         // Reverse the index to make it interesting.
         let mut indexes = get_index_defs(0);
         indexes.reverse();
@@ -1399,7 +1403,7 @@ mod tests {
         for bytes in entries.iter() {
             log.append(bytes).expect("append");
         }
-        log.flush().expect("flush");
+        log.sync().expect("flush");
 
         // Corrupt an index. Backup its content.
         let backup = {
@@ -1526,7 +1530,7 @@ mod tests {
                 .open(dir.path())
                 .unwrap();
             log2.append(b"log2").unwrap();
-            log2.flush().unwrap();
+            log2.sync().unwrap();
         };
 
         let mut log1 = OpenOptions::new()
@@ -1548,7 +1552,7 @@ mod tests {
         log1.append(b"bb").unwrap(); // replaced to "cc"
         log1.append(b"ccc").unwrap(); // kept
         write_by_log2();
-        log1.flush().unwrap();
+        log1.sync().unwrap();
 
         assert_eq!(
             log1.iter().collect::<Result<Vec<_>, _>>().unwrap(),
@@ -1557,7 +1561,7 @@ mod tests {
 
         log1.append(b"dddd").unwrap(); // error
         write_by_log2();
-        log1.flush().unwrap_err();
+        log1.sync().unwrap_err();
     }
 
     quickcheck! {
@@ -1585,7 +1589,7 @@ mod tests {
             for &(ref data, flush, reload) in &entries {
                 log.append(data).expect("append");
                 if flush {
-                    log.flush().expect("flush");
+                    log.sync().expect("flush");
                     if reload {
                         log = Log::open(dir.path(), Vec::new()).unwrap();
                     }

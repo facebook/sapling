@@ -103,8 +103,8 @@ impl OpenOptions {
 
     /// Sets the flush filter function.
     ///
-    /// The function will be called at [`LogRotate::flush`] time, if there are
-    /// changes since `open` (or last `flush`) time.
+    /// The function will be called at [`LogRotate::sync`] time, if there are
+    /// changes since `open` (or last `sync`) time.
     ///
     /// The filter function can be used to avoid writing content that already
     /// exists in the latest [`Log`], or rewrite content as needed.
@@ -186,10 +186,10 @@ impl LogRotate {
         self.logs[0].lookup(index_id, key)
     }
 
-    /// Write in-memory entries to disk.
+    /// Read latest data from disk. Write in-memory entries to disk.
     ///
     /// Return the index of the latest [`Log`].
-    pub fn flush(&mut self) -> Fallible<u8> {
+    pub fn sync(&mut self) -> Fallible<u8> {
         let mut lock_file = open_dir(&self.dir)?;
         let _lock = ScopedFileLock::new(&mut lock_file, true)?;
 
@@ -242,6 +242,11 @@ impl LogRotate {
         Ok(self.latest)
     }
 
+    /// Renamed. Use [`LogRotate::sync`] instead.
+    pub fn flush(&mut self) -> Fallible<u8> {
+        self.sync()
+    }
+
     fn try_remove_old_logs(&self) {
         if let Ok(read_dir) = self.dir.read_dir() {
             let latest = self.latest;
@@ -256,7 +261,7 @@ impl LogRotate {
                             {
                                 // Errors are not fatal. On Windows, this can fail if
                                 // other processes have files in entry.path() mmap-ed.
-                                // Newly opened or flushed LogRotate will umap files.
+                                // Newly opened or flushed LogRotate will unmap files.
                                 // New rotation would trigger remove_dir_all to try
                                 // remove old logs again.
                                 let _ = fs::remove_dir_all(entry.path());
@@ -427,21 +432,21 @@ mod tests {
 
         // No rotate.
         rotate.append(b"a").unwrap();
-        assert_eq!(rotate.flush().unwrap(), 0);
+        assert_eq!(rotate.sync().unwrap(), 0);
         rotate.append(b"a").unwrap();
-        assert_eq!(rotate.flush().unwrap(), 0);
+        assert_eq!(rotate.sync().unwrap(), 0);
 
         // Trigger rotate. "a" is still accessible.
         rotate.append(vec![b'b'; 100]).unwrap();
-        assert_eq!(rotate.flush().unwrap(), 1);
+        assert_eq!(rotate.sync().unwrap(), 1);
         assert_eq!(lookup(&rotate, b"a").len(), 2);
 
         // Trigger rotate again. Only new entries are accessible.
         // Older directories should be deleted automatically.
         rotate.append(vec![b'c'; 50]).unwrap();
-        assert_eq!(rotate.flush().unwrap(), 1);
+        assert_eq!(rotate.sync().unwrap(), 1);
         rotate.append(vec![b'd'; 50]).unwrap();
-        assert_eq!(rotate.flush().unwrap(), 2);
+        assert_eq!(rotate.sync().unwrap(), 2);
         assert_eq!(lookup(&rotate, b"a").len(), 0);
         assert_eq!(lookup(&rotate, b"b").len(), 0);
         assert_eq!(lookup(&rotate, b"c").len(), 1);
@@ -469,13 +474,13 @@ mod tests {
 
         for i in 1..=(max_log_count - 1) {
             rotate.append(b"abcdefghijklmn").unwrap();
-            assert_eq!(rotate.flush().unwrap(), i);
+            assert_eq!(rotate.sync().unwrap(), i);
             assert_eq!(count(), (i as usize) + 2);
         }
 
         for i in max_log_count..=255 {
             rotate.append(b"abcdefghijklmn").unwrap();
-            assert_eq!(rotate.flush().unwrap(), i);
+            assert_eq!(rotate.sync().unwrap(), i);
             assert_eq!(count(), (max_log_count as usize) + 1);
         }
 
@@ -512,7 +517,7 @@ mod tests {
 
         // rotate1 triggers a rotation.
         rotate1.append(vec![b'a'; 100]).unwrap();
-        assert_eq!(rotate1.flush().unwrap(), 1);
+        assert_eq!(rotate1.sync().unwrap(), 1);
 
         let size = |log_index: u64| {
             dir.path()
@@ -527,7 +532,7 @@ mod tests {
 
         // rotate2 writes to the right location ("1"), not "0";
         rotate2.append(vec![b'b'; 100]).unwrap();
-        assert_eq!(rotate2.flush().unwrap(), 2);
+        assert_eq!(rotate2.sync().unwrap(), 2);
 
         #[cfg(unix)]
         {
@@ -566,24 +571,24 @@ mod tests {
             .unwrap();
 
         rotate2.append(vec![b'a'; 3]).unwrap();
-        rotate2.flush().unwrap();
+        rotate2.sync().unwrap();
 
         rotate1.append(vec![b'a'; 1]).unwrap(); // replaced to 'xx'
         rotate1.append(vec![b'a'; 2]).unwrap();
-        assert_eq!(rotate1.flush().unwrap(), 0); // trigger flush filter by Log
+        assert_eq!(rotate1.sync().unwrap(), 0); // trigger flush filter by Log
         assert_eq!(read_log("0"), vec![&b"aaa"[..], b"xx", b"aa"]);
 
         rotate1.append(vec![b'a'; 1]).unwrap(); // not replaced
-        assert_eq!(rotate1.flush().unwrap(), 0); // do not trigger flush filter
+        assert_eq!(rotate1.sync().unwrap(), 0); // do not trigger flush filter
         assert_eq!(read_log("0").last().unwrap(), b"a");
 
         rotate1.append(vec![b'a'; 1]).unwrap(); // replaced to 'xx'
         rotate1.append(vec![b'a'; 2]).unwrap();
 
         rotate2.append(vec![b'a'; 100]).unwrap(); // rotate
-        assert_eq!(rotate2.flush().unwrap(), 1);
+        assert_eq!(rotate2.sync().unwrap(), 1);
 
-        assert_eq!(rotate1.flush().unwrap(), 1); // trigger flush filter by LogRotate
+        assert_eq!(rotate1.sync().unwrap(), 1); // trigger flush filter by LogRotate
         assert_eq!(read_log("1"), vec![b"xx", b"aa"]);
     }
 
@@ -599,17 +604,17 @@ mod tests {
             .unwrap();
 
         rotate.append(vec![b'a'; 101]).unwrap();
-        rotate.flush().unwrap(); // trigger rotate
+        rotate.sync().unwrap(); // trigger rotate
         rotate.append(vec![b'b'; 10]).unwrap();
 
         assert_eq!(rotate.lookup_latest(0, b"b").unwrap().count(), 1);
         assert_eq!(rotate.lookup_latest(0, b"a").unwrap().count(), 0);
 
         rotate.append(vec![b'c'; 101]).unwrap();
-        rotate.flush().unwrap(); // trigger rotate again
+        rotate.sync().unwrap(); // trigger rotate again
 
         rotate.append(vec![b'd'; 10]).unwrap();
-        rotate.flush().unwrap(); // not trigger rotate
+        rotate.sync().unwrap(); // not trigger rotate
         rotate.append(vec![b'e'; 10]).unwrap();
 
         assert_eq!(rotate.lookup_latest(0, b"c").unwrap().count(), 0);
