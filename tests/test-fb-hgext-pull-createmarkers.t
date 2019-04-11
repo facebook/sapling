@@ -152,10 +152,33 @@ changesets
 
   $ hg up --hidden 4 # --hidden because directaccess works only with hashes
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ mkcommit k
+  $ mkcommit k 202
   $ hg rebase -d default/master
   note: not rebasing 2:1a07332e9fa1 "add c", already in destination as 6:d446b1b2be43 "add c"
   note: not rebasing 3:ee96b78ae17d "add d", already in destination as 7:1f539cc6f364 "add d"
   note: not rebasing 4:d5895ab36037 "add e", already in destination as 8:461a5b25b3dc "add e" (default/master master)
-  rebasing 9:df5f40cb6607 "add k" (tip)
+  rebasing 9:7dcd118e395a "add k" (tip)
 
+  $ echo more >> k
+  $ hg amend
+  $ hg unhide 10
+
+  $ cd ../server
+  $ mkcommit k 202
+  $ cd ../client
+  $ hg pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files (+1 heads)
+  new changesets a4884e89c0d5
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  abort: cannot obsolete public changeset: a4884e89c0d5
+  (see 'hg help phases' for details)
+  [255]
+
+BUG! Pullcreatemarkers tried to create markers for K1 -> KLanded and K2 -> KLanded,
+and autorels tried to make a KLanded -> KLanded obsmarker, which failed because KLanded
+is public.
