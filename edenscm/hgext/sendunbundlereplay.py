@@ -6,6 +6,8 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+import datetime
+
 from edenscm.mercurial import error, hg, replay, util
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
@@ -53,7 +55,12 @@ def sendunbundlereplay(ui, **opts):
     with open(fname, "rb") as f:
         stream = util.chunkbuffer([f.read()])
 
+    before = datetime.datetime.utcnow()
     remote = hg.peer(ui, {}, path)
+    elapsed = (datetime.datetime.utcnow() - before).total_seconds()
+    ui.note(_("creating a peer took: %r\n") % elapsed)
+
+    before = datetime.datetime.utcnow()
     reply = remote.unbundlereplay(
         stream,
         ["force"],
@@ -61,6 +68,8 @@ def sendunbundlereplay(ui, **opts):
         replay.ReplayData(commitdates, rebasedhead, ontobook),
         ui.configbool("sendunbundlereplay", "respondlightly", True),
     )
+    elapsed = (datetime.datetime.utcnow() - before).total_seconds()
+    ui.note(_("single wireproto command took: %r\n") % elapsed)
 
     returncode = 0
     for part in reply.iterparts():

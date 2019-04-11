@@ -86,6 +86,7 @@ Send unbundlereplay with incorrect expected hash
   remote: 527
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
@@ -93,6 +94,7 @@ Send unbundlereplay with incorrect expected hash
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
   [1]
 
@@ -104,6 +106,7 @@ Send unbundlereplay with incorrect expected bookmark
   remote: 527
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
@@ -111,6 +114,7 @@ Send unbundlereplay with incorrect expected bookmark
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
   [1]
 
@@ -122,6 +126,7 @@ Send unbundlereplay with incorrect commit timestamp
   remote: 527
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
@@ -129,6 +134,7 @@ Send unbundlereplay with incorrect commit timestamp
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
   [1]
 
@@ -140,10 +146,12 @@ Send Unbundlereplay
   remote: 527
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Everything seems in order
+  single wireproto command took: * (glob)
 
 Send Unbundlereplay to delete a bookmark
   $ hg book newbook -r c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
@@ -160,8 +168,10 @@ Send Unbundlereplay to delete a bookmark
   remote: 527
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: [ReplayVerification] Everything seems in order
+  single wireproto command took: * (glob)
   $ hg book
      master_bookmark           3:c2e526aacb51
 
@@ -226,6 +236,7 @@ Send unbundlereplay with incorrect expected hash to hgsql server
   remote: 544
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
@@ -233,6 +244,7 @@ Send unbundlereplay with incorrect expected hash to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
   [1]
 
@@ -244,6 +256,7 @@ Send unbundlereplay with incorrect expected bookmark to hgsql server
   remote: 544
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
@@ -251,6 +264,7 @@ Send unbundlereplay with incorrect expected bookmark to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
   [1]
 
@@ -262,6 +276,7 @@ Send unbundlereplay with incorrect commit timestamp to hgsql server
   remote: 544
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
@@ -269,6 +284,7 @@ Send unbundlereplay with incorrect commit timestamp to hgsql server
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
   [1]
 
@@ -284,11 +300,13 @@ Send correct unbundlereplay to hgsql server
   remote: 544
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Everything seems in order
   bundle2-input: start processing of HG20 stream
+  single wireproto command took: * (glob)
   bundle2-input: reading bundle2 stream parameters
   bundle2-input: start extraction of bundle2 parts
   bundle2-input: part header size: 43
@@ -313,12 +331,14 @@ Send correct unbundlereplay to hgsql server
   remote: 544
   remote: capabilities:* unbundlereplay* (glob)
   remote: 1
+  creating a peer took: * (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
   bundle2-input: start processing of HG20 stream
+  single wireproto command took: * (glob)
   bundle2-input: reading bundle2 stream parameters
   bundle2-input: start extraction of bundle2 parts
   bundle2-input: part header size: 29
