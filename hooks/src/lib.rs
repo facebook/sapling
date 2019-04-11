@@ -14,54 +14,6 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-extern crate aclchecker;
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
-#[cfg(test)]
-extern crate async_unit;
-extern crate asyncmemo;
-extern crate blob_changeset;
-extern crate bookmarks;
-extern crate bytes;
-#[macro_use]
-extern crate cloned;
-#[macro_use]
-extern crate failure_ext as failure;
-#[cfg(test)]
-extern crate fixtures;
-extern crate futures;
-#[macro_use]
-extern crate futures_ext;
-extern crate hlua;
-extern crate hlua_futures;
-extern crate hyper;
-extern crate hyper_tls;
-#[macro_use]
-extern crate lazy_static;
-extern crate linked_hash_map;
-#[macro_use]
-extern crate maplit;
-extern crate mercurial_types;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-#[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
-extern crate regex;
-extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
-#[macro_use]
-extern crate slog;
-extern crate itertools;
-extern crate tempdir;
-
-extern crate context;
-extern crate srclient;
-extern crate thrift;
-
 pub mod errors;
 mod facebook;
 pub mod hook_loader;
@@ -74,16 +26,17 @@ use asyncmemo::{Asyncmemo, Filler, Weight};
 use blob_changeset::HgBlobChangeset;
 use bookmarks::Bookmark;
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
-use failure::{err_msg, Error, FutureFailureErrorExt};
+use failure_ext::{err_msg, Error, FutureFailureErrorExt};
 use futures::{failed, finished, Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::{manifest_utils::EntryStatus, Changeset, HgChangesetId, HgParents, MPath};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
 use regex::Regex;
-use slog::Logger;
+use slog::{debug, Logger};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};

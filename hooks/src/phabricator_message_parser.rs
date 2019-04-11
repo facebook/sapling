@@ -6,6 +6,7 @@
 
 use hlua::{AnyLuaString, AnyLuaValue};
 use itertools;
+use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
 use std::collections::{HashMap, HashSet};
 use std::mem;
@@ -229,6 +230,7 @@ fn to_lua_array<'a, T: IntoIterator<Item = String>>(v: T) -> AnyLuaValue {
 #[cfg(test)]
 mod test {
     use super::*;
+    use maplit::hashmap;
 
     fn s(v: &str) -> String {
         v.to_string()

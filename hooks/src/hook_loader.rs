@@ -8,13 +8,13 @@
 
 #![deny(warnings)]
 
-use super::lua_hook::LuaHook;
-use super::{Hook, HookChangeset, HookManager};
-use errors::*;
-use facebook::rust_hooks::check_unittests::CheckUnittestsHook;
-use facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
-use facebook::rust_hooks::restrict_users::RestrictUsersHook;
-use facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
+use crate::errors::*;
+use crate::facebook::rust_hooks::check_unittests::CheckUnittestsHook;
+use crate::facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
+use crate::facebook::rust_hooks::restrict_users::RestrictUsersHook;
+use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
+use crate::lua_hook::LuaHook;
+use crate::{Hook, HookChangeset, HookManager};
 use failure::Error;
 use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;

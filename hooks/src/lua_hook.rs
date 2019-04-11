@@ -14,17 +14,20 @@ use super::{
     HookChangesetParents, HookContext, HookExecution, HookFile, HookRejectionInfo,
 };
 use aclchecker::Identity;
+use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
 use futures::future::{ok, result};
 use futures::{failed, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hlua::{
     function0, function1, function2, AnyLuaString, AnyLuaValue, Lua, LuaError,
     LuaFunctionCallError, LuaTable, PushGuard, TuplePushError, Void,
 };
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
+use lazy_static::lazy_static;
 use linked_hash_map::LinkedHashMap;
+use maplit::hashmap;
 use metaconfig_types::HookConfig;
 use mononoke_types::FileType;
 use regex::{Regex, RegexBuilder};
@@ -430,13 +433,15 @@ fn cached_regex_match(
 
 #[cfg(test)]
 mod test {
-    use super::super::{
+    use super::*;
+    use crate::{
         facebook, ChangedFileType, HookChangeset, HookChangesetParents, InMemoryFileContentStore,
     };
-    use super::*;
     use aclchecker::AclChecker;
+    use assert_matches::assert_matches;
     use async_unit;
     use bytes::Bytes;
+    use failure_ext::err_downcast;
     use futures::Future;
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;
