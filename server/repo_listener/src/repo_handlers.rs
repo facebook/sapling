@@ -77,7 +77,7 @@ pub fn repo_handlers(
                 }
             };
 
-            let ready_handle = ready.create_handle(reponame.as_ref());
+            let ready_handle = ready.create_handle(reponame.clone());
 
             let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
