@@ -44,6 +44,7 @@ class TestServer {
   }
 };
 
+// @lint-ignore-every PRIVATEKEY1
 const std::string kClientCACertName = "client-ca-cert.pem";
 const std::string kClientCACertContent = folly::stripLeftMargin(R"(
   -----BEGIN CERTIFICATE-----
@@ -263,8 +264,7 @@ class CurlTest : public ::testing::Test {
         certs_->path() / kClientCACertName);
 
     const auto address = server_->getAddresses()[0].address;
-    host_ = folly::to<std::string>(
-        "https://[", address.getFullyQualified(), "]:", address.getPort());
+    address_ = folly::SocketAddress("::1", address.getPort());
   }
 
   static void TearDownTestCase() {
@@ -274,16 +274,16 @@ class CurlTest : public ::testing::Test {
 
   static std::unique_ptr<TemporaryDirectory> certs_;
   static std::unique_ptr<ScopedHTTPServer> server_;
-  static std::string host_;
+  static folly::SocketAddress address_;
 };
 
 std::unique_ptr<TemporaryDirectory> CurlTest::certs_ = nullptr;
 std::unique_ptr<ScopedHTTPServer> CurlTest::server_ = nullptr;
-std::string CurlTest::host_ = "";
+folly::SocketAddress CurlTest::address_;
 
 TEST_F(CurlTest, Success) {
   auto client = CurlHttpClient(
-      host_,
+      address_,
       AbsolutePath((certs_->path() / kClientChainName).native()),
       std::chrono::milliseconds(100000));
 
@@ -294,7 +294,7 @@ TEST_F(CurlTest, Success) {
 
 TEST_F(CurlTest, InvalidClientCertificate) {
   auto client = CurlHttpClient(
-      host_,
+      address_,
       AbsolutePath((certs_->path() / kInvalidChainName).native()),
       std::chrono::milliseconds(100000));
 
@@ -308,7 +308,7 @@ TEST_F(CurlTest, InvalidClientCertificate) {
 
 TEST_F(CurlTest, ThrowOn4XX) {
   auto client = CurlHttpClient(
-      host_,
+      address_,
       AbsolutePath((certs_->path() / kClientChainName).native()),
       std::chrono::milliseconds(100000));
 

@@ -383,6 +383,21 @@ void HgBackingStore::initializeTreeManifestImport(
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
+std::unique_ptr<ServiceAddress> HgBackingStore::getMononokeServiceAddress() {
+  auto edenConfig = config_->getEdenConfig();
+  auto hostname = edenConfig->getMononokeHostName();
+
+  if (hostname) {
+    auto port = edenConfig->getMononokePort();
+    XLOG(DBG2) << "Using " << *hostname << ":" << port << " for Mononoke";
+    return std::make_unique<ServiceAddress>(*hostname, port);
+  }
+
+  const auto& tier = edenConfig->getMononokeTierName();
+  XLOG(DBG2) << "Using SMC tier " << tier << " for Mononoke";
+  return std::make_unique<ServiceAddress>(tier);
+}
+
 #ifndef EDEN_WIN_NOMONONOKE
 std::unique_ptr<MononokeHttpBackingStore>
 HgBackingStore::initializeHttpMononokeBackingStore() {
@@ -399,27 +414,11 @@ HgBackingStore::initializeHttpMononokeBackingStore() {
     return nullptr;
   }
 
-  auto executor = folly::getIOExecutor();
-  auto hostname = edenConfig->getMononokeHostName();
-
-  std::unique_ptr<ServiceAddress> service;
-  if (hostname) {
-    auto port = edenConfig->getMononokePort();
-    service = std::make_unique<ServiceAddress>(*hostname, port);
-    XLOG(DBG2) << "HTTP Mononoke enabled for repository " << repoName_
-               << ", using host " << *hostname << ":" << port;
-  } else {
-    const auto& tier = edenConfig->getMononokeTierName();
-    service = std::make_unique<ServiceAddress>(tier);
-    XLOG(DBG2) << "HTTP Mononoke enabled for repository " << repoName_
-               << ", using tier " << tier;
-  }
-
   return std::make_unique<MononokeHttpBackingStore>(
-      std::move(service),
+      getMononokeServiceAddress(),
       repoName_,
       std::chrono::milliseconds(FLAGS_mononoke_timeout),
-      executor.get(),
+      folly::getIOExecutor().get(),
       sslContext);
 }
 
@@ -440,13 +439,7 @@ HgBackingStore::initializeThriftMononokeBackingStore() {
 std::unique_ptr<MononokeCurlBackingStore>
 HgBackingStore::initializeCurlMononokeBackingStore() {
   auto edenConfig = config_->getEdenConfig();
-  auto hostname = edenConfig->getMononokeHostName();
   auto clientCertificate = edenConfig->getClientCertificate();
-
-  if (!hostname) {
-    XLOG(WARN) << "Mononoke is disabled because no Mononoke host is provided";
-    return nullptr;
-  }
 
   if (!clientCertificate) {
     XLOG(WARN)
@@ -454,11 +447,8 @@ HgBackingStore::initializeCurlMononokeBackingStore() {
     return nullptr;
   }
 
-  XLOG(DBG2) << "Initializing cURL Mononoke backing store for repository "
-             << repoName_ << ", using host " << *hostname;
-
   return std::make_unique<MononokeCurlBackingStore>(
-      *hostname,
+      getMononokeServiceAddress(),
       AbsolutePath(folly::to<std::string>(*clientCertificate)),
       repoName_,
       std::chrono::milliseconds(FLAGS_mononoke_timeout),

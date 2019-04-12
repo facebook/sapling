@@ -28,11 +28,12 @@ namespace eden {
 class Blob;
 class Tree;
 class Hash;
+class ServiceAddress;
 
 class MononokeCurlBackingStore : public BackingStore {
  public:
   MononokeCurlBackingStore(
-      std::string host,
+      std::unique_ptr<ServiceAddress> service,
       AbsolutePath certificate,
       std::string repo,
       std::chrono::milliseconds timeout,

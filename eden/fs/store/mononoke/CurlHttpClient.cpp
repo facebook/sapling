@@ -30,15 +30,16 @@ write_callback(char* contents, size_t size, size_t nmemb, void* out) {
 } // namespace
 
 CurlHttpClient::CurlHttpClient(
-    std::string host,
+    folly::SocketAddress address,
     AbsolutePath certificate,
     std::chrono::milliseconds timeout)
-    : host_(std::move(host)),
+    : address_(std::move(address)),
       certificate_(std::move(certificate)),
       timeout_(timeout) {
   handle_ = buildRequest();
 }
 
+/// Makes an HTTP GET request to the given path.
 std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
   auto buffer = folly::IOBufQueue{};
 
@@ -46,10 +47,12 @@ std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
     throw std::runtime_error("curl failed to set CURLOPT_WRITEDATA");
   }
 
-  if (curl_easy_setopt(handle_.get(), CURLOPT_URL, (host_ + path).c_str()) !=
-      CURLE_OK) {
+  auto url = folly::to<std::string>(
+      "https://", address_.getHostStr(), ":", address_.getPort(), path);
+
+  if (curl_easy_setopt(handle_.get(), CURLOPT_URL, url.c_str()) != CURLE_OK) {
     throw std::runtime_error(
-        folly::to<std::string>("curl failed to set url: ", host_, path));
+        folly::to<std::string>("curl failed to set url: ", url));
   }
 
   auto ret = curl_easy_perform(handle_.get());

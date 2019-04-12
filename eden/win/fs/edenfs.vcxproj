@@ -205,6 +205,7 @@
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp" />
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp" />
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp" />
+    <ClCompile Include="..\..\fs\utils\ServiceAddress.cpp" />
     <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.cpp" />
     <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.cpp" />
     <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_binary.cpp" />
@@ -289,6 +290,7 @@
     <ClInclude Include="..\..\fs\utils\PathFuncs.h" />
     <ClInclude Include="..\..\fs\utils\TimeUtil.h" />
     <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h" />
+    <ClInclude Include="..\..\fs\utils\ServiceAddress.h" />
     <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.h" />
     <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.h" />
     <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_custom_protocol.h" />

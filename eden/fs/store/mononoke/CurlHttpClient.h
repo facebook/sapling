@@ -10,6 +10,7 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <memory>
@@ -34,7 +35,7 @@ struct CurlDeleter {
 class CurlHttpClient {
  public:
   CurlHttpClient(
-      std::string host,
+      folly::SocketAddress address,
       AbsolutePath certificate,
       std::chrono::milliseconds timeout);
 
@@ -44,7 +45,7 @@ class CurlHttpClient {
   void initGlobal();
   std::unique_ptr<CURL, CurlDeleter> buildRequest();
 
-  std::string host_;
+  folly::SocketAddress address_;
   AbsolutePath certificate_;
 
   // cURL timeout for the request (see CURLOPT_TIMEOUT_MS for detail)

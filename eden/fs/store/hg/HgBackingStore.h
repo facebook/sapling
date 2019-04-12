@@ -43,6 +43,7 @@ class MononokeThriftBackingStore;
 class MononokeCurlBackingStore;
 class UnboundedQueueExecutor;
 class ReloadableConfig;
+class ServiceAddress;
 
 /**
  * A BackingStore implementation that loads data out of a mercurial repository.
@@ -116,6 +117,13 @@ class HgBackingStore : public BackingStore {
    * Return nullptr if Mononoke is disabled.
    */
   std::shared_ptr<BackingStore> getMononoke();
+
+  /**
+   * Get an instance of `ServiceAddress` that points to Mononoke API Server
+   * based on user's configuration. It could be a pair of host and port or a smc
+   * tier name.
+   */
+  std::unique_ptr<ServiceAddress> getMononokeServiceAddress();
 
 #ifndef EDEN_WIN_NOMONONOKE
   /**

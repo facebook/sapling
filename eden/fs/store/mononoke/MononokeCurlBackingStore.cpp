@@ -16,6 +16,7 @@
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/executors/thread_factory/ThreadFactory.h>
 #include <folly/json.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -23,6 +24,7 @@
 #include "eden/fs/store/mononoke/CurlHttpClient.h"
 #include "eden/fs/store/mononoke/MononokeAPIUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/ServiceAddress.h"
 
 DEFINE_int32(
     mononoke_curl_threads,
@@ -39,7 +41,8 @@ static folly::ThreadLocalPtr<CurlHttpClient> threadCurlClient;
 CurlHttpClient& getCurlHttpClient() {
   if (!threadCurlClient) {
     throw std::logic_error(
-        "Attempting to use curl client in a non-curl client thread");
+        "Attempting to use curl client in a non-curl client thread "
+        "or failed to resolve service address");
   }
   return *threadCurlClient;
 }
@@ -47,31 +50,43 @@ CurlHttpClient& getCurlHttpClient() {
 class MononokeCurlThreadFactory : public folly::ThreadFactory {
  public:
   MononokeCurlThreadFactory(
-      std::string host,
+      std::unique_ptr<ServiceAddress> service,
       AbsolutePath certificate,
       std::chrono::milliseconds timeout)
       : delegate_("CurlClient"),
-        host_(host),
+        service_(std::move(service)),
         certificate_(certificate),
         timeout_(timeout) {}
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
-      threadCurlClient.reset(new CurlHttpClient(host_, certificate_, timeout_));
-      func();
+      try {
+        auto address = service_->getSocketAddressBlocking();
+        if (address) {
+          threadCurlClient.reset(
+              new CurlHttpClient(address->first, certificate_, timeout_));
+          func();
+        } else {
+          XLOG(WARN) << "failed to resolve address for Mononoke API Server";
+        }
+      } catch (const std::exception& ex) {
+        XLOG(WARN)
+            << "failed to resolve address for Mononoke API Server, reason: "
+            << ex.what();
+      }
     });
   }
 
  private:
   folly::NamedThreadFactory delegate_;
-  std::string host_;
+  std::unique_ptr<ServiceAddress> service_;
   AbsolutePath certificate_;
   const std::chrono::milliseconds timeout_;
-};
+}; // namespace
 } // namespace
 
 MononokeCurlBackingStore::MononokeCurlBackingStore(
-    std::string host,
+    std::unique_ptr<ServiceAddress> service,
     AbsolutePath certificate,
     std::string repo,
     std::chrono::milliseconds timeout,
@@ -82,7 +97,7 @@ MononokeCurlBackingStore::MononokeCurlBackingStore(
           std::make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<MononokeCurlThreadFactory>(
-              host,
+              std::move(service),
               certificate,
               timeout))),
       serverExecutor_(std::move(executor)) {}

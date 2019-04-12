@@ -320,6 +320,9 @@
     <ClCompile Include="..\..\fs\tracing\EdenStats.cpp">
       <Filter>fs\Tracing</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\utils\ServiceAddress.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
@@ -582,6 +585,9 @@
     </ClInclude>
     <ClInclude Include="utils\UserInfo.h">
       <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\ServiceAddress.h">
+      <Filter>fs\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
