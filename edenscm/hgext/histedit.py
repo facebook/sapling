@@ -577,7 +577,7 @@ def commitfuncfor(repo, src):
             extra["histedit_source"] = src.hex()
             mutation.record(repo, extra, [src.node()], "histedit")
             kwargs[r"extra"] = extra
-            kwargs[r"loginfo"] = {"predecessors": src.hex, "mutation": "histedit"}
+            kwargs[r"loginfo"] = {"predecessors": src.hex(), "mutation": "histedit"}
             return repo.commit(**kwargs)
 
     return commitfunc
