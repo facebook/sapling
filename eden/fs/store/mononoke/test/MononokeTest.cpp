@@ -25,6 +25,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
+#include "eden/fs/utils/ServiceAddress.h"
 
 using namespace facebook::eden;
 using namespace proxygen;
@@ -118,6 +119,10 @@ class MononokeHttpBackingStoreTest : public ::testing::Test {
             })")};
     return blobs;
   }
+  std::unique_ptr<ServiceAddress> getServerAddress(ScopedHTTPServer* server) {
+    return std::make_unique<ServiceAddress>(
+        "localhost", server->getAddresses()[0].address.getPort());
+  }
 
   Hash emptyhash{"1111111111111111111111111111111111111111"};
   Hash treehash{"2222222222222222222222222222222222222222"};
@@ -132,8 +137,7 @@ TEST_F(MononokeHttpBackingStoreTest, testGetBlob) {
 
   ScopedEventBaseThread evbThread;
   MononokeHttpBackingStore store(
-      "localhost",
-      server->getAddresses()[0].address,
+      getServerAddress(server.get()),
       "repo",
       std::chrono::milliseconds(400),
       evbThread.getEventBase(),
@@ -151,13 +155,14 @@ TEST_F(MononokeHttpBackingStoreTest, testConnectFailed) {
   auto serverSocket = folly::AsyncServerSocket::newSocket();
   serverSocket->bind(address);
   address = serverSocket->getAddress();
+  auto service =
+      std::make_unique<ServiceAddress>("localhost", address.getPort());
 
   auto blobs = getBlobs();
 
   ScopedEventBaseThread evbThread;
   MononokeHttpBackingStore store(
-      "localhost",
-      address,
+      std::move(service),
       "repo",
       std::chrono::milliseconds(300),
       evbThread.getEventBase(),
@@ -176,8 +181,7 @@ TEST_F(MononokeHttpBackingStoreTest, testEmptyBuffer) {
 
   ScopedEventBaseThread evbThread;
   MononokeHttpBackingStore store(
-      "localhost",
-      server->getAddresses()[0].address,
+      getServerAddress(server.get()),
       "repo",
       std::chrono::milliseconds(300),
       evbThread.getEventBase(),
@@ -193,8 +197,7 @@ TEST_F(MononokeHttpBackingStoreTest, testGetTree) {
 
   ScopedEventBaseThread evbThread;
   MononokeHttpBackingStore store(
-      "localhost",
-      server->getAddresses()[0].address,
+      getServerAddress(server.get()),
       "repo",
       std::chrono::milliseconds(300),
       evbThread.getEventBase(),
@@ -235,8 +238,7 @@ TEST_F(MononokeHttpBackingStoreTest, testMalformedGetTree) {
 
   ScopedEventBaseThread evbThread;
   MononokeHttpBackingStore store(
-      "localhost",
-      server->getAddresses()[0].address,
+      getServerAddress(server.get()),
       "repo",
       std::chrono::milliseconds(300),
       evbThread.getEventBase(),
@@ -251,8 +253,7 @@ TEST_F(MononokeHttpBackingStoreTest, testGetTreeForCommit) {
 
   ScopedEventBaseThread evbThread;
   MononokeHttpBackingStore store(
-      "localhost",
-      server->getAddresses()[0].address,
+      getServerAddress(server.get()),
       "repo",
       std::chrono::milliseconds(300),
       evbThread.getEventBase(),

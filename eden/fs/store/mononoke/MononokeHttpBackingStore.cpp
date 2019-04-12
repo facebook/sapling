@@ -24,6 +24,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/mononoke/MononokeAPIUtils.h"
+#include "eden/fs/utils/ServiceAddress.h"
 
 using folly::Future;
 using folly::IOBuf;
@@ -167,28 +168,12 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
 } // namespace
 
 MononokeHttpBackingStore::MononokeHttpBackingStore(
-    folly::StringPiece hostName,
-    const folly::SocketAddress& socketAddress,
+    std::unique_ptr<ServiceAddress> service,
     const std::string& repo,
     const std::chrono::milliseconds& timeout,
     folly::Executor* executor,
     const std::shared_ptr<folly::SSLContext> sslContext)
-    : socketAddress_(std::optional<folly::SocketAddress>(socketAddress)),
-      hostName_(hostName.str()),
-      repo_(repo),
-      timeout_(timeout),
-      executor_(executor),
-      sslContext_(sslContext) {}
-
-MononokeHttpBackingStore::MononokeHttpBackingStore(
-    folly::StringPiece tierName,
-    const std::string& repo,
-    const std::chrono::milliseconds& timeout,
-    folly::Executor* executor,
-    const std::shared_ptr<folly::SSLContext> sslContext)
-    : socketAddress_(std::nullopt),
-      hostName_("localhost"),
-      tierName_(tierName.str()),
+    : service_(std::move(service)),
       repo_(repo),
       timeout_(timeout),
       executor_(executor),
@@ -228,61 +213,34 @@ folly::Future<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTreeForCommit(
       });
 }
 
-folly::Future<folly::SocketAddress> MononokeHttpBackingStore::getAddress(
-    folly::EventBase* eventBase) {
-  if (socketAddress_.has_value()) {
-    return folly::makeFuture(socketAddress_.value());
-  }
-  auto promise = folly::Promise<folly::SocketAddress>();
-  auto future = promise.getFuture();
-
-  auto& factory = servicerouter::cpp2::getClientFactory();
-  auto selector = factory.getSelector();
-
-  selector->getSelectionAsync(
-      tierName_,
-      servicerouter::DebugContext(),
-      servicerouter::SelectionCacheCallback(
-          [this, promise = std::move(promise)](
-              const servicerouter::Selection& selection,
-              servicerouter::DebugContext&& /* unused */) mutable {
-            if (selection.hosts.empty()) {
-              auto ex = make_exception_wrapper<std::runtime_error>(
-                  folly::to<std::string>("no hosts found in tier ", tierName_));
-              promise.setException(ex);
-              return;
-            }
-            auto selected = folly::Random::rand32(selection.hosts.size());
-            const auto& host = selection.hosts[selected];
-            const auto& addr = folly::SocketAddress(
-                host->location().getIpAddress(), host->location().getPort());
-            promise.setValue(addr);
-          }),
-      eventBase,
-      servicerouter::ServiceOptions(),
-      servicerouter::ConnConfigs());
-
-  return future;
+folly::Future<SocketAddressWithHostname>
+MononokeHttpBackingStore::getAddress() {
+  return folly::via(executor_, [this] {
+    auto addr = service_->getSocketAddressBlocking();
+    if (!addr) {
+      throw std::runtime_error("could not get address of the server");
+    }
+    return std::move(*addr);
+  });
 }
 
 folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequest(
     folly::StringPiece endpoint,
     const Hash& id) {
-  auto eventBase = folly::EventBaseManager::get()->getEventBase();
-
-  return getAddress(eventBase).thenValue([=](folly::SocketAddress addr) {
+  return getAddress().thenValue([=](SocketAddressWithHostname addr) {
     return sendRequestImpl(addr, endpoint, id);
   });
 }
 
 folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequestImpl(
-    folly::SocketAddress addr,
+    SocketAddressWithHostname addr,
     folly::StringPiece endpoint,
     const Hash& id) {
+  const auto& [socketAddress, host] = addr;
   URL url(folly::sformat(
       "https://{}:{}/{}/{}/{}",
-      hostName_,
-      addr.getPort(),
+      host,
+      socketAddress.getPort(),
       repo_,
       endpoint,
       id.toString()));
@@ -309,15 +267,15 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequestImpl(
   if (sslContext_ != nullptr) {
     connector->connectSSL(
         eventBase,
-        addr,
+        socketAddress,
         sslContext_,
         nullptr,
         timeout_,
         opts,
         folly::AsyncSocket::anyAddress(),
-        hostName_);
+        host);
   } else {
-    connector->connect(eventBase, addr, timeout_, opts);
+    connector->connect(eventBase, socketAddress, timeout_, opts);
   }
 
   /* capture `connector` to make sure it stays alive for the duration of the

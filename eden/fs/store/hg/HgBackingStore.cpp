@@ -32,6 +32,7 @@
 #include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
 #include "eden/fs/utils/LazyInitialize.h"
 #include "eden/fs/utils/SSLContext.h"
+#include "eden/fs/utils/ServiceAddress.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #if EDEN_HAVE_HG_TREEMANIFEST
@@ -399,31 +400,27 @@ HgBackingStore::initializeHttpMononokeBackingStore() {
   }
 
   auto executor = folly::getIOExecutor();
-  auto hostName = edenConfig->getMononokeHostName();
-  if (hostName) {
+  auto hostname = edenConfig->getMononokeHostName();
+
+  std::unique_ptr<ServiceAddress> service;
+  if (hostname) {
     auto port = edenConfig->getMononokePort();
-    XLOG(DBG2) << "Initializing HTTP Mononoke backing store for repository "
-               << repoName_ << ", using host " << *hostName << ":" << port;
-    return std::make_unique<MononokeHttpBackingStore>(
-        *hostName,
-        folly::SocketAddress(hostName->c_str(), port, /*allowNameLookup=*/true),
-        repoName_,
-        std::chrono::milliseconds(FLAGS_mononoke_timeout),
-        executor.get(),
-        sslContext);
-
+    service = std::make_unique<ServiceAddress>(*hostname, port);
+    XLOG(DBG2) << "HTTP Mononoke enabled for repository " << repoName_
+               << ", using host " << *hostname << ":" << port;
   } else {
-    const auto& tierName = edenConfig->getMononokeTierName();
-    XLOG(DBG2) << "Initializing HTTP Mononoke backing store for repository "
-               << repoName_ << ", using tier " << tierName;
-
-    return std::make_unique<MononokeHttpBackingStore>(
-        tierName,
-        repoName_,
-        std::chrono::milliseconds(FLAGS_mononoke_timeout),
-        executor.get(),
-        sslContext);
+    const auto& tier = edenConfig->getMononokeTierName();
+    service = std::make_unique<ServiceAddress>(tier);
+    XLOG(DBG2) << "HTTP Mononoke enabled for repository " << repoName_
+               << ", using tier " << tier;
   }
+
+  return std::make_unique<MononokeHttpBackingStore>(
+      std::move(service),
+      repoName_,
+      std::chrono::milliseconds(FLAGS_mononoke_timeout),
+      executor.get(),
+      sslContext);
 }
 
 std::unique_ptr<MononokeThriftBackingStore>

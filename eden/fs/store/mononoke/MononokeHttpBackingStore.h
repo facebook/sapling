@@ -34,6 +34,9 @@ namespace eden {
 class Blob;
 class Hash;
 class Tree;
+class ServiceAddress;
+
+using SocketAddressWithHostname = std::pair<folly::SocketAddress, std::string>;
 
 /**
  * A BackingStore implementation that loads data out of a remote Mononoke
@@ -42,16 +45,7 @@ class Tree;
 class MononokeHttpBackingStore : public BackingStore {
  public:
   MononokeHttpBackingStore(
-      folly::StringPiece tierName,
-      const std::string& repo,
-      const std::chrono::milliseconds& timeout,
-      folly::Executor* executor,
-      const std::shared_ptr<folly::SSLContext> sslContext);
-
-  // This constructor should only be used in testing.
-  MononokeHttpBackingStore(
-      folly::StringPiece hostName,
-      const folly::SocketAddress& socketAddress,
+      std::unique_ptr<ServiceAddress> service,
       const std::string& repo,
       const std::chrono::milliseconds& timeout,
       folly::Executor* executor,
@@ -69,18 +63,16 @@ class MononokeHttpBackingStore : public BackingStore {
   MononokeHttpBackingStore(MononokeHttpBackingStore const&) = delete;
   MononokeHttpBackingStore& operator=(MononokeHttpBackingStore const&) = delete;
 
-  folly::Future<folly::SocketAddress> getAddress(folly::EventBase*);
+  folly::Future<SocketAddressWithHostname> getAddress();
   folly::Future<std::unique_ptr<folly::IOBuf>> sendRequest(
       folly::StringPiece endpoint,
       const Hash& id);
   folly::Future<std::unique_ptr<folly::IOBuf>> sendRequestImpl(
-      folly::SocketAddress addr,
+      SocketAddressWithHostname addr,
       folly::StringPiece endpoint,
       const Hash& id);
 
-  std::optional<folly::SocketAddress> socketAddress_;
-  std::string hostName_;
-  std::string tierName_;
+  std::unique_ptr<ServiceAddress> service_;
   std::string repo_;
   std::chrono::milliseconds timeout_;
   folly::Executor* executor_;
