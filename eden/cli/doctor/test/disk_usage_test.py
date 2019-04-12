@@ -50,7 +50,7 @@ class DiskUsageTest(DoctorTestBase):
         return problem_collector.problems
 
     def test_low_free_absolute_disk_is_major(self):
-        self._mock_disk_usage(blocks=100_000_000, avail=500_000)
+        self._mock_disk_usage(blocks=100000000, avail=500000)
         problems = self._check_disk_usage()
 
         self.assertEqual(
@@ -62,7 +62,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
 
     def test_low_percentage_free_but_high_absolute_free_disk_is_minor(self):
-        self._mock_disk_usage(blocks=100_000_000, avail=2_000_000)
+        self._mock_disk_usage(blocks=100000000, avail=2000000)
         problems = self._check_disk_usage()
 
         self.assertEqual(
@@ -74,7 +74,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ADVICE)
 
     def test_high_percentage_free_but_small_disk_is_major(self):
-        self._mock_disk_usage(blocks=800_000, avail=500_000)
+        self._mock_disk_usage(blocks=800000, avail=500000)
         problems = self._check_disk_usage()
 
         self.assertEqual(
@@ -86,12 +86,12 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
 
     def test_disk_usage_normal(self):
-        self._mock_disk_usage(blocks=100_000_000, avail=50_000_000)
+        self._mock_disk_usage(blocks=100000000, avail=50000000)
         problems = self._check_disk_usage()
         self.assertEqual(len(problems), 0)
 
     def test_issue_includes_custom_message_from_config(self) -> None:
-        self._mock_disk_usage(blocks=100_000_000, avail=500_000)
+        self._mock_disk_usage(blocks=100000000, avail=500000)
         instance = FakeEdenInstance(
             self.make_temporary_directory(),
             config={
@@ -107,7 +107,7 @@ class DiskUsageTest(DoctorTestBase):
             "for help.",
         )
 
-        self._mock_disk_usage(blocks=100_000_000, avail=2_000_000)
+        self._mock_disk_usage(blocks=100000000, avail=2000000)
         instance = FakeEdenInstance(
             self.make_temporary_directory(),
             config={

@@ -44,9 +44,9 @@ access        |      p90               9               10          11         12
 
     def test_print_mem_status(self):
         dictionary = {
-            "memory_free": 1_234_567,
+            "memory_free": 1234567,
             "memory_free_percent": 50,
-            "memory_usage": 45_678_912,
+            "memory_usage": 45678912,
             "memory_usage_percent": 70,
         }
         expected_output = """\
@@ -92,10 +92,10 @@ key                1              2              3              4
         self.assertEqual(expected_output, out.getvalue())
 
     def test_format_size(self):
-        self.assertEqual("1.5 GB", stats_print.format_size(1_500_000_000))
+        self.assertEqual("1.5 GB", stats_print.format_size(1500000000))
         # rounds up
-        self.assertEqual("1.6 GB", stats_print.format_size(1_590_000_000))
-        self.assertEqual("123.4 MB", stats_print.format_size(123_400_000))
+        self.assertEqual("1.6 GB", stats_print.format_size(1590000000))
+        self.assertEqual("123.4 MB", stats_print.format_size(123400000))
         self.assertEqual("12 B", stats_print.format_size(12))
         self.assertEqual("0", stats_print.format_size(0))
 

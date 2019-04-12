@@ -500,7 +500,7 @@ class Basic20181121Test(SnapshotTestBase):
         # Replacing the next inode number file with a larger value should not
         # be reported as an error.
         next_inode_path = self._overlay_path() / "next-inode-number"
-        next_inode_path.write_bytes(self._compute_next_inode_data(12_345_678))
+        next_inode_path.write_bytes(self._compute_next_inode_data(12345678))
         self._run_fsck([])
 
     def test_corrupt_next_inode_number(self) -> None:
