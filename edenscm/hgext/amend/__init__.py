@@ -14,15 +14,6 @@ except it doesn't prompt for the commit message unless --edit is provided.
 Allows amending changesets that have children and can automatically rebase
 the children onto the new version of the changeset.
 
-This extension is incompatible with changeset evolution. The command will
-automatically disable itself if changeset evolution is enabled.
-
-To disable the creation of preamend bookmarks and use obsolescence
-markers instead to fix up amends, enable the userestack option::
-
-    [amend]
-    userestack = true
-
 To make `hg previous` and `hg next` always pick the newest commit at
 each step of walking up or down the stack instead of aborting when
 encountering non-linearity (equivalent to the --newest flag), enable
@@ -557,28 +548,5 @@ def wraprebase(orig, ui, repo, *pats, **opts):
     return orig(ui, repo, *pats, **opts)
 
 
-def _preamendname(repo, node):
-    suffix = ".preamend"
-    name = repo._activebookmark
-    if not name:
-        name = hex(node)[:12]
-    return name + suffix
-
-
 def _histediting(repo):
     return repo.localvfs.exists("histedit-state")
-
-
-def _fixbookmarks(repo, revs):
-    """Make any bookmarks pointing to the given revisions point to the
-       latest version of each respective revision.
-    """
-    repo = repo.unfiltered()
-    cl = repo.changelog
-    with repo.wlock(), repo.lock(), repo.transaction("movebookmarks") as tr:
-        changes = []
-        for rev in revs:
-            latest = cl.node(common.latest(repo, rev))
-            for bm in repo.nodebookmarks(cl.node(rev)):
-                changes.append((bm, latest))
-        repo._bookmarks.applychanges(repo, tr, changes)
