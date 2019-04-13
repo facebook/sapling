@@ -28,27 +28,27 @@ Create a repo with non-ascii paths
   $ hg add . -q 2>/dev/null
   $ hg commit -m 'tailing spaces' -q
 
-..Create files with random raw characters
+..Create files with utf8 encoded unicode characters
 
   $ python2 2>/dev/null << EOF
   > for i in range(1, 256):
   >     if chr(i) in '/.\n\r':
   >         continue
-  >     name = chr(i) * (i % 7 + 1)
+  >     name = (unichr(i) * (i % 7 + 1)).encode('utf8')
   >     with open(name, 'wb') as f:
   >         f.write(b'foo')
   > EOF
 
   $ if [ $? -ne 0 ]; then
-  >   echo 'skipped: filesystem does not support binary paths'
+  >   echo 'skipped: filesystem does not support non ascii paths'
   >   exit 80
   > fi
 
   $ hg add . -q 2>/dev/null
-  $ hg commit -m 'binary paths' -q
+  $ hg commit -m 'nonascii paths' -q
 
   $ hg log -T '{rev}:{node} {desc}\n'
-  1:b0c761d3d09e5ad2bd8f9440e212fc43eecf6dbe binary paths
+  1:c1a12d91b750b584bafe0299c27a4ae596e29c01 nonascii paths
   0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark nonasciipath
@@ -61,7 +61,7 @@ Create the master repo
   $ hg pull -q ../client1
 
   $ hg log -T '{rev}:{node} {desc}\n'
-  1:b0c761d3d09e5ad2bd8f9440e212fc43eecf6dbe binary paths
+  1:c1a12d91b750b584bafe0299c27a4ae596e29c01 nonascii paths
   0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ cd ..
@@ -71,11 +71,11 @@ Create another master repo, it should synchronize from the database
   $ initserver master2 sqlreponame
   $ cd master2
   $ hg log -T '{rev}:{node} {desc}\n'
-  1:b0c761d3d09e5ad2bd8f9440e212fc43eecf6dbe binary paths
+  1:c1a12d91b750b584bafe0299c27a4ae596e29c01 nonascii paths
   0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark
-     nonasciipath              1:b0c761d3d09e
+     nonasciipath              1:c1a12d91b750
 
   $ hg up nonasciipath -q
   $ [[ -f 'a    ' ]] && echo good
