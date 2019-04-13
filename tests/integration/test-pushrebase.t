@@ -277,75 +277,16 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ hgmn push -r . --to master_bookmark -q
   $ hgmn up .^^ && echo 12 > 12 && hg add 12 && hg ci -m 12
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ log -r ":"
-  @  12 [draft;rev=23;cd5aac4439e5]
-  |
-  | o  11 [public;rev=22;589551466f25] default/master_bookmark
-  | |
-  | o  10 [public;rev=21;c573a92e1179]
-  |/
-  o  9 [public;rev=20;2f7cc50dc4e5]
-  |
-  | o  8 [draft;rev=19;e0f0824ca6a6]
-  | |
-  o |    merge 6 and 7 [public;rev=18;4a0002072071]
-  |\ \
-  | o |  6 [public;rev=17;8ad514b2cb51]
-  | | |
-  o | |  7 [public;rev=16;7126dfcadf99]
-  |/ /
-  o /  5 [public;rev=12;59e5396444cf]
-  |/
-  o  4 [public;rev=11;4f5a4463b24b]
-  |
-  o  3 [public;rev=10;7796136324ad]
-  |
-  o  1 [public;rev=4;c2e526aacb51]
-  |
-  o  C [public;rev=2;26805aba1e60]
-  |
-  o  B [public;rev=1;112478962961]
-  |
-  o  A [public;rev=0;426bada5c675]
-  
+  $ hg log -r master_bookmark -T '{node}\n'
+  589551466f2555a4d90ca544b23273a2eed21f9d
+
   $ hg merge -qr 21 && hg ci -qm "merge 10 and 12"
   $ hg phase -r $(hg log -r . -T "{p1node}")
   23: draft
   $ hg phase -r $(hg log -r . -T "{p2node}")
   21: public
-  $ log -r ":"
-  @    merge 10 and 12 [draft;rev=24;e3db177db1d1]
-  |\
-  | o  12 [draft;rev=23;cd5aac4439e5]
-  | |
-  +---o  11 [public;rev=22;589551466f25] default/master_bookmark
-  | |
-  o |  10 [public;rev=21;c573a92e1179]
-  |/
-  o  9 [public;rev=20;2f7cc50dc4e5]
-  |
-  | o  8 [draft;rev=19;e0f0824ca6a6]
-  | |
-  o |    merge 6 and 7 [public;rev=18;4a0002072071]
-  |\ \
-  | o |  6 [public;rev=17;8ad514b2cb51]
-  | | |
-  o | |  7 [public;rev=16;7126dfcadf99]
-  |/ /
-  o /  5 [public;rev=12;59e5396444cf]
-  |/
-  o  4 [public;rev=11;4f5a4463b24b]
-  |
-  o  3 [public;rev=10;7796136324ad]
-  |
-  o  1 [public;rev=4;c2e526aacb51]
-  |
-  o  C [public;rev=2;26805aba1e60]
-  |
-  o  B [public;rev=1;112478962961]
-  |
-  o  A [public;rev=0;426bada5c675]
-  
+  $ hg log -r master_bookmark -T '{node}\n'
+  589551466f2555a4d90ca544b23273a2eed21f9d
 
 - Actually test the push
   $ hgmn push -r . --to master_bookmark
@@ -358,39 +299,8 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg hide -r . -q && hgmn up master_bookmark -q
-  $ log -r ":"
-  @    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
-  |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  o |  11 [public;rev=22;589551466f25]
-  | |
-  o |  10 [public;rev=21;c573a92e1179]
-  |/
-  o  9 [public;rev=20;2f7cc50dc4e5]
-  |
-  | o  8 [draft;rev=19;e0f0824ca6a6]
-  | |
-  o |    merge 6 and 7 [public;rev=18;4a0002072071]
-  |\ \
-  | o |  6 [public;rev=17;8ad514b2cb51]
-  | | |
-  o | |  7 [public;rev=16;7126dfcadf99]
-  |/ /
-  o /  5 [public;rev=12;59e5396444cf]
-  |/
-  o  4 [public;rev=11;4f5a4463b24b]
-  |
-  o  3 [public;rev=10;7796136324ad]
-  |
-  o  1 [public;rev=4;c2e526aacb51]
-  |
-  o  C [public;rev=2;26805aba1e60]
-  |
-  o  B [public;rev=1;112478962961]
-  |
-  o  A [public;rev=0;426bada5c675]
-  
+  $ hg log -r master_bookmark -T '{node}\n'
+  eb388b759fde98ed5b1e05fd2da5309f3762c2fd
 Test creating a bookmark on a public commit
   $ hgmn push --rev 25 --to master_bookmark_2 --create
   remote: .* DEBG Session with Mononoke started with uuid: .* (re)
