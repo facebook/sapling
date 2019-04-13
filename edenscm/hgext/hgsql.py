@@ -1249,7 +1249,8 @@ def wraprepo(repo):
                 "WHERE repo = %s AND namespace='heads'",
                 (reponame,),
             )
-            for head in cursor:
+            headsindb = cursor.fetchall()
+            for head in headsindb:
                 head = head[0]
                 if head in newheads:
                     newheads.discard(head)
@@ -1276,7 +1277,8 @@ def wraprepo(repo):
                 "WHERE namespace = 'bookmarks' AND repo = %s",
                 (reponame,),
             )
-            for k, v in cursor:
+            bookmarksindb = cursor.fetchall()
+            for k, v in bookmarksindb:
                 if newbookmarks.get(k) == v:
                     del newbookmarks[k]
                 else:

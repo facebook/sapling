@@ -51,10 +51,10 @@ Add a new commit to server2 (as if we stripped in server1):
   $ echo foo > a
   $ commit "first"
   [hgsql] got lock after * seconds (read 1 rows) (glob)
-  [hgsql] held lock for * seconds (read 7 rows; write 7 rows) (glob)
+  [hgsql] held lock for * seconds (read 8 rows; write 7 rows) (glob)
   $ hg book -r . master
   [hgsql] got lock after * seconds (read 1 rows) (glob)
-  [hgsql] held lock for * seconds (read 4 rows; write 1 rows) (glob)
+  [hgsql] held lock for * seconds (read 5 rows; write 1 rows) (glob)
   $ log
   @  first [draft:8585ef078134] master
   |
@@ -88,7 +88,7 @@ Create a _third_ draft commit, push to the (behind) server1:
   remote:     87df66bba286  third commit
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: rebasing stack from 8585ef078134 onto 8585ef078134
-  remote: [hgsql] held lock for * seconds (read 6 rows; write 9 rows) (glob)
+  remote: [hgsql] held lock for * seconds (read 8 rows; write 9 rows) (glob)
   updating bookmark master
 
 

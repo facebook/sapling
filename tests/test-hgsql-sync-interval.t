@@ -112,7 +112,7 @@ Make sure repo2 and repo3 log looks sane.
   added 1 changesets with 1 changes to 1 files
   new changesets 26805aba1e60
   (run 'hg update' to get a working copy)
-  [hgsql] held lock for * seconds (read 6 rows; write 7 rows) (glob)
+  [hgsql] held lock for * seconds (read 7 rows; write 7 rows) (glob)
 
   $ cat $TESTTMP/repo3/out
   [hgsql] getting 2 commits from database
@@ -126,4 +126,4 @@ Make sure repo2 and repo3 log looks sane.
   added 1 changesets with 1 changes to 1 files
   new changesets f585351a92f8
   (run 'hg update' to get a working copy)
-  [hgsql] held lock for * seconds (read 6 rows; write 7 rows) (glob)
+  [hgsql] held lock for * seconds (read 7 rows; write 7 rows) (glob)

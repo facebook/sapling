@@ -88,12 +88,12 @@ Do the push!
   remote: added 1 changesets with 1 changes to 1 files
   remote: new changesets 112478962961
   remote: (run 'hg update' to get a working copy)
-  remote: [hgsql] held lock for * seconds (read 6 rows; write 7 rows) (glob)
+  remote: [hgsql] held lock for * seconds (read 8 rows; write 7 rows) (glob)
   remote: checking conflicts with 426bada5c675
   remote: pushing 1 changeset:
   remote:     dc0947a82db8  C
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: rebasing stack from 426bada5c675 onto 426bada5c675
-  remote: [hgsql] held lock for * seconds (read 6 rows; write 8 rows) (glob)
+  remote: [hgsql] held lock for * seconds (read 8 rows; write 8 rows) (glob)
   updating bookmark master
 
