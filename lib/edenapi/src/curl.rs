@@ -14,7 +14,7 @@ use failure::{bail, ensure, Fallible};
 use itertools::Itertools;
 use log;
 use serde::{de::DeserializeOwned, Serialize};
-use serde_json;
+use serde_cbor;
 use url::Url;
 
 use driver::MultiDriver;
@@ -116,7 +116,7 @@ impl EdenApi for EdenApiCurlClient {
             keys: batch.into_iter().collect(),
         });
 
-        let responses: Vec<FileDataResponse> = self.request_json_multi(&url, requests)?;
+        let responses: Vec<FileDataResponse> = self.multi_request(&url, requests)?;
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -148,7 +148,7 @@ impl EdenApi for EdenApiCurlClient {
             depth: max_depth,
         });
 
-        let responses: Vec<FileHistoryResponse> = self.request_json_multi(&url, requests)?;
+        let responses: Vec<FileHistoryResponse> = self.multi_request(&url, requests)?;
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -188,8 +188,8 @@ impl EdenApiCurlClient {
 
     /// Send multiple concurrent POST requests using the given requests as the
     /// JSON payload of each respective request. Assumes that the responses are
-    /// also JSON encoded, and automatically deserializes and returns them.
-    fn request_json_multi<I, T, R>(&self, url: &Url, requests: I) -> Fallible<Vec<T>>
+    /// CBOR encoded, and automatically deserializes and returns them.
+    fn multi_request<I, T, R>(&self, url: &Url, requests: I) -> Fallible<Vec<T>>
     where
         R: Serialize,
         T: DeserializeOwned,
@@ -201,7 +201,7 @@ impl EdenApiCurlClient {
         let mut driver = MultiDriver::with_capacity(num_requests);
         for request in requests {
             let mut easy = self.easy()?;
-            prepare_json_post(&mut easy, &url, &request)?;
+            prepare_cbor_post(&mut easy, &url, &request)?;
             driver.add(easy)?;
         }
 
@@ -216,7 +216,7 @@ impl EdenApiCurlClient {
             let data = &easy.get_ref().0;
             total_bytes += data.len();
 
-            let response = serde_json::from_slice::<T>(data)?;
+            let response = serde_cbor::from_slice::<T>(data)?;
             responses.push(response);
         }
 
@@ -243,16 +243,16 @@ impl Handler for Collector {
 }
 
 /// Configure the given Easy2 handle to perform a POST request.
-/// The given payload will be serialized as JSON and used as the request body.
-fn prepare_json_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &R) -> Fallible<()> {
-    let payload = serde_json::to_vec(&request)?;
+/// The given payload will be serialized as CBOR and used as the request body.
+fn prepare_cbor_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &R) -> Fallible<()> {
+    let payload = serde_cbor::to_vec(&request)?;
 
     easy.url(url.as_str())?;
     easy.post(true)?;
     easy.post_fields_copy(&payload)?;
 
     let mut headers = List::new();
-    headers.append("Content-Type: application/json")?;
+    headers.append("Content-Type: application/cbor")?;
     easy.http_headers(headers)?;
 
     Ok(())
