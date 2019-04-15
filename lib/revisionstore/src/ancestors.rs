@@ -149,12 +149,12 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAnce
 #[cfg(test)]
 mod tests {
     use super::*;
-    use types::testutil::*;
+    use types::{testutil::*, Node, RepoPathBuf};
 
     fn build_diamond_graph() -> (Key, Ancestors) {
         let mut ancestors = Ancestors::new();
         let keys = vec![key("a", "1"), key("b", "2"), key("c", "3"), key("d", "4")];
-        let null_key = null_key("");
+        let null_key = Key::new(RepoPathBuf::new(), Node::null_id().clone());
 
         // Build a simple diamond graph
         ancestors.insert(
@@ -238,18 +238,19 @@ mod tests {
         for i in 1..=size {
             keys.push(key(&i.to_string(), &i.to_string()));
         }
+        let null_key = Key::new(RepoPathBuf::new(), Node::null_id().clone());
 
         // Build a mergey history where commit N has parents N-1 and N-2
         for i in 0..size {
             let p1 = if i > 0 {
                 keys[i - 1].clone()
             } else {
-                null_key("")
+                null_key.clone()
             };
             let p2 = if i > 1 {
                 keys[i - 2].clone()
             } else {
-                null_key("")
+                null_key.clone()
             };
             ancestors.insert(
                 keys[i].clone(),

@@ -63,10 +63,7 @@ use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Key {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        Key::from_name_slice(
-            RepoPathBuf::arbitrary(g).as_byte_slice().to_vec(),
-            Node::arbitrary(g),
-        )
+        Key::new(RepoPathBuf::arbitrary(g), Node::arbitrary(g))
     }
 }
 
@@ -74,13 +71,14 @@ impl Arbitrary for Key {
 pub mod mocks {
     use super::Key;
     use crate::node::mocks::{ONES, THREES, TWOS};
+    use crate::testutil::*;
 
     use lazy_static::lazy_static;
 
     lazy_static! {
-        pub static ref FOO_KEY: Key = Key::from_name_slice(b"foo".to_vec(), ONES);
-        pub static ref BAR_KEY: Key = Key::from_name_slice(b"bar".to_vec(), TWOS);
-        pub static ref BAZ_KEY: Key = Key::from_name_slice(b"baz".to_vec(), THREES);
+        pub static ref FOO_KEY: Key = Key::new(repo_path_buf("foo"), ONES);
+        pub static ref BAR_KEY: Key = Key::new(repo_path_buf("bar"), TWOS);
+        pub static ref BAZ_KEY: Key = Key::new(repo_path_buf("baz"), THREES);
     }
 }
 

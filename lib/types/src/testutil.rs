@@ -51,10 +51,10 @@ pub fn node(hex: &str) -> Node {
 }
 
 pub fn key(path: &str, hexnode: &str) -> Key {
-    Key::from_name_slice(path.as_bytes().to_vec(), node(hexnode))
+    Key::new(repo_path_buf(path), node(hexnode))
 }
 
 /// The null node id is special and it's semantics vary. A null key contains a null node id.
 pub fn null_key(path: &str) -> Key {
-    Key::from_name_slice(path.as_bytes().to_vec(), Node::null_id().clone())
+    Key::new(repo_path_buf(path), Node::null_id().clone())
 }
