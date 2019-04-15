@@ -15,7 +15,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::{Key, Node, NodeInfo, RepoPath};
+use types::{Key, Node, NodeInfo, RepoPath, RepoPathBuf};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
@@ -314,7 +314,7 @@ impl Repackable for HistoryPack {
 struct HistoryPackIterator<'a> {
     pack: &'a HistoryPack,
     offset: u64,
-    current_name: Vec<u8>,
+    current_name: RepoPathBuf,
     current_remaining: u32,
 }
 
@@ -323,7 +323,7 @@ impl<'a> HistoryPackIterator<'a> {
         HistoryPackIterator {
             pack,
             offset: 1, // Start after the header byte
-            current_name: vec![],
+            current_name: RepoPathBuf::new(),
             current_remaining: 0,
         }
     }
@@ -338,8 +338,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
             match file_header {
                 Ok(header) => {
                     let file_name_slice = header.file_name.as_byte_slice();
-                    self.current_name.clear();
-                    self.current_name.extend_from_slice(file_name_slice);
+                    self.current_name = header.file_name.to_owned();
                     self.current_remaining = header.count;
                     self.offset += 4 + 2 + file_name_slice.len() as u64;
                 }
@@ -362,7 +361,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
                     Some(path) => 2 + path.as_byte_slice().len() as u64,
                     None => 2,
                 };
-                Ok(Key::from_name_slice(self.current_name.clone(), e.node))
+                Ok(Key::new(self.current_name.clone(), e.node))
             }
             Err(e) => Err(e),
         })
