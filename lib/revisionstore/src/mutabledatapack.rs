@@ -218,11 +218,9 @@ mod tests {
     };
 
     use bytes::Bytes;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
 
-    use types::Key;
+    use types::{testutil::*, Key};
 
     #[test]
     fn test_basic_creation() {
@@ -275,20 +273,18 @@ mod tests {
 
     #[test]
     fn test_get_delta_chain() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
-
         let tempdir = tempdir().unwrap();
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), node("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: Some(Key::new(Vec::new(), delta.key.node.clone())),
-            key: Key::new(Vec::new(), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), node("2")),
         };
         mutdatapack.add(&delta2, &Default::default()).unwrap();
 
@@ -301,20 +297,19 @@ mod tests {
 
     #[test]
     fn test_get_meta() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
 
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), node("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), node("2")),
         };
         let meta2 = Metadata {
             flags: Some(2),
@@ -331,7 +326,7 @@ mod tests {
         assert_eq!(found_meta, meta2);
 
         // Requesting a non-existent metadata
-        let not = Key::new(vec![1], Node::random(&mut rng));
+        let not = key("not", "10000");
         mutdatapack
             .get_meta(&not)
             .expect_err("expected error for non existent node");
@@ -339,7 +334,6 @@ mod tests {
 
     #[test]
     fn test_get_missing() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
 
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
@@ -350,7 +344,7 @@ mod tests {
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
 
-        let not = Key::new(vec![1], Node::random(&mut rng));
+        let not = key("not", "10000");
         let missing = mutdatapack
             .get_missing(&vec![delta.key.clone(), not.clone()])
             .unwrap();
