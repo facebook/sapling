@@ -1101,6 +1101,11 @@ def _earlysplitopts(args):
     )
 
 
+def _joinfullargs(fullargs):
+    fullargs = [util.shellquote(arg) for arg in fullargs]
+    return " ".join(fullargs)
+
+
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
     hook.hook(
@@ -1108,7 +1113,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
         repo,
         "pre-%s" % cmd,
         True,
-        args=" ".join(fullargs),
+        args=_joinfullargs(fullargs),
         pats=cmdpats,
         opts=cmdoptions,
     )

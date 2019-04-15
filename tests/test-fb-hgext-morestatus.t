@@ -283,3 +283,14 @@ Test interrupted update state, without active bookmark and REV is specified usin
 Test update state can be reset using .
   $ hg update . -q
   $ hg status
+
+Test args escaping in continue command
+  $ breakupdate
+  $ hg bookmark b1
+  $ hg --config extensions.fsmonitor=! --config ui.ssh="ssh -oControlMaster=no" update -C 2977a57ce863
+  $ hg status
+  
+  # The repository is in an unfinished *update* state.
+  # To continue:                hg --config 'extensions.fsmonitor=!' --config 'ui.ssh=ssh -oControlMaster=no' update -C 2977a57ce863
+  # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
+
