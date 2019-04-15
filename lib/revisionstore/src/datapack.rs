@@ -436,11 +436,9 @@ pub mod tests {
     use std::rc::Rc;
 
     use quickcheck::quickcheck;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
 
-    use types::node::Node;
+    use types::testutil::*;
 
     use crate::datastore::{Delta, Metadata};
     use crate::mutabledatapack::MutableDataPack;
@@ -459,14 +457,13 @@ pub mod tests {
 
     #[test]
     fn test_get_missing() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                base: Some(key("a", "1")),
+                key: key("a", "2"),
             },
             Default::default(),
         )];
@@ -476,30 +473,29 @@ pub mod tests {
             assert_eq!(missing.len(), 0);
         }
 
-        let not = Key::new(vec![1], Node::random(&mut rng));
+        let not = key("b", "3");
         let missing = pack.get_missing(&vec![not.clone()]).unwrap();
         assert_eq!(missing, vec![not.clone()]);
     }
 
     #[test]
     fn test_get_meta() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "1")),
+                    key: key("a", "2"),
                 },
                 Default::default(),
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "3")),
+                    key: key("a", "4"),
                 },
                 Metadata {
                     size: Some(1000),
@@ -517,23 +513,22 @@ pub mod tests {
 
     #[test]
     fn test_get_delta_chain_single() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "1")),
+                    key: key("a", "2"),
                 },
                 Default::default(),
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "3")),
+                    key: key("a", "4"),
                 },
                 Default::default(),
             ),
@@ -548,23 +543,22 @@ pub mod tests {
 
     #[test]
     fn test_get_delta() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "1")),
+                    key: key("a", "2"),
                 },
                 Default::default(),
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "3")),
+                    key: key("a", "4"),
                 },
                 Default::default(),
             ),
@@ -579,14 +573,13 @@ pub mod tests {
 
     #[test]
     fn test_get_delta_chain_multiple() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let mut revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                base: Some(key("a", "1")),
+                key: key("a", "2"),
             },
             Default::default(),
         )];
@@ -595,7 +588,7 @@ pub mod tests {
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: Some(base0),
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                key: key("a", "3"),
             },
             Default::default(),
         ));
@@ -604,7 +597,7 @@ pub mod tests {
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: Some(base1),
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                key: key("a", "4"),
             },
             Default::default(),
         ));
@@ -629,23 +622,22 @@ pub mod tests {
 
     #[test]
     fn test_iter() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "1")),
+                    key: key("a", "2"),
                 },
                 Default::default(),
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
-                    key: Key::new(vec![0], Node::random(&mut rng)),
+                    base: Some(key("a", "3")),
+                    key: key("a", "4"),
                 },
                 Default::default(),
             ),
@@ -663,14 +655,13 @@ pub mod tests {
 
     #[test]
     fn test_delete() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: None,
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                key: key("a", "1"),
             },
             Default::default(),
         )];
@@ -689,14 +680,13 @@ pub mod tests {
 
     #[test]
     fn test_delete_while_open() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: None,
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                key: key("a", "1"),
             },
             Default::default(),
         )];
@@ -710,14 +700,13 @@ pub mod tests {
 
     #[test]
     fn test_rc() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: None,
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                key: key("a", "1"),
             },
             Default::default(),
         )];
