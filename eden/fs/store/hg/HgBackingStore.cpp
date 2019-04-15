@@ -122,7 +122,7 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   HgImporterThreadFactory(
       AbsolutePathPiece repository,
       LocalStore* localStore,
-      std::shared_ptr<ThreadLocalEdenStats> stats)
+      std::shared_ptr<EdenStats> stats)
       : delegate_("HgImporter"),
         repository_(repository),
         localStore_(localStore),
@@ -140,7 +140,7 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   folly::NamedThreadFactory delegate_;
   AbsolutePath repository_;
   LocalStore* localStore_;
-  std::shared_ptr<ThreadLocalEdenStats> stats_;
+  std::shared_ptr<EdenStats> stats_;
 };
 
 /**
@@ -240,7 +240,7 @@ HgBackingStore::HgBackingStore(
     LocalStore* localStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
-    std::shared_ptr<ThreadLocalEdenStats> stats)
+    std::shared_ptr<EdenStats> stats)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,

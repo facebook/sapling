@@ -255,7 +255,7 @@ class HgImporterEofError : public HgImporterError {
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    std::shared_ptr<ThreadLocalEdenStats> stats,
+    std::shared_ptr<EdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath}, store_{store}, stats_{std::move(stats)} {
   std::vector<string> cmd;
@@ -948,7 +948,7 @@ const ImporterOptions& HgImporter::getOptions() const {
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    std::shared_ptr<ThreadLocalEdenStats> stats,
+    std::shared_ptr<EdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},

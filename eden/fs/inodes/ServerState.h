@@ -72,10 +72,10 @@ class ServerState : public ReloadableConfig {
   }
 
   /**
-   * Get the ThreadLocalEdenStats object that tracks process-wide (rather than
-   * per-mount) statistics.
+   * Get the EdenStats object that tracks process-wide (rather than per-mount)
+   * statistics.
    */
-  ThreadLocalEdenStats& getStats() {
+  EdenStats& getStats() {
     return edenStats_;
   }
 
@@ -151,7 +151,7 @@ class ServerState : public ReloadableConfig {
 
   AbsolutePath socketPath_;
   UserInfo userInfo_;
-  ThreadLocalEdenStats edenStats_;
+  EdenStats edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;

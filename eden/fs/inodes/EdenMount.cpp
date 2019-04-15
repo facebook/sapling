@@ -542,7 +542,7 @@ const AbsolutePath& EdenMount::getPath() const {
   return config_->getMountPath();
 }
 
-ThreadLocalEdenStats* EdenMount::getStats() const {
+EdenStats* EdenMount::getStats() const {
   return &serverState_->getStats();
 }
 

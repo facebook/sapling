@@ -241,7 +241,7 @@ class EdenMount {
    * Today this is the global stats instance, but in the future it will be
    * a mount point specific instance.
    */
-  ThreadLocalEdenStats* getStats() const;
+  EdenStats* getStats() const;
 
   folly::Logger& getStraceLogger() {
     return straceLogger_;

@@ -106,7 +106,7 @@ class FuseChannelTest : public ::testing::Test {
   }
 
   FakeFuse fuse_;
-  ThreadLocalEdenStats stats_;
+  EdenStats stats_;
   TestDispatcher dispatcher_{&stats_};
   AbsolutePath mountPath_{"/fake/mount/path"};
 };

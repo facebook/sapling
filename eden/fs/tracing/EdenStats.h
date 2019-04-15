@@ -26,15 +26,14 @@ namespace eden {
 class EdenStatsTag {};
 class EdenThreadStats;
 
-using ThreadLocalEdenStats =
-    folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
+using EdenStats = folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
 
 /**
  * EdenThreadStats contains various thread-local stats structures.
  *
  * Each EdenThreadStats object should only be used from a single thread.
- * The ThreadLocalEdenStats object should be used to maintain one
- * EdenThreadStats object for each thread that needs to access/update the stats.
+ * The EdenStats object should be used to maintain one EdenThreadStats object
+ * for each thread that needs to access/update the stats.
  */
 class EdenThreadStats : public facebook::stats::ThreadLocalStatsT<
                             facebook::stats::TLStatsThreadSafe> {

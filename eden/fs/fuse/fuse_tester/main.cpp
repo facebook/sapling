@@ -38,7 +38,7 @@ FOLLY_INIT_LOGGING_CONFIG("eden=DBG2,eden.fs.fuse=DBG7");
 namespace {
 class TestDispatcher : public Dispatcher {
  public:
-  TestDispatcher(ThreadLocalEdenStats* stats, const UserInfo& identity)
+  TestDispatcher(EdenStats* stats, const UserInfo& identity)
       : Dispatcher(stats), identity_(identity) {}
 
   folly::Future<Attr> getattr(InodeNumber ino) override {
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
       [&] { privHelper->attachEventBase(evbt.getEventBase()); });
   auto fuseDevice = privHelper->fuseMount(mountPath.value()).get(100ms);
 
-  ThreadLocalEdenStats stats;
+  EdenStats stats;
   TestDispatcher dispatcher(&stats, identity);
 
   std::unique_ptr<FuseChannel, FuseChannelDeleter> channel(new FuseChannel(

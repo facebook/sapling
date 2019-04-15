@@ -60,7 +60,7 @@ fuse_attr_out Dispatcher::Attr::asFuseAttr() const {
 
 Dispatcher::~Dispatcher() {}
 
-Dispatcher::Dispatcher(ThreadLocalEdenStats* stats) : stats_(stats) {}
+Dispatcher::Dispatcher(EdenStats* stats) : stats_(stats) {}
 
 void Dispatcher::initConnection(const fuse_init_out& out) {
   connInfo_ = out;
@@ -262,7 +262,7 @@ const fuse_init_out& Dispatcher::getConnInfo() const {
   return connInfo_;
 }
 
-ThreadLocalEdenStats* Dispatcher::getStats() const {
+EdenStats* Dispatcher::getStats() const {
   return stats_;
 }
 

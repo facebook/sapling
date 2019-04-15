@@ -137,7 +137,7 @@ class HgImporter : public Importer {
   HgImporter(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      std::shared_ptr<ThreadLocalEdenStats>,
+      std::shared_ptr<EdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   virtual ~HgImporter();
@@ -297,7 +297,7 @@ class HgImporter : public Importer {
 #endif
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
-  std::shared_ptr<ThreadLocalEdenStats> const stats_;
+  std::shared_ptr<EdenStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
   /**
@@ -336,7 +336,7 @@ class HgImporterManager : public Importer {
   HgImporterManager(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      std::shared_ptr<ThreadLocalEdenStats>,
+      std::shared_ptr<EdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash importFlatManifest(folly::StringPiece revName) override;
@@ -358,7 +358,7 @@ class HgImporterManager : public Importer {
 
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
-  std::shared_ptr<ThreadLocalEdenStats> const stats_;
+  std::shared_ptr<EdenStats> const stats_;
   const std::optional<AbsolutePath> importHelperScript_;
 };
 

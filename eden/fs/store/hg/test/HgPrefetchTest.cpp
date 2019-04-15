@@ -31,7 +31,7 @@ using testing::HasSubstr;
 
 TEST(HgPrefetch, test) {
   MemoryLocalStore localStore;
-  auto stats = std::make_shared<ThreadLocalEdenStats>();
+  auto stats = std::make_shared<EdenStats>();
   TemporaryDirectory testDir("eden_hg_import_test");
   AbsolutePath testPath{testDir.path().string()};
 

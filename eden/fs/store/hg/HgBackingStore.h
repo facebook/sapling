@@ -62,7 +62,7 @@ class HgBackingStore : public BackingStore {
       LocalStore* localStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::shared_ptr<ThreadLocalEdenStats>);
+      std::shared_ptr<EdenStats>);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline

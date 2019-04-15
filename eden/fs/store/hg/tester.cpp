@@ -129,7 +129,7 @@ int importTree(
     AbsolutePathPiece repoPath,
     StringPiece revName,
     RelativePath subdir,
-    std::shared_ptr<ThreadLocalEdenStats> stats) {
+    std::shared_ptr<EdenStats> stats) {
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
   HgBackingStore backingStore(
       repoPath, store, &resultThreadPool, nullptr, stats);
@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
 
   FaultInjector faultInjector(/*enabled=*/false);
   RocksDbLocalStore store(rocksPath, &faultInjector);
-  auto stats = std::make_shared<ThreadLocalEdenStats>();
+  auto stats = std::make_shared<EdenStats>();
 
   int returnCode = EX_OK;
   if (FLAGS_import_type == "flat") {

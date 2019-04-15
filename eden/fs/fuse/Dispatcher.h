@@ -40,18 +40,17 @@ class EdenStatsTag;
 class RequestData;
 class FileHandle;
 class MountPoint;
-using ThreadLocalEdenStats =
-    folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
+using EdenStats = folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
 
 class Dispatcher {
   fuse_init_out connInfo_;
-  ThreadLocalEdenStats* stats_{nullptr};
+  EdenStats* stats_{nullptr};
 
  public:
   virtual ~Dispatcher();
 
-  explicit Dispatcher(ThreadLocalEdenStats* stats);
-  ThreadLocalEdenStats* getStats() const;
+  explicit Dispatcher(EdenStats* stats);
+  EdenStats* getStats() const;
 
   const fuse_init_out& getConnInfo() const;
 

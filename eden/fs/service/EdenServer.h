@@ -282,11 +282,11 @@ class EdenServer : private TakeoverHandler {
     return serverState_;
   }
 
-  std::shared_ptr<ThreadLocalEdenStats> getSharedStats() {
-    return std::shared_ptr<ThreadLocalEdenStats>(serverState_, getStats());
+  std::shared_ptr<EdenStats> getSharedStats() {
+    return std::shared_ptr<EdenStats>(serverState_, getStats());
   }
 
-  ThreadLocalEdenStats* getStats() {
+  EdenStats* getStats() {
     return &serverState_->getStats();
   }
 
