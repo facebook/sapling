@@ -34,10 +34,12 @@ impl Key {
         Key { path, node }
     }
 
+    #[deprecated(since = "2019-04-09", note = "should use path instead")]
     pub fn name(&self) -> &[u8] {
         &self.path.as_byte_slice()
     }
 
+    #[deprecated(since = "2019-04-09", note = "should use path instead")]
     pub fn set_name(&mut self, name: Vec<u8>) {
         let path = RepoPathBuf::from_utf8(name).unwrap();
         self.path = path;
