@@ -15,6 +15,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
+#include <rocksdb/convenience.h>
 #include <rocksdb/db.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
@@ -217,9 +218,38 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   auto columnFamily = dbHandles_.columns[keySpace].get();
   std::unique_ptr<rocksdb::Iterator> it{
       dbHandles_.db->NewIterator(ReadOptions(), columnFamily)};
+  XLOG(DBG2) << "clearing column family \"" << columnFamily->GetName() << "\"";
+  Slice begin;
+  // All of our keys are currently 20 bytes.  Use a longer key to ensure that
+  // this is greater than any valid key.
+  std::string endStr(
+      21, static_cast<char>(std::numeric_limits<unsigned char>::max()));
+  Slice end(endStr);
+
+  // Delete all SST files that only contain keys in the specified range.
+  // Since we are deleting everything in this column family this should
+  // effectively delete everything.
+  auto status =
+      DeleteFilesInRange(dbHandles_.db.get(), columnFamily, &begin, &end);
+  if (!status.ok()) {
+    throw RocksException::build(
+        status,
+        "error deleting data in \"",
+        columnFamily->GetName(),
+        "\" column family");
+  }
+
+  // Call DeleteRange() as well.  In theory DeleteFilesInRange may not delete
+  // everything in the range (but it probably will in our case since we are
+  // intending to delete everything).
   const WriteOptions writeOptions;
-  for (it->SeekToFirst(); it->Valid(); it->Next()) {
-    dbHandles_.db->Delete(writeOptions, columnFamily, it->key());
+  status = dbHandles_.db->DeleteRange(writeOptions, columnFamily, begin, end);
+  if (!status.ok()) {
+    throw RocksException::build(
+        status,
+        "error deleting data in \"",
+        columnFamily->GetName(),
+        "\" column family");
   }
 }
 
@@ -227,8 +257,17 @@ void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
   auto options = rocksdb::CompactRangeOptions{};
   options.allow_write_stall = true;
   auto columnFamily = dbHandles_.columns[keySpace].get();
-  dbHandles_.db->CompactRange(
+  XLOG(DBG2) << "compacting column family \"" << columnFamily->GetName()
+             << "\"";
+  auto status = dbHandles_.db->CompactRange(
       options, columnFamily, /*begin=*/nullptr, /*end=*/nullptr);
+  if (!status.ok()) {
+    throw RocksException::build(
+        status,
+        "error compacting \"",
+        columnFamily->GetName(),
+        "\" column family");
+  }
 }
 
 StoreResult RocksDbLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
