@@ -430,6 +430,8 @@ mod tests {
     use quickcheck::quickcheck;
     use tempfile::NamedTempFile;
 
+    use types::path::RepoPathBuf;
+
     fn make_index(
         file_sections: &[(&Box<[u8]>, FileSectionLocation)],
         nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
@@ -481,8 +483,8 @@ mod tests {
             options == parsed_options
         }
 
-        fn test_roundtrip_index(data: Vec<(Vec<u8>, (FileSectionLocation, HashMap<Key, NodeLocation>))>) -> bool {
-            let data = data.iter().map(|(name, tuple)| (name.clone().into_boxed_slice(), tuple)).collect::<Vec<_>>();
+        fn test_roundtrip_index(data: Vec<(RepoPathBuf, (FileSectionLocation, HashMap<Key, NodeLocation>))>) -> bool {
+            let data = data.iter().map(|(name, tuple)| (name.as_byte_slice().to_vec().into_boxed_slice(), tuple)).collect::<Vec<_>>();
             let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = vec![];
             let mut file_nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = HashMap::new();
 

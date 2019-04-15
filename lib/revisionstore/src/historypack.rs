@@ -393,8 +393,8 @@ pub mod tests {
     }
 
     pub fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
-        let file1 = vec![1, 2, 3];
-        let file2 = vec![1, 2, 3, 4, 5];
+        let file1 = "path".as_bytes().to_vec();
+        let file2 = "path/file".as_bytes().to_vec();
         let null = Node::null_id();
         let node1 = Node::random(&mut rng);
         let node2 = Node::random(&mut rng);

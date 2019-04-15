@@ -7,7 +7,7 @@ use std::fmt;
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::node::Node;
+use crate::{node::Node, path::RepoPathBuf};
 
 #[derive(
     Clone,
@@ -23,28 +23,30 @@ use crate::node::Node;
 )]
 pub struct Key {
     // Name is usually a file or directory path
-    name: Vec<u8>,
+    pub path: RepoPathBuf,
     // Node is always a 20 byte hash. This will be changed to a fix length array later.
     pub node: Node,
 }
 
 impl Key {
     pub fn new(name: Vec<u8>, node: Node) -> Self {
-        Key { name, node }
+        let path = RepoPathBuf::from_utf8(name).unwrap();
+        Key { path, node }
     }
 
     pub fn name(&self) -> &[u8] {
-        &self.name
+        &self.path.as_byte_slice()
     }
 
     pub fn set_name(&mut self, name: Vec<u8>) {
-        self.name = name;
+        let path = RepoPathBuf::from_utf8(name).unwrap();
+        self.path = path;
     }
 }
 
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", &self.node, String::from_utf8_lossy(&self.name))
+        write!(f, "{} {}", &self.node, self.path)
     }
 }
 
@@ -54,7 +56,10 @@ use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Key {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        Key::new(Vec::arbitrary(g), Node::arbitrary(g))
+        Key::new(
+            RepoPathBuf::arbitrary(g).as_byte_slice().to_vec(),
+            Node::arbitrary(g),
+        )
     }
 }
 

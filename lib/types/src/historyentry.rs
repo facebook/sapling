@@ -2,7 +2,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{key::Key, node::Node, nodeinfo::NodeInfo, parents::Parents};
+use crate::{key::Key, node::Node, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
 
 /// Structure containing the fields corresponding to a HistoryPack's
 /// in-memory representation of a file history entry. Useful for
@@ -151,7 +151,7 @@ impl Arbitrary for WireHistoryEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         // It doesn't make sense to have a non-None copyfrom containing
         // an empty name, so set copyfrom to None in such cases.
-        let mut copyfrom = <Option<Vec<u8>>>::arbitrary(g).filter(|name| !name.is_empty());
+        let mut copyfrom = <Option<RepoPathBuf>>::arbitrary(g).filter(|name| !name.is_empty());
         let parents = Parents::arbitrary(g);
 
         // It is not possible to have a copy without a p1, so if there is no p1,
@@ -164,7 +164,7 @@ impl Arbitrary for WireHistoryEntry {
             node: Node::arbitrary(g),
             parents,
             linknode: Node::arbitrary(g),
-            copyfrom,
+            copyfrom: copyfrom.map(|path| path.as_byte_slice().to_vec()),
         }
     }
 }
@@ -181,8 +181,8 @@ mod tests {
             entry == roundtrip
         }
 
-        fn wire_entry_roundtrip(wire: WireHistoryEntry, name: Vec<u8>) -> bool {
-            let entry = HistoryEntry::from((wire.clone(), name));
+        fn wire_entry_roundtrip(wire: WireHistoryEntry, path: RepoPathBuf) -> bool {
+            let entry = HistoryEntry::from((wire.clone(), path.as_byte_slice().to_vec()));
             let roundtrip = WireHistoryEntry::from(entry);
             wire == roundtrip
         }
