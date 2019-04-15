@@ -38,7 +38,7 @@ impl PoolSizeConfig {
 
     pub fn for_sharded_connection() -> Self {
         Self {
-            write_pool_size: 10,
+            write_pool_size: 1,
             read_pool_size: 1,
             read_master_pool_size: 1,
         }
