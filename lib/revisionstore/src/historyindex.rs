@@ -297,11 +297,11 @@ impl HistoryIndex {
         })?;
         let mut file_nodes: Vec<(&Key, &NodeLocation)> =
             file_nodes.iter().collect::<Vec<(&Key, &NodeLocation)>>();
-        file_nodes.sort_by_key(|x| x.0.node());
+        file_nodes.sort_by_key(|x| x.0.node);
 
         for &(key, location) in file_nodes.iter() {
             NodeIndexEntry {
-                node: key.node().clone(),
+                node: key.node.clone(),
                 offset: location.offset,
             }
             .write(writer)?;
@@ -330,7 +330,7 @@ impl HistoryIndex {
         let end = start + file_entry.node_index_size as usize;
 
         let buf = self.mmap.get_err(start..end)?;
-        let entry_offset = self.binary_search_nodes(key.node(), &buf)?;
+        let entry_offset = self.binary_search_nodes(&key.node, &buf)?;
 
         self.read_node_entry((start + entry_offset) - self.index_start)
     }
@@ -497,7 +497,7 @@ mod tests {
                 file_sections.push((name_slice, location.clone()));
                 let mut node_map: HashMap<Key, NodeLocation> = HashMap::new();
                 for (key, node_location) in nodes.iter() {
-                    let key = Key::new(name_slice.to_vec(), key.node().clone());
+                    let key = Key::new(name_slice.to_vec(), key.node.clone());
                     node_map.insert(key, node_location.clone());
                 }
                 file_nodes.insert(name_slice, node_map);
@@ -517,7 +517,7 @@ mod tests {
                 for (ref key, ref location) in node_map.iter() {
                     assert_eq!(name.as_ref(), key.name());
                     let entry = index.get_node_entry(key).unwrap();
-                    assert_eq!(key.node(), &entry.node);
+                    assert_eq!(key.node, entry.node);
                     assert_eq!(location.offset, entry.offset);
                 }
             }

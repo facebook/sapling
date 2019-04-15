@@ -177,14 +177,14 @@ mod tests {
             );
         }
         for (key, nodeinfo) in &loose_file.ancestors {
-            if key.node() == &anode {
-                assert_eq!(nodeinfo.parents[0].node(), &ap0);
-                assert_eq!(nodeinfo.parents[1].node(), &ap1);
+            if key.node == anode {
+                assert_eq!(nodeinfo.parents[0].node, ap0);
+                assert_eq!(nodeinfo.parents[1].node, ap1);
                 assert_eq!(nodeinfo.linknode, alinknode);
             } else {
-                assert_eq!(key.node(), &bnode);
-                assert_eq!(nodeinfo.parents[0].node(), &bp0);
-                assert_eq!(nodeinfo.parents[1].node(), &bp1);
+                assert_eq!(key.node, bnode);
+                assert_eq!(nodeinfo.parents[0].node, bp0);
+                assert_eq!(nodeinfo.parents[1].node, bp1);
                 assert_eq!(nodeinfo.linknode, blinknode);
             }
         }

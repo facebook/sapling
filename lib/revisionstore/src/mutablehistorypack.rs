@@ -105,7 +105,7 @@ impl MutableHistoryPack {
         // Write nodes
         for (key, node_info) in node_map.iter() {
             let p1 = &node_info.parents[0];
-            let copyfrom = if !p1.node().is_null() && p1.name() != key.name() {
+            let copyfrom = if !p1.node.is_null() && p1.name() != key.name() {
                 Some(p1.name())
             } else {
                 None
@@ -114,9 +114,9 @@ impl MutableHistoryPack {
             let node_offset = section_offset + writer.len() as usize;
             HistoryEntry::write(
                 writer,
-                key.node(),
-                node_info.parents[0].node(),
-                node_info.parents[1].node(),
+                &key.node,
+                &node_info.parents[0].node,
+                &node_info.parents[1].node,
                 &node_info.linknode,
                 &copyfrom,
             )?;

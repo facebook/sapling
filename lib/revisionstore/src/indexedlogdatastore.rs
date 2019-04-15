@@ -39,7 +39,7 @@ impl Entry {
     }
 
     pub fn from_log(key: &Key, log: &LogRotate) -> Fallible<Self> {
-        let mut log_entry = log.lookup(0, key.node().as_ref())?;
+        let mut log_entry = log.lookup(0, key.node.as_ref())?;
         let buf = log_entry.nth(0).ok_or_else(|| format_err!("Not found"))??;
 
         let mut cur = Cursor::new(buf);
@@ -73,14 +73,14 @@ impl Entry {
 
     pub fn write_to_log(self, log: &mut LogRotate) -> Fallible<()> {
         let mut buf = Vec::new();
-        buf.write_all(self.delta.key.node().as_ref())?;
+        buf.write_all(self.delta.key.node.as_ref())?;
         buf.write_u16::<BigEndian>(self.delta.key.name().len() as u16)?;
         buf.write_all(self.delta.key.name())?;
         buf.write_all(
             self.delta
                 .base
                 .as_ref()
-                .map_or_else(|| Node::null_id(), |k| k.node())
+                .map_or_else(|| Node::null_id(), |k| &k.node)
                 .as_ref(),
         )?;
         self.metadata.write(&mut buf)?;

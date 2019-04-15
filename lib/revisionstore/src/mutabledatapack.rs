@@ -87,13 +87,13 @@ impl MutableDataPack {
         let mut buf = Vec::with_capacity(delta.key.name().len() + compressed.len() + 72);
         buf.write_u16::<BigEndian>(delta.key.name().len() as u16)?;
         buf.write_all(delta.key.name())?;
-        buf.write_all(delta.key.node().as_ref())?;
+        buf.write_all(delta.key.node.as_ref())?;
 
         buf.write_all(
             delta
                 .base
                 .as_ref()
-                .map_or_else(|| Node::null_id(), |k| k.node())
+                .map_or_else(|| Node::null_id(), |k| &k.node)
                 .as_ref(),
         )?;
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
@@ -105,17 +105,17 @@ impl MutableDataPack {
         self.hasher.input(&buf);
 
         let delta_location = DeltaLocation {
-            delta_base: delta.base.as_ref().map_or(None, |k| Some(k.node().clone())),
+            delta_base: delta.base.as_ref().map_or(None, |k| Some(k.node.clone())),
             offset,
             size: buf.len() as u64,
         };
         self.mem_index
-            .insert(delta.key.node().clone(), delta_location);
+            .insert(delta.key.node.clone(), delta_location);
         Ok(())
     }
 
     fn read_entry(&self, key: &Key) -> Fallible<(Delta, Metadata)> {
-        let location: &DeltaLocation = self.mem_index.get(key.node()).ok_or::<Error>(
+        let location: &DeltaLocation = self.mem_index.get(&key.node).ok_or::<Error>(
             MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
                 .into(),
         )?;
@@ -202,7 +202,7 @@ impl Store for MutableDataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| self.mem_index.get(k.node()).is_none())
+            .filter(|k| self.mem_index.get(&k.node).is_none())
             .map(|k| k.clone())
             .collect())
     }
@@ -287,7 +287,7 @@ mod tests {
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
-            base: Some(Key::new(Vec::new(), delta.key.node().clone())),
+            base: Some(Key::new(Vec::new(), delta.key.node.clone())),
             key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
         mutdatapack.add(&delta2, &Default::default()).unwrap();

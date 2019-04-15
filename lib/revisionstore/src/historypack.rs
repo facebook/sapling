@@ -229,7 +229,7 @@ impl HistoryPack {
 
     fn read_node_info(&self, key: &Key, offset: u64) -> Fallible<NodeInfo> {
         let entry = self.read_history_entry(offset)?;
-        assert_eq!(&entry.node, key.node());
+        assert_eq!(entry.node, key.node);
         let p1 = Key::new(
             match entry.copy_from {
                 Some(value) => value.to_vec(),

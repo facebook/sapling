@@ -169,7 +169,7 @@ fn get_file(
     key: Key,
 ) -> impl Future<Item = (Key, Bytes), Error = Error> {
     log::debug!("Fetching file content for key: {}", &key);
-    let filenode = key.node().to_hex();
+    let filenode = key.node.to_hex();
     url_prefix
         .join(&filenode)
         .into_future()
@@ -206,7 +206,7 @@ fn get_history(
     max_depth: Option<u32>,
 ) -> impl Stream<Item = HistoryEntry, Error = Error> {
     log::debug!("Fetching history for key: {}", &key);
-    let filenode = key.node().to_hex();
+    let filenode = key.node.to_hex();
     let filename = url_encode(&key.name());
     url_prefix
         .join(&format!("{}/", &filenode))

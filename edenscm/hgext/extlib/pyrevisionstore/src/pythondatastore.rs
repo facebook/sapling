@@ -36,7 +36,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
-        let py_node = PyBytes::new(py, key.node().as_ref());
+        let py_node = PyBytes::new(py, key.node.as_ref());
 
         let py_data = self
             .py_store
@@ -52,7 +52,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
-        let py_node = PyBytes::new(py, key.node().as_ref());
+        let py_node = PyBytes::new(py, key.node.as_ref());
         let py_delta = self
             .py_store
             .call_method(py, "getdelta", (py_name, py_node), None)
@@ -68,7 +68,7 @@ impl DataStore for PythonDataStore {
         let base_key = to_key(py, &py_delta_name, &py_delta_node);
         Ok(Delta {
             data: py_bytes.data(py).to_vec().into(),
-            base: if base_key.node().is_null() {
+            base: if base_key.node.is_null() {
                 None
             } else {
                 Some(base_key)
@@ -81,7 +81,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
-        let py_node = PyBytes::new(py, key.node().as_ref());
+        let py_node = PyBytes::new(py, key.node.as_ref());
         let py_chain = self
             .py_store
             .call_method(py, "getdeltachain", (py_name, py_node), None)
@@ -98,7 +98,7 @@ impl DataStore for PythonDataStore {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
-        let py_node = PyBytes::new(py, key.node().as_ref());
+        let py_node = PyBytes::new(py, key.node.as_ref());
         let py_meta = self
             .py_store
             .call_method(py, "getmeta", (py_name, py_node), None)
@@ -129,7 +129,8 @@ impl Store for PythonDataStore {
             py_missing.insert_item(py, py_missing.len(py), py_key.into_object());
         }
 
-        let py_missing = self.py_store
+        let py_missing = self
+            .py_store
             .call_method(py, "getmissing", (py_missing,), None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_list = PyList::extract(py, &py_missing).map_err(|e| pyerr_to_error(py, e))?;

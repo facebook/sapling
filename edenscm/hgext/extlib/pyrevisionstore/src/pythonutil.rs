@@ -38,7 +38,7 @@ pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> Key {
 pub fn from_key(py: Python, key: &Key) -> (PyBytes, PyBytes) {
     (
         PyBytes::new(py, key.name()),
-        PyBytes::new(py, key.node().as_ref()),
+        PyBytes::new(py, key.node.as_ref()),
     )
 }
 
@@ -54,7 +54,7 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
     let base_key = to_key(py, &py_delta_name, &py_delta_node);
     Ok(Delta {
         data: py_bytes.data(py).to_vec().into(),
-        base: if base_key.node().is_null() {
+        base: if base_key.node.is_null() {
             None
         } else {
             Some(base_key)

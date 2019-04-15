@@ -3,8 +3,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::{PyBytes, PyDict, PyErr, PyIterator, PyList, PyResult, PyTuple, Python, PythonObject,
-              ToPyObject};
+use cpython::{
+    PyBytes, PyDict, PyErr, PyIterator, PyList, PyResult, PyTuple, Python, PythonObject, ToPyObject,
+};
 
 use revisionstore::historystore::HistoryStore;
 use types::{Key, NodeInfo};
@@ -21,12 +22,9 @@ impl<T: HistoryStore> HistoryStorePyExt for T {
     fn get_ancestors(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node);
         let ancestors = self.get_ancestors(&key).map_err(|e| to_pyerr(py, &e))?;
-        let ancestors = ancestors.iter().map(|(k, v)| {
-            (
-                PyBytes::new(py, k.node().as_ref()),
-                from_node_info(py, k, v),
-            )
-        });
+        let ancestors = ancestors
+            .iter()
+            .map(|(k, v)| (PyBytes::new(py, k.node.as_ref()), from_node_info(py, k, v)));
         let pyancestors = PyDict::new(py);
         for (node, value) in ancestors {
             pyancestors.set_item(py, node, value)?;
@@ -37,7 +35,8 @@ impl<T: HistoryStore> HistoryStorePyExt for T {
     fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
-        let keys = keys.map(|k| k.and_then(|k| from_tuple_to_key(py, &k)))
+        let keys = keys
+            .map(|k| k.and_then(|k| from_tuple_to_key(py, &k)))
             .collect::<Result<Vec<Key>, PyErr>>()?;
         let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
 
@@ -59,13 +58,14 @@ impl<T: HistoryStore> HistoryStorePyExt for T {
 
 fn from_node_info(py: Python, key: &Key, info: &NodeInfo) -> PyTuple {
     (
-        PyBytes::new(py, info.parents[0].node().as_ref()),
-        PyBytes::new(py, info.parents[1].node().as_ref()),
+        PyBytes::new(py, info.parents[0].node.as_ref()),
+        PyBytes::new(py, info.parents[1].node.as_ref()),
         PyBytes::new(py, info.linknode.as_ref().as_ref()),
         if key.name() != info.parents[0].name() {
             PyBytes::new(py, info.parents[0].name()).into_object()
         } else {
             Python::None(py)
         },
-    ).into_py_object(py)
+    )
+        .into_py_object(py)
 }

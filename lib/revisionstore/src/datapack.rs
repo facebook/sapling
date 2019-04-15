@@ -311,7 +311,7 @@ impl DataStore for DataPack {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let entry = self.index.get_entry(key.node())?;
+        let entry = self.index.get_entry(&key.node)?;
         let data_entry = self.read_entry(entry.pack_entry_offset())?;
 
         Ok(Delta {
@@ -325,7 +325,7 @@ impl DataStore for DataPack {
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let mut chain: Vec<Delta> = Default::default();
-        let mut next_entry = self.index.get_entry(key.node())?;
+        let mut next_entry = self.index.get_entry(&key.node)?;
         loop {
             let data_entry = self.read_entry(next_entry.pack_entry_offset())?;
             chain.push(Delta {
@@ -347,7 +347,7 @@ impl DataStore for DataPack {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        let index_entry = self.index.get_entry(key.node())?;
+        let index_entry = self.index.get_entry(&key.node)?;
         Ok(self.read_entry(index_entry.pack_entry_offset())?.metadata)
     }
 }
@@ -360,7 +360,7 @@ impl Store for DataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| self.index.get_entry(k.node()).is_err())
+            .filter(|k| self.index.get_entry(&k.node).is_err())
             .map(|k| k.clone())
             .collect())
     }
