@@ -35,12 +35,13 @@ namespace eden {
 
 class DirList;
 class Dispatcher;
-class EdenStats;
+class EdenThreadStats;
 class EdenStatsTag;
 class RequestData;
 class FileHandle;
 class MountPoint;
-using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
+using ThreadLocalEdenStats =
+    folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
 
 class Dispatcher {
   fuse_init_out connInfo_;

@@ -21,29 +21,30 @@ namespace facebook {
 namespace eden {
 
 /**
- * A tag class for using with folly::ThreadLocal when storing EdenStats.
+ * A tag class for using with folly::ThreadLocal when storing EdenThreadStats.
  */
 class EdenStatsTag {};
-class EdenStats;
+class EdenThreadStats;
 
-using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
+using ThreadLocalEdenStats =
+    folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
 
 /**
- * EdenStats contains various thread-local stats structures.
+ * EdenThreadStats contains various thread-local stats structures.
  *
- * Each EdenStats object should only be used from a single thread.
- * The ThreadLocalEdenStats object should be used to maintain one EdenStats
- * object for each thread that needs to access/update the stats.
+ * Each EdenThreadStats object should only be used from a single thread.
+ * The ThreadLocalEdenStats object should be used to maintain one
+ * EdenThreadStats object for each thread that needs to access/update the stats.
  */
-class EdenStats : public facebook::stats::ThreadLocalStatsT<
-                      facebook::stats::TLStatsThreadSafe> {
+class EdenThreadStats : public facebook::stats::ThreadLocalStatsT<
+                            facebook::stats::TLStatsThreadSafe> {
  public:
   using Histogram = TLHistogram;
 #if defined(EDEN_HAVE_STATS)
   using Timeseries = TLTimeseries;
 #endif
 
-  explicit EdenStats();
+  explicit EdenThreadStats();
 
   // We track latency in units of microseconds, hence the _us suffix
   // in the histogram names below.
@@ -99,7 +100,7 @@ class EdenStats : public facebook::stats::ThreadLocalStatsT<
   // thread from the one used to initiate it, we use HistogramPtr
   // as a helper for referencing the pointer-to-member that we
   // want to update at the end of the request.
-  using HistogramPtr = Histogram EdenStats::*;
+  using HistogramPtr = Histogram EdenThreadStats::*;
 
   /** Record a the latency for an operation.
    * item is the pointer-to-member for one of the histograms defined

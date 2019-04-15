@@ -26,7 +26,7 @@ class RequestData : public folly::RequestData {
   fuse_in_header fuseHeader_;
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  EdenStats::HistogramPtr latencyHistogram_{nullptr};
+  EdenThreadStats::HistogramPtr latencyHistogram_{nullptr};
   ThreadLocalEdenStats* stats_{nullptr};
   Dispatcher* dispatcher_{nullptr};
 
@@ -58,7 +58,7 @@ class RequestData : public folly::RequestData {
 
   void startRequest(
       ThreadLocalEdenStats* stats,
-      EdenStats::HistogramPtr histogram);
+      EdenThreadStats::HistogramPtr histogram);
   void finishRequest();
 
   // Returns the associated dispatcher instance

@@ -53,7 +53,7 @@ RequestData& RequestData::create(
 
 void RequestData::startRequest(
     ThreadLocalEdenStats* stats,
-    EdenStats::HistogramPtr histogram) {
+    EdenThreadStats::HistogramPtr histogram) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;

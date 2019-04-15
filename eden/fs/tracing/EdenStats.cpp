@@ -26,9 +26,10 @@ constexpr std::chrono::microseconds kBucketSize{1000};
 namespace facebook {
 namespace eden {
 
-EdenStats::EdenStats() {}
+EdenThreadStats::EdenThreadStats() {}
 
-EdenStats::Histogram EdenStats::createHistogram(const std::string& name) {
+EdenThreadStats::Histogram EdenThreadStats::createHistogram(
+    const std::string& name) {
   return Histogram{this,
                    name,
                    static_cast<size_t>(kBucketSize.count()),
@@ -41,14 +42,15 @@ EdenStats::Histogram EdenStats::createHistogram(const std::string& name) {
 }
 
 #if defined(EDEN_HAVE_STATS)
-EdenStats::Timeseries EdenStats::createTimeseries(const std::string& name) {
+EdenThreadStats::Timeseries EdenThreadStats::createTimeseries(
+    const std::string& name) {
   auto timeseries = Timeseries{this, name};
   timeseries.exportStat(facebook::stats::COUNT);
   return timeseries;
 }
 #endif
 
-void EdenStats::recordLatency(
+void EdenThreadStats::recordLatency(
     HistogramPtr item,
     std::chrono::microseconds elapsed,
     std::chrono::seconds now) {
