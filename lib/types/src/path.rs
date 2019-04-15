@@ -85,6 +85,13 @@ impl RepoPathBuf {
         Default::default()
     }
 
+    /// Constructs a `RepoPathBuf` from a vector of bytes. It will fail when the bytes are are not
+    /// valid utf8 or when the string does not respect the `RepoPathBuf` rules.
+    pub fn from_utf8(vec: Vec<u8>) -> Fallible<RepoPathBuf> {
+        let utf8_string = String::from_utf8(vec)?;
+        RepoPathBuf::from_string(utf8_string)
+    }
+
     /// Constructs a `RepoPathBuf` from a `String`. It can fail when the contents of String is
     /// deemed invalid. See `RepoPath` for validation rules.
     pub fn from_string(s: String) -> Fallible<Self> {
@@ -538,6 +545,7 @@ mod tests {
     #[test]
     fn test_repo_path_initialization_with_invalid_utf8() {
         assert!(RepoPath::from_utf8(&vec![0x80, 0x80]).is_err());
+        assert!(RepoPathBuf::from_utf8(vec![0x80, 0x80]).is_err());
     }
 
     #[test]
@@ -569,6 +577,10 @@ mod tests {
                 "{}",
                 RepoPathBuf::from_string(String::from("slice")).unwrap()
             ),
+            "slice"
+        );
+        assert_eq!(
+            format!("{}", RepoPathBuf::from_utf8(b"slice".to_vec()).unwrap()),
             "slice"
         );
     }
