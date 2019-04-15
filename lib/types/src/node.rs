@@ -204,9 +204,6 @@ impl<R: Read + ?Sized> ReadNodeExt for R {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::quickcheck;
-
-#[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for Node {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         let mut bytes = [0u8; Node::len()];
@@ -239,6 +236,8 @@ pub mod mocks {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
 
     #[test]
     fn test_incorrect_length() {

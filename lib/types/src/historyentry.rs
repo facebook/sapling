@@ -113,7 +113,7 @@ impl From<HistoryEntry> for WireHistoryEntry {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{quickcheck, Arbitrary};
+use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for HistoryEntry {
@@ -171,6 +171,8 @@ impl Arbitrary for WireHistoryEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
