@@ -8,6 +8,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{
     historyentry::{HistoryEntry, WireHistoryEntry},
     key::Key,
+    path::RepoPathBuf,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,11 +46,11 @@ pub struct FileHistoryRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileHistoryResponse {
-    pub entries: Vec<(Vec<u8>, WireHistoryEntry)>,
+    pub entries: Vec<(RepoPathBuf, WireHistoryEntry)>,
 }
 
 impl FileHistoryResponse {
-    pub fn new(history: impl IntoIterator<Item = (Vec<u8>, WireHistoryEntry)>) -> Self {
+    pub fn new(history: impl IntoIterator<Item = (RepoPathBuf, WireHistoryEntry)>) -> Self {
         Self {
             entries: history.into_iter().collect(),
         }
@@ -64,7 +65,7 @@ impl IntoIterator for FileHistoryResponse {
         let iter = self
             .entries
             .into_iter()
-            .map(|(name, entry)| HistoryEntry::from_wire(entry, name));
+            .map(|(path, entry)| HistoryEntry::from_wire(entry, path));
         Box::new(iter)
     }
 }
@@ -78,6 +79,7 @@ mod tests {
         node::mocks::{AS, BS, CS, ONES, THREES, TWOS},
         nodeinfo::NodeInfo,
         parents::Parents,
+        testutil::*,
     };
 
     #[test]
@@ -115,9 +117,9 @@ mod tests {
         };
 
         let history = vec![
-            (b"foo".to_vec(), foo),
-            (b"bar".to_vec(), bar),
-            (b"baz".to_vec(), baz),
+            (repo_path_buf("foo"), foo),
+            (repo_path_buf("bar"), bar),
+            (repo_path_buf("baz"), baz),
         ];
         let response = FileHistoryResponse::new(history);
 

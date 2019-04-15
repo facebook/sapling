@@ -244,7 +244,7 @@ fn get_history(
         })
         .map(process_body)
         .flatten_stream()
-        .map(move |entry| HistoryEntry::from_wire(entry, key.name().to_vec()))
+        .map(move |entry| HistoryEntry::from_wire(entry, key.path.clone()))
 }
 
 fn process_body(body: Bytes) -> impl Stream<Item = WireHistoryEntry, Error = Error> {

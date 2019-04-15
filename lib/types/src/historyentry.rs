@@ -30,28 +30,28 @@ impl HistoryEntry {
     /// the entry refers. (The name is a bytestring that usually consists
     /// of the file's path.) As such, the name needs to be supplied by the
     /// caller in order to perform the conversion.
-    pub fn from_wire(entry: WireHistoryEntry, name: Vec<u8>) -> Self {
+    pub fn from_wire(entry: WireHistoryEntry, path: RepoPathBuf) -> Self {
         // If this file was copied, use the original name as the name of
         // the p1 key instead of the current entry's name.
-        let p1_name = entry.copyfrom.unwrap_or_else(|| name.clone());
+        let p1_name = entry.copyfrom.unwrap_or_else(|| path.clone());
         let parents = match entry.parents {
             Parents::None => Default::default(),
             Parents::One(p1) => {
-                let p1 = Key::from_name_slice(p1_name, p1);
+                let p1 = Key::new(p1_name, p1);
                 // If there is no p2, its node hash is null and its name is empty.
                 let p2 = Key::default();
                 [p1, p2]
             }
             Parents::Two(p1, p2) => {
-                let p1 = Key::from_name_slice(p1_name, p1);
+                let p1 = Key::new(p1_name, p1);
                 // If there is a p2, its name must match the current entry's name.
-                let p2 = Key::from_name_slice(name.clone(), p2);
+                let p2 = Key::new(path.clone(), p2);
                 [p1, p2]
             }
         };
 
         Self {
-            key: Key::from_name_slice(name, entry.node),
+            key: Key::new(path, entry.node),
             nodeinfo: NodeInfo {
                 parents,
                 linknode: entry.linknode,
@@ -60,9 +60,9 @@ impl HistoryEntry {
     }
 }
 
-impl From<(WireHistoryEntry, Vec<u8>)> for HistoryEntry {
-    fn from((entry, name): (WireHistoryEntry, Vec<u8>)) -> Self {
-        Self::from_wire(entry, name)
+impl From<(WireHistoryEntry, RepoPathBuf)> for HistoryEntry {
+    fn from((entry, path): (WireHistoryEntry, RepoPathBuf)) -> Self {
+        Self::from_wire(entry, path)
     }
 }
 
@@ -89,7 +89,7 @@ pub struct WireHistoryEntry {
     pub node: Node,
     pub parents: Parents,
     pub linknode: Node,
-    pub copyfrom: Option<Vec<u8>>,
+    pub copyfrom: Option<RepoPathBuf>,
 }
 
 impl From<HistoryEntry> for WireHistoryEntry {
@@ -97,12 +97,11 @@ impl From<HistoryEntry> for WireHistoryEntry {
         let [p1, p2] = entry.nodeinfo.parents;
         // If the p1's name differs from the entry's name, this means the file
         // was copied, so populate the copyfrom path with the p1 name.
-        let copyfrom =
-            if !p1.node.is_null() && !p1.name().is_empty() && p1.name() != entry.key.name() {
-                Some(p1.name().to_vec())
-            } else {
-                None
-            };
+        let copyfrom = if !p1.node.is_null() && !p1.path.is_empty() && p1.path != entry.key.path {
+            Some(p1.path)
+        } else {
+            None
+        };
 
         Self {
             node: entry.key.node,
@@ -128,7 +127,7 @@ impl Arbitrary for HistoryEntry {
         // so p2's name must always match the current entry's name
         // unless p2 is null.
         if !nodeinfo.parents[1].node.is_null() {
-            nodeinfo.parents[1].set_name(key.name().to_vec());
+            nodeinfo.parents[1].path = key.path.clone();
         }
 
         // If p1's key contains a null node hash or an empty name,
@@ -137,7 +136,7 @@ impl Arbitrary for HistoryEntry {
         // path with a non-null hash.
         //
         // Likewise, if p1 is null, then p2 must also be null.
-        if nodeinfo.parents[0].name().is_empty() || nodeinfo.parents[0].node.is_null() {
+        if nodeinfo.parents[0].path.is_empty() || nodeinfo.parents[0].node.is_null() {
             nodeinfo.parents[0] = Key::default();
             nodeinfo.parents[1] = Key::default();
         }
@@ -164,7 +163,7 @@ impl Arbitrary for WireHistoryEntry {
             node: Node::arbitrary(g),
             parents,
             linknode: Node::arbitrary(g),
-            copyfrom: copyfrom.map(|path| path.as_byte_slice().to_vec()),
+            copyfrom,
         }
     }
 }
@@ -175,14 +174,14 @@ mod tests {
 
     quickcheck! {
         fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
-            let name = entry.key.name().to_vec();
+            let path = entry.key.path.clone();
             let wire = WireHistoryEntry::from(entry.clone());
-            let roundtrip = HistoryEntry::from((wire, name));
+            let roundtrip = HistoryEntry::from((wire, path));
             entry == roundtrip
         }
 
         fn wire_entry_roundtrip(wire: WireHistoryEntry, path: RepoPathBuf) -> bool {
-            let entry = HistoryEntry::from((wire.clone(), path.as_byte_slice().to_vec()));
+            let entry = HistoryEntry::from((wire.clone(), path));
             let roundtrip = WireHistoryEntry::from(entry);
             wire == roundtrip
         }
