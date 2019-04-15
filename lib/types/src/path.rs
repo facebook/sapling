@@ -38,9 +38,11 @@ use std::{
 };
 
 use failure::{bail, Fallible};
+use serde_derive::{Deserialize, Serialize};
 
 /// An owned version of a `RepoPath`.
 #[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize)]
 pub struct RepoPathBuf(String);
 
 /// A normalized path starting from the root of the repository. Paths can be broken into
@@ -60,6 +62,7 @@ pub struct RepoPathBuf(String);
 ///
 /// It should be noted that `RepoPathBuf` and `RepoPath` implement `AsRef<RepoPath>`.
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Serialize)]
 pub struct RepoPath(str);
 
 /// An owned version of a `PathComponent`. Not intended for mutation. RepoPathBuf is probably
