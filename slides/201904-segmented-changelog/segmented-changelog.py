@@ -538,7 +538,7 @@ def slidenumberassign1():
             seglevel=2,
         ),
     )
-    yield r"Use Depth-First Serach, not Breadth-First Search, from a merge."
+    yield r"Use Depth-First Search, not Breadth-First Search, from a merge."
 
 
 def slidenumberassign2():
@@ -562,7 +562,7 @@ def slidenumberassign2():
             texts=" AFDBCEG",
         ),
     )
-    yield r"Use Depth-First Serach."
+    yield r"Use Depth-First Search."
 
 
 def slidenumberassign3():
