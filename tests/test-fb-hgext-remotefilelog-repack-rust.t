@@ -144,3 +144,14 @@
   $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histpack
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
+
+# Verify that a non-existing directory does not fail repack
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > fastmanifest=
+  > EOF
+
+  $ hg repack --incremental --packsonly
+  warning: rust repack failed for: $TESTTMP/hgcache/master/packs/manifests, fallback to python
+  warning: rust repack failed for: $TESTTMP/shallow/.hg/store/packs/manifests, fallback to python
