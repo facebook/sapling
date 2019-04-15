@@ -167,9 +167,9 @@ mod tests {
     use super::*;
 
     use bytes::Bytes;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
+
+    use types::testutil::*;
 
     #[test]
     fn test_empty() {
@@ -180,14 +180,13 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
         let mut log = IndexedLogDataStore::new(&tempdir).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: Key::new(vec![0], Node::random(&mut rng)),
+            key: key("a", "1"),
         };
         let metadata = Default::default();
 
@@ -197,14 +196,13 @@ mod tests {
 
     #[test]
     fn test_add_get() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
         let mut log = IndexedLogDataStore::new(&tempdir).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: Key::new(vec![0], Node::random(&mut rng)),
+            key: key("a", "1"),
         };
         let metadata = Default::default();
 
