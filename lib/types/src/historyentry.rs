@@ -97,11 +97,12 @@ impl From<HistoryEntry> for WireHistoryEntry {
         let [p1, p2] = entry.nodeinfo.parents;
         // If the p1's name differs from the entry's name, this means the file
         // was copied, so populate the copyfrom path with the p1 name.
-        let copyfrom = if !p1.node.is_null() && !p1.name.is_empty() && p1.name != entry.key.name {
-            Some(p1.name)
-        } else {
-            None
-        };
+        let copyfrom =
+            if !p1.node.is_null() && !p1.name().is_empty() && p1.name() != entry.key.name() {
+                Some(p1.name().to_vec())
+            } else {
+                None
+            };
 
         Self {
             node: entry.key.node,
@@ -127,7 +128,7 @@ impl Arbitrary for HistoryEntry {
         // so p2's name must always match the current entry's name
         // unless p2 is null.
         if !nodeinfo.parents[1].node.is_null() {
-            nodeinfo.parents[1].name = key.name.clone();
+            nodeinfo.parents[1].set_name(key.name().to_vec());
         }
 
         // If p1's key contains a null node hash or an empty name,
@@ -136,7 +137,7 @@ impl Arbitrary for HistoryEntry {
         // path with a non-null hash.
         //
         // Likewise, if p1 is null, then p2 must also be null.
-        if nodeinfo.parents[0].name.is_empty() || nodeinfo.parents[0].node.is_null() {
+        if nodeinfo.parents[0].name().is_empty() || nodeinfo.parents[0].node.is_null() {
             nodeinfo.parents[0] = Key::default();
             nodeinfo.parents[1] = Key::default();
         }
@@ -174,7 +175,7 @@ mod tests {
 
     quickcheck! {
         fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
-            let name = entry.key.name.clone();
+            let name = entry.key.name().to_vec();
             let wire = WireHistoryEntry::from(entry.clone());
             let roundtrip = HistoryEntry::from((wire, name));
             entry == roundtrip

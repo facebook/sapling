@@ -23,7 +23,7 @@ use crate::node::Node;
 )]
 pub struct Key {
     // Name is usually a file or directory path
-    pub(crate) name: Vec<u8>,
+    name: Vec<u8>,
     // Node is always a 20 byte hash. This will be changed to a fix length array later.
     pub node: Node,
 }
@@ -35,6 +35,10 @@ impl Key {
 
     pub fn name(&self) -> &[u8] {
         &self.name
+    }
+
+    pub fn set_name(&mut self, name: Vec<u8>) {
+        self.name = name;
     }
 }
 
