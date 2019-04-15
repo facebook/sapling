@@ -153,5 +153,3 @@
   > EOF
 
   $ hg repack --incremental --packsonly
-  warning: rust repack failed for: $TESTTMP/hgcache/master/packs/manifests, fallback to python
-  warning: rust repack failed for: $TESTTMP/shallow/.hg/store/packs/manifests, fallback to python
