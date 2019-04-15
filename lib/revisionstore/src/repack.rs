@@ -165,7 +165,7 @@ fn repack_packs<'a, T: MutablePack, U: Store + Repackable>(
                     // We were about to remove this file, let's just ignore the failures to open
                     // it.
                     successfully_repacked += 1;
-                    continue
+                    continue;
                 }
             };
 
@@ -294,7 +294,7 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
 
-    use types::node::Node;
+    use types::testutil::*;
 
     use std::{
         collections::HashMap,
@@ -340,15 +340,11 @@ mod tests {
 
     #[test]
     fn test_repackable() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let is_deleted = Rc::new(AtomicBool::new(false));
         let store = FakeStore {
             kind: RepackOutputType::Data,
             id: Arc::new(PathBuf::from("foo/bar")),
-            keys: vec![
-                Key::new(vec![0], Node::random(&mut rng)),
-                Key::new(vec![0], Node::random(&mut rng)),
-            ],
+            keys: vec![key("a", "1"), key("b", "2")],
             deleted: is_deleted.clone(),
         };
 
@@ -366,7 +362,7 @@ mod tests {
 
         let store2 = store.clone();
 
-        // Test cleanup where the packed keys don't some store keys
+        // Test cleanup where the pack, testutil::*ed keys don't some store keys
         let mut packed_keys = HashSet::new();
         packed_keys.insert(store.keys[0].clone());
         let mut created_packs = HashSet::new();
@@ -416,14 +412,13 @@ mod tests {
 
     #[test]
     fn test_repack_one_datapack() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
         let revisions = vec![(
             Delta {
                 data: Bytes::from(&[1u8, 2, 3, 4][..]),
                 base: None,
-                key: Key::new(vec![0], Node::random(&mut rng)),
+                key: key("a", "1"),
             },
             Default::default(),
         )];
@@ -447,13 +442,12 @@ mod tests {
 
     #[test]
     fn test_repack_multiple_datapacks() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
         let mut revisions = Vec::new();
         let mut paths = Vec::new();
 
-        for _ in 0..2 {
-            let base = Key::new(vec![0], Node::random(&mut rng));
+        for i in 1..=2 {
+            let base = key("a", &i.to_string());
             let rev = vec![
                 (
                     Delta {
@@ -467,7 +461,7 @@ mod tests {
                     Delta {
                         data: Bytes::from(&[1, 2, 3, 4][..]),
                         base: Some(base),
-                        key: Key::new(vec![0], Node::random(&mut rng)),
+                        key: key("a", &(100 + i).to_string()),
                     },
                     Default::default(),
                 ),
@@ -510,13 +504,12 @@ mod tests {
 
     #[test]
     fn test_repack_corrupted() {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
         let mut revisions = Vec::new();
         let mut paths = Vec::new();
 
-        for _ in 0..2 {
-            let base = Key::new(vec![0], Node::random(&mut rng));
+        for i in 1..=2 {
+            let base = key("a", &i.to_string());
             let rev = vec![
                 (
                     Delta {
@@ -530,7 +523,7 @@ mod tests {
                     Delta {
                         data: Bytes::from(&[1, 2, 3, 4][..]),
                         base: Some(base),
-                        key: Key::new(vec![0], Node::random(&mut rng)),
+                        key: key("a", &(100 + i).to_string()),
                     },
                     Default::default(),
                 ),
