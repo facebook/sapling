@@ -419,7 +419,7 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let mut fetches = Vec::new();
         for key in keys {
-            let filenode = HgFileNodeId::new(key.node().clone().into());
+            let filenode = HgFileNodeId::new(key.node.clone().into());
             let fut = self.repo.get_raw_hg_content(ctx.clone(), filenode, false);
 
             let logger = self.logger.clone();
@@ -451,7 +451,7 @@ impl MononokeRepo {
         for key in keys {
             let ctx = ctx.clone();
             let repo = self.repo.clone();
-            let filenode = HgFileNodeId::new(key.node().clone().into());
+            let filenode = HgFileNodeId::new(key.node.clone().into());
             let logger = self.logger.clone();
 
             let fut = MPath::new(key.name())
