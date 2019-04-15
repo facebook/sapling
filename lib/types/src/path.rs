@@ -490,7 +490,7 @@ impl<'a> Iterator for Components<'a> {
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for RepoPathBuf {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let size = g.gen_range(0, 16);
+        let size = g.gen_range(0, 8);
         let mut path_buf = RepoPathBuf::new();
         for _ in 0..size {
             path_buf.push(PathComponentBuf::arbitrary(g).as_ref());
@@ -506,7 +506,17 @@ impl quickcheck::Arbitrary for PathComponentBuf {
         // string is found. To note that generating Arbitrary Unicode on `char` is implemented
         // using a loop where random bytes are validated against the `char` constructor.
         loop {
-            let s = String::arbitrary(g);
+            let size = g.gen_range(1, 8);
+            let mut s = String::with_capacity(size);
+            for _ in 0..size {
+                let c = loop {
+                    let x = char::arbitrary(g);
+                    if x != SEPARATOR {
+                        break x;
+                    }
+                };
+                s.push(c);
+            }
             if let Ok(component) = PathComponentBuf::from_string(s) {
                 return component;
             }
