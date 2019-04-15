@@ -64,7 +64,8 @@ void RequestData::finishRequest() {
   const auto now = steady_clock::now();
   const auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
   const auto diff = duration_cast<microseconds>(now - startTime_);
-  stats_->get()->recordLatency(latencyHistogram_, diff, now_since_epoch);
+  stats_->getStatsForCurrentThread().recordLatency(
+      latencyHistogram_, diff, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
 }

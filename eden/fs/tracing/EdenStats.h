@@ -9,24 +9,34 @@
  */
 #pragma once
 
+#include <folly/ThreadLocal.h>
 #include "common/stats/ThreadLocalStats.h"
 #include "eden/fs/eden-config.h"
-
-namespace folly {
-template <class T, class Tag, class AccessMode>
-class ThreadLocal;
-}
 
 namespace facebook {
 namespace eden {
 
-/**
- * A tag class for using with folly::ThreadLocal when storing EdenThreadStats.
- */
-class EdenStatsTag {};
 class EdenThreadStats;
 
-using EdenStats = folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
+class EdenStats {
+ public:
+  /**
+   * This function can be called on any thread.
+   *
+   * The returned object can be used only on the current thread.
+   */
+  EdenThreadStats& getStatsForCurrentThread();
+
+  /**
+   * This function can be called on any thread.
+   */
+  void aggregate();
+
+ private:
+  class ThreadLocalTag {};
+
+  folly::ThreadLocal<EdenThreadStats, ThreadLocalTag, void> threadLocalStats_;
+};
 
 /**
  * EdenThreadStats contains various thread-local stats structures.

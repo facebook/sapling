@@ -709,7 +709,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
 HgImporter::TransactionID HgImporter::sendManifestRequest(
     folly::StringPiece revName) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->get()->hgImporterManifest.addValue(1);
+  stats_->getStatsForCurrentThread().hgImporterManifest.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -732,7 +732,8 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
 HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
     folly::StringPiece revName) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->get()->hgImporterManifestNodeForCommit.addValue(1);
+  stats_->getStatsForCurrentThread().hgImporterManifestNodeForCommit.addValue(
+      1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -756,7 +757,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
     Hash revHash) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->get()->hgImporterCatFile.addValue(1);
+  stats_->getStatsForCurrentThread().hgImporterCatFile.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -782,7 +783,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
 HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->get()->hgImporterPrefetchFiles.addValue(1);
+  stats_->getStatsForCurrentThread().hgImporterPrefetchFiles.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -841,7 +842,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash pathManifestNode) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->get()->hgImporterFetchTree.addValue(1);
+  stats_->getStatsForCurrentThread().hgImporterFetchTree.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;

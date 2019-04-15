@@ -1193,9 +1193,7 @@ void EdenServer::shutdownSubscribers() {
 }
 
 void EdenServer::flushStatsNow() {
-  for (auto& stats : serverState_->getStats().accessAllThreads()) {
-    stats.aggregate();
-  }
+  serverState_->getStats().aggregate();
 }
 
 void EdenServer::reportProcStats() {

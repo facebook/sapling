@@ -26,6 +26,16 @@ constexpr std::chrono::microseconds kBucketSize{1000};
 namespace facebook {
 namespace eden {
 
+EdenThreadStats& EdenStats::getStatsForCurrentThread() {
+  return *threadLocalStats_.get();
+}
+
+void EdenStats::aggregate() {
+  for (auto& stats : threadLocalStats_.accessAllThreads()) {
+    stats.aggregate();
+  }
+}
+
 EdenThreadStats::EdenThreadStats() {}
 
 EdenThreadStats::Histogram EdenThreadStats::createHistogram(

@@ -18,8 +18,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
-template <class T, class Tag, class AccessMode>
-class ThreadLocal;
 template <class T>
 class Future;
 } // namespace folly
@@ -35,12 +33,10 @@ namespace eden {
 
 class DirList;
 class Dispatcher;
-class EdenThreadStats;
-class EdenStatsTag;
-class RequestData;
+class EdenStats;
 class FileHandle;
 class MountPoint;
-using EdenStats = folly::ThreadLocal<EdenThreadStats, EdenStatsTag, void>;
+class RequestData;
 
 class Dispatcher {
   fuse_init_out connInfo_;
