@@ -1311,3 +1311,17 @@ def shelved(repo, subset, x):
     nodes = map(lambda x: nodemod.hex(repo[x].node()), nodes)
     # returns intersection with shelved commits (including hidden)
     return subset & repo.revs("%ls", nodes)
+
+
+templatekeyword = registrar.templatekeyword()
+
+
+@templatekeyword("shelvename")
+def shelvename(repo, ctx, templ, **args):
+    """String.  The name of the shelved commit that this commit contains."""
+    node = ctx.node()
+    for filename in listshelvesfiles(repo):
+        shelve = shelvedfile(repo, filename, "oshelve")
+        if shelve.exists() and nodemod.bin(shelve.readobsshelveinfo()["node"]) == node:
+            return shelve.name
+    return ""

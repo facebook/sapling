@@ -1275,6 +1275,10 @@ For this test enabled shelve extension is enough, and it is enabled at the top o
   shelved as default-02
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ testshelvedcount 3
+  $ hg log --hidden -r "shelved()" --template "{node|short} {shelvename}\n"
+  d7a61836580c default
+  9dcce8f0ff7d default-01
+  225e1bca0190 default-02
   $ hg unshelve > /dev/null
   $ testshelvedcount 2
   $ hg unshelve > /dev/null
@@ -1345,6 +1349,8 @@ Test interrupted shelve - this should not lose work
   
   $ hg shelve --list
   default * shelve changes to: commit1 (glob)
+  $ hg log --hidden -r tip -T '{node|short} "{shelvename}" "{desc}"\n'
+  f70d92a087e8 "default" "shelve changes to: commit1"
   $ hg unshelve
   unshelving change 'default'
   $ cat file2
