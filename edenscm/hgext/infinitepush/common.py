@@ -8,7 +8,7 @@ import os
 import struct
 import tempfile
 
-from edenscm.mercurial import error, extensions
+from edenscm.mercurial import error, extensions, util
 from edenscm.mercurial.node import hex
 
 
@@ -59,3 +59,16 @@ def _makebundlefromraw(data):
         raise
 
     return bundlefile
+
+
+class scratchbranchmatcher(object):
+    def __init__(self, ui):
+        scratchbranchpat = ui.config("infinitepush", "branchpattern")
+        if scratchbranchpat:
+            _, _, matchfn = util.stringmatcher(scratchbranchpat)
+        else:
+            matchfn = lambda x: False
+        self._matchfn = matchfn
+
+    def match(self, bookmark):
+        return self._matchfn(bookmark)

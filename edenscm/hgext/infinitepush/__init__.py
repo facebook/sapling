@@ -175,7 +175,7 @@ configscratchpush = "infinitepush-scratchpush"
 confignonforwardmove = "non-forward-move"
 
 cmdtable = infinitepushcommands.cmdtable
-_scratchbranchmatcher = lambda x: False
+_scratchbranchmatcher = None
 _maybehash = re.compile(r"^[a-f0-9]+$").search
 
 colortable = {
@@ -329,10 +329,8 @@ def commonsetup(ui):
         "namespace patterns",
     )
     wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
-    scratchbranchpat = ui.config("infinitepush", "branchpattern")
-    if scratchbranchpat:
-        global _scratchbranchmatcher
-        kind, pat, _scratchbranchmatcher = util.stringmatcher(scratchbranchpat)
+    global _scratchbranchmatcher
+    _scratchbranchmatcher = common.scratchbranchmatcher(ui)
     extensions.wrapfunction(debugcommands, "_debugbundle2part", _debugbundle2part)
 
 
@@ -466,7 +464,7 @@ def exbookmarks(orig, ui, repo, *names, **opts):
         scratch_bms = []
         other_bms = []
         for name in names:
-            if _scratchbranchmatcher(name) and name not in existing_local_bms:
+            if _scratchbranchmatcher.match(name) and name not in existing_local_bms:
                 scratch_bms.append(name)
             else:
                 other_bms.append(name)
@@ -820,7 +818,7 @@ def _lookupwrap(orig):
     def _lookup(repo, proto, key):
         localkey = encoding.tolocal(key)
 
-        if isinstance(localkey, str) and _scratchbranchmatcher(localkey):
+        if isinstance(localkey, str) and _scratchbranchmatcher.match(localkey):
             scratchnode = repo.bundlestore.index.getnode(localkey)
             if scratchnode:
                 return "%s %s\n" % (1, scratchnode)
@@ -885,7 +883,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
         mayberemote = _tryhoist(ui, mayberemote)
         dopull = False
         kwargs = {}
-        if _scratchbranchmatcher(mayberemote):
+        if _scratchbranchmatcher.match(mayberemote):
             dopull = True
             kwargs["bookmark"] = [mayberemote]
         elif _maybehash(mayberemote):
@@ -988,7 +986,7 @@ def _dopull(orig, ui, repo, source="default", **opts):
     unknownnodes = []
     pullbookmarks = opts.get("bookmark") or []
     for rev in opts.get("rev", []):
-        if _scratchbranchmatcher(rev):
+        if _scratchbranchmatcher.match(rev):
             # rev is a scratch bookmark, treat it as a bookmark
             pullbookmarks.append(rev)
         elif rev not in unfi:
@@ -997,7 +995,7 @@ def _dopull(orig, ui, repo, source="default", **opts):
         bookmarks = []
         revs = opts.get("rev") or []
         for bookmark in pullbookmarks:
-            if _scratchbranchmatcher(bookmark):
+            if _scratchbranchmatcher.match(bookmark):
                 # rev is not known yet
                 # it will be fetched with listkeyspatterns next
                 scratchbookmarks[bookmark] = "REVTOFETCH"
@@ -1065,7 +1063,7 @@ def _readscratchremotebookmarks(ui, repo, other):
         repo._remotenames.clearnames()
         for remotebookmark in repo.names["remotebookmarks"].listnames(repo):
             path, bookname = remotenamesext.splitremotename(remotebookmark)
-            if path == remotepath and _scratchbranchmatcher(bookname):
+            if path == remotepath and _scratchbranchmatcher.match(bookname):
                 nodes = repo.names["remotebookmarks"].nodes(repo, remotebookmark)
                 if nodes:
                     result[bookname] = hex(nodes[0])
@@ -1123,7 +1121,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
 
     with ui.configoverride(overrides, "infinitepush"):
         scratchpush = opts.get("bundle_store")
-        if _scratchbranchmatcher(bookmark):
+        if _scratchbranchmatcher.match(bookmark):
             # We are pushing to a scratch bookmark.  Check that there is
             # exactly one revision that is being pushed (this will be the
             # new bookmarked node).
