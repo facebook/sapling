@@ -149,50 +149,40 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAnce
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
-    use types::node::Node;
+    use types::testutil::*;
 
     fn build_diamond_graph() -> (Key, Ancestors) {
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
-
         let mut ancestors = Ancestors::new();
-        let keys = vec![
-            Key::new(Vec::new(), Node::random(&mut rng)),
-            Key::new(Vec::new(), Node::random(&mut rng)),
-            Key::new(Vec::new(), Node::random(&mut rng)),
-            Key::new(Vec::new(), Node::random(&mut rng)),
-        ];
-
-        let null_key = Key::new(Vec::new(), Node::null_id().clone());
+        let keys = vec![key("a", "1"), key("b", "2"), key("c", "3"), key("d", "4")];
+        let null_key = null_key("");
 
         // Build a simple diamond graph
         ancestors.insert(
             keys[0].clone(),
             NodeInfo {
                 parents: [keys[1].clone(), keys[2].clone()],
-                linknode: Node::random(&mut rng),
+                linknode: node("101"),
             },
         );
         ancestors.insert(
             keys[1].clone(),
             NodeInfo {
                 parents: [keys[3].clone(), null_key.clone()],
-                linknode: Node::random(&mut rng),
+                linknode: node("102"),
             },
         );
         ancestors.insert(
             keys[2].clone(),
             NodeInfo {
                 parents: [keys[3].clone(), null_key.clone()],
-                linknode: Node::random(&mut rng),
+                linknode: node("103"),
             },
         );
         ancestors.insert(
             keys[3].clone(),
             NodeInfo {
                 parents: [null_key.clone(), null_key.clone()],
-                linknode: Node::random(&mut rng),
+                linknode: node("104"),
             },
         );
 
@@ -242,34 +232,30 @@ mod tests {
     fn test_mergey_ancestor_iterator() {
         // Tests for exponential time complexity in a merge ancestory. This doesn't won't fail,
         // but may take a long time if there is bad time complexity.
-        let mut rng = ChaChaRng::from_seed([0u8; 32]);
-
         let size = 5000;
         let mut ancestors = Ancestors::new();
         let mut keys = vec![];
-        for _ in 0..size {
-            keys.push(Key::new(Vec::new(), Node::random(&mut rng)));
+        for i in 1..=size {
+            keys.push(key(&i.to_string(), &i.to_string()));
         }
-
-        let null_key = Key::new(Vec::new(), Node::null_id().clone());
 
         // Build a mergey history where commit N has parents N-1 and N-2
         for i in 0..size {
             let p1 = if i > 0 {
                 keys[i - 1].clone()
             } else {
-                null_key.clone()
+                null_key("")
             };
             let p2 = if i > 1 {
                 keys[i - 2].clone()
             } else {
-                null_key.clone()
+                null_key("")
             };
             ancestors.insert(
                 keys[i].clone(),
                 NodeInfo {
                     parents: [p1, p2],
-                    linknode: Node::random(&mut rng),
+                    linknode: node(&(10000 + i).to_string()),
                 },
             );
         }
