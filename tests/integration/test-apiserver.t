@@ -77,7 +77,7 @@ test link file (no follow)
 
 test folder
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT1/folder | extract_json_error
-  folder is invalid
+  Invalid input: folder
   400
 
 test cat renamed file
@@ -107,7 +107,7 @@ observe that copy info is present in output
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000/test | extract_json_error
-  0000 is invalid
+  Invalid input: 0000
   400
 
   $ sslcurl -i $APISERVER//raw/000/test 2> /dev/null | grep 404
@@ -143,15 +143,15 @@ test reachability in basic repo
 
 test reachability response on nonexistent nodes
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/$COMMIT1/0000 | extract_json_error
-  internal server error: 0000 is invalid
+  internal server error: Invalid input: 0000
   500
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/$COMMIT2 | extract_json_error
-  internal server error: 1111 is invalid
+  internal server error: Invalid input: 1111
   500
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/1111/2222 | extract_json_error
-  internal server error: 2222 is invalid
+  internal server error: Invalid input: 2222
   500
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/is_ancestor/0123456789123456789012345678901234567890/$COMMIT1 | extract_json_error
@@ -202,7 +202,7 @@ test get blob by hash
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000 | extract_json_error
-  0000 is invalid
+  Invalid input: 0000
   400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000000000000000000000000000000000000001 | extract_json_error
@@ -226,7 +226,7 @@ test get tree
   $ diff output baseline
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000 | extract_json_error
-  0000 is invalid
+  Invalid input: 0000
   400
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/0000000000000000000000000000000000000001 | extract_json_error
@@ -257,7 +257,7 @@ test get changeset
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000 | extract_json_error
-  0000 is invalid
+  Invalid input: 0000
   400
 
 test TLS Session/Ticket resumption when using client certs
@@ -305,7 +305,7 @@ test download LFS (GET request)
 
   $ NON_VALID_SHA="1234"
   $ sslcurl  -w "\n%{http_code}" $APISERVER/repo/lfs/download/$NON_VALID_SHA | extract_json_error
-  1234 is invalid
+  Invalid input: 1234
   400
 
 test upload+download LFS (PUT request)

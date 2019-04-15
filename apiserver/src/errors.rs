@@ -114,7 +114,7 @@ impl fmt::Display for ErrorKind {
 
         match self {
             NotFound(_0, _) => write!(f, "{} is not found", _0),
-            InvalidInput(_0, _) => write!(f, "{} is invalid", _0),
+            InvalidInput(_0, _) => write!(f, "Invalid input: {}", _0),
             InternalError(_0) => write!(f, "internal server error: {}", _0),
             LFSNotFound(_0) => write!(f, "{} is not found on LFS request", _0),
             NotADirectory(_0) => write!(f, "{} is not a directory", _0),

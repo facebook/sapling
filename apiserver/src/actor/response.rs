@@ -9,6 +9,8 @@ use std::collections::BTreeMap;
 use actix_web::{self, dev::BodyStream, Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
 use futures::Stream;
+use serde::Serialize;
+use serde_cbor;
 
 use types::{FileDataResponse, FileHistoryResponse};
 
@@ -66,6 +68,13 @@ fn binary_response(content: Bytes) -> HttpResponse {
         .body(Body::Binary(content.into()))
 }
 
+fn cbor_response(content: impl Serialize) -> HttpResponse {
+    let content = serde_cbor::to_vec(&content).unwrap();
+    HttpResponse::Ok()
+        .content_type("application/cbor")
+        .body(Body::Binary(content.into()))
+}
+
 fn streaming_response(stream: SendBodyStream) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/octet-stream")
@@ -98,8 +107,8 @@ impl Responder for MononokeRepoResponse {
             DownloadLargeFile { content } => Ok(binary_response(content.into())),
             LfsBatch { response } => Json(response).respond_to(req),
             UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
-            EdenGetData { response } => Json(response).respond_to(req),
-            EdenGetHistory { response } => Json(response).respond_to(req),
+            EdenGetData { response } => Ok(cbor_response(response)),
+            EdenGetHistory { response } => Ok(cbor_response(response)),
         }
     }
 }

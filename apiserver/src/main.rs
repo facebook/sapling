@@ -13,7 +13,8 @@ use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use failure::Fallible;
-use futures::Future;
+use futures::{future::err, Future};
+use futures_ext::FutureExt;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
@@ -23,13 +24,13 @@ use metaconfig_parser::RepoConfigs;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
+use serde_cbor;
 use serde_derive::Deserialize;
 use slog::{info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
-use types::{FileDataRequest, FileHistoryRequest};
 
 mod actor;
 mod errors;
@@ -345,21 +346,26 @@ struct EdenGetDataParams {
 }
 
 fn eden_get_data(
-    (state, params, req): (
-        State<HttpServerState>,
-        Path<EdenGetDataParams>,
-        Json<FileDataRequest>,
-    ),
+    (state, params, body): (State<HttpServerState>, Path<EdenGetDataParams>, Bytes),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
-    let req = req.into_inner();
-    state.mononoke.send_query(
-        prepare_fake_ctx(&state),
-        MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::EdenGetData(req),
-        },
-    )
+    match serde_cbor::from_slice(&body) {
+        Ok(request) => state
+            .mononoke
+            .send_query(
+                prepare_fake_ctx(&state),
+                MononokeQuery {
+                    repo: params.repo,
+                    kind: MononokeRepoQuery::EdenGetData(request),
+                },
+            )
+            .left_future(),
+        Err(e) => {
+            let msg = "POST data is invalid CBOR".into();
+            let e = ErrorKind::InvalidInput(msg, Some(e.into()));
+            err(e).right_future()
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -368,21 +374,26 @@ struct EdenGetHistoryParams {
 }
 
 fn eden_get_history(
-    (state, params, req): (
-        State<HttpServerState>,
-        Path<EdenGetHistoryParams>,
-        Json<FileHistoryRequest>,
-    ),
+    (state, params, body): (State<HttpServerState>, Path<EdenGetHistoryParams>, Bytes),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
-    let req = req.into_inner();
-    state.mononoke.send_query(
-        prepare_fake_ctx(&state),
-        MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::EdenGetHistory(req),
-        },
-    )
+    match serde_cbor::from_slice(&body) {
+        Ok(request) => state
+            .mononoke
+            .send_query(
+                prepare_fake_ctx(&state),
+                MononokeQuery {
+                    repo: params.repo,
+                    kind: MononokeRepoQuery::EdenGetHistory(request),
+                },
+            )
+            .left_future(),
+        Err(e) => {
+            let msg = "POST data is invalid CBOR".into();
+            let e = ErrorKind::InvalidInput(msg, Some(e.into()));
+            err(e).right_future()
+        }
+    }
 }
 
 fn setup_logger(debug: bool) -> Logger {
