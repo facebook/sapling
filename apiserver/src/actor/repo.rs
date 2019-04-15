@@ -4,7 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{collections::HashMap, convert::TryInto, sync::Arc};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    sync::Arc,
+};
 
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
@@ -194,7 +198,7 @@ impl MononokeRepo {
         let history =
             remotefilelog::get_file_history(ctx, self.repo.clone(), filenode, path.clone(), depth)
                 .and_then(move |entry| {
-                    let entry = WireHistoryEntry::from(entry);
+                    let entry = WireHistoryEntry::try_from(entry)?;
                     Ok(Bytes::from(serde_json::to_vec(&entry)?))
                 })
                 .from_err()
@@ -460,9 +464,9 @@ impl MononokeRepo {
                 .and_then(move |path| {
                     debug!(&logger, "fetching history for key: {}", &key);
                     remotefilelog::get_file_history(ctx, repo, filenode, path, depth)
-                        .map(move |entry| {
-                            let entry = WireHistoryEntry::from(entry);
-                            (key.name().to_vec(), entry)
+                        .and_then(move |entry| {
+                            let entry = WireHistoryEntry::try_from(entry)?;
+                            Ok((key.path.clone(), entry))
                         })
                         .collect()
                         .from_err()

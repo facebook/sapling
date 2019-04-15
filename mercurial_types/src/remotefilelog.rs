@@ -4,10 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure_ext::Result;
+use failure_ext::{Error, Result};
 use mononoke_types::MPath;
-use std::io::Write;
-use types::{Parents, WireHistoryEntry};
+use std::{convert::TryFrom, io::Write};
+use types::{Parents, RepoPathBuf as ClientRepoPathBuf, WireHistoryEntry};
 
 use crate::blobnode::HgParents;
 use crate::nodehash::{HgChangesetId, HgFileNodeId, NULL_HASH};
@@ -94,16 +94,17 @@ impl HgFileHistoryEntry {
     }
 }
 
-impl From<HgFileHistoryEntry> for WireHistoryEntry {
+impl TryFrom<HgFileHistoryEntry> for WireHistoryEntry {
+    type Error = Error;
     /// Convert from a representation of a history entry using Mononoke's types to
     /// a representation that uses the Mercurial client's types.
-    fn from(entry: HgFileHistoryEntry) -> Self {
+    fn try_from(entry: HgFileHistoryEntry) -> Result<Self> {
         let node = entry.node.into_nodehash().into();
         let linknode = entry.linknode.into_nodehash().into();
 
         let (parents, copyfrom) = match entry.copyfrom {
             Some((copypath, copyrev)) => {
-                let copypath = copypath.to_vec();
+                let copypath = ClientRepoPathBuf::from_utf8(copypath.to_vec())?;
                 let copyrev = copyrev.into_nodehash().into();
                 let (p1, _) = Parents::from(entry.parents).into_nodes();
                 let parents = Parents::new(copyrev, p1);
@@ -112,11 +113,11 @@ impl From<HgFileHistoryEntry> for WireHistoryEntry {
             None => (entry.parents.into(), None),
         };
 
-        Self {
+        Ok(Self {
             node,
             parents,
             linknode,
             copyfrom,
-        }
+        })
     }
 }

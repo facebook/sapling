@@ -44,6 +44,7 @@
 //! structures at all.
 #![deny(warnings)]
 #![feature(const_fn)]
+#![feature(try_from)]
 
 pub mod bdiff;
 pub mod blob;
