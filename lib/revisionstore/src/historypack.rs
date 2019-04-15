@@ -15,7 +15,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::{Key, Node, NodeInfo};
+use types::{Key, Node, NodeInfo, RepoPath};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
@@ -60,7 +60,7 @@ impl From<HistoryPackVersion> for u8 {
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct FileSectionHeader<'a> {
-    pub file_name: &'a [u8],
+    pub file_name: &'a RepoPath,
     pub count: u32,
 }
 
@@ -89,15 +89,17 @@ impl<'a> FileSectionHeader<'a> {
     pub(crate) fn read(buf: &[u8]) -> Fallible<FileSectionHeader> {
         let mut cur = Cursor::new(buf);
         let file_name_len = cur.read_u16::<BigEndian>()? as usize;
-        let file_name = read_slice(&mut cur, &buf, file_name_len)?;
+        let file_name_slice = read_slice(&mut cur, &buf, file_name_len)?;
+        let file_name = RepoPath::from_utf8(file_name_slice)?;
 
         let count = cur.read_u32::<BigEndian>()?;
         Ok(FileSectionHeader { file_name, count })
     }
 
     pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
-        writer.write_u16::<BigEndian>(self.file_name.len() as u16)?;
-        writer.write_all(self.file_name)?;
+        let file_name_slice = self.file_name.as_byte_slice();
+        writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
+        writer.write_all(file_name_slice)?;
         writer.write_u32::<BigEndian>(self.count)?;
         Ok(())
     }
@@ -333,10 +335,11 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
             let file_header = self.pack.read_file_section_header(self.offset);
             match file_header {
                 Ok(header) => {
+                    let file_name_slice = header.file_name.as_byte_slice();
                     self.current_name.clear();
-                    self.current_name.extend_from_slice(header.file_name);
+                    self.current_name.extend_from_slice(file_name_slice);
                     self.current_remaining = header.count;
-                    self.offset += 4 + 2 + header.file_name.len() as u64;
+                    self.offset += 4 + 2 + file_name_slice.len() as u64;
                 }
                 Err(e) => {
                     return Some(Err(e));
@@ -377,6 +380,8 @@ pub mod tests {
         collections::HashMap,
         fs::{set_permissions, File, OpenOptions},
     };
+
+    use types::RepoPathBuf;
 
     use crate::mutablehistorypack::MutableHistoryPack;
     use crate::mutablepack::MutablePack;
@@ -554,9 +559,9 @@ pub mod tests {
     }
 
     quickcheck! {
-        fn test_file_section_header_serialization(name: Vec<u8>, count: u32) -> bool {
+        fn test_file_section_header_serialization(path: RepoPathBuf, count: u32) -> bool {
             let header = FileSectionHeader {
-                file_name: name.as_ref(),
+                file_name: path.as_ref(),
                 count: count,
             };
             let mut buf = vec![];

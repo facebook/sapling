@@ -185,7 +185,7 @@ impl RepoPath {
 
     /// Constructs a `RepoPath` from a byte slice. It will fail when the bytes are are not valid
     /// utf8 or when the string does not respect the `RepoPath` rules.
-    pub fn from_utf8<'a, S: AsRef<[u8]>>(s: &'a S) -> Fallible<&'a RepoPath> {
+    pub fn from_utf8<'a, S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Fallible<&'a RepoPath> {
         let utf8_str = std::str::from_utf8(s.as_ref())?;
         RepoPath::from_str(utf8_str)
     }

@@ -16,7 +16,7 @@ use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
 use tempfile::NamedTempFile;
 
-use types::{Key, NodeInfo};
+use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::error::EmptyMutablePack;
@@ -34,7 +34,7 @@ struct MutableHistoryPackError(String);
 pub struct MutableHistoryPack {
     version: HistoryPackVersion,
     dir: PathBuf,
-    mem_index: HashMap<Box<[u8]>, HashMap<Key, NodeInfo>>,
+    mem_index: HashMap<RepoPathBuf, HashMap<Key, NodeInfo>>,
 }
 
 impl MutableHistoryPack {
@@ -62,7 +62,7 @@ impl MutableHistoryPack {
         // key.name().clone() though. So we have to do it the long way to avoid the allocation.
         let entries = self
             .mem_index
-            .entry(Box::from(key.name()))
+            .entry(key.path.clone())
             .or_insert_with(|| HashMap::new());
         entries.insert(key.clone(), info.clone());
         Ok(())
@@ -85,10 +85,10 @@ impl MutableHistoryPack {
     fn write_section<'a>(
         &self,
         writer: &mut Vec<u8>,
-        file_name: &'a Box<[u8]>,
+        file_name: &'a RepoPath,
         node_map: &HashMap<Key, NodeInfo>,
         section_offset: usize,
-        nodes: &mut HashMap<&'a Box<[u8]>, HashMap<Key, NodeLocation>>,
+        nodes: &mut HashMap<&'a RepoPath, HashMap<Key, NodeLocation>>,
     ) -> Fallible<()> {
         let mut node_locations = HashMap::<Key, NodeLocation>::with_capacity(node_map.len());
 
@@ -149,14 +149,14 @@ impl MutablePack for MutableHistoryPack {
         hasher.input(&[version_u8]);
 
         // Store data for the index
-        let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = Default::default();
-        let mut nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = Default::default();
+        let mut file_sections: Vec<(&RepoPath, FileSectionLocation)> = Default::default();
+        let mut nodes: HashMap<&RepoPath, HashMap<Key, NodeLocation>> = Default::default();
 
         // Write the historypack
         let mut section_buf = Vec::new();
         let mut section_offset = data_file.bytes_written();
         // - In sorted order for deterministic hashes.
-        let mut keys = self.mem_index.keys().collect::<Vec<&Box<[u8]>>>();
+        let mut keys = self.mem_index.keys().collect::<Vec<_>>();
         keys.sort_unstable();
         for file_name in keys {
             let node_map = self.mem_index.get(file_name).unwrap();
@@ -274,7 +274,7 @@ impl HistoryStore for MutableHistoryPack {
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         Ok(self
             .mem_index
-            .get(key.name())
+            .get(&key.path)
             .ok_or(MutableHistoryPackError(format!(
                 "key '{:?}' not present in mutable history pack",
                 key
@@ -292,7 +292,7 @@ impl Store for MutableHistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| match self.mem_index.get(k.name()) {
+            .filter(|k| match self.mem_index.get(&k.path) {
                 Some(e) => e.get(k).is_none(),
                 None => true,
             })

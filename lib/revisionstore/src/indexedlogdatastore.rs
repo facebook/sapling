@@ -52,7 +52,7 @@ impl Entry {
         let base = if base.is_null() {
             None
         } else {
-            Some(Key::from_name_slice(key.name().to_vec(), base))
+            Some(Key::new(key.path.clone(), base))
         };
 
         let metadata = Metadata::read(&mut cur)?;

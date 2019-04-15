@@ -17,7 +17,7 @@ use crypto::sha1::Sha1;
 use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
-use types::{Key, Node};
+use types::{Key, Node, RepoPath};
 
 use crate::error::KeyError;
 use crate::fanouttable::FanoutTable;
@@ -191,8 +191,8 @@ impl HistoryIndex {
 
     pub fn write<T: Write>(
         writer: &mut T,
-        file_sections: &[(&Box<[u8]>, FileSectionLocation)],
-        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_sections: &[(&RepoPath, FileSectionLocation)],
+        nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
     ) -> Fallible<()> {
         // Write header
         let options = HistoryIndexOptions {
@@ -201,10 +201,10 @@ impl HistoryIndex {
         };
         options.write(writer)?;
 
-        let mut file_sections: Vec<(&Box<[u8]>, Node, FileSectionLocation)> = file_sections
+        let mut file_sections: Vec<(&RepoPath, Node, FileSectionLocation)> = file_sections
             .iter()
-            .map(|e| Ok((e.0, sha1(&e.0), e.1.clone())))
-            .collect::<Fallible<Vec<(&Box<[u8]>, Node, FileSectionLocation)>>>()?;
+            .map(|e| Ok((e.0, sha1(&e.0.as_byte_slice()), e.1.clone())))
+            .collect::<Fallible<Vec<(&RepoPath, Node, FileSectionLocation)>>>()?;
         // They must be written in sorted order so they can be bisected.
         file_sections.sort_by_key(|x| x.1);
 
@@ -233,8 +233,8 @@ impl HistoryIndex {
     fn write_file_index<T: Write>(
         writer: &mut T,
         options: &HistoryIndexOptions,
-        file_sections: &Vec<(&Box<[u8]>, Node, FileSectionLocation)>,
-        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_sections: &Vec<(&RepoPath, Node, FileSectionLocation)>,
+        nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
     ) -> Fallible<()> {
         // For each file, keep track of where its node index will start.
         // The first ones starts after the header, fanout, file count, file section, and node count.
@@ -246,7 +246,7 @@ impl HistoryIndex {
         let mut node_count = 0;
 
         // Write out the file section entries
-        let mut seen_files = HashSet::<&Box<[u8]>>::with_capacity(file_sections.len());
+        let mut seen_files = HashSet::<&RepoPath>::with_capacity(file_sections.len());
         for &(file_name, file_hash, ref section_location) in file_sections.iter() {
             if seen_files.contains(file_name) {
                 return Err(HistoryIndexError(format!(
@@ -272,7 +272,7 @@ impl HistoryIndex {
             .write(writer)?;
 
             // Keep track of the current node index offset
-            node_offset += 2 + file_name.len() + node_section_size;
+            node_offset += 2 + file_name.as_byte_slice().len() + node_section_size;
             node_count += file_nodes.len();
         }
 
@@ -284,12 +284,13 @@ impl HistoryIndex {
 
     fn write_node_section<T: Write>(
         writer: &mut T,
-        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
-        file_name: &Box<[u8]>,
+        nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
+        file_name: &RepoPath,
     ) -> Fallible<()> {
         // Write the filename
-        writer.write_u16::<BigEndian>(file_name.len() as u16)?;
-        writer.write_all(file_name)?;
+        let file_name_slice = file_name.as_byte_slice();
+        writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
+        writer.write_all(file_name_slice)?;
 
         // Write each node, in sorted order so the can be bisected
         let file_nodes = nodes.get(file_name).ok_or_else(|| {
@@ -433,8 +434,8 @@ mod tests {
     use types::path::RepoPathBuf;
 
     fn make_index(
-        file_sections: &[(&Box<[u8]>, FileSectionLocation)],
-        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_sections: &[(&RepoPath, FileSectionLocation)],
+        nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
     ) -> HistoryIndex {
         let mut file = NamedTempFile::new().unwrap();
         HistoryIndex::write(&mut file, file_sections, nodes).unwrap();
@@ -484,41 +485,41 @@ mod tests {
         }
 
         fn test_roundtrip_index(data: Vec<(RepoPathBuf, (FileSectionLocation, HashMap<Key, NodeLocation>))>) -> bool {
-            let data = data.iter().map(|(name, tuple)| (name.as_byte_slice().to_vec().into_boxed_slice(), tuple)).collect::<Vec<_>>();
-            let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = vec![];
-            let mut file_nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = HashMap::new();
+            let mut file_sections: Vec<(&RepoPath, FileSectionLocation)> = vec![];
+            let mut file_nodes: HashMap<&RepoPath, HashMap<Key, NodeLocation>> = HashMap::new();
 
-            let mut seen_files: HashSet<Box<[u8]>> = HashSet::new();
-            for &(ref name_slice, (ref location, ref nodes)) in data.iter() {
+            let mut seen_files: HashSet<RepoPathBuf> = HashSet::new();
+            for &(ref path, (ref location, ref nodes)) in data.iter() {
                 // Don't allow a filename to be used twice
-                if seen_files.contains(name_slice) {
+                if seen_files.contains(path) {
                     continue;
                 }
-                seen_files.insert(name_slice.clone());
+                seen_files.insert(path.clone());
 
-                file_sections.push((name_slice, location.clone()));
+                file_sections.push((path, location.clone()));
                 let mut node_map: HashMap<Key, NodeLocation> = HashMap::new();
                 for (key, node_location) in nodes.iter() {
-                    let key = Key::from_name_slice(name_slice.to_vec(), key.node.clone());
+                    let key = Key::new(path.clone(), key.node.clone());
                     node_map.insert(key, node_location.clone());
                 }
-                file_nodes.insert(name_slice, node_map);
+                file_nodes.insert(path, node_map);
             }
 
             let index = make_index(&file_sections, &file_nodes);
 
             // Lookup each file section
-            for &(ref name, ref location) in file_sections.iter() {
-                let entry = index.get_file_entry(&Key::from_name_slice(name.to_vec(), Node::null_id().clone())).unwrap();
+            for (path, location) in file_sections {
+                let my_key = Key::new(path.to_owned(), Node::null_id().clone());
+                let entry = index.get_file_entry(&my_key).unwrap();
                 assert_eq!(location.offset, entry.file_section_offset);
                 assert_eq!(location.size, entry.file_section_size);
             }
 
             // Lookup each node
-            for (ref name, ref node_map) in file_nodes.iter() {
-                for (ref key, ref location) in node_map.iter() {
-                    assert_eq!(name.as_ref(), key.name());
-                    let entry = index.get_node_entry(key).unwrap();
+            for (path, node_map) in file_nodes {
+                for (key, location) in node_map {
+                    assert_eq!(path, key.path.as_ref());
+                    let entry = index.get_node_entry(&key).unwrap();
                     assert_eq!(key.node, entry.node);
                     assert_eq!(location.offset, entry.offset);
                 }
