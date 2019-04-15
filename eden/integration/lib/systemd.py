@@ -172,7 +172,10 @@ class SystemdUserServiceManager:
 
     def exit(self) -> None:
         process_id = self.process_id
-        self._systemctl.check_call(["start", "exit.target"])
+        # We intentionally do not check the result from the systemctl command here.
+        # It may fail with a "Connection reset by peer" error due to systemd exiting.
+        # We simply confirm that systemd exits after running this command.
+        self._systemctl.run(["start", "exit.target"])
         if not wait_for_process_exit(process_id, timeout=60):
             raise TimeoutError()
 
@@ -418,8 +421,7 @@ def _transient_managed_systemd_user_service_manager(
             child_systemd_service.stop()
         except Exception:
             logger.warning(
-                f"Failed to stop systemd user service manager ({child_systemd})",
-                exc_info=True,
+                f"Failed to stop systemd user service manager ({child_systemd})"
             )
             # Ignore the exception.
 
