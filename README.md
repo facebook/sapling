@@ -21,4 +21,4 @@ where we need to shore things up are:
 * Open source replacements for Facebook-internal services (blob store, logging etc).
 
 The current goal is to get Mononoke working on Linux. Other Unix-like OSes may
-be supported in the future.
+be supported in the future
