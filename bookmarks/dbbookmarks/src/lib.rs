@@ -30,7 +30,7 @@ use context::CoreContext;
 use failure::{err_msg, Error, Result};
 use futures::{
     future::{self, loop_fn, Loop},
-    stream, Future, IntoFuture,
+    stream, Future, IntoFuture, Stream,
 };
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::Timestamp;
@@ -115,7 +115,7 @@ queries! {
          VALUES {values}"
     }
 
-    read ReadNextBookmarkLogEntry(min_id: u64, repo_id: RepositoryId) -> (
+    read ReadNextBookmarkLogEntries(min_id: u64, repo_id: RepositoryId, limit: u64) -> (
         i64, RepositoryId, Bookmark, Option<ChangesetId>, Option<ChangesetId>,
         BookmarkUpdateReason, Timestamp, Option<String>, Option<String>
     ) {
@@ -125,7 +125,7 @@ queries! {
          LEFT JOIN bundle_replay_data replay ON log.id = replay.bookmark_update_log_id
          WHERE log.id > {min_id} AND log.repo_id = {repo_id}
          ORDER BY id asc
-         LIMIT 1"
+         LIMIT {limit}"
     }
 
     read CountFurtherBookmarkLogEntries(min_id: u64, repo_id: RepositoryId) -> (u64) {
@@ -291,17 +291,17 @@ impl Bookmarks for SqlBookmarks {
             .boxify()
     }
 
-    fn read_next_bookmark_log_entry(
+    fn read_next_bookmark_log_entries(
         &self,
         _ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
-    ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error> {
-        ReadNextBookmarkLogEntry::query(&self.read_connection, &id, &repoid)
-            .and_then(|entries| {
-                let entry = entries.into_iter().next();
-                match entry {
-                    Some((
+        limit: u64,
+    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+        ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
+            .map(|entries| {
+                stream::iter_ok(entries.into_iter()).and_then(|entry| {
+                    let (
                         id,
                         repo_id,
                         name,
@@ -311,9 +311,10 @@ impl Bookmarks for SqlBookmarks {
                         timestamp,
                         bundle_handle,
                         commit_timestamps,
-                    )) => get_bundle_replay_data(bundle_handle, commit_timestamps).and_then(
+                    ) = entry;
+                    get_bundle_replay_data(bundle_handle, commit_timestamps).and_then(
                         |replay_data| {
-                            Ok(Some(BookmarkUpdateLogEntry {
+                            Ok(BookmarkUpdateLogEntry {
                                 id,
                                 repo_id,
                                 bookmark_name: name,
@@ -321,12 +322,12 @@ impl Bookmarks for SqlBookmarks {
                                 from_changeset_id: from_cs_id,
                                 reason: reason.update_bundle_replay_data(replay_data)?,
                                 timestamp,
-                            }))
+                            })
                         },
-                    ),
-                    None => Ok(None),
-                }
+                    )
+                })
             })
+            .flatten_stream()
             .boxify()
     }
 }

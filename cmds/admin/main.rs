@@ -866,7 +866,10 @@ fn process_hg_sync_subcommand<'a>(
                 .map(std::path::PathBuf::from));
 
             bookmarks
-                .read_next_bookmark_log_entry(ctx.clone(), id - 1, repo_id)
+                .read_next_bookmark_log_entries(ctx.clone(), id - 1, repo_id, 1)
+                .into_future()
+                .map(|(entry, _)| entry)
+                .map_err(|(err, _)| err)
                 .and_then(move |maybe_log_entry| {
                     let log_entry =
                         try_boxfuture!(maybe_log_entry.ok_or(err_msg("no log entries found")));

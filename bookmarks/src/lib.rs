@@ -164,12 +164,13 @@ pub trait Bookmarks: Send + Sync + 'static {
 
     /// Read the next entry from Bookmark update log. It either returns a new log entry with id
     /// bigger than `id` or None if there are no more log entries with bigger id.
-    fn read_next_bookmark_log_entry(
+    fn read_next_bookmark_log_entries(
         &self,
         ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
-    ) -> BoxFuture<Option<BookmarkUpdateLogEntry>, Error>;
+        limit: u64,
+    ) -> BoxStream<BookmarkUpdateLogEntry, Error>;
 
     /// Read the log entry for specific bookmark with specified to changeset id.
     fn list_bookmark_log_entries(
