@@ -515,6 +515,21 @@ impl quickcheck::Arbitrary for PathComponentBuf {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+pub mod mocks {
+    use super::*;
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        pub static ref FOO_PATH: RepoPathBuf =
+            RepoPathBuf::from_string(String::from("foo")).unwrap();
+        pub static ref BAR_PATH: RepoPathBuf =
+            RepoPathBuf::from_string(String::from("bar")).unwrap();
+        pub static ref BAZ_PATH: RepoPathBuf =
+            RepoPathBuf::from_string(String::from("baz")).unwrap();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
