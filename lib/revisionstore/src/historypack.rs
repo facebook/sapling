@@ -70,7 +70,7 @@ pub struct HistoryEntry<'a> {
     pub p1: Node,
     pub p2: Node,
     pub link_node: Node,
-    pub copy_from: Option<&'a [u8]>,
+    pub copy_from: Option<&'a RepoPath>,
 }
 
 fn read_slice<'a, 'b>(
@@ -127,7 +127,8 @@ impl<'a> HistoryEntry<'a> {
         // Copyfrom
         let copy_from_len = cur.read_u16::<BigEndian>()? as usize;
         let copy_from = if copy_from_len > 0 {
-            Some(read_slice(&mut cur, &buf, copy_from_len)?)
+            let slice = read_slice(&mut cur, &buf, copy_from_len)?;
+            Some(RepoPath::from_utf8(slice)?)
         } else {
             None
         };
@@ -147,7 +148,7 @@ impl<'a> HistoryEntry<'a> {
         p1: &Node,
         p2: &Node,
         linknode: &Node,
-        copy_from: &Option<&[u8]>,
+        copy_from: &Option<&RepoPath>,
     ) -> Fallible<()> {
         writer.write_all(node.as_ref())?;
         writer.write_all(p1.as_ref())?;
@@ -155,8 +156,9 @@ impl<'a> HistoryEntry<'a> {
         writer.write_all(linknode.as_ref())?;
         match copy_from {
             &Some(file_name) => {
-                writer.write_u16::<BigEndian>(file_name.len() as u16)?;
-                writer.write_all(file_name)?;
+                let file_name_slice = file_name.as_byte_slice();
+                writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
+                writer.write_all(file_name_slice)?;
             }
             &None => writer.write_u16::<BigEndian>(0)?,
         };
@@ -232,10 +234,10 @@ impl HistoryPack {
     fn read_node_info(&self, key: &Key, offset: u64) -> Fallible<NodeInfo> {
         let entry = self.read_history_entry(offset)?;
         assert_eq!(entry.node, key.node);
-        let p1 = Key::from_name_slice(
+        let p1 = Key::new(
             match entry.copy_from {
-                Some(value) => value.to_vec(),
-                None => key.name().to_vec(),
+                Some(value) => value.to_owned(),
+                None => key.path.clone(),
             },
             entry.p1.clone(),
         );
@@ -357,7 +359,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
             Ok(ref e) => {
                 self.offset += 80;
                 self.offset += match e.copy_from {
-                    Some(v) => 2 + v.len() as u64,
+                    Some(path) => 2 + path.as_byte_slice().len() as u64,
                     None => 2,
                 };
                 Ok(Key::from_name_slice(self.current_name.clone(), e.node))
@@ -574,7 +576,7 @@ pub mod tests {
             p1: Node,
             p2: Node,
             link_node: Node,
-            copy_from: Option<Vec<u8>>
+            copy_from: Option<RepoPathBuf>
         ) -> bool {
             let mut buf = vec![];
             HistoryEntry::write(

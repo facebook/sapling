@@ -105,8 +105,8 @@ impl MutableHistoryPack {
         // Write nodes
         for (key, node_info) in node_map.iter() {
             let p1 = &node_info.parents[0];
-            let copyfrom = if !p1.node.is_null() && p1.name() != key.name() {
-                Some(p1.name())
+            let copyfrom = if !p1.node.is_null() && p1.path != key.path {
+                Some(p1.path.as_ref())
             } else {
                 None
             };
