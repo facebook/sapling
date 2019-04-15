@@ -20,7 +20,6 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <algorithm>
 #include "eden/fs/inodes/DirEntry.h"
-#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 #include "eden/fs/utils/PathFuncs.h"
