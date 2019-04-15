@@ -12,6 +12,10 @@ from edenscm.mercurial import error, extensions
 from edenscm.mercurial.node import hex
 
 
+def isserver(ui):
+    return ui.configbool("infinitepush", "server")
+
+
 def isremotebooksenabled(ui):
     return "remotenames" in extensions._extensions and ui.configbool(
         "remotenames", "bookmarks"

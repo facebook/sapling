@@ -301,12 +301,8 @@ class bundlestore(object):
             )
 
 
-def _isserver(ui):
-    return ui.configbool("infinitepush", "server")
-
-
 def reposetup(ui, repo):
-    if _isserver(ui) and repo.local():
+    if common.isserver(ui) and repo.local():
         repo.bundlestore = bundlestore(repo)
 
 
@@ -321,7 +317,7 @@ def uisetup(ui):
 
 def extsetup(ui):
     commonsetup(ui)
-    if _isserver(ui):
+    if common.isserver(ui):
         serverextsetup(ui)
     else:
         clientextsetup(ui)
