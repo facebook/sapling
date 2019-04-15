@@ -32,7 +32,7 @@ pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
 pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> Key {
     let mut bytes: [u8; 20] = Default::default();
     bytes.copy_from_slice(&node.data(py)[0..20]);
-    Key::new(name.data(py).into(), (&bytes).into())
+    Key::from_name_slice(name.data(py).into(), (&bytes).into())
 }
 
 pub fn from_key(py: Python, key: &Key) -> (PyBytes, PyBytes) {
@@ -69,7 +69,7 @@ pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
         Some(base) => from_key(py, &base),
         None => from_key(
             py,
-            &Key::new(delta.key.name().to_vec(), Node::null_id().clone()),
+            &Key::from_name_slice(delta.key.name().to_vec(), Node::null_id().clone()),
         ),
     };
     let bytes = PyBytes::new(py, &delta.data);

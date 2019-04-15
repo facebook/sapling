@@ -176,7 +176,7 @@ fn make_key(name: *const u8, name_len: usize, node: *const u8, node_len: usize) 
     let node = unsafe { slice::from_raw_parts(node, node_len) };
     let node = Node::from_slice(node)?;
 
-    Ok(Key::new(name, node))
+    Ok(Key::from_name_slice(name, node))
 }
 
 /// Helper function that performs the get operation, wrapped in a Result

@@ -29,9 +29,14 @@ pub struct Key {
 }
 
 impl Key {
-    pub fn new(name: Vec<u8>, node: Node) -> Self {
-        let path = RepoPathBuf::from_utf8(name).unwrap();
+    pub fn new(path: RepoPathBuf, node: Node) -> Self {
         Key { path, node }
+    }
+
+    #[deprecated(since = "2019-04-09", note = "should use new instead")]
+    pub fn from_name_slice(name: Vec<u8>, node: Node) -> Self {
+        let path = RepoPathBuf::from_utf8(name).unwrap();
+        Key::new(path, node)
     }
 
     #[deprecated(since = "2019-04-09", note = "should use path instead")]
@@ -58,7 +63,7 @@ use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Key {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        Key::new(
+        Key::from_name_slice(
             RepoPathBuf::arbitrary(g).as_byte_slice().to_vec(),
             Node::arbitrary(g),
         )
@@ -73,9 +78,9 @@ pub mod mocks {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        pub static ref FOO_KEY: Key = Key::new(b"foo".to_vec(), ONES);
-        pub static ref BAR_KEY: Key = Key::new(b"bar".to_vec(), TWOS);
-        pub static ref BAZ_KEY: Key = Key::new(b"baz".to_vec(), THREES);
+        pub static ref FOO_KEY: Key = Key::from_name_slice(b"foo".to_vec(), ONES);
+        pub static ref BAR_KEY: Key = Key::from_name_slice(b"bar".to_vec(), TWOS);
+        pub static ref BAZ_KEY: Key = Key::from_name_slice(b"baz".to_vec(), THREES);
     }
 }
 

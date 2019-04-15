@@ -77,7 +77,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), Default::default()),
+            key: Key::from_name_slice(Vec::new(), Default::default()),
         };
 
         let cloned_delta = delta.clone();

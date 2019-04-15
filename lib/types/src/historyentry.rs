@@ -37,21 +37,21 @@ impl HistoryEntry {
         let parents = match entry.parents {
             Parents::None => Default::default(),
             Parents::One(p1) => {
-                let p1 = Key::new(p1_name, p1);
+                let p1 = Key::from_name_slice(p1_name, p1);
                 // If there is no p2, its node hash is null and its name is empty.
                 let p2 = Key::default();
                 [p1, p2]
             }
             Parents::Two(p1, p2) => {
-                let p1 = Key::new(p1_name, p1);
+                let p1 = Key::from_name_slice(p1_name, p1);
                 // If there is a p2, its name must match the current entry's name.
-                let p2 = Key::new(name.clone(), p2);
+                let p2 = Key::from_name_slice(name.clone(), p2);
                 [p1, p2]
             }
         };
 
         Self {
-            key: Key::new(name, entry.node),
+            key: Key::from_name_slice(name, entry.node),
             nodeinfo: NodeInfo {
                 parents,
                 linknode: entry.linknode,

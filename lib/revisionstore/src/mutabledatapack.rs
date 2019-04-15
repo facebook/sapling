@@ -138,8 +138,8 @@ impl MutableDataPack {
                 data: entry.delta()?,
                 base: entry
                     .delta_base()
-                    .map(|delta_base| Key::new(key.name().into(), delta_base.clone())),
-                key: Key::new(key.name().into(), entry.node().clone()),
+                    .map(|delta_base| Key::from_name_slice(key.name().into(), delta_base.clone())),
+                key: Key::from_name_slice(key.name().into(), entry.node().clone()),
             },
             entry.metadata().clone(),
         ))
@@ -229,7 +229,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), Default::default()),
+            key: Key::from_name_slice(Vec::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).expect("add");
         let datapackbase = mutdatapack.close().expect("close");
@@ -263,7 +263,7 @@ mod tests {
             let delta = Delta {
                 data: Bytes::from(&[0, 1, 2][..]),
                 base: None,
-                key: Key::new(Vec::new(), Default::default()),
+                key: Key::from_name_slice(Vec::new(), Default::default()),
             };
             mutdatapack.add(&delta, &Default::default()).expect("add");
         }
@@ -278,13 +278,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), node("1")),
+            key: Key::from_name_slice(Vec::new(), node("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
-            base: Some(Key::new(Vec::new(), delta.key.node.clone())),
-            key: Key::new(Vec::new(), node("2")),
+            base: Some(Key::from_name_slice(Vec::new(), delta.key.node.clone())),
+            key: Key::from_name_slice(Vec::new(), node("2")),
         };
         mutdatapack.add(&delta2, &Default::default()).unwrap();
 
@@ -303,13 +303,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), node("1")),
+            key: Key::from_name_slice(Vec::new(), node("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), node("2")),
+            key: Key::from_name_slice(Vec::new(), node("2")),
         };
         let meta2 = Metadata {
             flags: Some(2),
@@ -340,7 +340,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Vec::new(), Default::default()),
+            key: Key::from_name_slice(Vec::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
 

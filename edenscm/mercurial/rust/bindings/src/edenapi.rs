@@ -112,5 +112,5 @@ fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
     let path = path.data(py).to_vec();
     let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
     let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
-    Ok(Key::new(path, node))
+    Ok(Key::from_name_slice(path, node))
 }
