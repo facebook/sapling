@@ -6,40 +6,23 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate stats;
-extern crate ascii;
-extern crate bookmarks;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-#[macro_use]
-extern crate futures_ext;
-extern crate mononoke_types;
-extern crate serde_json;
-#[macro_use]
-extern crate sql;
-extern crate sql_ext;
-
 use bookmarks::{
     Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
     BundleReplayData, Transaction,
 };
 use context::CoreContext;
-use failure::{err_msg, Error, Result};
+use failure_ext::{bail_msg, err_msg, Error, Result};
 use futures::{
     future::{self, loop_fn, Loop},
     stream, Future, IntoFuture, Stream,
 };
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::Timestamp;
-use sql::{Connection, Transaction as SqlTransaction};
-pub use sql_ext::SqlConstructors;
-use stats::Timeseries;
-use std::collections::HashMap;
-
 use mononoke_types::{ChangesetId, RepositoryId};
+use sql::{queries, Connection, Transaction as SqlTransaction};
+pub use sql_ext::SqlConstructors;
+use stats::{define_stats, Timeseries};
+use std::collections::HashMap;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks";
@@ -558,8 +541,8 @@ impl Transaction for SqlBookmarksTransaction {
                 }
 
                 let rows_to_insert = creates_vec.len() as u64;
-                InsertBookmarks::query_with_transaction(transaction, &ref_rows[..])
-                    .then(move |res| match res {
+                InsertBookmarks::query_with_transaction(transaction, &ref_rows[..]).then(
+                    move |res| match res {
                         Err(err) => Err(Some(err)),
                         Ok((transaction, result)) => {
                             if result.affected_rows() == rows_to_insert {
@@ -568,34 +551,41 @@ impl Transaction for SqlBookmarksTransaction {
                                 Err(None)
                             }
                         }
-                    })
+                    },
+                )
             })
             .and_then(move |transaction| {
                 loop_fn(
                     (transaction, sets.into_iter()),
                     move |(transaction, mut updates)| match updates.next() {
-                        Some((ref name, (BookmarkSetData { ref new_cs, ref old_cs }, ref _reason))) if new_cs == old_cs => {
+                        Some((
+                            ref name,
+                            (
+                                BookmarkSetData {
+                                    ref new_cs,
+                                    ref old_cs,
+                                },
+                                ref _reason,
+                            ),
+                        )) if new_cs == old_cs => {
                             // no-op update. If bookmark points to a correct update then
                             // let's continue the transaction, otherwise revert it
-                            SelectBookmark::query_with_transaction(
-                                transaction,
-                                &repo_id,
-                                &name,
-                            )
-                            .then({
-                                let new_cs = new_cs.clone();
-                                move |res| match res {
-                                Err(err) => Err(Some(err)),
-                                Ok((transaction, result)) => {
-                                    if result.get(0).map(|b| b.0) == Some(new_cs) {
-                                        Ok((transaction, updates))
-                                    } else {
-                                        Err(None)
+                            SelectBookmark::query_with_transaction(transaction, &repo_id, &name)
+                                .then({
+                                    let new_cs = new_cs.clone();
+                                    move |res| match res {
+                                        Err(err) => Err(Some(err)),
+                                        Ok((transaction, result)) => {
+                                            if result.get(0).map(|b| b.0) == Some(new_cs) {
+                                                Ok((transaction, updates))
+                                            } else {
+                                                Err(None)
+                                            }
+                                        }
                                     }
-                                }
-                            }})
-                            .map(Loop::Continue)
-                            .boxify()
+                                })
+                                .map(Loop::Continue)
+                                .boxify()
                         }
                         Some((name, (BookmarkSetData { new_cs, old_cs }, _reason))) => {
                             UpdateBookmark::query_with_transaction(

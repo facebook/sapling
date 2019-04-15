@@ -7,22 +7,6 @@
 //! Tests for the Filenodes store.
 
 #![deny(warnings)]
-#![feature(never_type)]
-
-extern crate ascii;
-extern crate async_unit;
-extern crate bookmarks;
-extern crate context;
-extern crate dbbookmarks;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-#[macro_use]
-extern crate maplit;
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-extern crate mononoke_types_mocks;
-extern crate tokio;
 
 use bookmarks::{
     Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
@@ -31,12 +15,14 @@ use bookmarks::{
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use futures::{Future, Stream};
+use maplit::{btreemap, hashmap};
 use mercurial_types_mocks::nodehash as mercurial_mocks;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
+use std::collections::BTreeMap;
 
 fn create_bookmark(book: &str) -> Bookmark {
     Bookmark::new(book.to_string()).unwrap()
@@ -786,9 +772,10 @@ fn test_list_by_prefix() {
         bookmarks
             .list_by_prefix(ctx.clone(), &prefix, REPO_ZERO)
             .collect()
+            .map(|vs| vs.into_iter().collect::<BTreeMap<_, _>>())
             .wait()
             .unwrap(),
-        vec![(name_1.clone(), ONES_CSID), (name_2.clone(), ONES_CSID)]
+        btreemap! { name_1.clone() => ONES_CSID, name_2.clone() => ONES_CSID }
     );
 
     assert_eq!(

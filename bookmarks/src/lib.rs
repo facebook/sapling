@@ -6,20 +6,9 @@
 
 #![deny(warnings)]
 
-extern crate ascii;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures_ext;
-extern crate mercurial_types;
-extern crate mononoke_types;
-extern crate sql;
-
-use std::fmt;
-
 use ascii::AsciiString;
 use context::CoreContext;
-use failure::{err_msg, Error, Result};
+use failure_ext::{err_msg, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
@@ -28,10 +17,11 @@ use sql::mysql_async::{
     FromValueError, Value,
 };
 use std::collections::HashMap;
+use std::fmt;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Bookmark {
     bookmark: AsciiString,
 }
