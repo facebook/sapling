@@ -8,7 +8,7 @@ use std::{fs::File, io::prelude::*};
 use bytes::Bytes;
 use failure::{Fail, Fallible};
 
-use types::{Key, Node, NodeInfo, RepoPath};
+use types::{Key, Node, NodeInfo, RepoPathBuf};
 
 use crate::error::KeyError;
 use crate::historystore::Ancestors;
@@ -69,12 +69,12 @@ impl LooseFile {
         let mut ancestors: Ancestors = Ancestors::new();
         while start + 80 < content.len() {
             let node: Node = Node::from_slice(&content[start..start + 20])?;
-            let dummy: Vec<u8> = RepoPath::from_str("_dummy")?.as_byte_slice().to_vec();
-            let key: Key = Key::from_name_slice(dummy.clone(), node);
+            let dummy = RepoPathBuf::new();
+            let key: Key = Key::new(dummy.clone(), node);
             let p0: Node = Node::from_slice(&content[start + 20..start + 40])?;
-            let k0: Key = Key::from_name_slice(dummy.clone(), p0);
+            let k0: Key = Key::new(dummy.clone(), p0);
             let p1: Node = Node::from_slice(&content[start + 40..start + 60])?;
-            let k1: Key = Key::from_name_slice(dummy, p1);
+            let k1: Key = Key::new(dummy, p1);
             let parents: [Key; 2] = [k0, k1];
             let linknode: Node = Node::from_slice(&content[start + 60..start + 80])?;
             let nodeinfo = NodeInfo { parents, linknode };

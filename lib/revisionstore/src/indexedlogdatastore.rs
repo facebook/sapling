@@ -74,8 +74,9 @@ impl Entry {
     pub fn write_to_log(self, log: &mut LogRotate) -> Fallible<()> {
         let mut buf = Vec::new();
         buf.write_all(self.delta.key.node.as_ref())?;
-        buf.write_u16::<BigEndian>(self.delta.key.name().len() as u16)?;
-        buf.write_all(self.delta.key.name())?;
+        let path_slice = self.delta.key.path.as_byte_slice();
+        buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
+        buf.write_all(path_slice)?;
         buf.write_all(
             self.delta
                 .base

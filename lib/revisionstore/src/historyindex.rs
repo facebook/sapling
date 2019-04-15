@@ -312,7 +312,7 @@ impl HistoryIndex {
     }
 
     pub fn get_file_entry(&self, key: &Key) -> Fallible<FileIndexEntry> {
-        let filename_node = sha1(key.name());
+        let filename_node = sha1(key.path.as_byte_slice());
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_node)?;
         let start = start + self.index_start;
         let end = end
@@ -327,7 +327,7 @@ impl HistoryIndex {
     pub fn get_node_entry(&self, key: &Key) -> Fallible<NodeIndexEntry> {
         let file_entry = self.get_file_entry(&key)?;
 
-        let start = file_entry.node_index_offset as usize + 2 + key.name().len();
+        let start = file_entry.node_index_offset as usize + 2 + key.path.as_byte_slice().len();
         let end = start + file_entry.node_index_size as usize;
 
         let buf = self.mmap.get_err(start..end)?;

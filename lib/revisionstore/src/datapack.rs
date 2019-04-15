@@ -318,8 +318,8 @@ impl DataStore for DataPack {
             data: data_entry.delta()?,
             base: data_entry
                 .delta_base()
-                .map(|delta_base| Key::from_name_slice(key.name().into(), delta_base.clone())),
-            key: Key::from_name_slice(key.name().into(), data_entry.node().clone()),
+                .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
+            key: Key::new(key.path.clone(), data_entry.node().clone()),
         })
     }
 
@@ -332,8 +332,8 @@ impl DataStore for DataPack {
                 data: data_entry.delta()?,
                 base: data_entry
                     .delta_base()
-                    .map(|delta_base| Key::from_name_slice(key.name().into(), delta_base.clone())),
-                key: Key::from_name_slice(key.name().into(), data_entry.node().clone()),
+                    .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
+                key: Key::new(key.path.clone(), data_entry.node().clone()),
             });
 
             if let DeltaBaseOffset::Offset(offset) = next_entry.delta_base_offset() {

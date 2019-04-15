@@ -241,7 +241,7 @@ impl HistoryPack {
             },
             entry.p1.clone(),
         );
-        let p2 = Key::from_name_slice(key.name().to_vec(), entry.p2.clone());
+        let p2 = Key::new(key.path.clone(), entry.p2.clone());
 
         Ok(NodeInfo {
             parents: [p1, p2],
@@ -383,7 +383,7 @@ pub mod tests {
         fs::{set_permissions, File, OpenOptions},
     };
 
-    use types::RepoPathBuf;
+    use types::{testutil::*, RepoPathBuf};
 
     use crate::mutablehistorypack::MutableHistoryPack;
     use crate::mutablepack::MutablePack;
@@ -400,8 +400,8 @@ pub mod tests {
     }
 
     pub fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
-        let file1 = "path".as_bytes().to_vec();
-        let file2 = "path/file".as_bytes().to_vec();
+        let file1 = RepoPath::from_str("path").unwrap();
+        let file2 = RepoPath::from_str("path/file").unwrap();
         let null = Node::null_id();
         let node1 = Node::random(&mut rng);
         let node2 = Node::random(&mut rng);
@@ -414,11 +414,11 @@ pub mod tests {
         let mut ancestor_map = HashMap::new();
 
         // Insert key 1
-        let key1 = Key::from_name_slice(file1.clone(), node2.clone());
+        let key1 = Key::new(file1.to_owned(), node2.clone());
         let info = NodeInfo {
             parents: [
-                Key::from_name_slice(file1.clone(), node1.clone()),
-                Key::from_name_slice(file1.clone(), null.clone()),
+                Key::new(file1.to_owned(), node1.clone()),
+                Key::new(file1.to_owned(), null.clone()),
             ],
             linknode: Node::random(&mut rng),
         };
@@ -428,11 +428,11 @@ pub mod tests {
         ancestor_map.insert(key1.clone(), ancestors);
 
         // Insert key 2
-        let key2 = Key::from_name_slice(file2.clone(), node3.clone());
+        let key2 = Key::new(file2.to_owned(), node3.clone());
         let info = NodeInfo {
             parents: [
-                Key::from_name_slice(file2.clone(), node5.clone()),
-                Key::from_name_slice(file2.clone(), node6.clone()),
+                Key::new(file2.to_owned(), node5.clone()),
+                Key::new(file2.to_owned(), node6.clone()),
             ],
             linknode: Node::random(&mut rng),
         };
@@ -442,7 +442,7 @@ pub mod tests {
         ancestor_map.insert(key2.clone(), ancestors);
 
         // Insert key 3
-        let key3 = Key::from_name_slice(file1.clone(), node4.clone());
+        let key3 = Key::new(file1.to_owned(), node4.clone());
         let info = NodeInfo {
             parents: [key2.clone(), key1.clone()],
             linknode: Node::random(&mut rng),
@@ -498,7 +498,7 @@ pub mod tests {
         let pack = make_historypack(&tempdir, &nodes);
 
         let mut test_keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
-        let missing_key = Key::from_name_slice(vec![9], Node::random(&mut rng));
+        let missing_key = key("missing", "f0f0f0");
         test_keys.push(missing_key.clone());
 
         let missing = pack.get_missing(&test_keys[..]).unwrap();

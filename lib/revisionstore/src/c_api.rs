@@ -20,7 +20,7 @@ use std::{
 
 use failure::Fallible;
 
-use types::{Key, Node};
+use types::{Key, Node, RepoPath};
 
 use crate::datapack::DataPack;
 use crate::datastore::DataStore;
@@ -170,13 +170,13 @@ fn make_key(name: *const u8, name_len: usize, node: *const u8, node_len: usize) 
     debug_assert!(!name.is_null());
     debug_assert!(!node.is_null());
 
-    let name = unsafe { slice::from_raw_parts(name, name_len) };
-    let name = name.to_vec();
+    let path_slice = unsafe { slice::from_raw_parts(name, name_len) };
+    let path = RepoPath::from_utf8(path_slice)?.to_owned();
 
-    let node = unsafe { slice::from_raw_parts(node, node_len) };
-    let node = Node::from_slice(node)?;
+    let node_slice = unsafe { slice::from_raw_parts(node, node_len) };
+    let node = Node::from_slice(node_slice)?;
 
-    Ok(Key::from_name_slice(name, node))
+    Ok(Key::new(path, node))
 }
 
 /// Helper function that performs the get operation, wrapped in a Result

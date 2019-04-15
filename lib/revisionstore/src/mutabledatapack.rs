@@ -74,8 +74,9 @@ impl MutableDataPack {
 
     /// Adds the given entry to the mutable datapack.
     pub fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
-        if delta.key.name().len() >= u16::MAX as usize {
-            return Err(MutableDataPackError("delta name is longer than 2^16".into()).into());
+        let path_slice = delta.key.path.as_byte_slice();
+        if path_slice.len() >= u16::MAX as usize {
+            return Err(MutableDataPackError("delta path is longer than 2^16".into()).into());
         }
 
         let offset = self.data_file.bytes_written();
@@ -84,9 +85,9 @@ impl MutableDataPack {
 
         // Preallocate with approximately the size we need:
         // (namelen(2) + name + node(20) + node(20) + datalen(8) + data + metadata(~22))
-        let mut buf = Vec::with_capacity(delta.key.name().len() + compressed.len() + 72);
-        buf.write_u16::<BigEndian>(delta.key.name().len() as u16)?;
-        buf.write_all(delta.key.name())?;
+        let mut buf = Vec::with_capacity(path_slice.len() + compressed.len() + 72);
+        buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
+        buf.write_all(path_slice)?;
         buf.write_all(delta.key.node.as_ref())?;
 
         buf.write_all(
@@ -138,8 +139,8 @@ impl MutableDataPack {
                 data: entry.delta()?,
                 base: entry
                     .delta_base()
-                    .map(|delta_base| Key::from_name_slice(key.name().into(), delta_base.clone())),
-                key: Key::from_name_slice(key.name().into(), entry.node().clone()),
+                    .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
+                key: Key::new(key.path.clone(), entry.node().clone()),
             },
             entry.metadata().clone(),
         ))
@@ -220,7 +221,7 @@ mod tests {
     use bytes::Bytes;
     use tempfile::tempdir;
 
-    use types::{testutil::*, Key};
+    use types::{testutil::*, Key, RepoPathBuf};
 
     #[test]
     fn test_basic_creation() {
@@ -229,7 +230,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::from_name_slice(Vec::new(), Default::default()),
+            key: Key::new(RepoPathBuf::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).expect("add");
         let datapackbase = mutdatapack.close().expect("close");
@@ -263,7 +264,7 @@ mod tests {
             let delta = Delta {
                 data: Bytes::from(&[0, 1, 2][..]),
                 base: None,
-                key: Key::from_name_slice(Vec::new(), Default::default()),
+                key: Key::new(RepoPathBuf::new(), Default::default()),
             };
             mutdatapack.add(&delta, &Default::default()).expect("add");
         }
@@ -278,13 +279,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::from_name_slice(Vec::new(), node("1")),
+            key: Key::new(RepoPathBuf::new(), node("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
-            base: Some(Key::from_name_slice(Vec::new(), delta.key.node.clone())),
-            key: Key::from_name_slice(Vec::new(), node("2")),
+            base: Some(Key::new(RepoPathBuf::new(), delta.key.node.clone())),
+            key: Key::new(RepoPathBuf::new(), node("2")),
         };
         mutdatapack.add(&delta2, &Default::default()).unwrap();
 
@@ -303,13 +304,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::from_name_slice(Vec::new(), node("1")),
+            key: Key::new(RepoPathBuf::new(), node("1")),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::from_name_slice(Vec::new(), node("2")),
+            key: Key::new(RepoPathBuf::new(), node("2")),
         };
         let meta2 = Metadata {
             flags: Some(2),
@@ -340,7 +341,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::from_name_slice(Vec::new(), Default::default()),
+            key: Key::new(RepoPathBuf::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).unwrap();
 
