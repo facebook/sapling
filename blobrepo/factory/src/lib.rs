@@ -33,9 +33,7 @@ use prefixblob::PrefixBlobstore;
 
 use fileblob::Fileblob;
 use sqlblob::Sqlblob;
-use std::time::Duration;
 
-use delayblob::DelayBlob;
 use failure_ext::prelude::*;
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
@@ -46,7 +44,7 @@ use rocksdb;
 use scuba::ScubaClient;
 
 /// Create a new BlobRepo with purely local state.
-pub fn new_local(
+fn new_local(
     logger: Logger,
     path: &Path,
     blobstore: Arc<Blobstore>,
@@ -74,47 +72,20 @@ pub fn new_local(
 
 /// Most local use cases should use new_rocksdb instead. This is only meant for test
 /// fixtures.
-pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
+fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
     let blobstore = Fileblob::create(path.join("blobs"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
     new_local(logger, path, Arc::new(blobstore), repoid)
 }
 
-pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
+fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
     let options = rocksdb::Options::new().create_if_missing(true);
     let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
         .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
     new_local(logger, path, Arc::new(blobstore), repoid)
 }
 
-pub fn new_rocksdb_delayed<F>(
-    logger: Logger,
-    path: &Path,
-    repoid: RepositoryId,
-    delay_gen: F,
-    get_roundtrips: usize,
-    put_roundtrips: usize,
-    is_present_roundtrips: usize,
-    assert_present_roundtrips: usize,
-) -> Result<BlobRepo>
-where
-    F: FnMut(()) -> Duration + 'static + Send + Sync,
-{
-    let options = rocksdb::Options::new().create_if_missing(true);
-    let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    let blobstore = DelayBlob::new(
-        Box::new(blobstore),
-        delay_gen,
-        get_roundtrips,
-        put_roundtrips,
-        is_present_roundtrips,
-        assert_present_roundtrips,
-    );
-    new_local(logger, path, Arc::new(blobstore), repoid)
-}
-
-pub fn new_sqlite(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
+fn new_sqlite(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
     let blobstore = Sqlblob::with_sqlite_path(repoid, path.join("blobs"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
     new_local(logger, path, Arc::new(blobstore), repoid)
@@ -129,9 +100,7 @@ pub fn open_blobrepo(
     use metaconfig_types::RepoType::*;
 
     match repotype {
-        BlobFiles(ref path) => new_files(logger, &path, repoid)
-            .into_future()
-            .left_future(),
+        BlobFiles(ref path) => new_files(logger, &path, repoid).into_future().left_future(),
         BlobRocks(ref path) => new_rocksdb(logger, &path, repoid)
             .into_future()
             .left_future(),
@@ -166,6 +135,7 @@ pub fn open_blobrepo(
     }
 }
 
+/// Used by tests
 pub fn new_memblob_empty(
     logger: Option<Logger>,
     blobstore: Option<Arc<Blobstore>>,
