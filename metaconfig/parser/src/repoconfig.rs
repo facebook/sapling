@@ -333,6 +333,7 @@ impl RepoConfigs {
                     };
 
                     let only_fast_forward = bookmark.only_fast_forward.unwrap_or(false);
+                    let allowed_users = bookmark.allowed_users.map(|re| re.0);
 
                     bookmark_params.push(BookmarkParams {
                         bookmark: bookmark_or_regex,
@@ -341,6 +342,7 @@ impl RepoConfigs {
                             None => vec![],
                         },
                         only_fast_forward,
+                        allowed_users,
                     });
                 }
                 bookmark_params
@@ -463,6 +465,8 @@ struct RawBookmarkConfig {
     hooks: Option<Vec<RawBookmarkHook>>,
     // Are non fastforward moves allowed for this bookmark
     only_fast_forward: Option<bool>,
+    /// Only users matching this pattern will be allowed to move this bookmark
+    allowed_users: Option<RawRegex>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -580,6 +584,7 @@ mod test {
             gluster_basepath="mononoke/glusterblob-test"
             [[bookmarks]]
             name="master"
+            allowed_users="^(svcscm|twsvcscm)$"
             [[bookmarks.hooks]]
             hook_name="hook1"
             [[bookmarks.hooks]]
@@ -696,11 +701,13 @@ mod test {
                             "rust:rusthook".to_string(),
                         ],
                         only_fast_forward: false,
+                        allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap()),
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
                         hooks: vec![],
                         only_fast_forward: false,
+                        allowed_users: None,
                     },
                 ],
                 hooks: vec![

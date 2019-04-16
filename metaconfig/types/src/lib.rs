@@ -23,6 +23,7 @@ use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::str;
+use std::sync::Arc;
 
 /// Arguments for setting up a Manifold blobstore.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -187,8 +188,52 @@ impl From<Regex> for BookmarkOrRegex {
     }
 }
 
+/// Collection of all bookmark attribtes
+#[derive(Clone)]
+pub struct BookmarkAttrs {
+    bookmark_params: Arc<Vec<BookmarkParams>>,
+}
+
+impl BookmarkAttrs {
+    /// create bookmark attributes from bookmark params vector
+    pub fn new(bookmark_params: impl Into<Arc<Vec<BookmarkParams>>>) -> Self {
+        Self {
+            bookmark_params: bookmark_params.into(),
+        }
+    }
+
+    /// select bookmark params matching provided bookmark
+    pub fn select<'a>(
+        &'a self,
+        bookmark: &'a Bookmark,
+    ) -> impl Iterator<Item = &'a BookmarkParams> {
+        self.bookmark_params
+            .iter()
+            .filter(move |params| params.bookmark.matches(bookmark))
+    }
+
+    /// check if provided bookmark is fast-forward only
+    pub fn is_fast_forward_only(&self, bookmark: &Bookmark) -> bool {
+        self.select(bookmark).any(|params| params.only_fast_forward)
+    }
+
+    /// check if provided unix name is allowed to move specified bookmark
+    pub fn is_allowed_user(&self, user: &Option<String>, bookmark: &Bookmark) -> bool {
+        match user {
+            None => true,
+            Some(user) => {
+                // NOTE: `Iterator::all` combinator returns `true` if selected set is empty
+                //       which is consistent with what we want
+                self.select(bookmark)
+                    .flat_map(|params| &params.allowed_users)
+                    .all(|re| re.is_match(user))
+            }
+        }
+    }
+}
+
 /// Configuration for a bookmark
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct BookmarkParams {
     /// The bookmark
     pub bookmark: BookmarkOrRegex,
@@ -196,7 +241,25 @@ pub struct BookmarkParams {
     pub hooks: Vec<String>,
     /// Are non fast forward moves blocked for this bookmark
     pub only_fast_forward: bool,
+    /// Only users matching this pattern will be allowed to move this bookmark
+    pub allowed_users: Option<Regex>,
 }
+
+impl PartialEq for BookmarkParams {
+    fn eq(&self, other: &Self) -> bool {
+        let allowed_users_eq = match (&self.allowed_users, &other.allowed_users) {
+            (None, None) => true,
+            (Some(left), Some(right)) => left.as_str() == right.as_str(),
+            _ => false,
+        };
+        allowed_users_eq
+            && (self.bookmark == other.bookmark)
+            && (self.hooks == other.hooks)
+            && (self.only_fast_forward == other.only_fast_forward)
+    }
+}
+
+impl Eq for BookmarkParams {}
 
 /// The type of the hook
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]

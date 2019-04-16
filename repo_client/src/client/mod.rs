@@ -1018,7 +1018,7 @@ impl HgCommands for RepoClient {
                     ctx.with_logger_kv(o!("command" => "unbundle")),
                     client.repo.blobrepo().clone(),
                     client.repo.pushrebase_params().clone(),
-                    client.repo.fastforward_only_bookmarks().clone(),
+                    client.repo.bookmark_attrs(),
                     heads,
                     stream,
                     hook_manager,

@@ -35,7 +35,7 @@ use mercurial_bundles::{
 use mercurial_types::{
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
-use metaconfig_types::{BookmarkOrRegex, PushrebaseParams, RepoReadOnly};
+use metaconfig_types::{BookmarkAttrs, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
 use phases::{Phase, Phases};
 use pushrebase;
@@ -63,7 +63,7 @@ pub fn resolve(
     ctx: CoreContext,
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
-    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
+    bookmark_attrs: BookmarkAttrs,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
@@ -72,13 +72,8 @@ pub fn resolve(
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
-    let resolver = Bundle2Resolver::new(
-        ctx.clone(),
-        repo,
-        pushrebase,
-        fastforward_only_bookmarks,
-        hook_manager,
-    );
+    let resolver =
+        Bundle2Resolver::new(ctx.clone(), repo, pushrebase, bookmark_attrs, hook_manager);
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
@@ -588,7 +583,7 @@ struct Bundle2Resolver {
     ctx: CoreContext,
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
-    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
+    bookmark_attrs: BookmarkAttrs,
     hook_manager: Arc<HookManager>,
     scribe_commit_queue: Arc<ScribeCommitQueue>,
 }
@@ -598,7 +593,7 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         repo: BlobRepo,
         pushrebase: PushrebaseParams,
-        fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
+        bookmark_attrs: BookmarkAttrs,
         hook_manager: Arc<HookManager>,
     ) -> Self {
         let scribe_commit_queue = match pushrebase.commit_scribe_category.clone() {
@@ -612,7 +607,7 @@ impl Bundle2Resolver {
             ctx,
             repo,
             pushrebase,
-            fastforward_only_bookmarks,
+            bookmark_attrs,
             hook_manager,
             scribe_commit_queue,
         }
@@ -629,18 +624,18 @@ impl Bundle2Resolver {
         let resolver = self.clone();
         let ctx = resolver.ctx.clone();
         let repo = resolver.repo.clone();
-        let fastforward_only_bookmarks = resolver.fastforward_only_bookmarks.clone();
+        let bookmark_attrs = resolver.bookmark_attrs.clone();
 
         let bookmarks_push_fut = bookmark_pushes
             .into_iter()
             .map(move |bp| {
                 BonsaiBookmarkPush::new(ctx.clone(), &repo, bp).and_then({
-                    cloned!(repo, ctx, lca_hint, fastforward_only_bookmarks);
+                    cloned!(repo, ctx, lca_hint, bookmark_attrs);
                     move |bp| {
                         check_bookmark_push_allowed(
                             ctx.clone(),
                             repo.clone(),
-                            fastforward_only_bookmarks.clone(),
+                            bookmark_attrs,
                             allow_non_fast_forward,
                             bp,
                             lca_hint,
@@ -1321,6 +1316,19 @@ impl Bundle2Resolver {
         onto_bookmark: &pushrebase::OntoBookmarkParams,
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
     ) -> impl Future<Item = (ChangesetId, Vec<ChangesetId>), Error = Error> {
+        let user = ctx.user_unix_name();
+        if !self
+            .bookmark_attrs
+            .is_allowed_user(user, &onto_bookmark.bookmark)
+        {
+            return future::err(format_err!(
+                "[pushrebase] This user `{:?}` is not allowed to move `{:?}`",
+                user,
+                &onto_bookmark.bookmark
+            ))
+            .boxify();
+        }
+
         let block_merges = self.pushrebase.block_merges.clone();
         if block_merges
             && changesets
@@ -1451,14 +1459,22 @@ impl From<Error> for RunHooksError {
 fn check_bookmark_push_allowed(
     ctx: CoreContext,
     repo: BlobRepo,
-    fastforward_only_bookmarks: Vec<BookmarkOrRegex>,
+    bookmark_attrs: BookmarkAttrs,
     allow_non_fast_forward: bool,
     bp: BonsaiBookmarkPush,
     lca_hint: Arc<LeastCommonAncestorsHint>,
 ) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> {
-    let fastforward_only_bookmark = fastforward_only_bookmarks
-        .iter()
-        .any(|bookmark| bookmark.matches(&bp.name));
+    let user = ctx.user_unix_name();
+    if !bookmark_attrs.is_allowed_user(user, &bp.name) {
+        return future::err(format_err!(
+            "[push] This user `{:?}` is not allowed to move `{:?}`",
+            user,
+            &bp.name
+        ))
+        .right_future();
+    }
+
+    let fastforward_only_bookmark = bookmark_attrs.is_fast_forward_only(&bp.name);
     // only allow non fast forward moves if the pushvar is set and the bookmark does not
     // explicitly block them.
     let block_non_fast_forward = fastforward_only_bookmark || !allow_non_fast_forward;
