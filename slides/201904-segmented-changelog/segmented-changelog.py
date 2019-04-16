@@ -130,17 +130,19 @@ def dag(
     startx=0,
     starty=0,
     drawstyle="",
-    ypos={},
+    ypos=None,
     red=None,
     green=None,
-    segoverride={},
+    segoverride=None,
 ):
     revs = list(revs)
     parents = parents or {}
     texts = texts or {}
     red = red or set()
     green = green or set()
+    ypos = ypos or {}
     yposforce = ypos
+    segoverride = segoverride or {}
     if not isinstance(texts, dict):
         texts = dict(enumerate(texts))
     for i, rev in enumerate(revs):
@@ -282,7 +284,8 @@ def seghighlevel(segs, segsize=3):
     return hlsegs
 
 
-def drawsegs(segs, y="-1.3cm", highlighted=None, segoverride={}):
+def drawsegs(segs, y="-1.3cm", highlighted=None, segoverride=None):
+    segoverride = segoverride or {}
     nodestyle = "midway, below"
     linestyle = "color=blue2, line width=0.7mm"
     segname = sha1(str(segs))
