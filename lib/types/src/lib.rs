@@ -6,6 +6,7 @@
 //! Common types used by sibling crates
 
 pub mod api;
+pub mod dataentry;
 pub mod errors;
 pub mod historyentry;
 pub mod key;
@@ -15,6 +16,7 @@ pub mod parents;
 pub mod path;
 
 pub use crate::api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse};
+pub use crate::dataentry::DataEntry;
 pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};
 pub use crate::key::Key;
 pub use crate::node::Node;
