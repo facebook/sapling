@@ -1328,7 +1328,23 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
     prelockontonode = prelockonto.hex() if prelockonto else None
 
     # Allow running hooks on the new commits before we take the lock
-    prelockrebaseargs = op.hookargs.copy()
+    if op.hookargs is None:
+        # Usually pushrebase prepushrebasehooks are called outside of
+        # transaction. If that's the case then op.hookargs is not None and
+        # it contains hook arguments.
+        # However Mononoke -> hg sync job might replay two bundles under
+        # the same transaction. In that case hookargs are stored in transaction
+        # object (see bundle2operation:gettransaction).
+        #
+        # For reference: Mononoke -> hg sync job uses wireproto.py:unbundlereplay
+        # function as it's entry point
+        tr = op.repo.currenttransaction()
+        if tr is not None:
+            prelockrebaseargs = tr.hookargs.copy()
+        else:
+            raise error.ProgrammingError("internal error: hookargs are not set")
+    else:
+        prelockrebaseargs = op.hookargs.copy()
     prelockrebaseargs["source"] = "push"
     prelockrebaseargs["bundle2"] = "1"
     prelockrebaseargs["node"] = scmutil.revsingle(bundle, "min(bundle())").hex()
