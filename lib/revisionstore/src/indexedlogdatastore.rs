@@ -20,6 +20,7 @@ use types::{node::ReadNodeExt, Key, Node};
 
 use crate::{
     datastore::{DataStore, Delta, Metadata},
+    error::KeyError,
     sliceext::SliceExt,
     store::Store,
 };
@@ -40,7 +41,9 @@ impl Entry {
 
     pub fn from_log(key: &Key, log: &LogRotate) -> Fallible<Self> {
         let mut log_entry = log.lookup(0, key.node.as_ref())?;
-        let buf = log_entry.nth(0).ok_or_else(|| format_err!("Not found"))??;
+        let buf = log_entry
+            .nth(0)
+            .ok_or_else(|| KeyError::new(format_err!("Not found")))??;
 
         let mut cur = Cursor::new(buf);
         cur.seek(SeekFrom::Current(Node::len() as i64))?;
@@ -213,5 +216,20 @@ mod tests {
         let log = IndexedLogDataStore::new(&tempdir).unwrap();
         let read_delta = log.get_delta(&delta.key).unwrap();
         assert_eq!(delta, read_delta);
+    }
+
+    #[test]
+    fn test_lookup_failure() {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogDataStore::new(&tempdir).unwrap();
+
+        let key = key("a", "1");
+        let err = log.get_delta(&key);
+
+        if let Err(err) = err {
+            assert!(err.downcast_ref::<KeyError>().is_some());
+        } else {
+            panic!("Lookup didn't fail");
+        }
     }
 }
