@@ -187,3 +187,23 @@ Metrics is logged to blackbox:
   $ hg blackbox
   *> {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}} (glob)
   atexit handler executed
+
+Invalid format strings don't crash Mercurial
+
+  $ SCM_SAMPLING_FILEPATH=$TESTTMP/invalid.txt hg --config sampling.key.invalid=invalid debugsh -c 'repo.ui.log("invalid", "invalid format %s %s", "single")'
+  atexit handler executed
+  >>> import os, json
+  >>> with open(os.path.join(os.environ["TESTTMP"], "invalid.txt"), "r") as f:
+  ...     lines = f.read().split("\0")
+  ...     for line in lines:
+  ...         if "invalid" in line:
+  ...             obj = json.loads(line)
+  ...             category = obj["category"]
+  ...             data = obj["data"]
+  ...             print("category: %s" % category)
+  ...             for k, v in sorted(data.items()):
+  ...                 print("  %s=%s" % (k, v))
+  category: invalid
+    metrics_type=invalid
+    msg=invalid format %s %s single
+

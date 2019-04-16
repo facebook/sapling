@@ -112,8 +112,17 @@ def uisetup(ui):
                     if msg and event != "metrics":
                         # do not keep message for "metrics", which only wants
                         # to log key/value dict.
-                        # ui.log treats msg as a format string + format args.
-                        opts["msg"] = msg[0] % msg[1:]
+                        if len(msg) == 1:
+                            # don't try to format if there is only one item.
+                            opts["msg"] = msg[0]
+                        else:
+                            # ui.log treats msg as a format string + format args.
+                            try:
+                                opts["msg"] = msg[0] % msg[1:]
+                            except TypeError:
+                                # formatting failed - just log each item of the
+                                # message separately.
+                                opts["msg"] = " ".join(msg)
                     with open(script, "a") as outfile:
                         outfile.write(json.dumps({"data": opts, "category": ref}))
                         outfile.write("\0")
