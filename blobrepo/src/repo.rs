@@ -11,8 +11,8 @@ use crate::errors::*;
 use crate::file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
     fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
-    fetch_file_size_from_blobstore, fetch_raw_filenode_bytes, fetch_rename_from_blobstore,
-    get_rename_from_envelope, HgBlobEntry,
+    fetch_file_parents_from_blobstore, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
+    fetch_rename_from_blobstore, get_rename_from_envelope, HgBlobEntry,
 };
 use crate::memory_manifest::MemoryRootManifest;
 use crate::repo_commit::*;
@@ -284,6 +284,14 @@ impl BlobRepo {
         key: HgFileNodeId,
     ) -> impl Future<Item = ContentId, Error = Error> {
         fetch_file_content_id_from_blobstore(ctx, &self.blobstore, key)
+    }
+
+    pub fn get_file_parents(
+        &self,
+        ctx: CoreContext,
+        key: HgFileNodeId,
+    ) -> impl Future<Item = HgParents, Error = Error> {
+        fetch_file_parents_from_blobstore(ctx, &self.blobstore, key)
     }
 
     pub fn get_file_sha256(

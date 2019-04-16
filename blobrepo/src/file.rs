@@ -134,6 +134,19 @@ pub fn fetch_file_content_sha256_from_blobstore(
         .map(|file_content| get_sha256(&file_content.into_bytes()))
 }
 
+pub fn fetch_file_parents_from_blobstore(
+    ctx: CoreContext,
+    blobstore: &RepoBlobstore,
+    node_id: HgFileNodeId,
+) -> impl Future<Item = HgParents, Error = Error> {
+    fetch_file_envelope(ctx, blobstore, node_id).map(|envelope| {
+        let envelope = envelope.into_mut();
+        let p1 = envelope.p1.map(|filenode| filenode.into_nodehash());
+        let p2 = envelope.p2.map(|filenode| filenode.into_nodehash());
+        HgParents::new(p1, p2)
+    })
+}
+
 pub fn fetch_rename_from_blobstore(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
