@@ -185,6 +185,15 @@ class Client(object):
                     }
                   }
                 }
+                latest_draft_phabricator_version {
+                  local_commit_info: phabricator_version_properties (
+                    property_names: ["local:commits"]
+                  ) {
+                    nodes {
+                      property_value
+                    }
+                  }
+                }
                 created_time
                 updated_time
                 is_landing
@@ -221,12 +230,21 @@ class Client(object):
                 info["updated"] = node["updated_time"]
                 info["is_landing"] = node["is_landing"]
 
+                active_diff = None
                 if (
-                    "latest_active_diff" not in node
-                    or node["latest_active_diff"] is None
+                    "latest_active_diff" in node
+                    and node["latest_active_diff"] is not None
                 ):
+                    active_diff = node["latest_active_diff"]
+
+                if (
+                    "latest_draft_phabricator_version" in node
+                    and node["latest_draft_phabricator_version"] is not None
+                ):
+                    active_diff = node["latest_draft_phabricator_version"]
+
+                if active_diff is None:
                     continue
-                active_diff = node["latest_active_diff"]
 
                 info["count"] = node["differential_diffs"]["count"]
 
