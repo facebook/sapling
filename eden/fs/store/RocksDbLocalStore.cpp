@@ -191,7 +191,6 @@ RocksDbLocalStore::RocksDbLocalStore(
       faultInjector_(*faultInjector),
       dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()),
       ioPool_(12, "RocksLocalStore") {
-  writeColumnFamilyIDs();
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {
@@ -432,38 +431,6 @@ void RocksDbLocalStore::put(
       dbHandles_.columns[keySpace].get(),
       _createSlice(key),
       _createSlice(value));
-}
-
-void RocksDbLocalStore::writeColumnFamilyIDs() {
-  // Add an "id" entry to each column family, and then explicitly flush each
-  // column family.
-  //
-  // The main purpose of this is to ensure the column family names have actually
-  // been flushed out to SST files.  Otherwise the RocksDB RepairDB() function
-  // can end up incorrectly dropping column families if they have never had any
-  // data flushed to them.  (https://github.com/facebook/rocksdb/issues/5073)
-  //
-  // We can potentially use this key as a data format version number in case we
-  // ever want to change the data format.  We could bump the value stored in
-  // this field and then use it when opening a DB to tell if it is using the
-  // new or old data format.
-  rocksdb::WriteBatch batch;
-  for (const auto& columnFamily : dbHandles_.columns) {
-    // This key currently can never collide with keys for normal stored data.
-    // All our column families currently use 20-byte hashes for their normal
-    // keys.
-    auto status =
-        dbHandles_.db->Put(WriteOptions(), columnFamily.get(), "id", "1");
-    if (!status.ok()) {
-      throw RocksException::build(
-          status, "error writing column family IDs to local store");
-    }
-    status = dbHandles_.db->Flush(FlushOptions(), columnFamily.get());
-    if (!status.ok()) {
-      throw RocksException::build(
-          status, "error flushing column family IDs to local store");
-    }
-  }
 }
 
 } // namespace eden
