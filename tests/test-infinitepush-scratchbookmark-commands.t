@@ -135,3 +135,103 @@ Test the attempting to create a scratch bookmark on a non existing commit fails.
   $ hg debugcreatescratchbookmark -r "aaaaaaaaaaaa" -B scratch/bookmark
   abort: unknown revision 'aaaaaaaaaaaa'!
   [255]
+
+
+Test invalid invocations of the `debugmovescratchbookmark` command.
+
+
+  $ cd ../client
+  $ hg debugmovescratchbookmark -r "." -B scratch/draft
+  abort: scratch bookmarks can only be moved on an infinitepush server
+  [255]
+
+  $ cd ../server
+  $ hg debugmovescratchbookmark -r "all()" -B scratch/draft
+  abort: must specify exactly one target commit for scratch bookmark
+  [255]
+
+  $ hg debugmovescratchbookmark -r "."
+  abort: scratch bookmark name is required
+  [255]
+
+  $ hg debugmovescratchbookmark -r "." -B scratch/nonexistingbookmark
+  abort: scratch bookmark 'scratch/nonexistingbookmark' does not exist
+  [255]
+
+
+Test that we cannot move a real bookmark.
+
+
+  $ hg debugmovescratchbookmark -r "." -B nonscratchbookmark
+  abort: invalid scratch bookmark name
+  [255]
+
+
+Move a public scratch bookmark to an older commit on the server.
+
+
+  $ hg debugmovescratchbookmark -r ".^" -B scratch/public
+
+
+Check that the bookmarks show as expected on the client.
+
+
+  $ cd ../client
+
+  $ hg pull -B scratch/public
+  pulling from ssh://user@dummy/server
+  no changes found
+
+  $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
+  74903ee2450a "public commit" default/scratch/public
+  72feb0cc373f "another public commit" default/scratch/anotherpublic
+  68d8ff913700 "draft commit" default/scratch/anotherdraft default/scratch/draft
+
+
+Push another draft commit to a scratch bookmark.
+
+
+  $ echo 2 >> file
+  $ hg commit -Aqm "another draft commit"
+  $ hg push -q --to "scratch/draft" -r "."
+
+  $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
+  74903ee2450a "public commit" default/scratch/public
+  72feb0cc373f "another public commit" default/scratch/anotherpublic
+  68d8ff913700 "draft commit" default/scratch/anotherdraft
+  6051090c9df8 "another draft commit" default/scratch/draft
+
+
+Swap the draft scratch bookmarks.
+
+
+  $ cd ../server
+  $ hg debugmovescratchbookmark -r "68d8ff913700" -B scratch/draft
+  $ hg debugmovescratchbookmark -r "6051090c9df8" -B scratch/anotherdraft
+
+
+Check that the bookmarks show as expected on the client.
+
+
+  $ cd ../client
+  $ hg pull -B scratch/draft
+  pulling from ssh://user@dummy/server
+  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 1 files
+
+  $ hg pull -B scratch/anotherdraft
+  pulling from ssh://user@dummy/server
+  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 1 files
+
+  $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
+  74903ee2450a "public commit" default/scratch/public
+  72feb0cc373f "another public commit" default/scratch/anotherpublic
+  68d8ff913700 "draft commit" default/scratch/draft
+  6051090c9df8 "another draft commit" default/scratch/anotherdraft

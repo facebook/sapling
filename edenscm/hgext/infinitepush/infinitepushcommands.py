@@ -153,3 +153,32 @@ def debugcreatescratchbookmark(ui, repo, *args, **opts):
 
         targetnode = _resolvetargetnode(repo, opts.get("rev"))
         index.addbookmark(scratchbookmarkname, targetnode)
+
+
+@command(
+    "debugmovescratchbookmark",
+    [
+        ("r", "rev", "", _("target commit for scratch bookmark"), _("REV")),
+        ("B", "bookmark", "", _("scratch bookmark name"), _("BOOKMARK")),
+    ],
+)
+def debugmovescratchbookmark(ui, repo, *args, **opts):
+    """move existing scratch bookmark to the specified revision
+    """
+    if not common.isserver(ui):
+        raise error.Abort(
+            _("scratch bookmarks can only be moved on an infinitepush server")
+        )
+
+    scratchbookmarkname = _resolvescratchbookmark(ui, opts.get("bookmark"))
+    index = repo.bundlestore.index
+    with index:
+        currentnode = index.getnode(scratchbookmarkname)
+        if not currentnode:
+            raise error.Abort(
+                _("scratch bookmark '%s' does not exist") % scratchbookmarkname
+            )
+
+        targetnode = _resolvetargetnode(repo, opts.get("rev"))
+        index.deletebookmarks([scratchbookmarkname])
+        index.addbookmark(scratchbookmarkname, targetnode)
