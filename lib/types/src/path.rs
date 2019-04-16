@@ -157,6 +157,12 @@ impl AsRef<RepoPath> for RepoPathBuf {
     }
 }
 
+impl AsRef<[u8]> for RepoPathBuf {
+    fn as_ref(&self) -> &[u8] {
+        self.as_byte_slice()
+    }
+}
+
 impl Borrow<RepoPath> for RepoPathBuf {
     fn borrow(&self) -> &RepoPath {
         self
@@ -610,20 +616,23 @@ mod tests {
     #[test]
     fn test_repo_path_conversions() {
         let repo_path_buf = RepoPathBuf::from_string(String::from("path_buf")).unwrap();
-        assert_eq!(repo_path_buf.as_ref().to_owned(), repo_path_buf);
+        assert_eq!(repo_path_buf.as_repo_path().to_owned(), repo_path_buf);
 
         let repo_path = RepoPath::from_str("path").unwrap();
-        assert_eq!(repo_path.to_owned().as_ref(), repo_path);
+        assert_eq!(repo_path.to_owned().as_repo_path(), repo_path);
     }
 
     #[test]
     fn test_repo_path_buf_push() {
         let mut repo_path_buf = RepoPathBuf::new();
         repo_path_buf.push(RepoPath::from_str("one").unwrap());
-        assert_eq!(repo_path_buf.as_ref(), RepoPath::from_str("one").unwrap());
+        assert_eq!(
+            repo_path_buf.as_repo_path(),
+            RepoPath::from_str("one").unwrap()
+        );
         repo_path_buf.push(RepoPath::from_str("two").unwrap());
         assert_eq!(
-            repo_path_buf.as_ref(),
+            repo_path_buf.as_repo_path(),
             RepoPath::from_str("one/two").unwrap()
         );
     }

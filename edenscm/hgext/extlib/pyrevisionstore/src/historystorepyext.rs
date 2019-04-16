@@ -61,8 +61,8 @@ fn from_node_info(py: Python, key: &Key, info: &NodeInfo) -> PyTuple {
         PyBytes::new(py, info.parents[0].node.as_ref()),
         PyBytes::new(py, info.parents[1].node.as_ref()),
         PyBytes::new(py, info.linknode.as_ref().as_ref()),
-        if key.name() != info.parents[0].name() {
-            PyBytes::new(py, info.parents[0].name()).into_object()
+        if key.path != info.parents[0].path {
+            PyBytes::new(py, info.parents[0].path.as_byte_slice()).into_object()
         } else {
             Python::None(py)
         },

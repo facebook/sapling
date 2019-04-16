@@ -39,7 +39,7 @@ impl<T: DataStore> DataStorePyExt for T {
             from_key(py, &key)
         } else {
             (
-                PyBytes::new(py, key.name()),
+                PyBytes::new(py, key.path.as_byte_slice()),
                 PyBytes::new(py, Node::null_id().as_ref()),
             )
         };

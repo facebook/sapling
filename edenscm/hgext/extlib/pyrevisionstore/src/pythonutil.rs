@@ -38,7 +38,7 @@ pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<Key> {
 
 pub fn from_key(py: Python, key: &Key) -> (PyBytes, PyBytes) {
     (
-        PyBytes::new(py, key.name()),
+        PyBytes::new(py, key.path.as_byte_slice()),
         PyBytes::new(py, key.node.as_ref()),
     )
 }

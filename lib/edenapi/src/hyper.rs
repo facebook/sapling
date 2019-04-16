@@ -207,7 +207,7 @@ fn get_history(
 ) -> impl Stream<Item = HistoryEntry, Error = Error> {
     log::debug!("Fetching history for key: {}", &key);
     let filenode = key.node.to_hex();
-    let filename = url_encode(&key.name());
+    let filename = url_encode(key.path.as_byte_slice());
     url_prefix
         .join(&format!("{}/", &filenode))
         .into_future()

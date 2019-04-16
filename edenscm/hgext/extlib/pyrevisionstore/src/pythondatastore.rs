@@ -35,7 +35,7 @@ impl DataStore for PythonDataStore {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyBytes::new(py, key.name());
+        let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
 
         let py_data = self
@@ -51,7 +51,7 @@ impl DataStore for PythonDataStore {
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyBytes::new(py, key.name());
+        let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
         let py_delta = self
             .py_store
@@ -81,7 +81,7 @@ impl DataStore for PythonDataStore {
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyBytes::new(py, key.name());
+        let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
         let py_chain = self
             .py_store
@@ -98,7 +98,7 @@ impl DataStore for PythonDataStore {
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let py_name = PyBytes::new(py, key.name());
+        let py_name = PyBytes::new(py, key.path.as_byte_slice());
         let py_node = PyBytes::new(py, key.node.as_ref());
         let py_meta = self
             .py_store
