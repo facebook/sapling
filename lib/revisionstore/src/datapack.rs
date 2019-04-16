@@ -89,7 +89,7 @@ use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use lz4_pyframe::decompress;
-use types::{Key, Node};
+use types::{Key, Node, RepoPath};
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
@@ -119,7 +119,7 @@ pub struct DataPack {
 
 pub struct DataEntry<'a> {
     offset: u64,
-    filename: &'a [u8],
+    filename: &'a RepoPath,
     node: Node,
     delta_base: Option<Node>,
     compressed_data: &'a [u8],
@@ -156,8 +156,9 @@ impl<'a> DataEntry<'a> {
 
         // Filename
         let filename_len = cur.read_u16::<BigEndian>()? as u64;
-        let filename =
+        let filename_slice =
             buf.get_err(cur.position() as usize..(cur.position() + filename_len) as usize)?;
+        let filename = RepoPath::from_utf8(filename_slice)?;
         let cur_pos = cur.position();
         cur.set_position(cur_pos + filename_len);
 
@@ -209,7 +210,7 @@ impl<'a> DataEntry<'a> {
         self.offset
     }
 
-    pub fn filename(&self) -> &[u8] {
+    pub fn filename(&self) -> &RepoPath {
         self.filename
     }
 
@@ -422,7 +423,7 @@ impl<'a> Iterator for DataPackIterator<'a> {
         Some(match entry {
             Ok(ref e) => {
                 self.offset = e.next_offset;
-                Ok(Key::from_name_slice(e.filename.to_vec(), e.node))
+                Ok(Key::new(e.filename.to_owned(), e.node))
             }
             Err(e) => Err(e),
         })
