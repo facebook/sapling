@@ -7,43 +7,15 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-extern crate clap;
-extern crate failure_ext as failure;
-extern crate futures;
-#[macro_use]
-extern crate lazy_static;
-extern crate openssl;
-extern crate secure_utils;
-extern crate services;
-#[macro_use]
-extern crate slog;
-extern crate slog_glog_fmt;
-extern crate slog_logview;
-extern crate slog_stats;
-extern crate slog_term;
-extern crate stats;
-extern crate tokio;
-extern crate tracing_fb303;
-
-extern crate blobrepo;
-extern crate bookmarks;
-extern crate cachelib;
-extern crate cmdlib;
-extern crate context;
-extern crate mercurial_types;
-extern crate metaconfig_parser;
-extern crate metaconfig_types;
-extern crate panichandler;
-extern crate ready_state;
-extern crate repo_listener;
 
 mod monitoring;
 
 use clap::{App, ArgMatches};
-use failure::SlogKVError;
+use failure_ext::SlogKVError;
 use futures::Future;
+use lazy_static::lazy_static;
 use metaconfig_parser::RepoConfigs;
-use slog::{Drain, Level, Logger};
+use slog::{crit, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use std::io;
@@ -52,9 +24,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::runtime::Runtime;
 
 mod errors {
-    pub use failure::{Error, Result};
+    pub use failure_ext::{Error, Result};
 }
-use errors::*;
+use crate::errors::*;
 
 lazy_static! {
     static ref TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);

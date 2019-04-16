@@ -10,11 +10,11 @@ use std::thread::{self, JoinHandle};
 
 use clap::ArgMatches;
 use services::{self, Fb303Service, FbStatus};
-use slog::Logger;
+use slog::{info, Logger};
 
 use ready_state::ReadyState;
 
-use errors::*;
+use crate::errors::*;
 
 struct MononokeService {
     ready: ReadyState,
