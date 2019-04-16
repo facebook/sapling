@@ -489,9 +489,9 @@ def dispatch(req):
                         "time": time.time(),
                     }
                     req.ui.log(
-                        "perftrace", "Trace:\n%s\n" % output, key=key, payload=output
+                        "perftrace", "Trace:\n%s\n", output, key=key, payload=output
                     )
-                    req.ui.log("perftracekey", "Trace key:%s\n" % key, perftracekey=key)
+                    req.ui.log("perftracekey", "Trace key:%s\n", key, perftracekey=key)
 
         req.ui._measuredtimes["command_duration"] = duration * 1000
         retmask = req.ui.configint("ui", "exitcodemask")
