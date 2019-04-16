@@ -3,8 +3,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::{PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, Python,
-              PythonObject, ToPyObject};
+use cpython::{
+    PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, Python, PythonObject,
+    ToPyObject,
+};
 
 use revisionstore::datastore::DataStore;
 use types::{Key, Node};
@@ -23,14 +25,14 @@ pub trait DataStorePyExt {
 
 impl<T: DataStore> DataStorePyExt for T {
     fn get(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
-        let key = to_key(py, name, node);
+        let key = to_key(py, name, node)?;
         let result = <DataStore>::get(self, &key).map_err(|e| to_pyerr(py, &e))?;
 
         Ok(PyBytes::new(py, &result[..]))
     }
 
     fn get_delta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
-        let key = to_key(py, name, node);
+        let key = to_key(py, name, node)?;
         let delta = self.get_delta(&key).map_err(|e| to_pyerr(py, &e))?;
 
         let (base_name, base_node) = if let Some(key) = delta.base {
@@ -49,12 +51,13 @@ impl<T: DataStore> DataStorePyExt for T {
             base_name.into_object(),
             base_node.into_object(),
             meta.into_object(),
-        ).into_py_object(py)
+        )
+            .into_py_object(py)
             .into_object())
     }
 
     fn get_delta_chain(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        let key = to_key(py, name, node);
+        let key = to_key(py, name, node)?;
         let deltachain = self.get_delta_chain(&key).map_err(|e| to_pyerr(py, &e))?;
         let pychain = deltachain
             .iter()
@@ -64,7 +67,7 @@ impl<T: DataStore> DataStorePyExt for T {
     }
 
     fn get_meta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        let key = to_key(py, name, node);
+        let key = to_key(py, name, node)?;
         let metadata = self.get_meta(&key).map_err(|e| to_pyerr(py, &e))?;
         let metadict = PyDict::new(py);
         if let Some(size) = metadata.size {
@@ -80,10 +83,12 @@ impl<T: DataStore> DataStorePyExt for T {
     fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
-        let keys = keys.map(|k| match k {
-            Ok(k) => from_tuple_to_key(py, &k),
-            Err(e) => Err(e),
-        }).collect::<Result<Vec<Key>, PyErr>>()?;
+        let keys = keys
+            .map(|k| match k {
+                Ok(k) => from_tuple_to_key(py, &k),
+                Err(e) => Err(e),
+            })
+            .collect::<Result<Vec<Key>, PyErr>>()?;
         let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
 
         let results = PyList::new(py, &[]);

@@ -65,7 +65,8 @@ impl DataStore for PythonDataStore {
         let py_delta_node = bytes_from_tuple(py, &py_tuple, 3)?;
         let py_bytes = bytes_from_tuple(py, &py_tuple, 4)?;
 
-        let base_key = to_key(py, &py_delta_name, &py_delta_node);
+        let base_key =
+            to_key(py, &py_delta_name, &py_delta_node).map_err(|e| pyerr_to_error(py, e))?;
         Ok(Delta {
             data: py_bytes.data(py).to_vec().into(),
             base: if base_key.node.is_null() {
@@ -73,7 +74,7 @@ impl DataStore for PythonDataStore {
             } else {
                 Some(base_key)
             },
-            key: to_key(py, &py_name, &py_node),
+            key: to_key(py, &py_name, &py_node).map_err(|e| pyerr_to_error(py, e))?,
         })
     }
 

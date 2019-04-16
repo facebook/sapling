@@ -12,7 +12,7 @@ use cpython::{
 use failure::{Error, Fallible};
 use revisionstore::datastore::Delta;
 use revisionstore::error::KeyError;
-use types::{Key, Node};
+use types::{Key, Node, RepoPath};
 
 use crate::pyerror::pyerr_to_error;
 
@@ -29,10 +29,11 @@ pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     }
 }
 
-pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> Key {
+pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<Key> {
     let mut bytes: [u8; 20] = Default::default();
     bytes.copy_from_slice(&node.data(py)[0..20]);
-    Key::from_name_slice(name.data(py).into(), (&bytes).into())
+    let path = RepoPath::from_utf8(name.data(py)).map_err(|e| to_pyerr(py, &e))?;
+    Ok(Key::new(path.to_owned(), (&bytes).into()))
 }
 
 pub fn from_key(py: Python, key: &Key) -> (PyBytes, PyBytes) {
@@ -51,7 +52,8 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
     let py_delta_node = PyBytes::extract(py, &py_delta.get_item(py, 3))?;
     let py_bytes = PyBytes::extract(py, &py_delta.get_item(py, 4))?;
 
-    let base_key = to_key(py, &py_delta_name, &py_delta_node);
+    let key = to_key(py, &py_name, &py_node)?;
+    let base_key = to_key(py, &py_delta_name, &py_delta_node)?;
     Ok(Delta {
         data: py_bytes.data(py).to_vec().into(),
         base: if base_key.node.is_null() {
@@ -59,7 +61,7 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
         } else {
             Some(base_key)
         },
-        key: to_key(py, &py_name, &py_node),
+        key,
     })
 }
 
@@ -69,7 +71,7 @@ pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
         Some(base) => from_key(py, &base),
         None => from_key(
             py,
-            &Key::from_name_slice(delta.key.name().to_vec(), Node::null_id().clone()),
+            &Key::new(delta.key.path.clone(), Node::null_id().clone()),
         ),
     };
     let bytes = PyBytes::new(py, &delta.data);
@@ -94,7 +96,7 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
     let py_tuple = <&PyTuple>::extract(py, &py_tuple)?.as_slice(py);
     let name = <&PyBytes>::extract(py, &py_tuple[0])?;
     let node = <&PyBytes>::extract(py, &py_tuple[1])?;
-    Ok(to_key(py, &name, &node))
+    to_key(py, &name, &node)
 }
 
 pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Fallible<PyBytes> {
