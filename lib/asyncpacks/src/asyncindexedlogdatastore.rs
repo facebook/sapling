@@ -66,7 +66,7 @@ mod tests {
     use tokio::runtime::Runtime;
 
     use revisionstore::DataStore;
-    use types::Key;
+    use types::{Key, RepoPathBuf};
 
     #[test]
     fn test_add() {
@@ -77,7 +77,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::from_name_slice(Vec::new(), Default::default()),
+            key: Key::new(RepoPathBuf::new(), Default::default()),
         };
 
         let cloned_delta = delta.clone();
