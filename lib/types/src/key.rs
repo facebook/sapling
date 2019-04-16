@@ -33,12 +33,6 @@ impl Key {
         Key { path, node }
     }
 
-    #[deprecated(since = "2019-04-09", note = "should use new instead")]
-    pub fn from_name_slice(name: Vec<u8>, node: Node) -> Self {
-        let path = RepoPathBuf::from_utf8(name).unwrap();
-        Key::new(path, node)
-    }
-
     #[deprecated(since = "2019-04-09", note = "should use path instead")]
     pub fn name(&self) -> &[u8] {
         &self.path.as_byte_slice()
