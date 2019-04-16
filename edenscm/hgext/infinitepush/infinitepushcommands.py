@@ -101,3 +101,55 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
         for node, metadata in nodesmetadata.iteritems():
             dumped = json.dumps(metadata, sort_keys=True)
             index.saveoptionaljsonmetadata(node, dumped)
+
+
+def _resolvescratchbookmark(ui, scratchbookmarkname):
+    if not scratchbookmarkname:
+        raise error.Abort(_("scratch bookmark name is required"))
+
+    if not common.scratchbranchmatcher(ui).match(scratchbookmarkname):
+        raise error.Abort(_("invalid scratch bookmark name"))
+
+    return scratchbookmarkname
+
+
+def _resolvetargetnode(repo, rev):
+    index = repo.bundlestore.index
+    targetnode = index.getnodebyprefix(rev)
+    if not targetnode:
+        revs = scmutil.revrange(repo, [rev])
+        if len(revs) != 1:
+            raise error.Abort(
+                _("must specify exactly one target commit for scratch bookmark")
+            )
+
+        targetnode = repo[revs.last()].hex()
+
+    return targetnode
+
+
+@command(
+    "debugcreatescratchbookmark",
+    [
+        ("r", "rev", "", _("target commit for scratch bookmark"), _("REV")),
+        ("B", "bookmark", "", _("scratch bookmark name"), _("BOOKMARK")),
+    ],
+)
+def debugcreatescratchbookmark(ui, repo, *args, **opts):
+    """create scratch bookmark on the specified revision
+    """
+    if not common.isserver(ui):
+        raise error.Abort(
+            _("scratch bookmarks can only be created on an infinitepush server")
+        )
+
+    scratchbookmarkname = _resolvescratchbookmark(ui, opts.get("bookmark"))
+    index = repo.bundlestore.index
+    with index:
+        if index.getnode(scratchbookmarkname):
+            raise error.Abort(
+                _("scratch bookmark '%s' already exists") % scratchbookmarkname
+            )
+
+        targetnode = _resolvetargetnode(repo, opts.get("rev"))
+        index.addbookmark(scratchbookmarkname, targetnode)
