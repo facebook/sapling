@@ -134,6 +134,7 @@ def _resolvetargetnode(repo, rev):
         ("r", "rev", "", _("target commit for scratch bookmark"), _("REV")),
         ("B", "bookmark", "", _("scratch bookmark name"), _("BOOKMARK")),
     ],
+    _("-r REV -B BOOKMARK"),
 )
 def debugcreatescratchbookmark(ui, repo, *args, **opts):
     """create scratch bookmark on the specified revision
@@ -161,6 +162,7 @@ def debugcreatescratchbookmark(ui, repo, *args, **opts):
         ("r", "rev", "", _("target commit for scratch bookmark"), _("REV")),
         ("B", "bookmark", "", _("scratch bookmark name"), _("BOOKMARK")),
     ],
+    _("-r REV -B BOOKMARK"),
 )
 def debugmovescratchbookmark(ui, repo, *args, **opts):
     """move existing scratch bookmark to the specified revision
