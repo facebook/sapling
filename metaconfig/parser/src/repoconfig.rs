@@ -552,6 +552,23 @@ mod test {
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
 
+    fn write_files(
+        files: impl IntoIterator<Item = (impl AsRef<Path>, impl AsRef<[u8]>)>,
+    ) -> TempDir {
+        let tmp_dir = TempDir::new("mononoke_test_config").expect("tmp_dir failed");
+
+        for (path, content) in files.into_iter() {
+            let path = path.as_ref();
+            let content = content.as_ref();
+
+            let dir = path.parent().expect("missing parent");
+            create_dir_all(tmp_dir.path().join(dir)).expect("create dir failed");
+            write(tmp_dir.path().join(path), content).expect("write failed");
+        }
+
+        tmp_dir
+    }
+
     #[test]
     fn test_read_manifest() {
         let hook1_content = "this is hook1";
@@ -635,14 +652,7 @@ mod test {
             "my_path/my_files" => "",
         };
 
-        let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
-
-        for (path, content) in paths.clone() {
-            let file_path = Path::new(path);
-            let dir = file_path.parent().unwrap();
-            create_dir_all(tmp_dir.path().join(dir)).unwrap();
-            write(tmp_dir.path().join(file_path), content).unwrap();
-        }
+        let tmp_dir = write_files(&paths);
 
         let repoconfig = RepoConfigs::read_configs(tmp_dir.path()).expect("failed to read configs");
 
@@ -825,14 +835,7 @@ mod test {
             "repos/fbsource/server.toml" => content,
         };
 
-        let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
-
-        for (path, content) in paths {
-            let file_path = Path::new(path);
-            let dir = file_path.parent().unwrap();
-            create_dir_all(tmp_dir.path().join(dir)).unwrap();
-            write(tmp_dir.path().join(file_path), content).unwrap();
-        }
+        let tmp_dir = write_files(&paths);
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
         assert!(res.is_err());
@@ -859,14 +862,7 @@ mod test {
             "repos/fbsource/server.toml" => content,
         };
 
-        let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
-
-        for (path, content) in paths {
-            let file_path = Path::new(path);
-            let dir = file_path.parent().unwrap();
-            create_dir_all(tmp_dir.path().join(dir)).unwrap();
-            write(tmp_dir.path().join(file_path), content).unwrap();
-        }
+        let tmp_dir = write_files(&paths);
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
         assert!(res.is_err());
