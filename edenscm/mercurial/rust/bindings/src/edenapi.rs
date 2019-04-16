@@ -11,8 +11,8 @@ use encoding::{local_bytes_to_path, path_to_local_bytes};
 use failure::format_err;
 use log;
 
-use ::edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient};
-use types::{Key, Node};
+use edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient};
+use types::{Key, Node, RepoPath};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
@@ -109,8 +109,11 @@ py_class!(class client |py| {
 });
 
 fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
-    let path = path.data(py).to_vec();
+    let path = path.data(py);
+    let path = RepoPath::from_utf8(path)
+        .map_pyerr::<exc::RuntimeError>(py)?
+        .to_owned();
     let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
     let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
-    Ok(Key::from_name_slice(path, node))
+    Ok(Key::new(path, node))
 }
