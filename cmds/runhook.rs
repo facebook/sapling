@@ -13,35 +13,6 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-extern crate blobrepo;
-extern crate blobrepo_factory;
-extern crate blobstore;
-extern crate cachelib;
-extern crate clap;
-extern crate cmdlib;
-extern crate context;
-extern crate failure_ext as failure;
-extern crate futures;
-#[macro_use]
-extern crate futures_ext;
-extern crate hooks;
-extern crate hooks_content_stores;
-extern crate manifoldblob;
-extern crate mercurial_types;
-extern crate mononoke_types;
-#[macro_use]
-extern crate slog;
-extern crate slog_glog_fmt;
-extern crate tokio;
-
-#[cfg(test)]
-extern crate async_unit;
-extern crate bookmarks;
-#[cfg(test)]
-extern crate fixtures;
-#[cfg(test)]
-extern crate tempdir;
-
 use std::env::args;
 use std::fs::File;
 use std::io::prelude::*;
@@ -52,20 +23,20 @@ use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use context::CoreContext;
-use failure::{Error, Result};
+use failure_ext::{Error, Result};
 use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hooks::lua_hook::LuaHook;
 use hooks::{HookExecution, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
-use slog::{Drain, Level, Logger};
+use slog::{o, Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 
 fn run_hook(
     args: Vec<String>,
-    repo_creator: fn(&Logger, &ArgMatches) -> BoxFuture<BlobRepo, Error>,
+    repo_creator: fn(&Logger, &ArgMatches<'_>) -> BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<HookExecution, Error> {
     // Define command line args and parse command line
     let app = App::new("runhook")
@@ -161,7 +132,7 @@ fn run_hook(
     .boxify()
 }
 
-fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
+fn create_blobrepo(logger: &Logger, matches: &ArgMatches<'_>) -> BoxFuture<BlobRepo, Error> {
     let blobstore_args = cmdlib::args::parse_blobstore_args(matches);
     let myrouter_port = cmdlib::args::parse_myrouter_port(&matches).expect("missing myrouter port");
 
@@ -328,7 +299,7 @@ mod test {
         code: String,
         changeset_id: String,
         run_file: bool,
-        repo_creator: fn(&Logger, &ArgMatches) -> BoxFuture<BlobRepo, Error>,
+        repo_creator: fn(&Logger, &ArgMatches<'_>) -> BoxFuture<BlobRepo, Error>,
     ) -> Result<HookExecution> {
         let dir = TempDir::new("runhook").unwrap();
         let file_path = dir.path().join("testhook.lua");
@@ -348,11 +319,14 @@ mod test {
         run_hook(args, repo_creator).wait()
     }
 
-    fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
+    fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches<'_>) -> BoxFuture<BlobRepo, Error> {
         future::ok(fixtures::linear::getrepo(None)).boxify()
     }
 
-    fn test_many_files_dirs(_logger: &Logger, _matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
+    fn test_many_files_dirs(
+        _logger: &Logger,
+        _matches: &ArgMatches<'_>,
+    ) -> BoxFuture<BlobRepo, Error> {
         future::ok(fixtures::many_files_dirs::getrepo(None)).boxify()
     }
 
