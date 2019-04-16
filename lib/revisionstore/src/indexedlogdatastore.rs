@@ -153,7 +153,21 @@ impl DataStore for IndexedLogDataStore {
         let mut next_key = Some(key.clone());
 
         while let Some(key) = next_key {
-            let entry = Entry::from_log(&key, &self.log)?;
+            let entry = Entry::from_log(&key, &self.log);
+
+            // Partial chains are valid. The rest of the chain may be present in another store, or
+            // may need to be fetched from the network. All of this will be handled higher up the
+            // stack.
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(e) => {
+                    if e.downcast_ref::<KeyError>().is_some() && !chain.is_empty() {
+                        break;
+                    } else {
+                        return Err(e);
+                    }
+                }
+            };
             next_key = entry.delta.base.clone();
             chain.push(entry.delta);
         }
@@ -231,5 +245,23 @@ mod tests {
         } else {
             panic!("Lookup didn't fail");
         }
+    }
+
+    #[test]
+    fn test_get_partial_chain() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogDataStore::new(&tempdir)?;
+
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: Some(key("a", "1")),
+            key: key("a", "2"),
+        };
+        let metadata = Default::default();
+
+        log.add(&delta, &metadata)?;
+        let chain = log.get_delta_chain(&delta.key)?;
+        assert_eq!(chain.last().expect("Empty").base, delta.base);
+        Ok(())
     }
 }
