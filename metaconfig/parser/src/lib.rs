@@ -8,7 +8,6 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(try_from)]
 
 use failure_ext as failure;
 

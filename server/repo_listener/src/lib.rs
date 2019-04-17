@@ -8,7 +8,6 @@
 // TODO(T33448938) use of deprecated item 'tokio::timer::Deadline': use Timeout instead
 #![allow(deprecated)]
 #![feature(never_type)]
-#![feature(try_from)]
 
 extern crate blobrepo;
 extern crate blobrepo_factory;
@@ -54,11 +53,11 @@ extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
 extern crate reachabilityindex;
-extern crate skiplist;
 extern crate ready_state;
 extern crate repo_client;
 extern crate scribe;
 extern crate scuba_ext;
+extern crate skiplist;
 extern crate sshrelay;
 
 mod connection_acceptor;

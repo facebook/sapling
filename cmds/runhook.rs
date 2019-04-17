@@ -11,7 +11,6 @@
 //! It currently supports hooks written in Lua only
 
 #![deny(warnings)]
-#![feature(try_from)]
 
 use std::env::args;
 use std::fs::File;

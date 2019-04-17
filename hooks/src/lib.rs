@@ -12,7 +12,6 @@
 //! The scripting language specific implementation of hooks are in the corresponding sub module.
 
 #![deny(warnings)]
-#![feature(try_from)]
 
 pub mod errors;
 mod facebook;

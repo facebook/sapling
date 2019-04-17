@@ -9,7 +9,7 @@
 #![deny(warnings)]
 // The allow(dead_code) is temporary until Thrift serialization is done.
 #![allow(dead_code)]
-#![feature(const_fn, try_from)]
+#![feature(const_fn)]
 
 pub mod blob;
 pub mod bonsai_changeset;

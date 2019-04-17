@@ -23,7 +23,7 @@ extern crate tokio;
 
 use std::cmp;
 use std::sync::{
-    atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT},
+    atomic::{AtomicUsize, Ordering},
     Arc,
 };
 
@@ -75,8 +75,8 @@ impl AliasVerification {
             repoid,
             sqlchangesets,
             mode,
-            err_cnt: Arc::new(ATOMIC_USIZE_INIT),
-            cs_processed: Arc::new(ATOMIC_USIZE_INIT),
+            err_cnt: Arc::new(AtomicUsize::new(0)),
+            cs_processed: Arc::new(AtomicUsize::new(0)),
         }
     }
 

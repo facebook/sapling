@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(never_type, try_from)]
+#![feature(never_type)]
 
 use std::collections::{BTreeMap, HashSet};
 use std::iter::repeat;

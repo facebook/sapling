@@ -468,7 +468,7 @@ impl MononokeRepo {
             let filenode = HgFileNodeId::new(key.node.clone().into());
             let logger = self.logger.clone();
 
-            let fut = MPath::new(&key.path)
+            let fut = MPath::new(key.path.as_byte_slice())
                 .into_future()
                 .from_err()
                 .and_then(move |path| {
