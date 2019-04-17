@@ -113,6 +113,14 @@ Test push tracking
   |
   o  0 a1
   
+Test push with explicit default path
+
+  $ hg push `hg paths default`
+  pushing rev e305ab9fea99 to destination $TESTTMP/repo1 bookmark b
+  searching for changes
+  remote bookmark already points at pushed rev
+  no changes found
+  [1]
 
 Test that we don't try to push if tracking bookmark isn't a remote bookmark
 

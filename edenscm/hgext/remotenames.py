@@ -1098,10 +1098,18 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
 
     origdest = dest
-    if not dest and not opargs["to"] and not revs and _tracking(ui):
+    defaultpush = ui.paths.get("default-push") or ui.paths.get("default")
+    if defaultpush:
+        defaultpush = defaultpush.loc
+    if (
+        (not dest or dest == defaultpush)
+        and not opargs["to"]
+        and not revs
+        and _tracking(ui)
+    ):
         current = repo._activebookmark
         tracking = _readtracking(repo)
-        # print "tracking on %s %s" % (current, tracking)
+        ui.debug("tracking on %s %s\n" % (current, tracking))
         if current and current in tracking:
             track = tracking[current]
             path, book = splitremotename(track)
