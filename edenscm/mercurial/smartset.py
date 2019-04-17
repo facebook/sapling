@@ -1110,6 +1110,19 @@ class _spanset(abstractsmartset):
             self._end,
         )
 
+    def __and__(self, rhs):
+        if (
+            isinstance(rhs, abstractsmartset)
+            and self.isdescending()
+            and self._start == 0
+            and rhs.isdescending()
+        ):
+            # fast path: spanset is a superset of the rhs.
+            rhsmax = next(iter(rhs))
+            if rhsmax is None or rhsmax <= self._end:
+                return rhs
+        return super(_spanset, self).__and__(rhs)
+
 
 class fullreposet(_spanset):
     """a set containing all revisions in the repo

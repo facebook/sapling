@@ -2413,9 +2413,7 @@ ordering defined by it.
         (symbol '_list')
         (string '0\x002\x001'))))
   * set:
-  <filteredset
-    <spanset- 0:3>,
-    <baseset [1]>>
+  <baseset [1]>
   1
 
  'A & B' can be rewritten as 'flipand(B, A)' by weight.
