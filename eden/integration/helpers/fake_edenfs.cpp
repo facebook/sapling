@@ -13,6 +13,7 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <signal.h>
+#include <sysexits.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <algorithm>
 #include <array>
@@ -26,6 +27,7 @@
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
@@ -71,12 +73,6 @@ DEFINE_double(
     sleepBeforeStop,
     0.0,
     "Sleep for this many seconds before stopping");
-DEFINE_string(edenDir, "", "The path to the .eden directory");
-DEFINE_string(
-    etcEdenDir,
-    "/etc/eden",
-    "The directory holding all system configuration files");
-DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 
 using namespace facebook::eden;
 
@@ -339,11 +335,14 @@ int main(int argc, char** argv) {
     XLOG(ERR) << "the --edenfs flag is required";
     return 1;
   }
-  if (FLAGS_edenDir.empty()) {
-    XLOG(ERR) << "the --edenDir flag is required";
-    return 1;
+  std::unique_ptr<EdenConfig> edenConfig;
+  try {
+    edenConfig = getEdenConfig(identity);
+  } catch (const ArgumentError& ex) {
+    fprintf(stderr, "%s\n", ex.what());
+    return EX_SOFTWARE;
   }
-  auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
+  auto edenDir = edenConfig->getEdenDir();
 
   auto logPath = makeDefaultLogDirectory(edenDir) + getDefaultLogFileName();
   auto startupLogger = daemonizeIfRequested(logPath.value());

@@ -9,7 +9,6 @@
  */
 #include "eden/fs/service/EdenMain.h"
 
-#include <boost/filesystem.hpp>
 #include <folly/Conv.h>
 #include <folly/ScopeGuard.h>
 #include <folly/experimental/FunctionScheduler.h>
@@ -27,6 +26,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
@@ -42,12 +42,6 @@ DEFINE_bool(
     "This argument must be supplied to confirm you intend to run "
     "edenfs instead of eden");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
-DEFINE_string(edenDir, "", "The path to the .eden directory");
-DEFINE_string(
-    etcEdenDir,
-    "/etc/eden",
-    "The directory holding all system configuration files");
-DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(
     logPath,
     "",
@@ -57,9 +51,6 @@ DEFINE_bool(
     false,
     "Report successful startup without waiting for all configured mounts "
     "to be remounted.");
-
-constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
-constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
 
 using namespace facebook::eden;
 
@@ -84,17 +75,6 @@ std::string getLogPath(AbsolutePathPiece edenDir) {
 
   auto logDir = makeDefaultLogDirectory(edenDir);
   return (logDir + getDefaultLogFileName()).value();
-}
-
-AbsolutePath ensureEdenDirExists(folly::StringPiece path) {
-  // Call boost::filesystem::create_directories() directly on the user-supplied
-  // argument before we try canonicalizing it.  We'll do so with realpath()
-  // later, but this requires the directory exist first.
-  boost::filesystem::path boostPath(path.begin(), path.end());
-  boost::filesystem::create_directories(boostPath);
-
-  // Call realpath now that we know the directory exists.
-  return facebook::eden::realpath(path);
 }
 
 } // namespace
@@ -186,74 +166,15 @@ int EdenMain::main(int argc, char** argv) {
   }
 #endif
 
-  // normalizeBestEffort() to try resolving symlinks in these paths but don't
-  // fail if they don't exist.
-  AbsolutePath systemConfigDir;
+  std::unique_ptr<EdenConfig> edenConfig;
   try {
-    systemConfigDir = normalizeBestEffort(FLAGS_etcEdenDir);
-  } catch (const std::exception& ex) {
-    fprintf(
-        stderr,
-        "invalid flag value: %s: %s\n",
-        FLAGS_etcEdenDir.c_str(),
-        folly::exceptionStr(ex).c_str());
-    return EX_SOFTWARE;
-  }
-  const auto systemConfigPath =
-      systemConfigDir + PathComponentPiece{kEdenfsConfigFile};
-
-  const std::string configPathStr = FLAGS_configPath;
-  AbsolutePath userConfigPath;
-  if (configPathStr.empty()) {
-    userConfigPath = identity.getHomeDirectory() +
-        PathComponentPiece{kDefaultUserConfigFile};
-  } else {
-    try {
-      userConfigPath = normalizeBestEffort(configPathStr);
-    } catch (const std::exception& ex) {
-      fprintf(
-          stderr,
-          "invalid flag value: %s: %s\n",
-          FLAGS_configPath.c_str(),
-          folly::exceptionStr(ex).c_str());
-      return EX_SOFTWARE;
-    }
-  }
-  // Create the default EdenConfig. Next, update with command line arguments.
-  // Command line areguments will take precedence over config file settings.
-  auto edenConfig = std::make_unique<EdenConfig>(
-      identity.getUsername(),
-      identity.getUid(),
-      identity.getHomeDirectory(),
-      userConfigPath,
-      systemConfigDir,
-      systemConfigPath);
-
-  // Load system and user configurations
-  edenConfig->loadSystemConfig();
-  edenConfig->loadUserConfig();
-
-  // We will set the edenDir using ConfigSource COMMAND_LINE so that it cannot
-  // be over-ridden by subsequent config file updates.
-  AbsolutePath edenDir;
-  try {
-    if (!FLAGS_edenDir.empty()) {
-      edenDir = ensureEdenDirExists(folly::to<std::string>(FLAGS_edenDir));
-    } else {
-      edenDir =
-          ensureEdenDirExists(folly::to<std::string>(edenConfig->getEdenDir()));
-    }
-    edenConfig->setEdenDir(edenDir, facebook::eden::COMMAND_LINE);
-  } catch (const std::exception& ex) {
-    fprintf(
-        stderr,
-        "error creating %s: %s\n",
-        FLAGS_edenDir.c_str(),
-        folly::exceptionStr(ex).c_str());
+    edenConfig = getEdenConfig(identity);
+  } catch (const ArgumentError& ex) {
+    fprintf(stderr, "%s\n", ex.what());
     return EX_SOFTWARE;
   }
 
-  auto logPath = getLogPath(edenDir);
+  auto logPath = getLogPath(edenConfig->getEdenDir());
   auto startupLogger =
       std::shared_ptr<StartupLogger>{daemonizeIfRequested(logPath)};
   XLOG(DBG3) << edenConfig->toString();
