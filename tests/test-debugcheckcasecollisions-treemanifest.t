@@ -32,7 +32,7 @@ different, so this is a different test script.
   > }
 
   $ mkdir -p dirA/subdirA dirA/subdirB dirB
-  $ touch dirA/subdirA/file1 dirA/subdirB/file2 dirB/file3 file4
+  $ touch dirA/subdirA/file1 dirA/subdirA/File10 dirA/subdirB/file2 dirB/file3 file4
   $ hg commit -Aqm "base"
 
 Check basic case collisions
@@ -66,4 +66,13 @@ Check self-conflicts
 Check against a particular revision
   $ hg debugcheckcasecollisions -r 0 FILE4
   FILE4 conflicts with file4
+  [1]
+
+Check case collision on top of the commit which introduces it
+(this is how this command is used: it runs from the hook on top of the commit
+being checked, and it gets passed a list of file adds)
+  $ touch dirA/subdirA/file10
+  $ hg commit -Aqm new
+  $ hg debugcheckcasecollisions dirA/subdirA/file10
+  dirA/subdirA/file10 conflicts with dirA/subdirA/File10
   [1]

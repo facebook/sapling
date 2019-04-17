@@ -3204,12 +3204,20 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
                 dir, base = "", tf
             dirlist = treemanifest.listdir(dir)
             if dirlist:
-                lowerdirlist = {f.lower(): f for f in dirlist}
-                conflict = lowerdirlist.get(base.lower())
-                if conflict is not None and base != conflict:
+                lowerdirlist = collections.defaultdict(list)
+                for f in dirlist:
+                    lowerdirlist[f.lower()].append(f)
+
+                conflicts = lowerdirlist.get(base.lower())
+                if conflicts is not None and conflicts != [base]:
+                    if base in conflicts:
+                        conflicts.remove(base)
                     if dir:
-                        conflict = dir + "/" + conflict
-                    ui.status(_("%s conflicts with %s\n") % (name(tf, tff), conflict))
+                        conflicts = [dir + "/" + c for c in conflicts]
+                    for conflict in conflicts:
+                        ui.status(
+                            _("%s conflicts with %s\n") % (name(tf, tff), conflict)
+                        )
                     res = 1
     else:
         seen = set()
