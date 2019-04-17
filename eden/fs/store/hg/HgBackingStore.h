@@ -191,6 +191,7 @@ class HgBackingStore : public BackingStore {
   folly::Future<Hash> importFlatManifest(Hash commitId);
 
   LocalStore* localStore_{nullptr};
+  std::shared_ptr<EdenStats> stats_;
   // A set of threads owning HgImporter instances
   std::unique_ptr<folly::Executor> importThreadPool_;
   std::shared_ptr<ReloadableConfig> config_;

@@ -105,6 +105,13 @@ class EdenThreadStats : public facebook::stats::ThreadLocalStatsT<
       createTimeseries("hg_importer.prefetch_files")};
 #endif
 
+  Histogram hgBackingStoreGetTree{createHistogram("store.hg.get_tree")};
+  Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_file")};
+  Histogram mononokeBackingStoreGetTree{
+      createHistogram("store.mononoke.get_tree")};
+  Histogram mononokeBackingStoreGetBlob{
+      createHistogram("store.mononoke.get_blob")};
+
   // Since we can potentially finish a request in a different
   // thread from the one used to initiate it, we use HistogramPtr
   // as a helper for referencing the pointer-to-member that we

@@ -22,6 +22,7 @@
 #include <folly/json.h>
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
+#include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #ifndef EDEN_WIN
@@ -493,6 +494,7 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
 }
 
 unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
+  folly::stop_watch<std::chrono::milliseconds> watch;
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(store_, blobHash, "importFileContents");
@@ -559,6 +561,8 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   XLOG(DBG4) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
              << hgInfo.revHash() << "); length=" << bodyLength;
 
+  stats_->getStatsForCurrentThread().hgBackingStoreGetBlob.addValue(
+      watch.elapsed().count());
   return make_unique<Blob>(blobHash, std::move(buf));
 }
 

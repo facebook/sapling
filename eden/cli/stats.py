@@ -414,6 +414,46 @@ def get_thrift_latency(counters: DiagInfoCounters) -> Table2D:
     return table
 
 
+@stats_cmd("hg-latency", "Show the latency of hg backing store")
+class HgBackingStoreLatencyCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        return backing_store_latency("hg", args)
+
+
+@stats_cmd("mononoke", "Show the latency of mononoke backing store")
+class MononokeBackingStoreLatencyCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        return backing_store_latency("mononoke", args)
+
+
+def backing_store_latency(store: str, args: argparse.Namespace) -> int:
+    out = sys.stdout
+    instance = cmd_util.get_eden_instance(args)
+    with instance.get_thrift_client() as client:
+        diag_info = client.getStatInfo()
+    table = get_store_latency(diag_info.counters, store)
+    stats_print.write_heading(
+        "Latency of {} backing store operations in EdenFs".format(store), out
+    )
+    stats_print.write_latency_table(table, out)
+    return 0
+
+
+def get_store_latency(counters: DiagInfoCounters, store: str) -> Table2D:
+    table: Table2D = {}
+
+    for key in counters:
+        if key.startswith("store.{}".format(store)) and key.find(".count") == -1:
+            tokens = key.split(".")
+            method = tokens[2]
+            percentile = tokens[3]
+            period = None
+            if len(tokens) > 4:
+                period = tokens[4]
+            insert_latency_record(table, counters[key], method, percentile, period)
+    return table
+
+
 class StatsCmd(Subcmd):
     NAME = "stats"
     HELP = "Prints statistics information for eden"

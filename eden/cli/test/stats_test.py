@@ -11,7 +11,7 @@ import unittest
 from io import StringIO
 
 from .. import stats_print
-from ..stats import DiagInfoCounters, get_hg_importer_counters
+from ..stats import DiagInfoCounters, get_hg_importer_counters, get_store_latency
 
 
 class StatsTest(unittest.TestCase):
@@ -135,3 +135,54 @@ class HgImporterStatsTest(unittest.TestCase):
         }
         table = get_hg_importer_counters(counters)
         self.assertEqual(table.get("dog_file"), [10, 70, 90, 100])
+
+
+class HgBackingStoreStatsTest(unittest.TestCase):
+    def test_get_stats_from_right_store(self) -> None:
+        counters: DiagInfoCounters = {
+            "store.mononoke.get_blob.p50": 10,
+            "store.mononoke.get_blob.p50.60": 20,
+            "store.mononoke.get_blob.p50.600": 30,
+            "store.mononoke.get_blob.p50.3600": 40,
+            "store.hg.get_blob.p50": 40,
+            "store.hg.get_blob.p50.60": 30,
+            "store.hg.get_blob.p50.600": 20,
+            "store.hg.get_blob.p50.3600": 10,
+        }
+        table = get_store_latency(counters, "mononoke")
+        result = table.get("get_blob")
+        if result:
+            self.assertEqual(result[1], ["20 μs", "30 μs", "40 μs", "10 μs"])
+        else:
+            # make pyre happy
+            self.assertTrue(False, "should return result")
+
+    def test_get_store_latency_correctly(self) -> None:
+        counters: DiagInfoCounters = {
+            "store.mononoke.get_blob.count": 10,
+            "store.mononoke.get_blob.count.60": 20,
+            "store.mononoke.get_blob.count.600": 30,
+            "store.mononoke.get_blob.count.3600": 40,
+            "store.mononoke.get_blob.p50": 5010,
+            "store.mononoke.get_blob.p50.60": 5020,
+            "store.mononoke.get_blob.p50.600": 5030,
+            "store.mononoke.get_blob.p50.3600": 5040,
+            "store.mononoke.get_blob.p90": 9010,
+            "store.mononoke.get_blob.p90.60": 9020,
+            "store.mononoke.get_blob.p90.600": 9030,
+            "store.mononoke.get_blob.p90.3600": 9040,
+            "store.mononoke.get_blob.p99": 9910,
+            "store.mononoke.get_blob.p99.60": 9920,
+            "store.mononoke.get_blob.p99.600": 9930,
+            "store.mononoke.get_blob.p99.3600": 9940,
+        }
+        table = get_store_latency(counters, "mononoke")
+        self.assertEqual(
+            table.get("get_blob"),
+            [
+                ["", "", "", ""],
+                ["5020 μs", "5030 μs", "5040 μs", "5010 μs"],
+                ["9020 μs", "9030 μs", "9040 μs", "9010 μs"],
+                ["9920 μs", "9930 μs", "9940 μs", "9910 μs"],
+            ],
+        )

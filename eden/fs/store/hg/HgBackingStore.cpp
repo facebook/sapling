@@ -18,6 +18,7 @@
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
+#include <folly/stop_watch.h>
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/model/Blob.h"
@@ -242,6 +243,7 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<EdenStats> stats)
     : localStore_(localStore),
+      stats_(stats),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
           /* Eden performance will degrade when, for example, a status operation
@@ -488,13 +490,18 @@ Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
 #if EDEN_HAVE_HG_TREEMANIFEST
   HgProxyHash pathInfo(localStore_, id, "importTree");
   std::shared_ptr<LocalStore::WriteBatch> writeBatch(localStore_->beginWrite());
+  folly::stop_watch<std::chrono::milliseconds> watch;
   auto fut = importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
       id,
       pathInfo.path(),
       writeBatch);
-  return std::move(fut).thenValue([batch = std::move(writeBatch)](auto tree) {
+  return std::move(fut).thenValue([stats = stats_,
+                                   batch = std::move(writeBatch),
+                                   watch = std::move(watch)](auto tree) {
     batch->flush();
+    stats->getStatsForCurrentThread().hgBackingStoreGetTree.addValue(
+        watch.elapsed().count());
     return tree;
   });
 #else
@@ -533,11 +540,12 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     // can save us from materializing so many file contents later to compute
     // size and hash information.
     XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
+    folly::stop_watch<std::chrono::milliseconds> watch;
 
     RelativePath ownedPath(path);
     return mononoke->getTree(manifestNode)
         .via(serverThreadPool_)
-        .thenTry([edenTreeID, ownedPath, writeBatch](
+        .thenTry([stats = stats_, edenTreeID, ownedPath, writeBatch, watch](
                      auto mononokeTreeTry) mutable {
           auto& mononokeTree = mononokeTreeTry.value();
           std::vector<TreeEntry> entries;
@@ -567,6 +575,9 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
           auto serialized = LocalStore::serializeTree(tree.get());
           writeBatch->put(
               KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+          auto count = watch.elapsed().count();
+          stats->getStatsForCurrentThread()
+              .mononokeBackingStoreGetTree.addValue(count);
           return makeFuture(std::move(tree));
         })
         .thenError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
@@ -813,8 +824,14 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   if (mononoke) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
+    folly::stop_watch<std::chrono::milliseconds> watch;
     auto revHashCopy = hgInfo.revHash();
     return mononoke->getBlob(revHashCopy)
+        .ensure([stats = stats_, watch = std::move(watch)]() {
+          auto count = watch.elapsed().count();
+          stats->getStatsForCurrentThread()
+              .mononokeBackingStoreGetBlob.addValue(count);
+        })
         .thenError([this,
                     id,
                     path = hgInfo.path().copy(),
