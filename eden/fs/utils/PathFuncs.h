@@ -1698,6 +1698,14 @@ void validatePathComponentLength(PathComponentPiece name);
 bool ensureDirectoryExists(AbsolutePathPiece path);
 
 /**
+ * Recursively remove a directory tree.
+ *
+ * Returns false if the directory did not exist in the first place, and true if
+ * the directory was successfully removed.  Throws an exception on error.
+ */
+bool removeRecursively(AbsolutePathPiece path);
+
+/**
  * Convenient literals for constructing path types.
  */
 inline namespace path_literals {

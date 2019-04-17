@@ -12,6 +12,7 @@
 #include <boost/functional/hash.hpp>
 #include <fcntl.h>
 #include <folly/Exception.h>
+#include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -768,6 +769,35 @@ TEST(PathFuncs, comparison) {
   // We should always perform byte-by-byte comparisons (and ignore locale)
   EXPECT_LT(PathComponent{"ABC"}, PathComponent{"abc"});
   EXPECT_LT(PathComponent{"XYZ"}, PathComponent{"abc"});
+}
+
+TEST(PathFuncs, localDirCreateRemove) {
+  folly::test::TemporaryDirectory dir = makeTempDir();
+  string pathStr{dir.path().string()};
+  AbsolutePathPiece tmpDirPath{pathStr};
+
+  // Create a deep directory, and write a file inside it.
+  auto testPath = tmpDirPath + "foo/bar/asdf/test.txt"_relpath;
+  ensureDirectoryExists(testPath.dirname());
+  folly::writeFile(StringPiece("test\n"), testPath.c_str());
+
+  // Read it back just as a sanity check
+  string contents;
+  ASSERT_TRUE(folly::readFile(testPath.c_str(), contents));
+  EXPECT_EQ("test\n", contents);
+
+  // Delete the first-level directory and its contents
+  auto topDir = tmpDirPath + "foo"_pc;
+  struct stat st;
+  auto returnCode = lstat(topDir.c_str(), &st);
+  EXPECT_EQ(0, returnCode);
+  ASSERT_TRUE(removeRecursively(topDir));
+  returnCode = lstat(topDir.c_str(), &st);
+  EXPECT_NE(0, returnCode);
+  EXPECT_EQ(ENOENT, errno);
+
+  // Calling removeRecursively() on a non-existent directory should return false
+  ASSERT_FALSE(removeRecursively(topDir));
 }
 
 // std::string is nothrow move constructible and assignable, so the

@@ -268,10 +268,19 @@ void validatePathComponentLength(PathComponentPiece name) {
   }
 }
 
-bool ensureDirectoryExists(AbsolutePathPiece path) {
+namespace {
+boost::filesystem::path toBoostPath(AbsolutePathPiece path) {
   auto piece = path.stringPiece();
-  return boost::filesystem::create_directories(
-      boost::filesystem::path(piece.begin(), piece.end()));
+  return boost::filesystem::path(piece.begin(), piece.end());
+}
+} // namespace
+
+bool ensureDirectoryExists(AbsolutePathPiece path) {
+  return boost::filesystem::create_directories(toBoostPath(path));
+}
+
+bool removeRecursively(AbsolutePathPiece path) {
+  return boost::filesystem::remove_all(toBoostPath(path));
 }
 
 AbsolutePath expandUser(
