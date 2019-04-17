@@ -136,9 +136,6 @@ using std::unique_ptr;
 namespace {
 using namespace facebook::eden;
 
-constexpr StringPiece kLockFileName{"lock"};
-constexpr StringPiece kThriftSocketName{"socket"};
-constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 } // namespace
@@ -196,7 +193,6 @@ EdenServer::EdenServer(
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig)
     : edenDir_{edenConfig->getEdenDir()},
-      configPath_{edenConfig->getUserConfigPath()},
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
@@ -389,7 +385,7 @@ Future<Unit> EdenServer::prepareImpl(
     std::shared_ptr<StartupLogger> logger,
     bool waitForMountCompletion) {
   bool doingTakeover = false;
-  if (!acquireEdenLock()) {
+  if (!edenDir_.acquireLock()) {
     // Another edenfs process is already running.
     //
     // If --takeover was specified, fall through and attempt to gracefully
@@ -397,9 +393,9 @@ Future<Unit> EdenServer::prepareImpl(
     //
     // If --takeover was not specified, fail now.
     if (!FLAGS_takeover) {
-      throw std::runtime_error(
-          "another instance of Eden appears to be running for " +
-          edenDir_.stringPiece().str());
+      throw std::runtime_error(folly::to<string>(
+          "another instance of Eden appears to be running for ",
+          edenDir_.getPath()));
     }
     doingTakeover = true;
   }
@@ -433,7 +429,7 @@ Future<Unit> EdenServer::prepareImpl(
   // If we are gracefully taking over from an existing edenfs process,
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
-  const auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
+  const auto takeoverPath = edenDir_.getTakeoverSocketPath();
 #endif
   TakeoverData takeoverData;
   if (doingTakeover) {
@@ -448,8 +444,7 @@ Future<Unit> EdenServer::prepareImpl(
         " mount points");
 
     // Take over the eden lock file and the thrift server socket.
-    lockFile_ = std::move(takeoverData.lockFile);
-    writePidToLockFile(lockFile_.fd());
+    edenDir_.takeoverLock(std::move(takeoverData.lockFile));
     server_->useExistingSocket(takeoverData.thriftSocket.release());
 #else
     NOT_IMPLEMENTED();
@@ -463,7 +458,7 @@ Future<Unit> EdenServer::prepareImpl(
     logger->log("Creating new memory store.");
     localStore_ = make_shared<MemoryLocalStore>(serverState_);
   } else if (FLAGS_local_storage_engine_unsafe == "sqlite") {
-    const auto path = edenDir_ + RelativePathPiece{kSqlitePath};
+    const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
     logger->log("Opening local SQLite store ", path, "...");
@@ -477,7 +472,7 @@ Future<Unit> EdenServer::prepareImpl(
   } else if (FLAGS_local_storage_engine_unsafe == "rocksdb") {
     logger->log("Opening local RocksDB store...");
     folly::stop_watch<std::chrono::milliseconds> watch;
-    const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
+    const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
     localStore_ = make_shared<RocksDbLocalStore>(
         rocksPath, &serverState_->getFaultInjector(), serverState_);
@@ -567,7 +562,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   std::vector<Future<Unit>> mountFutures;
   folly::dynamic dirs = folly::dynamic::object();
   try {
-    dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
+    dirs = ClientConfig::loadClientDirectoryMap(edenDir_.getPath());
   } catch (const std::exception& ex) {
     logger->warn(
         "Could not parse config.json file: ",
@@ -589,8 +584,8 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
         makeFutureWith([&] {
           MountInfo mountInfo;
           mountInfo.mountPoint = client.first.c_str();
-          auto edenClientPath = edenDir_ + PathComponent("clients") +
-              PathComponent(client.second.c_str());
+          auto edenClientPath =
+              edenDir_.getCheckoutStateDir(client.second.asString());
           mountInfo.edenClientPath = edenClientPath.stringPiece().str();
           auto initialConfig = ClientConfig::loadFromClientDirectory(
               AbsolutePathPiece{mountInfo.mountPoint},
@@ -664,7 +659,7 @@ Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
         // Stop the privhelper process.
         shutdownPrivhelper();
 
-        takeover.lockFile = std::move(lockFile_);
+        takeover.lockFile = edenDir_.extractLock();
         auto future = takeover.takeoverComplete.getFuture();
         takeover.thriftSocket = std::move(socket);
 
@@ -1065,7 +1060,7 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setInterface(handler_);
 
   // Get the path to the thrift socket.
-  auto thriftSocketPath = edenDir_ + PathComponentPiece{kThriftSocketName};
+  auto thriftSocketPath = edenDir_.getThriftSocketPath();
   folly::SocketAddress thriftAddress;
 #ifdef EDEN_WIN
   // Until we have Python support for Unix Domain sockets on Windows
@@ -1082,26 +1077,6 @@ Future<Unit> EdenServer::createThriftServer() {
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);
   return serverEventHandler_->getThriftRunningFuture();
-}
-
-bool EdenServer::acquireEdenLock() {
-  const auto lockPath = edenDir_ + PathComponentPiece{kLockFileName};
-  lockFile_ = folly::File(lockPath.value(), O_WRONLY | O_CREAT | O_CLOEXEC);
-  if (!lockFile_.try_lock()) {
-    lockFile_.close();
-    return false;
-  }
-
-  writePidToLockFile(lockFile_.fd());
-
-  return true;
-}
-
-void EdenServer::writePidToLockFile(int fd) {
-  // Write the PID (with a newline) to the lockfile.
-  folly::ftruncateNoInt(fd, /* len */ 0);
-  const auto pidContents = folly::to<std::string>(getpid(), "\n");
-  folly::pwriteNoInt(fd, pidContents.data(), pidContents.size(), 0);
 }
 
 void EdenServer::prepareThriftAddress() {

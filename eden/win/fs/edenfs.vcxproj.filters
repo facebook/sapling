@@ -161,6 +161,9 @@
     <ClCompile Include="..\..\fs\service\EdenServer.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\service\EdenStateDir.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
     <ClCompile Include="D:\edenwin64\stubs\common\stats\ServiceData.cpp">
       <Filter>Extern</Filter>
     </ClCompile>
@@ -413,6 +416,9 @@
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\service\EdenServer.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\EdenStateDir.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="Stub.h">

@@ -26,7 +26,12 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/service/EdenStateDir.h"
+#include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/tracing/EdenStats.h"
+#include "eden/fs/utils/PathFuncs.h"
+
 #ifdef EDEN_WIN
 #include "eden/win/fs/mount/EdenMount.h" // @manual
 #include "eden/win/fs/utils/Stub.h" // @manual
@@ -36,11 +41,6 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #endif
-
-#include "eden/fs/inodes/ServerState.h"
-#include "eden/fs/takeover/TakeoverHandler.h"
-#include "eden/fs/utils/PathFuncs.h"
-#include "folly/experimental/FunctionScheduler.h"
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
 constexpr folly::StringPiece kPrivateBytes{"memory_private_bytes"};
@@ -274,8 +274,8 @@ class EdenServer : private TakeoverHandler {
       folly::StringPiece type,
       folly::StringPiece name);
 
-  AbsolutePathPiece getEdenDir() {
-    return edenDir_;
+  AbsolutePathPiece getEdenDir() const {
+    return edenDir_.getPath();
   }
 
   const std::shared_ptr<ServerState>& getServerState() {
@@ -367,22 +367,6 @@ class EdenServer : private TakeoverHandler {
       folly::StringPiece name);
   FOLLY_NODISCARD folly::Future<folly::Unit> createThriftServer();
 
-  /**
-   * Acquire the main edenfs lock.
-   *
-   * Returns true if the lock was acquired successfully, or false if we failed
-   * to acquire the lock (likely due to another process holding it).
-   * May throw an exception on other errors (e.g., insufficient permissions to
-   * create the lock file, out of disk space, etc).
-   */
-  FOLLY_NODISCARD bool acquireEdenLock();
-
-  /**
-   * Write the current process ID follow by a newline to the given lock file
-   * fd.
-   */
-  void writePidToLockFile(int id);
-
   void prepareThriftAddress();
 
   /**
@@ -440,14 +424,13 @@ class EdenServer : private TakeoverHandler {
    * Member variables.
    *
    * Note that the declaration order below is important for initialization
-   * and cleanup order.  lockFile_ is near the top so it will be released last.
+   * and cleanup order.  edenDir_ is near the top so it will be destroyed last,
+   * as it holds the process-wide lock for our on-disk state.
    * mountPoints_ are near the bottom, so they get destroyed before the
    * backingStores_ and localStore_.
    */
 
-  AbsolutePath edenDir_;
-  AbsolutePath configPath_;
-  folly::File lockFile_;
+  EdenStateDir edenDir_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
