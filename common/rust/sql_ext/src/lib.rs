@@ -27,7 +27,7 @@ pub struct PoolSizeConfig {
 impl PoolSizeConfig {
     fn for_regular_connection() -> Self {
         Self {
-            write_pool_size: myrouter::DEFAULT_MAX_NUM_OF_CONCURRENT_CONNECTIONS,
+            write_pool_size: 1,
             read_pool_size: myrouter::DEFAULT_MAX_NUM_OF_CONCURRENT_CONNECTIONS,
             // For reading from master we need to use less concurrent connections in order to
             // protect the master from being overloaded. The `clone` here means that for write
