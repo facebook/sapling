@@ -302,10 +302,6 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // by returning an error, and avoids sending the request to userspace.
   args.altflags |= FUSE_MOPT_NO_APPLEXATTR;
 
-  // We don't want (and can't track) apple double files in the repo,
-  // so tell the kernel to skip that stuff.
-  args.altflags |= FUSE_MOPT_NO_APPLEDOUBLE;
-
   int mountFlags = MNT_NOSUID;
   checkUnixError(
       mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args), "failed to mount");
