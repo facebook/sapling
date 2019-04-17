@@ -2620,6 +2620,14 @@ def _makefollowlogfilematcher(repo, files, followfirst):
     fcacheready = [False]
     pctx = repo["."]
 
+    # "files" might be directories. Normalize them to actual files.
+    for path in files:
+        if path not in pctx:
+            # "path" could be a prefix matching a directory, use the
+            # real matcher interface to handle it.
+            files = list(pctx.walk(scmutil.match(pctx, files, default="path")))
+            break
+
     def populate():
         for fn in files:
             fctx = pctx[fn]
@@ -2695,10 +2703,10 @@ def _makelogrevset(repo, pats, opts, revs):
     if not slowpath:
         for f in match.files():
             if follow and f not in wctx:
-                # If the file exists, it may be a directory, so let it
-                # take the slow path.
+                # If the file exists, it may be a directory. The "follow"
+                # revset can handle directories fine. So no need to use
+                # the slow path.
                 if os.path.exists(repo.wjoin(f)):
-                    slowpath = True
                     continue
                 else:
                     raise error.Abort(

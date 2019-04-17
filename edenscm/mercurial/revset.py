@@ -1064,7 +1064,27 @@ def _follow(repo, subset, x, name, followfirst=False):
             if r is None:
                 ctx = repo["."]
             m = matchmod.match(repo.root, repo.getcwd(), [x], ctx=mctx, default="path")
-            fctxs.extend(ctx[f].introfilectx() for f in ctx.manifest().walk(m))
+            files = []
+            for f in ctx.manifest().walk(m):
+                files.append(f)
+                # 3 is not chosen scientifically. But it looks sane.
+                if len(files) >= 3:
+                    # Too many files. The "file" might be a prefix pattern
+                    # matching every file in a directory.  Use a different code
+                    # path that might be cheaper.
+                    #
+                    # See cmdutil._makelogrevset for the example use of
+                    # _matchfiles.
+                    pat = "p:%s" % x
+                    matchfiles = revsetlang.formatspec(
+                        '_matchfiles("r:", "d:relpath", %s)', pat
+                    )
+                    if revs == [None]:
+                        s = repo.revs("reverse(ancestors(.)) & %r", matchfiles)
+                    else:
+                        s = repo.revs("reverse(ancestors(%ld)) & %r", revs, matchfiles)
+                    return subset & s
+            fctxs.extend(ctx[f].introfilectx() for f in files)
         s = dagop.filerevancestors(fctxs, followfirst)
     else:
         if revs is None:

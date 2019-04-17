@@ -1645,16 +1645,10 @@ Test --follow on a directory
   $ testlog -f dir
   []
   (group
-    (and
+    (group
       (func
-        (symbol 'ancestors')
-        (symbol '.'))
-      (func
-        (symbol '_matchfiles')
-        (list
-          (string 'r:')
-          (string 'd:relpath')
-          (string 'p:dir')))))
+        (symbol 'follow')
+        (string 'dir'))))
   $ hg up -q tip
 
 Test --follow on file not in parent revision

@@ -461,30 +461,20 @@ Sadly, this test shows internals are inconsistent.
   
 
  Undo the removal
- (BUG: Merge commit does not match its original state)
 
   $ printf C > B
   $ printf D > A
   $ hg ci --amend -m E3
-  $ hg log -f -T '{desc}' -G A
+  $ hg log -fr tip -T '{desc}' -G A
   o    D
   |\
   | ~
-  | o  C
-  |/|
-  | ~
   o  A
   
-  $ hg log -f -T '{desc}' -G B
-  @    E3
+  $ hg log -fr tip -T '{desc}' -G B
+  o    C
   |\
-  | o    D
-  | |\
-  | | ~
-  o |  C
-  |\|
-  ~ |
-   /
+  | ~
   o  B
   
 

@@ -104,6 +104,7 @@ log on directory
   [255]
 
 -f, directory
+(The code path using "follow()" revset will follow file renames, so 'b' and 'a' show up)
 
   $ hg up -q 3
   $ hg log -f dir
@@ -111,6 +112,16 @@ log on directory
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     c
+  
+  changeset:   1:d89b0a12d229
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b
+  
+  changeset:   0:9161b9aeaf16
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
   
 -f, directory with --patch
 
@@ -123,6 +134,28 @@ log on directory
   diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
   --- /dev/null* (glob)
   +++ b/dir/b* (glob)
+  @@ -0,0 +1,1 @@
+  +a
+  
+  changeset:   1:d89b0a12d229
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b
+  
+  diff -r 9161b9aeaf16 -r d89b0a12d229 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:02 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  
+  changeset:   0:9161b9aeaf16
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
+  
+  diff -r 000000000000 -r 9161b9aeaf16 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:01 1970 +0000
   @@ -0,0 +1,1 @@
   +a
   
