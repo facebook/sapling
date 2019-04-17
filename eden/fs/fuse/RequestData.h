@@ -77,8 +77,8 @@ class RequestData : public folly::RequestData {
   template <typename T>
   folly::Future<folly::Unit> catchErrors(folly::Future<T>&& fut) {
     return std::move(fut)
-        .onError(systemErrorHandler)
-        .onError(genericErrorHandler)
+        .thenError(folly::tag_t<std::system_error>{}, systemErrorHandler)
+        .thenError(folly::tag_t<std::exception>{}, genericErrorHandler)
         .ensure([] { RequestData::get().finishRequest(); });
   }
 

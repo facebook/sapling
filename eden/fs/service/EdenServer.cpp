@@ -818,14 +818,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                   edenMount,
                   optionalTakeover =
                       std::move(optionalTakeover)](auto&&) mutable {
-
         return (optionalTakeover ? performTakeoverFuseStart(
                                        edenMount, std::move(*optionalTakeover))
                                  : performFreshFuseStart(edenMount))
             // If an error occurs we want to call mountFinished and throw the
             // error here.  Once the pool is up and running, the finishFuture
             // will ensure that this happens.
-            .onError([this, edenMount](folly::exception_wrapper ew) {
+            .thenError([this, edenMount](folly::exception_wrapper ew) {
               mountFinished(edenMount.get(), std::nullopt);
               return makeFuture<folly::Unit>(ew);
             })
@@ -854,10 +853,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                 // case as they are already mounted.
                 return edenMount->performBindMounts()
                     .thenValue([edenMount](auto&&) { return edenMount; })
-                    .onError([this,
-                              edenMount,
-                              finishFuture = std::move(finishFuture)](
-                                 folly::exception_wrapper ew) mutable {
+                    .thenError([this,
+                                edenMount,
+                                finishFuture = std::move(finishFuture)](
+                                   folly::exception_wrapper ew) mutable {
                       // Creating a bind mount failed. Trigger an unmount.
                       return unmount(edenMount->getPath().stringPiece())
                           .thenTry([finishFuture = std::move(finishFuture)](
