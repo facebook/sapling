@@ -18,7 +18,7 @@ use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error, Result};
-use futures::future::{err, ok, Future};
+use futures::future::{err, ok, result, Future};
 use futures::stream::repeat;
 use futures::Stream;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -31,7 +31,9 @@ use slog::{debug, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use sql::myrouter;
 use std::fmt;
+use std::fs::File;
 use std::io;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -61,6 +63,25 @@ fn main() -> Result<()> {
     let changeset = matches.value_of("changeset").map_or(None, |cs| {
         Some(HgChangesetId::from_str(cs).expect("Invalid changesetid"))
     });
+    let mut excludes = matches.value_of("exclude").map_or(vec![], |excludes| {
+        excludes
+            .split(",")
+            .map(|cs| HgChangesetId::from_str(cs).expect("Invalid changeset"))
+            .collect::<Vec<_>>()
+    });
+
+    if let Some(path) = matches.value_of("exclude_file") {
+        let changesets = BufReader::new(File::open(path)?)
+            .lines()
+            .filter_map(|cs_str| {
+                cs_str
+                    .map_err(Error::from)
+                    .and_then(|cs_str| HgChangesetId::from_str(&cs_str))
+                    .ok()
+            });
+
+        excludes.extend(changesets);
+    }
 
     cmdlib::args::init_cachelib(&matches);
 
@@ -89,59 +110,72 @@ fn main() -> Result<()> {
             // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
             let ctx = CoreContext::test_mock();
 
-            let tailer = try_boxfuture!(Tailer::new(
-                ctx,
-                blobrepo,
-                config.clone(),
-                bookmark,
-                manifold_client.clone(),
-                logger.clone(),
-            ));
+            blobrepo
+                .get_hg_bonsai_mapping(ctx.clone(), excludes)
+                .and_then({
+                    cloned!(manifold_client, logger);
+                    move |excl| {
+                        result(Tailer::new(
+                            ctx,
+                            blobrepo,
+                            config.clone(),
+                            bookmark,
+                            manifold_client.clone(),
+                            logger.clone(),
+                            excl.into_iter().map(|(_, cs)| cs).collect(),
+                        ))
+                    }
+                })
+                .and_then({
+                    cloned!(manifold_client);
+                    move |tail| {
+                        let f = match init_revision {
+                            Some(init_rev) => {
+                                info!(
+                                    logger.clone(),
+                                    "Initial revision specified as argument {}", init_rev
+                                );
+                                let hash = try_boxfuture!(HgNodeHash::from_str(&init_rev));
+                                let bytes = hash.as_bytes().into();
+                                manifold_client
+                                    .write(tail.get_last_rev_key(), bytes)
+                                    .map(|_| ())
+                                    .boxify()
+                            }
+                            None => futures::future::ok(()).boxify(),
+                        };
 
-            let fut = match init_revision {
-                Some(init_rev) => {
-                    info!(
-                        logger.clone(),
-                        "Initial revision specified as argument {}", init_rev
-                    );
-                    let hash = try_boxfuture!(HgNodeHash::from_str(&init_rev));
-                    let bytes = hash.as_bytes().into();
-                    manifold_client
-                        .write(tailer.get_last_rev_key(), bytes)
-                        .map(|_| ())
-                        .boxify()
-                }
-                None => futures::future::ok(()).boxify(),
-            };
-
-            match (continuous, changeset) {
-                (true, _) => {
-                    // Tail new commits and run hooks on them
-                    let logger = logger.clone();
-                    fut.then(|_| {
-                        repeat(()).for_each(move |()| {
-                            let fut = tailer.run();
-                            process_hook_results(fut, logger.clone()).and_then(|_| {
-                                sleep(Duration::new(10, 0))
-                                    .map_err(|err| format_err!("Tokio timer error {:?}", err))
-                            })
-                        })
-                    })
-                    .boxify()
-                }
-                (_, Some(changeset)) => {
-                    let fut = tailer.run_single_changeset(changeset);
-                    process_hook_results(fut, logger)
-                }
-                _ => {
-                    let logger = logger.clone();
-                    fut.then(move |_| {
-                        let fut = tailer.run_with_limit(limit);
-                        process_hook_results(fut, logger)
-                    })
-                    .boxify()
-                }
-            }
+                        match (continuous, changeset) {
+                            (true, _) => {
+                                // Tail new commits and run hooks on them
+                                let logger = logger.clone();
+                                f.then(|_| {
+                                    repeat(()).for_each(move |()| {
+                                        let fut = tail.run();
+                                        process_hook_results(fut, logger.clone()).and_then(|_| {
+                                            sleep(Duration::new(10, 0)).map_err(|err| {
+                                                format_err!("Tokio timer error {:?}", err)
+                                            })
+                                        })
+                                    })
+                                })
+                                .boxify()
+                            }
+                            (_, Some(changeset)) => {
+                                let fut = tail.run_single_changeset(changeset);
+                                process_hook_results(fut, logger)
+                            }
+                            _ => {
+                                let logger = logger.clone();
+                                f.then(move |_| {
+                                    let fut = tail.run_with_limit(limit);
+                                    process_hook_results(fut, logger)
+                                })
+                                .boxify()
+                            }
+                        }
+                    }
+                })
         }
     });
 
@@ -280,6 +314,20 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("changeset")
                 .short("c")
                 .help("the changeset to run hooks for")
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("exclude")
+                .long("exclude")
+                .short("e")
+                .help("a comma separated list of changesets to exclude")
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("exclude_file")
+                .long("exclude_file")
+                .short("f")
+                .help("a file containing changesets to exclude that is separated by new lines")
                 .takes_value(true)
         )
         .arg(

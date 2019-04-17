@@ -22,6 +22,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use slog::{debug, info, Logger};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct Tailer {
@@ -32,6 +33,7 @@ pub struct Tailer {
     last_rev_key: String,
     manifold_client: ManifoldHttpClient,
     logger: Logger,
+    excludes: HashSet<ChangesetId>,
 }
 
 impl Tailer {
@@ -42,6 +44,7 @@ impl Tailer {
         bookmark: Bookmark,
         manifold_client: ManifoldHttpClient,
         logger: Logger,
+        excludes: HashSet<ChangesetId>,
     ) -> Result<Tailer> {
         let changeset_store = BlobRepoChangesetStore::new(repo.clone());
         let content_store = BlobRepoFileContentStore::new(repo.clone());
@@ -67,6 +70,7 @@ impl Tailer {
             last_rev_key,
             manifold_client,
             logger,
+            excludes,
         })
     }
 
@@ -82,6 +86,7 @@ impl Tailer {
         end_rev: HgChangesetId,
         bm: Bookmark,
         logger: Logger,
+        excludes: HashSet<ChangesetId>,
     ) -> BoxFuture<Vec<HookResults>, Error> {
         debug!(logger, "Running in range {} to {}", last_rev, end_rev);
         cloned!(logger);
@@ -89,6 +94,7 @@ impl Tailer {
             .and_then(move |end_rev| {
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
                     .take(1000) // Limit number so we don't process too many
+                    .filter(move |cs| !excludes.contains(cs))
                     .map({
                         move |cs| {
                             cloned!(ctx, bm, hm, logger, repo);
@@ -111,7 +117,13 @@ impl Tailer {
         last_rev: HgChangesetId,
         end_rev: HgChangesetId,
     ) -> BoxFuture<Vec<HookResults>, Error> {
-        cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark);
+        cloned!(
+            self.ctx,
+            self.repo,
+            self.hook_manager,
+            self.bookmark,
+            self.excludes
+        );
         Tailer::run_in_range0(
             ctx,
             repo,
@@ -120,6 +132,7 @@ impl Tailer {
             end_rev,
             bookmark,
             self.logger.clone(),
+            excludes,
         )
     }
 
@@ -155,6 +168,7 @@ impl Tailer {
         let ctx = self.ctx.clone();
         let bm = self.bookmark.clone();
         let hm = self.hook_manager.clone();
+        let excludes = self.excludes.clone();
 
         let bm_rev = self
             .repo
@@ -173,6 +187,7 @@ impl Tailer {
             .and_then(move |bm_rev| {
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bm_rev)
                     .take(limit)
+                    .filter(move |cs| !excludes.contains(cs))
                     .map({
                         move |cs| {
                             cloned!(ctx, bm, hm, logger, repo);
@@ -188,29 +203,25 @@ impl Tailer {
     }
 
     pub fn run(&self) -> BoxFuture<Vec<HookResults>, Error> {
-        let ctx = self.ctx.clone();
-        let bm = self.bookmark.clone();
-        let bm2 = bm.clone();
-        let repo = self.repo.clone();
-        let hm = self.hook_manager.clone();
-        let last_rev_key = self.last_rev_key.clone();
-        let last_rev_key2 = last_rev_key.clone();
-        let manifold_client = self.manifold_client.clone();
-        let manifold_client2 = manifold_client.clone();
-
-        info!(self.logger, "Running tailer on bookmark {}", bm);
-
-        let logger = self.logger.clone();
-        let logger2 = logger.clone();
-        let logger3 = logger.clone();
+        info!(
+            self.logger,
+            "Running tailer on bookmark {}",
+            self.bookmark.clone()
+        );
 
         self.repo
-            .get_bookmark(ctx.clone(), &bm)
-            .and_then(|opt| opt.ok_or(ErrorKind::NoSuchBookmark(bm).into()))
-            .and_then(move |current_bm_cs| {
-                manifold_client
-                    .read(last_rev_key, PayloadRange::Full)
-                    .map(move |opt| (current_bm_cs, opt))
+            .get_bookmark(self.ctx.clone(), &self.bookmark.clone())
+            .and_then({
+                cloned!(self.bookmark);
+                |opt| opt.ok_or(ErrorKind::NoSuchBookmark(bookmark).into())
+            })
+            .and_then({
+                cloned!(self.last_rev_key, self.manifold_client);
+                move |current_bm_cs| {
+                    manifold_client
+                        .read(last_rev_key, PayloadRange::Full)
+                        .map(move |opt| (current_bm_cs, opt))
+                }
             })
             .and_then(|(current_bm_cs, opt)| match opt {
                 Some(last_rev_bytes) => Ok((current_bm_cs, last_rev_bytes)),
@@ -220,22 +231,46 @@ impl Tailer {
                 let node_hash = HgChangesetId::from_bytes(&*last_rev_bytes.payload.payload)?;
                 Ok((current_bm_cs, node_hash))
             })
-            .and_then(move |(current_bm_cs, last_rev)| {
-                let end_rev = current_bm_cs;
-                info!(
-                    logger,
-                    "Bookmark is currently at {}, last processed revision is {}", end_rev, last_rev
+            .and_then({
+                cloned!(
+                    self.logger,
+                    self.bookmark,
+                    self.excludes,
+                    self.hook_manager,
+                    self.repo,
+                    self.ctx
                 );
-                if last_rev == end_rev {
-                    info!(logger, "Nothing to do");
-                }
-                Tailer::run_in_range0(ctx, repo, hm, last_rev, end_rev, bm2, logger3)
+                move |(current_bm_cs, last_rev)| {
+                    let end_rev = current_bm_cs;
+                    info!(
+                        logger,
+                        "Bookmark is currently at {}, last processed revision is {}",
+                        end_rev,
+                        last_rev
+                    );
+                    if last_rev == end_rev {
+                        info!(logger, "Nothing to do");
+                    }
+                    Tailer::run_in_range0(
+                        ctx,
+                        repo,
+                        hook_manager,
+                        last_rev,
+                        end_rev,
+                        bookmark,
+                        logger,
+                        excludes,
+                    )
                     .map(move |res| (end_rev, res))
+                }
             })
-            .and_then(move |(end_rev, res)| {
-                info!(logger2, "Setting last processed revision to {:?}", end_rev);
-                let bytes = end_rev.as_bytes().into();
-                manifold_client2.write(last_rev_key2, bytes).map(|()| res)
+            .and_then({
+                cloned!(self.last_rev_key, self.logger, self.manifold_client);
+                move |(end_rev, res)| {
+                    info!(logger, "Setting last processed revision to {:?}", end_rev);
+                    let bytes = end_rev.as_bytes().into();
+                    manifold_client.write(last_rev_key, bytes).map(|()| res)
+                }
             })
             .boxify()
     }
