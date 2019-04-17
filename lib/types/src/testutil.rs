@@ -4,8 +4,10 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{
+    dataentry::DataEntry,
     key::Key,
     node::Node,
+    parents::Parents,
     path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf},
 };
 
@@ -57,4 +59,12 @@ pub fn key(path: &str, hexnode: &str) -> Key {
 /// The null node id is special and it's semantics vary. A null key contains a null node id.
 pub fn null_key(path: &str) -> Key {
     Key::new(repo_path_buf(path), Node::null_id().clone())
+}
+
+pub fn data_entry(key: Key, data: impl AsRef<[u8]>) -> DataEntry {
+    DataEntry {
+        key,
+        data: data.as_ref().into(),
+        parents: Parents::None,
+    }
 }

@@ -34,10 +34,15 @@ impl DataEntry {
     /// file content, and compare it with the known filenode hash from
     /// the entry's `Key`.
     pub fn validate(&self) -> Fallible<()> {
-        let (p1, p2) = self.parents.clone().into_nodes();
+        // Mercurial hashes the parent filesnodes in sorted order
+        // when computing the filenode hash.
+        let (p1, p2) = match self.parents.clone().into_nodes() {
+            (p1, p2) if p1 > p2 => (p2, p1),
+            (p1, p2) => (p1, p2),
+        };
+
         let mut hash = [0u8; 20];
         let mut hasher = Sha1::new();
-
         hasher.input(p1.as_ref());
         hasher.input(p2.as_ref());
         hasher.input(&self.data);

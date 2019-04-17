@@ -2,10 +2,10 @@
 
 //! Types for data interchange between the Mononoke API Server and the Mercurial client.
 
-use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
+    dataentry::DataEntry,
     historyentry::{HistoryEntry, WireHistoryEntry},
     key::Key,
     path::RepoPathBuf,
@@ -18,23 +18,23 @@ pub struct FileDataRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileDataResponse {
-    pub files: Vec<(Key, Bytes)>,
+    pub entries: Vec<DataEntry>,
 }
 
 impl FileDataResponse {
-    pub fn new(data: impl IntoIterator<Item = (Key, Bytes)>) -> Self {
+    pub fn new(data: impl IntoIterator<Item = DataEntry>) -> Self {
         Self {
-            files: data.into_iter().collect(),
+            entries: data.into_iter().collect(),
         }
     }
 }
 
 impl IntoIterator for FileDataResponse {
-    type Item = (Key, Bytes);
-    type IntoIter = std::vec::IntoIter<(Key, Bytes)>;
+    type Item = DataEntry;
+    type IntoIter = std::vec::IntoIter<DataEntry>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.files.into_iter()
+        self.entries.into_iter()
     }
 }
 
@@ -85,9 +85,9 @@ mod tests {
     #[test]
     fn data_iter() {
         let data = vec![
-            (FOO_KEY.clone(), Bytes::from(&b"foo data"[..])),
-            (BAR_KEY.clone(), Bytes::from(&b"bar data"[..])),
-            (BAZ_KEY.clone(), Bytes::from(&b"baz data"[..])),
+            data_entry(FOO_KEY.clone(), b"foo data"),
+            data_entry(BAR_KEY.clone(), b"bar data"),
+            data_entry(BAZ_KEY.clone(), b"baz data"),
         ];
         let response = FileDataResponse::new(data.clone());
 

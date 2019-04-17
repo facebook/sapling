@@ -39,6 +39,7 @@ pub struct EdenApiCurlClient {
     creds: Option<ClientCreds>,
     data_batch_size: Option<usize>,
     history_batch_size: Option<usize>,
+    validate: bool,
 }
 
 // Public API.
@@ -71,6 +72,7 @@ impl EdenApiCurlClient {
             creds: config.creds,
             data_batch_size: config.data_batch_size,
             history_batch_size: config.history_batch_size,
+            validate: true,
         };
 
         // Create repo/packs directory in cache if it doesn't already exist.
@@ -123,13 +125,22 @@ impl EdenApi for EdenApiCurlClient {
             responses.len(),
             responses
                 .iter()
-                .map(|entry| entry.files.len())
+                .map(|response| response.entries.len())
                 .sum::<usize>(),
         );
 
+        let mut files = Vec::new();
+        for entry in responses.into_iter().flatten() {
+            if self.validate {
+                log::trace!("Validating file: {}", &entry.key);
+                entry.validate()?;
+            }
+            files.push((entry.key, entry.data));
+        }
+
         let cache_path = self.pack_cache_path();
         log::debug!("Writing pack file in directory: {:?}", &cache_path);
-        write_datapack(cache_path, responses.into_iter().flatten())
+        write_datapack(cache_path, files)
     }
 
     fn get_history(&self, keys: Vec<Key>, max_depth: Option<u32>) -> Fallible<PathBuf> {
