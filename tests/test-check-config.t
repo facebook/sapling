@@ -46,7 +46,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   >   $PYTHON contrib/check-config.py
   undocumented: clone.requestfullclone (bool)
   undocumented: extensions.treemanifest (str)
-  undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)
   undocumented: fastmanifest.cachecutoffdays (int) [60]
   undocumented: fastmanifest.cacheonchange (bool)

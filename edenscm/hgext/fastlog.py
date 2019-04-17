@@ -10,8 +10,10 @@ Configure it by adding the following config options to your .hg/hgrc.
 This relies on fbconduit being setup for the repo; this should already
 be configured if supported by your repo.
 
-[fastlog]
-enabled=true
+Config::
+
+    [fastlog]
+    enabled=true
 """
 
 import heapq
@@ -20,13 +22,12 @@ from threading import Event, Thread
 
 from edenscm.mercurial import (
     changelog,
-    cmdutil,
     error,
     extensions,
+    match as matchmod,
     node,
     phases,
     revset,
-    scmutil,
     smartset,
     util,
 )
@@ -57,7 +58,7 @@ def extsetup(ui):
         ui.warn(_("No conduit host specified in config; disabling fastlog\n"))
         return
 
-    extensions.wrapfunction(cmdutil, "getlogrevs", getfastlogrevs)
+    extensions.wrapfunction(revset, "_follow", fastlogfollow)
 
 
 def lazyparents(rev, public, parentfunc):
@@ -151,151 +152,174 @@ def originator(parentfunc, rev):
             yield p
 
 
-def getfastlogrevs(orig, repo, pats, opts):
-    blacklist = ["all", "branch", "rev", "sparse"]
-    if any(opts.get(opt) for opt in blacklist) or not opts.get("follow"):
-        return orig(repo, pats, opts)
+def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
+    if followfirst:
+        # fastlog does not support followfirst=True
+        repo.ui.debug("fastlog: not used because 'followfirst' is set\n")
+        return orig(repo, subset, x, name, followfirst)
+
+    args = revset.getargsdict(x, name, "file startrev")
+    if "file" not in args:
+        # Not interesting for fastlog case.
+        repo.ui.debug("fastlog: not used because 'file' is not provided\n")
+        return orig(repo, subset, x, name, followfirst)
+
+    if "startrev" in args:
+        revs = revset.getset(repo, smartset.fullreposet(repo), args["startrev"])
+        it = iter(revs)
+        try:
+            startrev = next(it)
+        except StopIteration:
+            startrev = repo["."].rev()
+        try:
+            next(it)
+            # fastlog does not support multiple startrevs
+            repo.ui.debug("fastlog: not used because multiple revs are provided\n")
+            return orig(repo, subset, x, name, followfirst)
+        except StopIteration:
+            # supported by fastlog: startrev contains a single rev
+            pass
+    else:
+        startrev = repo["."].rev()
 
     reponame = repo.ui.config("fbconduit", "reponame")
-    if reponame and repo.ui.configbool("fastlog", "enabled"):
-        wctx = repo[None]
-        match, pats = scmutil.matchandpats(wctx, pats, opts)
-        files = match.files()
-        if not files or "." in files:
-            # Walking the whole repo - bail on fastlog
-            return orig(repo, pats, opts)
+    if not reponame or not repo.ui.configbool("fastlog", "enabled"):
+        repo.ui.debug("fastlog: not used because fastlog is disabled\n")
+        return orig(repo, subset, x, name, followfirst)
 
-        dirs = set()
-        wvfs = repo.wvfs
-        for path in files:
-            if wvfs.isdir(path) and not wvfs.islink(path):
-                dirs.update([path + "/"])
-            else:
-                # bail on symlinks, and also bail on files for now
-                # with follow behavior, for files, we are supposed
-                # to track copies / renames, but it isn't convenient
-                # to do this through scmquery
-                return orig(repo, pats, opts)
+    path = revset.getstring(args["file"], _("%s expected a pattern") % name)
+    if path.startswith("path:"):
+        # strip "path:" prefix
+        path = path[5:]
 
-        rev = repo["."].rev()
+    if any(path.startswith("%s:" % prefix) for prefix in matchmod.allpatternkinds):
+        # Patterns other than "path:" are not supported
+        repo.ui.debug(
+            "fastlog: not used because '%s:' patterns are not supported\n"
+            % path.split(":", 1)[0]
+        )
+        return orig(repo, subset, x, name, followfirst)
 
-        parents = repo.changelog.parentrevs
-        public = set()
+    files = [path]
+    if not files or "." in files:
+        # Walking the whole repo - bail on fastlog
+        repo.ui.debug("fastlog: not used because walking through the entire repo\n")
+        return orig(repo, subset, x, name, followfirst)
 
-        # Our criterion for invoking fastlog is finding a single
-        # common public ancestor from the current head.  First we
-        # have to walk back through drafts to find all interesting
-        # public parents.  Typically this will just be one, but if
-        # there are merged drafts, we may have multiple parents.
-        if repo[rev].phase() == phases.public:
-            public.add(rev)
+    dirs = set()
+    wvfs = repo.wvfs
+    for path in files:
+        if wvfs.isdir(path) and not wvfs.islink(path):
+            dirs.update([path + "/"])
         else:
-            queue = deque()
-            queue.append(rev)
-            seen = set()
-            while queue:
-                cur = queue.popleft()
-                if cur not in seen:
-                    seen.add(cur)
-                    if repo[cur].mutable():
-                        for p in parents(cur):
-                            if p != nullrev:
-                                queue.append(p)
-                    else:
-                        public.add(cur)
+            # bail on symlinks, and also bail on files for now
+            # with follow behavior, for files, we are supposed
+            # to track copies / renames, but it isn't convenient
+            # to do this through scmquery
+            repo.ui.debug("fastlog: not used because %s is not a directory\n" % path)
+            return orig(repo, subset, x, name, followfirst)
 
-        def fastlog(repo, startrev, dirs, localmatch):
-            filefunc = repo.changelog.readfiles
-            for parent in lazyparents(startrev, public, parents):
-                files = filefunc(parent)
-                if dirmatches(files, dirs):
-                    yield parent
-            repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
-            for rev in combinator(repo, parent, dirs, localmatch):
-                yield rev
+    rev = startrev
 
-        def combinator(repo, rev, dirs, localmatch):
-            """combinator(repo, rev, dirs, localmatch)
-            Make parallel local and remote queries along ancestors of
-            rev along path and combine results, eliminating duplicates,
-            restricting results to those which match dirs
-            """
-            LOCAL = "L"
-            REMOTE = "R"
-            queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
-            hash = repo[rev].hex()
+    parents = repo.changelog.parentrevs
+    public = set()
 
-            local = LocalIteratorThread(queue, LOCAL, rev, dirs, localmatch, repo)
-            remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, dirs, repo)
+    # Our criterion for invoking fastlog is finding a single
+    # common public ancestor from the current head.  First we
+    # have to walk back through drafts to find all interesting
+    # public parents.  Typically this will just be one, but if
+    # there are merged drafts, we may have multiple parents.
+    if repo[rev].phase() == phases.public:
+        public.add(rev)
+    else:
+        queue = deque()
+        queue.append(rev)
+        seen = set()
+        while queue:
+            cur = queue.popleft()
+            if cur not in seen:
+                seen.add(cur)
+                if repo[cur].mutable():
+                    for p in parents(cur):
+                        if p != nullrev:
+                            queue.append(p)
+                else:
+                    public.add(cur)
 
-            # Allow debugging either remote or local path
-            debug = repo.ui.config("fastlog", "debug")
-            if debug != "local":
-                repo.ui.debug("starting fastlog at %s\n" % hash)
-                remote.start()
-            if debug != "remote":
-                local.start()
-            seen = set([rev])
+    def fastlog(repo, startrev, dirs, localmatch):
+        filefunc = repo.changelog.readfiles
+        for parent in lazyparents(startrev, public, parents):
+            files = filefunc(parent)
+            if dirmatches(files, dirs):
+                yield parent
+        repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
+        for rev in combinator(repo, parent, dirs, localmatch):
+            yield rev
 
-            try:
-                while True:
-                    try:
-                        producer, success, msg = queue.get(True, 3600)
-                    except util.empty:
-                        raise error.Abort("Timeout reading log data")
-                    if not success:
-                        if producer == LOCAL:
-                            raise error.Abort(msg)
-                        elif msg:
-                            repo.ui.log("hgfastlog", msg)
-                            continue
+    def combinator(repo, rev, dirs, localmatch):
+        """combinator(repo, rev, dirs, localmatch)
+        Make parallel local and remote queries along ancestors of
+        rev along path and combine results, eliminating duplicates,
+        restricting results to those which match dirs
+        """
+        LOCAL = "L"
+        REMOTE = "R"
+        queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
+        hash = repo[rev].hex()
 
-                    if msg is None:
-                        # Empty message means no more results
-                        return
+        local = LocalIteratorThread(queue, LOCAL, rev, dirs, localmatch, repo)
+        remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, dirs, repo)
 
-                    rev = msg
-                    if debug:
-                        if producer == LOCAL:
-                            repo.ui.debug("LOCAL:: %s\n" % msg)
-                        elif producer == REMOTE:
-                            repo.ui.debug("REMOTE:: %s\n" % msg)
+        # Allow debugging either remote or local path
+        debug = repo.ui.config("fastlog", "debug")
+        if debug != "local":
+            repo.ui.debug("starting fastlog at %s\n" % hash)
+            remote.start()
+        if debug != "remote":
+            local.start()
+        seen = set([rev])
 
-                    if rev not in seen:
-                        seen.add(rev)
-                        yield rev
-            finally:
-                local.stop()
-                remote.stop()
+        try:
+            while True:
+                try:
+                    producer, success, msg = queue.get(True, 3600)
+                except util.empty:
+                    raise error.Abort("Timeout reading log data")
+                if not success:
+                    if producer == LOCAL:
+                        raise error.Abort(msg)
+                    elif msg:
+                        repo.ui.log("hgfastlog", msg)
+                        continue
 
-        # Complex match - use a revset.
-        complex = [
-            "date",
-            "exclude",
-            "include",
-            "keyword",
-            "no_merges",
-            "only_merges",
-            "prune",
-            "user",
-        ]
-        if match.anypats() or any(opts.get(opt) for opt in complex):
-            f = fastlog(repo, rev, dirs, None)
-            revs = smartset.generatorset(f, iterasc=False)
-            revs.reverse()
-            if not revs:
-                return smartset.baseset([]), None, None
-            expr, filematcher = cmdutil._makelogrevset(repo, pats, opts, revs)
-            matcher = revset.match(repo.ui, expr)
-            matched = matcher(repo, revs)
-            return matched, expr, filematcher
-        else:
-            # Simple match without revset shaves ~0.5 seconds off
-            # hg log -l 100 -T ' ' on common directories.
-            expr = "fastlog(%s)" % ",".join(dirs)
-            return fastlog(repo, rev, dirs, dirmatches), expr, None
+                if msg is None:
+                    # Empty message means no more results
+                    return
 
-    return orig(repo, pats, opts)
+                rev = msg
+                if debug:
+                    if producer == LOCAL:
+                        repo.ui.debug("LOCAL:: %s\n" % msg)
+                    elif producer == REMOTE:
+                        repo.ui.debug("REMOTE:: %s\n" % msg)
+
+                if rev not in seen:
+                    seen.add(rev)
+                    yield rev
+        finally:
+            local.stop()
+            remote.stop()
+
+    revgen = fastlog(repo, rev, dirs, dirmatches)
+    fastlogset = smartset.generatorset(revgen, iterasc=False)
+    # Optimization: typically for "reverse(:.) & follow(path)" used by
+    # "hg log". The left side is more expensive, although it has smaller
+    # "weight". Make sure fastlogset is on the left side to avoid slow
+    # walking through ":.".
+    if subset.isdescending():
+        fastlogset.reverse()
+        return fastlogset & subset
+    return subset & fastlogset
 
 
 class readonlychangelog(object):
