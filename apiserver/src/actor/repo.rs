@@ -38,7 +38,7 @@ use uuid::Uuid;
 use mercurial_types::{manifest::Content, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use types::{
-    FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse, Key,
+    DataEntry, FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse, Key,
     WireHistoryEntry,
 };
 
@@ -424,12 +424,22 @@ impl MononokeRepo {
         let mut fetches = Vec::new();
         for key in keys {
             let filenode = HgFileNodeId::new(key.node.clone().into());
-            let fut = self.repo.get_raw_hg_content(ctx.clone(), filenode, false);
+            let get_parents = self.repo.get_file_parents(ctx.clone(), filenode);
+            let get_content = self.repo.get_raw_hg_content(ctx.clone(), filenode, false);
 
+            // Use `lazy` when writing log messages so that the message is emitted
+            // when the Future is polled rather than when it is created.
             let logger = self.logger.clone();
             let fut = lazy(move || {
                 debug!(&logger, "fetching data for key: {}", &key);
-                fut.map(move |blob| (key, blob.into_inner()))
+
+                get_parents.and_then(move |parents| {
+                    get_content.map(move |content| DataEntry {
+                        key,
+                        data: content.into_inner(),
+                        parents: parents.into(),
+                    })
+                })
             });
 
             fetches.push(fut);
@@ -438,8 +448,8 @@ impl MononokeRepo {
         iter_ok(fetches)
             .buffer_unordered(10)
             .collect()
-            .map(|files| MononokeRepoResponse::EdenGetData {
-                response: FileDataResponse::new(files),
+            .map(|entries| MononokeRepoResponse::EdenGetData {
+                response: FileDataResponse::new(entries),
             })
             .from_err()
             .boxify()
