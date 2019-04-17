@@ -10,6 +10,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <eden/fs/utils/PathFuncs.h>
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/Expected.h>
@@ -241,7 +242,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   auto [fuseDev, dindex] = allocateFuseDevice();
 
   fuse_mount_args args{};
-  auto canonicalPath = realpath(mountPath, NULL);
+  auto canonicalPath = ::realpath(mountPath, NULL);
   if (!canonicalPath) {
     folly::throwSystemError("failed to realpath ", mountPath);
   }
@@ -271,7 +272,12 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   checkedSnprintf(args.fsname, "eden@" OSXFUSE_DEVICE_BASENAME "%d", dindex);
   args.altflags |= FUSE_MOPT_FSNAME;
 
-  checkedSnprintf(args.volname, OSXFUSE_VOLNAME_FORMAT, dindex);
+  auto mountPathBaseName = basename(canonicalPath);
+  checkedSnprintf(
+      args.volname,
+      "%.*s",
+      int(mountPathBaseName.size()),
+      mountPathBaseName.data());
   args.altflags |= FUSE_MOPT_VOLNAME;
 
   checkedSnprintf(args.fstypename, "%s", "eden");
