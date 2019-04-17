@@ -68,6 +68,7 @@ Check against a particular revision
   FILE4 conflicts with file4
   [1]
 
+#if no-icasefs
 Check case collision on top of the commit which introduces it
 (this is how this command is used: it runs from the hook on top of the commit
 being checked, and it gets passed a list of file adds)
@@ -76,3 +77,4 @@ being checked, and it gets passed a list of file adds)
   $ hg debugcheckcasecollisions dirA/subdirA/file10
   dirA/subdirA/file10 conflicts with dirA/subdirA/File10
   [1]
+#endif
