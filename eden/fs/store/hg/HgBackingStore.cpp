@@ -530,7 +530,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     auto serialized = LocalStore::serializeTree(tree.get());
     writeBatch->put(
         KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-    return tree;
+    return makeFuture(std::move(tree));
   }
 
   auto mononoke = getMononoke();
