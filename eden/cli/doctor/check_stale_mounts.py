@@ -79,14 +79,15 @@ def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]
     log = logging.getLogger("eden.cli.doctor.stale_mounts")
     stale_eden_mount_points: Set[bytes] = set()
     for mount_point in get_all_eden_mount_points(mount_table):
+        # All eden mounts should have a .eden directory.
+        # If the edenfs daemon serving this mount point has died we
+        # will get ENOTCONN when trying to access it.  (Simply calling
+        # lstat() on the root directory itself can succeed even in this
+        # case.)
+        eden_dir = os.path.join(mount_point, b".eden")
+
         try:
-            # All eden mounts should have a .eden directory.
-            # If the edenfs daemon serving this mount point has died we
-            # will get ENOTCONN when trying to access it.  (Simply calling
-            # lstat() on the root directory itself can succeed even in this
-            # case.)
-            eden_dir = os.path.join(mount_point, b".eden")
-            mount_table.lstat(eden_dir)
+            mount_table.check_path_access(eden_dir)
         except OSError as e:
             if e.errno == errno.ENOTCONN:
                 stale_eden_mount_points.add(mount_point)

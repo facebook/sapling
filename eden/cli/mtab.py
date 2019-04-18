@@ -7,8 +7,10 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import abc
+import errno
 import logging
 import os
+import random
 import subprocess
 from typing import List, NamedTuple, Union
 
@@ -40,6 +42,13 @@ class MountTable(abc.ABC):
     @abc.abstractmethod
     def lstat(self, path: Union[bytes, str]) -> MTStat:
         "Returns a subset of the results of os.lstat."
+
+    @abc.abstractmethod
+    def check_path_access(self, path: bytes) -> None:
+        """\
+        Attempts to stat the given directory, bypassing the kernel's caches.
+        Raises OSError upon failure.
+        """
 
     @abc.abstractmethod
     def create_bind_mount(self, source_path, dest_path) -> bool:
@@ -81,6 +90,19 @@ class LinuxMountTable(MountTable):
     def lstat(self, path: Union[bytes, str]) -> MTStat:
         st = os.lstat(path)
         return MTStat(st_uid=st.st_uid, st_dev=st.st_dev, st_mode=st.st_mode)
+
+    def check_path_access(self, path: bytes) -> None:
+        # Even if the FUSE process is shut down, the lstat call will succeed if
+        # the stat result is cached. Append a random string to avoid that. In a
+        # better world, this code would bypass the cache by opening a handle
+        # with O_DIRECT, but Eden does not support O_DIRECT.
+
+        try:
+            os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                return
+            raise
 
     def create_bind_mount(self, source_path, dest_path) -> bool:
         return 0 == subprocess.check_call(

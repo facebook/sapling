@@ -113,6 +113,17 @@ class FakeMountTable(mtab.MountTable):
         else:
             return typing.cast(mtab.MTStat, result)
 
+    def check_path_access(self, path: bytes) -> None:
+        path_str = os.fsdecode(path)
+
+        try:
+            result = self.stats[path_str]
+        except KeyError:
+            raise OSError(errno.ENOENT, f"no path {path_str}")
+
+        if isinstance(result, BaseException):
+            raise result
+
     def _remove_mount(self, mount_point: bytes) -> None:
         self.mounts[:] = [
             mount_info
