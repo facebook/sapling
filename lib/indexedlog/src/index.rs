@@ -50,11 +50,15 @@
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
 use std::borrow::Cow;
+use std::cmp::Ordering::{Equal, Greater, Less};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
 use std::mem::size_of;
-use std::ops::Deref;
+use std::ops::{
+    Bound::{self, Excluded, Included, Unbounded},
+    Deref, RangeBounds,
+};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -729,6 +733,156 @@ impl<'a> Iterator for PrefixIter<'a> {
     }
 }
 
+/// Iterator returned by [`Index::range`].
+/// Provide access to full keys and values (as [`LinkOffset`]), sorted by key.
+pub struct RangeIter<'a> {
+    index: &'a Index,
+
+    // Stack about what is being visited, for `next`.
+    front_stack: Vec<IterState>,
+
+    // Stack about what is being visited, for `next_back`.
+    back_stack: Vec<IterState>,
+
+    // Completed. Either error out, or the iteration ends.
+    completed: bool,
+}
+
+impl<'a> RangeIter<'a> {
+    fn new(index: &'a Index, front_stack: Vec<IterState>, back_stack: Vec<IterState>) -> Self {
+        assert!(!front_stack.is_empty());
+        assert!(!back_stack.is_empty());
+        Self {
+            completed: front_stack.last() == back_stack.last(),
+            index,
+            front_stack,
+            back_stack,
+        }
+    }
+
+    /// Reconstruct "key" from the stack.
+    fn key(stack: &Vec<IterState>) -> Fallible<Vec<u8>> {
+        // Reconstruct key. Collect base16 child stack (prefix + visiting),
+        // then convert to base256.
+        let mut prefix = Vec::with_capacity(stack.len() - 1);
+        for frame in stack.iter().take(stack.len() - 1).cloned() {
+            prefix.push(match frame {
+                // The frame contains the "current" child being visited.
+                IterState::RadixChild(_, child) if child < 16 => child,
+                _ => unreachable!("bug: malicious iterator state"),
+            })
+        }
+        if prefix.len() & 1 == 1 {
+            // Odd-length key
+            Err(data_error("unexpected odd-length key"))
+        } else {
+            Ok(base16_to_base256(&prefix))
+        }
+    }
+
+    /// Used by both `next` and `next_back`.
+    fn step(
+        index: &'a Index,
+        stack: &mut Vec<IterState>,
+        towards: Side,
+        exclusive: IterState,
+    ) -> Option<Fallible<(Cow<'a, [u8]>, LinkOffset)>> {
+        loop {
+            let state = match stack.pop().unwrap().step(towards) {
+                // Pop. Visit next.
+                None => continue,
+                Some(state) => state,
+            };
+
+            if state == exclusive {
+                // Stop iteration.
+                return None;
+            }
+
+            // Write down what's being visited.
+            stack.push(state);
+
+            return match state {
+                IterState::RadixChild(radix, child) => match radix.child(index, child) {
+                    Ok(next_offset) if next_offset.is_null() => continue,
+                    Ok(next_offset) => match next_offset.to_typed(&index.buf, &index.checksum) {
+                        Ok(TypedOffset::Radix(next_radix)) => {
+                            stack.push(match towards {
+                                Front => IterState::RadixEnd(next_radix),
+                                Back => IterState::RadixStart(next_radix),
+                            });
+                            continue;
+                        }
+                        Ok(TypedOffset::Leaf(next_leaf)) => {
+                            stack.push(match towards {
+                                Front => IterState::LeafEnd(next_leaf),
+                                Back => IterState::LeafStart(next_leaf),
+                            });
+                            continue;
+                        }
+                        Ok(_) => Some(Err(data_error("unexpected type during iteration"))),
+                        Err(err) => Some(Err(err)),
+                    },
+                    Err(err) => Some(Err(err)),
+                },
+                IterState::RadixLeaf(radix) => match radix.link_offset(index) {
+                    Ok(link_offset) if link_offset.is_null() => continue,
+                    Ok(link_offset) => match Self::key(stack) {
+                        Ok(key) => Some(Ok((Cow::Owned(key), link_offset))),
+                        Err(err) => Some(Err(err)),
+                    },
+                    Err(err) => Some(Err(err)),
+                },
+                IterState::Leaf(leaf) => match leaf.key_and_link_offset(index) {
+                    Ok((key, link_offset)) => Some(Ok((Cow::Borrowed(key), link_offset))),
+                    Err(err) => Some(Err(err)),
+                },
+                IterState::RadixEnd(_)
+                | IterState::RadixStart(_)
+                | IterState::LeafStart(_)
+                | IterState::LeafEnd(_) => {
+                    continue;
+                }
+            };
+        }
+    }
+}
+
+impl<'a> Iterator for RangeIter<'a> {
+    type Item = Fallible<(Cow<'a, [u8]>, LinkOffset)>;
+
+    /// Return the next key and corresponding [`LinkOffset`].
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.completed {
+            return None;
+        }
+        let exclusive = self.back_stack.last().cloned().unwrap();
+        let result = Self::step(self.index, &mut self.front_stack, Back, exclusive);
+        match result {
+            Some(Err(_)) | None => self.completed = true,
+            _ => (),
+        }
+        result
+    }
+}
+
+impl<'a> DoubleEndedIterator for RangeIter<'a> {
+    /// Return the next key and corresponding [`LinkOffset`], from the end of
+    /// the iterator.
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.completed {
+            return None;
+        }
+        let exclusive = self.front_stack.last().cloned().unwrap();
+        let result = Self::step(self.index, &mut self.back_stack, Front, exclusive);
+        match result {
+            Some(Err(_)) | None => self.completed = true,
+            _ => (),
+        }
+        result
+    }
+}
+
 impl LinkOffset {
     /// Iterating through values referred by this linked list.
     pub fn values<'a>(self, index: &'a Index) -> LeafValueIter<'a> {
@@ -1306,6 +1460,74 @@ impl OffsetMap {
     }
 }
 
+/// Choose between Front and Back. Used by [`RangeIter`] related logic.
+#[derive(Clone, Copy)]
+enum Side {
+    Front,
+    Back,
+}
+use Side::{Back, Front};
+
+/// State used by [`RangeIter`].
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum IterState {
+    /// Visiting the child of a radix node.
+    /// child must be inside 0..16 range.
+    RadixChild(RadixOffset, u8),
+
+    /// Visiting the leaf of a radix node.
+    RadixLeaf(RadixOffset),
+
+    /// Visiting this leaf node.
+    Leaf(LeafOffset),
+
+    /// Dummy states to express "inclusive" bounds.
+    /// RadixStart < RadixLeaf < RadixChild < RadixEnd.
+    /// LeafStart < Leaf < LeafEnd.
+    RadixStart(RadixOffset),
+    RadixEnd(RadixOffset),
+    LeafStart(LeafOffset),
+    LeafEnd(LeafOffset),
+}
+
+impl IterState {
+    /// Get the next state on the same frame.
+    /// Return `None` if the frame should be popped.
+    fn next(self) -> Option<Self> {
+        match self {
+            IterState::RadixChild(radix, 15) => Some(IterState::RadixEnd(radix)),
+            IterState::RadixChild(radix, i) => Some(IterState::RadixChild(radix, i + 1)),
+            IterState::RadixStart(radix) => Some(IterState::RadixLeaf(radix)),
+            IterState::RadixLeaf(radix) => Some(IterState::RadixChild(radix, 0)),
+            IterState::LeafStart(leaf) => Some(IterState::Leaf(leaf)),
+            IterState::Leaf(leaf) => Some(IterState::LeafEnd(leaf)),
+            _ => None,
+        }
+    }
+
+    /// Get the previous state on the same frame.
+    /// Return `None` if the frame should be popped.
+    fn prev(self) -> Option<Self> {
+        match self {
+            IterState::RadixChild(radix, 0) => Some(IterState::RadixLeaf(radix)),
+            IterState::RadixChild(radix, i) => Some(IterState::RadixChild(radix, i - 1)),
+            IterState::RadixEnd(radix) => Some(IterState::RadixChild(radix, 15)),
+            IterState::RadixLeaf(radix) => Some(IterState::RadixStart(radix)),
+            IterState::LeafEnd(leaf) => Some(IterState::Leaf(leaf)),
+            IterState::Leaf(leaf) => Some(IterState::LeafStart(leaf)),
+            _ => None,
+        }
+    }
+
+    /// Move one step towards the given side.
+    fn step(self, towards: Side) -> Option<Self> {
+        match towards {
+            Front => self.prev(),
+            Back => self.next(),
+        }
+    }
+}
+
 //// Main Index
 
 /// Insertion-only mapping from `bytes` to a list of [u64]s.
@@ -1798,6 +2020,29 @@ impl Index {
         self.scan_prefix_base16(base16)
     }
 
+    /// Scans entries whose keys are within the given range.
+    ///
+    /// Returns a double-ended iterator, which provides accesses to keys and
+    /// values.
+    pub fn range<'a>(&self, range: impl RangeBounds<&'a [u8]>) -> Fallible<RangeIter> {
+        let is_empty_range = match (range.start_bound(), range.end_bound()) {
+            (Included(start), Included(end)) => start > end,
+            (Included(start), Excluded(end)) => start > end,
+            (Excluded(start), Included(end)) => start > end,
+            (Excluded(start), Excluded(end)) => start >= end,
+            (Unbounded, _) | (_, Unbounded) => false,
+        };
+
+        if is_empty_range {
+            // `BTreeSet::range` panics in this case. Match its behavior.
+            panic!("range start is greater than range end");
+        }
+
+        let front_stack = self.iter_stack_by_bound(range.start_bound(), Front)?;
+        let back_stack = self.iter_stack_by_bound(range.end_bound(), Back)?;
+        Ok(RangeIter::new(self, front_stack, back_stack))
+    }
+
     /// Insert a key-value pair. The value will be the head of the linked list.
     /// That is, `get(key).values().first()` will return the newly inserted
     /// value.
@@ -1919,6 +2164,71 @@ impl Index {
 
             step += 1;
         }
+    }
+
+    // Internal function used by [`Index::range`].
+    // Calculate the [`IterState`] stack used by [`RangeIter`].
+    // `side` is the side of the `bound`, starting side of the iteration,
+    // the opposite of "towards" side.
+    fn iter_stack_by_bound(&self, bound: Bound<&&[u8]>, side: Side) -> Fallible<Vec<IterState>> {
+        let root_radix = self.root.radix_offset;
+        let (inclusive, mut base16iter) = match bound {
+            Unbounded => {
+                return Ok(match side {
+                    Front => vec![IterState::RadixStart(root_radix)],
+                    Back => vec![IterState::RadixEnd(root_radix)],
+                });
+            }
+            Included(ref key) => (true, Base16Iter::from_base256(key)),
+            Excluded(ref key) => (false, Base16Iter::from_base256(key)),
+        };
+
+        let mut offset: Offset = root_radix.into();
+        let mut stack = Vec::<IterState>::new();
+
+        while !offset.is_null() {
+            match offset.to_typed(&self.buf, &self.checksum)? {
+                TypedOffset::Radix(radix) => match base16iter.next() {
+                    None => {
+                        // The key ends at this Radix entry.
+                        let state = IterState::RadixLeaf(radix);
+                        let state = match inclusive {
+                            true => state.step(side).unwrap(),
+                            false => state,
+                        };
+                        stack.push(state);
+                        return Ok(stack);
+                    }
+                    Some(x) => {
+                        // Follow the `x`-th child in the Radix entry.
+                        stack.push(IterState::RadixChild(radix, x));
+                        offset = radix.child(self, x)?;
+                    }
+                },
+                TypedOffset::Leaf(leaf) => {
+                    let stored_cmp_key = {
+                        let (stored_key, _link_offset) = leaf.key_and_link_offset(self)?;
+                        Base16Iter::from_base256(&stored_key)
+                            .skip(stack.len())
+                            .cmp(base16iter)
+                    };
+                    let state = IterState::Leaf(leaf);
+                    let state = match (stored_cmp_key, side, inclusive) {
+                        (Equal, _, true) | (Less, Back, _) | (Greater, Front, _) => {
+                            state.step(side).unwrap()
+                        }
+                        (Equal, _, false) | (Greater, Back, _) | (Less, Front, _) => state,
+                    };
+                    stack.push(state);
+                    return Ok(stack);
+                }
+                _ => return Err(data_error("unexpected type following prefix")),
+            }
+        }
+
+        // Prefix does not exist. The stack ends with a RadixChild state that
+        // points to nothing.
+        Ok(stack)
     }
 
     /// Split a leaf entry. Separated from `insert_advanced` to make `insert_advanced`
@@ -2248,7 +2558,7 @@ impl Debug for Index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
+    use std::collections::{BTreeSet, HashMap};
     use std::fs::File;
     use std::io::prelude::*;
     use tempfile::tempdir;
@@ -2852,6 +3162,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn test_root_meta() {
         let dir = tempdir().unwrap();
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
@@ -2862,6 +3173,152 @@ mod tests {
         index.flush().expect("flush");
         let index = open_opts().open(dir.path().join("a")).expect("open");
         assert_eq!(index.get_meta(), &meta[..]);
+    }
+
+    impl<'a> RangeIter<'a> {
+        fn clone_with_index(&self, index: &'a Index) -> Self {
+            Self {
+                completed: self.completed,
+                index,
+                front_stack: self.front_stack.clone(),
+                back_stack: self.back_stack.clone(),
+            }
+        }
+    }
+
+    /// Extract keys from the [`RangeIter`]. Verify different iteration
+    /// directions, and returned link offsets. A `key` has link offset `i`
+    /// if that key matches `keys[i]`.
+    fn iter_to_keys(index: &Index, keys: &Vec<&[u8]>, iter: &RangeIter) -> Vec<Vec<u8>> {
+        let it_forward = iter.clone_with_index(index);
+        let it_backward = iter.clone_with_index(index);
+        let mut it_both_ends = iter.clone_with_index(index);
+
+        let extract = |v: Fallible<(Cow<'_, [u8]>, LinkOffset)>| -> Vec<u8> {
+            let (key, link_offset) = v.unwrap();
+            let key = key.as_ref();
+            // Verify link_offset is correct
+            let ids: Vec<u64> = link_offset
+                .values(&index)
+                .collect::<Fallible<Vec<u64>>>()
+                .unwrap();
+            assert!(ids.len() == 1);
+            assert_eq!(keys[ids[0] as usize], key);
+            key.to_vec()
+        };
+
+        let keys_forward: Vec<_> = it_forward.map(extract).collect();
+        let mut keys_backward: Vec<_> = it_backward.rev().map(extract).collect();
+        keys_backward.reverse();
+        assert_eq!(keys_forward, keys_backward);
+
+        // Forward and backward iterators should not overlap
+        let mut keys_both_ends = Vec::new();
+        for i in 0..(keys_forward.len() + 2) {
+            if let Some(v) = it_both_ends.next() {
+                keys_both_ends.insert(i, extract(v));
+            }
+            if let Some(v) = it_both_ends.next_back() {
+                keys_both_ends.insert(i + 1, extract(v));
+            }
+        }
+        assert_eq!(keys_forward, keys_both_ends);
+
+        keys_forward
+    }
+
+    /// Test `Index::range` against `BTreeSet::range`. `tree` specifies keys.
+    fn test_range_against_btreeset(tree: BTreeSet<&[u8]>) {
+        let dir = tempdir().unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+        let keys: Vec<&[u8]> = tree.iter().cloned().collect();
+        for (i, key) in keys.iter().enumerate() {
+            index.insert(key, i as u64).unwrap();
+        }
+
+        let range_test = |start: Bound<&[u8]>, end: Bound<&[u8]>| {
+            let range = (start, end);
+            let iter = index.range(range).unwrap();
+            let expected_keys: Vec<Vec<u8>> = tree
+                .range::<&[u8], _>((start, end))
+                .map(|v| v.to_vec())
+                .collect();
+            let selected_keys: Vec<Vec<u8>> = iter_to_keys(&index, &keys, &iter);
+            assert_eq!(selected_keys, expected_keys);
+        };
+
+        // Generate key variants based on existing keys. Generated keys do not
+        // exist int the index. Therefore the test is more interesting.
+        let mut variant_keys = Vec::new();
+        for base_key in keys.iter() {
+            // One byte appended
+            for b in [0x00, 0x77, 0xff].iter().cloned() {
+                let mut key = base_key.to_vec();
+                key.push(b);
+                variant_keys.push(key);
+            }
+
+            // Last byte mutated, or removed
+            if !base_key.is_empty() {
+                let mut key = base_key.to_vec();
+                let last = *key.last().unwrap();
+                *key.last_mut().unwrap() = last.wrapping_add(1);
+                variant_keys.push(key.clone());
+                *key.last_mut().unwrap() = last.wrapping_sub(1);
+                variant_keys.push(key.clone());
+                key.pop();
+                variant_keys.push(key);
+            }
+        }
+
+        // Remove duplicated entries.
+        let variant_keys = variant_keys
+            .iter()
+            .map(|v| v.as_ref())
+            .filter(|k| !tree.contains(k))
+            .collect::<BTreeSet<&[u8]>>()
+            .iter()
+            .cloned()
+            .collect::<Vec<&[u8]>>();
+
+        range_test(Unbounded, Unbounded);
+
+        for key1 in keys.iter().chain(variant_keys.iter()) {
+            range_test(Unbounded, Included(key1));
+            range_test(Unbounded, Excluded(key1));
+            range_test(Included(key1), Unbounded);
+            range_test(Excluded(key1), Unbounded);
+
+            for key2 in keys.iter().chain(variant_keys.iter()) {
+                if key1 < key2 {
+                    range_test(Excluded(key1), Excluded(key2));
+                }
+                if key1 <= key2 {
+                    range_test(Excluded(key1), Included(key2));
+                    range_test(Included(key1), Excluded(key2));
+                    range_test(Included(key1), Included(key2));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_range_example1() {
+        test_range_against_btreeset(
+            vec![
+                &[0x00, 0x00, 0x00][..],
+                &[0x10, 0x0d, 0x01],
+                &[0x10, 0x0e],
+                &[0x10, 0x0f],
+                &[0x10, 0x0f, 0xff],
+                &[0x10, 0x10, 0x01],
+                &[0x10, 0x11],
+                &[0xff],
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+        );
     }
 
     quickcheck! {
@@ -2904,6 +3361,18 @@ mod tests {
                     index.get(key).unwrap().values(&index).map(|v| v.unwrap()).collect();
                 v == *values
             })
+        }
+
+        fn test_range_quickcheck(keys: Vec<Vec<u8>>) -> bool {
+            let size_limit = if cfg!(debug_assertions) {
+                4
+            } else {
+                16
+            };
+            let size = keys.len() % size_limit + 1;
+            let tree: BTreeSet<&[u8]> = keys.iter().take(size).map(|v| v.as_ref()).collect();
+            test_range_against_btreeset(tree);
+            true
         }
     }
 }
