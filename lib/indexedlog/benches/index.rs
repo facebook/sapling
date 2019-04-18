@@ -71,7 +71,7 @@ fn main() {
         })
     });
 
-    bench("index lookup (memory)", || {
+    {
         let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
@@ -79,14 +79,33 @@ fn main() {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                 .expect("insert");
         }
-        elapsed(move || {
-            for i in 0..N {
-                idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
-            }
-        })
-    });
 
-    bench("index lookup (disk, no verify)", || {
+        bench("index lookup (memory)", || {
+            elapsed(|| {
+                for i in 0..N {
+                    idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
+                }
+            })
+        });
+
+        bench("index prefix scan (2B)", || {
+            elapsed(|| {
+                for _ in 0..(N / 3) {
+                    idx.scan_prefix([0x33, 0x33]).unwrap().count();
+                }
+            })
+        });
+
+        bench("index prefix scan (1B)", || {
+            elapsed(|| {
+                for _ in 0..(N / 807) {
+                    idx.scan_prefix([0x33]).unwrap().count();
+                }
+            })
+        });
+    }
+
+    {
         let dir = tempdir().unwrap();
         let mut idx = open_opts()
             .checksum_chunk_size(0)
@@ -98,12 +117,31 @@ fn main() {
                 .expect("insert");
         }
         idx.flush().expect("flush");
-        elapsed(move || {
-            for i in 0..N {
-                idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
-            }
-        })
-    });
+
+        bench("index lookup (disk, no verify)", || {
+            elapsed(|| {
+                for i in 0..N {
+                    idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
+                }
+            })
+        });
+
+        bench("index prefix scan (2B, disk)", || {
+            elapsed(|| {
+                for _ in 0..(N / 3) {
+                    idx.scan_prefix([0x33, 0x33]).unwrap().count();
+                }
+            })
+        });
+
+        bench("index prefix scan (1B, disk)", || {
+            elapsed(|| {
+                for _ in 0..(N / 807) {
+                    idx.scan_prefix([0x33]).unwrap().count();
+                }
+            })
+        });
+    }
 
     bench("index lookup (disk, verified)", || {
         let dir = tempdir().unwrap();
