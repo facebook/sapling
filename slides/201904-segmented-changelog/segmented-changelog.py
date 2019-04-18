@@ -403,8 +403,8 @@ def slideflatsegmentdef():
     yield "Properties:"
     yield itemlist(
         r"Reduce DAG complexity to $ O(merges) $",
-        r"Parents of %s are segment parents." % tt("x"),
-        r"Parent information is loseless.",
+        r"Parents of %s are segment parents" % tt("x"),
+        r"Parent information is loseless",
     )
 
 
@@ -426,7 +426,7 @@ def slidehighlevelsegmentdef():
     yield "Properties:"
     yield itemlist(
         r"Compress commits across merges",
-        r"Parent information is lossy.\footnotemark[2]",
+        r"Parent information is lossy\footnotemark[2]",
     )
     yield r"\footnotetext[2]{Cannot get parents of arbitrary commit by high-level segments only.}"
 
@@ -634,7 +634,7 @@ def slidestorage():
         ],
         [
             r"Segments",
-            itemlist(r"Tiny (<1MB)", r"Calculated Server-side", r"Stored client-side"),
+            itemlist(r"Tiny (<1MB)", r"Calculated Server-side", r"Stored Client-side"),
         ],
     )
 
@@ -682,6 +682,7 @@ def header():
         "title": "Segmented Changelog",
         "author": "Jun Wu",
         "institute": "Facebook",
+        "date": "April 15, 2019",
     }
     yield repeat(r"\%s{%s}", metadata.items())
 
