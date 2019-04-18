@@ -613,126 +613,6 @@ impl<'a> Iterator for LeafValueIter<'a> {
     }
 }
 
-/// Iterator returned by [Index::scan_prefix_base16].
-/// Provide access to full keys and values (as [`LinkOffset`]), sorted by key.
-pub struct PrefixIter<'a> {
-    index: &'a Index,
-
-    // Offsets and child index (current visiting, to be visited).
-    // Special child index CHILD_LINK means to check the LinkOffset.
-    // An empty stack means "stop iteration".
-    stack: Vec<(Offset, u8, u8)>,
-
-    // Prefix of the key (in base16 form)
-    prefix: Vec<u8>,
-}
-
-const CHILD_LINK: u8 = 255;
-
-impl<'a> PrefixIter<'a> {
-    fn new(index: &'a Index, start: Option<(Offset, Vec<u8>)>) -> Self {
-        let (stack, prefix) = match start {
-            Some((offset, prefix)) => (vec![(offset, 0, CHILD_LINK)], prefix),
-            None => (Vec::new(), Vec::new()),
-        };
-        PrefixIter {
-            index,
-            stack,
-            prefix,
-        }
-    }
-}
-
-impl<'a> Iterator for PrefixIter<'a> {
-    type Item = Fallible<(Cow<'a, [u8]>, LinkOffset)>;
-
-    /// Return the next key and corresponding [`LinkOffset`].
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.stack.is_empty() {
-            return None;
-        }
-
-        let (offset, _, child) = self.stack.pop().unwrap();
-        match offset.to_typed(&self.index.buf, &self.index.checksum) {
-            Ok(TypedOffset::Radix(radix)) => {
-                if child == 16 {
-                    return self.next();
-                }
-
-                // Prepare the next item to visit
-                let next_child = if child == CHILD_LINK { 0 } else { child + 1 };
-                self.stack.push((offset, child, next_child));
-
-                // Proceed with the current visit
-                if child == CHILD_LINK {
-                    // Examine the link offset at this Radix entry
-                    match radix.link_offset(self.index) {
-                        Ok(link_offset) => {
-                            if !link_offset.is_null() {
-                                // Reconstruct key. Collect base16 child stack (prefix + visiting),
-                                // then convert to base256.
-                                let mut prefix = self.prefix.clone();
-                                for (_offset, visiting, _next) in
-                                    self.stack.iter().take(self.stack.len() - 1).cloned()
-                                {
-                                    debug_assert!(visiting != CHILD_LINK);
-                                    prefix.push(visiting);
-                                }
-                                if prefix.len() & 1 == 1 {
-                                    // Odd-length key
-                                    Some(Err(data_error("unexpected odd-length key")))
-                                } else {
-                                    let key = base16_to_base256(&prefix);
-                                    Some(Ok((Cow::Owned(key), link_offset)))
-                                }
-                            } else {
-                                self.next()
-                            }
-                        }
-                        Err(err) => {
-                            self.stack.clear();
-                            Some(Err(err))
-                        }
-                    }
-                } else {
-                    // Examine a child entry
-                    debug_assert!(child < 16);
-                    match radix.child(self.index, child) {
-                        Ok(next_offset) => {
-                            if !next_offset.is_null() {
-                                self.stack.push((next_offset, CHILD_LINK, CHILD_LINK));
-                            }
-                            self.next()
-                        }
-                        Err(err) => {
-                            self.stack.clear();
-                            Some(Err(err))
-                        }
-                    }
-                }
-            }
-
-            Ok(TypedOffset::Leaf(leaf)) => {
-                // Meet a leaf. If key matches, return the link offset.
-                match leaf.key_and_link_offset(self.index) {
-                    Err(err) => {
-                        self.stack.clear();
-                        Some(Err(err))
-                    }
-                    Ok((stored_key, link_offset)) => {
-                        Some(Ok((Cow::Borrowed(stored_key), link_offset)))
-                    }
-                }
-            }
-
-            _ => {
-                self.stack.clear();
-                Some(Err(data_error("unexpected type during prefix iteration")))
-            }
-        }
-    }
-}
-
 /// Iterator returned by [`Index::range`].
 /// Provide access to full keys and values (as [`LinkOffset`]), sorted by key.
 pub struct RangeIter<'a> {
@@ -1960,11 +1840,10 @@ impl Index {
     }
 
     /// Scan entries which match the given prefix in base16 form.
-    /// Return [`PrefixIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_base16(&self, mut base16: impl Iterator<Item = u8>) -> Fallible<PrefixIter> {
+    /// Return [`RangeIter`] which allows accesses to keys and values.
+    pub fn scan_prefix_base16(&self, mut base16: impl Iterator<Item = u8>) -> Fallible<RangeIter> {
         let mut offset: Offset = self.root.radix_offset.into();
-        let mut prefix_len = 0;
-        let mut prefix: Vec<u8> = Vec::new();
+        let mut front_stack = Vec::<IterState>::new();
 
         while !offset.is_null() {
             // Read the entry at "offset"
@@ -1972,49 +1851,59 @@ impl Index {
                 TypedOffset::Radix(radix) => {
                     match base16.next() {
                         None => {
-                            // The key ends at this Radix entry.
-                            return Ok(PrefixIter::new(self, Some((offset, prefix))));
+                            let start = IterState::RadixStart(radix);
+                            let end = IterState::RadixEnd(radix);
+                            front_stack.push(start);
+                            let mut back_stack = front_stack.clone();
+                            *back_stack.last_mut().unwrap() = end;
+                            return Ok(RangeIter::new(self, front_stack, back_stack));
                         }
                         Some(x) => {
                             // Follow the `x`-th child in the Radix entry.
-                            prefix.push(x);
-                            prefix_len += 1;
+                            front_stack.push(IterState::RadixChild(radix, x));
                             offset = radix.child(self, x)?;
                         }
                     }
                 }
                 TypedOffset::Leaf(leaf) => {
                     // Meet a leaf. If key matches, return the link offset.
-                    let (stored_key, _link_offset) = leaf.key_and_link_offset(self)?;
-                    // Remaining key matches?
-                    let remaining: Vec<u8> = base16.collect();
-                    if Base16Iter::from_base256(&stored_key)
-                        .skip(prefix_len)
-                        .take(remaining.len())
-                        .eq(remaining.iter().cloned())
-                    {
-                        return Ok(PrefixIter::new(self, Some((offset, prefix))));
+                    let eq = {
+                        let (stored_key, _link_offset) = leaf.key_and_link_offset(self)?;
+                        // Remaining key matches?
+                        let remaining: Vec<u8> = base16.collect();
+                        Base16Iter::from_base256(&stored_key)
+                            .skip(front_stack.len())
+                            .take(remaining.len())
+                            .eq(remaining.iter().cloned())
+                    };
+                    if eq {
+                        let start = IterState::LeafStart(leaf);
+                        let end = IterState::LeafEnd(leaf);
+                        front_stack.push(start);
+                        let mut back_stack = front_stack.clone();
+                        *back_stack.last_mut().unwrap() = end;
+                        return Ok(RangeIter::new(self, front_stack, back_stack));
                     } else {
-                        return Ok(PrefixIter::new(self, None));
-                    }
+                        return Ok(RangeIter::new(self, front_stack.clone(), front_stack));
+                    };
                 }
                 _ => return Err(data_error("unexpected type during prefix scan")),
             }
         }
 
         // Not found
-        return Ok(PrefixIter::new(self, None));
+        Ok(RangeIter::new(self, front_stack.clone(), front_stack))
     }
 
     /// Scan entries which match the given prefix in base256 form.
-    /// Return [`PrefixIter`] which allows accesses to keys and values.
-    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<PrefixIter> {
+    /// Return [`RangeIter`] which allows accesses to keys and values.
+    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<RangeIter> {
         self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
     }
 
     /// Scan entries which match the given prefix in hex form.
-    /// Return [`PrefixIter`] which allows accesses to keys and values.
-    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<PrefixIter> {
+    /// Return [`RangeIter`] which allows accesses to keys and values.
+    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> Fallible<RangeIter> {
         // Invalid hex chars will be caught by `radix.child`
         let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
         self.scan_prefix_base16(base16)
@@ -2581,22 +2470,8 @@ mod tests {
 
         // Return keys with the given prefix. Also verify LinkOffsets.
         let scan_keys = |prefix: &[u8]| -> Vec<Vec<u8>> {
-            index
-                .scan_prefix(prefix)
-                .unwrap()
-                .map(|v| {
-                    let (key, link_offset) = v.unwrap();
-                    let key = key.as_ref();
-                    // Verify link_offset is correct
-                    let ids: Vec<u64> = link_offset
-                        .values(&index)
-                        .collect::<Fallible<Vec<u64>>>()
-                        .unwrap();
-                    assert!(ids.len() == 1);
-                    assert_eq!(keys[ids[0] as usize], key);
-                    key.to_vec()
-                })
-                .collect()
+            let iter = index.scan_prefix(prefix).unwrap();
+            iter_to_keys(&index, &keys, &iter)
         };
 
         assert_eq!(scan_keys(b"01"), vec![b"01"]);

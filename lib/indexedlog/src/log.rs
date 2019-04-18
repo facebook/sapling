@@ -32,7 +32,7 @@
 // LittleEndian encoding.
 
 use crate::errors::{data_error, parameter_error};
-use crate::index::{self, Index, InsertKey, LeafValueIter, PrefixIter};
+use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter};
 use crate::lock::ScopedFileLock;
 use crate::utils::{atomic_write, mmap_readonly, open_dir, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
@@ -190,9 +190,9 @@ pub struct LogLookupIter<'a> {
 
 /// Iterator over keys and [`LogLookupIter`], filtered by an index prefix.
 ///
-/// It is a wrapper around [index::PrefixIter].
-pub struct LogPrefixIter<'a> {
-    inner_iter: PrefixIter<'a>,
+/// It is a wrapper around [index::RangeIter].
+pub struct LogRangeIter<'a> {
+    inner_iter: RangeIter<'a>,
     errored: bool,
     log: &'a Log,
     index: &'a Index,
@@ -473,10 +473,10 @@ impl Log {
         &self,
         index_id: usize,
         prefix: K,
-    ) -> Fallible<LogPrefixIter> {
+    ) -> Fallible<LogRangeIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix(prefix)?;
-        Ok(LogPrefixIter {
+        Ok(LogRangeIter {
             inner_iter,
             errored: false,
             log: self,
@@ -494,10 +494,10 @@ impl Log {
         &self,
         index_id: usize,
         hex_prefix: K,
-    ) -> Fallible<LogPrefixIter> {
+    ) -> Fallible<LogRangeIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix_hex(hex_prefix)?;
-        Ok(LogPrefixIter {
+        Ok(LogRangeIter {
             inner_iter,
             errored: false,
             log: self,
@@ -1052,7 +1052,7 @@ impl<'a> Iterator for LogIter<'a> {
     }
 }
 
-impl<'a> Iterator for LogPrefixIter<'a> {
+impl<'a> Iterator for LogRangeIter<'a> {
     type Item = Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
 
     fn next(&mut self) -> Option<Self::Item> {
