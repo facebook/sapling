@@ -899,14 +899,6 @@ class fileserverclient(object):
             global fetches, fetched, fetchcost
             fetches += 1
 
-            # We want to be able to detect excess individual file downloads, so
-            # let's log that information for debugging.
-            if fetches >= 15 and fetches < 18:
-                if fetches == 15:
-                    fetchwarning = self.ui.config("remotefilelog", "fetchwarning")
-                    if fetchwarning:
-                        self.ui.warn(fetchwarning + "\n")
-                self.logstacktrace()
             missingids = [(file, hex(id)) for file, id in missingids]
 
             fetched += len(missingids)

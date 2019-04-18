@@ -116,7 +116,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.debug (bool)
   undocumented: remotefilelog.excludepattern (list)
   undocumented: remotefilelog.fastdatapack (bool)
-  undocumented: remotefilelog.fetchwarning (str)
   undocumented: remotefilelog.includepattern (list)
   undocumented: remotefilelog.pullprefetch (str)
   undocumented: remotefilelog.reponame (str)
