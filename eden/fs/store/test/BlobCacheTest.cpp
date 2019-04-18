@@ -153,7 +153,7 @@ TEST(BlobCache, can_forget_cached_entry_in_middle) {
 TEST(BlobCache, duplicate_insertion_with_interest_forgets_on_last_drop) {
   auto cache = BlobCache::create(100, 0);
   auto blob = std::make_shared<Blob>(hash3, "blob"_sp);
-  auto weak = std::weak_ptr{blob};
+  auto weak = std::weak_ptr<Blob>{blob};
   auto handle1 = cache->insert(blob, BlobCache::Interest::WantHandle);
   auto handle2 = cache->insert(blob, BlobCache::Interest::WantHandle);
   blob.reset();
@@ -176,7 +176,7 @@ TEST(BlobCache, does_not_forget_blob_until_last_handle_is_forgotten) {
   EXPECT_TRUE(result2.blob);
   EXPECT_EQ(result1.blob, result2.blob);
 
-  auto weak = std::weak_ptr{result1.blob};
+  auto weak = std::weak_ptr<const Blob>{result1.blob};
   result1.blob.reset();
   result2.blob.reset();
   EXPECT_TRUE(weak.lock());

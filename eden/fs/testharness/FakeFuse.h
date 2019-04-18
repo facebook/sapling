@@ -12,6 +12,7 @@
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <chrono>
+#include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
 
