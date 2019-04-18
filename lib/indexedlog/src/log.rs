@@ -43,7 +43,7 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
-use std::ops::Range;
+use std::ops::{Range, RangeBounds};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
@@ -476,6 +476,29 @@ impl Log {
     ) -> Fallible<LogRangeIter> {
         let index = self.indexes.get(index_id).unwrap();
         let inner_iter = index.scan_prefix(prefix)?;
+        Ok(LogRangeIter {
+            inner_iter,
+            errored: false,
+            log: self,
+            index,
+        })
+    }
+
+    /// Look up keys and entries by querying a specified index about a specified
+    /// range.
+    ///
+    /// The `index_id` is the index of `index_defs` defined by [`OpenOptions`].
+    ///
+    /// Return an iterator that yields `(key, iter)`, where `key` is the full
+    /// key, `iter` is [`LogLookupIter`] that allows iteration through entries
+    /// matching that key.
+    pub fn lookup_range<'a>(
+        &self,
+        index_id: usize,
+        range: impl RangeBounds<&'a [u8]>,
+    ) -> Fallible<LogRangeIter> {
+        let index = self.indexes.get(index_id).unwrap();
+        let inner_iter = index.range(range)?;
         Ok(LogRangeIter {
             inner_iter,
             errored: false,
@@ -1052,14 +1075,13 @@ impl<'a> Iterator for LogIter<'a> {
     }
 }
 
-impl<'a> Iterator for LogRangeIter<'a> {
-    type Item = Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.errored {
-            return None;
-        }
-        match self.inner_iter.next() {
+impl<'a> LogRangeIter<'a> {
+    /// Wrap `next()` or `next_back()` result by the inner iterator.
+    fn wrap_inner_next_result(
+        &mut self,
+        item: Option<Fallible<(Cow<'a, [u8]>, index::LinkOffset)>>,
+    ) -> Option<Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>> {
+        match item {
             None => None,
             Some(Err(err)) => {
                 self.errored = true;
@@ -1074,6 +1096,28 @@ impl<'a> Iterator for LogRangeIter<'a> {
                 Some(Ok((key, iter)))
             }
         }
+    }
+}
+
+impl<'a> Iterator for LogRangeIter<'a> {
+    type Item = Fallible<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.errored {
+            return None;
+        }
+        let inner = self.inner_iter.next();
+        self.wrap_inner_next_result(inner)
+    }
+}
+
+impl<'a> DoubleEndedIterator for LogRangeIter<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.errored {
+            return None;
+        }
+        let inner = self.inner_iter.next_back();
+        self.wrap_inner_next_result(inner)
     }
 }
 
@@ -1433,7 +1477,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lookup_prefix() {
+    fn test_lookup_prefix_and_range() {
         let dir = tempdir().unwrap();
         let index_func = |data: &[u8]| vec![IndexOutput::Reference(0..(data.len() - 1) as u64)];
         let mut log = Log::open(
@@ -1448,10 +1492,11 @@ mod tests {
             log.append(entry).unwrap();
         }
 
+        // Test lookup_prefix
+
         // 0x61 == b'a'. 0x6 will match both keys: "aa" and "b".
         // "aa" matches the value "aaa", "b" matches the entries ["bb", "bb"]
-        let mut iter = log.lookup_prefix_hex(0, b"6").unwrap();
-        assert_eq!(iter.next().unwrap().unwrap().0.as_ref(), b"aa");
+        let mut iter = log.lookup_prefix_hex(0, b"6").unwrap().rev();
         assert_eq!(
             iter.next()
                 .unwrap()
@@ -1461,10 +1506,34 @@ mod tests {
                 .unwrap(),
             vec![b"bb", b"bb"]
         );
+        assert_eq!(iter.next().unwrap().unwrap().0.as_ref(), b"aa");
         assert!(iter.next().is_none());
 
         let mut iter = log.lookup_prefix(0, b"b").unwrap();
         assert_eq!(iter.next().unwrap().unwrap().0.as_ref(), b"b");
+        assert!(iter.next().is_none());
+
+        // Test lookup_range
+        assert_eq!(log.lookup_range(0, &b"b"[..]..).unwrap().count(), 1);
+        assert_eq!(log.lookup_range(0, ..=&b"b"[..]).unwrap().count(), 2);
+        assert_eq!(
+            log.lookup_range(0, &b"c"[..]..=&b"d"[..]).unwrap().count(),
+            0
+        );
+
+        let mut iter = log.lookup_range(0, ..).unwrap().rev();
+        let next = iter.next().unwrap().unwrap();
+        assert_eq!(next.0.as_ref(), &b"b"[..]);
+        assert_eq!(
+            next.1.collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![&b"bb"[..], &b"bb"[..]]
+        );
+        let next = iter.next().unwrap().unwrap();
+        assert_eq!(next.0.as_ref(), &b"aa"[..]);
+        assert_eq!(
+            next.1.collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![&b"aaa"[..]]
+        );
         assert!(iter.next().is_none());
     }
 
