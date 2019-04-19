@@ -198,6 +198,7 @@ impl SqlFilenodes {
                 format!("{}.{}", tier.to_string(), shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
+                "shardedfilenodes",
             );
 
             write_connections.push(write_connection);

@@ -90,6 +90,7 @@ impl Sqlblob {
                 format!("{}.{}", shardmap.to_string(), shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
+                "blobstore",
             );
 
             cons.write_connection.push(write_connection);

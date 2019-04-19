@@ -49,11 +49,14 @@ pub fn create_myrouter_connections(
     tier: impl ToString,
     port: u16,
     pool_size_config: PoolSizeConfig,
+    label: impl ToString,
 ) -> SqlConnections {
     let mut builder = Connection::myrouter_builder();
     builder.tier(tier).port(port);
 
     builder.tie_break(myrouter::TieBreak::SLAVE_FIRST);
+
+    builder.label(label);
     let read_connection = builder
         .max_num_of_concurrent_connections(pool_size_config.read_pool_size)
         .build_read_only();
@@ -92,7 +95,12 @@ pub trait SqlConstructors: Sized {
             write_connection,
             read_connection,
             read_master_connection,
-        } = create_myrouter_connections(tier, port, PoolSizeConfig::for_regular_connection());
+        } = create_myrouter_connections(
+            tier,
+            port,
+            PoolSizeConfig::for_regular_connection(),
+            Self::LABEL,
+        );
 
         Self::from_connections(write_connection, read_connection, read_master_connection)
     }
