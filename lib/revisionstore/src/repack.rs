@@ -18,10 +18,10 @@ use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::DataStore;
 use crate::historypack::{HistoryPack, HistoryPackVersion};
 use crate::historystore::HistoryStore;
+use crate::localstore::LocalStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;
-use crate::store::Store;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepackOutputType {
@@ -120,7 +120,7 @@ enum RepackFailure {
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<'a, T: MutablePack, U: Store + Repackable>(
+fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Fallible<()>,

@@ -9,11 +9,11 @@ use failure::Fallible;
 
 use types::{Key, NodeInfo};
 
-use crate::store::Store;
+use crate::localstore::LocalStore;
 
 pub type Ancestors = HashMap<Key, NodeInfo>;
 
-pub trait HistoryStore: Store {
+pub trait HistoryStore: LocalStore {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors>;
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo>;
 }

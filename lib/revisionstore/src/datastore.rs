@@ -15,7 +15,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use types::Key;
 
-use crate::store::Store;
+use crate::localstore::LocalStore;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
@@ -30,7 +30,7 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
-pub trait DataStore: Store {
+pub trait DataStore: LocalStore {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>>;
     fn get_delta(&self, key: &Key) -> Fallible<Delta>;
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;

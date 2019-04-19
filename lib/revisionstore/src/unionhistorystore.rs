@@ -76,7 +76,7 @@ mod tests {
 
     use quickcheck::quickcheck;
 
-    use crate::store::Store;
+    use crate::localstore::LocalStore;
 
     struct BadHistoryStore;
 
@@ -106,7 +106,7 @@ mod tests {
         }
     }
 
-    impl Store for EmptyHistoryStore {
+    impl LocalStore for EmptyHistoryStore {
         fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
@@ -122,7 +122,7 @@ mod tests {
         }
     }
 
-    impl Store for BadHistoryStore {
+    impl LocalStore for BadHistoryStore {
         fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
             Err(BadHistoryStoreError.into())
         }

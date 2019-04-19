@@ -8,7 +8,7 @@ use cpython::{
 };
 use failure::Fallible;
 
-use revisionstore::{DataStore, Delta, Metadata, Store};
+use revisionstore::{DataStore, Delta, LocalStore, Metadata};
 use types::Key;
 
 use crate::pyerror::pyerr_to_error;
@@ -119,7 +119,7 @@ impl DataStore for PythonDataStore {
     }
 }
 
-impl Store for PythonDataStore {
+impl LocalStore for PythonDataStore {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

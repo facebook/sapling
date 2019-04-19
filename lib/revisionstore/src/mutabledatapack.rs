@@ -23,9 +23,9 @@ use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::error::EmptyMutablePack;
+use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
-use crate::store::Store;
 
 pub struct MutableDataPack {
     dir: PathBuf,
@@ -199,7 +199,7 @@ impl DataStore for MutableDataPack {
     }
 }
 
-impl Store for MutableDataPack {
+impl LocalStore for MutableDataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()

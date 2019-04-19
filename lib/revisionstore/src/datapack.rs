@@ -93,9 +93,9 @@ use types::{Key, Node, RepoPath};
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
 use crate::datastore::{DataStore, Delta, Metadata};
+use crate::localstore::LocalStore;
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
-use crate::store::Store;
 use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
@@ -353,7 +353,7 @@ impl DataStore for DataPack {
     }
 }
 
-impl Store for DataPack {
+impl LocalStore for DataPack {
     fn from_path(path: &Path) -> Fallible<Self> {
         DataPack::new(path)
     }

@@ -20,9 +20,9 @@ use types::{Key, Node, NodeInfo, RepoPath, RepoPathBuf};
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::historyindex::HistoryIndex;
 use crate::historystore::{Ancestors, HistoryStore};
+use crate::localstore::LocalStore;
 use crate::repack::{IterableStore, RepackOutputType, Repackable};
 use crate::sliceext::SliceExt;
-use crate::store::Store;
 use crate::vfs::remove_file;
 
 #[derive(Debug, Fail)]
@@ -266,7 +266,7 @@ impl HistoryStore for HistoryPack {
     }
 }
 
-impl Store for HistoryPack {
+impl LocalStore for HistoryPack {
     fn from_path(path: &Path) -> Fallible<Self> {
         HistoryPack::new(path)
     }

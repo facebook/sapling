@@ -21,8 +21,8 @@ use types::{node::ReadNodeExt, Key, Node};
 use crate::{
     datastore::{DataStore, Delta, Metadata},
     error::KeyError,
+    localstore::LocalStore,
     sliceext::SliceExt,
-    store::Store,
 };
 
 pub struct IndexedLogDataStore {
@@ -125,7 +125,7 @@ impl IndexedLogDataStore {
     }
 }
 
-impl Store for IndexedLogDataStore {
+impl LocalStore for IndexedLogDataStore {
     fn from_path(path: &Path) -> Fallible<Self> {
         IndexedLogDataStore::new(path)
     }

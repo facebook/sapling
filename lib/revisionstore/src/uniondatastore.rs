@@ -124,7 +124,7 @@ mod tests {
 
     use quickcheck::quickcheck;
 
-    use crate::store::Store;
+    use crate::localstore::LocalStore;
 
     struct BadDataStore;
 
@@ -162,7 +162,7 @@ mod tests {
         }
     }
 
-    impl Store for EmptyDataStore {
+    impl LocalStore for EmptyDataStore {
         fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
@@ -186,7 +186,7 @@ mod tests {
         }
     }
 
-    impl Store for BadDataStore {
+    impl LocalStore for BadDataStore {
         fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
             Err(BadDataStoreError.into())
         }

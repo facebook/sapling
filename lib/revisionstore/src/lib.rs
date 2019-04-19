@@ -17,13 +17,13 @@ pub mod error;
 pub mod historypack;
 pub mod historystore;
 pub mod indexedlogdatastore;
+pub mod localstore;
 pub mod loosefile;
 pub mod mutabledatapack;
 pub mod mutablehistorypack;
 pub mod mutablepack;
 pub mod packwriter;
 pub mod repack;
-pub mod store;
 pub mod uniondatastore;
 pub mod unionhistorystore;
 
@@ -32,11 +32,11 @@ pub use crate::datastore::{DataStore, Delta, Metadata};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{Ancestors, HistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogDataStore;
+pub use crate::localstore::LocalStore;
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::mutablepack::MutablePack;
 pub use crate::repack::IterableStore;
-pub use crate::store::Store;
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
