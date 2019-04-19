@@ -166,6 +166,8 @@ queries! {
 }
 
 impl SqlConstructors for SqlBookmarks {
+    const LABEL: &'static str = "bookmarks";
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,

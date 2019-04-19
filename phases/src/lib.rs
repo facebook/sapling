@@ -238,6 +238,8 @@ queries! {
 }
 
 impl SqlConstructors for SqlPhases {
+    const LABEL: &'static str = "phases";
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,

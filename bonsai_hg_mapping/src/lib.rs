@@ -223,6 +223,8 @@ queries! {
 }
 
 impl SqlConstructors for SqlBonsaiHgMapping {
+    const LABEL: &'static str = "bonsai_hg_mapping";
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,

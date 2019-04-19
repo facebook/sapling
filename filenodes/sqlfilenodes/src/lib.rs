@@ -163,6 +163,8 @@ queries! {
 }
 
 impl SqlConstructors for SqlFilenodes {
+    const LABEL: &'static str = "filenodes";
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,

@@ -188,6 +188,8 @@ queries! {
 }
 
 impl SqlConstructors for SqlBlobstoreSyncQueue {
+    const LABEL: &'static str = "blob_sync_queue";
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,

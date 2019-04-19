@@ -231,6 +231,8 @@ queries! {
 }
 
 impl SqlConstructors for SqlChangesets {
+    const LABEL: &'static str = "changesets";
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,

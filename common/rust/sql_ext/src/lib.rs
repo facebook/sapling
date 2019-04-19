@@ -77,6 +77,8 @@ pub fn create_myrouter_connections(
 
 /// Set of useful constructors for Mononoke's sql based data access objects
 pub trait SqlConstructors: Sized {
+    const LABEL: &'static str;
+
     fn from_connections(
         write_connection: Connection,
         read_connection: Connection,
