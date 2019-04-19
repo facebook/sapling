@@ -22,6 +22,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <optional>
 #include <random>
 
 #include "eden/fs/testharness/TempFile.h"

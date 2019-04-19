@@ -124,8 +124,11 @@ TEST(Tracing, records_traceId_across_futures_no_early_tracepoint) {
 }
 
 TEST(Tracing, does_not_record_if_disabled) {
+  // Zeroes out all pending tracepoints from previous tests.
+  (void)getAllTracepoints();
+
   disableTracing();
   { TraceBlock block{"my_block"}; }
   auto points = getAllTracepoints();
-  ASSERT_EQ(points.size(), 0);
+  ASSERT_EQ(0, points.size());
 }

@@ -377,7 +377,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
 
   // Create the file
   folly::writeFileAtomic(path.value(), dataOne_);
-  chmod(path.c_str(), __S_IEXEC);
+  chmod(path.c_str(), S_IEXEC);
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -391,7 +391,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
 
   // Update file - keep permissions same (inaccessible)
   folly::writeFileAtomic(path.value(), dataTwo_);
-  EXPECT_EQ(chmod(path.c_str(), __S_IEXEC), 0);
+  EXPECT_EQ(chmod(path.c_str(), S_IEXEC), 0);
 
   // FileChangeMonitor will not notify if the file has changed AND there is
   // still the same open error.
@@ -412,7 +412,7 @@ TEST_F(FileChangeMonitorTest, openFailFixTest) {
 
   // Create the file
   folly::writeFileAtomic(path.value(), dataOne_);
-  EXPECT_EQ(chmod(path.c_str(), __S_IEXEC), 0);
+  EXPECT_EQ(chmod(path.c_str(), S_IEXEC), 0);
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
