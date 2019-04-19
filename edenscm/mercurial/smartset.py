@@ -1118,7 +1118,7 @@ class _spanset(abstractsmartset):
             and rhs.isdescending()
         ):
             # fast path: spanset is a superset of the rhs.
-            rhsmax = next(iter(rhs))
+            rhsmax = next(iter(rhs), None)
             if rhsmax is None or rhsmax <= self._end:
                 return rhs
         return super(_spanset, self).__and__(rhs)
