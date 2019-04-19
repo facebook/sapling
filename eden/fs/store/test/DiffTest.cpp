@@ -417,7 +417,9 @@ TEST_F(DiffTest, loadTreeError) {
   auto result = std::move(resultFuture).get();
   EXPECT_THAT(
       result.errors,
-      UnorderedElementsAre(Pair("x/y/z", "std::runtime_error: oh noes")));
+      UnorderedElementsAre(Pair(
+          "x/y/z",
+          folly::exceptionStr(std::runtime_error("oh noes")).c_str())));
   EXPECT_THAT(
       result.entries,
       UnorderedElementsAre(Pair("a/b/3.txt", ScmFileStatus::MODIFIED)));

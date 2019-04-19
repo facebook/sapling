@@ -7,33 +7,23 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/test/LocalStoreTest.h"
-#include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/SqliteLocalStore.h"
 
 namespace {
 
 using namespace facebook::eden;
 
-LocalStoreImplResult makeMemoryLocalStore(FaultInjector*) {
-  return {std::nullopt, std::make_unique<MemoryLocalStore>()};
-}
-
-LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
+LocalStoreImplResult makeRocksDbLocalStore(FaultInjector* faultInjector) {
   auto tempDir = makeTempDir();
-  auto store = std::make_unique<SqliteLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
+  auto store = std::make_unique<RocksDbLocalStore>(
+      AbsolutePathPiece{tempDir.path().string()}, faultInjector);
   return {std::move(tempDir), std::move(store)};
 }
 
 INSTANTIATE_TEST_CASE_P(
-    Memory,
+    RocksDB,
     LocalStoreTest,
-    ::testing::Values(makeMemoryLocalStore));
-
-INSTANTIATE_TEST_CASE_P(
-    Sqlite,
-    LocalStoreTest,
-    ::testing::Values(makeSqliteLocalStore));
+    ::testing::Values(makeRocksDbLocalStore));
 
 } // namespace
