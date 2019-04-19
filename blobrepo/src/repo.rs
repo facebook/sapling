@@ -75,6 +75,7 @@ define_stats! {
     get_changeset_by_changesetid: timeseries(RATE, SUM),
     get_hg_file_copy_from_blobstore: timeseries(RATE, SUM),
     get_hg_from_bonsai_changeset: timeseries(RATE, SUM),
+    generate_hg_from_bonsai_changeset: timeseries(RATE, SUM),
     get_manifest_by_nodeid: timeseries(RATE, SUM),
     get_root_entry: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
@@ -1489,7 +1490,10 @@ impl BlobRepo {
                 let repo = self.clone();
                 move |cs_id| match cs_id {
                     Some(cs_id) => future::ok(cs_id).left_future(),
-                    None => create_hg_from_bonsai_changeset(ctx, &repo, bcs_id).right_future(),
+                    None => {
+                        STATS::generate_hg_from_bonsai_changeset.add_value(1);
+                        create_hg_from_bonsai_changeset(ctx, &repo, bcs_id).right_future()
+                    }
                 }
             })
     }
