@@ -134,6 +134,9 @@ Configs for Eden API (HTTP data fetching):
     ``edenapi.historybatchsize`` specifies the batch size for history requests
     for backends that support batching.
 
+    ``edenapi.validatefiles`` specifies that the client should recompute and
+    compare the filenode hash for the received file content.
+
 Eden API TLS credentials are configured using the auth section:
 
     ``auth.edenapi.prefix``: base URL (without scheme) for which to set credentials.
@@ -231,6 +234,7 @@ configitem("edenapi", "url", default=None)
 configitem("edenapi", "backend", default="curl")
 configitem("edenapi", "databatchsize", default=None)
 configitem("edenapi", "historybatchsize", default=None)
+configitem("edenapi", "validatefiles", default=True)
 
 testedwith = "ships-with-fb-hgext"
 

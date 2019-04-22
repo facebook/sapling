@@ -13,11 +13,15 @@ pub struct Config {
     pub(crate) cache_path: Option<PathBuf>,
     pub(crate) data_batch_size: Option<usize>,
     pub(crate) history_batch_size: Option<usize>,
+    pub(crate) validate_files: bool,
 }
 
 impl Config {
     pub fn new() -> Self {
-        Default::default()
+        Self {
+            validate_files: true,
+            ..Default::default()
+        }
     }
 
     /// Base URL of the Mononoke API server host.
@@ -68,6 +72,15 @@ impl Config {
     /// Only the curl backend will honor this setting.
     pub fn history_batch_size(mut self, size: Option<usize>) -> Self {
         self.history_batch_size = size;
+        self
+    }
+
+    /// Specifies whether the client should attempt to validate the
+    /// received file content by recomputing and comparing the filenode
+    /// hash. Only available for backends which fetch the file parent
+    /// information in addition to file content. Enabled by default.
+    pub fn validate_files(mut self, validate: bool) -> Self {
+        self.validate_files = validate;
         self
     }
 }

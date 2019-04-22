@@ -53,5 +53,6 @@ def initclient(ui, repo):
         "creds": getcreds(ui, url),
         "databatchsize": ui.config("edenapi", "databatchsize"),
         "historybatchsize": ui.config("edenapi", "historybatchsize"),
+        "validatefiles": ui.configbool("edenapi", "validatefiles"),
     }
     return edenapi.client(**kwargs)

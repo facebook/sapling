@@ -32,7 +32,8 @@ py_class!(class client |py| {
         backend: &PyBytes,
         creds: Option<(&PyBytes, &PyBytes)> = None,
         databatchsize: Option<usize> = None,
-        historybatchsize: Option<usize> = None
+        historybatchsize: Option<usize> = None,
+        validatefiles: bool = true
     ) -> PyResult<client> {
         let url = str::from_utf8(url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let cachepath = local_bytes_to_path(&cachepath.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -45,7 +46,8 @@ py_class!(class client |py| {
             .cache_path(cachepath)
             .repo(repo)
             .data_batch_size(databatchsize)
-            .history_batch_size(historybatchsize);
+            .history_batch_size(historybatchsize)
+            .validate_files(validatefiles);
 
         if let Some((cert, key)) = creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;

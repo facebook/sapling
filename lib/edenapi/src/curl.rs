@@ -39,7 +39,7 @@ pub struct EdenApiCurlClient {
     creds: Option<ClientCreds>,
     data_batch_size: Option<usize>,
     history_batch_size: Option<usize>,
-    validate: bool,
+    validate_files: bool,
 }
 
 // Public API.
@@ -72,7 +72,7 @@ impl EdenApiCurlClient {
             creds: config.creds,
             data_batch_size: config.data_batch_size,
             history_batch_size: config.history_batch_size,
-            validate: true,
+            validate_files: config.validate_files,
         };
 
         // Create repo/packs directory in cache if it doesn't already exist.
@@ -131,7 +131,7 @@ impl EdenApi for EdenApiCurlClient {
 
         let mut files = Vec::new();
         for entry in responses.into_iter().flatten() {
-            if self.validate {
+            if self.validate_files {
                 log::trace!("Validating file: {}", &entry.key);
                 entry.validate()?;
             }
