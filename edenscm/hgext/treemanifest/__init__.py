@@ -803,21 +803,20 @@ class basetreemanifestlog(object):
     def commitpending(self):
         if self._mutablelocalpacks is not None:
             dpack, hpack = self._mutablelocalpacks
+            self._mutablelocalpacks = None
 
             dpack.close()
             hpack.close()
-
-            self._mutablelocalpacks = None
 
             self.datastore.markforrefresh()
             self.historystore.markforrefresh()
 
         if self._mutablesharedpacks is not None:
             dpack, hpack = self._mutablesharedpacks
+            self._mutablesharedpacks = None
+
             dpack.close()
             hpack.close()
-
-            self._mutablesharedpacks = None
 
             self.datastore.markforrefresh()
             self.historystore.markforrefresh()
@@ -825,18 +824,17 @@ class basetreemanifestlog(object):
     def abortpending(self):
         if self._mutablelocalpacks is not None:
             dpack, hpack = self._mutablelocalpacks
+            self._mutablelocalpacks = None
 
             dpack.abort()
             hpack.abort()
-
-            self._mutablelocalpacks = None
 
         if self._mutablesharedpacks is not None:
             dpack, hpack = self._mutablesharedpacks
+            self._mutablesharedpacks = None
+
             dpack.abort()
             hpack.abort()
-
-            self._mutablesharedpacks = None
 
     def __nonzero__(self):
         return True

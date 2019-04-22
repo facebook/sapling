@@ -526,11 +526,10 @@ class remotefileslog(filelog.fileslog):
         additions."""
         if self._mutablelocalpacks is not None:
             dpack, hpack = self._mutablelocalpacks
+            self._mutablelocalpacks = None
 
             dpack.close()
             hpack.close()
-
-            self._mutablelocalpacks = None
 
             for store in self.localdatastores:
                 store.markforrefresh()
@@ -542,11 +541,10 @@ class remotefileslog(filelog.fileslog):
         additions."""
         if self._mutablelocalpacks is not None:
             dpack, hpack = self._mutablelocalpacks
+            self._mutablelocalpacks = None
 
             dpack.abort()
             hpack.abort()
-
-            self._mutablelocalpacks = None
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""
