@@ -16,6 +16,7 @@ add_thrift_cpp2_library(
 )
 
 file(GLOB SERVICE_SRCS "*.cpp")
+list(REMOVE_ITEM SERVICE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/eden_gc.cpp")
 add_library(
   eden_service STATIC
     ${SERVICE_SRCS}
