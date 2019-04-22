@@ -45,11 +45,13 @@ def getcreds(ui, url):
 def initclient(ui, repo):
     """Initialize a new Eden API client using the user's config."""
     url = getbaseurl(ui)
-    creds = getcreds(ui, url)
-    cachepath = shallowutil.getcachepath(ui)
-    backend = ui.config("edenapi", "backend")
-    databatchsize = ui.config("edenapi", "databatchsize")
-    historybatchsize = ui.config("edenapi", "historybatchsize")
-    return edenapi.client(
-        url, cachepath, repo.name, backend, creds, databatchsize, historybatchsize
-    )
+    kwargs = {
+        "url": url,
+        "cachepath": shallowutil.getcachepath(ui),
+        "repo": repo.name,
+        "backend": ui.config("edenapi", "backend"),
+        "creds": getcreds(ui, url),
+        "databatchsize": ui.config("edenapi", "databatchsize"),
+        "historybatchsize": ui.config("edenapi", "historybatchsize"),
+    }
+    return edenapi.client(**kwargs)
