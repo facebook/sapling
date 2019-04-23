@@ -31,7 +31,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
 
-from . import constants, shallowutil, wirepack
+from . import constants, edenapi, shallowutil, wirepack
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .metadatastore import unionmetadatastore
@@ -402,23 +402,8 @@ class fileserverclient(object):
 
     def request(self, fileids, fetchdata, fetchhistory):
         if self.ui.configbool("remotefilelog", "fetchpacks"):
-            if self.ui.configbool("edenapi", "enabled"):
-                return self.httprequestpacks(fileids, fetchdata, fetchhistory)
             return self.requestpacks(fileids, fetchdata, fetchhistory)
         return self.requestloose(fileids)
-
-    def httprequestpacks(self, fileids, fetchdata, fetchhistory):
-        """Fetch packs via HTTP using the Eden API"""
-        perftrace.traceflag("http")
-        if fetchdata:
-            self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
-            self.ui.metrics.gauge("http_getfiles_calls", 1)
-            self.repo.edenapi.get_files(fileids)
-
-        if fetchhistory:
-            self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
-            self.ui.metrics.gauge("http_gethistory_calls", 1)
-            self.repo.edenapi.get_history(fileids)
 
     def requestpacks(self, fileids, fetchdata, fetchhistory):
         if not self.remotecache.connected:
@@ -703,6 +688,16 @@ class fileserverclient(object):
 
         See `remotefilelogserver.getpack` for the file format.
         """
+
+        # Try fetching packs via HTTP first; fall back to SSH on error.
+        if edenapi.enabled(self.repo.ui):
+            try:
+                with progress.spinner(self.repo.ui, _("Fetching packs over HTTP")):
+                    return self._httpfetchpacks(fileids)
+            except Exception as e:
+                self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
+                self.ui.develwarn(str(e))
+
         try:
             with self._connect() as conn:
                 total = len(fileids)
@@ -762,6 +757,28 @@ class fileserverclient(object):
             pipeo.flush()
         pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
         pipeo.flush()
+
+    def _httpfetchpacks(self, fileids):
+        """Fetch packs via HTTP using the Eden API"""
+        perftrace.traceflag("http")
+
+        # The Eden API Rust bindings require that fileids
+        # be a list of tuples; lists-of-lists or generators
+        # will result in a type error, so convert them here.
+        fileids = [tuple(i) for i in fileids]
+
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("fetching %d files over HTTP\n") % len(fileids))
+
+        self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+        self.ui.metrics.gauge("http_getfiles_calls", 1)
+        datapackpath = self.repo.edenapi.get_files(fileids)
+
+        self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+        self.ui.metrics.gauge("http_gethistory_calls", 1)
+        histpackpath = self.repo.edenapi.get_history(fileids)
+
+        return datapackpath, histpackpath
 
     def connect(self):
         if self.cacheprocess:
