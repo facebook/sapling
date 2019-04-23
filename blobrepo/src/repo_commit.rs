@@ -26,7 +26,7 @@ use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
 use mercurial_types::manifest::{self, Content};
-use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
+use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
 use mercurial_types::{
     Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey, HgParents, MPath, Manifest,
@@ -590,14 +590,24 @@ fn compute_changed_files_impl(
         (Some(manifest), None) | (None, Some(manifest)) => {
             compute_changed_files_pair(ctx, &root, &manifest)
         }
-        (Some(p1), Some(p2)) => compute_changed_files_pair(ctx.clone(), &root, &p1)
-            .join(compute_changed_files_pair(ctx.clone(), &root, &p2))
-            .map(|(left, right)| {
-                left.intersection(&right)
-                    .cloned()
-                    .collect::<HashSet<MPath>>()
-            })
-            .boxify(),
+        (Some(p1), Some(p2)) => {
+            let f1 = compute_changed_files_pair(ctx.clone(), &root, &p1)
+                .join(compute_changed_files_pair(ctx.clone(), &root, &p2))
+                .map(|(left, right)| left.intersection(&right).cloned().collect::<Vec<_>>());
+
+            // Mercurial always includes removed files, we need to match this behaviour
+            let f2 = compute_removed_files(ctx.clone(), &root, Some(&p1));
+            let f3 = compute_removed_files(ctx.clone(), &root, Some(&p2));
+
+            f1.join3(f2, f3)
+                .map(|(ch1, ch2, ch3)| {
+                    ch1.into_iter()
+                        .chain(ch2.into_iter())
+                        .chain(ch3.into_iter())
+                        .collect::<HashSet<_>>()
+                })
+                .boxify()
+        }
     }
     .map(|files| {
         let mut files: Vec<MPath> = files.into_iter().collect();
@@ -608,10 +618,28 @@ fn compute_changed_files_impl(
     .boxify()
 }
 
-fn compute_added_files(
+fn compute_removed_files(
     ctx: CoreContext,
     child: &Box<dyn Manifest + Sync>,
     parent: Option<&Box<dyn Manifest + Sync>>,
+) -> impl Future<Item = Vec<MPath>, Error = Error> {
+    compute_files_with_status(ctx, child, parent, move |change| match change.status {
+        EntryStatus::Deleted(entry) => {
+            if entry.get_type() == manifest::Type::Tree {
+                None
+            } else {
+                MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
+            }
+        }
+        _ => None,
+    })
+}
+
+fn compute_files_with_status(
+    ctx: CoreContext,
+    child: &Box<dyn Manifest + Sync>,
+    parent: Option<&Box<dyn Manifest + Sync>>,
+    filter_map: impl Fn(ChangedEntry) -> Option<MPath>,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     let s = match parent {
         Some(parent) => changed_entry_stream(ctx, child, parent, None).boxify(),
@@ -621,17 +649,7 @@ fn compute_added_files(
         }
     };
 
-    s.filter_map(|change| match change.status {
-        EntryStatus::Added(entry) => {
-            if entry.get_type() == manifest::Type::Tree {
-                None
-            } else {
-                MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
-            }
-        }
-        _ => None,
-    })
-    .collect()
+    s.filter_map(filter_map).collect()
 }
 
 /// Checks if new commit (or to be precise, it's manifest) introduces any new case conflicts
@@ -655,7 +673,20 @@ pub fn check_case_conflicts(
         .join(parent_mf_fut)
         .and_then({
             cloned!(ctx);
-            move |(child_mf, parent_mf)| compute_added_files(ctx, &child_mf, parent_mf.as_ref())
+            move |(child_mf, parent_mf)| {
+                compute_files_with_status(ctx, &child_mf, parent_mf.as_ref(), |change| {
+                    match change.status {
+                        EntryStatus::Added(entry) => {
+                            if entry.get_type() == manifest::Type::Tree {
+                                None
+                            } else {
+                                MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
+                            }
+                        }
+                        _ => None,
+                    }
+                })
+            }
         })
         .and_then(
             |added_files| match mononoke_types::check_case_conflicts(added_files.clone()) {
