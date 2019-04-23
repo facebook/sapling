@@ -17,6 +17,11 @@ def enabled(ui):
     return ui.configbool("edenapi", "enabled")
 
 
+def debug(ui):
+    """Check whether HTTP data fetching is in debug mode."""
+    return ui.configbool("edenapi", "debug")
+
+
 def bailifdisabled(ui):
     """Abort if HTTP data fetching is disabled."""
     if not enabled(ui):

@@ -124,6 +124,8 @@ Configs for Eden API (HTTP data fetching):
 
     ``edenapi.enabled`` specifies whether HTTP data fetching should be used.
 
+    ``edenapi.debug`` enables debug output for HTTP data fetching.
+
     ``edenapi.url`` specifies the base URL of the API server.
 
     ``edenapi.backend`` specifies which HTTP client library to use.
@@ -230,6 +232,7 @@ configitem("remotefilelog", "server", default=None)
 
 # Config items for HTTP data fetching.
 configitem("edenapi", "enabled", default=False)
+configitem("edenapi", "debug", default=False)
 configitem("edenapi", "url", default=None)
 configitem("edenapi", "backend", default="curl")
 configitem("edenapi", "databatchsize", default=None)
