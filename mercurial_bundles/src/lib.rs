@@ -48,6 +48,7 @@ extern crate mercurial;
 extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
+extern crate mononoke_types;
 #[cfg(test)]
 extern crate partial_io;
 extern crate scuba_ext;
@@ -59,6 +60,7 @@ pub mod changegroup;
 mod chunk;
 mod delta;
 pub mod infinitepush;
+pub mod obsmarkers;
 pub mod part_encode;
 mod part_header;
 mod part_inner;
@@ -103,6 +105,8 @@ pub enum Bundle2Item {
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
     Pushkey(PartHeader, BoxFuture<(), Error>),
     Pushvars(PartHeader, BoxFuture<(), Error>),
+    // Same as B2xInfinitepushBookmarks: this part won't be used.
+    Obsmarkers(PartHeader, BoxStream<bytes::Bytes, Error>),
 }
 
 impl Bundle2Item {
@@ -149,6 +153,7 @@ impl fmt::Debug for Bundle2Item {
             &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
             &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
             &Pushvars(ref header, _) => write!(f, "Bundle2Item::Pushvars({:?}, ...)", header),
+            &Obsmarkers(ref header, _) => write!(f, "Bundle2Item::Obsmarkers({:?}, ...)", header),
         }
     }
 }

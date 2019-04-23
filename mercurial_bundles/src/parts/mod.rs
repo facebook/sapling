@@ -4,30 +4,30 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fmt;
-
+use super::changegroup::packer::CgPacker;
+use super::changegroup::{CgDeltaChunk, Part, Section};
+use super::obsmarkers::packer::obsmarkers_packer_stream;
+use super::obsmarkers::MetadataEntry;
+use super::wirepack;
+use super::wirepack::packer::WirePackPacker;
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
+use context::CoreContext;
+use errors::*;
 use failure::prelude::*;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
 use futures_ext::BoxFuture;
 use futures_stats::Timed;
-use std::io::Write;
-
-use super::changegroup::packer::CgPacker;
-use super::changegroup::{CgDeltaChunk, Part, Section};
-use super::wirepack;
-use super::wirepack::packer::WirePackPacker;
-
-use context::CoreContext;
-use errors::*;
 use mercurial_types::{
     Delta, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath, NULL_HASH,
 };
+use mononoke_types::DateTime;
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
 use scuba_ext::ScubaSampleBuilderExt;
+use std::fmt;
+use std::io::Write;
 
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
@@ -248,5 +248,20 @@ pub fn replypushkey_part(res: bool, in_reply_to: u32) -> Result<PartEncodeBuilde
     }
     builder.add_mparam("in-reply-to", format!("{}", in_reply_to))?;
 
+    Ok(builder)
+}
+
+pub fn obsmarkers_part<S>(
+    pairs: S,
+    time: DateTime,
+    metadata: Vec<MetadataEntry>,
+) -> Result<PartEncodeBuilder>
+where
+    S: 'static + Stream<Item = (HgChangesetId, Vec<HgChangesetId>), Error = Error> + Send,
+{
+    let stream = obsmarkers_packer_stream(pairs, time, metadata);
+
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Obsmarkers)?;
+    builder.set_data_generated(stream);
     Ok(builder)
 }

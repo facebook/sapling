@@ -70,7 +70,7 @@ pub enum PartHeaderType {
     // Pushkey,                 // TODO Do we want to support this?
     // Bookmarks,               // TODO Do we want to support this?
     // ReplyPushkey,            // TODO Do we want to support this?
-    // Obsmarkers,              // TODO Do we want to support this?
+    Obsmarkers,
     // ReplyObsmarkers,         // TODO Do we want to support this?
     // HgtagsFnodes,            // TODO Do we want to support this?
 }
@@ -94,6 +94,7 @@ impl PartHeaderType {
             "reply:pushkey" => Ok(ReplyPushkey),
             "pushvars" => Ok(Pushvars),
             "phase-heads" => Ok(PhaseHeads),
+            "obsmarkers" => Ok(Obsmarkers),
             bad => bail_msg!("unknown header type {}", bad),
         }
     }
@@ -116,6 +117,7 @@ impl PartHeaderType {
             Pushvars => "pushvars",
             ReplyPushkey => "reply:pushkey",
             PhaseHeads => "phase-heads",
+            Obsmarkers => "obsmarkers",
         }
     }
 }

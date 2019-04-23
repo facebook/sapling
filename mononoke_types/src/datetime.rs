@@ -73,6 +73,11 @@ impl DateTime {
     }
 
     #[inline]
+    pub fn tz_offset_minutes(&self) -> i16 {
+        (self.tz_offset_secs() / 60) as i16
+    }
+
+    #[inline]
     pub fn as_chrono(&self) -> &ChronoDateTime<FixedOffset> {
         &self.0
     }
