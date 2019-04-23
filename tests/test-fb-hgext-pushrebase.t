@@ -653,6 +653,46 @@ Test that hooks are fired with the correct variables
 
   $ cd ../
 
+Test that failing prechangegroup hooks block the push
+
+  $ hg init hookserver2
+  $ cd hookserver2
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > prechangegroup = exit 1
+  > [extensions]
+  > pushrebase=
+  > EOF
+  $ touch file && hg ci -Aqm initial
+  $ hg bookmark master
+  $ cd ../
+
+  $ hg clone hookserver2 hookclient2
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd hookclient2
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase=
+  > EOF
+  $ hg update master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master)
+  $ echo >> file && hg ci -Aqm first
+  $ echo >> file && hg ci -Aqm second
+  $ echo >> file && hg ci -Aqm last
+  $ hg push --to master -B master
+  pushing to $TESTTMP/hookserver2
+  searching for changes
+  pushing 3 changesets:
+      4fcee35c508c  first
+      11be4ca7f3f4  second
+      a5e72ac0df88  last
+  abort: prechangegroup hook exited with status 1
+  [255]
+
+  $ cd ..
+
 Test date rewriting
 
   $ hg init rewritedate

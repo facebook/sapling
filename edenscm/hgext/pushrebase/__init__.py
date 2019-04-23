@@ -1199,7 +1199,7 @@ def bundle2rebase(op, part):
                 # Enter the critical section! This triggers a hgsql sync.
                 tr = op.gettransaction()
                 hookargs = dict(tr.hookargs)
-                op.repo.hook("prechangegroup", **hookargs)
+                op.repo.hook("prechangegroup", throw=True, **hookargs)
 
                 # ontoctx could move. Fetch the new one.
                 # Print rebase source and destination.
@@ -1237,7 +1237,7 @@ def bundle2rebase(op, part):
                 setrecordingparams(op.repo, ontoparam, onto)
                 revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
 
-                op.repo.hook("prechangegroup", **hookargs)
+                op.repo.hook("prechangegroup", throw=True, **hookargs)
 
                 log(
                     getpushmessage(
