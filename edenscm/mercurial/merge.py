@@ -533,7 +533,7 @@ class mergestate(object):
         else:
             actx = None
         self._repo.ui.log(
-            "merge-resolve", "resolving %s, preresolve = %s", dfile, preresolve
+            "merge_resolve", "resolving %s, preresolve = %s", dfile, preresolve
         )
         fcd = self._filectxorabsent(hash, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
@@ -1945,7 +1945,7 @@ def _logupdatedistance(ui, repo, node, branchmerge):
 
     try:
         distance = len(repo.revs("(%s %% .) + (. %% %s)", node, node))
-        repo.ui.log("update_size", "", update_distance=distance)
+        repo.ui.log("update_size", update_distance=distance)
     except Exception:
         # error may happen like: RepoLookupError: unknown revision '-1'
         pass
@@ -2293,7 +2293,7 @@ def update(
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.
-    repo.ui.log("update_size", "", update_filecount=sum(stats))
+    repo.ui.log("update_size", update_filecount=sum(stats))
 
     return stats
 

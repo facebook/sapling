@@ -46,7 +46,7 @@ def _writeerr(orig, self, *args, **opts):
 
 def _handlecommandexception(orig, ui):
     trace = traceback.format_exc()
-    ui.log("commandexception", "%s\n", trace)
+    ui.log("command_exception", "%s\n", trace)
     ui.write_err(_colorizetraceback(ui, trace))
     return True  # do not re-raise the exception
 

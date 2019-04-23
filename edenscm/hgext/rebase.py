@@ -445,7 +445,6 @@ class rebaseruntime(object):
         # a rebase may run multiple updates, so that value might be not be accurate.
         repo.ui.log(
             "rebase_size",
-            "",
             rebase_commitcount=commitcount,
             rebase_distance=distance - commitcount,
         )
@@ -462,9 +461,7 @@ class rebaseruntime(object):
         else:
             self.wctx = self.repo[None]
             self.repo.ui.debug("rebasing on disk\n")
-        self.repo.ui.log(
-            "rebase", "", rebase_imm_used=str(self.wctx.isinmemory()).lower()
-        )
+        self.repo.ui.log("rebase", rebase_imm_used=str(self.wctx.isinmemory()).lower())
 
     def _performrebase(self, tr):
         self._assignworkingcopy()
@@ -585,7 +582,6 @@ class rebaseruntime(object):
                         )
                     ui.log(
                         "rebase",
-                        "",
                         rebase_imm_new_restart=str(True).lower(),
                         rebase_imm_restart=str(True).lower(),
                     )
@@ -1249,7 +1245,7 @@ def _definedestmap(
         destmap = {r: destrev for r in rebaseset}  # {srcrev: destrev}
 
     rbsrt.rebasingwcp = destmap is not None and repo["."].rev() in destmap
-    ui.log("rebase", "", rebase_rebasing_wcp=rbsrt.rebasingwcp)
+    ui.log("rebase", rebase_rebasing_wcp=rbsrt.rebasingwcp)
     if rbsrt.inmemory and rbsrt.rebasingwcp:
         # Require a clean working copy if rebasing the current commit, as the
         # last step of the rebase is an update.

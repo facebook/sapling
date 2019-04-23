@@ -317,7 +317,7 @@ blackbox should work if repo.ui.log is not called (issue5518)
 
   $ cat >> $HGRCPATH << EOF
   > [blackbox]
-  > track = commandexception
+  > track = command_exception
   > [extensions]
   > raise=$TESTTMP/raise.py
   > EOF

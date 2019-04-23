@@ -5,7 +5,7 @@
   > [experimental]
   > evolution = all
   > [blackbox]
-  > track = command, commandfinish, commandexception,
+  > track = command, command_finish, command_exception,
   >   pinnednodes
   > EOF
 

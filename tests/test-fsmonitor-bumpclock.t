@@ -30,12 +30,12 @@ many files:
   $ hg status
 
   $ hg blackbox | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
-  clock = 'c:x' len(nonnormal) = 0
-  setlastclock: 'c:x'
-  setlastisfresh: False
+  clock='c:x' len(nonnormal)=0
+  setlastclock 'c:x'
+  setlastisfresh False
   watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
-  getlastclock: 'c:x'
-  set clock, notefiles = 'c:x', []
+  getlastclock 'c:x'
+  set clock='c:x' notefiles=[]
   status exited 0 after 0.00 seconds
 
 The watchman clock remains unchanged. Watchman still returns 4 files, which

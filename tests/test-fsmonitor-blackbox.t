@@ -2,7 +2,7 @@
 
   $ newrepo
   $ enable blackbox
-  $ setconfig blackbox.track=fsmonitor_details
+  $ setconfig blackbox.track=fsmonitor
   $ hg status
   $ touch x
   $ hg status
@@ -38,7 +38,7 @@
   $ grep returned .hg/blackbox.log
   *> watchman returned ['x'] (glob)
   *> watchman returned [*] and 5 more entries (glob)
-  $ grep 'set clock, notefiles' .hg/blackbox.log
-  *> set clock, notefiles = '*', [] (glob)
-  *> set clock, notefiles = '*', ['x'] (glob)
-  *> set clock, notefiles = '*', [*] and 6 more entries (glob)
+  $ grep 'set clock' .hg/blackbox.log
+  *> set clock='*' notefiles=[] (glob)
+  *> set clock='*' notefiles=['x'] (glob)
+  *> set clock='*' notefiles=[*] and 6 more entries (glob)

@@ -72,7 +72,7 @@ class visibleheads(object):
                 raise
             self.heads = _convertfromobsolete(repo)
             self.dirty = True
-        ui.log("visibility", "", visibility_headcount=len(self.heads))
+        ui.log("visibility", visibility_headcount=len(self.heads))
 
     def _write(self, fp):
         fp.write("%s\n" % FORMAT_VERSION)

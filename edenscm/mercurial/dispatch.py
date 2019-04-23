@@ -401,11 +401,7 @@ def dispatch(req):
     def logatexit():
         ui = req.ui
         if ui.logmeasuredtimes:
-            ui.log(
-                "measuredtimes",
-                "measured times",
-                **pycompat.strkwargs(ui._measuredtimes)
-            )
+            ui.log("measuredtimes", **pycompat.strkwargs(ui._measuredtimes))
         if ui.metrics.stats:
             # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
             # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
@@ -467,7 +463,7 @@ def dispatch(req):
         duration = util.timer() - starttime
         req.ui.flush()
         req.ui.log(
-            "commandfinish",
+            "command_finish",
             "%s exited %d after %0.2f seconds\n",
             msg,
             ret or 0,
@@ -895,7 +891,7 @@ class cmdalias(object):
             raise error.Abort(self.badalias, hint=hint)
 
         ui.log(
-            "commandalias", "alias '%s' expands to '%s'\n", self.name, self.definition
+            "command_alias", "alias '%s' expands to '%s'\n", self.name, self.definition
         )
         if util.safehasattr(self, "shell"):
             return self.fn(ui, *args, **opts)
@@ -1452,7 +1448,7 @@ def handlecommandexception(ui):
     this function returns False, ignored otherwise.
     """
     warning = _exceptionwarning(ui)
-    ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
+    ui.log("command_exception", "%s\n%s\n", warning, traceback.format_exc())
     ui.warn(warning)
     return False  # re-raise the exception
 

@@ -115,13 +115,8 @@ class client(object):
 
     def _command(self, *args):
         watchmanargs = (args[0], self._resolved_root) + args[1:]
-        self._ui.log(
-            "watchman-command",
-            "watchman command %r started with timeout = %s",
-            watchmanargs,
-            self._timeout,
-        )
         try:
+            starttime = util.timer()
             if self._watchmanclient is None:
                 self._firsttime = False
                 self._watchmanclient = pywatchman.client(
@@ -133,12 +128,19 @@ class client(object):
                 )
             result = self._watchmanclient.query(*watchmanargs)
             self._ui.log(
-                "watchman-command", "watchman command %r completed", watchmanargs
+                "watchman",
+                "command %r completed in %0.2f seconds",
+                watchmanargs,
+                util.timer() - starttime,
             )
             return result
         except pywatchman.CommandError as ex:
             if "unable to resolve root" in ex.msg:
+                self._ui.log(
+                    "watchman", "command %r failed - unable to resolve root", args
+                )
                 raise WatchmanNoRoot(self._resolved_root, ex.msg)
+            self._ui.log("watchman", "command %r failed - %s", watchmanargs, ex.msg)
             raise Unavailable(ex.msg)
         except pywatchman.SocketConnectError as ex:
             # If fsmonitor.sockpath was specified in the configuration, we will
@@ -151,6 +153,7 @@ class client(object):
             if not self._ui.config("fsmonitor", "sockpath") or self._sockpath is None:
                 # Either sockpath wasn't configured, or we already tried clearing
                 # it out, so let's propagate this error.
+                self._ui.log("watchman", "command %r failed - %s", watchmanargs, ex)
                 raise Unavailable(str(ex))
             # Recurse and retry the command, and hopefully it will
             # start the server this time.
@@ -158,6 +161,7 @@ class client(object):
             self._watchmanclient = None
             return self._command(*args)
         except pywatchman.WatchmanError as ex:
+            self._ui.log("watchman", "command %r failed - %s", watchmanargs, ex)
             raise Unavailable(str(ex))
 
     @util.timefunction("watchmanquery", 0, "_ui")
@@ -170,7 +174,7 @@ class client(object):
                     # Ideally we wouldn't let this happen, but if it does happen,
                     # record it in the log and retry the command.
                     self._ui.log(
-                        "watchman-command",
+                        "watchman",
                         "UseAfterFork detected, re-establish a client connection",
                     )
                     self._watchmanclient = None
@@ -286,9 +290,8 @@ class state_update(object):
             metadata.update(self.metadata)
             client.command(cmd, {"name": self.name, "metadata": metadata})
             return True
-        except Exception as e:
+        except Exception:
             # Swallow any errors; fire and forget
-            self.repo.ui.log("watchman", "Exception %s while running %s\n", e, cmd)
             return False
 
 

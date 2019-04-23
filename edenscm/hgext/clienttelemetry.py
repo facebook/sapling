@@ -48,7 +48,7 @@ def correlator(ui):
     global _correlator
     if _correlator is None:
         _correlator = util.makerandomidentifier()
-        ui.log("clienttelemetry", "", client_correlator=_correlator)
+        ui.log("clienttelemetry", client_correlator=_correlator)
     return _correlator
 
 
@@ -59,7 +59,7 @@ _clienttelemetrydata = {}
 def _clienttelemetry(repo, proto, args):
     """Handle received client telemetry"""
     logargs = {"client_%s" % key: value for key, value in args.items()}
-    repo.ui.log("clienttelemetry", "", **logargs)
+    repo.ui.log("clienttelemetry", **logargs)
     # Make them available to other extensions
     repo.clienttelemetry = logargs
     return socket.gethostname()
@@ -94,7 +94,7 @@ def _peersetup(ui, peer):
         logargs = {name: f(ui) for name, f in _clienttelemetryfuncs.items()}
         logargs.update(_clienttelemetrydata)
         peername = peer._call("clienttelemetry", **logargs)
-        ui.log("clienttelemetry", "", server_realhostname=peername)
+        ui.log("clienttelemetry", server_realhostname=peername)
         ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
         if ann is None:
             ann = not ui.plain() and ui._isatty(ui.ferr)

@@ -58,7 +58,7 @@ Traces are logged in blackbox
   > [extensions]
   > blackbox=
   > [blackbox]
-  > track = command, commandexception
+  > track = command, command_exception
   > logsource = 1
   > EOF
 
@@ -70,5 +70,5 @@ Traces are logged in blackbox
   $ hg blackbox -l 12 | grep '\[command'
   * @0000000000000000000000000000000000000000 (*) [command]> blackbox -l 2 (glob)
   * @0000000000000000000000000000000000000000 (*) [command]> crash* (glob)
-  * @0000000000000000000000000000000000000000 (*) [commandexception]> * (glob)
+  * @0000000000000000000000000000000000000000 (*) [command_exception]> * (glob)
   * @0000000000000000000000000000000000000000 (*) [command]> blackbox -l 12 (glob)

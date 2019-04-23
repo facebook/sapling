@@ -169,7 +169,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import state
+from . import fsmonitorutil, state
 from ..extlib import pywatchman, watchmanclient
 
 
@@ -205,11 +205,11 @@ def _handleunavailable(ui, state, ex):
             ui.warn(str(ex) + "\n")
         if ex.invalidate:
             state.invalidate(reason="exception")
-        ui.log("fsmonitor", "Watchman unavailable: %s\n", ex.msg)
-        ui.log("fsmonitor_status", "", fsmonitor_status="unavailable")
+        ui.log("fsmonitor", "watchman unavailable: %s\n", ex.msg)
+        ui.log("fsmonitor_status", fsmonitor_status="unavailable")
     else:
-        ui.log("fsmonitor", "Watchman exception: %s\n", ex)
-        ui.log("fsmonitor_status", "", fsmonitor_status="exception")
+        ui.log("fsmonitor", "watchman exception: %s\n", ex)
+        ui.log("fsmonitor_status", fsmonitor_status="exception")
 
 
 def _hashignore(ignore):
@@ -381,9 +381,7 @@ def overridewalk(orig, self, match, unknown, ignored, full=True):
         nonnormalset = self._map.nonnormalsetfiltered(dirfilter)
     else:
         nonnormalset = self._map.nonnormalset
-    self._ui.log(
-        "fsmonitor", "clock = %r len(nonnormal) = %d" % (clock, len(nonnormalset))
-    )
+    self._ui.log("fsmonitor", "clock=%r len(nonnormal)=%d" % (clock, len(nonnormalset)))
 
     copymap = self._map.copymap
     getkind = stat.S_IFMT
@@ -457,13 +455,13 @@ def overridewalk(orig, self, match, unknown, ignored, full=True):
             notefiles = []
 
     if fresh_instance:
-        self._ui.log("fsmonitor_status", "", fsmonitor_status="fresh")
+        self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
     else:
-        self._ui.log("fsmonitor_status", "", fsmonitor_status="normal")
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
+        self._ui.log("fsmonitor_status", fsmonitor_status="normal")
+        if "fsmonitor" in getattr(self._ui, "track", ()):
             filelist = [e["name"] for e in result["files"]]
             self._ui.log(
-                "fsmonitor_details", "watchman returned %s" % _reprshort(filelist)
+                "fsmonitor", "watchman returned %s" % fsmonitorutil.reprshort(filelist)
             )
         state.setwatchmanchangedfilecount(len(result["files"]))
 
@@ -1031,11 +1029,3 @@ def debugrefreshwatchmanclock(ui, repo):
         ui.status(_("updating watchman clock from %r to %r\n") % (ds.getclock(), clock))
         ds.setclock(clock)
         ds.write(tr)
-
-
-def _reprshort(filelist, limit=20):
-    """Like repr(filelist). But truncate it if it is too long"""
-    if len(filelist) <= limit:
-        return repr(filelist)
-    else:
-        return "%r and %s more entries" % (filelist[:limit], len(filelist) - limit)

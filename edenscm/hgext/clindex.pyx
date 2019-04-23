@@ -426,7 +426,7 @@ def reposetup(ui, repo):
 
     try:
         # Record nodemap lag.
-        ui.log("nodemap_lag", "", nodemap_lag=repo.changelog.nodemap.lag)
+        ui.log("nodemap_lag", nodemap_lag=repo.changelog.nodemap.lag)
     except AttributeError:
         pass
 

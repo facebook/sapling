@@ -299,7 +299,7 @@ def _makerage(ui, repo, **opts):
             'first 20 lines of "hg status"',
             lambda: "\n".join(hgcmd("status").splitlines()[:20]),
         ),
-        ("hg blackbox -l60", lambda: hgcmd("blackbox", limit=60)),
+        ("hg blackbox -l100", lambda: hgcmd("blackbox", limit=100)),
         ("hg summary", lambda: hgcmd("summary")),
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),

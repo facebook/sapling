@@ -1400,7 +1400,7 @@ class dirstate(object):
             prefix + "wdirparent1": parents[0],
             prefix + "wdirparent2": parents[1],
         }
-        ui.log("dirstate_info", "", **data)
+        ui.log("dirstate_info", **data)
 
 
 class dirstatemap(object):

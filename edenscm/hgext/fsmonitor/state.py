@@ -15,6 +15,8 @@ import struct
 from edenscm.mercurial import pathutil, util
 from edenscm.mercurial.i18n import _
 
+from . import fsmonitorutil
+
 
 _version = 4
 _versionformat = ">I"
@@ -111,13 +113,10 @@ class state(object):
         finally:
             file.close()
 
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            from . import _reprshort
-
-            self._ui.log(
-                "fsmonitor_details",
-                "clock, notefiles = %r, %s" % (clock, _reprshort(notefiles)),
-            )
+        self._ui.log(
+            "fsmonitor",
+            "get clock=%r notefiles=%s" % (clock, fsmonitorutil.reprshort(notefiles)),
+        )
 
         return clock, ignorehash, notefiles
 
@@ -135,13 +134,10 @@ class state(object):
             self._ignorelist = ignorelist
 
     def set(self, clock, ignorehash, notefiles):
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            from . import _reprshort
-
-            self._ui.log(
-                "fsmonitor_details",
-                "set clock, notefiles = %r, %s" % (clock, _reprshort(notefiles)),
-            )
+        self._ui.log(
+            "fsmonitor",
+            "set clock=%r notefiles=%s" % (clock, fsmonitorutil.reprshort(notefiles)),
+        )
 
         if self._usetreestate:
             ds = self._repo.dirstate
@@ -197,23 +193,19 @@ class state(object):
         except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            self._ui.log("fsmonitor_details", "fsmonitor state invalidated")
+        self._ui.log("fsmonitor", "state invalidated")
 
     def setlastclock(self, clock):
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            self._ui.log("fsmonitor_details", "setlastclock: %r" % clock)
+        self._ui.log("fsmonitor", "setlastclock %r" % clock)
         self._lastclock = clock
 
     def setlastisfresh(self, isfresh):
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            self._ui.log("fsmonitor_details", "setlastisfresh: %r" % isfresh)
+        self._ui.log("fsmonitor", "setlastisfresh %r" % isfresh)
         self._lastisfresh = isfresh
 
     def setwatchmanchangedfilecount(self, filecount):
         self._lastchangedfilecount = filecount
 
     def getlastclock(self):
-        if "fsmonitor_details" in getattr(self._ui, "track", ()):
-            self._ui.log("fsmonitor_details", "getlastclock: %r" % self._lastclock)
+        self._ui.log("fsmonitor", "getlastclock %r" % self._lastclock)
         return self._lastclock

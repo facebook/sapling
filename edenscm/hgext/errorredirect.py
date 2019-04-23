@@ -50,7 +50,7 @@ def _handlecommandexception(orig, ui):
     trace = traceback.format_exc()
 
     # let blackbox log it (if it is configured to do so)
-    ui.log("commandexception", "%s\n%s\n", warning, trace)
+    ui.log("command_exception", "%s\n%s\n", warning, trace)
     exctype = sys.exc_info()[0]
     exctypename = "None" if exctype is None else exctype.__name__
     ui.log(

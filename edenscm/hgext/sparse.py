@@ -447,7 +447,7 @@ def _trackdirstatesizes(runcommand, lui, repo, *args):
             # Treestate and treedirstate.
             dirstatesize = len(dirstate._map)
         if dirstatesize is not None:
-            lui.log("dirstate_size", "", dirstate_size=dirstatesize)
+            lui.log("dirstate_size", dirstate_size=dirstatesize)
             if (
                 repo.ui.configbool("sparse", "largecheckouthint")
                 and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
