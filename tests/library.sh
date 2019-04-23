@@ -1,4 +1,4 @@
-CACHEDIR=$PWD/hgcache
+CACHEDIR=$TESTTMP/hgcache
 cat >> $HGRCPATH <<EOF
 [remotefilelog]
 cachepath=$CACHEDIR
