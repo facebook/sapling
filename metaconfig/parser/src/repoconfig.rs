@@ -363,6 +363,7 @@ impl RepoConfigs {
                         .forbid_p2_root_rebases
                         .unwrap_or(default.forbid_p2_root_rebases),
                     casefolding_check: raw.casefolding_check.unwrap_or(default.casefolding_check),
+                    emit_obsmarkers: raw.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
                 }
             })
             .unwrap_or_default();
@@ -533,6 +534,7 @@ struct RawPushrebaseParams {
     block_merges: Option<bool>,
     forbid_p2_root_rebases: Option<bool>,
     casefolding_check: Option<bool>,
+    emit_obsmarkers: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -630,6 +632,7 @@ mod test {
             recursion_limit = 1024
             forbid_p2_root_rebases = false
             casefolding_check = false
+            emit_obsmarkers = false
             [lfs]
             threshold = 1000
             [bundle2_replay_params]
@@ -767,6 +770,7 @@ mod test {
                     block_merges: false,
                     forbid_p2_root_rebases: false,
                     casefolding_check: false,
+                    emit_obsmarkers: false,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

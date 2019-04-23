@@ -128,10 +128,24 @@ impl From<ErrorKind> for PushrebaseError {
 
 type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
+pub struct PushrebaseChangesetPair {
+    pub id_old: ChangesetId,
+    pub id_new: ChangesetId,
+}
+
+fn rebased_changesets_into_pairs(
+    rebased_changesets: RebasedChangesets,
+) -> Vec<PushrebaseChangesetPair> {
+    rebased_changesets
+        .into_iter()
+        .map(|(id_old, (id_new, _))| PushrebaseChangesetPair { id_old, id_new })
+        .collect()
+}
+
 pub struct PushrebaseSuccessResult {
     pub head: ChangesetId,
     pub retry_num: usize,
-    pub rebased_changesets: Vec<ChangesetId>,
+    pub rebased_changesets: Vec<PushrebaseChangesetPair>,
 }
 
 #[derive(Clone)]
@@ -294,7 +308,8 @@ fn do_rebase(
     bookmark_val: Option<ChangesetId>,
     onto_bookmark: Bookmark,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
-) -> impl Future<Item = Option<(ChangesetId, Vec<ChangesetId>)>, Error = PushrebaseError> {
+) -> impl Future<Item = Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, Error = PushrebaseError>
+{
     create_rebased_changesets(
         ctx.clone(),
         repo.clone(),
@@ -847,7 +862,7 @@ fn try_update_bookmark(
     new_value: ChangesetId,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     rebased_changesets: RebasedChangesets,
-) -> BoxFuture<Option<(ChangesetId, Vec<ChangesetId>)>, PushrebaseError> {
+) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
     let bookmark_update_reason = create_bookmark_update_reason(
         ctx,
@@ -864,11 +879,7 @@ fn try_update_bookmark(
                 txn.commit()
                     .map(move |success| {
                         if success {
-                            let changesets = rebased_changesets
-                                .into_iter()
-                                .map(|(_, (cs_id, _))| cs_id)
-                                .collect();
-                            Some((new_value, changesets))
+                            Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
                         } else {
                             None
                         }
@@ -887,7 +898,7 @@ fn try_create_bookmark(
     new_value: ChangesetId,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     rebased_changesets: RebasedChangesets,
-) -> BoxFuture<Option<(ChangesetId, Vec<ChangesetId>)>, PushrebaseError> {
+) -> BoxFuture<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
     let bookmark_update_reason = create_bookmark_update_reason(
         ctx,
@@ -905,11 +916,7 @@ fn try_create_bookmark(
                 txn.commit()
                     .map(move |success| {
                         if success {
-                            let changesets = rebased_changesets
-                                .into_iter()
-                                .map(|(_, (cs_id, _))| cs_id)
-                                .collect();
-                            Some((new_value, changesets))
+                            Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
                         } else {
                             None
                         }

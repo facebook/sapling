@@ -323,6 +323,8 @@ pub struct PushrebaseParams {
     pub forbid_p2_root_rebases: bool,
     /// Whether to do chasefolding check during pushrebase
     pub casefolding_check: bool,
+    /// Whether to do emit obsmarkers after pushrebase
+    pub emit_obsmarkers: bool,
 }
 
 impl Default for PushrebaseParams {
@@ -334,6 +336,7 @@ impl Default for PushrebaseParams {
             block_merges: false,
             forbid_p2_root_rebases: true,
             casefolding_check: true,
+            emit_obsmarkers: false,
         }
     }
 }

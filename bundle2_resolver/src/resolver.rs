@@ -419,13 +419,16 @@ fn resolve_pushrebase(
                 bookmark_push_part_id,
             )| {
                 // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
+                let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
+
                 resolver
-                    .log_commits_to_scribe(ctx.clone(), pushrebased_changesets)
+                    .log_commits_to_scribe(ctx.clone(), new_commits)
                     .and_then(move |_| {
                         resolver.prepare_pushrebase_response(
                             ctx,
                             commonheads,
                             pushrebased_rev,
+                            pushrebased_changesets,
                             onto_params.bookmark,
                             lca_hint,
                             phases_hint,
@@ -1176,6 +1179,7 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         commonheads: CommonHeads,
         pushrebased_rev: ChangesetId,
+        pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
         onto: Bookmark,
         lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
@@ -1203,6 +1207,16 @@ impl Bundle2Resolver {
             None => None,
         };
 
+        let obsmarkers_part = match self.pushrebase.emit_obsmarkers {
+            true => try_boxfuture!(obsolete::pushrebased_changesets_to_obsmarkers_part(
+                ctx.clone(),
+                &repo,
+                pushrebased_changesets,
+            )
+            .transpose()),
+            false => None,
+        };
+
         let mut scuba_logger = self.ctx.scuba().clone();
         maybe_onto_head
             .join(pushrebased_rev)
@@ -1223,6 +1237,7 @@ impl Bundle2Resolver {
             })
             .and_then(move |mut cg_part_builder| {
                 cg_part_builder.extend(bookmark_reply_part.into_iter());
+                cg_part_builder.extend(obsmarkers_part.into_iter());
                 let compression = None;
                 create_bundle_stream(cg_part_builder, compression)
                     .collect()
@@ -1315,7 +1330,8 @@ impl Bundle2Resolver {
         changesets: Changesets,
         onto_bookmark: &pushrebase::OntoBookmarkParams,
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
-    ) -> impl Future<Item = (ChangesetId, Vec<ChangesetId>), Error = Error> {
+    ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error>
+    {
         let user = ctx.user_unix_name();
         if !self
             .bookmark_attrs

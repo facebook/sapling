@@ -250,6 +250,12 @@ rewritedates=false
 CONFIG
 fi
 
+if [[ -v EMIT_OBSMARKERS ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+emit_obsmarkers=true
+CONFIG
+fi
+
 if [[ ! -v ENABLE_ACL_CHECKER ]]; then
   cat >> repos/repo/server.toml <<CONFIG
 [hook_manager_params]

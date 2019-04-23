@@ -189,6 +189,7 @@ fn bundle2caps() -> String {
         ("b2x:rebase", vec![]),
         ("b2x:rebasepackpart", vec![]),
         ("phases", vec!["heads"]),
+        ("obsmarkers", vec!["V1"]),
     ];
 
     let mut encodedcaps = vec![];
