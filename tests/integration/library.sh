@@ -405,6 +405,7 @@ function hginit_treemanifest() {
   cat >> "$1"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=
+fastmanifest=
 remotefilelog=
 smartlog=
 [treemanifest]
