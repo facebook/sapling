@@ -150,7 +150,8 @@ def _shareddatastorespythonrepack(repo, options, packpath, incremental):
 def _shareddatastoresrepack(repo, options, incremental):
     if util.safehasattr(repo.fileslog, "shareddatastores"):
         packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-        _cleanuptemppacks(repo.ui, packpath)
+        limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
+        _cleanuppacks(repo.ui, packpath, limit)
 
         if _userustrepack(repo):
             _runrustrepack(
@@ -194,7 +195,7 @@ def _localdatarepack(repo, options, incremental):
         packpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )
-        _cleanuptemppacks(repo.ui, packpath)
+        _cleanuppacks(repo.ui, packpath, 0)
 
         if _userustrepack(repo):
             _runrustrepack(repo, options, packpath, incremental, _localdatapythonrepack)
@@ -239,7 +240,12 @@ def _manifestrepack(repo, options, incremental):
         spackpath, sdstores, shstores = shareddata
 
         def _domanifestrepack(packpath, dstores, hstores, shared):
-            _cleanuptemppacks(repo.ui, packpath)
+            limit = (
+                repo.ui.configbytes("remotefilelog", "manifestlimit", "2GB")
+                if shared
+                else 0
+            )
+            _cleanuppacks(repo.ui, packpath, limit)
             if _userustrepack(repo):
                 _runrustrepack(
                     repo,
@@ -670,6 +676,70 @@ def _cleanuptemppacks(ui, packpath):
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise
+
+
+def _cleanupoldpacks(ui, packpath, limit):
+    """Enforce a size limit on the cache. Packfiles will be removed oldest
+    first, with the asumption that old packfiles contains less useful data than new ones.
+    """
+    with progress.spinner(ui, _("cleaning old packs")):
+
+        def _mtime(f):
+            stat = os.lstat(f)
+            return stat.st_mtime
+
+        def _listpackfiles(path):
+            packs = []
+            for f in os.listdir(path):
+                _, ext = os.path.splitext(f)
+                if ext.endswith("pack"):
+                    packs.append(os.path.join(packpath, f))
+
+            return packs
+
+        files = sorted(_listpackfiles(packpath), key=_mtime, reverse=True)
+
+        cachesize = 0
+        for f in files:
+            stat = os.lstat(f)
+            cachesize += stat.st_size
+
+        while cachesize > limit:
+            f = files.pop()
+            stat = os.lstat(f)
+
+            # Dont't remove files that are newer than 10 minutes. This will
+            # avoid a race condition where mercurial downloads files from the
+            # network and expect these to be present on disk. If the 'limit' is
+            # properly set, we should have removed enough files that this
+            # condition won't matter.
+            if time.gmtime(stat.st_mtime + 10 * 60) > time.gmtime():
+                return
+
+            root, ext = os.path.splitext(f)
+            try:
+                if ext == datapack.PACKSUFFIX:
+                    os.unlink(root + datapack.INDEXSUFFIX)
+                else:
+                    os.unlink(root + historypack.INDEXSUFFIX)
+            except OSError as ex:
+                if ex.errno != errno.ENOENT:
+                    raise
+
+            try:
+                os.unlink(f)
+            except OSError as ex:
+                if ex.errno != errno.ENOENT:
+                    raise
+
+            cachesize -= stat.st_size
+
+
+def _cleanuppacks(ui, packpath, limit):
+    _cleanuptemppacks(ui, packpath)
+    if ui.configbool("remotefilelog", "cleanoldpacks"):
+        if limit != 0:
+            _cleanupoldpacks(ui, packpath, limit)
 
 
 class repacker(object):

@@ -103,6 +103,15 @@ Configs:
     The default is true, but this may make some operations cause many tree
     fetches when used in conjunction with treemanifest in treeonly mode.
 
+    ``remotefilelog.cleanoldpacks`` controls whether repack will attempt to
+    limit the size of its cache.
+
+    ``remotefilelog.cachelimit`` limit the size of the hgcache to this size.
+    Packfiles will be removed from oldest to newest during repack.
+
+    ``remotefilelog.manifestlimit`` limit the size of the manifest cache to this size.
+    Manifests will be removed from oldest to newest during repack.
+
     ``format.userustdatapack`` switches to using the rust data pack
     implementation.
 
