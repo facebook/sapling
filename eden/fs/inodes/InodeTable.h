@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <optional>
 #include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/Bug.h"

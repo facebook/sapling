@@ -14,6 +14,7 @@
 #include <folly/executors/ManualExecutor.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gflags/gflags.h>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
