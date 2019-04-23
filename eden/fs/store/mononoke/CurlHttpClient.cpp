@@ -90,6 +90,23 @@ std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
   return result;
 }
 
+int curlFollyLogger(
+    CURL* /* handle */,
+    curl_infotype type,
+    char* data,
+    size_t size,
+    void* /* userptr */) {
+  auto stripLogMessage = [](const char* data, size_t size) {
+    auto message = folly::StringPiece(data, size);
+    message.removeSuffix("\n");
+    return message;
+  };
+
+  XLOG_IF(DBG9, type == CURLINFO_TEXT) << stripLogMessage(data, size);
+
+  return 0;
+}
+
 std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest() {
   CURL* curl = curl_easy_init();
   if (!curl) {
@@ -125,10 +142,23 @@ std::unique_ptr<CURL, CurlDeleter> CurlHttpClient::buildRequest() {
       CURLE_OK) {
     throw std::runtime_error("curl failed to set CURLOPT_SSL_VERIFYPEER");
   }
-  if (curl_easy_setopt(request.get(), CURLOPT_SSL_VERIFYHOST, false)) {
+  if (curl_easy_setopt(request.get(), CURLOPT_SSL_VERIFYHOST, false) !=
+      CURLE_OK) {
     throw std::runtime_error("curl failed to set CURLOPT_SSL_VERIFYHOST");
   }
 
+  if (XLOG_IS_ON(DBG9)) {
+    if (curl_easy_setopt(
+            request.get(), CURLOPT_DEBUGFUNCTION, curlFollyLogger) !=
+        CURLE_OK) {
+      XLOG(WARN) << "curl failed to set CURLOPT_DEBUGFUNCTION";
+    } else {
+      // only if the debug function is successfully set.
+      if (curl_easy_setopt(request.get(), CURLOPT_VERBOSE, true)) {
+        XLOG(WARN) << "curl failed to set CURLOPT_VERBOSE";
+      }
+    }
+  }
   return request;
 }
 } // namespace eden
