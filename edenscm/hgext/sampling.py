@@ -187,7 +187,7 @@ def telemetry(reporef):
         # prefixed.
         ui.log("command_info", hg_maxrss=maxrss)
     except Exception as e:
-        ui.log("command_info", sampling_failure=e.message)
+        ui.log("command_info", sampling_failure=str(e))
 
 
 def reposetup(ui, repo):
