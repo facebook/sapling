@@ -27,6 +27,7 @@ def starttracking(repo):
     if "visibleheads" not in repo.storerequirements:
         with repo.lock():
             repo.storerequirements.add("visibleheads")
+            setvisibleheads(repo, _convertfromobsolete(repo))
             repo._writestorerequirements()
 
 
@@ -71,7 +72,7 @@ class visibleheads(object):
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
-            self.heads = _convertfromobsolete(repo)
+            self.heads = []
             self.dirty = True
         ui.log("visibility", visibility_headcount=len(self.heads))
 
