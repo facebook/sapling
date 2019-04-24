@@ -21,6 +21,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/utils/StatTimes.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;
@@ -47,34 +48,27 @@ std::ostream& operator<<(
 } // namespace chrono
 } // namespace std
 
-template <typename Clock = std::chrono::system_clock>
-typename Clock::time_point timespecToTimePoint(const timespec& ts) {
-  auto duration =
-      std::chrono::seconds{ts.tv_sec} + std::chrono::nanoseconds{ts.tv_nsec};
-  return typename Clock::time_point{duration};
-}
-
 /*
  * Helper functions for comparing timespec structs from file attributes
  * against C++11-style time_point objects.
  */
 bool operator<(const timespec& ts, std::chrono::system_clock::time_point tp) {
-  return timespecToTimePoint(ts) < tp;
+  return folly::to<std::chrono::system_clock::time_point>(ts) < tp;
 }
 bool operator<=(const timespec& ts, std::chrono::system_clock::time_point tp) {
-  return timespecToTimePoint(ts) <= tp;
+  return folly::to<std::chrono::system_clock::time_point>(ts) <= tp;
 }
 bool operator>(const timespec& ts, std::chrono::system_clock::time_point tp) {
-  return timespecToTimePoint(ts) > tp;
+  return folly::to<std::chrono::system_clock::time_point>(ts) > tp;
 }
 bool operator>=(const timespec& ts, std::chrono::system_clock::time_point tp) {
-  return timespecToTimePoint(ts) >= tp;
+  return folly::to<std::chrono::system_clock::time_point>(ts) >= tp;
 }
 bool operator!=(const timespec& ts, std::chrono::system_clock::time_point tp) {
-  return timespecToTimePoint(ts) != tp;
+  return folly::to<std::chrono::system_clock::time_point>(ts) != tp;
 }
 bool operator==(const timespec& ts, std::chrono::system_clock::time_point tp) {
-  return timespecToTimePoint(ts) == tp;
+  return folly::to<std::chrono::system_clock::time_point>(ts) == tp;
 }
 
 namespace {
@@ -198,9 +192,9 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(12, attr.st.st_size);
   EXPECT_EQ(1, attr.st.st_blocks);
-  EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_atim), start);
-  EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_mtim), start);
-  EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_ctim), start);
+  EXPECT_EQ(stAtimepoint(attr.st), start);
+  EXPECT_EQ(stMtimepoint(attr.st), start);
+  EXPECT_EQ(stCtimepoint(attr.st), start);
 }
 
 void testSetattrTruncateAll(TestMount& mount) {
@@ -307,8 +301,8 @@ TEST_F(FileInodeTest, setattrAtime) {
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st.st_atime);
-  EXPECT_EQ(1234, attr.st.st_atim.tv_sec);
-  EXPECT_EQ(5678, attr.st.st_atim.tv_nsec);
+  EXPECT_EQ(1234, stAtime(attr.st).tv_sec);
+  EXPECT_EQ(5678, stAtime(attr.st).tv_nsec);
 
   mount_.getClock().advance(10min);
 
@@ -321,7 +315,7 @@ TEST_F(FileInodeTest, setattrAtime) {
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(
       mount_.getClock().getTimePoint(),
-      folly::to<FakeClock::time_point>(attr.st.st_atim));
+      folly::to<FakeClock::time_point>(stAtime(attr.st)));
 }
 
 void testSetattrMtime(TestMount& mount) {
@@ -336,8 +330,8 @@ void testSetattrMtime(TestMount& mount) {
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st.st_mtime);
-  EXPECT_EQ(1234, attr.st.st_mtim.tv_sec);
-  EXPECT_EQ(5678, attr.st.st_mtim.tv_nsec);
+  EXPECT_EQ(1234, stMtime(attr.st).tv_sec);
+  EXPECT_EQ(5678, stMtime(attr.st).tv_nsec);
 
   // Ask to set the mtime to the current time
   mount.getClock().advance(1234min);
@@ -348,7 +342,7 @@ void testSetattrMtime(TestMount& mount) {
   attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
-  EXPECT_EQ(start, folly::to<FakeClock::time_point>(attr.st.st_mtim));
+  EXPECT_EQ(start, folly::to<FakeClock::time_point>(stMtime(attr.st)));
 }
 
 TEST_F(FileInodeTest, setattrMtime) {

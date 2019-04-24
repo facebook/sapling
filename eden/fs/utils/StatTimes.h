@@ -8,8 +8,11 @@
  *
  */
 #pragma once
+
+#include <folly/chrono/Conv.h>
 #include <stdint.h>
 #include <time.h>
+#include <chrono>
 
 namespace facebook {
 namespace eden {
@@ -53,6 +56,30 @@ inline const struct timespec& stCtime(const struct stat& st) {
 #else
 #error teach this system how to get the stat change time as a timespec
 #endif
+}
+
+/**
+ * Access stat atime as a system_clock::time_point.
+ */
+inline std::chrono::system_clock::time_point stAtimepoint(
+    const struct stat& st) {
+  return folly::to<std::chrono::system_clock::time_point>(stAtime(st));
+}
+
+/**
+ * Access stat mtime as a system_clock::time_point.
+ */
+inline std::chrono::system_clock::time_point stCtimepoint(
+    const struct stat& st) {
+  return folly::to<std::chrono::system_clock::time_point>(stCtime(st));
+}
+
+/**
+ * Access stat ctime as a system_clock::time_point.
+ */
+inline std::chrono::system_clock::time_point stMtimepoint(
+    const struct stat& st) {
+  return folly::to<std::chrono::system_clock::time_point>(stMtime(st));
 }
 
 #endif

@@ -26,6 +26,7 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/TimeUtil.h"
 
 using namespace facebook::eden;
@@ -373,22 +374,13 @@ void testModifyFile(
   // Check the stat() information on the inode.
   // The timestamps should not be earlier than when the checkout started.
   auto postStat = postInode->getattr().get(10ms).st;
-  EXPECT_GE(
-      folly::to<system_clock::time_point>(postStat.st_atim), checkoutStart);
-  EXPECT_GE(
-      folly::to<system_clock::time_point>(postStat.st_mtim), checkoutStart);
-  EXPECT_GE(
-      folly::to<system_clock::time_point>(postStat.st_ctim), checkoutStart);
+  EXPECT_GE(stAtimepoint(postStat), checkoutStart);
+  EXPECT_GE(stMtimepoint(postStat), checkoutStart);
+  EXPECT_GE(stCtimepoint(postStat), checkoutStart);
   if (preStat.has_value()) {
-    EXPECT_GE(
-        folly::to<system_clock::time_point>(postStat.st_atim),
-        folly::to<system_clock::time_point>(preStat->st_atim));
-    EXPECT_GE(
-        folly::to<system_clock::time_point>(postStat.st_mtim),
-        folly::to<system_clock::time_point>(preStat->st_mtim));
-    EXPECT_GE(
-        folly::to<system_clock::time_point>(postStat.st_ctim),
-        folly::to<system_clock::time_point>(preStat->st_ctim));
+    EXPECT_GE(stAtimepoint(postStat), stAtimepoint(*preStat));
+    EXPECT_GE(stMtimepoint(postStat), stMtimepoint(*preStat));
+    EXPECT_GE(stCtimepoint(postStat), stCtimepoint(*preStat));
   }
 
   // Unmount and remount the mount point, and verify that the file changes
