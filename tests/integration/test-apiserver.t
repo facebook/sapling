@@ -53,8 +53,8 @@ starts api server
   $ APISERVER_PORT=$(get_free_socket)
   $ apiserver -H "[::1]" -p $APISERVER_PORT
   $ wait_for_apiserver
-  $ function sslcurl() { curl --silent --cert "$TESTDIR/testcert.crt" --cacert "$TESTDIR/testcert.crt" --key "$TESTDIR/testcert.key" "$@"; }
-  $ function s_client() { openssl s_client -connect $APIHOST -cert "$TESTDIR/testcert.crt" -key "$TESTDIR/testcert.key" -ign_eof "$@"; }
+  $ function sslcurl() { curl --silent --cert "$TESTDIR/certs/localhost.crt" --cacert "$TESTDIR/certs/root-ca.crt" --key "$TESTDIR/certs/localhost.key" "$@"; }
+  $ function s_client() { openssl s_client -connect $APIHOST -CAfile "$TESTDIR/certs/root-ca.crt" -cert "$TESTDIR/certs/localhost.crt" -key "$TESTDIR/certs/localhost.key" -ign_eof "$@"; }
 
 ping test
   $ sslcurl -i $APISERVER/health_check | grep -iv "date"
@@ -263,10 +263,9 @@ test get changeset
 test TLS Session/Ticket resumption when using client certs
   $ TMPFILE=$(mktemp)
   $ RUN1=$(echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_out $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
-  depth=0 C = uk, L = Default City, O = Default Company Ltd, CN = localhost
-  verify error:num=18:self signed certificate
+  depth=1 C = US, ST = CA, O = FakeRootCanal, CN = fbmononoke.com
   verify return:1
-  depth=0 C = uk, L = Default City, O = Default Company Ltd, CN = localhost
+  depth=0 CN = localhost, O = Mononoke, C = US, ST = CA
   verify return:1
   $ RUN2=$(echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_in $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
   $ echo "$RUN1"

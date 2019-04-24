@@ -25,9 +25,9 @@ if os.name == "nt":
 
 log = open("dummylog", "a+b")
 
-cert = os.path.join(os.getenv("TESTDIR"), "testcert.crt")
-capem = os.path.join(os.getenv("TESTDIR"), "testcert.crt")
-privatekey = os.path.join(os.getenv("TESTDIR"), "testcert.key")
+cert = os.path.join(os.getenv("TESTDIR"), "certs/localhost.crt")
+capem = os.path.join(os.getenv("TESTDIR"), "certs/root-ca.crt")
+privatekey = os.path.join(os.getenv("TESTDIR"), "certs/localhost.key")
 
 if "hgcli" in hgcmd:
     hgcmd += (

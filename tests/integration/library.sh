@@ -28,16 +28,16 @@ function random_int() {
 }
 
 function sslcurl {
-  curl --cert "$TESTDIR/testcert.crt" --cacert "$TESTDIR/testcert.crt" --key "$TESTDIR/testcert.key" "$@"
+  curl --cert "$TESTDIR/certs/localhost.crt" --cacert "$TESTDIR/certs/root-ca.crt" --key "$TESTDIR/certs/localhost.key" "$@"
 }
 
 function mononoke {
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
-  "$MONONOKE_SERVER" "$@" --ca-pem "$TESTDIR/testcert.crt" \
-  --private-key "$TESTDIR/testcert.key" \
-  --cert "$TESTDIR/testcert.crt" \
-  --ssl-ticket-seeds "$TESTDIR/server.pem.seeds" \
+  "$MONONOKE_SERVER" "$@" --ca-pem "$TESTDIR/certs/root-ca.crt" \
+  --private-key "$TESTDIR/certs/localhost.key" \
+  --cert "$TESTDIR/certs/localhost.crt" \
+  --ssl-ticket-seeds "$TESTDIR/certs/server.pem.seeds" \
   --debug \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
@@ -349,10 +349,10 @@ function setup_no_ssl_apiserver {
 
 function apiserver {
   $MONONOKE_APISERVER "$@" --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --ssl-ca "$TESTDIR/testcert.crt" \
-    --ssl-private-key "$TESTDIR/testcert.key" \
-    --ssl-certificate "$TESTDIR/testcert.crt" \
-    --ssl-ticket-seeds "$TESTDIR/server.pem.seeds" \
+    --ssl-ca "$TESTDIR/certs/root-ca.crt" \
+    --ssl-private-key "$TESTDIR/certs/localhost.key" \
+    --ssl-certificate "$TESTDIR/certs/localhost.crt" \
+    --ssl-ticket-seeds "$TESTDIR/certs/server.pem.seeds" \
     --do-not-init-cachelib >> "$TESTTMP/apiserver.out" 2>&1 &
   export APISERVER_PID=$!
   echo "$APISERVER_PID" >> "$DAEMON_PIDS"
@@ -577,9 +577,9 @@ function mkcommit() {
 function pushrebase_replay() {
   DB_INDICES=$1
 
-  REPLAY_CA_PEM="$TESTDIR/testcert.crt" \
-  THRIFT_TLS_CL_CERT_PATH="$TESTDIR/testcert.crt" \
-  THRIFT_TLS_CL_KEY_PATH="$TESTDIR/testcert.key" $PUSHREBASE_REPLAY \
+  REPLAY_CA_PEM="$TESTDIR/certs/root-ca.crt" \
+  THRIFT_TLS_CL_CERT_PATH="$TESTDIR/certs/localhost.crt" \
+  THRIFT_TLS_CL_KEY_PATH="$TESTDIR/certs/localhost.key" $PUSHREBASE_REPLAY \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --reponame repo \
     --hgcli "$MONONOKE_HGCLI" \

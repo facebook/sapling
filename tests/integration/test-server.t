@@ -19,15 +19,14 @@ setup data
 start mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
-  $ function s_client () { openssl s_client -connect localhost:$MONONOKE_SOCKET -cert "$TESTDIR/testcert.crt" -key "$TESTDIR/testcert.key" -ign_eof "$@"; }
+  $ function s_client () { openssl s_client -connect localhost:$MONONOKE_SOCKET -CAfile "$TESTDIR/certs/root-ca.crt" -cert "$TESTDIR/certs/localhost.crt" -key "$TESTDIR/certs/localhost.key" -ign_eof "$@"; }
 
 test TLS Session/Ticket resumption when using client certs
   $ TMPFILE=$(mktemp)
   $ RUN1=$(echo -e "hello\n" | s_client -sess_out $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
-  depth=0 C = uk, L = Default City, O = Default Company Ltd, CN = localhost
-  verify error:num=18:self signed certificate
+  depth=1 C = US, ST = CA, O = FakeRootCanal, CN = fbmononoke.com
   verify return:1
-  depth=0 C = uk, L = Default City, O = Default Company Ltd, CN = localhost
+  depth=0 CN = localhost, O = Mononoke, C = US, ST = CA
   verify return:1
   read:errno=0
   $ RUN2=$(echo -e "hello\n" | s_client -sess_in $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
@@ -43,7 +42,7 @@ test TLS Tickets use encryption keys from seeds - sessions should persist across
   [137]
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
-  $ alias s_client="openssl s_client -connect localhost:$MONONOKE_SOCKET -cert \"$TESTDIR/testcert.crt\" -key \"$TESTDIR/testcert.key\" -ign_eof"
+  $ alias s_client="openssl s_client -connect localhost:$MONONOKE_SOCKET -CAfile \"$TESTDIR/certs/root-ca.crt\" -cert \"$TESTDIR/certs/localhost.crt\" -key \"$TESTDIR/certs/localhost.key\" -ign_eof"
   $ echo -e "hello\n" | s_client -sess_in $TMPFILE -state | grep -E "^SSL_connect"
   SSL_connect:before/connect initialization
   SSL_connect:SSLv3 write client hello A
