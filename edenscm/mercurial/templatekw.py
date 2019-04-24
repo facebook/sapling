@@ -654,12 +654,12 @@ def showgraphnode(repo, ctx, **args):
         wpnodes = wpnodes[:1]
     if ctx.node() in wpnodes:
         return "@"
+    elif ctx.invisible():
+        return "-"
     elif ctx.obsolete():
         return "x"
     elif ctx.closesbranch():
         return "_"
-    elif ctx.invisible():
-        return "-"
     else:
         return "o"
 

@@ -448,13 +448,13 @@ Drawdag
   | |
   | o  5: 64a8289d2492 'F'
   | |
-  | | x  4: 17d61397e601 'D'  (Rewritten using rebase into a1093b439e1b)
+  | | -  4: 17d61397e601 'D'  (Rewritten using rebase into a1093b439e1b)
   | | |
   | o |  3: 7fb047a69f22 'E'
   |/ /
-  | | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 17d61397e601)
+  | | -  2: 26805aba1e60 'C'  (Rewritten using rebase into 17d61397e601)
   | |/
-  | x  1: 112478962961 'B'  (Rewritten using split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
+  | -  1: 112478962961 'B'  (Rewritten using split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
   |/
   o  0: 426bada5c675 'A'
   
@@ -1184,7 +1184,7 @@ Test pullcreatemarkers can do this
   |
   o  27eaac8d0756 file2 D2345
   |
-  | x  f07a12cd100a file1 D1234 (Rewritten using land into ec3b92425d5b)
+  | -  f07a12cd100a file1 D1234 (Rewritten using land into ec3b92425d5b)
   |/
   @  d20a80d4def3 base
   

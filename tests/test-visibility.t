@@ -35,7 +35,7 @@ Simple creation and amending of draft commits
   |
   o  4: bc066ca12b45 draft 'draft1 amend1'
   |
-  | x  3: ca9d66205aca draft 'draft1'
+  | -  3: ca9d66205aca draft 'draft1'
   |/
   o  2: 4f416a252ac8 public 'public2'
   |
@@ -53,7 +53,7 @@ Simple creation and amending of draft commits
   $ tglogp --hidden
   @  4: bc066ca12b45 draft 'draft1 amend1'
   |
-  | x  3: ca9d66205aca draft 'draft1'
+  | -  3: ca9d66205aca draft 'draft1'
   |/
   o  2: 4f416a252ac8 public 'public2'
   |
@@ -509,7 +509,7 @@ Test that hiddenoverride has no effect on pinning hidden revisions.
   |
   | @  2: 917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
   | |
-  | x  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
+  | -  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
   |/
   o  0: 48b9aae0607f 'Z'
   
