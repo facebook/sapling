@@ -179,33 +179,25 @@ def newandmodified(chunks, originalchunks):
     return newlyaddedandmodifiedfiles
 
 
-def comparechunks(chunks1, chunks2):
+def comparechunks(chunks, headers):
     """
-    Determine whether two sets of chunks are the same, even after having
-    been filtered.
+    Determine whether the sets of chunks is the same as the original set of
+    headers, after they had been filtered.
 
-    Extract the patch recordhunks and compare them.  The crecord module wraps
-    these in uihunks, so we need to unwrap those.
+    Generate patches for both sets of data and then compare the patches.
     """
 
-    def makehunkset(chunks):
-        s = set()
+    originalpatch = stringio()
+    for header in headers:
+        header.write(originalpatch)
+        for hunk in header.hunks:
+            hunk.write(originalpatch)
 
-        def addhunk(hunk):
-            if isinstance(hunk, crecordmod.uihunk):
-                s.add(hunk._hunk)
-            elif isinstance(hunk, patch.recordhunk):
-                s.add(hunk)
+    newpatch = stringio()
+    for chunk in chunks:
+        chunk.write(newpatch)
 
-        for c in chunks:
-            if util.safehasattr(c, "hunks"):
-                for hunk in c.hunks:
-                    addhunk(hunk)
-            else:
-                addhunk(c)
-        return s
-
-    return makehunkset(chunks1) == makehunkset(chunks2)
+    return newpatch.getvalue() == originalpatch.getvalue()
 
 
 def parsealiases(cmd):

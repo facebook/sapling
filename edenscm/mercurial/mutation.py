@@ -45,7 +45,7 @@ def record(repo, extra, prednodes, op=None, splitting=None):
         extra["mutdate"] = "%d %d" % date
         if op is not None:
             extra["mutop"] = op
-        if splitting is not None:
+        if splitting:
             extra["mutsplit"] = ",".join(identfromnode(n) for n in splitting)
 
 
