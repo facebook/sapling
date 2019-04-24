@@ -48,11 +48,25 @@ impl Entry {
         }
     }
 
+    /// Read an entry from the IndexedLog and deserialize it.
+    ///
+    /// The on-disk format of an entry is the following:
+    /// - Node <20 bytes>
+    /// - Path len: 2 unsigned bytes, big-endian
+    /// - Path: <Path len> bytes
+    /// - Metadata: metadata-list
+    /// - Content len: 8 unsigned bytes, big-endian
+    /// - Content: <Content len> bytes, lz4 compressed
+    ///
+    /// The metadata-list is a list of Metadata, encode with:
+    /// - Flag: 1 byte,
+    /// - Len: 2 unsigned bytes, big-endian
+    /// - Value: <Len> bytes, big-endian
     pub fn from_log(key: &Key, log: &LogRotate) -> Fallible<Self> {
         let mut log_entry = log.lookup(0, key.node.as_ref())?;
         let buf = log_entry
             .nth(0)
-            .ok_or_else(|| KeyError::new(format_err!("Not found")))??;
+            .ok_or_else(|| KeyError::new(format_err!("Key {} not found", key)))??;
 
         let mut cur = Cursor::new(buf);
         cur.seek(SeekFrom::Current(Node::len() as i64))?;
@@ -75,6 +89,7 @@ impl Entry {
         })
     }
 
+    /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
     pub fn write_to_log(self, log: &mut LogRotate) -> Fallible<()> {
         let mut buf = Vec::new();
         buf.write_all(self.key.node.as_ref())?;
