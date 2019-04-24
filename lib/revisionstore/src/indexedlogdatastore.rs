@@ -9,14 +9,15 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::{format_err, Fallible};
+use bytes::Bytes;
+use failure::{ensure, format_err, Fallible};
 
 use indexedlog::{
     log::IndexOutput,
     rotate::{LogRotate, OpenOptions},
 };
 use lz4_pyframe::{compress, decompress};
-use types::{node::ReadNodeExt, Key, Node};
+use types::{Key, Node};
 
 use crate::{
     datastore::{DataStore, Delta, Metadata},
@@ -30,13 +31,18 @@ pub struct IndexedLogDataStore {
 }
 
 struct Entry {
-    pub delta: Delta,
+    pub key: Key,
+    pub content: Bytes,
     pub metadata: Metadata,
 }
 
 impl Entry {
-    pub fn new(delta: Delta, metadata: Metadata) -> Self {
-        Entry { delta, metadata }
+    pub fn new(key: Key, content: Bytes, metadata: Metadata) -> Self {
+        Entry {
+            key,
+            content,
+            metadata,
+        }
     }
 
     pub fn from_log(key: &Key, log: &LogRotate) -> Fallible<Self> {
@@ -51,45 +57,31 @@ impl Entry {
         let name_len = cur.read_u16::<BigEndian>()? as i64;
         cur.seek(SeekFrom::Current(name_len))?;
 
-        let base = cur.read_node()?;
-        let base = if base.is_null() {
-            None
-        } else {
-            Some(Key::new(key.path.clone(), base))
-        };
-
         let metadata = Metadata::read(&mut cur)?;
 
         let compressed_len = cur.read_u64::<BigEndian>()?;
         let compressed =
             buf.get_err(cur.position() as usize..(cur.position() + compressed_len) as usize)?;
 
-        let delta = Delta {
-            // XXX: Only decompress on-demand.
-            data: decompress(&compressed)?.into(),
-            base,
-            key: key.clone(),
-        };
-
-        Ok(Entry { delta, metadata })
+        // XXX: Only decompress on-demand.
+        let content = decompress(&compressed)?.into();
+        let key = key.clone();
+        Ok(Entry {
+            key,
+            content,
+            metadata,
+        })
     }
 
     pub fn write_to_log(self, log: &mut LogRotate) -> Fallible<()> {
         let mut buf = Vec::new();
-        buf.write_all(self.delta.key.node.as_ref())?;
-        let path_slice = self.delta.key.path.as_byte_slice();
+        buf.write_all(self.key.node.as_ref())?;
+        let path_slice = self.key.path.as_byte_slice();
         buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
         buf.write_all(path_slice)?;
-        buf.write_all(
-            self.delta
-                .base
-                .as_ref()
-                .map_or_else(|| Node::null_id(), |k| &k.node)
-                .as_ref(),
-        )?;
         self.metadata.write(&mut buf)?;
 
-        let compressed = compress(&self.delta.data)?;
+        let compressed = compress(&self.content)?;
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
@@ -111,7 +103,9 @@ impl IndexedLogDataStore {
     }
 
     pub fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
-        let entry = Entry::new(delta.clone(), metadata.clone());
+        ensure!(delta.base.is_none(), "Deltas aren't supported.");
+
+        let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
         entry.write_to_log(&mut self.log)
     }
 
@@ -145,34 +139,17 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        Ok(Entry::from_log(&key, &self.log)?.delta)
+        let content = Entry::from_log(&key, &self.log)?.content;
+        return Ok(Delta {
+            data: content,
+            base: None,
+            key: key.clone(),
+        });
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
-        let mut chain = Vec::new();
-        let mut next_key = Some(key.clone());
-
-        while let Some(key) = next_key {
-            let entry = Entry::from_log(&key, &self.log);
-
-            // Partial chains are valid. The rest of the chain may be present in another store, or
-            // may need to be fetched from the network. All of this will be handled higher up the
-            // stack.
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(e) => {
-                    if e.downcast_ref::<KeyError>().is_some() && !chain.is_empty() {
-                        break;
-                    } else {
-                        return Err(e);
-                    }
-                }
-            };
-            next_key = entry.delta.base.clone();
-            chain.push(entry.delta);
-        }
-
-        Ok(chain)
+        let delta = self.get_delta(key)?;
+        return Ok(vec![delta]);
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
@@ -248,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_partial_chain() -> Fallible<()> {
+    fn test_add_chain() -> Fallible<()> {
         let tempdir = TempDir::new()?;
         let mut log = IndexedLogDataStore::new(&tempdir)?;
 
@@ -259,9 +236,7 @@ mod tests {
         };
         let metadata = Default::default();
 
-        log.add(&delta, &metadata)?;
-        let chain = log.get_delta_chain(&delta.key)?;
-        assert_eq!(chain.last().expect("Empty").base, delta.base);
+        assert!(log.add(&delta, &metadata).is_err());
         Ok(())
     }
 }
