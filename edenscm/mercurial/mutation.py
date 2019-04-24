@@ -329,7 +329,7 @@ def fate(repo, node):
     happened to this node that resulted in one or more visible commits.
     """
     clrev = repo.changelog.rev
-    phasecache = repo._phasecache
+    phase = repo._phasecache.phase
     fate = []
     if isobsolete(repo, node):
         for succset in successorssets(repo, node, closest=True):
@@ -339,20 +339,18 @@ def fate(repo, node):
                 fate.append((succset, "split"))
             else:
                 succ = succset[0]
-                preds = None
+                # Base the default operation name on the successor's phase
+                if succ in repo and phase(repo, clrev(succ)) == phases.public:
+                    op = "land"
+                else:
+                    op = "rewrite"
+                # Try to find the real operation name.
                 entry = lookup(repo, succ)
                 if entry is not None:
                     preds = entry.preds()
-                    op = entry.op()
-                if preds is not None and node in preds:
-                    fate.append((succset, op))
-                elif (
-                    succ in repo
-                    and phasecache.phase(repo, clrev(succ)) == phases.public
-                ):
-                    fate.append((succset, "land"))
-                else:
-                    fate.append((succset, "rewrite"))
+                    if preds is not None and node in preds:
+                        op = entry.op() or op
+                fate.append((succset, op))
     return fate
 
 
