@@ -10,7 +10,7 @@ use std::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use failure::{ensure, format_err, Fallible};
+use failure::{bail, ensure, format_err, Fallible};
 
 use indexedlog::{
     log::IndexOutput,
@@ -32,16 +32,19 @@ pub struct IndexedLogDataStore {
 
 struct Entry {
     key: Key,
-    content: Bytes,
     metadata: Metadata,
+
+    content: Option<Bytes>,
+    compressed_content: Option<Bytes>,
 }
 
 impl Entry {
     pub fn new(key: Key, content: Bytes, metadata: Metadata) -> Self {
         Entry {
             key,
-            content,
+            content: Some(content),
             metadata,
+            compressed_content: None,
         }
     }
 
@@ -63,12 +66,11 @@ impl Entry {
         let compressed =
             buf.get_err(cur.position() as usize..(cur.position() + compressed_len) as usize)?;
 
-        // XXX: Only decompress on-demand.
-        let content = decompress(&compressed)?.into();
         let key = key.clone();
         Ok(Entry {
             key,
-            content,
+            content: None,
+            compressed_content: Some(compressed.into()),
             metadata,
         })
     }
@@ -81,15 +83,34 @@ impl Entry {
         buf.write_all(path_slice)?;
         self.metadata.write(&mut buf)?;
 
-        let compressed = compress(&self.content)?;
+        let compressed = if let Some(compressed) = self.compressed_content {
+            compressed
+        } else {
+            if let Some(raw) = self.content {
+                compress(&raw)?.into()
+            } else {
+                bail!("No content");
+            }
+        };
+
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
         Ok(log.append(buf)?)
     }
 
-    pub fn content(&self) -> &Bytes {
-        &self.content
+    pub fn content(&mut self) -> Fallible<Bytes> {
+        if let Some(content) = self.content.as_ref() {
+            return Ok(content.clone());
+        }
+
+        if let Some(compressed) = self.compressed_content.as_ref() {
+            let raw = Bytes::from(decompress(&compressed)?);
+            self.content = Some(raw.clone());
+            Ok(raw)
+        } else {
+            bail!("No content");
+        }
     }
 
     pub fn metadata(&self) -> &Metadata {
@@ -147,10 +168,10 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let entry = Entry::from_log(&key, &self.log)?;
-        let content = entry.content();
+        let mut entry = Entry::from_log(&key, &self.log)?;
+        let content = entry.content()?;
         return Ok(Delta {
-            data: content.clone(),
+            data: content,
             base: None,
             key: key.clone(),
         });
