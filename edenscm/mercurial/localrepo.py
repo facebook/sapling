@@ -2576,8 +2576,9 @@ class localrepository(object):
 
         Called during pull if pull.automigrate is true
         """
-        # Migrate treestate
         treestate.automigrate(self)
+        mutation.automigrate(self)
+        visibility.automigrate(self)
 
 
 # used to avoid circular references so destructors work

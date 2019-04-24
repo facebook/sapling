@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import errno
 
 from edenscm.mercurial import error, node, util
+from edenscm.mercurial.i18n import _
 
 
 def _convertfromobsolete(repo):
@@ -261,3 +262,13 @@ def enabled(repo):
     if isinstance(repo, bundlerepo.bundlerepository):
         return False
     return tracking(repo) and repo.ui.configbool("visibility", "enabled")
+
+
+def automigrate(repo):
+    mode = repo.ui.config("visibility", "automigrate")
+    if mode == "start" and "visibleheads" not in repo.storerequirements:
+        repo.ui.status(_("switching to explicit tracking of visible commits\n"))
+        starttracking(repo)
+    if mode == "stop" and "visibleheads" in repo.storerequirements:
+        repo.ui.status(_("reverting to tracking visibility through obsmarkers\n"))
+        stoptracking(repo)

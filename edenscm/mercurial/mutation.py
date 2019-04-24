@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from collections import defaultdict
 
 from . import error, node as nodemod, phases, repoview, util
+from .i18n import _
 from .rust.bindings import mutationstore
 
 
@@ -624,3 +625,134 @@ def bundle(repo, nodes):
                     remaining.add(nextnode)
 
     return mutationstore.bundle(entries)
+
+
+def convertfromobsmarkers(repo):
+    """Convert obsmarkers into mutation records."""
+    obsmarkers = repo.obsstore._all
+    # Sort obsmarkers by date.  Applying them in probable date order gives us
+    # a better chance of resolving cycles in the right way.
+    obsmarkers.sort(key=lambda x: x[4])
+    newmut = {}
+
+    def checkloopfree(pred, succs):
+        candidates = {pred}
+        while candidates:
+            candidate = candidates.pop()
+            if candidate in newmut:
+                mutpreds, mutsplit, _markers = newmut[candidate]
+                for succ in succs:
+                    if succ in mutpreds:
+                        repo.ui.debug(
+                            "ignoring loop: %s -> %s\n  history loops at %s -> %s\n"
+                            % (
+                                nodemod.hex(pred),
+                                ", ".join([nodemod.hex(s) for s in succs]),
+                                nodemod.hex(succ),
+                                nodemod.hex(candidate),
+                            )
+                        )
+                        return False
+                candidates.update(mutpreds)
+        return True
+
+    dropprune = 0
+    droprevive = 0
+    dropundo = 0
+    droploop = 0
+    dropinvalid = 0
+
+    for obsmarker in obsmarkers:
+        obspred, obssuccs, obsflag, obsmeta, obsdate, obsparents = obsmarker
+        if not obssuccs:
+            # Skip prune markers
+            dropprune += 1
+            continue
+        if obssuccs == (obspred,):
+            # Skip revive markers
+            droprevive += 1
+            continue
+        obsmeta = dict(obsmeta)
+        if obsmeta.get("operation") in ("undo", "uncommit", "unamend"):
+            # Skip undo-style markers
+            dropundo += 1
+            continue
+        if not checkloopfree(obspred, obssuccs):
+            # Skip markers that introduce loops
+            droploop += 1
+            continue
+        if len(obssuccs) > 1:
+            # Split marker
+            succ = obssuccs[-1]
+            if succ in newmut:
+                preds, split, markers = newmut[succ]
+                if obsmarker in markers:
+                    # duplicate
+                    continue
+                repo.ui.debug(
+                    "invalid obsmarker found: %s -> %s is both split and folded\n"
+                    % (nodemod.hex(obspred), nodemod.hex(succ))
+                )
+                dropinvalid += 1
+                continue
+            newmut[succ] = ([obspred], obssuccs[:-1], [obsmarker])
+        elif obssuccs[0] in newmut:
+            preds, split, markers = newmut[obssuccs[0]]
+            if obsmarker in markers:
+                # duplicate
+                continue
+            # Fold marker
+            preds.append(obspred)
+            markers.append(obsmarker)
+        else:
+            # Normal marker
+            newmut[obssuccs[0]] = ([obspred], None, [obsmarker])
+
+    repo.ui.debug(
+        "processed %s markers for %s commits\n" % (len(obsmarkers), len(newmut))
+    )
+    repo.ui.debug(
+        "dropped markers: prune: %s, revive: %s, undo: %s, loop: %s, invalid: %s\n"
+        % (dropprune, droprevive, dropundo, droploop, dropinvalid)
+    )
+
+    entries = []
+
+    for succ, (preds, split, obsmarkers) in newmut.items():
+        if lookup(repo, succ) is not None:
+            # Have already converted this successor, or already know about it
+            continue
+        mutop = ""
+        mutuser = ""
+        mutdate = None
+        for obsmarker in obsmarkers:
+            obspred, obssuccs, obsflag, obsmeta, obsdate, obsparents = obsmarker
+            obsmeta = dict(obsmeta)
+            obsop = obsmeta.get("operation", "")
+            if not mutop or obsop not in ("", "copy"):
+                mutop = obsop
+            obsuser = obsmeta.get("user", "")
+            if not mutuser and obsuser:
+                mutuser = obsuser
+            if not mutdate:
+                mutdate = obsdate
+
+        entries.append(
+            createsyntheticentry(
+                repo, ORIGIN_OBSMARKER, preds, succ, mutop, split, mutuser, mutdate
+            )
+        )
+
+    with repo.lock():
+        count = recordentries(repo, entries, skipexisting=False)
+
+    return (len(entries), len(newmut), count)
+
+
+def automigrate(repo):
+    if recording(repo) and repo.ui.configbool("mutation", "automigrate"):
+        msg = _(
+            "please wait while we migrate obsmarker information to the mutation store\n"
+        )
+        repo.ui.status(msg)
+        convertfromobsmarkers(repo)

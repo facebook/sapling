@@ -1487,10 +1487,10 @@ Supported arguments:
 Controls recording of commit mutation metadata.
 
 ``record``
-    Set to True to enable recording of commit mutation metadata inside commits.
+    Set to true to enable recording of commit mutation metadata inside commits.
 
 ``enabled``
-    Set to True to enable usage of recorded commit mutation metadata in
+    Set to true to enable usage of recorded commit mutation metadata in
     preference to obsolescence markers.
 
 ``date``
@@ -1500,6 +1500,10 @@ Controls recording of commit mutation metadata.
 ``user``
     Override the username of the user performing the mutation.  The default is
     the current user.
+
+``automigrate``
+    Set to true to automatically convert obsmarkers to mutation metadata during
+    automigration at the start of pull.
 
 ``pager``
 ---------
@@ -2334,6 +2338,18 @@ can determine them implicitly from obsolescence markers.
     the ``visibleheads`` requirement is set in the repo.  If False,
     or if the ``visibleheads`` requirement is not set in the repo,
     then obsolescence markers will be used to determine visibility.
+
+``automigrate``
+    Set to ``start`` to automatically start tracking visibility of
+    commits by adding the ``visibileheads`` requirement to the repo
+    during automigration at the start of pull.  The initial visibility
+    of commits will be determined by snapshotting the commits that are
+    visible according to the obsolescence markers that are valid at the
+    point the ``visibleheads`` requirement is added.
+
+    Set to ``stop`` to automatically stop tracking visibility of
+    commits by removing the ``visibleheads`` requirement from the
+    repo and deleting any recorded visible heads.
 
 
 ``web``
