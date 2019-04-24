@@ -9,9 +9,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::errors::*;
+use crate::Phase;
 use changeset_fetcher::ChangesetFetcher;
+use cloned::cloned;
 use context::CoreContext;
-use errors::*;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
@@ -20,7 +22,6 @@ use skiplist::SkiplistIndex;
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::sync::Arc;
-use Phase;
 
 #[derive(Clone)]
 pub struct PhasesReachabilityHint {

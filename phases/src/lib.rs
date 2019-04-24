@@ -4,69 +4,36 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate ascii;
-extern crate blobrepo;
-#[cfg(test)]
-extern crate blobrepo_factory;
-extern crate changeset_fetcher;
-#[macro_use]
-extern crate cloned;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate iobuf;
-extern crate memcache;
-extern crate mercurial_types;
-extern crate mononoke_types;
-extern crate reachabilityindex;
-extern crate skiplist;
-extern crate tokio;
-extern crate try_from;
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-
-#[macro_use]
-extern crate sql;
-extern crate sql_ext;
-
-#[macro_use]
-extern crate stats;
-
 mod caching;
 pub use caching::CachingHintPhases;
-
 mod errors;
 pub use errors::*;
-
 mod hint;
 pub use hint::PhasesReachabilityHint;
 
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
+use cloned::cloned;
 use context::CoreContext;
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use skiplist::SkiplistIndex;
+use sql::mysql_async::{
+    prelude::{ConvIr, FromValue},
+    FromValueError, Value,
+};
+use sql::{queries, Connection};
+pub use sql_ext::SqlConstructors;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::{fmt, str};
 use try_from::TryFrom;
 
-use sql::mysql_async::{
-    prelude::{ConvIr, FromValue},
-    FromValueError, Value,
-};
-use sql::Connection;
-pub use sql_ext::SqlConstructors;
-
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Phase {
     Draft,
     Public,
@@ -84,14 +51,15 @@ impl From<Phase> for HgPhase {
 impl fmt::Display for Phase {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Phase::Draft => write!(f, "{}", "Draft"),
-            Phase::Public => write!(f, "{}", "Public"),
+            Phase::Draft => write!(f, "Draft"),
+            Phase::Public => write!(f, "Public"),
         }
     }
 }
 
 impl TryFrom<iobuf::IOBuf> for Phase {
     type Err = ErrorKind;
+
     fn try_from(buf: iobuf::IOBuf) -> ::std::result::Result<Self, Self::Err> {
         let v: Vec<u8> = buf.into();
         match str::from_utf8(&v) {
@@ -524,18 +492,14 @@ impl Phases for HintPhases {
 
 #[cfg(test)]
 mod tests {
-    extern crate async_unit;
-    extern crate bookmarks;
-    extern crate fixtures;
-    extern crate mononoke_types_mocks;
-
     use super::*;
+    use bookmarks::{Bookmark, BookmarkUpdateReason};
+    use fixtures::linear;
     use futures::Stream;
+    use maplit::{hashmap, hashset};
     use mercurial_types::nodehash::HgChangesetId;
+    use mononoke_types_mocks::changesetid::*;
     use std::str::FromStr;
-    use tests::bookmarks::{Bookmark, BookmarkUpdateReason};
-    use tests::fixtures::linear;
-    use tests::mononoke_types_mocks::changesetid::*;
 
     fn add_get_sql_phase<P: Phases>(phases: P) {
         let ctx = CoreContext::test_mock();

@@ -4,20 +4,21 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::errors::*;
+use crate::{Phase, Phases, PhasesMapping, PhasesReachabilityHint};
 use blobrepo::BlobRepo;
+use cloned::cloned;
 use context::CoreContext;
-use errors::*;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 use skiplist::SkiplistIndex;
-use stats::Timeseries;
+use stats::{define_stats, Timeseries};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 use try_from::TryInto;
-use {Phase, Phases, PhasesMapping, PhasesReachabilityHint};
 
 // Memcache constants, should be changed when we want to invalidate memcache
 // entries
