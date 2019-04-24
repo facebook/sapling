@@ -27,6 +27,7 @@ use tokio_codec::{FramedRead, FramedWrite};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_openssl::SslAcceptorExt;
 use tokio_timer;
+use x509::identity;
 
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
@@ -104,13 +105,30 @@ fn accept(
         .and_then({
             cloned!(root_log);
             move |sock| {
-                ssh_server_mux(sock).map_err(move |err| {
-                    error!(
-                        root_log,
-                        "Error while reading preamble";
-                        SlogKVError(Error::from(err)),
-                    )
+                let identities = match sock.get_ref().ssl().peer_certificate() {
+                    Some(cert) => identity::get_identities(&cert),
+                    None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
+                };
+
+                ssh_server_mux(sock).map_err({
+                    cloned!(root_log);
+                    move |err| {
+                        error!(
+                            root_log,
+                            "Error while reading preamble";
+                            SlogKVError(Error::from(err)),
+                        )
+                    }
                 })
+                .join(identities.map_err({
+                    cloned!(root_log);
+                    move |err| {
+                        error!(
+                            root_log,
+                            "failed to get identities from certificate"; SlogKVError(Error::from(err)),
+                        )
+                    }
+                }))
             }
         })
         .join(addr.into_future().map_err({
@@ -122,7 +140,7 @@ fn accept(
                 )
             }
         }))
-        .and_then(move |(stdio, addr)| {
+        .and_then(move |((stdio, identities), addr)| {
             repo_handlers
                 .get(&stdio.preamble.reponame)
                 .cloned()
@@ -144,7 +162,7 @@ fn accept(
                 })
                 .into_future()
                 .and_then(move |handler| {
-                    request_handler(handler.clone(), stdio, addr, handler.repo.hook_manager())
+                    request_handler(handler.clone(), identities, stdio, addr, handler.repo.hook_manager())
                 })
         })
 }

@@ -9,9 +9,11 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use aclchecker::Identity;
 use failure::{prelude::*, SlogKVError};
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
+use itertools::join;
 use slog::{self, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
@@ -48,6 +50,7 @@ pub fn request_handler(
         phases_hint,
         preserve_raw_bundle2,
     }: RepoHandler,
+    client_identities: Vec<Identity>,
     stdio: Stdio,
     addr: SocketAddr,
     hook_manager: Arc<HookManager>,
@@ -108,7 +111,8 @@ pub fn request_handler(
     let mut scuba_logger = {
         scuba_logger
             .add_preamble(&preamble)
-            .add("client_ip", addr.to_string());
+            .add("client_ip", addr.to_string())
+            .add("client_identities", join(client_identities, ","));
         scuba_logger
     };
 

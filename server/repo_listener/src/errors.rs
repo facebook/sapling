@@ -12,4 +12,6 @@ pub enum ErrorKind {
     NoConnectionPreamble,
     #[fail(display = "connection error while reading preamble")]
     ConnectionError,
+    #[fail(display = "connection does not have a client certificate")]
+    ConnectionNoClientCertificate,
 }

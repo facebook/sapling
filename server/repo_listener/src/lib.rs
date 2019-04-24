@@ -9,6 +9,7 @@
 #![allow(deprecated)]
 #![feature(never_type)]
 
+extern crate aclchecker;
 extern crate blobrepo;
 extern crate blobrepo_factory;
 extern crate blobstore;
@@ -22,6 +23,7 @@ extern crate futures;
 #[macro_use]
 extern crate futures_ext;
 extern crate futures_stats;
+extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -59,6 +61,7 @@ extern crate scribe;
 extern crate scuba_ext;
 extern crate skiplist;
 extern crate sshrelay;
+extern crate x509;
 
 mod connection_acceptor;
 mod errors;
