@@ -365,19 +365,29 @@ def predecessorsset(repo, startnode, closest=False):
     If ``closest`` is False, returns a list of the earliest original versions of
     the start node.
     """
+    seen = {startnode}
 
     def get(node):
+        """Get immediate predecessors
+
+        Returns a list of immediate predecessors of the node, omitting
+        any predecessors which have already been seen, to prevent loops.
+
+        If the node has no predecessors, returns a list containing the node
+        itself.
+        """
         entry = lookupsplit(repo, node)
         if entry is not None:
             preds = entry.preds()
             if preds is not None:
-                return preds
+                return [pred for pred in preds if pred not in seen] or [node]
         return [node]
 
     preds = [startnode]
     nextpreds = sum((get(p) for p in preds), [])
     expanded = nextpreds != preds
     while expanded:
+        seen.update(nextpreds)
         if all(p in repo for p in nextpreds):
             # We have found a set of predecessors that are all visible - this is
             # a valid set to return.
@@ -454,9 +464,23 @@ def successorssets(repo, startnode, closest=False, cache=None):
     The ``cache`` parameter is unused.  It is provided to make this function
     signature-compatible with ``obsutil.successorssets``.
     """
+    seen = {startnode}
 
     def getsets(node):
-        return lookupsuccessors(repo, node) or [[node]]
+        """Get immediate successors sets
+
+        Returns a list of immediate successors sets of the node, omitting
+        any sets which contain nodes already seen, to prevent loops.
+
+        If the node has no successors, returns a list containing a single
+        successors set which contains the node itself.
+        """
+        succsets = [
+            succset
+            for succset in lookupsuccessors(repo, node)
+            if not any(succ in seen for succ in succset)
+        ]
+        return succsets or [[node]]
 
     clhasnode = repo.changelog.hasnode
 
@@ -464,6 +488,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
     nextsuccsets = getsets(startnode)
     expanded = nextsuccsets != succsets
     while expanded:
+        seen.update(node for succset in nextsuccsets for node in succset)
         if all(clhasnode(s) for succset in nextsuccsets for s in succset):
             # We have found a set of successor sets that all contain visible
             # commits - this is a valid set to return.
