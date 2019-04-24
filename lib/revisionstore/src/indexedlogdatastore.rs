@@ -31,9 +31,9 @@ pub struct IndexedLogDataStore {
 }
 
 struct Entry {
-    pub key: Key,
-    pub content: Bytes,
-    pub metadata: Metadata,
+    key: Key,
+    content: Bytes,
+    metadata: Metadata,
 }
 
 impl Entry {
@@ -87,6 +87,14 @@ impl Entry {
 
         Ok(log.append(buf)?)
     }
+
+    pub fn content(&self) -> &Bytes {
+        &self.content
+    }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
 }
 
 impl IndexedLogDataStore {
@@ -139,9 +147,10 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let content = Entry::from_log(&key, &self.log)?.content;
+        let entry = Entry::from_log(&key, &self.log)?;
+        let content = entry.content();
         return Ok(Delta {
-            data: content,
+            data: content.clone(),
             base: None,
             key: key.clone(),
         });
@@ -153,7 +162,7 @@ impl DataStore for IndexedLogDataStore {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        Ok(Entry::from_log(&key, &self.log)?.metadata)
+        Ok(Entry::from_log(&key, &self.log)?.metadata().clone())
     }
 }
 
