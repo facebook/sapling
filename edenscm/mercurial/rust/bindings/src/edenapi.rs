@@ -84,9 +84,12 @@ py_class!(class client |py| {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
-        let out_path = self.inner(py)
-            .get_files(keys)
-            .map_pyerr::<exc::RuntimeError>(py)?;
+
+        let client = self.inner(py);
+        let out_path = py.allow_threads(move || {
+            client.get_files(keys)
+        }).map_pyerr::<exc::RuntimeError>(py)?;
+
         let out_path = path_to_local_bytes(&out_path)
             .map_pyerr::<exc::RuntimeError>(py)?;
         Ok(PyBytes::new(py, &out_path))
@@ -101,9 +104,12 @@ py_class!(class client |py| {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
-        let out_path = self.inner(py)
-            .get_history(keys, depth)
-            .map_pyerr::<exc::RuntimeError>(py)?;
+
+        let client = self.inner(py);
+        let out_path = py.allow_threads(move || {
+            client.get_history(keys, depth)
+        }).map_pyerr::<exc::RuntimeError>(py)?;
+
         let out_path = path_to_local_bytes(&out_path)
             .map_pyerr::<exc::RuntimeError>(py)?;
         Ok(PyBytes::new(py, &out_path))

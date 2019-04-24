@@ -690,10 +690,9 @@ class fileserverclient(object):
         """
 
         # Try fetching packs via HTTP first; fall back to SSH on error.
-        if edenapi.enabled(self.repo.ui):
+        if edenapi.enabled(self.ui):
             try:
-                with progress.spinner(self.repo.ui, _("Fetching packs over HTTP")):
-                    return self._httpfetchpacks(fileids)
+                return self._httpfetchpacks(fileids)
             except Exception as e:
                 self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
                 self.ui.develwarn(str(e))
@@ -770,13 +769,15 @@ class fileserverclient(object):
         if edenapi.debug(self.ui):
             self.ui.warn(_("fetching %d files over HTTP\n") % len(fileids))
 
-        self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
-        self.ui.metrics.gauge("http_getfiles_calls", 1)
-        datapackpath = self.repo.edenapi.get_files(fileids)
+        with progress.spinner(self.ui, _("Fetching file content over HTTP")):
+            self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+            self.ui.metrics.gauge("http_getfiles_calls", 1)
+            datapackpath = self.repo.edenapi.get_files(fileids)
 
-        self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
-        self.ui.metrics.gauge("http_gethistory_calls", 1)
-        histpackpath = self.repo.edenapi.get_history(fileids)
+        with progress.spinner(self.ui, _("Fetching file history over HTTP")):
+            self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+            self.ui.metrics.gauge("http_gethistory_calls", 1)
+            histpackpath = self.repo.edenapi.get_history(fileids)
 
         return datapackpath, histpackpath
 

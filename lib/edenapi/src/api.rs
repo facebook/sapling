@@ -6,7 +6,7 @@ use failure::Fallible;
 
 use types::Key;
 
-pub trait EdenApi: Send {
+pub trait EdenApi: Send + Sync {
     /// Hit the API server's /health_check endpoint.
     /// Returns Ok(()) if the expected response is received, or an Error otherwise
     /// (e.g., if there was a connection problem or an unexpected repsonse).
