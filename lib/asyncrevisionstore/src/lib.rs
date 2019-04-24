@@ -1,5 +1,5 @@
 // Copyright Facebook, Inc. 2018
-//! asyncpacks - Asynchronous version to read/write pack files.
+//! asyncrevisionstore - Asynchronous version to read/write pack files.
 
 mod util;
 
