@@ -10,7 +10,7 @@ failure = "0.1"
 libc = "0.2" # version taken from fbcode/third-party2/.../crates.io/..
 serde = "1.0"
 serde_derive = "1.0"
-toml = "0.4"
+toml = "0.5"
 
 [dependencies.telemetry]
 path = "../../../telemetry/telemetry"
