@@ -81,6 +81,20 @@ class visibleheads(object):
             fp.write("%s\n" % (node.hex(h),))
         self.dirty = False
 
+    def _logchange(self, repo, oldheads, newheads):
+        newheads = set(newheads)
+        oldheads = set(oldheads)
+        addedheads = newheads - oldheads
+        removedheads = oldheads - newheads
+        repo.ui.log(
+            "visibility",
+            "removed %s heads [%s]; added %s heads [%s]",
+            len(removedheads),
+            ", ".join(node.short(n) for n in removedheads),
+            len(addedheads),
+            ", ".join(node.short(n) for n in addedheads),
+        )
+
     def _updateheads(self, repo, newheads, tr):
         newheads = list(newheads)
         # Remove heads that are not actually heads, and preserve the ordering
@@ -92,6 +106,7 @@ class visibleheads(object):
             [head for head in self.heads if head in realnewheadsset] + realnewheads
         )
         if self.heads != newheads:
+            self._logchange(repo, self.heads, newheads)
             self.heads = newheads
             self.dirty = True
             self._invisiblerevs = None
