@@ -1077,7 +1077,7 @@ def _follow(repo, subset, x, name, followfirst=False):
                     # _matchfiles.
                     pat = "p:%s" % x
                     matchfiles = revsetlang.formatspec(
-                        '_matchfiles("r:", "d:relpath", %s)', pat
+                        '_matchfiles("r:", "d:path", %s)', pat
                     )
                     if revs == [None]:
                         s = repo.revs("reverse(ancestors(.)) & %r", matchfiles)
