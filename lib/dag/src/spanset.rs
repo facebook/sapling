@@ -7,8 +7,21 @@
 //!
 //! See [`SpanSet`] for the main structure.
 
+use std::ops::{Bound, RangeBounds, RangeInclusive};
+
+use std::cmp::{
+    Ordering::{self, Equal, Greater, Less},
+    PartialOrd,
+};
+
 type Id = u64;
-type Span = (Id, Id);
+
+/// Range `low..=high`. `low` must be <= `high`.
+#[derive(Copy, Clone, Debug, Eq)]
+pub struct Span {
+    pub(crate) low: Id,
+    pub(crate) high: Id,
+}
 
 /// A set of integer spans.
 #[derive(Clone, Debug)]
@@ -16,15 +29,102 @@ pub struct SpanSet {
     spans: Vec<Span>,
 }
 
+impl PartialOrd for Span {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Reversed order.
+        Some(match other.high.cmp(&self.high) {
+            Less => Less,
+            Greater => Greater,
+            Equal => other.low.cmp(&self.low),
+        })
+    }
+}
+
+impl PartialEq for Span {
+    fn eq(&self, other: &Self) -> bool {
+        other.low == self.low && other.high == self.high
+    }
+}
+
+impl Ord for Span {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Reversed order.
+        match other.high.cmp(&self.high) {
+            Less => Less,
+            Greater => Greater,
+            Equal => other.low.cmp(&self.low),
+        }
+    }
+}
+
+impl Span {
+    pub fn new(low: Id, high: Id) -> Self {
+        assert!(low <= high);
+        Self { low, high }
+    }
+
+    fn count(self) -> u64 {
+        self.high - self.low + 1
+    }
+
+    fn contains(self, value: Id) -> bool {
+        self.low <= value && value <= self.high
+    }
+
+    fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
+        use Bound::{Excluded, Included, Unbounded};
+        #[cfg(debug_assertions)]
+        match (bounds.start_bound(), bounds.end_bound()) {
+            (Excluded(_), _) | (Unbounded, _) | (_, Unbounded) => panic!("unsupported bound type"),
+            _ => (),
+        }
+        match (bounds.start_bound(), bounds.end_bound()) {
+            (Included(&low), Included(&high)) if low <= high => Some(Span { low, high }),
+            (Included(&low), Excluded(&high_plus_one)) if low < high_plus_one => {
+                let high = high_plus_one - 1;
+                Some(Span { low, high })
+            }
+            _ => None,
+        }
+    }
+}
+
+// This is for users who want shorter code than [`Span::new`].
+// Internal logic here should use [`Span::new`], or [`Span::try_from_bounds`],
+// or construct [`Span`] directly.
+impl Into<Span> for RangeInclusive<Id> {
+    fn into(self) -> Span {
+        Span::new(*self.start(), *self.end())
+    }
+}
+
+impl Into<Span> for Id {
+    fn into(self) -> Span {
+        Span::new(self, self)
+    }
+}
+
+impl Into<RangeInclusive<Id>> for Span {
+    fn into(self) -> RangeInclusive<Id> {
+        self.low..=self.high
+    }
+}
+
 impl SpanSet {
-    /// Construct a [`SpanSet`] containing given sorted spans.
-    ///
-    /// Panic if the provided `spans` is not in decreasing `(start, end)` order,
-    /// or has overlapped spans.
-    pub fn from_sorted_spans(spans: Vec<Span>) -> Self {
+    /// Construct a [`SpanSet`] containing given spans.
+    /// Panic if spans overlap.
+    pub fn from_spans<T: Into<Span>, I: IntoIterator<Item = T>>(spans: I) -> Self {
+        let mut spans: Vec<Span> = spans.into_iter().map(|span| span.into()).collect();
+        spans.sort_unstable();
         let result = SpanSet { spans };
         assert!(result.is_valid());
         result
+    }
+
+    /// Construct an empty [`SpanSet`].
+    pub fn empty() -> Self {
+        let spans = Vec::new();
+        SpanSet { spans }
     }
 
     /// Check if the spans satisfies internal assumptions: sorted and not
@@ -34,30 +134,25 @@ impl SpanSet {
             .iter()
             .rev()
             .cloned()
-            .fold((-1, true), |(last_end, is_sorted), (start, end)| {
-                (
-                    end as i64,
-                    is_sorted && last_end < start as i64 && start <= end,
-                )
+            .fold((-1, true), |(last_high, is_sorted), span| {
+                (span.high as i64, is_sorted && last_high < span.low as i64)
             })
             .1
     }
 
     /// Count integers covered by this [`SpanSet`].
     pub fn count(&self) -> u64 {
-        self.spans
-            .iter()
-            .fold(0, |acc, (start, end)| acc + (end - start + 1) as u64)
+        self.spans.iter().fold(0, |acc, span| acc + span.count())
     }
 
     /// Tests if a given value exists in this set.
     pub fn contains(&self, value: Id) -> bool {
-        match self.spans.binary_search_by(|probe| value.cmp(&probe.0)) {
+        match self.spans.binary_search_by(|probe| value.cmp(&probe.low)) {
             Ok(_) => true,
             Err(idx) => self
                 .spans
                 .get(idx)
-                .map(|span| span.0 <= value && span.1 >= value)
+                .map(|span| span.contains(value))
                 .unwrap_or(false),
         }
     }
@@ -74,7 +169,7 @@ impl SpanSet {
         loop {
             match (next_left, next_right) {
                 (Some(left), Some(right)) => {
-                    if left.1 < right.1 {
+                    if left.high < right.high {
                         push(right);
                         next_right = iter_right.next();
                     } else {
@@ -111,22 +206,24 @@ impl SpanSet {
         loop {
             match (next_left, next_right) {
                 (Some(left), Some(right)) => {
-                    let span = (left.0.max(right.0), left.1.min(right.1));
-                    if span.0 <= span.1 {
+                    // current:
+                    //   |------- A --------|
+                    //         |------- B ------|
+                    //         |--- span ---|
+                    // next:
+                    //   |- A -| (remaining part of A)
+                    //           (next B)
+                    // note: (A, B) can be either (left, right) or (right, left)
+                    let span_low = left.low.max(right.low);
+                    let span_high = left.high.min(right.high);
+                    if let Some(span) = Span::try_from_bounds(span_low..=span_high) {
                         push(span);
                     }
-                    let right1 = (right.1 as i64).min(span.0 as i64 - 1);
-                    if right1 >= right.0 as i64 {
-                        next_right = Some((right.0, right1 as Id));
-                    } else {
-                        next_right = iter_right.next();
-                    }
-                    let left1 = (left.1 as i64).min(span.0 as i64 - 1);
-                    if left1 >= left.0 as i64 {
-                        next_left = Some((left.0, left1 as Id));
-                    } else {
-                        next_left = iter_left.next();
-                    }
+
+                    next_right = Span::try_from_bounds(right.low..(right.high + 1).min(span_low))
+                        .or_else(|| iter_right.next());
+                    next_left = Span::try_from_bounds(left.low..(left.high + 1).min(span_low))
+                        .or_else(|| iter_left.next());
                 }
                 (_, None) | (None, _) => {
                     let result = SpanSet { spans };
@@ -149,29 +246,20 @@ impl SpanSet {
         loop {
             match (next_left, next_right) {
                 (Some(left), Some(right)) => {
-                    if right.0 > left.1 {
+                    if right.low > left.high {
                         next_right = iter_right.next();
                     } else {
-                        next_left = if right.1 < left.0 {
+                        next_left = if right.high < left.low {
                             push(left);
                             iter_left.next()
                         } else {
                             // |----------------- left ------------------|
                             // |--- span1 ---|--- right ---|--- span2 ---|
-                            let span2 = (right.1 + 1, left.1);
-                            if span2.0 <= span2.1 {
+                            if let Some(span2) = Span::try_from_bounds(right.high + 1..=left.high) {
                                 push(span2);
                             }
-                            if right.0 > 0 {
-                                let span1 = (left.0, right.0 - 1);
-                                if span1.0 <= span1.1 {
-                                    Some(span1)
-                                } else {
-                                    iter_left.next()
-                                }
-                            } else {
-                                None
-                            }
+
+                            Span::try_from_bounds(left.low..right.low).or_else(|| iter_left.next())
                         };
                     }
                 }
@@ -196,7 +284,10 @@ impl SpanSet {
             front: (0, 0),
             back: (
                 self.spans.len() as isize - 1,
-                self.spans.last().map(|span| span.1 - span.0).unwrap_or(0),
+                self.spans
+                    .last()
+                    .map(|span| span.high - span.low)
+                    .unwrap_or(0),
             ),
         }
     }
@@ -207,10 +298,10 @@ fn push_with_union(spans: &mut Vec<Span>, span: Span) {
     match spans.last_mut() {
         None => spans.push(span),
         Some(mut last) => {
-            debug_assert!(last.1 >= span.1);
-            if last.0 <= span.1 + 1 {
+            debug_assert!(last.high >= span.high);
+            if last.low <= span.high + 1 {
                 // Union spans in-place.
-                last.0 = last.0.min(span.0);
+                last.low = last.low.min(span.low);
             } else {
                 spans.push(span)
             }
@@ -235,12 +326,12 @@ impl<'a> Iterator for SpanSetIter<'a> {
         } else {
             let (vec_id, span_id) = self.front;
             let span = &self.span_set.spans[vec_id as usize];
-            self.front = if span_id == span.1 - span.0 {
+            self.front = if span_id == span.high - span.low {
                 (vec_id + 1, 0)
             } else {
                 (vec_id, span_id + 1)
             };
-            Some(span.1 - span_id)
+            Some(span.high - span_id)
         }
     }
 }
@@ -255,7 +346,7 @@ impl<'a> DoubleEndedIterator for SpanSetIter<'a> {
             self.back = if span_id == 0 {
                 let span_len = if vec_id > 0 {
                     let span = self.span_set.spans[(vec_id - 1) as usize];
-                    span.1 - span.0
+                    span.high - span.low
                 } else {
                     0
                 };
@@ -263,7 +354,7 @@ impl<'a> DoubleEndedIterator for SpanSetIter<'a> {
             } else {
                 (vec_id, span_id - 1)
             };
-            Some(span.1 - span_id)
+            Some(span.high - span_id)
         }
     }
 }
@@ -274,44 +365,32 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_unordered_spans1() {
-        SpanSet::from_sorted_spans(vec![(2, 1)]);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_unordered_spans2() {
-        SpanSet::from_sorted_spans(vec![(1, 2), (3, 4)]);
-    }
-
-    #[test]
-    #[should_panic]
     fn test_overlapped_spans() {
-        SpanSet::from_sorted_spans(vec![(3, 4), (1, 3)]);
+        SpanSet::from_spans(vec![1..=3, 3..=4]);
     }
 
     #[test]
     fn test_valid_spans() {
-        SpanSet::from_sorted_spans(vec![]);
-        SpanSet::from_sorted_spans(vec![(4, 4), (3, 3), (1, 2)]);
+        SpanSet::empty();
+        SpanSet::from_spans(vec![4..=4, 3..=3, 1..=2]);
     }
 
     #[test]
     fn test_count() {
-        let set = SpanSet::from_sorted_spans(Vec::new());
+        let set = SpanSet::empty();
         assert_eq!(set.count(), 0);
 
-        let set = SpanSet::from_sorted_spans(vec![(31, 40), (20, 20), (1, 10)]);
+        let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
         assert_eq!(set.count(), 10 + 1 + 10);
     }
 
     #[test]
     fn test_contains() {
-        let set = SpanSet::from_sorted_spans(Vec::new());
+        let set = SpanSet::empty();
         assert!(!set.contains(0));
         assert!(!set.contains(10));
 
-        let set = SpanSet::from_sorted_spans(vec![(31, 40), (20, 20), (1, 10)]);
+        let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
         assert!(!set.contains(0));
         assert!(set.contains(1));
         assert!(set.contains(5));
@@ -330,64 +409,55 @@ mod tests {
         assert!(!set.contains(41));
     }
 
-    fn union(a: Vec<Span>, b: Vec<Span>) -> Vec<Span> {
-        let a = SpanSet::from_sorted_spans(a);
-        let b = SpanSet::from_sorted_spans(b);
+    fn union(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
+        let a = SpanSet::from_spans(a);
+        let b = SpanSet::from_spans(b);
         let spans1 = a.union(&b).spans;
         let spans2 = b.union(&a).spans;
         assert_eq!(spans1, spans2);
-        spans1
+        spans1.into_iter().map(|span| span.into()).collect()
     }
 
     #[test]
     fn test_union() {
-        assert_eq!(union(vec![(1, 10)], vec![(10, 20)]), vec![(1, 20)]);
-        assert_eq!(union(vec![(1, 30)], vec![(10, 20)]), vec![(1, 30)]);
+        assert_eq!(union(vec![1..=10], vec![10..=20]), vec![1..=20]);
+        assert_eq!(union(vec![1..=30], vec![10..=20]), vec![1..=30]);
+        assert_eq!(union(vec![6, 8, 10], vec![5, 7, 9]), vec![5..=10]);
         assert_eq!(
-            union(vec![(10, 10), (8, 8), (6, 6)], vec![(9, 9), (7, 7), (5, 5)]),
-            vec![(5, 10)]
-        );
-        assert_eq!(
-            union(vec![(10, 10), (8, 9), (6, 6)], vec![(5, 5)]),
-            vec![(8, 10), (5, 6)]
+            union(vec![6..=6, 8..=9, 10..=10], vec![5]),
+            vec![8..=10, 5..=6]
         );
     }
 
-    fn intersect(a: Vec<Span>, b: Vec<Span>) -> Vec<Span> {
-        let a = SpanSet::from_sorted_spans(a);
-        let b = SpanSet::from_sorted_spans(b);
+    fn intersect(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
+        let a = SpanSet::from_spans(a);
+        let b = SpanSet::from_spans(b);
         let spans1 = a.intersection(&b).spans;
         let spans2 = b.intersection(&a).spans;
         assert_eq!(spans1, spans2);
-        spans1
+        spans1.into_iter().map(|span| span.into()).collect()
     }
 
     #[test]
     fn test_intersection() {
-        assert_eq!(intersect(vec![(1, 10)], vec![(11, 20)]), vec![]);
-        assert_eq!(intersect(vec![(1, 10)], vec![(10, 20)]), vec![(10, 10)]);
-        assert_eq!(intersect(vec![(1, 30)], vec![(10, 20)]), vec![(10, 20)]);
+        assert_eq!(intersect(vec![1..=10], vec![11..=20]), vec![]);
+        assert_eq!(intersect(vec![1..=10], vec![10..=20]), vec![10..=10]);
+        assert_eq!(intersect(vec![1..=30], vec![10..=20]), vec![10..=20]);
         assert_eq!(
-            intersect(vec![(15, 20), (0, 10)], vec![(0, 30)]),
-            vec![(15, 20), (0, 10)]
+            intersect(vec![0..=10, 15..=20], vec![0..=30]),
+            vec![15..=20, 0..=10]
         );
         assert_eq!(
-            intersect(vec![(15, 20), (0, 10)], vec![(5, 19)]),
-            vec![(15, 19), (5, 10)]
+            intersect(vec![0..=10, 15..=20], vec![5..=19]),
+            vec![15..=19, 5..=10]
         );
-        assert_eq!(
-            intersect(vec![(10, 10), (9, 9), (8, 8), (7, 7)], vec![(8, 11)]),
-            vec![(8, 10)]
-        );
-        assert_eq!(
-            intersect(vec![(10, 10), (9, 9), (8, 8), (7, 7)], vec![(5, 8)]),
-            vec![(7, 8)]
-        );
+        assert_eq!(intersect(vec![10, 9, 8, 7], vec![8..=11]), vec![8..=10]);
+        assert_eq!(intersect(vec![10, 9, 8, 7], vec![5..=8]), vec![7..=8]);
     }
 
-    fn difference(a: Vec<Span>, b: Vec<Span>) -> Vec<Span> {
-        let a = SpanSet::from_sorted_spans(a);
-        let b = SpanSet::from_sorted_spans(b);
+    fn difference(a: Vec<impl Into<Span>>, b: Vec<impl Into<Span>>) -> Vec<RangeInclusive<Id>> {
+        let a = SpanSet::from_spans(a);
+        let b = SpanSet::from_spans(b);
         let spans1 = a.difference(&b).spans;
         let spans2 = b.difference(&a).spans;
 
@@ -398,45 +468,49 @@ mod tests {
         let unioned = union(a.spans.clone(), b.spans.clone());
         assert_eq!(
             union(intersected.clone(), spans1.clone()),
-            union(a.spans.clone(), Vec::new())
+            union(a.spans.clone(), Vec::<Span>::new())
         );
         assert_eq!(
             union(intersected.clone(), spans2.clone()),
-            union(b.spans.clone(), Vec::new())
+            union(b.spans.clone(), Vec::<Span>::new())
         );
         assert_eq!(
             union(spans1.clone(), union(intersected.clone(), spans2.clone())),
             unioned.clone(),
         );
 
-        spans1
+        assert!(intersect(spans1.clone(), spans2.clone()).is_empty());
+        assert!(intersect(spans1.clone(), intersected.clone()).is_empty());
+        assert!(intersect(spans2.clone(), intersected.clone()).is_empty());
+
+        spans1.into_iter().map(|span| span.into()).collect()
     }
 
     #[test]
     fn test_difference() {
-        assert_eq!(difference(vec![(0, 5)], Vec::new()), vec![(0, 5)]);
-        assert_eq!(difference(vec![], vec![(0, 5)]), vec![]);
-        assert_eq!(difference(vec![(0, 0)], vec![(1, 1)]), vec![(0, 0)]);
-        assert_eq!(difference(vec![(0, 0)], vec![(0, 1)]), vec![]);
-        assert_eq!(difference(vec![(0, 10)], vec![(0, 5)]), vec![(6, 10)]);
+        assert_eq!(difference(vec![0..=5], Vec::<Span>::new()), vec![0..=5]);
+        assert_eq!(difference(Vec::<Span>::new(), vec![0..=5]), vec![]);
+        assert_eq!(difference(vec![0..=0], vec![1..=1]), vec![0..=0]);
+        assert_eq!(difference(vec![0..=0], vec![0..=1]), vec![]);
+        assert_eq!(difference(vec![0..=10], vec![0..=5]), vec![6..=10]);
 
         assert_eq!(
-            difference(vec![(0, 10)], vec![(7, 8), (3, 4)]),
-            vec![(9, 10), (5, 6), (0, 2)]
+            difference(vec![0..=10], vec![3..=4, 7..=8]),
+            vec![9..=10, 5..=6, 0..=2]
         );
         assert_eq!(
-            difference(vec![(10, 12), (7, 8), (3, 4)], vec![(4, 11)]),
-            vec![(12, 12), (3, 3)]
+            difference(vec![3..=4, 7..=8, 10..=12], vec![4..=11]),
+            vec![12..=12, 3..=3]
         );
     }
 
     #[test]
     fn test_iter() {
-        let set = SpanSet::from_sorted_spans(vec![]);
+        let set = SpanSet::empty();
         assert!(set.iter().next().is_none());
         assert!(set.iter().rev().next().is_none());
 
-        let set = SpanSet::from_sorted_spans(vec![(0, 1)]);
+        let set = SpanSet::from_spans(vec![0..=1]);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![1, 0]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![0, 1]);
 
@@ -445,7 +519,7 @@ mod tests {
         assert!(iter.next_back().is_some());
         assert!(iter.next_back().is_none());
 
-        let set = SpanSet::from_sorted_spans(vec![(7, 8), (3, 5)]);
+        let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![3, 4, 5, 7, 8]);
     }
