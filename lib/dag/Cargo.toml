@@ -13,4 +13,9 @@ fs2 = "0.4.3"
 tempfile = "3.0.7"
 
 [dev-dependencies]
+minibench = { path = "../minibench" }
 quickcheck = "0.6"
+
+[[bench]]
+name = "spanset"
+harness = false
