@@ -697,11 +697,11 @@ class fileserverclient(object):
                 self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
                 self.ui.develwarn(str(e))
 
+        rcvd = 0
+        total = len(fileids)
+
         try:
             with self._connect() as conn:
-                total = len(fileids)
-                rcvd = 0
-
                 self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
                 self.ui.metrics.gauge("ssh_getpack_calls", 1)
 
