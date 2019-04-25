@@ -1,24 +1,24 @@
   $ newrepo
   $ drawdag <<'EOS'
-  > C   # C/a/3=3
-  > | D # C/a/2=2
-  > |/  # D/a/4=4
+  > C   # C/x/3=3
+  > | D # C/x/2=2
+  > |/  # D/x/4=4
   > B
   > |
-  > A   # A/a/1=1
+  > A   # A/x/1=1
   > EOS
 
   $ hg update -q $C
 
 Log a directory:
 
-  $ hg log -T '{desc}\n' -f a
+  $ hg log -T '{desc}\n' -f x
   C
   A
 
 From non-repo root:
 
-  $ cd a
+  $ cd x
   $ hg log -G -T '{desc}\n' -f .
   @  C
   :
@@ -27,7 +27,7 @@ From non-repo root:
 
 Using the follow revset, which is related to repo root:
 
-  $ hg log -G -T '{desc}\n' -r 'follow("a")'
+  $ hg log -G -T '{desc}\n' -r 'follow("x")'
   @  C
   :
   o  A
