@@ -8,3 +8,5 @@
 //! # dag
 //!
 //! Building blocks for the commit graph used by source control.
+
+pub mod spanset;
