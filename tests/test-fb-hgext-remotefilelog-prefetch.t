@@ -256,7 +256,7 @@
   $ mv z z2
   $ clearcache
   $ hg addremove -s 50 > /dev/null
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over * (glob)
 
   $ cd ..
 
