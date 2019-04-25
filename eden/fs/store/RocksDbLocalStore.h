@@ -51,6 +51,9 @@ class RocksDbLocalStore : public LocalStore {
       folly::ByteRange value) override;
   std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) override;
 
+  // Call RocksDB's RepairDB() function on the DB at the specified location
+  static void repairDB(AbsolutePathPiece path);
+
  private:
   FaultInjector& faultInjector_;
   RocksHandles dbHandles_;

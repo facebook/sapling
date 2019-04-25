@@ -191,23 +191,6 @@ rocksdb::Options getRocksdbOptions() {
   return options;
 }
 
-void repairDB(AbsolutePathPiece path) {
-  XLOG(ERR) << "Attempting to repair RocksDB " << path;
-  rocksdb::ColumnFamilyOptions unknownColumFamilyOptions;
-  unknownColumFamilyOptions.OptimizeForPointLookup(8);
-  unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
-
-  const auto& columnDescriptors = columnFamilies();
-
-  auto dbPathStr = path.stringPiece().str();
-  rocksdb::DBOptions dbOptions(getRocksdbOptions());
-  auto status = RepairDB(
-      dbPathStr, dbOptions, columnDescriptors, unknownColumFamilyOptions);
-  if (!status.ok()) {
-    throw RocksException::build(status, "unable to repair RocksDB at ", path);
-  }
-}
-
 RocksHandles openDB(AbsolutePathPiece path) {
   auto options = getRocksdbOptions();
   try {
@@ -218,7 +201,7 @@ RocksHandles openDB(AbsolutePathPiece path) {
     // Fall through and attempt to repair the DB
   }
 
-  repairDB(path);
+  RocksDbLocalStore::repairDB(path);
 
   // Now try opening the DB again.
   return RocksHandles(path.stringPiece(), options, columnFamilies());
@@ -255,6 +238,23 @@ RocksDbLocalStore::~RocksDbLocalStore() {
 
 void RocksDbLocalStore::close() {
   dbHandles_.close();
+}
+
+void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
+  XLOG(ERR) << "Attempting to repair RocksDB " << path;
+  rocksdb::ColumnFamilyOptions unknownColumFamilyOptions;
+  unknownColumFamilyOptions.OptimizeForPointLookup(8);
+  unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
+
+  const auto& columnDescriptors = columnFamilies();
+
+  auto dbPathStr = path.stringPiece().str();
+  rocksdb::DBOptions dbOptions(getRocksdbOptions());
+  auto status = RepairDB(
+      dbPathStr, dbOptions, columnDescriptors, unknownColumFamilyOptions);
+  if (!status.ok()) {
+    throw RocksException::build(status, "unable to repair RocksDB at ", path);
+  }
 }
 
 void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {

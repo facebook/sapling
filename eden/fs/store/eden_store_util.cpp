@@ -12,6 +12,7 @@
 #include <optional>
 
 #include <folly/Range.h>
+#include <folly/container/Array.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
@@ -26,6 +27,7 @@
 #include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
+using folly::make_array;
 using folly::StringPiece;
 using std::make_unique;
 using std::optional;
@@ -93,9 +95,13 @@ class Command {
   virtual void run() = 0;
 
  protected:
+  AbsolutePath getLocalStorePath() const {
+    return edenDir_.getPath() + "storage/rocks-db"_relpath;
+  }
+
   std::unique_ptr<RocksDbLocalStore> openLocalStore() {
     folly::stop_watch<std::chrono::milliseconds> watch;
-    const auto rocksPath = edenDir_.getPath() + "storage/rocks-db"_relpath;
+    const auto rocksPath = getLocalStorePath();
     ensureDirectoryExists(rocksPath);
     auto localStore = make_unique<RocksDbLocalStore>(
         rocksPath, &faultInjector_, std::make_shared<StoreConfig>(config_));
@@ -182,12 +188,23 @@ class CompactCommand : public Command {
   }
 };
 
+class RepairCommand : public Command {
+ public:
+  static constexpr auto name = StringPiece("repair");
+  static constexpr auto help = StringPiece(
+      "Force a repair of the RocksDB storage, even if it does not look corrupt");
+
+  void run() override {
+    RocksDbLocalStore::repairDB(getLocalStorePath());
+  }
+};
+
 std::unique_ptr<Command> createCommand(StringPiece name) {
-  std::array<std::unique_ptr<CommandFactory>, 3> commands{
+  auto commands = make_array<std::unique_ptr<CommandFactory>>(
       make_unique<CommandFactoryT<GcCommand>>(),
       make_unique<CommandFactoryT<ClearCommand>>(),
       make_unique<CommandFactoryT<CompactCommand>>(),
-  };
+      make_unique<CommandFactoryT<RepairCommand>>());
 
   std::unique_ptr<Command> command;
   for (const auto& factory : commands) {
