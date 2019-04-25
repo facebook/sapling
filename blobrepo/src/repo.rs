@@ -1384,6 +1384,92 @@ impl BlobRepo {
             })
     }
 
+    fn generate_hg_changeset(
+        &self,
+        ctx: CoreContext,
+        bcs_id: ChangesetId,
+        bcs: BonsaiChangeset,
+        parents: Vec<HgBlobChangeset>,
+    ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
+        let mut parents = parents.into_iter();
+        let p1 = parents.next();
+        let p2 = parents.next();
+
+        let p1_hash = p1.as_ref().map(|p1| p1.get_changeset_id());
+        let p2_hash = p2.as_ref().map(|p2| p2.get_changeset_id());
+
+        let mf_p1 = p1.map(|p| p.manifestid());
+        let mf_p2 = p2.map(|p| p.manifestid());
+
+        assert!(
+            parents.next().is_none(),
+            "more than 2 parents are not supported by hg"
+        );
+        let hg_parents = HgParents::new(
+            p1_hash.map(|h| h.into_nodehash()),
+            p2_hash.map(|h| h.into_nodehash()),
+        );
+        let repo = self.clone();
+        repo.get_manifest_from_bonsai(ctx.clone(), bcs.clone(), mf_p1.clone(), mf_p2.clone())
+            .and_then({
+                cloned!(ctx, repo);
+                move |(manifest_id, incomplete_filenodes)| {
+                compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1.as_ref(), mf_p2.as_ref())
+                    .map(move |files| {
+                        (manifest_id, incomplete_filenodes, hg_parents, files)
+                    })
+
+            }})
+            // create changeset
+            .and_then({
+                cloned!(ctx, repo, bcs);
+                move |(manifest_id, incomplete_filenodes, parents, files)| {
+                    let metadata = ChangesetMetadata {
+                        user: bcs.author().to_string(),
+                        time: *bcs.author_date(),
+                        extra: bcs.extra()
+                            .map(|(k, v)| {
+                                (k.as_bytes().to_vec(), v.to_vec())
+                            })
+                            .collect(),
+                        comments: bcs.message().to_string(),
+                    };
+                    let content = HgChangesetContent::new_from_parts(
+                        parents,
+                        manifest_id,
+                        metadata,
+                        files,
+                    );
+                    let cs = try_boxfuture!(HgBlobChangeset::new(content));
+                    let cs_id = cs.get_changeset_id();
+
+                    cs.save(ctx.clone(), repo.blobstore.clone())
+                        .and_then({
+                            cloned!(ctx, repo);
+                            move |_| incomplete_filenodes.upload(ctx, cs_id, &repo)
+                        })
+                        .and_then({
+                            cloned!(ctx, repo);
+                            move |_| repo.bonsai_hg_mapping.add(
+                                ctx,
+                                BonsaiHgMappingEntry {
+                                    repo_id: repo.get_repoid(),
+                                    hg_cs_id: cs_id,
+                                    bcs_id,
+                                },
+                            )
+                        })
+                        .map(move |_| cs_id)
+                        .boxify()
+                }
+            })
+            .timed(move |stats, _| {
+                STATS::generate_hg_from_bonsai_single_latency_ms
+                    .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                Ok(())
+            })
+    }
+
     pub fn get_hg_from_bonsai_changeset_with_impl(
         &self,
         ctx: CoreContext,
@@ -1403,14 +1489,18 @@ impl BlobRepo {
                         let parents_futs = bcs
                             .parents()
                             .map(|p_bcs_id| {
-                                repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), p_bcs_id, generated_commit_num + 1)
-                                    .and_then({
-                                        cloned!(ctx, repo);
-                                        move |(p_cs_id, generated_commit_num)| {
-                                            repo.get_changeset_by_changesetid(ctx, p_cs_id)
-                                                .map(move |cs| (cs, generated_commit_num))
-                                        }
-                                    })
+                                repo.get_hg_from_bonsai_changeset_with_impl(
+                                    ctx.clone(),
+                                    p_bcs_id,
+                                    generated_commit_num + 1,
+                                )
+                                .and_then({
+                                    cloned!(ctx, repo);
+                                    move |(p_cs_id, generated_commit_num)| {
+                                        repo.get_changeset_by_changesetid(ctx, p_cs_id)
+                                            .map(move |cs| (cs, generated_commit_num))
+                                    }
+                                })
                             })
                             .collect::<Vec<_>>();
                         future::join_all(parents_futs)
@@ -1426,82 +1516,8 @@ impl BlobRepo {
                                     })
                                     .collect();
 
-                                let mut parents = parents.into_iter();
-                                let p1 = parents.next();
-                                let p2 = parents.next();
-
-                                let p1_hash = p1.as_ref().map(|p1| p1.get_changeset_id());
-                                let p2_hash = p2.as_ref().map(|p2| p2.get_changeset_id());
-
-                                let mf_p1 = p1.map(|p| p.manifestid());
-                                let mf_p2 = p2.map(|p| p.manifestid());
-
-                                assert!(
-                                    parents.next().is_none(),
-                                    "more than 2 parents are not supported by hg"
-                                );
-                                let hg_parents = HgParents::new(
-                                    p1_hash.map(|h| h.into_nodehash()),
-                                    p2_hash.map(|h| h.into_nodehash()),
-                                );
-                                repo.get_manifest_from_bonsai(ctx.clone(), bcs.clone(), mf_p1.clone(), mf_p2.clone())
-                                    .and_then({
-                                        cloned!(ctx, repo);
-                                        move |(manifest_id, incomplete_filenodes)| {
-                                        compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1.as_ref(), mf_p2.as_ref())
-                                            .map(move |files| {
-                                                (manifest_id, incomplete_filenodes, hg_parents, files, parents_gen_num)
-                                            })
-
-                                    }})
-                                    // create changeset
-                                    .and_then({
-                                        cloned!(ctx, repo, bcs);
-                                        move |(manifest_id, incomplete_filenodes, parents, files, parents_gen_num)| {
-                                            let metadata = ChangesetMetadata {
-                                                user: bcs.author().to_string(),
-                                                time: *bcs.author_date(),
-                                                extra: bcs.extra()
-                                                    .map(|(k, v)| {
-                                                        (k.as_bytes().to_vec(), v.to_vec())
-                                                    })
-                                                    .collect(),
-                                                comments: bcs.message().to_string(),
-                                            };
-                                            let content = HgChangesetContent::new_from_parts(
-                                                parents,
-                                                manifest_id,
-                                                metadata,
-                                                files,
-                                            );
-                                            let cs = try_boxfuture!(HgBlobChangeset::new(content));
-                                            let cs_id = cs.get_changeset_id();
-
-                                            cs.save(ctx.clone(), repo.blobstore.clone())
-                                                .and_then({
-                                                    cloned!(ctx, repo);
-                                                    move |_| incomplete_filenodes.upload(ctx, cs_id, &repo)
-                                                })
-                                                .and_then({
-                                                    cloned!(ctx, repo);
-                                                    move |_| repo.bonsai_hg_mapping.add(
-                                                        ctx,
-                                                        BonsaiHgMappingEntry {
-                                                            repo_id: repo.get_repoid(),
-                                                            hg_cs_id: cs_id,
-                                                            bcs_id,
-                                                        },
-                                                    )
-                                                })
-                                                .map(move |_| (cs_id, parents_gen_num))
-                                                .boxify()
-                                        }
-                                    })
-                                    .timed(move |stats, _| {
-                                        STATS::generate_hg_from_bonsai_single_latency_ms
-                                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                                        Ok(())
-                                    })
+                                repo.generate_hg_changeset(ctx, bcs_id, bcs, parents)
+                                    .map(move |hg_cs_id| (hg_cs_id, parents_gen_num + 1))
                             }
                         })
                     }
