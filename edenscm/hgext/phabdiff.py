@@ -29,9 +29,9 @@ def showtasks(**args):
     """String. Return the tasks associated with given hg rev."""
     tasks = []
     descr = args["ctx"].description()
-    match = re.search("(Tasks?|Task ID):(.*)", descr)
+    match = re.search(r"Tasks?([\s-]?ID)?:\s*?[t\d ,]+", descr)
     if match:
-        tasks = re.findall("\d+", match.group(0))
+        tasks = re.findall(r"\d+", match.group(0))
     return templatekw.showlist("task", tasks, args)
 
 
@@ -61,5 +61,5 @@ def showreviewers(repo, ctx, templ, **args):
         descr = ctx.description()
         match = re.search("Reviewers:(.*)", descr)
         if match:
-            reviewers = filter(None, re.split("[\s,]", match.group(1)))
+            reviewers = filter(None, re.split(r"[\s,]", match.group(1)))
         return templatekw.showlist("reviewer", reviewers, args)
