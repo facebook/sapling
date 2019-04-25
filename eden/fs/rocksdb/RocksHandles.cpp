@@ -11,6 +11,8 @@
 
 #include <folly/logging/xlog.h>
 
+#include "eden/fs/rocksdb/RocksException.h"
+
 using folly::StringPiece;
 using rocksdb::ColumnFamilyDescriptor;
 using rocksdb::ColumnFamilyHandle;
@@ -26,6 +28,10 @@ namespace facebook {
 namespace eden {
 
 RocksHandles::~RocksHandles() {
+  close();
+}
+
+void RocksHandles::close() {
   // MUST destroy the column handles first
   columns.clear();
   db.reset();
@@ -33,32 +39,11 @@ RocksHandles::~RocksHandles() {
 
 RocksHandles::RocksHandles(
     StringPiece dbPath,
+    const Options& options,
     const std::vector<ColumnFamilyDescriptor>& columnDescriptors) {
   auto dbPathStr = dbPath.str();
-
-  Options options;
-  // Optimize RocksDB. This is the easiest way to get RocksDB to perform well.
-  options.IncreaseParallelism();
-
-  // Create the DB if it's not already present.
-  options.create_if_missing = true;
-  // Automatically create column families as we define new ones.
-  options.create_missing_column_families = true;
-
-  // If we wanted we could set options.info_log to control where RocksDB
-  // log messages get sent.  By default they are written to a file named "LOG"
-  // in the DB directory.
-  // options.info_log = make_shared<CustomLogger>(InfoLogLevel::INFO_LEVEL);
-
   DB* dbRaw;
-  columns.reserve(columnDescriptors.size());
-
   std::vector<ColumnFamilyHandle*> columnHandles;
-
-  auto openDB = [&] {
-    return DB::Open(
-        options, dbPathStr, columnDescriptors, &columnHandles, &dbRaw);
-  };
 
   // This will create any newly defined column families automatically,
   // so we needn't make any special migration steps here; just define
@@ -67,36 +52,17 @@ RocksHandles::RocksHandles(
   // and shout at us for not opening up the database with them defined.
   // We will need to do "something smarter" if we ever decide to perform
   // that kind of a migration.
-  auto status = openDB();
+  auto status =
+      DB::Open(options, dbPathStr, columnDescriptors, &columnHandles, &dbRaw);
   if (!status.ok()) {
     XLOG(ERR) << "Error opening RocksDB storage at " << dbPathStr << ": "
               << status.ToString();
-    XLOG(ERR) << "Attempting to repair RocksDB " << dbPathStr;
-
-    rocksdb::ColumnFamilyOptions unknownColumFamilyOptions;
-    unknownColumFamilyOptions.OptimizeForPointLookup(8);
-    unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
-
-    DBOptions dbOptions(options);
-    status = RepairDB(
-        dbPathStr, dbOptions, columnDescriptors, unknownColumFamilyOptions);
-    if (!status.ok()) {
-      throw std::runtime_error(folly::to<string>(
-          "Unable to repair RocksDB at ", dbPathStr, ": ", status.ToString()));
-    }
-
-    columnHandles.clear();
-    status = openDB();
-    if (!status.ok()) {
-      throw std::runtime_error(folly::to<string>(
-          "Failed to open RocksDB at ",
-          dbPathStr,
-          " after repair attempt: ",
-          status.ToString()));
-    }
+    throw RocksException::build(
+        status, "error opening RocksDB storage at", dbPathStr);
   }
 
   db.reset(dbRaw);
+  columns.reserve(columnHandles.size());
   for (auto h : columnHandles) {
     columns.emplace_back(h);
   }

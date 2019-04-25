@@ -178,6 +178,52 @@ void RocksDbWriteBatch::put(
   flushIfNeeded();
 }
 
+rocksdb::Options getRocksdbOptions() {
+  rocksdb::Options options;
+  // Optimize RocksDB. This is the easiest way to get RocksDB to perform well.
+  options.IncreaseParallelism();
+
+  // Create the DB if it's not already present.
+  options.create_if_missing = true;
+  // Automatically create column families as we define new ones.
+  options.create_missing_column_families = true;
+
+  return options;
+}
+
+void repairDB(AbsolutePathPiece path) {
+  XLOG(ERR) << "Attempting to repair RocksDB " << path;
+  rocksdb::ColumnFamilyOptions unknownColumFamilyOptions;
+  unknownColumFamilyOptions.OptimizeForPointLookup(8);
+  unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
+
+  const auto& columnDescriptors = columnFamilies();
+
+  auto dbPathStr = path.stringPiece().str();
+  rocksdb::DBOptions dbOptions(getRocksdbOptions());
+  auto status = RepairDB(
+      dbPathStr, dbOptions, columnDescriptors, unknownColumFamilyOptions);
+  if (!status.ok()) {
+    throw RocksException::build(status, "unable to repair RocksDB at ", path);
+  }
+}
+
+RocksHandles openDB(AbsolutePathPiece path) {
+  auto options = getRocksdbOptions();
+  try {
+    return RocksHandles(path.stringPiece(), options, columnFamilies());
+  } catch (const RocksException& ex) {
+    XLOG(ERR) << "Error opening RocksDB storage at " << path << ": "
+              << ex.what();
+    // Fall through and attempt to repair the DB
+  }
+
+  repairDB(path);
+
+  // Now try opening the DB again.
+  return RocksHandles(path.stringPiece(), options, columnFamilies());
+}
+
 } // namespace
 
 namespace facebook {
@@ -189,9 +235,8 @@ RocksDbLocalStore::RocksDbLocalStore(
     std::shared_ptr<ReloadableConfig> config)
     : LocalStore(std::move(config)),
       faultInjector_(*faultInjector),
-      dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()),
-      ioPool_(12, "RocksLocalStore") {
-}
+      dbHandles_(openDB(pathToRocksDb)),
+      ioPool_(12, "RocksLocalStore") {}
 
 RocksDbLocalStore::~RocksDbLocalStore() {
 #ifdef FOLLY_SANITIZE_ADDRESS
@@ -209,8 +254,7 @@ RocksDbLocalStore::~RocksDbLocalStore() {
 }
 
 void RocksDbLocalStore::close() {
-  dbHandles_.columns.clear();
-  dbHandles_.db.reset();
+  dbHandles_.close();
 }
 
 void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {

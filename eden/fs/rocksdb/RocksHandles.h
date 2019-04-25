@@ -48,12 +48,10 @@ struct RocksHandles {
    */
   RocksHandles(
       folly::StringPiece dbPath,
+      const rocksdb::Options& options,
       const std::vector<rocksdb::ColumnFamilyDescriptor>& columnDescriptors);
 
-  RocksHandles(const RocksHandles&) = delete;
-  RocksHandles& operator=(const RocksHandles&) = delete;
-  RocksHandles(RocksHandles&&) = default;
-  RocksHandles& operator=(RocksHandles&&) = default;
+  void close();
 };
 } // namespace eden
 } // namespace facebook
