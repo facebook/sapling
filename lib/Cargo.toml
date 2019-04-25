@@ -5,6 +5,7 @@ members = [
     "configparser",
     "cpython-ext",
     "cpython-failure",
+    "dag",
     "edenapi",
     "encoding",
     "hg_watchman_client",

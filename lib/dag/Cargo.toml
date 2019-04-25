@@ -1,0 +1,16 @@
+[package]
+name = "dag"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+indexedlog = { path = "../indexedlog" }
+vlqencoding = { path = "../vlqencoding" }
+
+byteorder = "1.2.7"
+failure = "0.1.5"
+fs2 = "0.4.3"
+tempfile = "3.0.7"
+
+[dev-dependencies]
+quickcheck = "0.6"
