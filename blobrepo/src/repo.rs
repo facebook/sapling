@@ -22,7 +22,7 @@ use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{self, Bookmark, BookmarkPrefix, BookmarkUpdateReason, Bookmarks};
 use bytes::Bytes;
-use cacheblob::MemWritesBlobstore;
+use cacheblob::{LeaseOps, MemWritesBlobstore};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
@@ -112,6 +112,7 @@ pub struct BlobRepo {
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
     // (for example, revsets).
     changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
+    hg_generation_lease: Arc<LeaseOps>,
 }
 
 impl BlobRepo {
@@ -123,6 +124,7 @@ impl BlobRepo {
         changesets: Arc<Changesets>,
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
         repoid: RepositoryId,
+        hg_generation_lease: Arc<LeaseOps>,
     ) -> Self {
         let changeset_fetcher_factory = {
             cloned!(changesets, repoid);
@@ -143,6 +145,7 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
+            hg_generation_lease,
         }
     }
 
@@ -155,6 +158,7 @@ impl BlobRepo {
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
         repoid: RepositoryId,
         changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
+        hg_generation_lease: Arc<LeaseOps>,
     ) -> Self {
         BlobRepo {
             logger,
@@ -165,6 +169,7 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory,
+            hg_generation_lease,
         }
     }
 
@@ -185,6 +190,7 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             repoid,
+            hg_generation_lease,
             ..
         } = self;
 
@@ -200,6 +206,7 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             repoid,
+            hg_generation_lease,
         )
     }
 
@@ -1384,6 +1391,69 @@ impl BlobRepo {
             })
     }
 
+    fn generate_lease_key(&self, bcs_id: &ChangesetId) -> String {
+        let repoid = self.get_repoid();
+        format!("repoid.{}.bonsai.{}", repoid.id(), bcs_id)
+    }
+
+    fn take_hg_generation_lease(
+        &self,
+        ctx: CoreContext,
+        bcs_id: ChangesetId,
+    ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> + Send {
+        let key = self.generate_lease_key(&bcs_id);
+        let repoid = self.get_repoid();
+
+        cloned!(self.bonsai_hg_mapping, self.hg_generation_lease);
+        let repo = self.clone();
+
+        loop_fn((), move |()| {
+            cloned!(ctx, key);
+            hg_generation_lease
+                .try_add_put_lease(&key)
+                .or_else(|_| Ok(false))
+                .and_then({
+                    cloned!(bcs_id, bonsai_hg_mapping, hg_generation_lease, repo);
+                    move |leased| {
+                        let maybe_hg_cs =
+                            bonsai_hg_mapping.get_hg_from_bonsai(ctx.clone(), repoid, bcs_id);
+                        if leased {
+                            maybe_hg_cs
+                                .and_then(move |maybe_hg_cs| match maybe_hg_cs {
+                                    Some(hg_cs) => repo
+                                        .release_hg_generation_lease(bcs_id, true)
+                                        .then(move |_| Ok(Loop::Break(Some(hg_cs))))
+                                        .left_future(),
+                                    None => future::ok(Loop::Break(None)).right_future(),
+                                })
+                                .left_future()
+                        } else {
+                            maybe_hg_cs
+                                .and_then(move |maybe_hg_cs_id| match maybe_hg_cs_id {
+                                    Some(hg_cs_id) => {
+                                        future::ok(Loop::Break(Some(hg_cs_id))).left_future()
+                                    }
+                                    None => hg_generation_lease
+                                        .wait_for_other_leases(&key)
+                                        .then(|_| Ok(Loop::Continue(())))
+                                        .right_future(),
+                                })
+                                .right_future()
+                        }
+                    }
+                })
+        })
+    }
+
+    fn release_hg_generation_lease(
+        &self,
+        bcs_id: ChangesetId,
+        put_success: bool,
+    ) -> impl Future<Item = (), Error = ()> + Send {
+        let key = self.generate_lease_key(&bcs_id);
+        self.hg_generation_lease.release_lease(&key, put_success)
+    }
+
     fn generate_hg_changeset(
         &self,
         ctx: CoreContext,
@@ -1516,8 +1586,25 @@ impl BlobRepo {
                                     })
                                     .collect();
 
-                                repo.generate_hg_changeset(ctx, bcs_id, bcs, parents)
-                                    .map(move |hg_cs_id| (hg_cs_id, parents_gen_num + 1))
+                                repo.take_hg_generation_lease(ctx.clone(), bcs_id.clone())
+                                    .and_then(move |maybe_hg_cs_id| {
+                                        match maybe_hg_cs_id {
+                                            Some(hg_cs_id) => {
+                                                future::ok((hg_cs_id, parents_gen_num)).left_future()
+                                            }
+                                            None => {
+                                                // We have the lease
+                                                STATS::generate_hg_from_bonsai_changeset.add_value(1);
+                                                repo.generate_hg_changeset(ctx, bcs_id, bcs, parents)
+                                                    .map(move |hg_cs_id| (hg_cs_id, parents_gen_num + 1))
+                                                    .then(move |res| {
+                                                        repo.release_hg_generation_lease(bcs_id, res.is_ok())
+                                                            .then(move |_| res)
+                                                    })
+                                                    .right_future()
+                                            }
+                                        }
+                                    })
                             }
                         })
                     }
@@ -1532,7 +1619,6 @@ impl BlobRepo {
                 move |cs_id| match cs_id {
                     Some(cs_id) => future::ok((cs_id, generated_commit_num)).left_future(),
                     None => {
-                        STATS::generate_hg_from_bonsai_changeset.add_value(1);
                         create_hg_from_bonsai_changeset(ctx, &repo, bcs_id, generated_commit_num)
                             .right_future()
                     }
@@ -2310,6 +2396,7 @@ impl Clone for BlobRepo {
             bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
+            hg_generation_lease: self.hg_generation_lease.clone(),
         }
     }
 }

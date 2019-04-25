@@ -24,7 +24,7 @@ use std::sync::Arc;
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
-use cacheblob::{new_cachelib_blobstore, new_memcache_blobstore};
+use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, new_memcache_blobstore, MemcacheOps};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangests, SqlChangesets};
 use filenodes::CachingFilenodes;
@@ -67,6 +67,7 @@ fn new_local(
         Arc::new(changesets),
         Arc::new(bonsai_hg_mapping),
         repoid,
+        Arc::new(DummyLease {}),
     ))
 }
 
@@ -157,6 +158,7 @@ pub fn new_memblob_empty(
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
         ),
         RepositoryId::new(0),
+        Arc::new(DummyLease {}),
     ))
 }
 
@@ -294,6 +296,7 @@ pub fn new_remote(
                 Arc::new(bonsai_hg_mapping),
                 repoid,
                 Arc::new(changeset_fetcher_factory),
+                Arc::new(MemcacheOps::new("bonsai-hg-generation", "")?),
             ))
         },
     )
