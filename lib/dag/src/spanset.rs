@@ -187,6 +187,19 @@ impl SpanSet {
             }
         }
     }
+
+    /// Get an iterator for integers in this [`SpanSet`].
+    /// By default, the iteration is in descending order.
+    pub fn iter(&self) -> SpanSetIter {
+        SpanSetIter {
+            span_set: self,
+            front: (0, 0),
+            back: (
+                self.spans.len() as isize - 1,
+                self.spans.last().map(|span| span.1 - span.0).unwrap_or(0),
+            ),
+        }
+    }
 }
 
 /// Push a span to `Vec<Span>`. Try to union them in-place.
@@ -201,6 +214,56 @@ fn push_with_union(spans: &mut Vec<Span>, span: Span) {
             } else {
                 spans.push(span)
             }
+        }
+    }
+}
+
+/// Iterator of integers in a [`SpanSet`].
+pub struct SpanSetIter<'a> {
+    span_set: &'a SpanSet,
+    // (index of span_set.spans, index of span_set.spans[i])
+    front: (isize, Id),
+    back: (isize, Id),
+}
+
+impl<'a> Iterator for SpanSetIter<'a> {
+    type Item = Id;
+
+    fn next(&mut self) -> Option<Id> {
+        if self.front > self.back {
+            None
+        } else {
+            let (vec_id, span_id) = self.front;
+            let span = &self.span_set.spans[vec_id as usize];
+            self.front = if span_id == span.1 - span.0 {
+                (vec_id + 1, 0)
+            } else {
+                (vec_id, span_id + 1)
+            };
+            Some(span.1 - span_id)
+        }
+    }
+}
+
+impl<'a> DoubleEndedIterator for SpanSetIter<'a> {
+    fn next_back(&mut self) -> Option<Id> {
+        if self.front > self.back {
+            None
+        } else {
+            let (vec_id, span_id) = self.back;
+            let span = &self.span_set.spans[vec_id as usize];
+            self.back = if span_id == 0 {
+                let span_len = if vec_id > 0 {
+                    let span = self.span_set.spans[(vec_id - 1) as usize];
+                    span.1 - span.0
+                } else {
+                    0
+                };
+                (vec_id - 1, span_len)
+            } else {
+                (vec_id, span_id - 1)
+            };
+            Some(span.1 - span_id)
         }
     }
 }
@@ -365,5 +428,25 @@ mod tests {
             difference(vec![(10, 12), (7, 8), (3, 4)], vec![(4, 11)]),
             vec![(12, 12), (3, 3)]
         );
+    }
+
+    #[test]
+    fn test_iter() {
+        let set = SpanSet::from_sorted_spans(vec![]);
+        assert!(set.iter().next().is_none());
+        assert!(set.iter().rev().next().is_none());
+
+        let set = SpanSet::from_sorted_spans(vec![(0, 1)]);
+        assert_eq!(set.iter().collect::<Vec<Id>>(), vec![1, 0]);
+        assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![0, 1]);
+
+        let mut iter = set.iter();
+        assert!(iter.next().is_some());
+        assert!(iter.next_back().is_some());
+        assert!(iter.next_back().is_none());
+
+        let set = SpanSet::from_sorted_spans(vec![(7, 8), (3, 5)]);
+        assert_eq!(set.iter().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
+        assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![3, 4, 5, 7, 8]);
     }
 }
