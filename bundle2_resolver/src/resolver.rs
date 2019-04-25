@@ -37,7 +37,7 @@ use mercurial_types::{
 };
 use metaconfig_types::{BookmarkAttrs, PushrebaseParams, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, ChangesetId, RawBundle2, RawBundle2Id};
-use phases::{Phase, Phases};
+use phases::{self, Phases};
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
@@ -67,8 +67,8 @@ pub fn resolve(
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
-    phases_hint: Arc<Phases>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases_hint: Arc<dyn Phases>,
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
@@ -167,7 +167,7 @@ fn resolve_push(
     bundle2: BoxStream<Bundle2Item, Error>,
     allow_non_fast_forward: bool,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_changegroup(ctx.clone(), bundle2)
@@ -275,8 +275,8 @@ fn resolve_pushrebase(
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
-    phases_hint: Arc<Phases>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases_hint: Arc<dyn Phases>,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
@@ -447,7 +447,7 @@ fn resolve_bookmark_only_pushrebase(
     bundle2: BoxStream<Bundle2Item, Error>,
     allow_non_fast_forward: bool,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
 ) -> BoxFuture<Bytes, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
@@ -621,7 +621,7 @@ impl Bundle2Resolver {
         &self,
         bookmark_pushes: Vec<BookmarkPush>,
         reason: BookmarkUpdateReason,
-        lca_hint: Arc<LeastCommonAncestorsHint>,
+        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         allow_non_fast_forward: bool,
     ) -> impl Future<Item = (), Error = Error> {
         let resolver = self.clone();
@@ -1181,8 +1181,8 @@ impl Bundle2Resolver {
         pushrebased_rev: ChangesetId,
         pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
         onto: Bookmark,
-        lca_hint: Arc<LeastCommonAncestorsHint>,
-        phases_hint: Arc<Phases>,
+        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        phases_hint: Arc<dyn Phases>,
         bookmark_push_part_id: Option<PartId>,
     ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
@@ -1192,15 +1192,17 @@ impl Bundle2Resolver {
         let common = commonheads.heads;
         let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
 
-        let pushrebased_rev =
-            // write phase as public for this commit
-            phases_hint.add(ctx.clone(), repo.clone(), pushrebased_rev.clone(), Phase::Public).and_then( {
-                cloned!(ctx, repo);
-                move |_| {
-                    repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
-                }
-            }
-        );
+        // write phase as public for this commit
+        let pushrebased_rev = phases::mark_reachable_as_public(
+            ctx.clone(),
+            repo.clone(),
+            phases_hint.clone(),
+            &[pushrebased_rev.clone()],
+        )
+        .and_then({
+            cloned!(ctx, repo);
+            move |_| repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
+        });
 
         let bookmark_reply_part = match bookmark_push_part_id {
             Some(part_id) => Some(try_boxfuture!(parts::replypushkey_part(true, part_id))),
@@ -1478,7 +1480,7 @@ fn check_bookmark_push_allowed(
     bookmark_attrs: BookmarkAttrs,
     allow_non_fast_forward: bool,
     bp: BonsaiBookmarkPush,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
 ) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> {
     let user = ctx.user_unix_name();
     if !bookmark_attrs.is_allowed_user(user, &bp.name) {

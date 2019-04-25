@@ -15,7 +15,10 @@ use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, Future, Stream};
+use futures::{
+    future::{self, IntoFuture, Loop},
+    stream, Future, Stream,
+};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -490,6 +493,70 @@ impl Phases for HintPhases {
     }
 }
 
+/// Mark all commits reachable from `public_heads` as public
+pub fn mark_reachable_as_public<'a, Heads>(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    phases_store: Arc<dyn Phases>,
+    public_heads: &'a Heads,
+) -> impl Future<Item = (), Error = Error>
+where
+    &'a Heads: IntoIterator<Item = &'a ChangesetId>,
+{
+    let changeset_fetcher = repo.get_changeset_fetcher();
+    let input: Vec<_> = public_heads.into_iter().cloned().collect();
+    future::loop_fn((HashMap::new(), input), {
+        cloned!(ctx, repo, phases_store);
+        move |(mut output, mut input)| match input.pop() {
+            None => future::ok(Loop::Break(output)).left_future(),
+            Some(cs) => phases_store
+                .get(ctx.clone(), repo.clone(), cs)
+                .and_then({
+                    cloned!(changeset_fetcher, ctx);
+                    move |phase| match phase {
+                        Some(Phase::Public) => {
+                            future::ok(Loop::Continue((output, input))).left_future()
+                        }
+                        _ => (
+                            changeset_fetcher.get_generation_number(ctx.clone(), cs),
+                            changeset_fetcher.get_parents(ctx, cs),
+                        )
+                            .into_future()
+                            .map(move |(generation, parents)| {
+                                output.insert(cs, generation);
+                                input.extend(
+                                    parents.into_iter().filter(|p| !output.contains_key(p)),
+                                );
+                                Loop::Continue((output, input))
+                            })
+                            .right_future(),
+                    }
+                })
+                .right_future(),
+        }
+    })
+    .and_then({
+        move |unmarked| {
+            // NOTE: We need to write phases in increasing generation number order, this will
+            //       ensure that our phases in a valid state (i.e do not have any gaps). Once
+            //       first public changeset is found we assume that all ancestors of it have
+            //       already been marked as public.
+            let mut unmarked: Vec<_> = unmarked.into_iter().map(|(k, v)| (v, k)).collect();
+            unmarked.sort_by(|l, r| l.0.cmp(&r.0));
+            stream::iter_ok(unmarked)
+                .chunks(100)
+                .and_then(move |chunk| {
+                    phases_store.add_all(
+                        ctx.clone(),
+                        repo.clone(),
+                        chunk.iter().map(|(_, cs)| (*cs, Phase::Public)).collect(),
+                    )
+                })
+                .for_each(|()| future::ok(()))
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -500,6 +567,7 @@ mod tests {
     use mercurial_types::nodehash::HgChangesetId;
     use mononoke_types_mocks::changesetid::*;
     use std::str::FromStr;
+    use tokio::runtime::Runtime;
 
     fn add_get_sql_phase<P: Phases>(phases: P) {
         let ctx = CoreContext::test_mock();
@@ -784,5 +852,113 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             get_hint_phase();
         });
+    }
+
+    #[test]
+    fn test_mark_reachable_as_public() {
+        let mut rt = Runtime::new().unwrap();
+
+        let repo = fixtures::branch_even::getrepo(None);
+        // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
+        // |
+        // o  b65231269f651cfe784fd1d97ef02a049a37b8a0 (5)
+        // |
+        // o  d7542c9db7f4c77dab4b315edd328edf1514952f (4)
+        // |
+        // | o  16839021e338500b3cf7c9b871c8a07351697d68 (3)
+        // | |
+        // | o  1d8a907f7b4bf50c6a09c16361e2205047ecc5e5 (2)
+        // | |
+        // | o  3cda5c78aa35f0f5b09780d971197b51cad4613a (1)
+        // |/
+        // |
+        // o  15c40d0abc36d47fb51c8eaec51ac7aad31f669c (0)
+        let hgcss = [
+            "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+            "3cda5c78aa35f0f5b09780d971197b51cad4613a",
+            "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
+            "16839021e338500b3cf7c9b871c8a07351697d68",
+            "d7542c9db7f4c77dab4b315edd328edf1514952f",
+            "b65231269f651cfe784fd1d97ef02a049a37b8a0",
+            "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+        ];
+        let ctx = CoreContext::test_mock();
+
+        // delete all existing bookmarks
+        let bookmarks = rt
+            .block_on(repo.get_bonsai_bookmarks(ctx.clone()).collect())
+            .unwrap();
+        let mut transaction = repo.update_bookmark_transaction(ctx.clone());
+        for bookmark in bookmarks {
+            transaction
+                .force_delete(
+                    &bookmark.0,
+                    BookmarkUpdateReason::TestMove {
+                        bundle_replay_data: None,
+                    },
+                )
+                .unwrap();
+        }
+        assert!(rt.block_on(transaction.commit()).unwrap());
+
+        // resolve bonsai
+        let bcss = rt
+            .block_on(future::join_all(
+                hgcss
+                    .iter()
+                    .map(|hgcs| {
+                        repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(hgcs).unwrap())
+                            .map(|bcs| bcs.unwrap())
+                    })
+                    .collect::<Vec<_>>(),
+            ))
+            .unwrap();
+
+        let phases: Arc<dyn Phases> = Arc::new(SqlPhases::with_sqlite_in_memory().unwrap());
+        // get phases mapping for all `bcss` in the same order
+        let get_phases_map = || {
+            phases
+                .get_all(ctx.clone(), repo.clone(), bcss.clone())
+                .map({
+                    cloned!(bcss);
+                    move |mapping| {
+                        bcss.iter()
+                            .map(|bcs| {
+                                mapping
+                                    .calculated
+                                    .get(bcs)
+                                    .map_or(false, |phase| phase == &Phase::Public)
+                            })
+                            .collect::<Vec<_>>()
+                    }
+                })
+        };
+
+        // all phases are draft
+        assert_eq!(rt.block_on(get_phases_map()).unwrap(), [false; 7]);
+
+        rt.block_on(mark_reachable_as_public(
+            ctx.clone(),
+            repo.clone(),
+            phases.clone(),
+            &[bcss[1]],
+        ))
+        .unwrap();
+        assert_eq!(
+            rt.block_on(get_phases_map()).unwrap(),
+            [true, true, false, false, false, false, false],
+        );
+
+        rt.block_on(mark_reachable_as_public(
+            ctx.clone(),
+            repo.clone(),
+            phases.clone(),
+            &[bcss[2], bcss[5]],
+        ))
+        .unwrap();
+        assert_eq!(
+            rt.block_on(get_phases_map()).unwrap(),
+            [true, true, true, false, true, true, false],
+        );
     }
 }
