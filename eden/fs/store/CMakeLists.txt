@@ -1,4 +1,8 @@
 file(GLOB STORE_SRCS "*.cpp")
+list(
+  REMOVE_ITEM SERVICE_SRCS
+  "${CMAKE_CURRENT_SOURCE_DIR}/eden_store_util.cpp"
+)
 add_library(
   eden_store STATIC
     ${STORE_SRCS}
