@@ -97,7 +97,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
                 file.name,
                 treeEntryTypeFromMononoke(file.file_type),
                 file.size,
-                Hash(file.content_sha1));
+                Hash(file.content_sha1_ref().value_unchecked()));
           } else {
             entries.emplace_back(
                 Hash(file.hash.hash),
