@@ -131,6 +131,38 @@ impl IdMap {
             Some(Err(err)) => Err(err),
         }
     }
+
+    /// Insert a new entry mapping from a slice to an id.
+    ///
+    /// Panic if the new entry conflicts with existing entries.
+    pub fn insert(&mut self, id: Id, slice: &[u8]) -> Fallible<()> {
+        if id < self.next_free_id {
+            let existing_slice = self.find_slice_by_id(id)?;
+            if let Some(existing_slice) = existing_slice {
+                assert_eq!(
+                    existing_slice, slice,
+                    "logic error: new entry conflicts with an existing entry"
+                );
+            }
+        }
+        let existing_id = self.find_id_by_slice(slice)?;
+        if let Some(existing_id) = existing_id {
+            assert_eq!(
+                existing_id, id,
+                "logic error: new entry conflicts with an existing entry"
+            );
+        }
+
+        let mut data = Vec::with_capacity(8 + slice.len());
+        data.write_u64::<BigEndian>(id).unwrap();
+        data.write_all(slice).unwrap();
+        self.log.append(data)?;
+        if id >= self.next_free_id {
+            self.next_free_id = id + 1;
+        }
+        Ok(())
+    }
+
     /// Return the next unused id.
     pub fn next_free_id(&self) -> Id {
         self.next_free_id
@@ -145,5 +177,82 @@ impl IdMap {
             Some(Ok((key, _))) => Ok(Cursor::new(key).read_u64::<BigEndian>()? + 1),
             _ => bail!("cannot read next_free_id"),
         }
+    }
+}
+
+impl<'a> SyncableIdMap<'a> {
+    /// Write pending changes to disk.
+    ///
+    /// This method must be called if there are new entries inserted.
+    /// Otherwise [`SyncableIdMap`] will panic once it gets dropped.
+    pub fn sync(&mut self) -> Fallible<()> {
+        self.map.log.sync()?;
+        Ok(())
+    }
+}
+
+impl<'a> Deref for SyncableIdMap<'a> {
+    type Target = IdMap;
+
+    fn deref(&self) -> &Self::Target {
+        self.map
+    }
+}
+
+impl<'a> DerefMut for SyncableIdMap<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.map
+    }
+}
+
+impl<'a> Drop for SyncableIdMap<'a> {
+    fn drop(&mut self) {
+        // TODO: handles `sync` failures gracefully.
+        assert!(
+            self.map.log.iter_dirty().next().is_none(),
+            "programming error: sync must be called before dropping WritableIdMap"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_simple_lookups() {
+        let dir = tempdir().unwrap();
+        let mut map = IdMap::open(dir.path()).unwrap();
+        let mut map = map.prepare_filesystem_sync().unwrap();
+        assert_eq!(map.next_free_id(), 0);
+        map.insert(1, b"abc").unwrap();
+        assert_eq!(map.next_free_id(), 2);
+        map.insert(2, b"def").unwrap();
+        assert_eq!(map.next_free_id(), 3);
+        map.insert(10, b"ghi").unwrap();
+        assert_eq!(map.next_free_id(), 11);
+
+        for _ in 0..=1 {
+            assert_eq!(map.find_slice_by_id(1).unwrap().unwrap(), b"abc");
+            assert_eq!(map.find_slice_by_id(2).unwrap().unwrap(), b"def");
+            assert!(map.find_slice_by_id(3).unwrap().is_none());
+            assert_eq!(map.find_slice_by_id(10).unwrap().unwrap(), b"ghi");
+
+            assert_eq!(map.find_id_by_slice(b"abc").unwrap().unwrap(), 1);
+            assert_eq!(map.find_id_by_slice(b"def").unwrap().unwrap(), 2);
+            assert_eq!(map.find_id_by_slice(b"ghi").unwrap().unwrap(), 10);
+            assert!(map.find_id_by_slice(b"jkl").unwrap().is_none());
+            map.sync().unwrap();
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_panic_with_dirty_changes() {
+        let dir = tempdir().unwrap();
+        let mut map = IdMap::open(dir.path()).unwrap();
+        let mut map = map.prepare_filesystem_sync().unwrap();
+        map.insert(0, b"abc").unwrap();
     }
 }
