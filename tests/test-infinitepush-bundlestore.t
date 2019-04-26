@@ -1,10 +1,15 @@
 TODO: Make this test compatibile with obsstore enabled.
-  $ setconfig experimental.evolution=
+  $ setconfig experimental.evolution= experimental.bundle2lazylocking=True
+
+# These are necessary to trigger pushkey handlers which may try to take the lock
+  $ setconfig devel.legacy.exchange=bookmarks,phases
+
 Create an ondisk bundlestore in .hg/scratchbranches
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
   $ setupcommon
+  $ enable infinitepush pushrebase
   $ hg init repo
   $ cd repo
 
@@ -23,11 +28,17 @@ the history but is stored on disk
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   $ mkcommit scratchcommit
+
+  $ rm -rf ../repo/.hg/store/undo*
   $ hg push -r . --to scratch/mybranch --create
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 1 commit:
   remote:     20759b6926ce  scratchcommit
+# Check if a lock was taken
+# BUG: undo should not exist since a lock should not be taken
+  $ test -f ../repo/.hg/store/undo
+
   $ hg log -G
   @  changeset:   1:20759b6926ce
   |  tag:         tip
