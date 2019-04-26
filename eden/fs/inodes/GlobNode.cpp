@@ -302,6 +302,28 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
   futures.emplace_back(evaluateRecursiveComponentImpl(
       store, rootPath, root, fileBlobsToPrefetch));
 
+  auto recurseIfNecessary = [&](PathComponentPiece name,
+                                GlobNode* node,
+                                const auto& entry) {
+    if (root.entryIsTree(entry)) {
+      if (root.entryShouldLoadChildTree(entry)) {
+        recurse.emplace_back(std::make_pair(name, node));
+      } else {
+        auto candidateName = rootPath + name;
+        futures.emplace_back(
+            store->getTree(root.entryHash(entry))
+                .thenValue([candidateName,
+                            store,
+                            innerNode = node,
+                            fileBlobsToPrefetch](
+                               std::shared_ptr<const Tree> dir) {
+                  return innerNode->evaluateImpl(
+                      store, candidateName, TreeRoot(dir), fileBlobsToPrefetch);
+                }));
+      }
+    }
+  };
+
   {
     auto contents = root.lockContents();
     for (auto& node : children_) {
@@ -321,26 +343,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
           }
 
           // Not the leaf of a pattern; if this is a dir, we need to recurse
-          if (root.entryIsTree(entry)) {
-            if (root.entryShouldLoadChildTree(entry)) {
-              recurse.emplace_back(std::make_pair(name, node.get()));
-            } else {
-              auto candidateName = rootPath + name;
-              futures.emplace_back(
-                  store->getTree(root.entryHash(entry))
-                      .thenValue([candidateName,
-                                  store,
-                                  innerNode = node.get(),
-                                  fileBlobsToPrefetch](
-                                     std::shared_ptr<const Tree> dir) {
-                        return innerNode->evaluateImpl(
-                            store,
-                            candidateName,
-                            TreeRoot(dir),
-                            fileBlobsToPrefetch);
-                      }));
-            }
-          }
+          recurseIfNecessary(name, node.get(), entry);
         }
       } else {
         // We need to match it out of the entries in this inode
@@ -358,26 +361,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
             }
             // Not the leaf of a pattern; if this is a dir, we need to
             // recurse
-            if (root.entryIsTree(entry)) {
-              if (root.entryShouldLoadChildTree(entry)) {
-                recurse.emplace_back(std::make_pair(name, node.get()));
-              } else {
-                auto candidateName = rootPath + name;
-                futures.emplace_back(
-                    store->getTree(root.entryHash(entry))
-                        .thenValue([candidateName,
-                                    store,
-                                    innerNode = node.get(),
-                                    fileBlobsToPrefetch](
-                                       std::shared_ptr<const Tree> dir) {
-                          return innerNode->evaluateImpl(
-                              store,
-                              candidateName,
-                              TreeRoot(dir),
-                              fileBlobsToPrefetch);
-                        }));
-              }
-            }
+            recurseIfNecessary(name, node.get(), entry);
           }
         }
       }
