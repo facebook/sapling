@@ -59,3 +59,7 @@ If repositories for some of the dependencies are already present in
 changes from GitHub.  You can explicitly run `./getdeps.py --update` if you
 want it to fetch the latest updates for each dependency and rebuild them from
 scratch.
+
+# License
+
+See [LICENSE](LICENSE).
