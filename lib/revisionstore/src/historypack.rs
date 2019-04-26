@@ -6,7 +6,7 @@
 use std::{
     fs::File,
     io::{Cursor, Read, Write},
-    mem::drop,
+    mem::{drop, replace},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -287,14 +287,15 @@ impl IterableStore for HistoryPack {
 }
 
 impl Repackable for HistoryPack {
-    fn delete(self) -> Fallible<()> {
+    fn delete(mut self) -> Fallible<()> {
         // On some platforms, removing a file can fail if it's still opened or mapped, let's make
         // sure we close and unmap them before deletion.
-        drop(self.mmap);
-        drop(self.index);
+        let pack_path = replace(&mut self.pack_path, Default::default());
+        let index_path = replace(&mut self.index_path, Default::default());
+        drop(self);
 
-        let result1 = remove_file(&self.pack_path);
-        let result2 = remove_file(&self.index_path);
+        let result1 = remove_file(&pack_path);
+        let result2 = remove_file(&index_path);
         // Only check for errors after both have run. That way if pack_path doesn't exist,
         // index_path is still deleted.
         result1?;
