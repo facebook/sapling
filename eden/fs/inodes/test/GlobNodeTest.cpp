@@ -8,7 +8,9 @@
  *
  */
 #include "eden/fs/inodes/GlobNode.h"
+#include <folly/Conv.h>
 #include <folly/Exception.h>
+#include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -21,8 +23,25 @@
 
 using namespace facebook;
 using namespace facebook::eden;
+using namespace folly::string_piece_literals;
+using namespace std::chrono_literals;
 
 using GlobResult = GlobNode::GlobResult;
+
+namespace {
+constexpr folly::Duration kSmallTimeout =
+    std::chrono::duration_cast<folly::Duration>(1s);
+
+folly::Future<std::vector<GlobResult>> evaluateGlob(
+    TestMount& mount,
+    GlobNode& globRoot,
+    GlobNode::PrefetchList prefetchHashes) {
+  auto rootInode = mount.getTreeInode(RelativePathPiece());
+  auto objectStore = mount.getEdenMount()->getObjectStore();
+  return globRoot.evaluate(
+      objectStore, RelativePathPiece(), rootInode, prefetchHashes);
+}
+} // namespace
 
 enum StartReady : bool {
   DeferReady = false,
@@ -58,10 +77,7 @@ class GlobNodeTest : public ::testing::TestWithParam<
           std::make_shared<GlobNode::PrefetchList::element_type>();
     }
 
-    auto rootInode = mount_.getTreeInode(RelativePathPiece());
-    auto objectStore = mount_.getEdenMount()->getObjectStore();
-    auto future = globRoot.evaluate(
-        objectStore, RelativePathPiece(), rootInode, prefetchHashes_);
+    auto future = evaluateGlob(mount_, globRoot, prefetchHashes_);
 
     if (!GetParam().first) {
       builder_.setAllReady();
@@ -181,3 +197,36 @@ const std::pair<enum StartReady, enum Prefetch> combinations[] = {
 };
 
 INSTANTIATE_TEST_CASE_P(Glob, GlobNodeTest, ::testing::ValuesIn(combinations));
+
+TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
+  auto mount = TestMount{};
+  auto builder = FakeTreeBuilder{};
+  builder.setFiles({{"dir/subdir/file", ""}});
+  mount.initialize(builder, /*startReady=*/false);
+  builder.setReady("dir");
+  ASSERT_FALSE(mount.getEdenMount()->getInode("dir/subdir"_relpath).isReady())
+      << "Loading dir/subdir should hang indefinitely";
+
+  for (folly::StringPiece pattern : {"dir/*"_sp, "dir/subdir"_sp}) {
+    SCOPED_TRACE(folly::to<std::string>("pattern = ", pattern));
+    GlobNode globRoot(/*includeDotfiles=*/false);
+    globRoot.parse("dir/*");
+    globRoot.debugDump();
+
+    auto matches = std::vector<GlobResult>{};
+    try {
+      matches = evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr)
+                    .get(kSmallTimeout);
+    } catch (const folly::FutureTimeout&) {
+      FAIL() << "Matching dir/subdir should not load dir/subdir";
+    }
+
+    EXPECT_FALSE(mount.getEdenMount()->getInode("dir/subdir"_relpath).isReady())
+        << "dir/subdir should still be unloaded after evaluating glob";
+    EXPECT_EQ(
+        (std::vector<GlobResult>{
+            GlobResult("dir/subdir"_relpath, dtype_t::Dir),
+        }),
+        matches);
+  }
+}
