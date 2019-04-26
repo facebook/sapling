@@ -305,7 +305,8 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
   auto recurseIfNecessary = [&](PathComponentPiece name,
                                 GlobNode* node,
                                 const auto& entry) {
-    if (root.entryIsTree(entry)) {
+    if ((!node->children_.empty() || !node->recursiveChildren_.empty()) &&
+        root.entryIsTree(entry)) {
       if (root.entryShouldLoadChildTree(entry)) {
         recurse.emplace_back(std::make_pair(name, node));
       } else {
@@ -339,7 +340,6 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
             if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
               fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
             }
-            continue;
           }
 
           // Not the leaf of a pattern; if this is a dir, we need to recurse
@@ -356,8 +356,6 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
                 fileBlobsToPrefetch->wlock()->emplace_back(
                     root.entryHash(entry));
               }
-
-              continue;
             }
             // Not the leaf of a pattern; if this is a dir, we need to
             // recurse

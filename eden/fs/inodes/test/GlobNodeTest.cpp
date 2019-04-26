@@ -70,6 +70,10 @@ class GlobNodeTest : public ::testing::TestWithParam<
       bool includeDotfiles) {
     GlobNode globRoot(/*includeDotfiles=*/includeDotfiles);
     globRoot.parse(pattern);
+    return doGlob(globRoot);
+  }
+
+  std::vector<GlobResult> doGlob(GlobNode& globRoot) {
     globRoot.debugDump();
 
     if (shouldPrefetch()) {
@@ -187,6 +191,62 @@ TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
         BHash};
     EXPECT_EQ(expectHashes, getPrefetchHashes());
   }
+}
+
+TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryChild) {
+  GlobNode globRoot(/*includeDotfiles=*/false);
+  globRoot.parse("dir/*");
+  globRoot.parse("dir/*/*");
+
+  auto matches = doGlob(globRoot);
+  std::vector<GlobResult> expect{
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular),
+  };
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryRecursiveChildren) {
+  GlobNode globRoot(/*includeDotfiles=*/false);
+  globRoot.parse("dir/*");
+  globRoot.parse("dir/*/**");
+
+  auto matches = doGlob(globRoot);
+  std::vector<GlobResult> expect{
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular),
+  };
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryChild) {
+  GlobNode globRoot(/*includeDotfiles=*/false);
+  globRoot.parse("dir");
+  globRoot.parse("dir/a.txt");
+
+  auto matches = doGlob(globRoot);
+  std::vector<GlobResult> expect{
+      GlobResult("dir"_relpath, dtype_t::Dir),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular),
+  };
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryRecursiveChildren) {
+  GlobNode globRoot(/*includeDotfiles=*/false);
+  globRoot.parse("dir");
+  globRoot.parse("dir/**");
+
+  auto matches = doGlob(globRoot);
+  std::vector<GlobResult> expect{
+      GlobResult("dir"_relpath, dtype_t::Dir),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular),
+  };
+  EXPECT_EQ(expect, matches);
 }
 
 const std::pair<enum StartReady, enum Prefetch> combinations[] = {
