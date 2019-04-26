@@ -25,6 +25,9 @@ extern crate quickcheck;
 extern crate rand;
 
 #[cfg(test)]
+extern crate rand_chacha;
+
+#[cfg(test)]
 extern crate tempdir;
 
 extern crate twox_hash;

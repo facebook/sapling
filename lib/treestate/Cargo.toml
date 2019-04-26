@@ -14,4 +14,5 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 itertools = "0.8"
 quickcheck = "0.6"
 rand = "0.5"
+rand_chacha = "*"
 tempdir = "0.3.7"
