@@ -1570,12 +1570,17 @@ class ui(object):
         `overrides` must be a dict of the following structure:
         {(section, name) : value}"""
         backup = self._rcfg.clone()
+        unserializablebackup = dict(self._unserializable)
+        pinnedbackup = set(self._pinnedconfigs)
         try:
             for (section, name), value in overrides.items():
                 self.setconfig(section, name, value, source)
             yield
         finally:
             self._rcfg = backup
+            self._unserializable = unserializablebackup
+            self._pinnedconfigs = pinnedbackup
+
             # just restoring ui.quiet config to the previous value is not enough
             # as it does not update ui.quiet class member
             if ("ui", "quiet") in overrides:
