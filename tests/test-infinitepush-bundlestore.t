@@ -36,8 +36,8 @@ the history but is stored on disk
   remote: pushing 1 commit:
   remote:     20759b6926ce  scratchcommit
 # Check if a lock was taken
-# BUG: undo should not exist since a lock should not be taken
   $ test -f ../repo/.hg/store/undo
+  [1]
 
   $ hg log -G
   @  changeset:   1:20759b6926ce

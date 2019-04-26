@@ -1511,9 +1511,6 @@ def bundle2pushkey(orig, op, part):
                 # This forbids moving bookmarks backwards from clients.
                 part.params["old"] = pushkey.encode(hex(serverbin))
 
-    # Force getting a transaction before calling pushkey. Among other things
-    # that sets a few additional hook arguments.
-    op.gettransaction()
     return orig(op, part)
 
 

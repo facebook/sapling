@@ -2051,10 +2051,10 @@ def handlepushkey(op, inpart):
     key = dec(inpart.params["key"])
     old = dec(inpart.params["old"])
     new = dec(inpart.params["new"])
-    # Grab the transaction to ensure that we have the lock before performing the
-    # pushkey.
-    if op.ui.configbool("experimental", "bundle2lazylocking"):
-        op.gettransaction()
+
+    # The lock may be lazy, so grab it to ensure that we have the lock before
+    # performing the pushkey.
+    op.gettransaction()
     ret = op.repo.pushkey(namespace, key, old, new)
     record = {"namespace": namespace, "key": key, "old": old, "new": new}
     op.records.add("pushkey", record)
