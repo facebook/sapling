@@ -138,6 +138,7 @@ impl<'a, T: ?Sized> AsRef<Vec<&'a T>> for VecStack<'a, T> {
     /// let vecref = stack.as_ref();
     /// let str1 = String::from("1");
     /// let _ = stack.push(&str1); // cannot push when `vecref` is alive.
+    /// let __ = vecref;
     /// ```
     ///
     /// Panic if `as_ref` is called when a previously pushed element is

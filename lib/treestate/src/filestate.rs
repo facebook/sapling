@@ -1,6 +1,8 @@
 // Copyright Facebook, Inc. 2017
 //! File State.
 
+use bitflags::bitflags;
+
 /// Information relating to a file in the dirstate.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct FileState {

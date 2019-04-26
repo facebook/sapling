@@ -1,15 +1,15 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State Tree.
 
+use crate::filestate::{FileState, FileStateV2, StateFlags};
+use crate::serialization::Serializable;
+use crate::store::{BlockId, Store, StoreView};
+use crate::vecmap::VecMap;
+use crate::vecstack::VecStack;
 use failure::Fallible;
-use filestate::{FileState, FileStateV2, StateFlags};
-use serialization::Serializable;
 use std::cell::Cell;
 use std::collections::Bound;
 use std::io::{Cursor, Read, Write};
-use store::{BlockId, Store, StoreView};
-use vecmap::VecMap;
-use vecstack::VecStack;
 
 /// A node entry is an entry in a directory, either a file or another directory.
 #[derive(Debug)]
@@ -844,7 +844,7 @@ where
                             // directories.  Check there is an acceptable file under the
                             // directory.
                             if node.path_complete_check(store, acceptable)? {
-                                let mut path = path.push(entry_name);
+                                let path = path.push(entry_name);
                                 visitor(path.as_ref())?;
                             }
                         }
@@ -1038,8 +1038,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use store::tests::MapStore;
-    use store::NullStore;
+    use crate::store::tests::MapStore;
+    use crate::store::NullStore;
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
     static TEST_FILES: [(&[u8], u32, i32, i32); 16] = [

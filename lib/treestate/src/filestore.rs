@@ -1,9 +1,10 @@
 // Copyright Facebook, Inc. 2017
 //! Implementation of a store using file I/O.
 
+use crate::errors::ErrorKind;
+use crate::store::{BlockId, Store, StoreView};
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use errors::ErrorKind;
-use failure::Fallible;
+use failure::{bail, Fallible};
 use std;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -11,7 +12,6 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::Path;
-use store::{BlockId, Store, StoreView};
 
 // File storage format:
 //
@@ -212,10 +212,10 @@ impl StoreView for FileStore {
 
 #[cfg(test)]
 mod tests {
-    use filestore::FileStore;
+    use crate::filestore::FileStore;
+    use crate::store::{BlockId, Store, StoreView};
     use std::fs;
     use std::io::Write;
-    use store::{BlockId, Store, StoreView};
     use tempdir::TempDir;
 
     #[test]

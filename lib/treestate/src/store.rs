@@ -1,8 +1,8 @@
 // Copyright Facebook, Inc. 2017
 //! Trait defining an append-only storage system.
 
-use errors::ErrorKind;
-use failure::Fallible;
+use crate::errors::ErrorKind;
+use failure::{bail, Fallible};
 use std::borrow::Cow;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash)]
@@ -55,9 +55,9 @@ impl StoreView for NullStore {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::store::{BlockId, Store, StoreView};
     use std::borrow::Cow;
     use std::collections::HashMap;
-    use store::{BlockId, Store, StoreView};
 
     /// Define a Store to be used in tests.  This doesn't store the data on disk, but rather
     /// keeps it in memory in a hash map.

@@ -1,16 +1,16 @@
 // Copyright Facebook, Inc. 2017
 //! Trait for serialization and deserialization of tree data.
 
+use crate::errors::*;
+use crate::filestate::{FileState, FileStateV2, StateFlags};
+use crate::store::BlockId;
+use crate::tree::{AggregatedState, Key, Node, NodeEntry, NodeEntryMap};
+use crate::treedirstate::TreeDirstateRoot;
+use crate::treestate::TreeStateRoot;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use errors::*;
-use failure::Fallible;
-use filestate::{FileState, FileStateV2, StateFlags};
+use failure::{bail, Fallible};
 use std::hash::Hasher;
 use std::io::{Cursor, Read, Write};
-use store::BlockId;
-use tree::{AggregatedState, Key, Node, NodeEntry, NodeEntryMap};
-use treedirstate::TreeDirstateRoot;
-use treestate::TreeStateRoot;
 use twox_hash::XxHash;
 use vlqencoding::{VLQDecode, VLQEncode};
 

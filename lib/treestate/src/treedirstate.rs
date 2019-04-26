@@ -1,14 +1,14 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State.
 
+use crate::filestate::FileState;
+use crate::filestore::FileStore;
+use crate::serialization::Serializable;
+use crate::store::{BlockId, NullStore, Store, StoreView};
+use crate::tree::{Key, KeyRef, Tree, VisitorResult};
 use failure::Fallible;
-use filestate::FileState;
-use filestore::FileStore;
-use serialization::Serializable;
 use std::io::Cursor;
 use std::path::Path;
-use store::{BlockId, NullStore, Store, StoreView};
-use tree::{Key, KeyRef, Tree, VisitorResult};
 
 /// Selected backend implementation for the treedirstate.
 enum Backend {
@@ -324,9 +324,9 @@ impl TreeDirstate {
 
 #[cfg(test)]
 mod tests {
-    use filestate::FileState;
+    use crate::filestate::FileState;
+    use crate::treedirstate::TreeDirstate;
     use tempdir::TempDir;
-    use treedirstate::TreeDirstate;
 
     fn make_state(state: u8) -> FileState {
         FileState::new(state, 0, 0, 0)

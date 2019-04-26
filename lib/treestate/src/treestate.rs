@@ -1,14 +1,14 @@
 // Copyright Facebook, Inc. 2017
 
+use crate::filestate::FileStateV2;
+use crate::filestore::FileStore;
+use crate::serialization::Serializable;
+use crate::store::{BlockId, Store, StoreView};
+use crate::tree::{AggregatedState, Key, KeyRef, Node, Tree, VisitorResult};
 use failure::Fallible;
-use filestate::FileStateV2;
-use filestore::FileStore;
-use serialization::Serializable;
 use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
-use store::{BlockId, Store, StoreView};
-use tree::{AggregatedState, Key, KeyRef, Node, Tree, VisitorResult};
 
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
@@ -158,7 +158,7 @@ impl TreeState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use filestate::StateFlags;
+    use crate::filestate::StateFlags;
     use rand::{Rng, SeedableRng};
     use rand_chacha::ChaChaRng;
     use tempdir::TempDir;
