@@ -273,7 +273,7 @@ impl ConfigSet {
             let mut lines = Vec::with_capacity(1);
             for pair in pairs {
                 if Rule::line == pair.as_rule() {
-                    lines.push(extract(&buf, pair.into_span()));
+                    lines.push(extract(&buf, pair.as_span()));
                 }
             }
 
@@ -293,9 +293,9 @@ impl ConfigSet {
             let mut name = Bytes::new();
             for pair in pairs {
                 match pair.as_rule() {
-                    Rule::config_name => name = extract(&buf, pair.into_span()),
+                    Rule::config_name => name = extract(&buf, pair.as_span()),
                     Rule::value => {
-                        let span = pair.clone().into_span();
+                        let span = pair.as_span();
                         let location = ValueLocation {
                             path: shared_path.clone(),
                             content: buf.clone(),
@@ -314,7 +314,7 @@ impl ConfigSet {
             for pair in pairs {
                 match pair.as_rule() {
                     Rule::section_name => {
-                        *section = extract(&buf, pair.into_span());
+                        *section = extract(&buf, pair.as_span());
                         return;
                     }
                     _ => (),
@@ -341,12 +341,12 @@ impl ConfigSet {
         };
 
         let handle_unset = |this: &mut ConfigSet, pair: Pair, section: &Bytes| {
-            let unset_span = pair.clone().into_span();
+            let unset_span = pair.as_span();
             let pairs = pair.into_inner();
             for pair in pairs {
                 match pair.as_rule() {
                     Rule::config_name => {
-                        let name = extract(&buf, pair.into_span());
+                        let name = extract(&buf, pair.as_span());
                         let location = ValueLocation {
                             path: shared_path.clone(),
                             content: buf.clone(),
