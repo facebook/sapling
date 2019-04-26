@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State.
 
-use errors::*;
+use failure::Fallible;
 use filestate::FileState;
 use filestore::FileStore;
 use serialization::Serializable;
@@ -36,7 +36,7 @@ impl Backend {
         }
     }
 
-    pub fn cache(&mut self) -> Result<()> {
+    pub fn cache(&mut self) -> Fallible<()> {
         match *self {
             Backend::Empty(ref _null) => Ok(()),
             Backend::File(ref mut file) => file.cache(),
@@ -88,7 +88,7 @@ impl TreeDirstate {
 
     /// Open an existing treedirstate file.  The entries in the file will not be materialized from
     /// the disk until they are accessed.
-    pub fn open<P: AsRef<Path>>(&mut self, filename: P, root_id: BlockId) -> Result<()> {
+    pub fn open<P: AsRef<Path>>(&mut self, filename: P, root_id: BlockId) -> Fallible<()> {
         let store = FileStore::open(filename)?;
         let root = TreeDirstateRoot::deserialize(&mut Cursor::new(store.read(root_id)?))?;
         self.tracked = Tree::open(root.tracked_root_id, root.tracked_file_count);
@@ -100,7 +100,7 @@ impl TreeDirstate {
 
     /// Write a new root block to the store.  This contains the identities of the tree roots
     /// and the tree sizes.
-    fn write_root(&mut self) -> Result<()> {
+    fn write_root(&mut self) -> Fallible<()> {
         let root = TreeDirstateRoot {
             tracked_root_id: self.tracked.root_id().unwrap(),
             tracked_file_count: self.tracked.file_count(),
@@ -116,7 +116,7 @@ impl TreeDirstate {
     }
 
     /// Write a full copy of the treedirstate out to a new file.
-    pub fn write_full<P: AsRef<Path>>(&mut self, filename: P) -> Result<()> {
+    pub fn write_full<P: AsRef<Path>>(&mut self, filename: P) -> Fallible<()> {
         {
             let mut store = FileStore::create(filename)?;
             {
@@ -130,7 +130,7 @@ impl TreeDirstate {
     }
 
     /// Write updated entries in the treedirstate to the store.
-    pub fn write_delta(&mut self) -> Result<()> {
+    pub fn write_delta(&mut self) -> Fallible<()> {
         {
             match self.store {
                 Backend::Empty(ref mut store) => {
@@ -163,7 +163,7 @@ impl TreeDirstate {
     }
 
     /// Add or update a file entry in the treedirstate.
-    pub fn add_file(&mut self, name: KeyRef, state: &FileState) -> Result<()> {
+    pub fn add_file(&mut self, name: KeyRef, state: &FileState) -> Fallible<()> {
         let store = self.store.store_view();
         self.removed.remove(store, name)?;
         self.tracked.add(store, name, state)?;
@@ -171,7 +171,7 @@ impl TreeDirstate {
     }
 
     /// Mark a file as removed in the treedirstate.
-    pub fn remove_file(&mut self, name: KeyRef, state: &FileState) -> Result<()> {
+    pub fn remove_file(&mut self, name: KeyRef, state: &FileState) -> Fallible<()> {
         let store = self.store.store_view();
         self.tracked.remove(store, name)?;
         self.removed.add(store, name, state)?;
@@ -179,7 +179,7 @@ impl TreeDirstate {
     }
 
     /// Drop a file from the treedirstate.
-    pub fn drop_file(&mut self, name: KeyRef) -> Result<bool> {
+    pub fn drop_file(&mut self, name: KeyRef) -> Fallible<bool> {
         let store = self.store.store_view();
         let tracked = self.tracked.remove(store, name)?;
         let removed = self.removed.remove(store, name)?;
@@ -195,7 +195,7 @@ impl TreeDirstate {
     }
 
     /// Get an entry from the tracked tree.
-    pub fn get_tracked<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a FileState>> {
+    pub fn get_tracked<'a>(&'a mut self, name: KeyRef) -> Fallible<Option<&'a FileState>> {
         self.tracked.get(self.store.store_view(), name)
     }
 
@@ -204,9 +204,9 @@ impl TreeDirstate {
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Option<Key>>
+    ) -> Fallible<Option<Key>>
     where
-        F: FnMut(KeyRef) -> Result<Key>,
+        F: FnMut(KeyRef) -> Fallible<Key>,
     {
         self.tracked
             .get_filtered_key(self.store.store_view(), name, filter, filter_id)
@@ -214,25 +214,25 @@ impl TreeDirstate {
     }
 
     /// Visit all tracked files with a visitor.
-    pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
+    pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Fallible<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Fallible<VisitorResult>,
     {
         self.store.cache()?;
         self.tracked.visit(self.store.store_view(), visitor)
     }
 
     /// Visit all tracked files in changed nodes with a visitor.
-    pub fn visit_changed_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
+    pub fn visit_changed_tracked<F>(&mut self, visitor: &mut F) -> Fallible<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Fallible<VisitorResult>,
     {
         self.store.cache()?;
         self.tracked.visit_changed(self.store.store_view(), visitor)
     }
 
     /// Get the name and state of the first file in the tracked tree.
-    pub fn get_first_tracked<'a>(&'a mut self) -> Result<Option<(Key, &'a FileState)>> {
+    pub fn get_first_tracked<'a>(&'a mut self) -> Fallible<Option<(Key, &'a FileState)>> {
         self.store.cache()?;
         self.tracked.get_first(self.store.store_view())
     }
@@ -241,29 +241,29 @@ impl TreeDirstate {
     pub fn get_next_tracked<'a>(
         &'a mut self,
         name: KeyRef,
-    ) -> Result<Option<(Key, &'a FileState)>> {
+    ) -> Fallible<Option<(Key, &'a FileState)>> {
         self.tracked.get_next(self.store.store_view(), name)
     }
 
-    pub fn has_tracked_dir(&mut self, name: KeyRef) -> Result<bool> {
+    pub fn has_tracked_dir(&mut self, name: KeyRef) -> Fallible<bool> {
         self.tracked.has_dir(self.store.store_view(), name)
     }
 
     /// Get an entry from the removed tree.
-    pub fn get_removed<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a FileState>> {
+    pub fn get_removed<'a>(&'a mut self, name: KeyRef) -> Fallible<Option<&'a FileState>> {
         self.removed.get(self.store.store_view(), name)
     }
 
     /// Visit all removed files with a visitor.
-    pub fn visit_removed<F>(&mut self, visitor: &mut F) -> Result<()>
+    pub fn visit_removed<F>(&mut self, visitor: &mut F) -> Fallible<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Fallible<VisitorResult>,
     {
         self.removed.visit(self.store.store_view(), visitor)
     }
 
     /// Get the name and state of the first file in the removed tree.
-    pub fn get_first_removed<'a>(&'a mut self) -> Result<Option<(Key, &'a FileState)>> {
+    pub fn get_first_removed<'a>(&'a mut self) -> Fallible<Option<(Key, &'a FileState)>> {
         self.removed.get_first(self.store.store_view())
     }
 
@@ -271,11 +271,11 @@ impl TreeDirstate {
     pub fn get_next_removed<'a>(
         &'a mut self,
         name: KeyRef,
-    ) -> Result<Option<(Key, &'a FileState)>> {
+    ) -> Fallible<Option<(Key, &'a FileState)>> {
         self.removed.get_next(self.store.store_view(), name)
     }
 
-    pub fn has_removed_dir(&mut self, name: KeyRef) -> Result<bool> {
+    pub fn has_removed_dir(&mut self, name: KeyRef) -> Fallible<bool> {
         self.removed.has_dir(self.store.store_view(), name)
     }
 
@@ -286,10 +286,10 @@ impl TreeDirstate {
         full_paths: bool,
         acceptable: &FA,
         visitor: &mut FV,
-    ) -> Result<()>
+    ) -> Fallible<()>
     where
         FA: Fn(&FileState) -> bool,
-        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+        FV: FnMut(&Vec<KeyRef>) -> Fallible<()>,
     {
         self.tracked.path_complete(
             self.store.store_view(),
@@ -307,10 +307,10 @@ impl TreeDirstate {
         full_paths: bool,
         acceptable: &FA,
         visitor: &mut FV,
-    ) -> Result<()>
+    ) -> Fallible<()>
     where
         FA: Fn(&FileState) -> bool,
-        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+        FV: FnMut(&Vec<KeyRef>) -> Fallible<()>,
     {
         self.removed.path_complete(
             self.store.store_view(),

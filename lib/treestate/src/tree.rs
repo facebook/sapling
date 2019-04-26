@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State Tree.
 
-use errors::*;
+use failure::Fallible;
 use filestate::{FileState, FileStateV2, StateFlags};
 use serialization::Serializable;
 use std::cell::Cell;
@@ -156,10 +156,10 @@ fn split_key_exact<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
 /// Compatiblity layer - difference between `FileState` and `FileStateV2`
 pub trait CompatExt<T> {
     /// Load extra fields. Extends `load`.
-    fn load_ext(&self, data: &mut Read) -> Result<()>;
+    fn load_ext(&self, data: &mut Read) -> Fallible<()>;
 
     /// Write extra fields. Extends `write_entries`.
-    fn write_ext(&self, writer: &mut Write) -> Result<()>;
+    fn write_ext(&self, writer: &mut Write) -> Fallible<()>;
 
     /// Calculate `aggregated_state` if it's not calculated yet.
     fn calculate_aggregated_state(&self) -> AggregatedState;
@@ -168,15 +168,15 @@ pub trait CompatExt<T> {
     fn calculate_aggregated_state_recursive(
         &mut self,
         _store: &StoreView,
-    ) -> Result<AggregatedState>;
+    ) -> Fallible<AggregatedState>;
 }
 
 impl CompatExt<FileState> for Node<FileState> {
-    fn load_ext(&self, _: &mut Read) -> Result<()> {
+    fn load_ext(&self, _: &mut Read) -> Fallible<()> {
         Ok(())
     }
 
-    fn write_ext(&self, _: &mut Write) -> Result<()> {
+    fn write_ext(&self, _: &mut Write) -> Fallible<()> {
         Ok(())
     }
 
@@ -187,13 +187,13 @@ impl CompatExt<FileState> for Node<FileState> {
     fn calculate_aggregated_state_recursive(
         &mut self,
         _store: &StoreView,
-    ) -> Result<AggregatedState> {
+    ) -> Fallible<AggregatedState> {
         Ok(AggregatedState::default().normalized())
     }
 }
 
 impl CompatExt<FileStateV2> for Node<FileStateV2> {
-    fn write_ext(&self, writer: &mut Write) -> Result<()> {
+    fn write_ext(&self, writer: &mut Write) -> Fallible<()> {
         let state = self.calculate_aggregated_state();
         state.serialize(writer)?;
         Ok(())
@@ -202,7 +202,8 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
     fn calculate_aggregated_state(&self) -> AggregatedState {
         match self.aggregated_state.get() {
             None => {
-                let state = self.entries
+                let state = self
+                    .entries
                     .as_ref()
                     .expect("entries should exist")
                     .iter()
@@ -222,7 +223,7 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
     fn calculate_aggregated_state_recursive(
         &mut self,
         store: &StoreView,
-    ) -> Result<AggregatedState> {
+    ) -> Fallible<AggregatedState> {
         self.load_aggregated_state(store)?;
         if self.aggregated_state.get().is_none() {
             for (_name, entry) in self.load_entries(store)?.iter_mut() {
@@ -234,7 +235,7 @@ impl CompatExt<FileStateV2> for Node<FileStateV2> {
         Ok(self.calculate_aggregated_state())
     }
 
-    fn load_ext(&self, data: &mut Read) -> Result<()> {
+    fn load_ext(&self, data: &mut Read) -> Fallible<()> {
         self.aggregated_state
             .set(Some(AggregatedState::deserialize(data)?));
         Ok(())
@@ -280,7 +281,7 @@ where
     Self: CompatExt<T>,
 {
     /// Attempt to load a node from a store.
-    fn load(&mut self, store: &StoreView) -> Result<()> {
+    fn load(&mut self, store: &StoreView) -> Fallible<()> {
         if self.entries.is_some() {
             // Already loaded.
             return Ok(());
@@ -294,7 +295,7 @@ where
     }
 
     /// Load only the aggregated_state without entries.
-    fn load_aggregated_state(&mut self, store: &StoreView) -> Result<()> {
+    fn load_aggregated_state(&mut self, store: &StoreView) -> Fallible<()> {
         if self.entries.is_some() {
             // No need to load aggregated_state, since it was loaded before.
             return Ok(());
@@ -302,7 +303,8 @@ where
             // Already loaded.
             return Ok(());
         }
-        let id = self.id
+        let id = self
+            .id
             .expect("Node must have a valid ID to load aggregated_state");
         let data = store.read(id)?;
         let mut cur = Cursor::new(data);
@@ -312,9 +314,10 @@ where
 
     /// Get access to the node entries, ensuring they are loaded first.
     #[inline]
-    fn load_entries(&mut self, store: &StoreView) -> Result<&mut NodeEntryMap<T>> {
+    fn load_entries(&mut self, store: &StoreView) -> Fallible<&mut NodeEntryMap<T>> {
         self.load(store)?;
-        let entries = self.entries
+        let entries = self
+            .entries
             .as_mut()
             .expect("Entries should have been populated by loading");
         Ok(entries)
@@ -322,11 +325,12 @@ where
 
     /// Writes all entries for this node to the store.  Any child directory entries must have
     /// had IDs assigned to them.
-    fn write_entries(&mut self, store: &mut Store) -> Result<()> {
+    fn write_entries(&mut self, store: &mut Store) -> Fallible<()> {
         let mut data = Vec::new();
         self.write_ext(&mut data)?;
         {
-            let entries = self.entries
+            let entries = self
+                .entries
                 .as_ref()
                 .expect("Node should have entries populated before writing out.");
             entries.serialize(&mut data)?;
@@ -337,7 +341,7 @@ where
 
     /// Perform a full write of the node and its children to the store.  Old entries are
     /// loaded from the old_store before being written back to the new store.
-    fn write_full(&mut self, store: &mut Store, old_store: &StoreView) -> Result<()> {
+    fn write_full(&mut self, store: &mut Store, old_store: &StoreView) -> Fallible<()> {
         // Write out all the child nodes.
         for (_name, entry) in self.load_entries(old_store)?.iter_mut() {
             if let &mut NodeEntry::Directory(ref mut node) = entry {
@@ -350,13 +354,14 @@ where
 
     /// Perform a delta write of the node and its children to the store.  Entries that are
     /// already in the store will not be written again.
-    fn write_delta<S: Store + StoreView>(&mut self, store: &mut S) -> Result<()> {
+    fn write_delta<S: Store + StoreView>(&mut self, store: &mut S) -> Fallible<()> {
         if self.id.is_none() {
             // This node has been modified, write out a new copy of any children who have
             // also changed.  The entries list must already have been populated when the node
             // was modified, so no need to load it here.
             {
-                let entries = self.entries
+                let entries = self
+                    .entries
                     .as_mut()
                     .expect("Node should have entries populated if it was modified.");
                 for (_name, entry) in entries.iter_mut() {
@@ -397,9 +402,9 @@ where
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Result<VisitorResult>
+    ) -> Fallible<VisitorResult>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Fallible<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
         VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
@@ -448,7 +453,7 @@ where
     fn get_first<'node>(
         &'node mut self,
         store: &StoreView,
-    ) -> Result<Option<(Vec<KeyRef<'node>>, &'node T)>> {
+    ) -> Fallible<Option<(Vec<KeyRef<'node>>, &'node T)>> {
         for (name, entry) in self.load_entries(store)?.iter_mut() {
             match entry {
                 &mut NodeEntry::Directory(ref mut node) => {
@@ -472,14 +477,15 @@ where
         &'node mut self,
         store: &StoreView,
         name: KeyRef,
-    ) -> Result<Option<(Vec<KeyRef<'node>>, &'node T)>> {
+    ) -> Fallible<Option<(Vec<KeyRef<'node>>, &'node T)>> {
         // Find the entry within this list, and what the remainder of the path is.
         let (elem, mut path) = split_key(name);
 
         // Get the next entry after the current one.  We need to look inside directories as we go.
         // The subpath we obtained from split_key is only relevant if we are looking inside the
         // directory the path refers to.
-        for (entry_name, entry) in self.load_entries(store)?
+        for (entry_name, entry) in self
+            .load_entries(store)?
             .range_mut((Bound::Included(elem), Bound::Unbounded))
         {
             match entry {
@@ -520,7 +526,7 @@ where
         &'node mut self,
         store: &StoreView,
         name: KeyRef<'name>,
-    ) -> Result<PathRecurse<'name, 'node, T>> {
+    ) -> Fallible<PathRecurse<'name, 'node, T>> {
         let (elem, path) = split_key(name);
         let res = if let Some(path) = path {
             // The name is for a subdirectory.
@@ -547,7 +553,7 @@ where
     }
 
     /// Get a file's state.
-    fn get<'node>(&'node mut self, store: &StoreView, name: KeyRef) -> Result<Option<&'node T>> {
+    fn get<'node>(&'node mut self, store: &StoreView, name: KeyRef) -> Fallible<Option<&'node T>> {
         match self.path_recurse(store, name)? {
             PathRecurse::Directory(_dir, path, node) => node.get(store, path),
             PathRecurse::ExactDirectory(_dir, _node) => Ok(None),
@@ -559,7 +565,7 @@ where
     }
 
     /// Returns true if the given path is a directory.
-    fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<bool> {
+    fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Fallible<bool> {
         // This directory exists, without checking entries.
         if name == b"/" {
             return Ok(true);
@@ -575,7 +581,7 @@ where
     }
 
     /// Returns `Some(AggregatedState)` if the given path is a directory, or `None`.
-    fn get_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<Option<AggregatedState>> {
+    fn get_dir(&mut self, store: &StoreView, name: KeyRef) -> Fallible<Option<AggregatedState>> {
         if name == b"/" {
             return Ok(Some(self.calculate_aggregated_state_recursive(store)?));
         }
@@ -592,7 +598,7 @@ where
 
     /// Add a file to the node.  The name may contain a path, in which case sufficient
     /// subdirectories are updated to add or update the file.
-    fn add(&mut self, store: &StoreView, name: KeyRef, info: &T) -> Result<bool> {
+    fn add(&mut self, store: &StoreView, name: KeyRef, info: &T) -> Fallible<bool> {
         let (new_entry, file_added) = match self.path_recurse(store, name)? {
             PathRecurse::Directory(_dir, path, node) => {
                 // The file is in a subdirectory.  Add it to the subdirectory.
@@ -648,7 +654,7 @@ where
     ///
     /// Returns a pair of booleans (file_removed, now_empty) indicating whether the file
     /// was removed, and whether the diectory is now empty.
-    fn remove(&mut self, store: &StoreView, name: KeyRef) -> Result<(bool, bool)> {
+    fn remove(&mut self, store: &StoreView, name: KeyRef) -> Fallible<(bool, bool)> {
         let (file_removed, remove_entry) = match self.path_recurse(store, name)? {
             PathRecurse::Directory(dir, path, node) => {
                 let (file_removed, now_empty) = node.remove(store, path)?;
@@ -688,9 +694,9 @@ where
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Vec<Vec<Key>>>
+    ) -> Fallible<Vec<Vec<Key>>>
     where
-        F: FnMut(KeyRef) -> Result<Key>,
+        F: FnMut(KeyRef) -> Fallible<Key>,
     {
         let (elem, path) = split_key(name);
         if self.filtered_keys.is_none()
@@ -739,7 +745,8 @@ where
             }
             Ok(result)
         } else {
-            Ok(self.filtered_keys
+            Ok(self
+                .filtered_keys
                 .as_ref()
                 .unwrap()
                 .map
@@ -754,7 +761,7 @@ where
 
     /// Checks if a path is suitable for completion, in that it contains a file that matches
     /// the acceptable conditions.
-    fn path_complete_check<FA>(&mut self, store: &StoreView, acceptable: &FA) -> Result<bool>
+    fn path_complete_check<FA>(&mut self, store: &StoreView, acceptable: &FA) -> Fallible<bool>
     where
         FA: Fn(&T) -> bool,
     {
@@ -790,10 +797,10 @@ where
         full_paths: bool,
         acceptable: &FA,
         visitor: &mut FV,
-    ) -> Result<()>
+    ) -> Fallible<()>
     where
         FA: Fn(&T) -> bool,
-        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+        FV: FnMut(&Vec<KeyRef>) -> Fallible<()>,
     {
         let (elem, subpath) = split_key_exact(prefix);
         if let Some(subpath) = subpath {
@@ -805,7 +812,8 @@ where
             }
         } else {
             // Prefix part is for a entry in this directory.  Iterate across all matching entries.
-            for (entry_name, entry) in self.load_entries(store)?
+            for (entry_name, entry) in self
+                .load_entries(store)?
                 .range_mut((Bound::Included(elem), Bound::Unbounded))
             {
                 if entry_name.len() < elem.len() || &entry_name[..elem.len()] != elem {
@@ -889,17 +897,17 @@ where
         self.file_count
     }
 
-    pub fn write_full(&mut self, store: &mut Store, old_store: &StoreView) -> Result<BlockId> {
+    pub fn write_full(&mut self, store: &mut Store, old_store: &StoreView) -> Fallible<BlockId> {
         self.root.write_full(store, old_store)?;
         Ok(self.root.id.unwrap())
     }
 
-    pub fn write_delta<S: Store + StoreView>(&mut self, store: &mut S) -> Result<BlockId> {
+    pub fn write_delta<S: Store + StoreView>(&mut self, store: &mut S) -> Fallible<BlockId> {
         self.root.write_delta(store)?;
         Ok(self.root.id.unwrap())
     }
 
-    pub fn get<'a>(&'a mut self, store: &StoreView, name: KeyRef) -> Result<Option<&'a T>> {
+    pub fn get<'a>(&'a mut self, store: &StoreView, name: KeyRef) -> Fallible<Option<&'a T>> {
         Ok(self.root.get(store, name)?)
     }
 
@@ -909,9 +917,9 @@ where
         visitor: &mut F,
         visit_dir: &VD,
         visit_file: &VF,
-    ) -> Result<()>
+    ) -> Fallible<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Fallible<VisitorResult>,
         VD: Fn(&Vec<KeyRef>, &Node<T>) -> bool,
         VF: Fn(&Vec<KeyRef>, &T) -> bool,
     {
@@ -922,16 +930,16 @@ where
         Ok(())
     }
 
-    pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
+    pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Fallible<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Fallible<VisitorResult>,
     {
         self.visit_advanced(store, visitor, &|_, _| true, &|_, _| true)
     }
 
-    pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
+    pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Fallible<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<VisitorResult>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Fallible<VisitorResult>,
     {
         self.visit_advanced(
             store,
@@ -941,7 +949,7 @@ where
         )
     }
 
-    pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Result<Option<(Key, &'a T)>> {
+    pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Fallible<Option<(Key, &'a T)>> {
         Ok(self.root.get_first(store)?.map(|(mut path, file)| {
             path.reverse();
             (path.concat().into_boxed_slice(), file)
@@ -952,29 +960,33 @@ where
         &'a mut self,
         store: &StoreView,
         name: KeyRef,
-    ) -> Result<Option<(Key, &'a T)>> {
+    ) -> Fallible<Option<(Key, &'a T)>> {
         Ok(self.root.get_next(store, name)?.map(|(mut path, file)| {
             path.reverse();
             (path.concat().into_boxed_slice(), file)
         }))
     }
 
-    pub fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<bool> {
+    pub fn has_dir(&mut self, store: &StoreView, name: KeyRef) -> Fallible<bool> {
         Ok(self.root.has_dir(store, name)?)
     }
 
-    pub fn get_dir(&mut self, store: &StoreView, name: KeyRef) -> Result<Option<AggregatedState>> {
+    pub fn get_dir(
+        &mut self,
+        store: &StoreView,
+        name: KeyRef,
+    ) -> Fallible<Option<AggregatedState>> {
         Ok(self.root.get_dir(store, name)?)
     }
 
-    pub fn add(&mut self, store: &StoreView, name: KeyRef, file: &T) -> Result<()> {
+    pub fn add(&mut self, store: &StoreView, name: KeyRef, file: &T) -> Fallible<()> {
         if self.root.add(store, name, file)? {
             self.file_count += 1;
         }
         Ok(())
     }
 
-    pub fn remove(&mut self, store: &StoreView, name: KeyRef) -> Result<bool> {
+    pub fn remove(&mut self, store: &StoreView, name: KeyRef) -> Fallible<bool> {
         let removed = self.root.remove(store, name)?.0;
         if removed {
             assert!(self.file_count > 0);
@@ -989,11 +1001,12 @@ where
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Vec<Key>>
+    ) -> Fallible<Vec<Key>>
     where
-        F: FnMut(KeyRef) -> Result<Key>,
+        F: FnMut(KeyRef) -> Fallible<Key>,
     {
-        Ok(self.root
+        Ok(self
+            .root
             .get_filtered_key(store, name, filter, filter_id)?
             .iter_mut()
             .map(|path| {
@@ -1010,10 +1023,10 @@ where
         full_paths: bool,
         acceptable: &FA,
         visitor: &mut FV,
-    ) -> Result<()>
+    ) -> Fallible<()>
     where
         FA: Fn(&T) -> bool,
-        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+        FV: FnMut(&Vec<KeyRef>) -> Fallible<()>,
     {
         let mut path = Vec::new();
         let mut path = VecStack::new(&mut path);
@@ -1025,8 +1038,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use store::NullStore;
     use store::tests::MapStore;
+    use store::NullStore;
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
     static TEST_FILES: [(&[u8], u32, i32, i32); 16] = [
@@ -1221,7 +1234,8 @@ mod tests {
             &ms,
             b"dirB/subdira/subsubdirx/file5",
             &FileState::new(b'm', 0o644, 200, 2000),
-        ).expect("can add");
+        )
+        .expect("can add");
 
         let mut files = Vec::new();
         {
@@ -1248,7 +1262,7 @@ mod tests {
         populate(&mut t, &ms);
 
         // Define a mapping function that upper-cases 'A' characters:
-        fn map_upper_a(k: KeyRef) -> Result<Key> {
+        fn map_upper_a(k: KeyRef) -> Fallible<Key> {
             Ok(k.iter()
                 .map(|c| if *c == b'a' { b'A' } else { *c })
                 .collect::<Vec<u8>>()
@@ -1256,7 +1270,7 @@ mod tests {
         }
 
         // Another map function that does nothing.
-        fn map_noop(k: KeyRef) -> Result<Key> {
+        fn map_noop(k: KeyRef) -> Fallible<Key> {
             Ok(Vec::from(k).into_boxed_slice())
         }
 
@@ -1293,8 +1307,9 @@ mod tests {
         t.add(&ms, b"A/A/a", &FileState::new(b'a', 0, 0, 0))
             .unwrap();
 
-        fn map_upper_a(key: KeyRef) -> Result<Key> {
-            Ok(key.iter()
+        fn map_upper_a(key: KeyRef) -> Fallible<Key> {
+            Ok(key
+                .iter()
                 .map(|c| if *c == b'a' { b'A' } else { *c })
                 .collect::<Vec<u8>>()
                 .into_boxed_slice())

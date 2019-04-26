@@ -12,7 +12,7 @@ extern crate bitflags;
 extern crate byteorder;
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 #[cfg(test)]
 extern crate itertools;
