@@ -132,7 +132,7 @@ Test gap in data (extension dis and enabled)
   4: commit --amend
   $ hg debugundohistory 1
   command:
-  	unkown command(s) run, gap in log
+  	unknown command(s) run, gap in log
   bookmarks:
   	feature1 49cdb4091aca3c09f402ff001cd20cf086873683
   	feature2 296fda51a303650465d07a1cd054075cbe6d3cbd

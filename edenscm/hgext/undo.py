@@ -7,8 +7,6 @@
 
 from __future__ import absolute_import
 
-import os
-
 from edenscm.mercurial import (
     cmdutil,
     commands,
@@ -471,7 +469,7 @@ def _debugundoindex(ui, repo, reverseindex):
                 )
         elif "command.i" == filename:
             if "" == rawcontent:
-                content = "unkown command(s) run, gap in log"
+                content = "unknown command(s) run, gap in log"
             else:
                 content = rawcontent.split("\0", 1)[1]
         else:
@@ -1205,6 +1203,8 @@ def smarthide(repo, revhide, revshow, local=False):
     """
     hidectxs = repo.set(revhide)
     showctxs = repo.set(revshow)
+    markers = []
+    nodes = []
     for ctx in hidectxs:
         unfi = repo.unfiltered()
         related = set()
@@ -1234,18 +1234,19 @@ def smarthide(repo, revhide, revshow, local=False):
         # correct solution for complex edge case
 
         if len(destinations) == 1:
-            hidecommits(repo, ctx, destinations)
+            markers.append((ctx, destinations))
+            nodes.append(ctx.node())
         elif len(destinations) > 1:  # split
-            hidecommits(repo, ctx, [])
+            markers.append((ctx, []))
+            nodes.append(ctx.node())
         elif len(destinations) == 0:
             if not local:
-                hidecommits(repo, ctx, [])
+                markers.append((ctx, []))
+                nodes.append(ctx.node())
 
-
-def hidecommits(repo, curctx, predctxs):
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        obsolete.createmarkers(repo, [(curctx, predctxs)], operation="undo")
-    visibility.remove(repo, [curctx.node()])
+        obsolete.createmarkers(repo, markers, operation="undo")
+    visibility.remove(repo, nodes)
 
 
 def revealcommits(repo, rev):

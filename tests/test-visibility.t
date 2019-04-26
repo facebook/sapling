@@ -576,3 +576,73 @@ Test that shelve and unshelve work
   |
   @  0: 48b9aae0607f 'Z'
   
+Test undo of split
+  $ cd $TESTTMP
+  $ newrepo
+  $ echo base > base
+  $ hg commit -Aqm base
+  $ echo file1 > file1
+  $ echo file2 > file2
+  $ echo file3 > file3
+  $ hg commit -Aqm to-split
+  $ hg split --config ui.interactive=true << EOF
+  > y
+  > y
+  > n
+  > n
+  > n
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  adding file1
+  adding file2
+  adding file3
+  diff --git a/file1 b/file1
+  new file mode 100644
+  examine changes to 'file1'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +file1
+  record change 1/3 to 'file1'? [Ynesfdaq?] y
+  
+  diff --git a/file2 b/file2
+  new file mode 100644
+  examine changes to 'file2'? [Ynesfdaq?] n
+  
+  diff --git a/file3 b/file3
+  new file mode 100644
+  examine changes to 'file3'? [Ynesfdaq?] n
+  
+  Done splitting? [yN] n
+  diff --git a/file2 b/file2
+  new file mode 100644
+  examine changes to 'file2'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +file2
+  record change 1/2 to 'file2'? [Ynesfdaq?] y
+  
+  diff --git a/file3 b/file3
+  new file mode 100644
+  examine changes to 'file3'? [Ynesfdaq?] n
+  
+  Done splitting? [yN] y
+  $ tglogm
+  @  4: a30320c497f0 'to-split'
+  |
+  o  3: 0a2500cbe503 'to-split'
+  |
+  o  2: 06e40e6ae08c 'to-split'
+  |
+  o  0: d20a80d4def3 'base'
+  
+  $ hg undo
+  undone to *, before split --config ui.interactive=true (glob)
+  $ tglogm
+  @  1: 9a8c420e44f2 'to-split'
+  |
+  o  0: d20a80d4def3 'base'
+  
