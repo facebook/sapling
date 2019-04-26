@@ -120,6 +120,11 @@ class _cachebackedpacks(object):
         # Data not found in any pack.
         self._lastpack = None
 
+    def clear(self):
+        self._packs.clear()
+        self._lrucache.clear()
+        self._lastpack = None
+
 
 class basepackstore(object):
     # Default cache size limit for the pack files.
@@ -297,7 +302,8 @@ class basepackstore(object):
         # IndexedLog. Running repack is the short-time solution until
         # IndexedLog is more widely deployed.
         if self.fetchpacksenabled and len(self.packs) == self.DEFAULTCACHESIZE:
-            self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
+            self.packs.clear()
+            self.packspath.clear()
             try:
                 self.repackstore()
             except Exception:
@@ -348,10 +354,21 @@ class basepackstore(object):
     def runonpacks(self, func):
         badpacks = []
 
-        oldpacks = set()
-        for i in range(2):
+        for pack in self.packs:
+            try:
+                yield func(pack)
+            except KeyError:
+                pass
+            except Exception as ex:
+                # Other exceptions indicate an issue with the pack file, so
+                # remove it.
+                badpacks.append((pack, getattr(ex, "errno", None)))
+
+        newpacks = self.refresh()
+        if newpacks != []:
+            newpacks = set(newpacks)
             for pack in self.packs:
-                if pack not in oldpacks:
+                if pack in newpacks:
                     try:
                         yield func(pack)
                     except KeyError:
@@ -360,12 +377,6 @@ class basepackstore(object):
                         # Other exceptions indicate an issue with the pack file, so
                         # remove it.
                         badpacks.append((pack, getattr(ex, "errno", None)))
-                    oldpacks.add(pack)
-
-            # Let's refresh the packs, what is being looked for might be on-disk.
-            if i == 0:
-                if self.refresh() == []:
-                    break
 
         if badpacks:
             if self.deletecorruptpacks:
