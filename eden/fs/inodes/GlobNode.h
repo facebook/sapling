@@ -85,6 +85,13 @@ class GlobNode {
       const std::shared_ptr<const Tree>& tree,
       PrefetchList fileBlobsToPrefetch);
 
+  /**
+   * Print a human-readable description of this GlobNode to stderr.
+   *
+   * For debugging purposes only.
+   */
+  void debugDump() const;
+
  private:
   // Returns the next glob node token.
   // This is the text from the start of pattern up to the first
@@ -122,6 +129,8 @@ class GlobNode {
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch);
+
+  void debugDump(int currentDepth) const;
 
   // The pattern fragment for this node
   std::string pattern_;

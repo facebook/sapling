@@ -8,6 +8,8 @@
  *
  */
 #include "GlobNode.h"
+#include <iomanip>
+#include <iostream>
 #include "eden/fs/inodes/TreeInode.h"
 
 using folly::Future;
@@ -543,6 +545,56 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
         }
         return shadowResults;
       });
+}
+
+void GlobNode::debugDump() const {
+  debugDump(/*currentDepth=*/0);
+}
+
+namespace {
+struct Indentation {
+  int width;
+
+  friend std::ostream& operator<<(
+      std::ostream& s,
+      const Indentation& indentation) {
+    return s << std::setw(indentation.width) << "";
+  }
+};
+} // namespace
+
+void GlobNode::debugDump(int currentDepth) const {
+  auto& out = std::cerr;
+  auto indentation = Indentation{currentDepth * 2};
+  auto boolString = [](bool b) -> const char* { return b ? "true" : "false"; };
+
+  out << indentation << "- GlobNode " << this << "\n"
+      << indentation << "  alwaysMatch=" << boolString(alwaysMatch_) << "\n"
+      << indentation << "  hasSpecials=" << boolString(hasSpecials_) << "\n"
+      << indentation << "  includeDotfiles=" << boolString(includeDotfiles_)
+      << "\n"
+      << indentation << "  isLeaf=" << boolString(isLeaf_) << "\n";
+
+  if (pattern_.empty()) {
+    out << indentation << "  pattern is empty\n";
+  } else {
+    out << indentation << "  pattern: " << pattern_ << "\n";
+  }
+
+  if (!children_.empty()) {
+    out << indentation << "  children (" << children_.size() << "):\n";
+    for (const auto& child : children_) {
+      child->debugDump(/*currentDepth=*/currentDepth + 1);
+    }
+  }
+
+  if (!recursiveChildren_.empty()) {
+    out << indentation << "  recursiveChildren (" << recursiveChildren_.size()
+        << "):\n";
+    for (const auto& child : recursiveChildren_) {
+      child->debugDump(/*currentDepth=*/currentDepth + 1);
+    }
+  }
 }
 
 } // namespace eden

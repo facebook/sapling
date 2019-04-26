@@ -51,6 +51,7 @@ class GlobNodeTest : public ::testing::TestWithParam<
       bool includeDotfiles) {
     GlobNode globRoot(/*includeDotfiles=*/includeDotfiles);
     globRoot.parse(pattern);
+    globRoot.debugDump();
 
     if (shouldPrefetch()) {
       prefetchHashes_ =
