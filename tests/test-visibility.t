@@ -1,4 +1,4 @@
-  $ enable amend rebase undo directaccess
+  $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
@@ -520,4 +520,59 @@ Test that hiddenoverride has no effect on pinning hidden revisions.
   o  5: 05eb30556340 'E'
   |
   o  0: 48b9aae0607f 'Z'
+  
+Test that shelve and unshelve work
+  $ echo more > file
+  $ hg add file
+  $ hg st
+  A file
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg st
+  $ tglogm
+  @  6: a77c932a84af 'F'
+  |
+  o  5: 05eb30556340 'E'
+  |
+  o  0: 48b9aae0607f 'Z'
+  
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [05eb30] E
+  $ hg unshelve --keep
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 7:f321a4a9343c "shelve changes to: F" (tip)
+  $ hg st
+  A file
+  $ tglogm
+  o  6: a77c932a84af 'F'
+  |
+  @  5: 05eb30556340 'E'
+  |
+  o  0: 48b9aae0607f 'Z'
+  
+  $ hg prev --clean
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [48b9aa] Z
+  $ echo data > other
+  $ hg add other
+  $ hg st
+  A other
+  ? file
+  $ hg unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 7:f321a4a9343c "shelve changes to: F"
+  $ hg st
+  A file
+  A other
+  $ tglogm
+  o  6: a77c932a84af 'F'
+  |
+  o  5: 05eb30556340 'E'
+  |
+  @  0: 48b9aae0607f 'Z'
   

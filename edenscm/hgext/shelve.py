@@ -50,6 +50,7 @@ from edenscm.mercurial import (
     templatefilters,
     util,
     vfs as vfsmod,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 
@@ -314,9 +315,7 @@ class shelvedstate(object):
     def removenodes(self, ui, repo):
         """Cleanup temporary nodes from the repo"""
         if self.obsshelve:
-            unfi = repo.unfiltered()
-            relations = [(unfi[n], ()) for n in self.nodestoremove]
-            obsolete.createmarkers(repo, relations)
+            _hidenodes(repo, self.nodestoremove)
         else:
             repair.strip(ui, repo, self.nodestoremove, backup=False, topic="shelve")
 
@@ -533,7 +532,7 @@ def _docreatecmd(ui, repo, pats, opts):
                 _nothingtoshelvemessaging(ui, repo, pats, opts)
                 return 1
 
-            obsolete.createmarkers(repo, [(repo.unfiltered()[node], ())])
+            _hidenodes(repo, [node])
     except (KeyboardInterrupt, Exception):
         if activebookmark:
             bookmarks.activate(repo, activebookmark)
@@ -981,16 +980,21 @@ def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
 def _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
     # order is important in the list of [shelvectx, tmpwctx] below
     # some nodes may already be obsolete
+    toobsolete = []
+    if shelvectx != pctx:
+        toobsolete.append(shelvectx)
+    if tmpwctx not in (pctx, shelvectx):
+        toobsolete.append(tmpwctx)
+    _hidenodes(repo, [ctx.node() for ctx in toobsolete])
+
+
+def _hidenodes(repo, nodes):
     unfi = repo.unfiltered()
-    nodestoobsolete = filter(lambda x: x != pctx, [shelvectx, tmpwctx])
-    seen = set()
-    relations = []
-    for nto in nodestoobsolete:
-        if nto in seen:
-            continue
-        seen.add(nto)
-        relations.append((unfi[nto.rev()], ()))
-    obsolete.createmarkers(unfi, relations)
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        markers = [(unfi[n], ()) for n in nodes]
+        obsolete.createmarkers(repo, markers)
+    if visibility.tracking(repo):
+        visibility.remove(repo, nodes)
 
 
 @command(
