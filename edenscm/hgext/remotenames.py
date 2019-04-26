@@ -1128,17 +1128,18 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         dest = "default-push"
 
     # get the actual path we will push to so we can do some url sniffing
-    for check in [dest, "default-push", "default"]:
-        if check in paths:
-            path = paths[check]
+    for check in [
+        # dest may be a path name, or an actual url
+        paths.get(dest, dest),
+        paths.get("default-push"),
+        paths.get("default"),
+    ]:
+        if check:
             # hgsubversion and hggit do funky things on push. Just call direct.
-            if path.startswith("svn+") or path.startswith("git+"):
+            if check.startswith("svn+") or check.startswith("git+"):
                 return orig(ui, repo, dest, opargs=opargs, **opts)
             # Once we have found the path where we are pushing, do not continue
             # checking for places we are not pushing.
-            break
-        if dest:
-            # If an explicit destination was checked, also stop checking here.
             break
 
     if not opargs["to"]:
