@@ -319,6 +319,53 @@ class datapacktestsbase(object):
 
             self.assertEquals(randomchain.index(revision) + 1, len(chain))
 
+    def testInlineRepack(self):
+        """Verify that when fetchpacks is enabled, and the number of packfiles
+        is over DEFAULTCACHESIZE, the refresh operation will trigger a repack,
+        reducing the number of packfiles in the store.
+        """
+        packdir = self.makeTempDir()
+
+        numpacks = 20
+        revisionsperpack = 100
+
+        for i in range(numpacks):
+            chain = []
+            revision = (str(i), self.getFakeHash(), nullid, "content")
+
+            for _ in range(revisionsperpack):
+                chain.append(revision)
+                revision = (str(i), self.getFakeHash(), revision[1], self.getFakeHash())
+
+            self.createPack(chain, packdir)
+
+        packreader = self.datapackreader
+
+        class testdatapackstore(datapackstore):
+            DEFAULTCACHESIZE = numpacks / 2
+
+            def getpack(self, path):
+                return packreader(path)
+
+        store = testdatapackstore(uimod.ui(), packdir, self.iscdatapack)
+
+        # The first refresh should populate all the packfiles.
+        store.refresh()
+        self.assertEquals(len(store.packs), testdatapackstore.DEFAULTCACHESIZE)
+
+        # Each packfile is made up of 2 files: the data, and the index
+        self.assertEquals(len(os.listdir(packdir)), numpacks * 2)
+
+        store.markforrefresh()
+
+        # The second one should repack all the packfiles into one.
+        store.fetchpacksenabled = True
+        store.refresh()
+        self.assertEquals(len(store.packs), 1)
+
+        # There should only be 2 files: the packfile, and the index
+        self.assertEquals(len(os.listdir(packdir)), 2)
+
     def testCorruptPackHandling(self):
         """Test that the pack store deletes corrupt packs."""
         # There's a bug in cdatapack right now that causes it to return bad data
