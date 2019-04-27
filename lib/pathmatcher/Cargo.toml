@@ -1,9 +1,10 @@
 [package]
 name = "pathmatcher"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 ignore = "0.4"
 
 [dev-dependencies]
-tempdir = "0.3.7"
+tempfile = "3.0.7"

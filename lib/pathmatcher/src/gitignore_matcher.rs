@@ -164,7 +164,7 @@ mod tests {
     use super::*;
     use std::fs::{create_dir_all, File};
     use std::io::Write;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     #[test]
     fn test_split_path() {
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_gitignore_match_directory() {
-        let dir = TempDir::new("gitignore").expect("tempdir");
+        let dir = tempdir().unwrap();
         write(dir.path().join(".gitignore"), b"FILE\nDIR/\n");
 
         let m = GitignoreMatcher::new(dir.path(), Vec::new());
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_gitignore_match_subdir() {
-        let dir = TempDir::new("gitignore").expect("tempdir");
+        let dir = tempdir().unwrap();
 
         create_dir_all(dir.path().join("a/b")).expect("mkdir");
         create_dir_all(dir.path().join("c/d")).expect("mkdir");
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_global_gitignore() {
-        let dir = TempDir::new("gitignore").expect("tempdir");
+        let dir = tempdir().unwrap();
         let ignore1_path = dir.path().join("ignore1");
         let ignore2_path = dir.path().join("ignore2");
 
