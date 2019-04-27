@@ -492,9 +492,15 @@ class SubversionRepo(object):
 
                 pathidx += 1
 
+                # Check for deleted directories first, in case they need to be
+                # replaced with a file afterwards.
+                if path in deleteddirs:
+                    direditor = editor.delete_entry(path, base_revision)
+
                 if path in file_data:
                     # visiting a file
                     base_text, new_text, action = file_data[path]
+                    fileeditor = None
                     if action == "modify":
                         fileeditor = editor.open_file(path, base_revision)
                     elif action == "add":
@@ -504,27 +510,26 @@ class SubversionRepo(object):
                         fileeditor = editor.add_file(path, frompath, fromrev)
                     elif action == "delete":
                         editor.delete_entry(path, base_revision)
-                        continue
                     else:
                         assert False, "invalid action '%s'" % action
 
-                    if path in props:
-                        if props[path].get("svn:special", None):
-                            new_text = "link %s" % new_text
-                        for p, v in props[path].iteritems():
-                            fileeditor.change_prop(p, v)
+                    if fileeditor is not None:
+                        if path in props:
+                            if props[path].get("svn:special", None):
+                                new_text = "link %s" % new_text
+                            for p, v in props[path].iteritems():
+                                fileeditor.change_prop(p, v)
 
-                    handler = fileeditor.apply_textdelta()
-                    delta.send_stream(cStringIO.StringIO(new_text), handler)
-                    fileeditor.close()
+                        handler = fileeditor.apply_textdelta()
+                        delta.send_stream(cStringIO.StringIO(new_text), handler)
+                        fileeditor.close()
 
-                else:
-                    # visiting a directory
-                    if path in deleteddirs:
-                        direditor = editor.delete_entry(path, base_revision)
-
-                        if path not in addeddirs:
-                            continue
+                # if visiting a directory
+                if path not in file_data or path in addeddirs:
+                    # If it was deleted and not re-added, move along.
+                    # We already processed the actual delete above.
+                    if path in deleteddirs and path not in addeddirs:
+                        continue
 
                     if path in addeddirs:
                         frompath, fromrev = copies.get(path, (None, -1))
