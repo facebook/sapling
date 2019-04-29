@@ -150,6 +150,12 @@ queries! {
         "
     }
 
+    read CountFurtherBookmarkLogEntriesWithoutReason(min_id: u64, repo_id: RepositoryId, reason: BookmarkUpdateReason) -> (u64) {
+        "SELECT COUNT(*)
+        FROM bookmarks_update_log
+        WHERE id > {min_id} AND repo_id = {repo_id} AND NOT reason = {reason}"
+    }
+
     write AddBundleReplayData(values: (id: u64, bundle_handle: String, commit_hashes_json: String)) {
         none,
         "INSERT INTO bundle_replay_data
@@ -297,13 +303,34 @@ impl Bookmarks for SqlBookmarks {
         _ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
+        maybe_exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<u64, Error> {
-        CountFurtherBookmarkLogEntries::query(&self.read_connection, &id, &repoid)
-            .and_then(|entries| {
+        let query = match maybe_exclude_reason {
+            Some(ref r) => CountFurtherBookmarkLogEntriesWithoutReason::query(
+                &self.read_connection,
+                &id,
+                &repoid,
+                &r,
+            )
+            .boxify(),
+            None => {
+                CountFurtherBookmarkLogEntries::query(&self.read_connection, &id, &repoid).boxify()
+            }
+        };
+
+        query
+            .and_then(move |entries| {
                 let entry = entries.into_iter().next();
                 match entry {
                     Some(count) => future::ok(count.0),
-                    None => future::err(err_msg("Failed to query further bookmark log entries")),
+                    None => {
+                        let extra = match maybe_exclude_reason {
+                            Some(..) => "without reason",
+                            None => "",
+                        };
+                        let msg = format!("Failed to query further bookmark log entries{}", extra);
+                        future::err(err_msg(msg))
+                    }
                 }
             })
             .boxify()

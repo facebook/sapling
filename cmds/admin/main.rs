@@ -213,6 +213,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .required(false)
                         .takes_value(false)
                         .help("only print the number if present"),
+                )
+                .arg(
+                    Arg::with_name("without-blobimport")
+                        .long("without-blobimport")
+                        .required(false)
+                        .takes_value(false)
+                        .help("exclude blobimport entries from the count"),
                 ),
         )
         .subcommand(
@@ -967,6 +974,7 @@ fn process_hg_sync_subcommand<'a>(
         },
         (HG_SYNC_REMAINS, Some(sub_m)) => {
             let quiet = sub_m.is_present("quiet");
+            let without_blobimport = sub_m.is_present("without-blobimport");
             mutable_counters
                 .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
                 .map(|maybe_counter| {
@@ -977,9 +985,21 @@ fn process_hg_sync_subcommand<'a>(
                     maybe_counter.unwrap_or(0)
                 })
                 .and_then({
-                    cloned!(ctx, repo_id);
+                    cloned!(ctx, repo_id, without_blobimport);
                     move |counter| {
-                        bookmarks.count_further_bookmark_log_entries(ctx, counter as u64, repo_id)
+                        let counter = counter as u64;
+
+                        let exclude_reason = match without_blobimport {
+                            true => Some(BookmarkUpdateReason::Blobimport),
+                            false => None,
+                        };
+
+                        bookmarks.count_further_bookmark_log_entries(
+                            ctx,
+                            counter,
+                            repo_id,
+                            exclude_reason
+                        )
                     }
                 })
                 .map({
@@ -988,9 +1008,17 @@ fn process_hg_sync_subcommand<'a>(
                         if quiet {
                             println!("{}", remaining);
                         } else {
+                            let name = match without_blobimport {
+                                true => "non-blobimport bundles",
+                                false => "bundles",
+                            };
+
                             info!(
                                 logger,
-                                "Remaining bundles to replay in {:?}: {}", repo_id, remaining
+                                "Remaining {} to replay in {:?}: {}",
+                                name,
+                                repo_id,
+                                remaining
                             );
                         }
                     }

@@ -184,12 +184,14 @@ pub trait Bookmarks: Send + Sync + 'static {
         max_rec: u32,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>;
 
-    /// Count the number of BookmarkUpdateLog entries wiht id greater than the give value
+    /// Count the number of BookmarkUpdateLog entries with id greater than the given value,
+    /// possibly excluding a given reason.
     fn count_further_bookmark_log_entries(
         &self,
         _ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
+        exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<u64, Error>;
 
     /// Count the number of BookmarkUpdateLog entries with id greater than the given value
