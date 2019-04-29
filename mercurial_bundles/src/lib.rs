@@ -68,7 +68,7 @@ mod part_outer;
 pub mod parts;
 mod pushrebase;
 mod quickcheck_types;
-mod stream_start;
+pub mod stream_start;
 #[cfg(test)]
 mod test;
 mod types;
