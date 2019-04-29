@@ -10,6 +10,7 @@
 #pragma once
 
 #include <folly/ThreadLocal.h>
+#include <memory>
 #include "common/stats/ThreadLocalStats.h"
 #include "eden/fs/eden-config.h"
 
@@ -37,6 +38,9 @@ class EdenStats {
 
   folly::ThreadLocal<EdenThreadStats, ThreadLocalTag, void> threadLocalStats_;
 };
+
+std::shared_ptr<EdenThreadStats> getSharedStatsForCurrentThread(
+    std::shared_ptr<EdenStats>);
 
 /**
  * EdenThreadStats contains various thread-local stats structures.

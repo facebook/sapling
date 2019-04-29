@@ -131,8 +131,8 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
-      threadLocalImporter.reset(
-          new HgImporterManager(repository_, localStore_, stats_));
+      threadLocalImporter.reset(new HgImporterManager(
+          repository_, localStore_, getSharedStatsForCurrentThread(stats_)));
       func();
     });
   }
@@ -270,7 +270,8 @@ HgBackingStore::HgBackingStore(
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   initializeDatapackImport(repository);
 #endif
-  HgImporter importer(repository, localStore, std::move(stats));
+  HgImporter importer(
+      repository, localStore, getSharedStatsForCurrentThread(stats));
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;

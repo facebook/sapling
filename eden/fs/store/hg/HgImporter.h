@@ -120,10 +120,13 @@ class Importer {
  * code.  HgImporter hides all of the interaction with the underlying python
  * code.
  *
- * HgImporter is not thread safe.  The external caller must provide their own
- * locking around each HgImporter object.  However, to achieve parallelism
- * multiple HgImporter objects can be created for the same repository and used
- * simultaneously.
+ * HgImporter is thread-bound; use HgImporter only on the thread it was created
+ * on.  To achieve parallelism multiple HgImporter objects can be created for
+ * the same repository and used simultaneously.  HgImporter is thread-bound for
+ * the following reasons:
+ *
+ * * HgImporter does not synchronize its own members.
+ * * HgImporter accesses EdenThreadStats, and EdenThreadStats is thread-bound.
  */
 class HgImporter : public Importer {
  public:
@@ -137,7 +140,7 @@ class HgImporter : public Importer {
   HgImporter(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      std::shared_ptr<EdenStats>,
+      std::shared_ptr<EdenThreadStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   virtual ~HgImporter();
@@ -297,7 +300,7 @@ class HgImporter : public Importer {
 #endif
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
-  std::shared_ptr<EdenStats> const stats_;
+  std::shared_ptr<EdenThreadStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
   /**
@@ -330,13 +333,15 @@ class HgImporterError : public std::exception {
 /**
  * A helper class that manages an HgImporter and recreates it after any error
  * communicating with the underlying python hg_import_helper.py script.
+ *
+ * Because HgImporter is thread-bound, HgImporterManager is also thread-bound.
  */
 class HgImporterManager : public Importer {
  public:
   HgImporterManager(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      std::shared_ptr<EdenStats>,
+      std::shared_ptr<EdenThreadStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash importFlatManifest(folly::StringPiece revName) override;
@@ -358,7 +363,7 @@ class HgImporterManager : public Importer {
 
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
-  std::shared_ptr<EdenStats> const stats_;
+  std::shared_ptr<EdenThreadStats> const stats_;
   const std::optional<AbsolutePath> importHelperScript_;
 };
 

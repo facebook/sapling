@@ -46,7 +46,7 @@ class HgImportTest : public ::testing::Test {
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + "repo"_pc};
   MemoryLocalStore localStore_;
-  std::shared_ptr<EdenStats> stats_ = std::make_shared<EdenStats>();
+  std::shared_ptr<EdenThreadStats> stats_ = std::make_shared<EdenThreadStats>();
 };
 
 } // namespace

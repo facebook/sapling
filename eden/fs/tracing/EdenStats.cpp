@@ -11,6 +11,7 @@
 
 #include <folly/container/Array.h>
 #include <chrono>
+#include <memory>
 
 #include "eden/fs/eden-config.h"
 
@@ -34,6 +35,12 @@ void EdenStats::aggregate() {
   for (auto& stats : threadLocalStats_.accessAllThreads()) {
     stats.aggregate();
   }
+}
+
+std::shared_ptr<EdenThreadStats> getSharedStatsForCurrentThread(
+    std::shared_ptr<EdenStats> stats) {
+  return std::shared_ptr<EdenThreadStats>(
+      stats, &stats->getStatsForCurrentThread());
 }
 
 EdenThreadStats::EdenThreadStats() {}

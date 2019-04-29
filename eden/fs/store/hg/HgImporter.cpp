@@ -256,7 +256,7 @@ class HgImporterEofError : public HgImporterError {
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    std::shared_ptr<EdenStats> stats,
+    std::shared_ptr<EdenThreadStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath}, store_{store}, stats_{std::move(stats)} {
   std::vector<string> cmd;
@@ -561,8 +561,7 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   XLOG(DBG4) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
              << hgInfo.revHash() << "); length=" << bodyLength;
 
-  stats_->getStatsForCurrentThread().hgBackingStoreGetBlob.addValue(
-      watch.elapsed().count());
+  stats_->hgBackingStoreGetBlob.addValue(watch.elapsed().count());
   return make_unique<Blob>(blobHash, std::move(buf));
 }
 
@@ -713,7 +712,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
 HgImporter::TransactionID HgImporter::sendManifestRequest(
     folly::StringPiece revName) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->getStatsForCurrentThread().hgImporterManifest.addValue(1);
+  stats_->hgImporterManifest.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -736,8 +735,7 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
 HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
     folly::StringPiece revName) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->getStatsForCurrentThread().hgImporterManifestNodeForCommit.addValue(
-      1);
+  stats_->hgImporterManifestNodeForCommit.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -761,7 +759,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
     Hash revHash) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->getStatsForCurrentThread().hgImporterCatFile.addValue(1);
+  stats_->hgImporterCatFile.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -787,7 +785,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
 HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->getStatsForCurrentThread().hgImporterPrefetchFiles.addValue(1);
+  stats_->hgImporterPrefetchFiles.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -846,7 +844,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash pathManifestNode) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->getStatsForCurrentThread().hgImporterFetchTree.addValue(1);
+  stats_->hgImporterFetchTree.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -953,7 +951,7 @@ const ImporterOptions& HgImporter::getOptions() const {
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    std::shared_ptr<EdenStats> stats,
+    std::shared_ptr<EdenThreadStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},

@@ -202,7 +202,8 @@ int main(int argc, char* argv[]) {
 
   int returnCode = EX_OK;
   if (FLAGS_import_type == "flat") {
-    HgImporter importer(repoPath, &store, stats);
+    HgImporter importer(
+        repoPath, &store, getSharedStatsForCurrentThread(stats));
     printf("Importing revision \"%s\" using flat manifest\n", revName.c_str());
     auto rootHash = importer.importFlatManifest(revName);
     printf("Imported root tree: %s\n", rootHash.toString().c_str());
