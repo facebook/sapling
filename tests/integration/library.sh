@@ -88,12 +88,34 @@ function init_mutable_counters_sqlite3_db {
   "insert into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 0)";
 }
 
+function create_books_sqlite3_db {
+  cat >> "$TESTTMP"/books.sql <<SQL
+  CREATE TABLE bookmarks_update_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  repo_id INT UNSIGNED NOT NULL,
+  name VARCHAR(512) NOT NULL,
+  from_changeset_id VARBINARY(32),
+  to_changeset_id VARBINARY(32),
+  reason VARCHAR(32) NOT NULL, -- enum is used in mysql
+  timestamp BIGINT NOT NULL
+);
+SQL
+
+  sqlite3 "$TESTTMP/repo/books" "$(cat "$TESTTMP"/books.sql)"
+}
+
 function mononoke_hg_sync_loop {
   $MONONOKE_HG_SYNC \
     --do-not-init-cachelib \
     --retry-num 1 \
     --mononoke-config-path mononoke-config \
     ssh://user@dummy/"$1" sync-loop --start-id "$2"
+}
+
+function write_stub_log_entry {
+  "$WRITE_STUB_LOG_ENTRY" \
+    --do-not-init-cachelib \
+    --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
 # Wait until a Mononoke server is available for this repo.

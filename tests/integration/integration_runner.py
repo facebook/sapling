@@ -38,6 +38,9 @@ VERIFY_INTEGRITY_TARGET = "//security/source_control:verify_integrity"
 MONONOKE_HG_SYNC_TARGET = (
     "//scm/mononoke/facebook/mononoke_hg_sync_job:mononoke_hg_sync_job"
 )
+WRITE_STUB_LOG_ENTRY_TARGET = (
+    "//scm/mononoke/tests/write_stub_log_entry:write_stub_log_entry"
+)
 
 
 @click.command()
@@ -129,6 +132,7 @@ def run(
         "FACEBOOK_HOOKS", FACEBOOK_HOOKS_TARGET, pathutils.BuildRuleTypes.FILEGROUP
     )
     add_to_environ("MONONOKE_HG_SYNC", MONONOKE_HG_SYNC_TARGET)
+    add_to_environ("WRITE_STUB_LOG_ENTRY", WRITE_STUB_LOG_ENTRY_TARGET)
     add_to_environ(
         "PUSHREBASE_REPLAY",
         PUSHREBASE_REPLAY_TARGET,
