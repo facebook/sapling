@@ -848,6 +848,9 @@ Check abort from mandatory pushkey
   pushkey: lock state after "phases"
   lock:          free
   wlock:         free
+  undolog/lock:  absent
+  prefetchlock:  free
+  infinitepushbackup.lock: free
   abort: Clown phase push failed
   [255]
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
@@ -863,6 +866,9 @@ Check abort from mandatory pushkey
   remote: pushkey: lock state after "phases"
   remote: lock:          free
   remote: wlock:         free
+  remote: undolog/lock:  absent
+  remote: prefetchlock:  free
+  remote: infinitepushbackup.lock: free
   abort: Clown phase push failed
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
@@ -878,6 +884,9 @@ Check abort from mandatory pushkey
   remote: pushkey: lock state after "phases"
   remote: lock:          free
   remote: wlock:         free
+  remote: undolog/lock:  absent
+  remote: prefetchlock:  free
+  remote: infinitepushbackup.lock: free
   abort: Clown phase push failed
   [255]
 

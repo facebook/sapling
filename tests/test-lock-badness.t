@@ -161,12 +161,16 @@ Having an undolog lock file
   lock:          free
   wlock:         free
   undolog/lock:  malformed
+  prefetchlock:  free
+  infinitepushbackup.lock: free
   [1]
   $ hg debuglocks --force-undolog-lock
   $ hg debuglocks
   lock:          free
   wlock:         free
   undolog/lock:  free
+  prefetchlock:  free
+  infinitepushbackup.lock: free
 
 #else
 
@@ -185,6 +189,8 @@ Having an empty undolog lock file
   lock:          free
   wlock:         free
   undolog/lock:  free
+  prefetchlock:  free
+  infinitepushbackup.lock: free
   $ hg debuglocks --force-undolog-lock
   abort: cannot force release lock on POSIX
   [255]
@@ -192,6 +198,8 @@ Having an empty undolog lock file
   lock:          free
   wlock:         free
   undolog/lock:  free
+  prefetchlock:  free
+  infinitepushbackup.lock: free
 #endif
 
   $ cd ..

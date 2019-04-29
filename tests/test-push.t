@@ -290,6 +290,9 @@ Test push hook locking
   added 1 changesets with 1 changes to 1 files
   lock:          user *, process * (*s) (glob)
   wlock:         free
+  undolog/lock:  absent
+  prefetchlock:  free
+  infinitepushbackup.lock: free
 
   $ hg --cwd 1 debugstrip tip -q
   $ hg --cwd 2 debugstrip tip -q
@@ -302,6 +305,9 @@ Test push hook locking
   added 1 changesets with 1 changes to 1 files
   lock:          user *, process * (*s) (glob)
   wlock:         user *, process * (*s) (glob)
+  undolog/lock:  absent
+  prefetchlock:  free
+  infinitepushbackup.lock: free
 
 Test bare push with multiple race checking options
 --------------------------------------------------

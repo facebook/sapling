@@ -152,6 +152,9 @@ Test debuglocks command:
   $ hg debuglocks
   lock:          free
   wlock:         free
+  undolog/lock:  absent
+  prefetchlock:  free
+  infinitepushbackup.lock: free
 
 Test WdirUnsupported exception
 

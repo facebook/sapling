@@ -1630,11 +1630,7 @@ def debuglocks(ui, repo, **opts):
     Returns 0 if no locks are held.
 
     """
-
     done = False
-    ull = None
-    if repo.localvfs.exists("undolog"):
-        ull = os.path.join("undolog", "lock")
     if pycompat.iswindows:
         if opts.get(r"force_lock"):
             repo.svfs.unlink("lock")
@@ -1643,7 +1639,7 @@ def debuglocks(ui, repo, **opts):
             repo.localvfs.unlink("wlock")
             done = True
         if opts.get(r"force_undolog_lock"):
-            repo.localvfs.unlink(ull)
+            repo.localvfs.unlink("undolog/lock")
             done = True
     else:
         if (
@@ -1674,21 +1670,29 @@ def debuglocks(ui, repo, **opts):
         release(*locks)
 
     now = time.time()
-    held = 0
 
-    def report(vfs, name, method):
+    def report(vfs, name, method=None):
+        if method is None:
+            method = lambda: lockmod.lock(vfs, name, timeout=0, ui=ui)
+
         # this causes stale locks to get reaped for more accurate reporting
         malformed = object()
+        absent = object()
         try:
-            l = method(False)
+            l = method()
         except error.LockHeld:
             l = None
+        except error.LockUnavailable:
+            l = absent
         except error.MalformedLock:
             l = malformed
 
         if l == malformed:
             ui.write(_("%-14s malformed\n") % (name + ":"))
             return 1
+        elif l == absent:
+            ui.write(_("%-14s absent\n") % (name + ":"))
+            return 0
         elif l:
             l.release()
         else:
@@ -1712,12 +1716,16 @@ def debuglocks(ui, repo, **opts):
         ui.write(("%-14s free\n") % (name + ":"))
         return 0
 
-    held += report(repo.svfs, "lock", repo.lock)
-    held += report(repo.localvfs, "wlock", repo.wlock)
-    if ull is not None:
-        ullmtd = lambda _: lockmod.lock(repo.localvfs, ull, desc="undolog", timeout=0)
-        held += report(repo.localvfs, ull, ullmtd)
-
+    held = sum(
+        (
+            report(repo.svfs, "lock", lambda: repo.lock(wait=False)),
+            report(repo.localvfs, "wlock", lambda: repo.wlock(wait=False)),
+            report(repo.localvfs, "undolog/lock"),
+            report(repo.svfs, "prefetchlock"),
+            report(repo.sharedvfs, "infinitepushbackup.lock"),
+        ),
+        0,
+    )
     return held
 
 
