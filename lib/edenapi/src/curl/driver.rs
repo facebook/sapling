@@ -90,7 +90,7 @@ impl<H: Handler> MultiDriver<H> {
         let mut failed = Vec::new();
         let mut i = 0;
 
-        while in_progress > 0 {
+        loop {
             log::trace!(
                 "Iteration {}: {}/{} transfers complete",
                 i,
@@ -123,6 +123,11 @@ impl<H: Handler> MultiDriver<H> {
 
             if fail_early && failed.len() > 0 {
                 log::debug!("At least one transfer failed; aborting.");
+                break;
+            }
+
+            if in_progress == 0 {
+                log::debug!("All transfers finished successfully.");
                 break;
             }
 
