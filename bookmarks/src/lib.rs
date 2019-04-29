@@ -6,7 +6,7 @@
 
 #![deny(warnings)]
 
-use ascii::AsciiString;
+use ascii::{AsciiChar, AsciiString};
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
@@ -18,6 +18,10 @@ use sql::mysql_async::{
 };
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::Range;
+
+pub mod cache;
+pub use cache::CachedBookmarks;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
@@ -93,6 +97,15 @@ impl BookmarkPrefix {
     pub fn is_empty(&self) -> bool {
         self.bookmark_prefix.is_empty()
     }
+
+    pub fn to_range(&self) -> Range<Bookmark> {
+        let mut end_ascii = self.bookmark_prefix.clone();
+        end_ascii.push(AsciiChar::DEL); // DEL is the maximum ascii character
+        Range {
+            start: Bookmark::new_ascii(self.bookmark_prefix.clone()),
+            end: Bookmark::new_ascii(end_ascii),
+        }
+    }
 }
 
 /// Entry that describes an update to a bookmark
@@ -150,7 +163,7 @@ pub trait Bookmarks: Send + Sync + 'static {
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// Creates a transaction that will be used for write operations.
-    fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<Transaction>;
+    fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction>;
 
     /// Read the next entry from Bookmark update log. It either returns a new log entry with id
     /// bigger than `id` or None if there are no more log entries with bigger id.
