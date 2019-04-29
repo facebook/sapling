@@ -117,6 +117,13 @@ queries! {
         WHERE id > {min_id} AND repo_id = {repo_id}"
     }
 
+    read CountFurtherBookmarkLogEntriesByReason(min_id: u64, repo_id: RepositoryId) -> (BookmarkUpdateReason, u64) {
+        "SELECT reason, COUNT(*)
+        FROM bookmarks_update_log
+        WHERE id > {min_id} AND repo_id = {repo_id}
+        GROUP BY reason"
+    }
+
     write AddBundleReplayData(values: (id: u64, bundle_handle: String, commit_hashes_json: String)) {
         none,
         "INSERT INTO bundle_replay_data
@@ -273,6 +280,17 @@ impl Bookmarks for SqlBookmarks {
                     None => future::err(err_msg("Failed to query further bookmark log entries")),
                 }
             })
+            .boxify()
+    }
+
+    fn count_further_bookmark_log_entries_by_reason(
+        &self,
+        _ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+    ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
+        CountFurtherBookmarkLogEntriesByReason::query(&self.read_connection, &id, &repoid)
+            .map(|entries| entries.into_iter().collect())
             .boxify()
     }
 

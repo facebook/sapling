@@ -112,6 +112,12 @@ function mononoke_hg_sync_loop {
     ssh://user@dummy/"$1" sync-loop --start-id "$2"
 }
 
+function mononoke_admin {
+  "$MONONOKE_ADMIN" \
+    --do-not-init-cachelib \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function write_stub_log_entry {
   "$WRITE_STUB_LOG_ENTRY" \
     --do-not-init-cachelib \

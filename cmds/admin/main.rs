@@ -30,7 +30,7 @@ use serde_derive::Serialize;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
-use bookmarks::{Bookmark, Bookmarks};
+use bookmarks::{Bookmark, BookmarkUpdateReason, Bookmarks};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
@@ -71,6 +71,7 @@ const HG_SYNC_BUNDLE: &'static str = "hg-sync-bundle";
 const HG_SYNC_REMAINS: &'static str = "remains";
 const HG_SYNC_FETCH_BUNDLE: &'static str = "fetch-bundle";
 const HG_SYNC_LAST_PROCESSED: &'static str = "last-processed";
+const HG_SYNC_VERIFY: &'static str = "verify";
 const SKIPLIST_BUILD: &'static str = "build";
 const SKIPLIST_READ: &'static str = "read";
 const ADD_PUBLIC_PHASES: &'static str = "add-public-phases";
@@ -219,6 +220,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .takes_value(true)
                         .help("where a bundle will be saved"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_VERIFY)
+                .about("verify the consistency of yet-to-be-processed bookmark log entries"),
         );
 
     let add_public_phases = SubCommand::with_name(ADD_PUBLIC_PHASES)
@@ -749,6 +754,87 @@ fn add_public_phases(
         .boxify()
 }
 
+fn process_hg_sync_verify(
+    ctx: CoreContext,
+    repo_id: RepositoryId,
+    mutable_counters: Arc<SqlMutableCounters>,
+    bookmarks: Arc<SqlBookmarks>,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
+    mutable_counters
+        .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+        .map(|maybe_counter| maybe_counter.unwrap_or(0)) // See rationale under HG_SYNC_REMAINS
+        .and_then({
+            cloned!(ctx, repo_id);
+            move |counter| {
+                bookmarks.count_further_bookmark_log_entries_by_reason(
+                    ctx,
+                    counter as u64,
+                    repo_id
+                )
+            }
+        })
+        .map({
+            cloned!(repo_id, logger);
+            move |counts| {
+                let (
+                    blobimports,
+                    others
+                ): (
+                    Vec<(BookmarkUpdateReason, u64)>,
+                    Vec<(BookmarkUpdateReason, u64)>
+                ) = counts
+                    .into_iter()
+                    .partition(|(reason, _)| match reason {
+                        BookmarkUpdateReason::Blobimport => true,
+                        _ => false,
+                    });
+
+                let blobimports: u64 = blobimports
+                    .into_iter()
+                    .fold(0, |acc, (_, count)| acc + count);
+
+                let others: u64 = others
+                    .into_iter()
+                    .fold(0, |acc, (_, count)| acc + count);
+
+                match (blobimports > 0, others > 0) {
+                    (true, true) => {
+                        info!(
+                            logger,
+                            "Remaining bundles to replay in {:?} are not consistent: found {} blobimports and {} non-blobimports",
+                            repo_id,
+                            blobimports,
+                            others
+                        );
+                    }
+                    (true, false) => {
+                        info!(
+                            logger,
+                            "All remaining bundles in {:?} are blobimports (found {})",
+                            repo_id,
+                            blobimports,
+                        );
+                    }
+                    (false, true) => {
+                        info!(
+                            logger,
+                            "All remaining bundles in {:?} are non-blobimports (found {})",
+                            repo_id,
+                            others,
+                        );
+                    }
+                    (false, false) =>  {
+                        info!(logger, "No replay data found in {:?}", repo_id);
+                    }
+                };
+
+                ()
+            }
+        })
+        .boxify()
+}
+
 const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
 
 fn process_hg_sync_subcommand<'a>(
@@ -896,6 +982,9 @@ fn process_hg_sync_subcommand<'a>(
                         .boxify()
                 })
                 .boxify()
+        }
+        (HG_SYNC_VERIFY, Some(..)) => {
+            process_hg_sync_verify(ctx, repo_id, mutable_counters, bookmarks, logger)
         }
         _ => {
             println!("{}", matches.usage());
