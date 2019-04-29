@@ -6,42 +6,41 @@
 
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
+use blobstore::Blobstore;
+use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
+use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use bookmarks::{Bookmarks, CachedBookmarks};
+use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, new_memcache_blobstore, MemcacheOps};
+use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
+use changesets::{CachingChangests, SqlChangesets};
 use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
+use failure_ext::prelude::*;
 use failure_ext::{err_msg, Error, Result};
+use fileblob::Fileblob;
+use filenodes::CachingFilenodes;
 use futures::{
     future::{self, IntoFuture},
     Future,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use metaconfig_types::{self, RepoType};
-use mononoke_types::RepositoryId;
-use slog::{self, o, Discard, Drain, Logger};
-use sqlfilenodes::{SqlConstructors, SqlFilenodes};
-use std::path::Path;
-use std::sync::Arc;
-
-use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
-use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
-use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, new_memcache_blobstore, MemcacheOps};
-use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
-use changesets::{CachingChangests, SqlChangesets};
-use filenodes::CachingFilenodes;
-use memblob::EagerMemblob;
-use prefixblob::PrefixBlobstore;
-
-use fileblob::Fileblob;
-use sqlblob::Sqlblob;
-
-use failure_ext::prelude::*;
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
+use memblob::EagerMemblob;
 use metaconfig_types::RemoteBlobstoreArgs;
+use metaconfig_types::{self, RepoType};
+use mononoke_types::RepositoryId;
 use multiplexedblob::MultiplexedBlobstore;
+use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
 use scuba::ScubaClient;
+use slog::{self, o, Discard, Drain, Logger};
+use sqlblob::Sqlblob;
+use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use std::path::Path;
+use std::sync::Arc;
+use std::time::Duration;
 
 /// Create a new BlobRepo with purely local state.
 fn new_local(
@@ -97,6 +96,7 @@ pub fn open_blobrepo(
     repotype: RepoType,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
+    bookmarks_cache_ttl: Option<Duration>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     use metaconfig_types::RepoType::*;
 
@@ -130,6 +130,7 @@ pub fn open_blobrepo(
                 filenode_shards.clone(),
                 repoid,
                 myrouter_port,
+                bookmarks_cache_ttl,
             )
             .right_future()
         }
@@ -169,6 +170,7 @@ pub fn new_remote(
     filenode_shards: Option<usize>,
     repoid: RepositoryId,
     myrouter_port: u16,
+    bookmarks_cache_ttl: Option<Duration>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     // recursively construct blobstore from arguments
     fn eval_remote_args(
@@ -259,7 +261,14 @@ pub fn new_remote(
                 &db_address,
             );
 
-            let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
+            let bookmarks: Arc<dyn Bookmarks> = {
+                let bookmarks = Arc::new(SqlBookmarks::with_myrouter(&db_address, myrouter_port));
+                if let Some(ttl) = bookmarks_cache_ttl {
+                    Arc::new(CachedBookmarks::new(bookmarks, ttl))
+                } else {
+                    bookmarks
+                }
+            };
 
             let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
             let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
@@ -289,7 +298,7 @@ pub fn new_remote(
 
             Ok(BlobRepo::new_with_changeset_fetcher_factory(
                 logger,
-                Arc::new(bookmarks),
+                bookmarks,
                 blobstore,
                 Arc::new(filenodes),
                 changesets,

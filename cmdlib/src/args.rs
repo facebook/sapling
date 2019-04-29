@@ -583,6 +583,7 @@ fn open_repo_internal<'a>(
         config.repotype.clone(),
         repo_id,
         myrouter_port,
+        config.bookmarks_cache_ttl,
     )
     .boxify()
 }

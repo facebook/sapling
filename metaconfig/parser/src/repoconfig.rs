@@ -15,6 +15,7 @@ use std::{
     num::NonZeroUsize,
     path::{Path, PathBuf},
     str,
+    time::Duration,
 };
 
 use crate::errors::*;
@@ -349,6 +350,7 @@ impl RepoConfigs {
             }
             None => vec![],
         };
+        let bookmarks_cache_ttl = this.bookmarks_cache_ttl.map(Duration::from_millis);
 
         let pushrebase = this
             .pushrebase
@@ -400,6 +402,7 @@ impl RepoConfigs {
             cache_warmup,
             hook_manager_params,
             bookmarks,
+            bookmarks_cache_ttl,
             hooks,
             pushrebase,
             lfs,
@@ -428,6 +431,7 @@ struct RawRepoConfig {
     delay_stddev: Option<u64>,
     cache_warmup: Option<RawCacheWarmupConfig>,
     bookmarks: Option<Vec<RawBookmarkConfig>>,
+    bookmarks_cache_ttl: Option<u64>,
     hooks: Option<Vec<RawHookConfig>>,
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
@@ -584,6 +588,7 @@ mod test {
             scuba_table="scuba_table"
             blobstore_scuba_table="blobstore_scuba_table"
             skiplist_index_blobstore_key="skiplist_key"
+            bookmarks_cache_ttl=5000
             [cache_warmup]
             bookmark="master"
             commit_limit=100
@@ -705,6 +710,7 @@ mod test {
                     weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
+                bookmarks_cache_ttl: Some(Duration::from_millis(5000)),
                 bookmarks: vec![
                     BookmarkParams {
                         bookmark: Bookmark::new("master").unwrap().into(),
@@ -795,6 +801,7 @@ mod test {
                 cache_warmup: None,
                 hook_manager_params: None,
                 bookmarks: vec![],
+                bookmarks_cache_ttl: None,
                 hooks: vec![],
                 pushrebase: Default::default(),
                 lfs: Default::default(),

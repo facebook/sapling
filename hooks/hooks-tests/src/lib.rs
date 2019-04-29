@@ -1194,6 +1194,7 @@ fn default_repo_config() -> RepoConfig {
         scuba_table: None,
         cache_warmup: None,
         hook_manager_params: None,
+        bookmarks_cache_ttl: None,
         bookmarks: vec![],
         hooks: vec![],
         pushrebase: Default::default(),

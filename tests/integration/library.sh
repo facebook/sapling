@@ -205,6 +205,7 @@ repotype="$REPOTYPE"
 repoid=0
 enabled=true
 hash_validation_percentage=100
+bookmarks_cache_ttl=2000
 CONFIG
 
 if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then

@@ -92,6 +92,7 @@ fn main() -> Result<()> {
         config.repotype.clone(),
         RepositoryId::new(config.repoid),
         myrouter_port,
+        config.bookmarks_cache_ttl,
     );
 
     let rc = RequestContext {
@@ -314,7 +315,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("changeset")
                 .short("c")
                 .help("the changeset to run hooks for")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("exclude")

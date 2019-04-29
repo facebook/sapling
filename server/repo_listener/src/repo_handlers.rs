@@ -87,6 +87,7 @@ pub fn repo_handlers(
                 config.repotype.clone(),
                 repoid,
                 myrouter_port,
+                config.bookmarks_cache_ttl,
             )
             .and_then(move |blobrepo| {
                 let hook_manager_params = match config.hook_manager_params.clone() {

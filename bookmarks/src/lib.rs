@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::ops::Range;
 
-pub mod cache;
+mod cache;
 pub use cache::CachedBookmarks;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;

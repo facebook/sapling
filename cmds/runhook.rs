@@ -12,12 +12,6 @@
 
 #![deny(warnings)]
 
-use std::env::args;
-use std::fs::File;
-use std::io::prelude::*;
-use std::str::FromStr;
-use std::sync::Arc;
-
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
@@ -29,9 +23,13 @@ use hooks::lua_hook::LuaHook;
 use hooks::{HookExecution, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use mercurial_types::HgChangesetId;
-use mononoke_types::RepositoryId;
 use slog::{o, Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
+use std::env::args;
+use std::fs::File;
+use std::io::prelude::*;
+use std::str::FromStr;
+use std::sync::Arc;
 
 fn run_hook(
     args: Vec<String>,
@@ -131,25 +129,8 @@ fn run_hook(
     .boxify()
 }
 
-fn create_blobrepo(logger: &Logger, matches: &ArgMatches<'_>) -> BoxFuture<BlobRepo, Error> {
-    let blobstore_args = cmdlib::args::parse_blobstore_args(matches);
-    let myrouter_port = cmdlib::args::parse_myrouter_port(&matches).expect("missing myrouter port");
-
-    let db_address = matches.value_of("db-address").unwrap().to_string();
-    let filenode_shards = matches.value_of("filenode-shards").map(|shard_count| {
-        shard_count
-            .parse()
-            .expect("shard count must be a positive integer")
-    });
-    blobrepo_factory::new_remote(
-        logger.clone(),
-        &blobstore_args,
-        db_address,
-        filenode_shards,
-        RepositoryId::new(0),
-        myrouter_port,
-    )
-    .boxify()
+fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
+    cmdlib::args::open_repo(logger, matches).boxify()
 }
 
 // It all starts here

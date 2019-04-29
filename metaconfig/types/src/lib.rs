@@ -24,6 +24,7 @@ use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Arguments for setting up a Manifold blobstore.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,6 +72,8 @@ pub struct RepoConfig {
     pub cache_warmup: Option<CacheWarmupParams>,
     /// Configuration for bookmarks
     pub bookmarks: Vec<BookmarkParams>,
+    /// Enables bookmarks cache with specified ttl (time to live)
+    pub bookmarks_cache_ttl: Option<Duration>,
     /// Configuration for hooks
     pub hooks: Vec<HookParams>,
     /// Pushrebase configuration options
