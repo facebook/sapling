@@ -132,6 +132,13 @@ def loadpath(path, module_name):
     path = util.normpath(util.expandpath(path))
     # TODO: check whether path is "trusted" or not
     module_name = pycompat.fsdecode(module_name)
+    if ":" in path:
+        prefix, content = path.split(":", 1)
+        if prefix == "python-base64":
+            import base64
+
+            source = base64.decodestring(content)
+            return loadsource(source, module_name)
     path = pycompat.fsdecode(path)
     if os.path.isdir(path):
         # module/__init__.py style
@@ -145,6 +152,19 @@ def loadpath(path, module_name):
             if not exc.filename:
                 exc.filename = path  # python does not fill this
             raise
+
+
+def loadsource(source, name):
+    """make a Python module from provided Python source code"""
+    # See load_source_module in Python/import.c for how this should work.
+    code = compile(source, "<%s>" % name, "exec")
+    # Get the module constructor. Note: 'sys' might be a demandimport proxy.
+    # Get the real 'sys' module by using sys.modules.
+    modtype = type(sys.modules["sys"])
+    mod = modtype(name)
+    env = mod.__dict__
+    exec(code, env, env)
+    return mod
 
 
 def preimport(name):
