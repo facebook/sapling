@@ -185,7 +185,7 @@ class Client(object):
                     }
                   }
                 }
-                latest_draft_phabricator_version {
+                latest_publishable_draft_phabricator_version {
                   local_commit_info: phabricator_version_properties (
                     property_names: ["local:commits"]
                   ) {
@@ -238,10 +238,10 @@ class Client(object):
                     active_diff = node["latest_active_diff"]
 
                 if (
-                    "latest_draft_phabricator_version" in node
-                    and node["latest_draft_phabricator_version"] is not None
+                    "latest_publishable_draft_phabricator_version" in node
+                    and node["latest_publishable_draft_phabricator_version"] is not None
                 ):
-                    active_diff = node["latest_draft_phabricator_version"]
+                    active_diff = node["latest_publishable_draft_phabricator_version"]
 
                 if active_diff is None:
                     continue
