@@ -440,12 +440,13 @@ function hginit_treemanifest() {
   cat >> "$1"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=
-fastmanifest=
+fastmanifest=!
 remotefilelog=
 smartlog=
 [treemanifest]
 server=True
 sendtrees=True
+treeonly=True
 [remotefilelog]
 reponame=$1
 cachepath=$TESTTMP/cachepath
@@ -455,7 +456,7 @@ EOF
 }
 
 function hgclone_treemanifest() {
-  hg clone -q --shallow --config remotefilelog.reponame=master "$@"
+  hg clone -q --shallow --config remotefilelog.reponame=master "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=

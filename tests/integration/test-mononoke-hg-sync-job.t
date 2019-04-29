@@ -257,7 +257,7 @@ Use the same code here as in the actual opsfiles hook
   remote: transaction abort!
   remote: rollback completed
   single wireproto command took: * (glob)
-  error:pushkey
+  replay failed: error:pushkey
   unbundle replay batch item #0 failed
   * retrying attempt 2 of 3... (glob)
   * syncing log entry #2 ... (glob)
@@ -277,7 +277,7 @@ Use the same code here as in the actual opsfiles hook
   remote: transaction abort!
   remote: rollback completed
   single wireproto command took: * (glob)
-  error:pushkey
+  replay failed: error:pushkey
   unbundle replay batch item #0 failed
   * retrying attempt 3 of 3... (glob)
   * syncing log entry #2 ... (glob)
@@ -297,7 +297,7 @@ Use the same code here as in the actual opsfiles hook
   remote: transaction abort!
   remote: rollback completed
   single wireproto command took: * (glob)
-  error:pushkey
+  replay failed: error:pushkey
   unbundle replay batch item #0 failed
   * sync failed for #2 (glob)
   * caused by: sync failed (glob)
@@ -327,7 +327,7 @@ Now bookmark is not blocked
   remote: transaction abort!
   remote: rollback completed
   single wireproto command took: * (glob)
-  error:pushkey
+  replay failed: error:pushkey
   unbundle replay batch item #0 failed
   * sync failed for #2 (glob)
   * caused by: sync failed (glob)
