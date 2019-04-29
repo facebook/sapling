@@ -72,7 +72,8 @@
 //! additional data.
 
 use base16::Base16Iter;
-use errors::{ErrorKind, Result};
+use errors::ErrorKind;
+use failure::Fallible;
 use key::KeyId;
 use traits::Resize;
 
@@ -92,7 +93,7 @@ impl RadixOffset {
 
     /// Append an empty `RadixNode` (`[u32; 16]`) at the end of a buffer.
     #[inline]
-    pub fn create<R: Resize<u32> + AsRef<[u32]>>(vec: &mut R) -> Result<Self> {
+    pub fn create<R: Resize<u32> + AsRef<[u32]>>(vec: &mut R) -> Fallible<Self> {
         let pos = vec.as_ref().len();
         if (pos as u32) as usize != pos {
             bail!(ErrorKind::OffsetOverflow(pos as u64));
@@ -128,7 +129,7 @@ impl RadixOffset {
         self,
         buf: &R,
         seq: I,
-    ) -> Result<(Option<KeyId>, (RadixOffset, usize, u8))> {
+    ) -> Fallible<(Option<KeyId>, (RadixOffset, usize, u8))> {
         let buf = buf.as_ref();
         let mut radix = self;
         for (i, b) in seq.enumerate() {
@@ -168,7 +169,7 @@ impl RadixOffset {
         vec: &mut R,
         index: u8,
         node: RadixOffset,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         if node.0 > 0x7fff_ffff {
             bail!(ErrorKind::OffsetOverflow(node.0 as u64));
         }
@@ -182,7 +183,7 @@ impl RadixOffset {
         vec: &mut R,
         index: u8,
         key_id: KeyId,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         let id: u32 = key_id.into();
         if id > 0x7fff_ffff {
             bail!(ErrorKind::OffsetOverflow(key_id.into()));
@@ -191,7 +192,7 @@ impl RadixOffset {
     }
 
     #[inline]
-    fn write_raw<R: AsMut<[u32]>>(&self, vec: &mut R, index: u8, value: u32) -> Result<()> {
+    fn write_raw<R: AsMut<[u32]>>(&self, vec: &mut R, index: u8, value: u32) -> Fallible<()> {
         debug_assert!(index < RADIX_NCHILDREN as u8);
         let vec = vec.as_mut();
         let pos = self.0 as usize + usize::from(index);
@@ -211,7 +212,7 @@ impl RadixOffset {
 /// `key` is a base256 sequence.
 /// The caller is responsible to check whether `KeyId` matches the given `Key` or not.
 #[inline]
-pub fn radix_lookup_unchecked<R, K>(radix_buf: &R, offset: u32, key: &K) -> Result<Option<KeyId>>
+pub fn radix_lookup_unchecked<R, K>(radix_buf: &R, offset: u32, key: &K) -> Fallible<Option<KeyId>>
 where
     R: AsRef<[u32]>,
     K: AsRef<[u8]>,
@@ -231,11 +232,11 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_lookup<R, K, KR, KA>(
     radix_buf: &R, offset: u32, key: &K, key_reader: KR, key_reader_arg: &KA)
-    -> Result<Option<KeyId>>
+    -> Fallible<Option<KeyId>>
 where
     R: AsRef<[u32]>,
     K: AsRef<[u8]>,
-    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
 {
     let key_id = radix_lookup_unchecked(radix_buf, offset, key)?;
     if let Some(id) = key_id {
@@ -263,11 +264,11 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_prefix_lookup<R, P, KR, KA>(
     radix_buf: &R, offset: u32, prefix: P, key_reader: KR, key_reader_arg: &KA)
-    -> Result<Option<KeyId>>
+    -> Fallible<Option<KeyId>>
 where
     R: AsRef<[u32]>,
     P: Iterator<Item = u8> + Clone,
-    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
 {
     let root = RadixOffset::new(offset);
     let (key_id, (_radix, i, _b)) = root.follow(radix_buf, prefix.clone())?;
@@ -298,10 +299,10 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_insert<R, KR, KA>(
     radix_buf: &mut R, offset: u32, key_id: KeyId, key_reader: KR, key_reader_arg: &KA)
-    -> Result<()>
+    -> Fallible<()>
 where
     R: Resize<u32> + AsRef<[u32]> + AsMut<[u32]>,
-    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
 {
     let new_key = key_reader(key_reader_arg, key_id)?;
     radix_insert_with_key(
@@ -330,11 +331,11 @@ where
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn radix_insert_with_key<R, K, KR, KA>(
     radix_buf: &mut R, offset: u32, key_id: KeyId, key: &K, key_reader: KR, key_reader_arg: &KA)
-    -> Result<()>
+    -> Fallible<()>
 where
     R: Resize<u32> + AsRef<[u32]> + AsMut<[u32]>,
     K: AsRef<[u8]>,
-    KR: Fn(&KA, KeyId) -> Result<&[u8]>,
+    KR: Fn(&KA, KeyId) -> Fallible<&[u8]>,
 {
     let new_key_id = key_id;
     let new_key = key;
@@ -394,6 +395,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use failure::AsFail;
     use key::{FixedKey, VariantKey};
     use std::collections::HashSet;
     use std::mem::transmute;
@@ -407,31 +409,34 @@ mod tests {
         let key = [0u8; 20];
         let key_id = (1u32 << 31).into();
         let r = radix_insert_with_key(&mut radix_buf, 0, key_id, &key, FixedKey::read, &key_buf);
-        assert_eq!(r.unwrap_err().description(), "offset overflow");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(
+            t,
+            format!("{}", ErrorKind::OffsetOverflow(2147483648).as_fail())
+        );
 
         // KeyId exceeds key buffer length
         let key_id = 30u32.into();
         let r = radix_insert(&mut radix_buf, 0, key_id, FixedKey::read, &key_buf);
-        assert_eq!(r.unwrap_err().description(), "invalid key id");
-        let r = radix_insert(&mut radix_buf, 0, key_id, FixedKey::read, &key_buf);
         let t = format!("{}", r.unwrap_err());
-        assert_eq!(t, "KeyId(30) cannot be resolved");
+        assert_eq!(t, format!("{}", ErrorKind::InvalidKeyId(key_id).as_fail()));
 
         // Radix root node offset exceeds radix buffer length
         let r = radix_insert_with_key(&mut radix_buf, 16, key_id, &key, FixedKey::read, &key_buf);
-        assert_eq!(format!("{}", r.unwrap_err()), "offset 16 is out of range");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(16).as_fail()));
 
         // Radix node offset out of range during a lookup
         let prefix = [0xf].iter().cloned();
         let r = radix_prefix_lookup(&radix_buf, 0, prefix, FixedKey::read, &key_buf);
-        assert_eq!(format!("{}", r.unwrap_err()), "offset 15 is out of range");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(t, format!("{}", ErrorKind::OffsetOverflow(15).as_fail()));
 
         // Base16 sequence overflow
         let prefix = [21].iter().cloned();
         let r = radix_prefix_lookup(&radix_buf, 0, prefix.clone(), FixedKey::read, &key_buf);
-        assert_eq!(r.unwrap_err().description(), "invalid base16 value");
-        let r = radix_prefix_lookup(&radix_buf, 0, prefix, FixedKey::read, &key_buf);
-        assert_eq!(format!("{}", r.unwrap_err()), "21 is not a base16 value");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(t, format!("{}", ErrorKind::InvalidBase16(21).as_fail()));
 
         // Inserting a same key with a same `KeyId` is okay
         let key_id1 = VariantKey::append(&mut key_buf, &b"ab");
@@ -441,7 +446,11 @@ mod tests {
 
         // But not okay if `KeyId` are different
         let r = radix_insert(&mut radix_buf, 0, key_id2, VariantKey::read, &key_buf);
-        assert_eq!(r.unwrap_err().description(), "key prefix conflict");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(
+            t,
+            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id2).as_fail())
+        );
 
         // A key cannot be a prefix of another key
         let key_id4 = VariantKey::append(&mut key_buf, &b"a");
@@ -449,12 +458,12 @@ mod tests {
         let r = radix_insert(&mut radix_buf, 0, key_id4, VariantKey::read, &key_buf);
         assert_eq!(
             format!("{}", r.unwrap_err()),
-            format!("{:?} cannot be a prefix of {:?}", key_id4, key_id1)
+            format!("{}", ErrorKind::PrefixConflict(key_id4, key_id1))
         );
         let r = radix_insert(&mut radix_buf, 0, key_id5, VariantKey::read, &key_buf);
         assert_eq!(
             format!("{}", r.unwrap_err()),
-            format!("{:?} cannot be a prefix of {:?}", key_id1, key_id5)
+            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id5))
         );
 
         // Enforce a leaf split of key_id1
@@ -463,9 +472,14 @@ mod tests {
 
         // Still impossible to cause key prefix conflicts
         let r = radix_insert(&mut radix_buf, 0, key_id4, VariantKey::read, &key_buf);
-        assert_eq!(r.unwrap_err().description(), "ambiguous prefix");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix.as_fail()));
         let r = radix_insert(&mut radix_buf, 0, key_id5, VariantKey::read, &key_buf);
-        assert_eq!(r.unwrap_err().description(), "key prefix conflict");
+        let t = format!("{}", r.unwrap_err());
+        assert_eq!(
+            t,
+            format!("{}", ErrorKind::PrefixConflict(key_id1, key_id5).as_fail())
+        );
     }
 
     #[test]
@@ -484,7 +498,8 @@ mod tests {
             let r = radix_prefix_lookup(&radix_buf, 0, prefix, VariantKey::read, &key_buf);
             if i == 0 {
                 // This is sub-optimal. But see the NOTE in RadixOffset::follow.
-                assert_eq!(r.unwrap_err().description(), "ambiguous prefix");
+                let t = format!("{}", r.unwrap_err());
+                assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix.as_fail()));
             } else if i <= key1.len() * 2 {
                 assert_eq!(r.unwrap(), Some(key1_id));
             } else {
@@ -500,7 +515,8 @@ mod tests {
             let prefix = query.clone().take(i);
             let r = radix_prefix_lookup(&radix_buf, 0, prefix, VariantKey::read, &key_buf);
             if i <= 5 {
-                assert_eq!(r.unwrap_err().description(), "ambiguous prefix")
+                let t = format!("{}", r.unwrap_err());
+                assert_eq!(t, format!("{}", ErrorKind::AmbiguousPrefix.as_fail()));
             } else if i <= key1.len() * 2 {
                 assert_eq!(r.unwrap(), Some(key1_id));
             } else {

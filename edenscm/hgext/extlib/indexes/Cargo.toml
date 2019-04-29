@@ -7,8 +7,9 @@ name = "indexes"
 crate-type = ["cdylib"]
 
 [dependencies]
+cpython-failure = { path = "../../../../lib/cpython-failure" }
 radixbuf = { path = "../../../../lib/radixbuf" }
-error-chain = "0.11"
+failure = "0.1.5"
 
 [dependencies.cpython]
 version = "0.2"

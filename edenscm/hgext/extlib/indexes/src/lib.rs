@@ -7,9 +7,11 @@ extern crate python27_sys;
 
 #[macro_use]
 extern crate cpython;
-#[macro_use]
-extern crate error_chain;
+extern crate cpython_failure;
 extern crate radixbuf;
+
+#[macro_use]
+extern crate failure;
 
 pub mod errors;
 pub mod nodemap;

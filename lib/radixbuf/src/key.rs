@@ -23,7 +23,8 @@
 //! of variant-length binary key, some escaping is needed to avoid the prefix conflict. The
 //! escaping logic might be implemented as key read/write functions.
 
-use errors::{ErrorKind, Result};
+use errors::ErrorKind;
+use failure::Fallible;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 use traits::Resize;
 use vlqencoding::{VLQDecode, VLQEncode};
@@ -35,22 +36,22 @@ pub struct KeyId(u32);
 macro_rules! impl_convert {
     ($T: ty) => {
         impl From<$T> for KeyId {
-            #[allow(unused_comparisons)]
-            #[inline]
-            fn from(v: $T) -> Self {
-                if v > 0xffff_ffff || v < 0 {
-                    panic!("KeyId out of range")
-                }
-                KeyId(v as u32)
-            }
-        }
+                            #[allow(unused_comparisons)]
+                            #[inline]
+                            fn from(v: $T) -> Self {
+                                if v > 0xffff_ffff || v < 0 {
+                                    panic!("KeyId out of range")
+                                }
+                                KeyId(v as u32)
+                            }
+                        }
 
         impl Into<$T> for KeyId {
-            #[inline]
-            fn into(self) -> $T {
-                self.0 as $T
-            }
-        }
+                            #[inline]
+                            fn into(self) -> $T {
+                                self.0 as $T
+                            }
+                        }
     };
 }
 
@@ -69,7 +70,7 @@ pub struct VariantKey;
 
 impl FixedKey {
     #[inline]
-    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Result<&'a [u8]> {
+    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Fallible<&'a [u8]> {
         let key_buf = key_buf.as_ref();
         let start_pos: usize = key_id.into();
         // LANG: Consider making 20 a type parameter once supported.
@@ -95,7 +96,7 @@ impl FixedKey {
 
 impl VariantKey {
     #[inline]
-    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Result<&'a [u8]> {
+    pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Fallible<&'a [u8]> {
         let key_buf = key_buf.as_ref();
         let mut reader = Cursor::new(key_buf);
         reader.seek(SeekFrom::Start(key_id.into()))?;

@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 #[cfg(test)]
 #[macro_use]

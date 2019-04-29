@@ -3,32 +3,20 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use failure::Fail;
+
 use key::KeyId;
 
-error_chain! {
-    foreign_links {
-        Io(::std::io::Error);
-    }
-
-    errors {
-        OffsetOverflow(offset: u64) {
-            description("offset overflow")
-            display("offset {} is out of range", offset)
-        }
-        AmbiguousPrefix {
-            description("ambiguous prefix")
-        }
-        PrefixConflict(key_id1: KeyId, key_id2: KeyId) {
-            description("key prefix conflict")
-            display("{:?} cannot be a prefix of {:?}", key_id1, key_id2)
-        }
-        InvalidKeyId(key_id: KeyId) {
-            description("invalid key id")
-            display("{:?} cannot be resolved", key_id)
-        }
-        InvalidBase16(x: u8) {
-            description("invalid base16 value")
-            display("{} is not a base16 value", x)
-        }
-    }
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "offset {} is out of range", _0)]
+    OffsetOverflow(u64),
+    #[fail(display = "ambiguous prefix")]
+    AmbiguousPrefix,
+    #[fail(display = "{:?} cannot be a prefix of {:?}", _0, _1)]
+    PrefixConflict(KeyId, KeyId),
+    #[fail(display = "{:?} cannot be resolved", _0)]
+    InvalidKeyId(KeyId),
+    #[fail(display = "{} is not a base16 value", _0)]
+    InvalidBase16(u8),
 }
