@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 bitflags = "1.0.4"
 byteorder = "1.2.7"
-failure = "*"
+failure = "0.1.5"
 twox-hash = "*"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
@@ -15,5 +15,5 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 itertools = "0.8"
 quickcheck = "0.6"
 rand = "0.5"
-rand_chacha = "*"
+rand_chacha = "0.1.1"
 tempdir = "0.3.7"
