@@ -93,7 +93,6 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -101,13 +100,12 @@ Sync a pushrebase bookmark move
   remote: capabilities* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
   remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #2 (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
@@ -122,7 +120,6 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 2
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #3 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -130,13 +127,12 @@ Sync a pushrebase bookmark move
   remote: capabilities* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
   remote: pushing 1 changeset:
   remote:     6cc06ef82eeb  anothercommit
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #3 (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
@@ -157,7 +153,6 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 3
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #4 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -165,11 +160,10 @@ Sync a pushrebase bookmark move
   remote: capabilities* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
   single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
-  
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #4 (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
@@ -247,28 +241,66 @@ Use the same code here as in the actual opsfiles hook
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * retrying attempt 2 of 3... (glob)
-  * syncing log entry #2 ... (glob)
-  * retrying attempt 3 of 3... (glob)
-  * syncing log entry #2 ... (glob)
-  * sync failed for #2 (glob)
-  * hg command failed: stdout: 'running * 'user@dummy' 'hg -R repo-hg-2 serve --stdio' (glob)
+  running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  ', stderr: 'remote: pushing 1 changeset:
+  remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
   remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
   remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
-  '
+  unbundle replay batch item #0 failed
+  * retrying attempt 2 of 3... (glob)
+  * syncing log entry #2 ... (glob)
+  running * 'hg -R repo-hg-2 serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: 554
+  remote: capabilities: * (glob)
+  remote: 1
+  creating a peer took: * (glob)
+  using * as a reports file (glob)
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     1e43292ffbb3  pushcommit
+  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
+  remote: pushkey-abort: prepushkey hook failed
+  remote: transaction abort!
+  remote: rollback completed
+  single wireproto command took: * (glob)
+  error:pushkey
+  unbundle replay batch item #0 failed
+  * retrying attempt 3 of 3... (glob)
+  * syncing log entry #2 ... (glob)
+  running * 'hg -R repo-hg-2 serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: 554
+  remote: capabilities: * (glob)
+  remote: 1
+  creating a peer took: * (glob)
+  using * as a reports file (glob)
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     1e43292ffbb3  pushcommit
+  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
+  remote: pushkey-abort: prepushkey hook failed
+  remote: transaction abort!
+  remote: rollback completed
+  single wireproto command took: * (glob)
+  error:pushkey
+  unbundle replay batch item #0 failed
+  * sync failed for #2 (glob)
+  * caused by: sync failed (glob)
 Oops, we allowed a wrong bookmark to be unbundlereplayed onto
   $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
   > [facebook]
@@ -279,24 +311,26 @@ Now bookmark is not blocked
   $ mononoke_hg_sync repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * sync failed for #2 (glob)
-  * hg command failed: stdout: 'running "*" 'user@dummy' 'hg -R repo-hg-2 serve --stdio' (glob)
+  running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  ', stderr: 'remote: pushing 1 changeset:
+  remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
   remote: [ReplayVerification] Expected: (master_bookmark, 1e43292ffbb38fa183e7f21fb8e8a8450e61c890). Actual: (master_bookmark, acc06228d802cbe9e2a6740c0abacf017f3be65c)
   remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
+  single wireproto command took: * (glob)
   error:pushkey
-  '
+  unbundle replay batch item #0 failed
+  * sync failed for #2 (glob)
+  * caused by: sync failed (glob)
 
 Set the correct timestamp back
   $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
@@ -321,7 +355,6 @@ Replay in a loop
   $ mononoke_hg_sync_loop repo-hg-3 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -329,45 +362,24 @@ Replay in a loop
   remote: capabilities:* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
   remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #2 (glob)
   * syncing log entry #3 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
-  running * 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  creating a peer took: * (glob)
   sending unbundlereplay command
+  remote: * (glob)
+  remote: * (glob)
   single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
-  remote: pushing 1 changeset:
-  remote:     6cc06ef82eeb  anothercommit
-  
+  unbundle replay batch item #1 successfully sent
   * successful sync of entry #3 (glob)
   * syncing log entry #4 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
-  running* 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  creating a peer took: * (glob)
   sending unbundlereplay command
   single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
-  
+  unbundle replay batch item #2 successfully sent
   * successful sync of entry #4 (glob)
   $ sqlite3 "$TESTTMP/repo/mutable_counters" "select * from mutable_counters";
   0|latest-replayed-request|4
@@ -383,7 +395,6 @@ Continue replay
   $ mononoke_hg_sync_loop repo-hg-3 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #5 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -391,13 +402,12 @@ Continue replay
   remote: capabilities:* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
   remote: pushing 1 changeset:
   remote:     67d5c96d65a7  onemorecommit
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #5 (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r tip
@@ -449,7 +459,6 @@ Continue replay
   $ mononoke_hg_sync_loop repo-hg-3 5
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #6 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -457,30 +466,19 @@ Continue replay
   remote: capabilities:* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
   remote: pushing 1 changeset:
   remote:     15776eb106e6  exec mode
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #6 (glob)
   * syncing log entry #7 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
-  running * 'hg -R repo-hg-3 serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities:* (glob)
-  remote: 1
-  creating a peer took: * (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
-  remote: pushing 1 changeset:
+  remote: * (glob)
   remote:     6f060fabc8e7  symlink
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #1 successfully sent
   * successful sync of entry #7 (glob)
   $ cd repo-hg-3
   $ hg log -r master_bookmark^
@@ -536,7 +534,6 @@ Test hook bypass using REPLAY_BYPASS file
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * syncing log entry #2 ... (glob)
-  * Sendunbundlereplay stdout: (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -544,11 +541,10 @@ Test hook bypass using REPLAY_BYPASS file
   remote: capabilities:* (glob)
   remote: 1
   creating a peer took: * (glob)
+  using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
-  
-  * Sendunbundlereplay stderr: (glob)
   remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
-  
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
   * successful sync of entry #2 (glob)
