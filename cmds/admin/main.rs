@@ -762,9 +762,10 @@ fn process_hg_sync_subcommand<'a>(
         args::open_sql(&matches, "mutable_counters")
             .expect("Failed to open the db with mutable_counters"),
     );
-    let bookmarks: Arc<SqlBookmarks> = Arc::new(
-        args::open_sql(&matches, "bookmarks").expect("Failed to open the db with bookmarks"),
-    );
+
+    let bookmarks: Arc<SqlBookmarks> =
+        Arc::new(args::open_sql(&matches, "books").expect("Failed to open the db with bookmarks"));
+
     match sub_m.subcommand() {
         (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match sub_m.value_of("set") {
             Some(new_value) => {
