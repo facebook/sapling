@@ -239,9 +239,31 @@ impl Bookmarks for CachedBookmarks {
         ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
+        exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<u64, Error> {
         self.bookmarks
-            .count_further_bookmark_log_entries(ctx, id, repoid)
+            .count_further_bookmark_log_entries(ctx, id, repoid, exclude_reason)
+    }
+
+    fn count_further_bookmark_log_entries_by_reason(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+    ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
+        self.bookmarks
+            .count_further_bookmark_log_entries_by_reason(ctx, id, repoid)
+    }
+
+    fn skip_over_bookmark_log_entries_with_reason(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+        reason: BookmarkUpdateReason,
+    ) -> BoxFuture<Option<u64>, Error> {
+        self.bookmarks
+            .skip_over_bookmark_log_entries_with_reason(ctx, id, repoid, reason)
     }
 }
 
@@ -430,7 +452,27 @@ mod tests {
             _ctx: CoreContext,
             _id: u64,
             _repoid: RepositoryId,
+            _exclude_reason: Option<BookmarkUpdateReason>,
         ) -> BoxFuture<u64, Error> {
+            unimplemented!()
+        }
+
+        fn count_further_bookmark_log_entries_by_reason(
+            &self,
+            _ctx: CoreContext,
+            _id: u64,
+            _repoid: RepositoryId,
+        ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
+            unimplemented!()
+        }
+
+        fn skip_over_bookmark_log_entries_with_reason(
+            &self,
+            _ctx: CoreContext,
+            _id: u64,
+            _repoid: RepositoryId,
+            _reason: BookmarkUpdateReason,
+        ) -> BoxFuture<Option<u64>, Error> {
             unimplemented!()
         }
     }
