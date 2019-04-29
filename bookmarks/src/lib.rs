@@ -199,6 +199,15 @@ pub trait Bookmarks: Send + Sync + 'static {
         id: u64,
         repoid: RepositoryId,
     ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error>;
+
+    /// Find the last contiguous BookmarkUpdateLog entry matching the reason provided.
+    fn skip_over_bookmark_log_entries_with_reason(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+        reason: BookmarkUpdateReason,
+    ) -> BoxFuture<Option<u64>, Error>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -124,6 +124,32 @@ queries! {
         GROUP BY reason"
     }
 
+    read SkipOverBookmarkLogEntriesWithReason(min_id: u64, repo_id: RepositoryId, reason: BookmarkUpdateReason) -> (u64) {
+        // We find the first entry that we _don't_ want to skip.
+        // Then we find the first entry that we do want to skip and is immediately before this.
+        // We don't allow looking back, so if we're going backwards, nothing happens.
+        "
+        SELECT id
+        FROM bookmarks_update_log
+        WHERE
+            repo_id = {repo_id} AND
+            id > {min_id} AND
+            reason = {reason} AND
+            id < (
+                SELECT id
+                FROM bookmarks_update_log
+                WHERE
+                    repo_id = {repo_id} AND
+                    id > {min_id} AND
+                    NOT reason = {reason}
+                ORDER BY id ASC
+                LIMIT 1
+            )
+        ORDER BY id DESC
+        LIMIT 1
+        "
+    }
+
     write AddBundleReplayData(values: (id: u64, bundle_handle: String, commit_hashes_json: String)) {
         none,
         "INSERT INTO bundle_replay_data
@@ -291,6 +317,18 @@ impl Bookmarks for SqlBookmarks {
     ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
         CountFurtherBookmarkLogEntriesByReason::query(&self.read_connection, &id, &repoid)
             .map(|entries| entries.into_iter().collect())
+            .boxify()
+    }
+
+    fn skip_over_bookmark_log_entries_with_reason(
+        &self,
+        _ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+        reason: BookmarkUpdateReason,
+    ) -> BoxFuture<Option<u64>, Error> {
+        SkipOverBookmarkLogEntriesWithReason::query(&self.read_connection, &id, &repoid, &reason)
+            .map(|entries| entries.first().map(|entry| entry.0))
             .boxify()
     }
 

@@ -190,6 +190,18 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .required(false)
                         .takes_value(true)
                         .help("get the value of the latest processed mononoke-hg-sync counter"),
+                )
+                .arg(
+                    Arg::with_name("skip-blobimport")
+                        .long("skip-blobimport")
+                        .required(false)
+                        .help("skip to the next non-blobimport entry in mononoke-hg-sync counter"),
+                )
+                .arg(
+                    Arg::with_name("dry-run")
+                        .long("dry-run")
+                        .required(false)
+                        .help("don't make changes, only show what would have been done (--skip-blobimport only)"),
                 ),
         )
         .subcommand(
@@ -853,8 +865,14 @@ fn process_hg_sync_subcommand<'a>(
         Arc::new(args::open_sql(&matches, "books").expect("Failed to open the db with bookmarks"));
 
     match sub_m.subcommand() {
-        (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match sub_m.value_of("set") {
-            Some(new_value) => {
+        (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match (sub_m.value_of("set"), sub_m.is_present("skip-blobimport"), sub_m.is_present("dry-run")) {
+            (Some(..), true, ..) => {
+                future::err(err_msg("cannot pass both --set and --skip-blobimport")).boxify()
+            }
+            (.., false, true) => {
+                future::err(err_msg("--dry-run is meaningless without --skip-blobimport")).boxify()
+            }
+            (Some(new_value), false, false) => {
                 let new_value = i64::from_str_radix(new_value, 10).unwrap();
                 mutable_counters
                     .set_counter(
@@ -883,7 +901,7 @@ fn process_hg_sync_subcommand<'a>(
                     })
                     .boxify()
             }
-            None => mutable_counters
+            (None, skip, dry_run) => mutable_counters
                 .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
                 .and_then(move |maybe_counter| {
                     match maybe_counter {
@@ -891,8 +909,59 @@ fn process_hg_sync_subcommand<'a>(
                         Some(counter) => {
                             info!(logger, "Counter for {:?} has value {}", repo_id, counter)
                         }
+                    };
+
+                    match (skip, maybe_counter) {
+                        (false, ..) => {
+                            // We just want to log the current counter: we're done.
+                            ok(()).boxify()
+                        }
+                        (true, None) => {
+                            // We'd like to skip, but we didn't find the current counter!
+                            future::err(err_msg("cannot proceed without a counter")).boxify()
+                        }
+                        (true, Some(counter)) => {
+                            bookmarks.skip_over_bookmark_log_entries_with_reason(
+                                ctx.clone(),
+                                counter as u64,
+                                repo_id,
+                                BookmarkUpdateReason::Blobimport,
+                            ).and_then({
+                                cloned!(ctx, repo_id);
+                                move |maybe_new_counter| match (maybe_new_counter, dry_run) {
+                                    (Some(new_counter), true) => {
+                                        info!(logger, "Counter for {:?} would be updated to {}", repo_id, new_counter);
+                                        future::ok(()).boxify()
+                                    }
+                                    (Some(new_counter), false) => {
+                                        mutable_counters.set_counter(
+                                            ctx.clone(),
+                                            repo_id,
+                                            LATEST_REPLAYED_REQUEST_KEY,
+                                            new_counter as i64,
+                                            Some(counter)
+                                        )
+                                        .and_then(move |success| {
+                                            match success {
+                                                true => {
+                                                    info!(logger, "Counter for {:?} was updated to {}", repo_id, new_counter);
+                                                    future::ok(())
+                                                }
+                                                false => {
+                                                    future::err(err_msg("update conflicted"))
+                                                }
+                                            }
+                                        })
+                                        .boxify()
+                                    }
+                                    (None, ..) => {
+                                        future::err(err_msg("no valid counter position to skip ahead to")).boxify()
+                                    }
+                                }
+                            })
+                            .boxify()
+                        }
                     }
-                    ok(()).boxify()
                 })
                 .boxify(),
         },
