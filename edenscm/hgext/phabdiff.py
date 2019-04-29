@@ -29,7 +29,7 @@ def showtasks(**args):
     """String. Return the tasks associated with given hg rev."""
     tasks = []
     descr = args["ctx"].description()
-    match = re.search(r"Tasks?([\s-]?ID)?:\s*?[t\d ,]+", descr)
+    match = re.search(r"Tasks?([\s-]?ID)?:\s*?[tT\d ,]+", descr)
     if match:
         tasks = re.findall(r"\d+", match.group(0))
     return templatekw.showlist("task", tasks, args)
