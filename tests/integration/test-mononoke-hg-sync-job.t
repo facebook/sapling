@@ -362,7 +362,7 @@ Replay in a loop
   * preparing log entry #1 ... (glob)
   * sync failed for #1 (glob)
   * unexpected bookmark move: blobimport (glob)
-  $ mononoke_hg_sync_loop repo-hg-3 1
+  $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
   * successful prepare of entry #2 (glob)

@@ -105,11 +105,16 @@ SQL
 }
 
 function mononoke_hg_sync_loop {
+  local repo="$1"
+  local start_id="$2"
+  shift
+  shift
+
   $MONONOKE_HG_SYNC \
     --do-not-init-cachelib \
     --retry-num 1 \
     --mononoke-config-path mononoke-config \
-    ssh://user@dummy/"$1" sync-loop --start-id "$2"
+    ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
 function mononoke_admin {
