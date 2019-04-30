@@ -82,7 +82,7 @@ Make a copy of it that will be used later
 Try to sync blobimport bookmark move, which should fail
   $ mononoke_hg_sync_with_failure_handler repo-hg 0 $TESTTMP/onfailure.sh
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * syncing log entry #1 ... (glob)
+  * preparing log entry #1 ... (glob)
   * running a failure handler: "$TESTTMP/onfailure.sh" (glob)
   Failure handling.
   * finished running a failure handler (glob)
@@ -92,6 +92,8 @@ Try to sync blobimport bookmark move, which should fail
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #2 ... (glob)
+  * successful prepare of entry #2 (glob)
   * syncing log entry #2 ... (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
@@ -119,6 +121,8 @@ Sync a pushrebase bookmark move
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 2
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #3 ... (glob)
+  * successful prepare of entry #3 (glob)
   * syncing log entry #3 ... (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
@@ -152,6 +156,8 @@ Sync a pushrebase bookmark move
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 3
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #4 ... (glob)
+  * successful prepare of entry #4 (glob)
   * syncing log entry #4 ... (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
@@ -240,6 +246,8 @@ Use the same code here as in the actual opsfiles hook
   $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #2 ... (glob)
+  * successful prepare of entry #2 (glob)
   * syncing log entry #2 ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
@@ -310,6 +318,8 @@ Oops, we allowed a wrong bookmark to be unbundlereplayed onto
 Now bookmark is not blocked
   $ mononoke_hg_sync repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #2 ... (glob)
+  * successful prepare of entry #2 (glob)
   * syncing log entry #2 ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
@@ -349,11 +359,13 @@ Replay in a loop
   $ create_mutable_counters_sqlite3_db
   $ mononoke_hg_sync_loop repo-hg-3 0
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * syncing log entry #1 ... (glob)
+  * preparing log entry #1 ... (glob)
   * sync failed for #1 (glob)
-  * caused by: unexpected bookmark move: blobimport (glob)
+  * unexpected bookmark move: blobimport (glob)
   $ mononoke_hg_sync_loop repo-hg-3 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #2 ... (glob)
+  * successful prepare of entry #2 (glob)
   * syncing log entry #2 ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
@@ -369,6 +381,8 @@ Replay in a loop
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * successful sync of entry #2 (glob)
+  * preparing log entry #3 ... (glob)
+  * successful prepare of entry #3 (glob)
   * syncing log entry #3 ... (glob)
   sending unbundlereplay command
   remote: * (glob)
@@ -376,6 +390,8 @@ Replay in a loop
   single wireproto command took: * (glob)
   unbundle replay batch item #1 successfully sent
   * successful sync of entry #3 (glob)
+  * preparing log entry #4 ... (glob)
+  * successful prepare of entry #4 (glob)
   * syncing log entry #4 ... (glob)
   sending unbundlereplay command
   single wireproto command took: * (glob)
@@ -394,6 +410,8 @@ Continue replay
   $ cd $TESTTMP
   $ mononoke_hg_sync_loop repo-hg-3 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #5 ... (glob)
+  * successful prepare of entry #5 (glob)
   * syncing log entry #5 ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
@@ -458,6 +476,8 @@ Continue replay
   $ cd $TESTTMP
   $ mononoke_hg_sync_loop repo-hg-3 5
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #6 ... (glob)
+  * successful prepare of entry #6 (glob)
   * syncing log entry #6 ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
@@ -473,6 +493,8 @@ Continue replay
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * successful sync of entry #6 (glob)
+  * preparing log entry #7 ... (glob)
+  * successful prepare of entry #7 (glob)
   * syncing log entry #7 ... (glob)
   sending unbundlereplay command
   remote: * (glob)
@@ -533,6 +555,8 @@ Test hook bypass using REPLAY_BYPASS file
   $ touch repo-hg-2/.hg/REPLAY_BYPASS
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #2 ... (glob)
+  * successful prepare of entry #2 (glob)
   * syncing log entry #2 ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
