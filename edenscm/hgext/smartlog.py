@@ -494,13 +494,13 @@ def interestingheads(repo, subset, x):
             heads.add(rev(books[b]))
 
     # add 'interesting' remote bookmarks as well
-    remotebooks = set()
     if util.safehasattr(repo, "names") and "remotebookmarks" in repo.names:
         ns = repo.names["remotebookmarks"]
-        remotebooks = set(ns.listnames(repo))
         for name in _reposnames(repo.ui):
-            if name in remotebooks:
-                heads.add(rev(ns.namemap(repo, name)[0]))
+            nodes = ns.namemap(repo, name)
+            if nodes:
+                ns.accessed(repo, name)
+                heads.add(rev(nodes[0]))
 
     return subset & smartset.baseset(heads)
 

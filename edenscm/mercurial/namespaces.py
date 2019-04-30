@@ -137,6 +137,7 @@ class namespaces(object):
                 continue
             n = v.namemap(repo, name)
             if n:
+                v.accessed(repo, name)
                 # return max revision number
                 if len(n) > 1:
                     cl = repo.changelog
@@ -172,6 +173,9 @@ class namespace(object):
       'deprecated': set of names to be masked for ordinary use
       'builtin': bool indicating if this namespace is supported by core
                  Mercurial.
+      'accessed': function, that is used to log if the name from the namespace
+                  was accessed. The method helps to build metrics around name
+                  "access" event.
     """
 
     def __init__(
@@ -185,6 +189,7 @@ class namespace(object):
         nodemap=None,
         deprecated=None,
         builtin=False,
+        accessed=None,
     ):
         """create a namespace
 
@@ -200,6 +205,9 @@ class namespace(object):
         nodemap: function that inputs a node, output name(s)
         deprecated: set of names to be masked for ordinary use
         builtin: whether namespace is implemented by core Mercurial
+        accessed: function, that is used to log if the name from the namespace
+        was accessed
+
         """
         self.templatename = templatename
         self.logname = logname
@@ -208,6 +216,11 @@ class namespace(object):
         self.listnames = listnames
         self.namemap = namemap
         self.nodemap = nodemap
+
+        if accessed is not None:
+            self.accessed = accessed
+        else:
+            self.accessed = lambda repo, name: None
 
         # if logname is not specified, use the template name as backup
         if self.logname is None:

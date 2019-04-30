@@ -678,6 +678,10 @@ class remotenames(dict):
 @namespacepredicate("remotebookmarks", priority=55)
 def remotebookmarks(repo):
     if repo.ui.configbool("remotenames", "bookmarks"):
+
+        def accessed(repo, name):
+            pass
+
         return namespaces.namespace(
             templatename="remotebookmarks",
             logname="bookmark",
@@ -685,6 +689,7 @@ def remotebookmarks(repo):
             listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
             namemap=lambda repo, name: repo._remotenames.mark2nodes().get(name, []),
             nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
+            accessed=accessed,
         )
     else:
         return None
@@ -695,6 +700,10 @@ def hoistednames(repo):
     hoist = repo.ui.config("remotenames", "hoist")
     # hoisting only works if there are remote bookmarks
     if repo.ui.configbool("remotenames", "bookmarks") and hoist:
+
+        def accessed(repo, name):
+            pass
+
         return namespaces.namespace(
             templatename="hoistednames",
             logname="hoistedname",
@@ -706,6 +715,7 @@ def hoistednames(repo):
             nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
                 node, []
             ),
+            accessed=accessed,
         )
     else:
         return None
