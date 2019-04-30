@@ -16,7 +16,9 @@ setup testing repo for mononoke
   $ ln -s test link
   $ mkdir -p folder/subfolder
   $ echo "hello" > folder/subfolder/.keep
-  $ hg add test link folder/subfolder/.keep
+  $ echo "hello" > duplicate
+  $ echo "hello" > duplicate-2
+  $ hg add test link folder/subfolder/.keep duplicate duplicate-2
   $ hg commit -ma
   $ COMMIT1=$(hg --debug id -i)
   $ BLOBHASH=$(hg manifest --debug | grep test | cut -d' ' -f1)
@@ -239,6 +241,14 @@ test get changeset
   "test"
 
   $ sslcurl $APISERVER/repo/tree/$(cat output | jq -r ".manifest") | jq ".[] | {name, type}"
+  {
+    "name": "duplicate",
+    "type": "file"
+  }
+  {
+    "name": "duplicate-2",
+    "type": "file"
+  }
   {
     "name": "folder",
     "type": "tree"

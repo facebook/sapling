@@ -14,6 +14,7 @@ use std::{
 
 use abomonation_derive::Abomonation;
 use chrono::{DateTime, FixedOffset};
+use cloned::cloned;
 use failure::{err_msg, Error};
 use serde_derive::Serialize;
 
@@ -129,14 +130,14 @@ impl EntryWithSizeAndContentHash {
             .ok_or_else(|| err_msg("HgEntry has no name!?")));
         // FIXME: json cannot represent non-UTF8 file names
         let name = try_boxfuture!(String::from_utf8(name));
-        let ttype = entry.get_type().into();
+        let ttype: FileType = entry.get_type().into();
         let hash = entry.get_hash().to_hex();
 
         let cache_key = Self::get_cache_key(repoid, hash.as_str());
 
         // this future computes SHA1 based on content
         let future = spawn_future(entry.get_content(ctx).and_then({
-            let hash = hash.clone();
+            cloned!(name, ttype, hash);
             move |content| {
                 let size = match &content {
                     Content::File(contents)
@@ -167,6 +168,13 @@ impl EntryWithSizeAndContentHash {
                 future.map(|entry| Some(entry)).boxify()
             })
             .and_then(move |entry| entry.ok_or(err_msg(format!("Entry {} not found", hash))))
+            .map(|entry| {
+                EntryWithSizeAndContentHash {
+                    name,
+                    ttype,
+                    ..entry
+                }
+            })
             .boxify()
         } else {
             future.boxify()
