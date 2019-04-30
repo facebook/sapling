@@ -65,7 +65,19 @@ bool WinStore::getAllEntries(
     const std::vector<TreeEntry>& treeEntries = tree->getTreeEntries();
     for (const auto& entry : treeEntries) {
       wstring name = edenToWinName(entry.getName().value().toStdString());
-      entryList.emplace_back(std::move(name), entry.isTree(), 1024);
+      size_t fileSize = 0;
+      if (!entry.isTree()) {
+        const std::optional<uint64_t>& size = entry.getSize();
+        if (size.has_value()) {
+          fileSize = size.value();
+        } else {
+          BlobMetadata metaData =
+              mount_->getObjectStore()->getBlobMetadata(entry.getHash()).get();
+          fileSize = metaData.size;
+        }
+      }
+
+      entryList.emplace_back(std::move(name), entry.isTree(), fileSize);
     }
     return true;
   }
