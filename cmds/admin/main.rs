@@ -1477,6 +1477,11 @@ fn main() -> Result<()> {
     let debug = matches.is_present("debug");
 
     tokio::run(future.map_err(move |err| {
+        // Flush so output is ordered as expected in tests. Ignore errors since there is nothing we
+        // can do about them.
+        let _ = std::io::stdout().flush();
+        let _ = std::io::stderr().flush();
+
         println!("{:?}", err);
         if debug {
             println!("\n============ DEBUG ERROR ============");
