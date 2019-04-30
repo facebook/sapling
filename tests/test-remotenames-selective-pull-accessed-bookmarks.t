@@ -1,5 +1,14 @@
+  $ unset SCM_SAMPLING_FILEPATH
+  $ LOGDIR=$TESTTMP/logs
+  $ mkdir $LOGDIR
+
   $ enable remotenames
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+
+  $ enable sampling
+  $ setconfig sampling.filepath=$LOGDIR/samplingpath.txt
+  $ setconfig sampling.key.accessedremotenames=remotenames
+
   $ hg init remoterepo
   $ hg clone -q ssh://user@dummy/remoterepo localrepo
 
@@ -9,14 +18,28 @@
   >    hg ci -m "commit $1"
   > }
 
+script to verify sampling
+  $ cat > verifylast.py << EOF
+  > import json, re
+  > with open("$LOGDIR/samplingpath.txt") as f:
+  >    data = f.read().strip("\0").split("\0")
+  > if data:
+  >     entry = json.loads(data[-1])
+  >     if entry["category"] == "remotenames":
+  >         if entry["data"]["metrics_type"] == "accessedremotenames":
+  >             metrics = "accessedremotenames_totalnum"
+  >             print("%s : %s" % (metrics, entry["data"][metrics]))
+  > EOF
+
   $ checkaccessedbookmarks() {
   >    local file=.hg/selectivepullaccessedbookmarks
   >    if [ -f $file ]; then
-  >        sort -k 3 $file
+  >        sort -k 3 $file ; python $TESTTMP/verifylast.py
   >    else
   >        echo "No contents!"
   >    fi
   > }
+
 
 Create remote bookmarks
 
@@ -52,17 +75,21 @@ Check used remote bookmarks tracking
      default/master            1:206754acf7d8
 
   $ checkaccessedbookmarks
+  accessedremotenames_totalnum : 0
   $ hg pull -B master
   pulling from ssh://user@dummy/remoterepo
   no changes found
   $ checkaccessedbookmarks
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
+  accessedremotenames_totalnum : 1
+
   $ hg pull -B A_bookmark
   pulling from ssh://user@dummy/remoterepo
   no changes found
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
+  accessedremotenames_totalnum : 2
 
 Check pulling unknown bookmark
 
@@ -73,6 +100,7 @@ Check pulling unknown bookmark
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
+  accessedremotenames_totalnum : 2
 
 Add second remote and update to first master
 
@@ -100,6 +128,7 @@ Add second remote and update to first master
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
+  accessedremotenames_totalnum : 2
   $ hg pull -B master secondremote
   pulling from ssh://user@dummy/secondremoterepo
   no changes found
@@ -107,6 +136,7 @@ Add second remote and update to first master
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+  accessedremotenames_totalnum : 3
 
 Check pulling bookmark as a revset
 TODO: need to log bookmarks passed under -r as well as normal
@@ -118,6 +148,7 @@ TODO: need to log bookmarks passed under -r as well as normal
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+  accessedremotenames_totalnum : 3
 
 Check updating to the remote bookmark
 
@@ -127,12 +158,14 @@ Check updating to the remote bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+  accessedremotenames_totalnum : 1
 
   $ hg up secondremote/master
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+  accessedremotenames_totalnum : 2
 
 update to the hoisted name
   $ hg up B_bookmark
@@ -141,6 +174,7 @@ update to the hoisted name
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+  accessedremotenames_totalnum : 3
 
 change hoist and update again
   $ setconfig remotenames.hoist=secondremote
@@ -152,6 +186,7 @@ change hoist and update again
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+  accessedremotenames_totalnum : 3
 
   $ hg up master
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -159,3 +194,4 @@ change hoist and update again
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+  accessedremotenames_totalnum : 3

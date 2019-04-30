@@ -185,6 +185,10 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
         ui.warn(_("`%s` found remotely\n") % mayberemotebookmark)
 
 
+def _reportaccessedbookmarks(ui, accessedremotenames):
+    ui.log("accessedremotenames", accessedremotenames_totalnum=len(accessedremotenames))
+
+
 def updateaccessedbookmarks(repo, remotepath, bookmarks):
     if not _trackaccessedbookmarks(repo.ui):
         return
@@ -196,6 +200,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
     else:
         knownbooks = set()
 
+    totalaccessednames = 0
     with repo.wlock(), vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
         newbookmarks = {}
         for node, nametype, oldremote, rname in knownbooks:
@@ -203,6 +208,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
                 continue
 
             if oldremote != remotepath:
+                totalaccessednames += 1
                 _writesingleremotename(f, oldremote, nametype, rname, node)
             else:
                 newbookmarks[rname] = node
@@ -214,7 +220,11 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
                 newbookmarks[rname] = node
 
         for rname, node in newbookmarks.iteritems():
+            totalaccessednames += 1
             _writesingleremotename(f, remotepath, "bookmarks", rname, node)
+
+    # log the number of accessed bookmarks currently tracked
+    repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)
 
 
 def expull(orig, repo, remote, *args, **kwargs):
