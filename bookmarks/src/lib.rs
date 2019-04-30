@@ -7,6 +7,7 @@
 #![deny(warnings)]
 
 use ascii::{AsciiChar, AsciiString};
+use asyncmemo::Weight;
 use context::CoreContext;
 use failure_ext::{err_msg, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
@@ -18,6 +19,7 @@ use sql::mysql_async::{
 };
 use std::collections::HashMap;
 use std::fmt;
+use std::mem;
 use std::ops::Range;
 
 mod cache;
@@ -54,6 +56,13 @@ impl Bookmark {
 
     pub fn to_string(&self) -> String {
         self.bookmark.clone().into()
+    }
+}
+
+impl Weight for Bookmark {
+    #[inline]
+    fn get_weight(&self) -> usize {
+        mem::size_of::<Self>() + self.bookmark.len()
     }
 }
 

@@ -440,6 +440,7 @@ mod test {
     use aclchecker::AclChecker;
     use assert_matches::assert_matches;
     use async_unit;
+    use bookmarks::Bookmark;
     use bytes::Bytes;
     use failure_ext::err_downcast;
     use futures::Future;
@@ -1610,7 +1611,12 @@ end"#;
             let ctx = CoreContext::test_mock();
 
             run_test_for_config_reading(ctx, |conf| {
-                HookContext::new("testhook".into(), conf, default_changeset())
+                HookContext::new(
+                    "testhook".into(),
+                    conf,
+                    default_changeset(),
+                    Bookmark::new("book").unwrap(),
+                )
             });
         });
     }
@@ -1621,7 +1627,12 @@ end"#;
             let ctx = CoreContext::test_mock();
 
             run_test_for_config_reading(ctx, |conf| {
-                HookContext::new("testhook".into(), conf, default_hook_added_file())
+                HookContext::new(
+                    "testhook".into(),
+                    conf,
+                    default_hook_added_file(),
+                    Bookmark::new("book").unwrap(),
+                )
             });
         });
     }
@@ -1632,7 +1643,12 @@ end"#;
         changeset: HookChangeset,
     ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
-        let context = HookContext::new(hook.name.clone(), Default::default(), changeset);
+        let context = HookContext::new(
+            hook.name.clone(),
+            Default::default(),
+            changeset,
+            Bookmark::new("book").unwrap(),
+        );
         hook.run(ctx, context).wait()
     }
 
@@ -1642,7 +1658,12 @@ end"#;
         hook_file: HookFile,
     ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
-        let context = HookContext::new(hook.name.clone(), Default::default(), hook_file);
+        let context = HookContext::new(
+            hook.name.clone(),
+            Default::default(),
+            hook_file,
+            Bookmark::new("book").unwrap(),
+        );
         hook.run(ctx, context).wait()
     }
 

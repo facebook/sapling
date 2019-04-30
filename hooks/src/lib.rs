@@ -195,7 +195,7 @@ impl HookManager {
         if hooks.is_empty() {
             finished(Vec::new()).boxify()
         } else {
-            self.run_changeset_hooks_for_changeset_id(ctx, changeset_id, hooks, maybe_pushvars)
+            self.run_changeset_hooks_for_changeset_id(ctx, changeset_id, hooks, maybe_pushvars, bookmark)
         }
     }
 
@@ -205,6 +205,7 @@ impl HookManager {
         changeset_id: HgChangesetId,
         hooks: Vec<String>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
+        bookmark: &Bookmark,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         let hooks: Result<Vec<(String, (Arc<Hook<HookChangeset>>, _))>, Error> = hooks
             .iter()
@@ -219,6 +220,7 @@ impl HookManager {
         let hooks = try_boxfuture!(hooks);
         self.get_hook_changeset(ctx.clone(), changeset_id)
             .and_then({
+                cloned!(bookmark);
                 move |hcs| {
                     let hooks = HookManager::filter_bypassed_hooks(
                         hooks,
@@ -226,7 +228,12 @@ impl HookManager {
                         maybe_pushvars.as_ref(),
                     );
 
-                    HookManager::run_changeset_hooks_for_changeset(ctx, hcs.clone(), hooks.clone())
+                    HookManager::run_changeset_hooks_for_changeset(
+                        ctx,
+                        hcs.clone(),
+                        hooks.clone(),
+                        bookmark,
+                    )
                 }
             })
             .map(move |res| {
@@ -249,12 +256,13 @@ impl HookManager {
         ctx: CoreContext,
         changeset: HookChangeset,
         hooks: Vec<(String, Arc<Hook<HookChangeset>>, HookConfig)>,
+        bookmark: Bookmark,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
             HookManager::run_changeset_hook(
                 ctx.clone(),
                 hook,
-                HookContext::new(hook_name, config, changeset.clone()),
+                HookContext::new(hook_name, config, changeset.clone(), bookmark.clone()),
             )
         }))
         .boxify()
@@ -307,6 +315,7 @@ impl HookManager {
                 hooks,
                 maybe_pushvars,
                 self.logger.clone(),
+                bookmark.clone(),
             )
         }
     }
@@ -318,6 +327,7 @@ impl HookManager {
         hooks: Vec<(String, (Arc<Hook<HookFile>>, HookConfig))>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
         logger: Logger,
+        bookmark: Bookmark,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
             self.logger,
@@ -339,6 +349,7 @@ impl HookManager {
                     hooks,
                     cache,
                     logger,
+                    bookmark,
                 )
             })
             .boxify()
@@ -350,6 +361,7 @@ impl HookManager {
         hooks: Vec<String>,
         cache: Cache,
         logger: Logger,
+        bookmark: Bookmark,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
             .files
@@ -364,6 +376,7 @@ impl HookManager {
                             hooks.clone(),
                             cache.clone(),
                             logger.clone(),
+                            bookmark.clone(),
                         )
                     ),
                     ChangedFileType::Deleted => None,
@@ -381,6 +394,7 @@ impl HookManager {
         hooks: Vec<String>,
         cache: Cache,
         logger: Logger,
+        bookmark: Bookmark,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<(FileHookExecutionID, HookExecution), _>> = hooks
             .iter()
@@ -390,6 +404,7 @@ impl HookManager {
                         cs_id,
                         hook_name: hook_name.to_string(),
                         file: file.clone(),
+                        bookmark: bookmark.clone(),
                     },
                     cache.clone(),
                     logger.clone(),
@@ -890,8 +905,12 @@ impl Filler for HookCacheFiller {
         match hooks.get(&key.hook_name) {
             Some(arc_hook) => {
                 let arc_hook = arc_hook.clone();
-                let hook_context: HookContext<HookFile> =
-                    HookContext::new(key.hook_name.clone(), arc_hook.1.clone(), key.file.clone());
+                let hook_context: HookContext<HookFile> = HookContext::new(
+                    key.hook_name.clone(),
+                    arc_hook.1.clone(),
+                    key.file.clone(),
+                    key.bookmark.clone(),
+                );
                 arc_hook.0.run(self.ctx.clone(), hook_context)
             }
             None => panic!("Can't find hook {}", key.hook_name), // TODO
@@ -906,6 +925,7 @@ pub struct FileHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
     pub file: HookFile,
+    pub bookmark: Bookmark,
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
@@ -916,7 +936,10 @@ pub struct ChangesetHookExecutionID {
 
 impl Weight for FileHookExecutionID {
     fn get_weight(&self) -> usize {
-        self.cs_id.get_weight() + self.hook_name.get_weight() + self.file.get_weight()
+        self.cs_id.get_weight()
+            + self.hook_name.get_weight()
+            + self.file.get_weight()
+            + self.bookmark.get_weight()
     }
 }
 
@@ -947,17 +970,19 @@ where
     pub hook_name: String,
     pub config: HookConfig,
     pub data: T,
+    pub bookmark: Bookmark,
 }
 
 impl<T> HookContext<T>
 where
     T: Clone,
 {
-    fn new(hook_name: String, config: HookConfig, data: T) -> HookContext<T> {
+    fn new(hook_name: String, config: HookConfig, data: T, bookmark: Bookmark) -> HookContext<T> {
         HookContext {
             hook_name,
             config,
             data,
+            bookmark,
         }
     }
 }

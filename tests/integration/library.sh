@@ -519,9 +519,10 @@ function hook_test_setup() {
   setup_mononoke_config
   cd "$TESTTMP/mononoke-config" || exit 1
 
+  HOOKBOOKMARK="${HOOKBOOKMARK:-master_bookmark}"
   cat >> repos/repo/server.toml <<CONFIG
 [[bookmarks]]
-name="master_bookmark"
+name="$HOOKBOOKMARK"
 CONFIG
 
   HOOK_FILE="$1"
@@ -532,6 +533,7 @@ CONFIG
   if [[ $# -gt 0 ]]; then
     EXTRA_CONFIG_DESCRIPTOR="$1"
   fi
+
 
   if [[ ! -z "$HOOK_FILE" ]] ; then
     mkdir -p common/hooks
@@ -560,7 +562,7 @@ B
 A
 EOF
 
-  hg bookmark master_bookmark -r tip
+  hg bookmark "$HOOKBOOKMARK" -r tip
 
   cd ..
   blobimport repo-hg/.hg repo

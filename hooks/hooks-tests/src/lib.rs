@@ -532,6 +532,7 @@ fn test_changeset_hook_context() {
             hook_name: "hook1".into(),
             config: Default::default(),
             data,
+            bookmark: Bookmark::new("bm1").unwrap(),
         };
         let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => context_matching_changeset_hook(expected_context)
