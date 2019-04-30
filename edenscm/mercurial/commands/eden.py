@@ -602,6 +602,8 @@ class HgServer(object):
             # 00changelog.i.a if it exists now instead of just using
             # 00changelog.i  The .a file contains pending commit data if a
             # transaction is in progress.
+            if self.repo.ui.configbool("devel", "all-warnings"):
+                logging.exception("Got exception when getting manifest node: %s", rev)
             self.repo.invalidate(clearfilecache=True)
             return self._get_manifest_node_impl(rev)
 
@@ -623,6 +625,10 @@ class HgServer(object):
             # Completely re-initialize our repo object and try again, in hopes
             # that this will make the server return data correctly when we
             # retry.
+            if self.repo.ui.configbool("devel", "all-warnings"):
+                logging.exception(
+                    "Got exception when getting file: %s, %s", path, hex(rev_hash)
+                )
             raise ResetRepoError(ex)
 
     def prefetch(self, rev):
