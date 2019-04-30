@@ -79,6 +79,7 @@ configitem("remotenames", "pushrev", default=None)
 configitem("remotenames", "resolvenodes", default=True)
 configitem("remotenames", "selectivepull", default=False)
 configitem("remotenames", "selectivepulldefault", default=[])
+configitem("remotenames", "selectivepullaccessedbookmarks", default=False)
 configitem("remotenames", "syncbookmarks", default=False)
 configitem("remotenames", "tracking", default=True)
 configitem("remotenames", "transitionbookmarks", default=[])
@@ -94,6 +95,7 @@ journalremotebookmarktype = "remotebookmark"
 # name of the file that is used to mark that transition to selectivepull has
 # happened
 _selectivepullenabledfile = "selectivepullenabled"
+_selectivepullaccessedbookmarks = "selectivepullaccessedbookmarks"
 
 
 def exbookcalcupdate(orig, ui, repo, checkout):
@@ -139,6 +141,10 @@ def _isselectivepull(ui):
     return ui.configbool("remotenames", "selectivepull")
 
 
+def _trackaccessedbookmarks(ui):
+    return ui.configbool("remotenames", "selectivepullaccessedbookmarks")
+
+
 def _getselectivepulldefaultbookmarks(ui):
     default_books = ui.configlist("remotenames", "selectivepulldefault")
     if not default_books:
@@ -179,6 +185,39 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
         ui.warn(_("`%s` found remotely\n") % mayberemotebookmark)
 
 
+def updateaccessedbookmarks(repo, remote, bookmarks):
+    if not _trackaccessedbookmarks(repo.ui):
+        return
+
+    vfs = repo.sharedvfs
+    remotepath = activepath(repo.ui, remote)
+
+    if vfs.exists(_selectivepullaccessedbookmarks):
+        knownbooks = set(_readremotenamesfrom(vfs, _selectivepullaccessedbookmarks))
+    else:
+        knownbooks = set()
+
+    with repo.wlock(), vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
+        newbookmarks = {}
+        for node, nametype, oldremote, rname in knownbooks:
+            if nametype != "bookmarks":
+                continue
+
+            if oldremote != remotepath:
+                _writesingleremotename(f, oldremote, nametype, rname, node)
+            else:
+                newbookmarks[rname] = node
+
+        nodemap = repo.unfiltered().changelog.nodemap
+        for rname, node in bookmarks.iteritems():
+            # if the node is known locally, update the old value or add new
+            if bin(node) in nodemap:
+                newbookmarks[rname] = node
+
+        for rname, node in newbookmarks.iteritems():
+            _writesingleremotename(f, remotepath, "bookmarks", rname, node)
+
+
 def expull(orig, repo, remote, *args, **kwargs):
     if _isselectivepull(repo.ui):
         # if selectivepull is enabled then we don't save all of the remote
@@ -215,7 +254,7 @@ def expull(orig, repo, remote, *args, **kwargs):
                 args = args[1:]
             for node in bookmarks.values():
                 heads.append(bin(node))
-            kwargs["bookmarks"] = bookmarks
+            kwargs["bookmarks"] = bookmarks.keys()
             kwargs["heads"] = heads
     else:
         bookmarks = remote.listkeys("bookmarks")
@@ -231,6 +270,12 @@ def expull(orig, repo, remote, *args, **kwargs):
         if _isselectivepull(repo.ui):
             with repo.wlock(), repo.localvfs(_selectivepullenabledfile, "w") as f:
                 f.write("enabled")  # content doesn't matter
+
+    if _trackaccessedbookmarks(repo.ui):
+        if "bookmarks" in kwargs:
+            accessedbookmarks = _listremotebookmarks(remote, kwargs["bookmarks"])
+            updateaccessedbookmarks(repo, remote, accessedbookmarks)
+
     return res
 
 
@@ -1564,19 +1609,11 @@ def shareawarecachevfs(repo):
         return repo.cachevfs
 
 
-def readbookmarknames(repo, remote):
-    for node, nametype, remotename, rname in readremotenames(repo):
-        if nametype == "bookmarks" and remotename == remote:
-            yield rname
-
-
-def readremotenames(repo):
-    vfs = repo.sharedvfs
-    # exit early if there is nothing to do
-    if not vfs.exists("remotenames"):
+def _readremotenamesfrom(vfs, filename):
+    if not vfs.exists(filename):
         return
 
-    f = vfs("remotenames")
+    f = vfs(filename)
     for line in f:
         nametype = None
         line = line.strip()
@@ -1600,6 +1637,21 @@ def readremotenames(repo):
         yield node, nametype, remote, rname
 
     f.close()
+
+
+def readbookmarknames(repo, remote):
+    for node, nametype, remotename, rname in readremotenames(repo):
+        if nametype == "bookmarks" and remotename == remote:
+            yield rname
+
+
+def readremotenames(repo):
+    return _readremotenamesfrom(repo.sharedvfs, "remotenames")
+
+
+def _writesingleremotename(fd, remote, nametype, name, node):
+    remotename = joinremotename(remote, name)
+    fd.write("%s %s %s\n" % (node, nametype, remotename))
 
 
 def transition(repo, ui):
@@ -1658,8 +1710,7 @@ def saveremotenames(repo, remotepath, bookmarks=None):
         # old data and re-save it
         for node, nametype, oldremote, rname in olddata:
             if oldremote != remotepath:
-                n = joinremotename(oldremote, rname)
-                f.write("%s %s %s\n" % (node, nametype, n))
+                _writesingleremotename(f, oldremote, nametype, rname, node)
             elif nametype == "bookmarks":
                 oldbooks[rname] = node
 
@@ -1680,10 +1731,7 @@ def saveremotenames(repo, remotepath, bookmarks=None):
                 # node is unknown locally, don't change the bookmark
                 bookhex = oldbooks.get(bookmark)
             if bookhex:
-                f.write(
-                    "%s bookmarks %s\n"
-                    % (bookhex, joinremotename(remotepath, bookmark))
-                )
+                _writesingleremotename(f, remotepath, "bookmarks", bookmark, bookhex)
         f.close()
 
         # Old paths have been deleted, refresh remotenames

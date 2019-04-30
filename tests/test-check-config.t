@@ -138,6 +138,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.pushrev (str)
   undocumented: remotenames.resolvenodes (bool)
   undocumented: remotenames.selectivepull (bool)
+  undocumented: remotenames.selectivepullaccessedbookmarks (bool)
   undocumented: remotenames.selectivepulldefault (list)
   undocumented: remotenames.syncbookmarks (bool)
   undocumented: remotenames.tracking (bool)
