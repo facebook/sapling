@@ -616,6 +616,17 @@ class HgServer(object):
 
         try:
             return fctx.data()
+        except KeyError:
+            # There is a race condition in Mercurial's repacking which may be
+            # triggered by debugedenimporthelper since we have multiple
+            # processes for importing files. So we will retry once for this
+            # type of error to avoid restarting the importer when this happens.
+            self.repo.ui.develwarn("Retrying due to possible race condition")
+            self.repo.fileslog.contentstore.markforrefresh()
+            try:
+                return fctx.data()
+            except Exception as ex:
+                raise ResetRepoError(ex)
         except Exception as ex:
             # Ugh.  The server-side remotefilelog code can sometimes
             # incorrectly fail to return data here.  I believe this occurs if
