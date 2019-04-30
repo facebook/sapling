@@ -185,12 +185,11 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
         ui.warn(_("`%s` found remotely\n") % mayberemotebookmark)
 
 
-def updateaccessedbookmarks(repo, remote, bookmarks):
+def updateaccessedbookmarks(repo, remotepath, bookmarks):
     if not _trackaccessedbookmarks(repo.ui):
         return
 
     vfs = repo.sharedvfs
-    remotepath = activepath(repo.ui, remote)
 
     if vfs.exists(_selectivepullaccessedbookmarks):
         knownbooks = set(_readremotenamesfrom(vfs, _selectivepullaccessedbookmarks))
@@ -274,7 +273,8 @@ def expull(orig, repo, remote, *args, **kwargs):
     if _trackaccessedbookmarks(repo.ui):
         if "bookmarks" in kwargs:
             accessedbookmarks = _listremotebookmarks(remote, kwargs["bookmarks"])
-            updateaccessedbookmarks(repo, remote, accessedbookmarks)
+            remotepath = activepath(repo.ui, remote)
+            updateaccessedbookmarks(repo, remotepath, accessedbookmarks)
 
     return res
 
@@ -678,16 +678,22 @@ class remotenames(dict):
 @namespacepredicate("remotebookmarks", priority=55)
 def remotebookmarks(repo):
     if repo.ui.configbool("remotenames", "bookmarks"):
+        namemap = lambda repo, name: repo._remotenames.mark2nodes().get(name, [])
 
         def accessed(repo, name):
-            pass
+            if _trackaccessedbookmarks(repo.ui):
+                nodes = namemap(repo, name)
+                if nodes:
+                    rnode = hex(nodes[0])
+                    remote, rname = splitremotename(name)
+                    updateaccessedbookmarks(repo, remote, {rname: rnode})
 
         return namespaces.namespace(
             templatename="remotebookmarks",
             logname="bookmark",
             colorname="remotebookmark",
             listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
-            namemap=lambda repo, name: repo._remotenames.mark2nodes().get(name, []),
+            namemap=namemap,
             nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
             accessed=accessed,
         )
@@ -700,18 +706,21 @@ def hoistednames(repo):
     hoist = repo.ui.config("remotenames", "hoist")
     # hoisting only works if there are remote bookmarks
     if repo.ui.configbool("remotenames", "bookmarks") and hoist:
+        namemap = lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(name, [])
 
         def accessed(repo, name):
-            pass
+            if _trackaccessedbookmarks(repo.ui):
+                nodes = namemap(repo, name)
+                if nodes:
+                    rnode = hex(nodes[0])
+                    updateaccessedbookmarks(repo, hoist, {name: rnode})
 
         return namespaces.namespace(
             templatename="hoistednames",
             logname="hoistedname",
             colorname="hoistedname",
             listnames=lambda repo: repo._remotenames.hoist2nodes(hoist).keys(),
-            namemap=lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(
-                name, []
-            ),
+            namemap=namemap,
             nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
                 node, []
             ),

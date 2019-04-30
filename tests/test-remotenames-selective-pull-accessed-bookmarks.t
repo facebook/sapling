@@ -118,3 +118,44 @@ TODO: need to log bookmarks passed under -r as well as normal
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+
+Check updating to the remote bookmark
+
+  $ rm .hg/selectivepullaccessedbookmarks
+
+  $ hg up default/A_bookmark
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ checkaccessedbookmarks
+  01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+
+  $ hg up secondremote/master
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ checkaccessedbookmarks
+  01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+  a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+
+update to the hoisted name
+  $ hg up B_bookmark
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ checkaccessedbookmarks
+  01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+  5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
+  a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+
+change hoist and update again
+  $ setconfig remotenames.hoist=secondremote
+
+  $ hg up A_bookmark
+  abort: unknown revision 'A_bookmark'!
+  [255]
+  $ checkaccessedbookmarks
+  01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+  5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
+  a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
+
+  $ hg up master
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ checkaccessedbookmarks
+  01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+  5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
+  a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
