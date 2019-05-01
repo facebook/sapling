@@ -416,6 +416,7 @@ impl RepoConfigs {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawRepoConfig {
     path: Option<PathBuf>,
     repotype: RawRepoType,
@@ -445,12 +446,14 @@ struct RawRepoConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawCacheWarmupConfig {
     bookmark: String,
     commit_limit: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawHookManagerParams {
     entrylimit: usize,
     weightlimit: usize,
@@ -463,6 +466,7 @@ struct RawHookManagerParams {
 struct RawRegex(#[serde(with = "serde_regex")] Regex);
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawBookmarkConfig {
     /// Either the regex or the name should be provided, not both
     regex: Option<RawRegex>,
@@ -475,11 +479,13 @@ struct RawBookmarkConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawBookmarkHook {
     hook_name: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawHookConfig {
     name: String,
     path: Option<String>,
@@ -491,6 +497,7 @@ struct RawHookConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawRemoteBlobstoreConfig {
     blobstore_type: RawBlobstoreType,
     blobstore_id: BlobstoreId,
@@ -508,6 +515,7 @@ struct RawRemoteBlobstoreConfig {
 
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 enum RawRepoType {
     #[serde(rename = "blob:files")]
     Files,
@@ -521,6 +529,7 @@ enum RawRepoType {
 
 /// Types of blobstores supported
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 enum RawBlobstoreType {
     #[serde(rename = "manifold")]
     Manifold,
@@ -531,6 +540,7 @@ enum RawBlobstoreType {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawPushrebaseParams {
     rewritedates: Option<bool>,
     recursion_limit: Option<usize>,
@@ -542,11 +552,13 @@ struct RawPushrebaseParams {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawLfsParams {
     threshold: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawBundle2ReplayParams {
     preserve_raw_bundle2: Option<bool>,
 }

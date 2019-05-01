@@ -1,0 +1,4 @@
+repoid = 123
+repotype = "blob:files"
+path = "/tmp/blobstore"
+random_unknown_field = "hello"
