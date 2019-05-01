@@ -464,7 +464,9 @@ class fileserverclient(object):
         try:
             # receive cache misses from master
             if missedfiles > 0:
-                datapackpath, histpackpath = self._fetchpackfiles(misses)
+                datapackpath, histpackpath = self._fetchpackfiles(
+                    misses, fetchdata, fetchhistory
+                )
                 # send to the memcache
                 if self.ui.configbool("remotefilelog", "updatesharedcache"):
                     if fetched:
@@ -682,7 +684,7 @@ class fileserverclient(object):
             draftset.add(key)
         self.writedata.addremotefilelognode(filename, bin(node), data)
 
-    def _fetchpackfiles(self, fileids):
+    def _fetchpackfiles(self, fileids, fetchdata, fetchhistory):
         """Requests the given file revisions from the server in a pack files
         format. Returns pair of the data pack and history pack paths.
 
@@ -692,7 +694,7 @@ class fileserverclient(object):
         # Try fetching packs via HTTP first; fall back to SSH on error.
         if edenapi.enabled(self.ui):
             try:
-                return self._httpfetchpacks(fileids)
+                return self._httpfetchpacks(fileids, fetchdata, fetchhistory)
             except Exception as e:
                 self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
                 self.ui.develwarn(str(e))
@@ -757,7 +759,7 @@ class fileserverclient(object):
         pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
         pipeo.flush()
 
-    def _httpfetchpacks(self, fileids):
+    def _httpfetchpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTP using the Eden API"""
         perftrace.traceflag("http")
 
@@ -769,15 +771,21 @@ class fileserverclient(object):
         if edenapi.debug(self.ui):
             self.ui.warn(_("fetching %d files over HTTP\n") % len(fileids))
 
-        with progress.spinner(self.ui, _("Fetching file content over HTTP")):
-            self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
-            self.ui.metrics.gauge("http_getfiles_calls", 1)
-            datapackpath = self.repo.edenapi.get_files(fileids)
+        if fetchdata:
+            with progress.spinner(self.ui, _("Fetching file content over HTTP")):
+                self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+                self.ui.metrics.gauge("http_getfiles_calls", 1)
+                datapackpath = self.repo.edenapi.get_files(fileids)
+        else:
+            datapackpath = None
 
-        with progress.spinner(self.ui, _("Fetching file history over HTTP")):
-            self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
-            self.ui.metrics.gauge("http_gethistory_calls", 1)
-            histpackpath = self.repo.edenapi.get_history(fileids)
+        if fetchhistory:
+            with progress.spinner(self.ui, _("Fetching file history over HTTP")):
+                self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+                self.ui.metrics.gauge("http_gethistory_calls", 1)
+                histpackpath = self.repo.edenapi.get_history(fileids)
+        else:
+            histpackpath = None
 
         return datapackpath, histpackpath
 
