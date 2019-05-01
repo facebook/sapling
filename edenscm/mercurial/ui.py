@@ -28,6 +28,7 @@ from . import (
     error,
     formatter,
     metrics,
+    perftrace,
     progress,
     pycompat,
     rcutil,
@@ -1387,13 +1388,14 @@ class ui(object):
 
             editor = self.geteditor()
 
-            self.system(
-                '%s "%s"' % (editor, name),
-                environ=environ,
-                onerr=error.Abort,
-                errprefix=_("edit failed"),
-                blockedtag="editor",
-            )
+            with perftrace.trace("Editor"):
+                self.system(
+                    '%s "%s"' % (editor, name),
+                    environ=environ,
+                    onerr=error.Abort,
+                    errprefix=_("edit failed"),
+                    blockedtag="editor",
+                )
 
             f = open(name, r"rb")
             t = util.fromnativeeol(f.read())
