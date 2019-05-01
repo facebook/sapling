@@ -76,7 +76,6 @@ def receivepack(ui, fh, dpack, hpack):
     receiveddata = []
     receivedhistory = []
 
-    pendinghistory = defaultdict(dict)
     with progress.bar(ui, _("receiving pack")) as prog:
         while True:
             filename = readpath(fh)
@@ -84,8 +83,8 @@ def receivepack(ui, fh, dpack, hpack):
 
             # Store the history for later sorting
             for value in readhistory(fh):
-                node = value[0]
-                pendinghistory[filename][node] = value
+                node, p1, p2, linknode, copyfrom = value
+                hpack.add(filename, node, p1, p2, linknode, copyfrom)
                 receivedhistory.append((filename, node))
                 count += 1
 
@@ -96,27 +95,6 @@ def receivepack(ui, fh, dpack, hpack):
 
             if count == 0 and filename == "":
                 break
-            prog.value += 1
-
-    # Add history to pack in toposorted order
-    with progress.bar(ui, _("storing pack"), total=len(pendinghistory)) as prog:
-        for filename, nodevalues in sorted(pendinghistory.iteritems()):
-
-            def _parentfunc(node):
-                p1, p2 = nodevalues[node][1:3]
-                parents = []
-                if p1 != nullid:
-                    parents.append(p1)
-                if p2 != nullid:
-                    parents.append(p2)
-                return parents
-
-            sortednodes = reversed(
-                shallowutil.sortnodes(nodevalues.iterkeys(), _parentfunc)
-            )
-            for node in sortednodes:
-                node, p1, p2, linknode, copyfrom = nodevalues[node]
-                hpack.add(filename, node, p1, p2, linknode, copyfrom)
             prog.value += 1
 
     return receiveddata, receivedhistory
