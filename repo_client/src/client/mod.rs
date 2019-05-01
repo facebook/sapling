@@ -112,6 +112,12 @@ fn timeout_duration() -> Duration {
     Duration::from_secs(15 * 60)
 }
 
+fn clone_timeout_duration() -> Duration {
+    // clone requests can be rather long. Let's bump the timeout
+    Duration::from_secs(30 * 60)
+}
+
+
 fn getfiles_timeout_duration() -> Duration {
     // getfiles requests can be rather long. Let's bump the timeout
     Duration::from_secs(90 * 60)
@@ -1279,7 +1285,7 @@ impl HgCommands for RepoClient {
                 }
             })
             .flatten_stream()
-            .whole_stream_timeout(timeout_duration())
+            .whole_stream_timeout(clone_timeout_duration())
             .map_err(process_stream_timeout_error)
             .timed({
                 let ctx = self.ctx.clone();
