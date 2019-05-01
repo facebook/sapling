@@ -72,7 +72,7 @@ from __future__ import absolute_import
 import errno
 import struct
 
-from . import error, node, obsutil, phases, policy, util
+from . import error, node, obsutil, perftrace, phases, policy, util
 from .i18n import _
 
 
@@ -1016,24 +1016,27 @@ def _computeobsoleteset(repo):
     This allows undo to return to old hashes, and is correct as long as
     obsmarker is not exchanged.
     """
-    getnode = repo.changelog.node
-    markersbysuccessor = repo.obsstore.predecessors.get
-    markersbypredecessor = repo.obsstore.successors.get
-    result = set()
-    for r in _mutablerevs(repo):
-        n = getnode(r)
-        m1s = markersbypredecessor(n)
-        m2s = markersbysuccessor(n)
-        if m1s:
-            if m2s:
-                # marker: (prec, [succ], flag, meta, (date, timezone), parent)
-                d1 = max(m[4][0] for m in m1s)
-                d2 = max(m[4][0] for m in m2s)
-                if d2 < d1:
+    with perftrace.trace("Compute Obsolete Nodes"):
+        perftrace.traceflag("obsolete")
+
+        getnode = repo.changelog.node
+        markersbysuccessor = repo.obsstore.predecessors.get
+        markersbypredecessor = repo.obsstore.successors.get
+        result = set()
+        for r in _mutablerevs(repo):
+            n = getnode(r)
+            m1s = markersbypredecessor(n)
+            m2s = markersbysuccessor(n)
+            if m1s:
+                if m2s:
+                    # marker: (prec, [succ], flag, meta, (date, timezone), parent)
+                    d1 = max(m[4][0] for m in m1s)
+                    d2 = max(m[4][0] for m in m2s)
+                    if d2 < d1:
+                        result.add(r)
+                else:
                     result.add(r)
-            else:
-                result.add(r)
-    return result
+        return result
 
 
 @cachefor("unstable")

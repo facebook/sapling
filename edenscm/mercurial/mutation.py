@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 
-from . import error, node as nodemod, phases, repoview, util
+from . import error, node as nodemod, perftrace, phases, repoview, util
 from .i18n import _
 from .rust.bindings import mutationstore
 
@@ -263,46 +263,49 @@ class obsoletecache(object):
         if self.complete[repo.filtername]:
             return self.obsolete[repo.filtername]
 
-        # Testing each node separately will result in lots of repeated tests.
-        # Instead, we can do the following:
-        # - Compute all nodes that are obsolete because one of their closest
-        #   successors is visible.
-        # - Work back from these commits marking all of their predecessors as
-        #   obsolete.
-        # Note that "visible" here means "visible in a normal filtered repo",
-        # even if the filter for this repo includes other commits.
-        clhasnode = repo.changelog.hasnode
-        clrev = repo.changelog.rev
-        obsolete = self.obsolete[repo.filtername]
-        hiddenrevs = repoview.filterrevs(repo, "visible")
-        for node in repo.nodes("not public()"):
-            succsets = successorssets(repo, node, closest=True)
-            if succsets != [[node]]:
-                if any(
-                    clrev(succ) not in hiddenrevs
-                    for succset in succsets
-                    for succ in succset
-                ):
-                    obsolete.add(node)
-        candidates = set(obsolete)
-        seen = set(obsolete)
-        while candidates:
-            candidate = candidates.pop()
-            entry = lookupsplit(repo, candidate)
-            if entry:
-                for pred in entry.preds():
-                    if pred not in obsolete and pred not in seen:
-                        candidates.add(pred)
-                        seen.add(pred)
-                        if clhasnode(pred):
-                            obsolete.add(pred)
-        self.obsolete[repo.filtername] = frozenset(obsolete)
-        self.complete[repo.filtername] = True
-        # Since we know all obsolete commits, no need to remember which ones
-        # are not obsolete.
-        if repo.filtername in self.notobsolete:
-            del self.notobsolete[repo.filtername]
-        return self.obsolete[repo.filtername]
+        with perftrace.trace("Compute Obsolete Nodes"):
+            perftrace.traceflag("mutation")
+
+            # Testing each node separately will result in lots of repeated tests.
+            # Instead, we can do the following:
+            # - Compute all nodes that are obsolete because one of their closest
+            #   successors is visible.
+            # - Work back from these commits marking all of their predecessors as
+            #   obsolete.
+            # Note that "visible" here means "visible in a normal filtered repo",
+            # even if the filter for this repo includes other commits.
+            clhasnode = repo.changelog.hasnode
+            clrev = repo.changelog.rev
+            obsolete = self.obsolete[repo.filtername]
+            hiddenrevs = repoview.filterrevs(repo, "visible")
+            for node in repo.nodes("not public()"):
+                succsets = successorssets(repo, node, closest=True)
+                if succsets != [[node]]:
+                    if any(
+                        clrev(succ) not in hiddenrevs
+                        for succset in succsets
+                        for succ in succset
+                    ):
+                        obsolete.add(node)
+            candidates = set(obsolete)
+            seen = set(obsolete)
+            while candidates:
+                candidate = candidates.pop()
+                entry = lookupsplit(repo, candidate)
+                if entry:
+                    for pred in entry.preds():
+                        if pred not in obsolete and pred not in seen:
+                            candidates.add(pred)
+                            seen.add(pred)
+                            if clhasnode(pred):
+                                obsolete.add(pred)
+            self.obsolete[repo.filtername] = frozenset(obsolete)
+            self.complete[repo.filtername] = True
+            # Since we know all obsolete commits, no need to remember which ones
+            # are not obsolete.
+            if repo.filtername in self.notobsolete:
+                del self.notobsolete[repo.filtername]
+            return self.obsolete[repo.filtername]
 
 
 def isobsolete(repo, node):
