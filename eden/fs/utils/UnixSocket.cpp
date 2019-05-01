@@ -113,7 +113,16 @@ UnixSocket::UnixSocket(EventBase* eventBase, File socket)
       socket_{std::move(socket)},
       // Create recvControlBuffer_ with enough capacity to receive
       // the maximum number of file descriptors that can be sent at once.
-      recvControlBuffer_(CMSG_SPACE(kMaxFDs * sizeof(int))) {}
+      recvControlBuffer_(CMSG_SPACE(kMaxFDs * sizeof(int))) {
+  // on macOS, sendmsg() doesn't respect MSG_DONTWAIT at all.
+  // Instead, the socket must be placed on non-blocking mode for
+  // the sendmsg call to have non-blocking semantics.
+  // Ensure that that is true here for all UnixSocket instances.
+  auto rv = fcntl(socket_.fd(), F_SETFL, O_NONBLOCK);
+  if (rv != 0) {
+    throw std::runtime_error("failed to set O_NONBLOCK on unix socket");
+  }
+}
 
 UnixSocket::~UnixSocket() {
   // The destructor should generally remain empty.
@@ -557,7 +566,11 @@ bool UnixSocket::trySendMessage(SendQueueEntry* entry) {
     XLOG(DBG9) << "trySendMessage(): controlLength=" << msg.msg_controllen;
   }
 
-  // Now call sendmsg
+  // Now call sendmsg.
+  // Portability concern: MSG_DONTWAIT is not documented at all in the
+  // macOS sendmsg() man page, and the obvserved behavior is that it
+  // has no effect at all on sendmsg().  Instead, the socket must be
+  // in non-blocking mode if we want non-blocking behavior!
   auto bytesSent = sendmsg(socket_.fd(), &msg, MSG_DONTWAIT);
   XLOG(DBG9) << "sendmsg() returned " << bytesSent
              << ", files sent: " << filesToSend;
