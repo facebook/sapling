@@ -66,9 +66,6 @@ Strip using sqlstrip
   saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
   stripping from the database
   deleting old references
-  adding new head references
-  adding new tip reference
-  adding new bookmark references
   deleting revision data
 
   $ cd master2
@@ -97,9 +94,6 @@ Repull, and then strip without a backup
   stripping locally
   stripping from the database
   deleting old references
-  adding new head references
-  adding new tip reference
-  adding new bookmark references
   deleting revision data
 
 Verify master2 is stripped
@@ -127,9 +121,6 @@ Run sqlstrip on master as well
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
   stripping from the database
   deleting old references
-  adding new head references
-  adding new tip reference
-  adding new bookmark references
   deleting revision data
 
   $ hg verify
@@ -175,9 +166,6 @@ Strip everything. No revlog revisions should remain in the database:
   saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-eccbc5b4-sqlstrip.hg
   stripping from the database
   deleting old references
-  adding new head references
-  adding new tip reference
-  adding new bookmark references
   deleting revision data
   $ mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" "$DBNAME" <<"EOS"
   > SELECT COUNT(1) FROM revisions WHERE repo='masterrepo'

@@ -2420,32 +2420,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
             ui.status("stripping from the database\n")
             ui.status("deleting old references\n")
-            cursor.execute(
-                """DELETE FROM revision_references WHERE repo = %s""", (reponame,)
-            )
-
-            ui.status("adding new head references\n")
-            for head in repo.heads():
-                cursor.execute(
-                    """INSERT INTO revision_references(repo, namespace, value)
-                               VALUES(%s, 'heads', %s)""",
-                    (reponame, hex(head)),
-                )
-
-            ui.status("adding new tip reference\n")
-            cursor.execute(
-                """INSERT INTO revision_references(repo, namespace, name, value)
-                           VALUES(%s, 'tip', 'tip', %s)""",
-                (reponame, len(repo) - 1),
-            )
-
-            ui.status("adding new bookmark references\n")
-            for k, v in repo._bookmarks.iteritems():
-                cursor.execute(
-                    """INSERT INTO revision_references(repo, namespace, name, value)
-                               VALUES(%s, 'bookmarks', %s, %s)""",
-                    (reponame, k, hex(v)),
-                )
+            repo._updaterevisionreferences()
 
             ui.status("deleting revision data\n")
             cursor.execute(
