@@ -25,6 +25,7 @@ include_directories(${GLOG_INCLUDE_DIR})
 # linker.
 find_package(Libevent CONFIG QUIET)
 
+find_package(fmt CONFIG REQUIRED)
 find_package(folly CONFIG REQUIRED)
 include_directories(${FOLLY_INCLUDE_DIR})
 
