@@ -23,7 +23,10 @@ boost::filesystem::path computeTempDir() {
   if ((envVar = std::getenv("TMPDIR")) || (envVar = std::getenv("TMP")) ||
       (envVar = std::getenv("TEMP")) || (envVar = std::getenv("TEMPDIR"))) {
     // If we found an explicit directory through the environment, use that.
-    return boost::filesystem::path(envVar);
+    // We canonicalize it because `/var/tmp` on macOS is a symlink and
+    // some of our tests compare the results of canonicalizing things
+    // that are relative to it.
+    return boost::filesystem::canonical(boost::filesystem::path(envVar));
   }
 
   // Try the following locations in order:
