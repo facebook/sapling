@@ -61,27 +61,48 @@ bool WinStore::getAllEntries(
     vector<FileMetadata>& entryList) const {
   shared_ptr<const Tree> tree = getTree(path);
 
-  if (tree) {
-    const std::vector<TreeEntry>& treeEntries = tree->getTreeEntries();
-    for (const auto& entry : treeEntries) {
-      wstring name = edenToWinName(entry.getName().value().toStdString());
-      size_t fileSize = 0;
-      if (!entry.isTree()) {
-        const std::optional<uint64_t>& size = entry.getSize();
-        if (size.has_value()) {
-          fileSize = size.value();
-        } else {
-          BlobMetadata metaData =
-              mount_->getObjectStore()->getBlobMetadata(entry.getHash()).get();
-          fileSize = metaData.size;
-        }
-      }
-
-      entryList.emplace_back(std::move(name), entry.isTree(), fileSize);
-    }
-    return true;
+  if (!tree) {
+    return false;
   }
-  return false;
+
+  const std::vector<TreeEntry>& treeEntries = tree->getTreeEntries();
+  vector<Future<pair<BlobMetadata, size_t>>> futures;
+  for (size_t i = 0; i < treeEntries.size(); i++) {
+    size_t fileSize = 0;
+    if (!treeEntries[i].isTree()) {
+      const std::optional<uint64_t>& size = treeEntries[i].getSize();
+      if (size.has_value()) {
+        fileSize = size.value();
+      } else {
+        futures.emplace_back(mount_->getObjectStore()
+                                 ->getBlobMetadata(treeEntries[i].getHash())
+                                 .thenValue([index = i](BlobMetadata data) {
+                                   return make_pair(data, index);
+                                 }));
+        continue;
+      }
+    }
+
+    entryList.emplace_back(
+        std::move(
+            edenToWinName(treeEntries[i].getName().value().toStdString())),
+        treeEntries[i].isTree(),
+        fileSize);
+  }
+
+  auto results = folly::collectAllSemiFuture(std::move(futures)).get();
+  for (auto& result : results) {
+    //
+    // If we are here it's for a file, so the second argument will be false.
+    //
+    entryList.emplace_back(
+        std::move(edenToWinName(
+            treeEntries[result->second].getName().value().toStdString())),
+        false,
+        result->first.size);
+  }
+
+  return true;
 }
 
 bool WinStore::getFileMetadata(

@@ -53,6 +53,10 @@ class WinStore {
   WinStore(const EdenMount* mount);
   ~WinStore();
 
+  //
+  // getAllEntries() doesn't guarantee the order of the entries. Caller should
+  // sort to get the desired order.
+  //
   bool getAllEntries(
       const std::wstring& path,
       std::vector<FileMetadata>& entryList) const;
