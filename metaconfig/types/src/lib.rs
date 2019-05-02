@@ -55,6 +55,27 @@ pub struct MysqlBlobstoreArgs {
     pub shard_num: NonZeroUsize,
 }
 
+/// Single entry that
+#[derive(Debug, Eq, PartialEq)]
+pub enum WhitelistEntry {
+    /// Hardcoded whitelisted identity name i.e. USER (identity type) stash (identity data)
+    HardcodedIdentity {
+        /// Identity type
+        ty: String,
+        /// Identity data
+        data: String,
+    },
+    /// Name of the tier
+    Tier(String),
+}
+
+/// Configuration for all repos
+#[derive(Debug, Default, Eq, PartialEq)]
+pub struct CommonConfig {
+    /// Who can interact with Mononoke
+    pub security_config: Vec<WhitelistEntry>,
+}
+
 /// Configuration of a single repository
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RepoConfig {

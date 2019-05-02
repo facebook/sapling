@@ -230,7 +230,16 @@ function setup_mononoke_config {
     REPOTYPE="$1"
   fi
 
+  ALLOWED_USERNAME="${ALLOWED_USERNAME:-myusername0}"
+
   cd mononoke-config
+  mkdir -p common
+  cat > common/common.toml <<CONFIG
+[[whitelist_entry]]
+identity_type = "USER"
+identity_data = "$ALLOWED_USERNAME"
+CONFIG
+
   mkdir -p repos/repo
   cat > repos/repo/server.toml <<CONFIG
 path="$TESTTMP/repo"

@@ -23,9 +23,9 @@ use bookmarks::Bookmark;
 use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    GlusterArgs, HookBypass, HookConfig, HookManagerParams, HookParams, HookType, LfsParams,
-    ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig,
-    RepoReadOnly, RepoType,
+    CommonConfig, GlusterArgs, HookBypass, HookConfig, HookManagerParams, HookParams, HookType,
+    LfsParams, ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig,
+    RepoReadOnly, RepoType, WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -41,6 +41,8 @@ pub struct RepoConfigs {
     pub metaconfig: MetaConfig,
     /// Configs for all other repositories
     pub repos: HashMap<String, RepoConfig>,
+    /// Common configs for all repos
+    pub common: CommonConfig,
 }
 
 impl RepoConfigs {
@@ -64,10 +66,104 @@ impl RepoConfigs {
             }
         }
 
+        let common_dir = config_path.as_ref().join("common");
+        let maybe_common_config = if common_dir.is_dir() {
+            Self::read_common_config(&common_dir)?
+        } else {
+            None
+        };
+
+        let common = maybe_common_config.unwrap_or(Default::default());
         Ok(Self {
             metaconfig: MetaConfig {},
             repos: repo_configs,
+            common,
         })
+    }
+
+    fn read_common_config(common_dir: &PathBuf) -> Result<Option<CommonConfig>> {
+        for entry in common_dir.read_dir()? {
+            let entry = entry?;
+            if entry.file_name() == "common.toml" {
+                let path = entry.path();
+                if !path.is_file() {
+                    return Err(ErrorKind::InvalidFileStructure(
+                        "common/common.toml should be a file!".into(),
+                    )
+                    .into());
+                }
+
+                let content = Self::read_file(path.as_ref())?;
+                let raw_config = toml::from_slice::<RawCommonConfig>(&content)?;
+                let mut tiers_num = 0;
+                let whitelisted_entries: Result<Vec<_>> = raw_config
+                    .whitelist_entry
+                    .unwrap_or(vec![])
+                    .into_iter()
+                    .map(|whitelist_entry| {
+                        let has_tier = whitelist_entry.tier.is_some();
+                        let has_identity = {
+                            if whitelist_entry.identity_data.is_none()
+                                ^ whitelist_entry.identity_type.is_none()
+                            {
+                                return Err(ErrorKind::InvalidFileStructure(
+                                    "identity type and data must be specified".into(),
+                                )
+                                .into());
+                            }
+
+                            whitelist_entry.identity_type.is_some()
+                        };
+
+                        if has_tier && has_identity {
+                            return Err(ErrorKind::InvalidFileStructure(
+                                "tier and identity cannot be both specified".into(),
+                            )
+                            .into());
+                        }
+
+                        if !has_tier && !has_identity {
+                            return Err(ErrorKind::InvalidFileStructure(
+                                "tier or identity must be specified".into(),
+                            )
+                            .into());
+                        }
+
+                        if whitelist_entry.tier.is_some() {
+                            tiers_num += 1;
+                            Ok(WhitelistEntry::Tier(whitelist_entry.tier.unwrap()))
+                        } else {
+                            let identity_type = whitelist_entry.identity_type.unwrap();
+
+                            Ok(WhitelistEntry::HardcodedIdentity {
+                                ty: identity_type,
+                                data: whitelist_entry.identity_data.unwrap(),
+                            })
+                        }
+                    })
+                    .collect();
+
+                if tiers_num > 1 {
+                    return Err(
+                        ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into(),
+                    );
+                }
+                return Ok(Some(CommonConfig {
+                    security_config: whitelisted_entries?,
+                }));
+            }
+        }
+        Ok(None)
+    }
+
+    fn read_file(path: &Path) -> Result<Vec<u8>> {
+        let file = File::open(path).context(format!("while opening {:?}", path))?;
+        let mut buf_reader = BufReader::new(file);
+        let mut contents = vec![];
+        buf_reader
+            .read_to_end(&mut contents)
+            .context(format!("while reading {:?}", path))?;
+        Ok(contents)
     }
 
     fn read_single_repo_config(
@@ -96,17 +192,7 @@ impl RepoConfigs {
             .into());
         }
 
-        fn read_file(path: &Path) -> Result<Vec<u8>> {
-            let file = File::open(path).context(format!("while opening {:?}", path))?;
-            let mut buf_reader = BufReader::new(file);
-            let mut contents = vec![];
-            buf_reader
-                .read_to_end(&mut contents)
-                .context(format!("while reading {:?}", path))?;
-            Ok(contents)
-        }
-
-        let raw_config = toml::from_slice::<RawRepoConfig>(&read_file(&config_file)?)?;
+        let raw_config = toml::from_slice::<RawRepoConfig>(&Self::read_file(&config_file)?)?;
 
         let hooks = raw_config.hooks.clone();
         // Easier to deal with empty vector than Option
@@ -145,7 +231,7 @@ impl RepoConfigs {
                     config_root_path.join(path)
                 };
 
-                let contents = read_file(&path_adjusted)
+                let contents = Self::read_file(&path_adjusted)
                     .context(format!("while reading hook {:?}", path_adjusted))?;
                 let code = str::from_utf8(&contents)?;
                 let code = code.to_string();
@@ -416,6 +502,18 @@ impl RepoConfigs {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+struct RawCommonConfig {
+    whitelist_entry: Option<Vec<RawWhitelistEntry>>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawWhitelistEntry {
+    tier: Option<String>,
+    identity_data: Option<String>,
+    identity_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 struct RawRepoConfig {
     path: Option<PathBuf>,
@@ -663,8 +761,17 @@ mod test {
             blobstore_scuba_table="blobstore_scuba_table"
             wireproto_scribe_category="category"
         "#;
+        let common_content = r#"
+            [[whitelist_entry]]
+            tier = "tier1"
+
+            [[whitelist_entry]]
+            identity_type = "username"
+            identity_data = "user"
+        "#;
 
         let paths = btreemap! {
+            "common/common.toml" => common_content,
             "common/hooks/hook1.lua" => hook1_content,
             "repos/fbsource/server.toml" => fbsource_content,
             "repos/fbsource/hooks/hook2.lua" => hook2_content,
@@ -829,6 +936,15 @@ mod test {
             RepoConfigs {
                 metaconfig: MetaConfig {},
                 repos,
+                common: CommonConfig {
+                    security_config: vec![
+                        WhitelistEntry::Tier("tier1".to_string()),
+                        WhitelistEntry::HardcodedIdentity {
+                            ty: "username".to_string(),
+                            data: "user".to_string(),
+                        },
+                    ],
+                },
             }
         )
     }
@@ -889,5 +1005,55 @@ mod test {
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_broken_common_config() {
+        fn check_fails(common: &str) -> bool {
+            let content = r#"
+                path="/tmp/fbsource"
+                repotype="blob:rocks"
+                repoid=0
+            "#;
+
+            let paths = btreemap! {
+                "common/common.toml" => common,
+                "repos/fbsource/server.toml" => content,
+            };
+
+            let tmp_dir = write_files(&paths);
+
+            let res = RepoConfigs::read_configs(tmp_dir.path());
+            res.is_err()
+        }
+
+        let common = r#"
+        [[whitelist_entry]]
+        identity_type="user"
+        "#;
+        assert!(check_fails(common));
+
+        let common = r#"
+        [[whitelist_entry]]
+        identity_data="user"
+        "#;
+        assert!(check_fails(common));
+
+        let common = r#"
+        [[whitelist_entry]]
+        tier="user"
+        identity_type="user"
+        identity_data="user"
+        "#;
+        assert!(check_fails(common));
+
+        // Only one tier is allowed
+        let common = r#"
+        [[whitelist_entry]]
+        tier="tier1"
+        [[whitelist_entry]]
+        tier="tier2"
+        "#;
+        assert!(check_fails(common));
     }
 }
