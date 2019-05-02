@@ -29,11 +29,9 @@ class Cursor;
 }
 } // namespace folly
 
-#if EDEN_HAVE_HG_TREEMANIFEST
 /* forward declare support classes from mercurial */
 class DatapackStore;
 class UnionDatapackStore;
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 namespace facebook {
 namespace eden {

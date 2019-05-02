@@ -5,11 +5,9 @@ add_library(
     ${STORE_HG_SRCS}
 )
 
-if (EDEN_HAVE_HG_TREEMANIFEST)
-  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS datapack)
-  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
-  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_config)
-endif()
+list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS datapack)
+list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
+list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_config)
 
 target_link_libraries(
   eden_store_hg

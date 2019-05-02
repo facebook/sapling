@@ -12,7 +12,6 @@
 
 #define EDEN_VERSION "${PACKAGE_VERSION}"
 
-#cmakedefine01 EDEN_HAVE_HG_TREEMANIFEST
 #cmakedefine EDEN_HAVE_ROCKSDB
 #cmakedefine EDEN_HAVE_SELINUX
 #cmakedefine EDEN_HAVE_SQLITE3

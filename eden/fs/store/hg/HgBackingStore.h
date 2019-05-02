@@ -25,12 +25,10 @@
 #include <memory>
 #include <optional>
 
-#if EDEN_HAVE_HG_TREEMANIFEST
 /* forward declare support classes from mercurial */
 class ConstantStringRef;
 class DatapackStore;
 class UnionDatapackStore;
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 namespace facebook {
 namespace eden {
@@ -80,13 +78,11 @@ class HgBackingStore : public BackingStore {
   FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
-#if EDEN_HAVE_HG_TREEMANIFEST
   /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
   folly::Future<Hash> importTreeManifest(const Hash& commitId);
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
  private:
   // Forbidden copy constructor and assignment operator
@@ -145,7 +141,7 @@ class HgBackingStore : public BackingStore {
   initializeThriftMononokeBackingStore();
 #endif
 
-#if defined(EDEN_HAVE_CURL) && EDEN_HAVE_HG_TREEMANIFEST
+#if defined(EDEN_HAVE_CURL)
   /**
    * Create an instance of MononokeCurlBackingStore with values from config_
    * (Curl based Mononoke client)
@@ -161,7 +157,6 @@ class HgBackingStore : public BackingStore {
   // Import the Tree from Hg and cache it in the LocalStore before returning it.
   folly::Future<std::unique_ptr<Tree>> importTreeForCommit(Hash commitID);
 
-#if EDEN_HAVE_HG_TREEMANIFEST
   void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
       const Hash& manifestNode,
@@ -184,7 +179,6 @@ class HgBackingStore : public BackingStore {
       const Hash& edenTreeID,
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
-#endif
 
   folly::Future<Hash> importManifest(Hash commitId);
 
@@ -201,7 +195,7 @@ class HgBackingStore : public BackingStore {
   // deadlock) or throw an exception when full (which would incorrectly fail the
   // load).
   folly::Executor* serverThreadPool_;
-#if EDEN_HAVE_HG_TREEMANIFEST
+
   // These DatapackStore objects are never referenced once UnionDatapackStore
   // is allocated. They are here solely so their lifetime persists while the
   // UnionDatapackStore is alive.
@@ -214,7 +208,6 @@ class HgBackingStore : public BackingStore {
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;
 #endif
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 };
 } // namespace eden
 } // namespace facebook

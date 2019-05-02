@@ -52,6 +52,6 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/fb-mercurial)
     ${OPENSSL_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
   )
-
-  set(EDEN_HAVE_HG_TREEMANIFEST ON)
+else()
+  message(FATAL_ERROR "fb-mercurial treemanifest support not found")
 endif()

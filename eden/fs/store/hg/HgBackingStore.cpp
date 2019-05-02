@@ -36,13 +36,11 @@
 #include "eden/fs/utils/ServiceAddress.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#if EDEN_HAVE_HG_TREEMANIFEST
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
 #include "scm/hg/lib/configparser/ConfigParser.h"
 #endif
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 #ifndef EDEN_WIN_NOMONONOKE
 #include "eden/fs/store/mononoke/MononokeHttpBackingStore.h"
@@ -77,14 +75,6 @@ DEFINE_bool(
     "Set this parameter to \"no\" to disable fetching missing treemanifest "
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
-DEFINE_bool(
-    use_hg_tree_manifest,
-    // treemanifest imports are disabled by default for now.
-    // We currently cannot access treemanifest data for pending transactions
-    // when mercurial invokes dirstate.setparents(), and this breaks
-    // many workflows.
-    true,
-    "Import mercurial trees using treemanifest in supported repositories.");
 DEFINE_int32(
     mononoke_timeout,
     2000, // msec
@@ -153,7 +143,6 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
   }
 };
 
-#if EDEN_HAVE_HG_TREEMANIFEST
 // A helper function to avoid repeating noisy casts/conversions when
 // loading data from a UnionDatapackStore instance.
 ConstantStringRef unionStoreGet(
@@ -227,7 +216,6 @@ std::unique_ptr<Blob> getBlobFromDataPackUnion(
   return nullptr;
 }
 #endif
-#endif
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -260,7 +248,6 @@ HgBackingStore::HgBackingStore(
               stats))),
       config_(config),
       serverThreadPool_(serverThreadPool) {
-#if EDEN_HAVE_HG_TREEMANIFEST
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   initializeDatapackImport(repository);
 #endif
@@ -269,7 +256,6 @@ HgBackingStore::HgBackingStore(
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
 /**
@@ -350,13 +336,6 @@ void HgBackingStore::initializeDatapackImport(AbsolutePathPiece repository) {
 void HgBackingStore::initializeTreeManifestImport(
     const ImporterOptions& options,
     AbsolutePathPiece repoPath) {
-#if EDEN_HAVE_HG_TREEMANIFEST
-  if (!FLAGS_use_hg_tree_manifest) {
-    XLOG(DBG2) << "treemanifest import disabled via command line flags "
-                  "for repository "
-               << repoPath;
-    return;
-  }
   if (options.treeManifestPackPaths.empty()) {
     XLOG(DBG2) << "treemanifest import not supported in repository "
                << repoPath;
@@ -377,7 +356,6 @@ void HgBackingStore::initializeTreeManifestImport(
   unionStore_ = std::make_unique<folly::Synchronized<UnionDatapackStore>>(
       folly::in_place, storePtrs);
   XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath;
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
 std::unique_ptr<ServiceAddress> HgBackingStore::getMononokeServiceAddress() {
@@ -432,7 +410,7 @@ HgBackingStore::initializeThriftMononokeBackingStore() {
 }
 #endif
 
-#if defined(EDEN_HAVE_CURL) && EDEN_HAVE_HG_TREEMANIFEST
+#if defined(EDEN_HAVE_CURL)
 std::unique_ptr<MononokeCurlBackingStore>
 HgBackingStore::initializeCurlMononokeBackingStore() {
   auto edenConfig = config_->getEdenConfig();
@@ -454,7 +432,6 @@ HgBackingStore::initializeCurlMononokeBackingStore() {
 #endif
 
 std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
-#if EDEN_HAVE_HG_TREEMANIFEST
   const auto& connectionType =
       config_->getEdenConfig()->getMononokeConnectionType();
 #ifndef EDEN_WIN_NOMONONOKE
@@ -477,12 +454,10 @@ std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
 #elif defined(EDEN_HAVE_CURL) // EDEN_WIN_NOMONONOKE
   return initializeCurlMononokeBackingStore();
 #endif // EDEN_WIN_NOMONONOKE
-#endif // EDEN_HAVE_HG_TREEMANIFEST
   return nullptr;
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
-#if EDEN_HAVE_HG_TREEMANIFEST
   HgProxyHash pathInfo(localStore_, id, "importTree");
   std::shared_ptr<LocalStore::WriteBatch> writeBatch(localStore_->beginWrite());
   folly::stop_watch<std::chrono::milliseconds> watch;
@@ -499,16 +474,8 @@ Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
         watch.elapsed().count());
     return tree;
   });
-#else
-  return Future<unique_ptr<Tree>>(folly::make_exception_wrapper<
-                                  std::domain_error>(folly::to<std::string>(
-      "requested to import subtree ",
-      id.toString(),
-      " but flatmanifest import should have already imported all subtrees")));
-#endif
 }
 
-#if EDEN_HAVE_HG_TREEMANIFEST
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
@@ -766,14 +733,12 @@ folly::Future<Hash> HgBackingStore::importTreeManifest(const Hash& commitId) {
             });
       });
 }
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
-#if EDEN_HAVE_HG_TREEMANIFEST
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   if (useDatapackGetBlob_ && dataPackStore_) {
     auto content =
@@ -821,7 +786,6 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
               .via(serverThreadPool_);
         });
   }
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
   return folly::via(
              importThreadPool_.get(),
@@ -884,12 +848,10 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
 }
 
 folly::Future<Hash> HgBackingStore::importManifest(Hash commitId) {
-#if EDEN_HAVE_HG_TREEMANIFEST
   if (unionStore_) {
     auto hash = importTreeManifest(commitId);
     return hash;
   }
-#endif // EDEN_HAVE_HG_TREEMANIFEST
   return importFlatManifest(commitId);
 }
 
