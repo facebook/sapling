@@ -85,12 +85,6 @@ DEFINE_bool(
     // many workflows.
     true,
     "Import mercurial trees using treemanifest in supported repositories.");
-DEFINE_bool(
-    allow_flatmanifest_fallback,
-    true,
-    "In mercurial repositories that support treemanifest, allow importing "
-    "commit information using flatmanifest if tree if an error occurs trying "
-    "to get treemanifest data.");
 DEFINE_int32(
     mononoke_timeout,
     2000, // msec
@@ -651,36 +645,12 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
        node = std::move(manifestNode),
        treeID = std::move(edenTreeID),
        batch = std::move(writeBatch)](folly::Try<folly::Unit> val) {
-        try {
-          val.value();
-          // Now try loading it again
-          unionStore_->wlock()->markForRefresh();
-          auto content = unionStoreGet(
-              *unionStore_->wlock(), ownedPath.stringPiece(), node);
-          return processTree(content, node, treeID, ownedPath, batch.get());
-        } catch (const HgImportPyError& ex) {
-          if (FLAGS_allow_flatmanifest_fallback) {
-            // For now translate any error thrown into a MissingKeyError,
-            // so that our caller will retry this tree import using
-            // flatmanifest import if possible.
-            //
-            // The mercurial code can throw a wide variety of errors here
-            // that all effectively mean mean it couldn't fetch the tree
-            // data.
-            //
-            // We most commonly expect to get a MissingNodesError if the
-            // remote server does not know about these trees (for instance
-            // if they are only available locally, but simply only have
-            // flatmanifest information rather than treemanifest info).
-            //
-            // However we can also get lots of other errors: no remote
-            // server configured, remote repository does not exist, remote
-            // repository does not support fetching tree info, etc.
-            throw MissingKeyError(ex.what());
-          } else {
-            throw;
-          }
-        }
+        val.value();
+        // Now try loading it again
+        unionStore_->wlock()->markForRefresh();
+        auto content =
+            unionStoreGet(*unionStore_->wlock(), ownedPath.stringPiece(), node);
+        return processTree(content, node, treeID, ownedPath, batch.get());
       });
 }
 
@@ -917,18 +887,6 @@ folly::Future<Hash> HgBackingStore::importManifest(Hash commitId) {
 #if EDEN_HAVE_HG_TREEMANIFEST
   if (unionStore_) {
     auto hash = importTreeManifest(commitId);
-    if (FLAGS_allow_flatmanifest_fallback) {
-      return std::move(hash).thenError(
-          folly::tag_t<MissingKeyError>{},
-          [this, commitId](const MissingKeyError&) {
-            // We don't have a tree manifest available for the target rev,
-            // so let's fall through to the full flat manifest importer.
-            XLOG(INFO) << "no treemanifest data available for revision "
-                       << commitId.toString()
-                       << ": falling back to slower flatmanifest import";
-            return importFlatManifest(commitId);
-          });
-    }
     return hash;
   }
 #endif // EDEN_HAVE_HG_TREEMANIFEST

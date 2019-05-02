@@ -194,14 +194,6 @@ class EdenFS(object):
             typing.cast(str, FindExe.EDEN_HG_IMPORT_HELPER),  # T38947910
             "--hgPath",
             typing.cast(str, FindExe.HG_REAL),  # T38947910
-            # Disable falling back to importing mercurial data using
-            # flatmanifest when the repository supports treemanifest.
-            # If an error occurs importing treemanifest data in a test this is
-            # probably a legitimate bug, and we don't want to mask it by
-            # falling back to flatmanifest.  Unit tests that do explicitly want
-            # to exercise the fallback behavior can override this in their
-            # edenfs_extra_args() method.
-            "--allow_flatmanifest_fallback=no",
         ]
 
         if "SANDCASTLE" in os.environ:
