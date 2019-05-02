@@ -11,7 +11,7 @@ use encoding::{local_bytes_to_path, path_to_local_bytes};
 use failure::format_err;
 use log;
 
-use edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient};
+use edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient, ProgressFn, ProgressStats};
 use types::{Key, Node, RepoPath};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -84,14 +84,15 @@ py_class!(class client |py| {
         self.inner(py).hostname().map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>) -> PyResult<PyBytes> {
+    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>, progress_fn: Option<PyObject> = None) -> PyResult<PyBytes> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
         let client = self.inner(py);
+        let progress_fn = progress_fn.map(wrap_callback);
         let out_path = py.allow_threads(move || {
-            client.get_files(keys)
+            client.get_files(keys, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
         let out_path = path_to_local_bytes(&out_path)
@@ -103,15 +104,17 @@ py_class!(class client |py| {
     def get_history(
         &self,
         keys: Vec<(PyBytes, PyBytes)>,
-        depth: Option<u32> = None
+        depth: Option<u32> = None,
+        progress_cb: Option<PyObject> = None
     ) -> PyResult<PyBytes> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
         let client = self.inner(py);
+        let progress_cb = progress_cb.map(wrap_callback);
         let out_path = py.allow_threads(move || {
-            client.get_history(keys, depth)
+            client.get_history(keys, depth, progress_cb)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
         let out_path = path_to_local_bytes(&out_path)
@@ -128,4 +131,12 @@ fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
     let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
     let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
     Ok(Key::new(path, node))
+}
+
+fn wrap_callback(callback: PyObject) -> ProgressFn {
+    Box::new(move |stats: ProgressStats| {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let _ = callback.call(py, stats.as_tuple(), None);
+    })
 }

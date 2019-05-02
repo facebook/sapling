@@ -9,6 +9,8 @@ use curl::{
 };
 use failure::{err_msg, Fallible};
 
+use crate::progress::ProgressManager;
+
 /// Timeout for a single iteration of waiting for activity
 /// on any active transfer in a curl::Multi session.
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -41,6 +43,7 @@ impl<H> MultiDriverResult<H> {
 pub struct MultiDriver<H> {
     multi: Multi,
     handles: Vec<Easy2Handle<H>>,
+    progress: Option<ProgressManager>,
 }
 
 impl<H: Handler> MultiDriver<H> {
@@ -48,7 +51,12 @@ impl<H: Handler> MultiDriver<H> {
         Self {
             multi: Multi::new(),
             handles: Vec::with_capacity(capacity),
+            progress: None,
         }
+    }
+
+    pub fn set_progress_manager(&mut self, progress: ProgressManager) {
+        self.progress = Some(progress);
     }
 
     /// Add an Easy2 handle to the Multi stack.
@@ -102,9 +110,13 @@ impl<H: Handler> MultiDriver<H> {
             in_progress = self.multi.perform()? as usize;
 
             // Check for messages; a message indicates a transfer completed (successfully or not).
+            let mut should_report_progress = false;
             self.multi.messages(|msg| {
                 let token = msg.token().unwrap();
                 log::trace!("Got message for transfer {}", token);
+
+                should_report_progress = true;
+
                 match msg.result() {
                     Some(Ok(())) => {
                         log::trace!("Transfer {} complete", token);
@@ -124,6 +136,12 @@ impl<H: Handler> MultiDriver<H> {
             if fail_early && failed.len() > 0 {
                 log::debug!("At least one transfer failed; aborting.");
                 break;
+            }
+
+            if should_report_progress {
+                if let Some(ref mut progress) = self.progress {
+                    progress.report();
+                }
             }
 
             if in_progress == 0 {

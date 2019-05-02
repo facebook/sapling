@@ -25,6 +25,7 @@ use url_ext::UrlExt;
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
 use crate::packs::{write_datapack, write_historypack};
+use crate::progress::ProgressFn;
 
 pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
@@ -154,7 +155,7 @@ impl EdenApi for EdenApiHyperClient {
     /// Fetch the content of the specified file from the API server and write
     /// it to a datapack in the configured cache directory. Returns the path
     /// of the resulting packfile.
-    fn get_files(&self, keys: Vec<Key>) -> Fallible<PathBuf> {
+    fn get_files(&self, keys: Vec<Key>, _: Option<ProgressFn>) -> Fallible<PathBuf> {
         let client = Arc::clone(&self.client);
         let prefix = self.repo_base_url()?.join(paths::GET_FILE)?;
 
@@ -173,7 +174,12 @@ impl EdenApi for EdenApiHyperClient {
     /// Fetch the history of the specified file from the API server and write
     /// it to a historypack in the configured cache directory. Returns the path
     /// of the resulting packfile.
-    fn get_history(&self, keys: Vec<Key>, max_depth: Option<u32>) -> Fallible<PathBuf> {
+    fn get_history(
+        &self,
+        keys: Vec<Key>,
+        max_depth: Option<u32>,
+        _: Option<ProgressFn>,
+    ) -> Fallible<PathBuf> {
         let client = Arc::clone(&self.client);
         let prefix = self.repo_base_url()?.join(paths::GET_HISTORY)?;
 

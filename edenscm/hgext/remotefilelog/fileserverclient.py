@@ -768,26 +768,46 @@ class fileserverclient(object):
         # will result in a type error, so convert them here.
         fileids = [tuple(i) for i in fileids]
 
-        if edenapi.debug(self.ui):
-            self.ui.warn(_("fetching %d files over HTTP\n") % len(fileids))
-
-        if fetchdata:
-            with progress.spinner(self.ui, _("Fetching file content over HTTP")):
-                self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
-                self.ui.metrics.gauge("http_getfiles_calls", 1)
-                datapackpath = self.repo.edenapi.get_files(fileids)
-        else:
-            datapackpath = None
-
-        if fetchhistory:
-            with progress.spinner(self.ui, _("Fetching file history over HTTP")):
-                self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
-                self.ui.metrics.gauge("http_gethistory_calls", 1)
-                histpackpath = self.repo.edenapi.get_history(fileids)
-        else:
-            histpackpath = None
+        datapackpath = self._httpfetchdata(fileids) if fetchdata else None
+        histpackpath = self._httpfetchhistory(fileids) if fetchhistory else None
 
         return datapackpath, histpackpath
+
+    def _httpfetchdata(self, fileids):
+        """Fetch file data over HTTP using the Eden API"""
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("fetching data for %d files over HTTP\n") % len(fileids))
+
+        with progress.bar(
+            self.ui, _("Fetching file content over HTTP"), start=None, unit="bytes"
+        ) as prog:
+            self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+            self.ui.metrics.gauge("http_getfiles_calls", 1)
+
+            def progcallback(dl, dlt, ul, ult):
+                if dl > 0:
+                    prog._total = dlt
+                    prog.value = dl
+
+            return self.repo.edenapi.get_files(fileids, progcallback)
+
+    def _httpfetchhistory(self, fileids, depth=None):
+        """Fetch file history over HTTP using the Eden API"""
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("fetching history for %d files over HTTP\n") % len(fileids))
+
+        with progress.bar(
+            self.ui, _("Fetching file history over HTTP"), start=None, unit="bytes"
+        ) as prog:
+            self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+            self.ui.metrics.gauge("http_gethistory_calls", 1)
+
+            def progcallback(dl, dlt, ul, ult):
+                if dl > 0:
+                    prog._total = dlt
+                    prog.value = dl
+
+            return self.repo.edenapi.get_history(fileids, depth, progcallback)
 
     def connect(self):
         if self.cacheprocess:
