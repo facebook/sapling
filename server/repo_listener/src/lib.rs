@@ -14,6 +14,7 @@ extern crate blobrepo;
 extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate bytes;
+extern crate if_ as acl;
 #[macro_use]
 extern crate cloned;
 extern crate context;
@@ -74,13 +75,14 @@ use openssl::ssl::SslAcceptor;
 use slog::Logger;
 use std::sync::atomic::AtomicBool;
 
-use metaconfig_types::RepoConfig;
+use metaconfig_types::{CommonConfig, RepoConfig};
 
 use connection_acceptor::connection_acceptor;
 use errors::*;
 use repo_handlers::repo_handlers;
 
 pub fn create_repo_listeners(
+    common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
     root_log: &Logger,
@@ -96,6 +98,7 @@ pub fn create_repo_listeners(
         repo_handlers(repos, myrouter_port, &root_log, &mut ready)
             .and_then(move |handlers| {
                 connection_acceptor(
+                    common_config,
                     sockname,
                     root_log,
                     handlers,

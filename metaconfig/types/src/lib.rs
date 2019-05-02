@@ -56,7 +56,7 @@ pub struct MysqlBlobstoreArgs {
 }
 
 /// Single entry that
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WhitelistEntry {
     /// Hardcoded whitelisted identity name i.e. USER (identity type) stash (identity data)
     HardcodedIdentity {
@@ -70,7 +70,7 @@ pub enum WhitelistEntry {
 }
 
 /// Configuration for all repos
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CommonConfig {
     /// Who can interact with Mononoke
     pub security_config: Vec<WhitelistEntry>,

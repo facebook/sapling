@@ -14,4 +14,10 @@ pub enum ErrorKind {
     ConnectionError,
     #[fail(display = "connection does not have a client certificate")]
     ConnectionNoClientCertificate,
+    #[fail(display = "Unauthorized access, permission denied")]
+    AuthorizationFailed,
+    #[fail(display = "Failed to create AclChecker for tier {}", _0)]
+    AclCheckerCreationFailed(String),
+    #[fail(display = "Unexpected identity type {}", _0)]
+    UnexpectedIdentityType(String),
 }

@@ -132,6 +132,7 @@ fn main() {
         ).expect("failed to build fb_tls acceptor");
 
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
+            config.common,
             config.repos.into_iter(),
             myrouter_port,
             root_log,

@@ -13,11 +13,14 @@ use std::sync::{
 };
 use std::time::Duration;
 
+use acl::VALID_ACL_MEMBER_TYPES;
+use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
 use failure::{err_msg, SlogKVError};
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
 use slog::{Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
@@ -44,6 +47,7 @@ lazy_static! {
 /// This function accepts connections, reads Preamble and routes request to a thread responsible for
 /// a particular repo
 pub fn connection_acceptor(
+    common_config: CommonConfig,
     sockname: String,
     root_log: Logger,
     repo_handlers: HashMap<String, RepoHandler>,
@@ -56,13 +60,30 @@ pub fn connection_acceptor(
         .expect("failed to create listener")
         .map_err(Error::from);
 
+    let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(common_config).map_err(
+        |err| {
+            let e: Error =
+                err_msg(format!("error while creating security checker: {}", err)).into();
+            e
+        }
+    ));
+
+    let security_checker = Arc::new(security_checker);
+
     TakeUntilNotSet::new(listener.boxify(), terminate_process)
         .for_each(move |sock| {
             // Accept the request without blocking the listener
-            cloned!(root_log, repo_handlers, tls_acceptor);
+            cloned!(root_log, repo_handlers, tls_acceptor, security_checker);
             OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
             tokio::spawn(future::lazy(move || {
-                accept(sock, root_log, repo_handlers, tls_acceptor).then(|res| {
+                accept(
+                    sock,
+                    root_log,
+                    repo_handlers,
+                    tls_acceptor,
+                    security_checker.clone(),
+                )
+                .then(|res| {
                     OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
                     res
                 })
@@ -87,6 +108,7 @@ fn accept(
     root_log: Logger,
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
     tls_acceptor: Arc<SslAcceptor>,
+    security_checker: Arc<ConnectionsSecurityChecker>,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();
 
@@ -110,25 +132,28 @@ fn accept(
                     None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
                 };
 
-                ssh_server_mux(sock).map_err({
+                let identities = identities.map_err({
                     cloned!(root_log);
                     move |err| {
                         error!(
                             root_log,
-                            "Error while reading preamble";
-                            SlogKVError(Error::from(err)),
+                            "failed to get identities from certificate"; SlogKVError(err),
                         )
                     }
-                })
-                .join(identities.map_err({
-                    cloned!(root_log);
-                    move |err| {
-                        error!(
-                            root_log,
-                            "failed to get identities from certificate"; SlogKVError(Error::from(err)),
-                        )
-                    }
-                }))
+                });
+
+                ssh_server_mux(sock)
+                    .map_err({
+                        cloned!(root_log);
+                        move |err| {
+                            error!(
+                                root_log,
+                                "Error while reading preamble";
+                                SlogKVError(err),
+                            )
+                        }
+                    })
+                    .join(identities)
             }
         })
         .join(addr.into_future().map_err({
@@ -141,20 +166,22 @@ fn accept(
             }
         }))
         .and_then(move |((stdio, identities), addr)| {
+            if !security_checker.check_if_connections_allowed(&identities) {
+                let err: Error = ErrorKind::AuthorizationFailed.into();
+                let tmp_conn_log = create_conn_logger(&stdio);
+                // This log goes to the user
+                error!(tmp_conn_log, "Authorization failed: {}", err);
+                // This log goes to the server stdout/stderr
+                error!(root_log, "Authorization failed"; SlogKVError(err));
+                return Err(()).into_future().left_future();
+            }
+
             repo_handlers
                 .get(&stdio.preamble.reponame)
                 .cloned()
                 .ok_or_else(|| {
                     error!(root_log, "Unknown repo: {}", stdio.preamble.reponame);
-                    let tmp_conn_logger = {
-                        let stderr_write = SenderBytesWrite {
-                            chan: stdio.stderr.clone().wait(),
-                        };
-                        let drain = slog_term::PlainSyncDecorator::new(stderr_write);
-                        let drain = slog_term::FullFormat::new(drain).build();
-                        let drain = KVFilter::new(drain, Level::Critical);
-                        Logger::root(drain.ignore_res(), o!())
-                    };
+                    let tmp_conn_logger = create_conn_logger(&stdio);
                     error!(
                         tmp_conn_logger,
                         "Requested repo \"{}\" does not exist or disabled", stdio.preamble.reponame
@@ -162,9 +189,89 @@ fn accept(
                 })
                 .into_future()
                 .and_then(move |handler| {
-                    request_handler(handler.clone(), identities, stdio, addr, handler.repo.hook_manager())
+                    request_handler(
+                        handler.clone(),
+                        identities,
+                        stdio,
+                        addr,
+                        handler.repo.hook_manager(),
+                    )
                 })
+                .right_future()
         })
+        .boxify()
+}
+
+fn create_conn_logger(stdio: &Stdio) -> Logger {
+    let stderr_write = SenderBytesWrite {
+        chan: stdio.stderr.clone().wait(),
+    };
+    let drain = slog_term::PlainSyncDecorator::new(stderr_write);
+    let drain = slog_term::FullFormat::new(drain).build();
+    let drain = KVFilter::new(drain, Level::Critical);
+    Logger::root(drain.ignore_res(), o!())
+}
+
+struct ConnectionsSecurityChecker {
+    tier_aclchecker: Option<AclChecker>,
+    whitelisted_identities: Vec<Identity>,
+}
+
+impl ConnectionsSecurityChecker {
+    fn new(common_config: CommonConfig) -> Result<Self> {
+        let mut whitelisted_identities = vec![];
+        let mut tier_aclchecker = None;
+
+        for whitelist_entry in common_config.security_config {
+            match whitelist_entry {
+                WhitelistEntry::HardcodedIdentity { ty, data } => {
+                    if !VALID_ACL_MEMBER_TYPES.contains(&ty) {
+                        return Err(ErrorKind::UnexpectedIdentityType(ty).into());
+                    }
+
+                    whitelisted_identities.push(Identity::new(&ty, &data));
+                }
+                WhitelistEntry::Tier(tier) => {
+                    if tier_aclchecker.is_some() {
+                        return Err(err_msg(
+                            "invalid config: only one aclchecker tier is allowed",
+                        ));
+                    }
+                    let tier = Identity::with_tier(&tier);
+                    let acl_checker = AclChecker::new(&tier)?;
+                    if !acl_checker.do_wait_updated(180_000) {
+                        return Err(ErrorKind::AclCheckerCreationFailed(tier.to_string()).into());
+                    }
+                    tier_aclchecker = Some(acl_checker);
+                }
+            }
+        }
+
+        Ok(Self {
+            tier_aclchecker,
+            whitelisted_identities,
+        })
+    }
+
+    fn check_if_connections_allowed(&self, identities: &Vec<Identity>) -> bool {
+        if let Some(ref aclchecker) = self.tier_aclchecker {
+            let identities_ref: Vec<_> = identities.iter().collect();
+            let action = "tupperware";
+            if aclchecker.check(identities_ref.as_ref(), &[action]) {
+                return true;
+            }
+        }
+
+        for identity in identities.iter() {
+            for whitelisted_identity in self.whitelisted_identities.iter() {
+                if identity == whitelisted_identity {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
 }
 
 fn listener<P>(sockname: P) -> io::Result<IoStream<TcpStream>>
