@@ -513,25 +513,37 @@ class remotefileslog(filelog.fileslog):
                 self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
             ),
         )
+        self._mutablesharedpacks = mutablestores.pendingmutablepack(
+            repo,
+            lambda: shallowutil.getcachepackpath(
+                self.repo, constants.FILEPACK_CATEGORY
+            ),
+        )
         self.makeunionstores()
 
     def getmutablelocalpacks(self):
         return self._mutablelocalpacks.getmutablepack()
 
+    def getmutablesharedpacks(self):
+        return self._mutablesharedpacks.getmutablepack()
+
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
         self._mutablelocalpacks.commit()
+        dpackpath, hpackpath = self._mutablesharedpacks.commit()
 
-        for store in self.localdatastores:
-            store.markforrefresh()
-        for store in self.localhistorystores:
-            store.markforrefresh()
+        self.repo.fileservice.updatecache(dpackpath, hpackpath)
+
+        self.contentstore.markforrefresh()
+        self.metadatastore.markforrefresh()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
         self._mutablelocalpacks.abort()
+        # XXX: Maybe we actually want to commit these
+        self._mutablesharedpacks.abort()
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""
@@ -567,14 +579,20 @@ class remotefileslog(filelog.fileslog):
             lambda: self._mutablelocalpacks
         )
 
+        mutablesharedstore = mutablestores.mutabledatahistorystore(
+            lambda: self._mutablesharedpacks
+        )
+
         # Instantiate union stores
         self.contentstore = unioncontentstore(
             sunioncontentstore,
             cachecontent,
             lpackcontent,
             localcontent,
+            mutablesharedstore,
             mutablelocalstore,
             remotecontent,
+            mutablesharedstore,
         )
 
         self.metadatastore = unionmetadatastore(
@@ -582,8 +600,10 @@ class remotefileslog(filelog.fileslog):
             cachemetadata,
             lpackmetadata,
             localmetadata,
+            mutablesharedstore,
             mutablelocalstore,
             remotemetadata,
+            mutablesharedstore,
         )
         self.loosefilewritestore = localcontent
 

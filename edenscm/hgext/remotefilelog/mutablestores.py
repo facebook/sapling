@@ -40,17 +40,22 @@ class pendingmutablepack(object):
         return dpack, hpack
 
     def commit(self):
+        dpackpath = None
+        hpackpath = None
+
         if self._mutabledpack is not None:
             try:
-                self._mutabledpack.close()
+                dpackpath = self._mutabledpack.close()
             finally:
                 self._mutabledpack = None
 
         if self._mutablehpack is not None:
             try:
-                self._mutablehpack.close()
+                hpackpath = self._mutablehpack.close()
             finally:
                 self._mutablehpack = None
+
+        return dpackpath, hpackpath
 
     def abort(self):
         if self._mutabledpack is not None:

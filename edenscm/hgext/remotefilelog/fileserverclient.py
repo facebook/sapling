@@ -405,6 +405,15 @@ class fileserverclient(object):
             return self.requestpacks(fileids, fetchdata, fetchhistory)
         return self.requestloose(fileids)
 
+    def updatecache(self, dpackpath, hpackpath):
+        if self.remotecache.connected:
+            # send to the memcache
+            if self.ui.configbool("remotefilelog", "updatesharedcache"):
+                if dpackpath:
+                    self.remotecache.setdatapack([dpackpath])
+                if hpackpath:
+                    self.remotecache.sethistorypack([hpackpath])
+
     def requestpacks(self, fileids, fetchdata, fetchhistory):
         if not self.remotecache.connected:
             self.connect()
@@ -467,13 +476,7 @@ class fileserverclient(object):
                 datapackpath, histpackpath = self._fetchpackfiles(
                     misses, fetchdata, fetchhistory
                 )
-                # send to the memcache
-                if self.ui.configbool("remotefilelog", "updatesharedcache"):
-                    if fetched:
-                        if datapackpath:
-                            cache.setdatapack([datapackpath])
-                        if histpackpath:
-                            cache.sethistorypack([histpackpath])
+                self.updatecache(datapackpath, histpackpath)
         finally:
             os.umask(oldumask)
 
@@ -712,14 +715,13 @@ class fileserverclient(object):
 
                 self._sendpackrequest(remote, fileids)
 
-                packpath = shallowutil.getcachepackpath(
-                    self.repo, constants.FILEPACK_CATEGORY
-                )
                 pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
 
-                receiveddata, receivedhistory, datapackpath, histpackpath = shallowutil.receivepack(
-                    self.repo.ui, pipei, packpath
+                dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
+                receiveddata, receivedhistory = wirepack.receivepack(
+                    self.repo.ui, pipei, dpack, hpack
                 )
+
                 rcvd = len(receiveddata)
 
             self.ui.log(
@@ -728,7 +730,7 @@ class fileserverclient(object):
                 fetched_files=rcvd,
                 total_to_fetch=total,
             )
-            return datapackpath, histpackpath
+            return None, None
         except Exception:
             self.ui.log(
                 "remotefilefetchlog",
