@@ -47,8 +47,8 @@ Enable Mononoke API for Mercurial client
   > EOF
 
 Check that the API server is alive
-  $ hg debughttp
-  successfully connected to: http://localhost:* (glob)
+  $ hg debughttp > output
+  $ diff output - <<< "successfully connected to: $HOSTNAME"
 
 Test fetching single file
   $ DATAPACK_PATH=$(hg debuggetfile <<EOF | awk '{print $3}'
