@@ -46,7 +46,7 @@ using namespace folly;
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
-// FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 void debugSetLogLevel(std::string category, std::string level) {
   auto& db = folly::LoggerDB::get();
@@ -102,8 +102,8 @@ int __cdecl main(int argc, char** argv) {
 
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
-  debugSetLogLevel("eden", "DBG");
-  debugSetLogLevel(".", "DBG");
+  // debugSetLogLevel("eden", "DBG");
+  // debugSetLogLevel(".", "DBG");
 
   startServer();
   XLOG(INFO) << "Eden Windows - Stopped";
