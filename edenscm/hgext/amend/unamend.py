@@ -10,10 +10,12 @@ from __future__ import absolute_import
 from edenscm.mercurial import (
     error,
     extensions,
+    mutation,
     node as nodemod,
     obsolete,
     obsutil,
     registrar,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 
@@ -42,12 +44,15 @@ def unamend(ui, repo, **opts):
     curctx = repo["."]
 
     # identify the commit to which to unamend
-    markers = list(predecessormarkers(curctx))
-    if len(markers) != 1:
-        e = _("changeset must have one predecessor, found %i predecessors")
-        raise error.Abort(e % len(markers))
+    if mutation.enabled(repo):
+        prednodes = curctx.mutationpredecessors()
+    else:
+        prednodes = [marker.prednode() for marker in predecessormarkers(curctx)]
 
-    prednode = markers[0].prednode()
+    if len(prednodes) != 1:
+        e = _("changeset must have one predecessor, found %i predecessors")
+        raise error.Abort(e % len(prednodes))
+    prednode = prednodes[0]
 
     if extensions.enabled().get("commitcloud", False):
         repo.revs("cloudremote(%s)" % nodemod.hex(prednode))
@@ -81,5 +86,8 @@ def unamend(ui, repo, **opts):
         for book in ctxbookmarks:
             changes.append((book, prednode))
         repo._bookmarks.applychanges(repo, tr, changes)
-        obsolete.createmarkers(repo, [(curctx, (predctx,))])
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            obsolete.createmarkers(repo, [(curctx, (predctx,))])
+        visibility.remove(repo, [curctx.node()])
+        visibility.add(repo, [predctx.node()])
         tr.close()

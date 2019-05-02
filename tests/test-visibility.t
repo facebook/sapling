@@ -646,3 +646,45 @@ Test undo of split
   |
   o  0: d20a80d4def3 'base'
   
+Unamend and Uncommit
+  $ cd $TESTTMP
+  $ newrepo
+  $ touch base
+  $ hg commit -Aqm base
+  $ echo 1 > file
+  $ hg commit -Aqm commit1
+  $ echo 2 > file
+  $ hg amend -m commit2
+  $ tglogm --hidden
+  @  2: 8e8ec65c0bb7 'commit2'
+  |
+  | -  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
+  |/
+  o  0: df4f53cec30a 'base'
+  
+
+  $ hg unamend
+  $ tglogm
+  @  1: 4c5b9b3e14b9 'commit1'
+  |
+  o  0: df4f53cec30a 'base'
+  
+  $ tglogm --hidden
+  -  2: 8e8ec65c0bb7 'commit2'
+  |
+  | @  1: 4c5b9b3e14b9 'commit1'
+  |/
+  o  0: df4f53cec30a 'base'
+  
+
+  $ hg uncommit
+  $ tglogm
+  @  0: df4f53cec30a 'base'
+  
+  $ tglogm --hidden
+  -  2: 8e8ec65c0bb7 'commit2'
+  |
+  | -  1: 4c5b9b3e14b9 'commit1'
+  |/
+  @  0: df4f53cec30a 'base'
+  
