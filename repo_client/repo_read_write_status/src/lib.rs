@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 use failure_ext::Error;
 use futures::future::ok;
 use futures::Future;
@@ -64,8 +66,8 @@ impl FromValue for HgMononokeReadWrite {
 }
 
 queries! {
-    read GetReadWriteStatus(repo_name: String) -> (HgMononokeReadWrite) {
-        "SELECT state FROM repo_lock
+    read GetReadWriteStatus(repo_name: String) -> (HgMononokeReadWrite, Option<String>) {
+        "SELECT state, reason FROM repo_lock
         WHERE repo = {repo_name}"
     }
 }
@@ -105,10 +107,12 @@ impl RepoReadWriteFetcher {
     fn query_read_write_state(&self) -> BoxFuture<RepoReadOnly, Error> {
         GetReadWriteStatus::query(&self.read_connection.clone().unwrap(), &self.repo_name)
             .map(|rows| {
-                match rows.first() {
+                match rows.into_iter().next() {
                     Some(row) => match row {
-                        (HgMononokeReadWrite::MononokeWrite,) => RepoReadOnly::ReadWrite,
-                        _ => RepoReadOnly::ReadOnly(DB_MSG.to_string()),
+                        (HgMononokeReadWrite::MononokeWrite, _) => RepoReadOnly::ReadWrite,
+                        (_, reason) => {
+                            RepoReadOnly::ReadOnly(reason.unwrap_or_else(|| DB_MSG.to_string()))
+                        }
                     },
                     // The repo state hasn't been initialised yet, so let's be cautious.
                     None => RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string()),
@@ -145,6 +149,12 @@ mod test {
         write InsertState(values: (repo: str, state: HgMononokeReadWrite)) {
             none,
             "REPLACE INTO repo_lock(repo, state)
+            VALUES {values}"
+        }
+
+        write InsertStateWithReason(values: (repo: str, state: HgMononokeReadWrite, reason: str)) {
+            none,
+            "REPLACE INTO repo_lock(repo, state, reason)
             VALUES {values}"
         }
     }
@@ -223,6 +233,23 @@ mod test {
         assert_eq!(
             fetcher.readonly().wait().unwrap(),
             ReadOnly(DB_MSG.to_string())
+        );
+    }
+
+    #[test]
+    fn test_readwrite_with_sqlite_and_reason() {
+        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
+
+        InsertStateWithReason::query(
+            &fetcher.get_connection().unwrap(),
+            &[("repo", &HgMononokeReadWrite::HgWrite, "reason123")],
+        )
+        .wait()
+        .unwrap();
+
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly("reason123".to_string())
         );
     }
 
