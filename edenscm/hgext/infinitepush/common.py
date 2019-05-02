@@ -16,6 +16,10 @@ def isserver(ui):
     return ui.configbool("infinitepush", "server")
 
 
+def reposetup(ui, repo):
+    repo._scratchbranchmatcher = scratchbranchmatcher(ui)
+
+
 def isremotebooksenabled(ui):
     return "remotenames" in extensions._extensions and ui.configbool(
         "remotenames", "bookmarks"
