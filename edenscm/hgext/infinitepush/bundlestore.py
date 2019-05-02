@@ -1,52 +1,43 @@
+# Infinitepush Bundle Store
+#
+# Copyright 2016-2019 Facebook, Inc.
+#
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""store for infinitepush bundles"""
 
-# based on bundleheads extension by Gregory Szorc <gps@mozilla.com>
-
-import abc
 import hashlib
 import os
 import subprocess
 from tempfile import NamedTemporaryFile
 
+from edenscm.mercurial import error
+from edenscm.mercurial.i18n import _
 
-class BundleWriteException(Exception):
-    pass
-
-
-class BundleReadException(Exception):
-    pass
+from . import fileindex, sqlindex
 
 
-class abstractbundlestore(object):
-    """Defines the interface for bundle stores.
+class bundlestore(object):
+    def __init__(self, repo):
+        storetype = repo.ui.config("infinitepush", "storetype", "")
+        if storetype == "disk":
+            self.store = filebundlestore(repo)
+        elif storetype == "external":
+            self.store = externalbundlestore(repo)
+        else:
+            raise error.Abort(
+                _("unknown infinitepush store type specified %s") % storetype
+            )
 
-    A bundle store is an entity that stores raw bundle data. It is a simple
-    key-value store. However, the keys are chosen by the store. The keys can
-    be any Python object understood by the corresponding bundle index (see
-    ``abstractbundleindex`` below).
-    """
-
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def write(self, data):
-        """Write bundle data to the store.
-
-        This function receives the raw data to be written as a str.
-        Throws BundleWriteException
-        The key of the written data MUST be returned.
-        """
-
-    @abc.abstractmethod
-    def read(self, key):
-        """Obtain bundle data for a key.
-
-        Returns None if the bundle isn't known.
-        Throws BundleReadException
-        The returned object should be a file object supporting read()
-        and close().
-        """
+        indextype = repo.ui.config("infinitepush", "indextype", "")
+        if indextype == "disk":
+            self.index = fileindex.fileindex(repo)
+        elif indextype == "sql":
+            self.index = sqlindex.sqlindex(repo)
+        else:
+            raise error.Abort(
+                _("unknown infinitepush index type specified %s") % indextype
+            )
 
 
 class filebundlestore(object):
@@ -55,14 +46,10 @@ class filebundlestore(object):
     meant for storing bundles somewhere on disk and on network filesystems
     """
 
-    def __init__(self, ui, repo):
-        self.ui = ui
-        self.repo = repo
-        self.storepath = ui.configpath("scratchbranch", "storepath")
+    def __init__(self, repo):
+        self.storepath = repo.ui.configpath("scratchbranch", "storepath")
         if not self.storepath:
-            self.storepath = self.repo.localvfs.join(
-                "scratchbranches", "filebundlestore"
-            )
+            self.storepath = repo.localvfs.join("scratchbranches", "filebundlestore")
         if not os.path.exists(self.storepath):
             os.makedirs(self.storepath)
 
@@ -96,8 +83,8 @@ class filebundlestore(object):
         return f.read()
 
 
-class externalbundlestore(abstractbundlestore):
-    def __init__(self, put_binary, put_args, get_binary, get_args):
+class externalbundlestore(object):
+    def __init__(self, repo):
         """
         `put_binary` - path to binary file which uploads bundle to external
             storage and prints key to stdout
@@ -108,11 +95,25 @@ class externalbundlestore(abstractbundlestore):
         `get_args` - format string with additional args to `get_binary`.
                      {filename} and {handle} replacement field can be used.
         """
+        ui = repo.ui
 
-        self.put_args = put_args
-        self.get_args = get_args
-        self.put_binary = put_binary
-        self.get_binary = get_binary
+        # path to the binary which uploads a bundle to the external store
+        # and prints the key to stdout.
+        self.put_binary = ui.config("infinitepush", "put_binary")
+        if not self.put_binary:
+            raise error.Abort("put binary is not specified")
+        # Additional args to ``put_binary``.  The '{filename}' replacement field
+        # can be used to get the filename.
+        self.put_args = ui.configlist("infinitepush", "put_args", [])
+
+        # path to the binary which accepts a file and key (in that order) and
+        # downloads the bundle form the store and saves it to the file.
+        self.get_binary = ui.config("infinitepush", "get_binary")
+        if not self.get_binary:
+            raise error.Abort("get binary is not specified")
+        # Additional args to ``get_binary``.  The '{filename}' and '{handle}'
+        # replacement fields can be used to get the filename and key.
+        self.get_args = ui.configlist("infinitepush", "get_args", [])
 
     def _call_binary(self, args):
         p = subprocess.Popen(
@@ -135,15 +136,17 @@ class externalbundlestore(abstractbundlestore):
             )
 
             if returncode != 0:
-                raise BundleWriteException(
-                    "Failed to upload to external store: %s" % stderr
+                raise error.Abort(
+                    "Infinitepush failed to upload bundle to external store: %s"
+                    % stderr
                 )
             stdout_lines = stdout.splitlines()
             if len(stdout_lines) == 1:
                 return stdout_lines[0]
             else:
-                raise BundleWriteException(
-                    "Bad output from %s: %s" % (self.put_binary, stdout)
+                raise error.Abort(
+                    "Infinitepush received bad output from %s: %s"
+                    % (self.put_binary, stdout)
                 )
 
     def read(self, handle):
@@ -158,7 +161,5 @@ class externalbundlestore(abstractbundlestore):
             )
 
             if returncode != 0:
-                raise BundleReadException(
-                    "Failed to download from external store: %s" % stderr
-                )
+                raise error.Abort("Failed to download from external store: %s" % stderr)
             return temp.read()

@@ -11,8 +11,16 @@ import time
 import warnings
 
 import mysql.connector
-from indexapi import indexapi, indexexception
-from edenscm.mercurial import util
+from edenscm.mercurial import error, util
+from edenscm.mercurial.i18n import _
+
+
+def _getloglevel(ui):
+    loglevel = ui.config("infinitepush", "loglevel", "DEBUG")
+    numeric_loglevel = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_loglevel, int):
+        raise error.Abort(_("invalid log level %s") % loglevel)
+    return numeric_loglevel
 
 
 def _convertbookmarkpattern(pattern):
@@ -30,27 +38,29 @@ def _convertbookmarkpattern(pattern):
 SEC_IN_DAY = 24 * 60 * 60
 
 
-class sqlindexapi(indexapi):
-    """
-    Sql backend for infinitepush index. See schema.sql
+class sqlindex(object):
+    """SQL-based backend for infinitepush index.
+
+    See schema.sql for the SQL schema.
+
+    This is a context manager.  All write operations should use:
+
+        with index:
+            index.addbookmark(...)
+            ...
     """
 
-    def __init__(
-        self,
-        reponame,
-        host,
-        port,
-        database,
-        user,
-        password,
-        logfile,
-        loglevel,
-        shorthasholdrevthreshold,
-        waittimeout=600,
-        locktimeout=120,
-    ):
-        super(sqlindexapi, self).__init__()
+    def __init__(self, repo):
+        ui = repo.ui
+        sqlhost = ui.config("infinitepush", "sqlhost")
+        if not sqlhost:
+            raise error.Abort(_("please set infinitepush.sqlhost"))
+        reponame = ui.config("infinitepush", "reponame")
+        if not reponame:
+            raise error.Abort(_("please set infinitepush.reponame"))
+
         self.reponame = reponame
+        host, port, database, user, password = sqlhost.split(":")
         self.sqlargs = {
             "host": host,
             "port": port,
@@ -60,21 +70,22 @@ class sqlindexapi(indexapi):
         }
         self.sqlconn = None
         self.sqlcursor = None
-        if not logfile:
-            logfile = os.devnull
+        logfile = ui.config("infinitepush", "logfile", os.devnull)
         logging.basicConfig(filename=logfile)
         self.log = logging.getLogger()
-        self.log.setLevel(loglevel)
+        self.log.setLevel(_getloglevel(ui))
         self._connected = False
-        self._waittimeout = waittimeout
-        self._locktimeout = locktimeout
-        self.shorthasholdrevthreshold = shorthasholdrevthreshold
+        self._waittimeout = ui.configint("infinitepush", "waittimeout", 300)
+        self._locktimeout = ui.configint("infinitepush", "locktimeout", 120)
+        self.shorthasholdrevthreshold = ui.configint(
+            "infinitepush", "shorthasholdrevthreshold", 60
+        )
 
     def sqlconnect(self):
         if self.sqlconn:
-            raise indexexception("SQL connection already open")
+            raise error.Abort("SQL connection already open")
         if self.sqlcursor:
-            raise indexexception("SQL cursor already open without connection")
+            raise error.Abort("SQL cursor already open without connection")
         retry = 3
         while True:
             try:
@@ -123,8 +134,7 @@ class sqlindexapi(indexapi):
             self.sqlconn.rollback()
 
     def addbundle(self, bundleid, nodesctx):
-        """Records bundles, mapping from node to bundle and metadata for nodes
-        """
+        """Record a bundleid containing the given nodes."""
         if not self._connected:
             self.sqlconnect()
 
@@ -171,8 +181,7 @@ class sqlindexapi(indexapi):
         )
 
     def addbookmark(self, bookmark, node):
-        """Takes a bookmark name and hash, and records mapping in the metadata
-        store."""
+        """Record a bookmark pointing to a particular node."""
         if not self._connected:
             self.sqlconnect()
         self.log.info(
@@ -185,7 +194,7 @@ class sqlindexapi(indexapi):
         )
 
     def addmanybookmarks(self, bookmarks):
-        """Records mapping of bookmarks and nodes"""
+        """Record the contents of the ``bookmarks`` dict as bookmarks."""
         if not self._connected:
             self.sqlconnect()
 
@@ -200,10 +209,7 @@ class sqlindexapi(indexapi):
         )
 
     def deletebookmarks(self, patterns):
-        """Accepts list of bookmark patterns and deletes them.
-        If `commit` is set then bookmark will actually be deleted. Otherwise
-        deletion will be delayed until the end of transaction.
-        """
+        """Delete all bookmarks that match any of the patterns in ``patterns``."""
         if not self._connected:
             self.sqlconnect()
 
@@ -219,7 +225,7 @@ class sqlindexapi(indexapi):
         self.sqlcursor.execute(query, params=[self.reponame] + patterns)
 
     def getbundle(self, node):
-        """Returns the bundleid for the bundle that contains the given node."""
+        """Get the bundleid for a bundle that contains the given node."""
         if not self._connected:
             self.sqlconnect()
         self.log.info("GET BUNDLE %r %r" % (self.reponame, node))
@@ -236,9 +242,11 @@ class sqlindexapi(indexapi):
         return bundle
 
     def getnodebyprefix(self, prefix):
-        """Returns the node with the given hash prefix.
-        None if it doesn't exist.
-        Raise error for ambiguous identifier"""
+        """Get the node that matches the given hash prefix.
+
+        If there is no match, returns None.
+
+        If there are multiple matches, raises an exception."""
         if not self._connected:
             self.sqlconnect()
         self.log.info("GET NODE BY PREFIX %r %r" % (self.reponame, prefix))
@@ -286,7 +294,7 @@ class sqlindexapi(indexapi):
                 )
 
             if len(result) > 1:
-                raise indexexception(
+                raise error.Abort(
                     ("ambiguous identifier '%s'\n" % prefix)
                     + "#commitcloud suggestions are:\n"
                     + formatdata(result)
@@ -296,7 +304,7 @@ class sqlindexapi(indexapi):
                 revdate = result[0][3]
                 threshold = self.shorthasholdrevthreshold * SEC_IN_DAY
                 if time.time() - revdate > threshold:
-                    raise indexexception(
+                    raise error.Abort(
                         "commit '%s' is more than %d days old\n"
                         "description:\n%s"
                         "#commitcloud hint: if you would like to fetch this "
@@ -315,9 +323,9 @@ class sqlindexapi(indexapi):
             result = self.sqlcursor.fetchall()
 
             if len(result) > 1:
-                raise indexexception(
-                    ("ambiguous identifier '%s'\n" % prefix)
-                    + "suggestion: provide longer commithash prefix"
+                raise error.Abort(
+                    "ambiguous identifier '%s'\n"
+                    "suggestion: provide longer commithash prefix" % prefix
                 )
 
         # result not found
@@ -332,7 +340,7 @@ class sqlindexapi(indexapi):
         return node
 
     def getnode(self, bookmark):
-        """Returns the node for the given bookmark. None if it doesn't exist."""
+        """Get the node for the given bookmark."""
         if not self._connected:
             self.sqlconnect()
         self.log.info("GET NODE reponame: %r bookmark: %r" % (self.reponame, bookmark))
@@ -349,6 +357,7 @@ class sqlindexapi(indexapi):
         return node
 
     def getbookmarks(self, query):
+        """Get all bookmarks that match the pattern."""
         if not self._connected:
             self.sqlconnect()
         self.log.info("QUERY BOOKMARKS reponame: %r query: %r" % (self.reponame, query))
@@ -371,6 +380,7 @@ class sqlindexapi(indexapi):
         return bookmarks
 
     def saveoptionaljsonmetadata(self, node, jsonmetadata):
+        """Save optional metadata for the given node."""
         if not self._connected:
             self.sqlconnect()
         self.log.info(
