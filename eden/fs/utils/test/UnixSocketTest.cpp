@@ -58,6 +58,7 @@ TEST(UnixSocket, getRemoteUID) {
   auto socket1 = make_unique<FutureUnixSocket>(&evb, std::move(sockets.first));
   auto socket2 = make_unique<FutureUnixSocket>(&evb, std::move(sockets.second));
 
+  EXPECT_EQ(getuid(), socket1->getRemoteUID());
   EXPECT_EQ(getuid(), socket2->getRemoteUID());
 }
 

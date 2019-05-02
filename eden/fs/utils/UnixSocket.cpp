@@ -296,17 +296,19 @@ uid_t UnixSocket::getRemoteUID() {
   // platforms we currently care about.
 
 #ifdef SO_PEERCRED
-  struct ucred cred;
+  struct ucred cred = {};
   constexpr int optname = SO_PEERCRED;
+  constexpr int level = SOL_SOCKET;
 #elif defined(LOCAL_PEERCRED)
-  struct xucred cred;
+  struct xucred cred = {};
   constexpr int optname = LOCAL_PEERCRED;
+  constexpr int level = SOL_LOCAL;
 #else
   static_assert("getting credentials not supported on this platform");
 #endif
 
   socklen_t len = sizeof(cred);
-  int result = getsockopt(socket_.fd(), SOL_SOCKET, optname, &cred, &len);
+  int result = getsockopt(socket_.fd(), level, optname, &cred, &len);
   folly::checkUnixError(result, "error getting unix socket peer credentials");
 
 #ifdef SO_PEERCRED
