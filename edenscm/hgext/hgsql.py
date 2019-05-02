@@ -712,10 +712,12 @@ def wraprepo(repo):
             self.sqlcursor = None
             self.sqlconn = None
 
-        def sqlisreporeadonly(self):
+        def sqlreporeadonlystate(self):
             NO_WRITE = 0
             MONONOKE_WRITE = 2
-            query = "SELECT state FROM repo_lock WHERE repo = %s"
+            DEFAULT_REASON = "no reason was provided"
+            MONONOKE_REASON = "writes are being served by Mononoke (fburl.com/mononoke)"
+            query = "SELECT state, reason FROM repo_lock WHERE repo = %s"
 
             self.sqlconnect()
 
@@ -725,10 +727,20 @@ def wraprepo(repo):
             if not rows:
                 # If there isn't an entry for this repo, let's treat it as
                 # unlocked.
-                return False
+                return (False, DEFAULT_REASON)
 
-            state = int(rows[0][0])
-            return state == NO_WRITE or state == MONONOKE_WRITE
+            state, reason = rows[0]
+
+            readonly = state == NO_WRITE or state == MONONOKE_WRITE
+
+            if reason is None:
+                reason = {MONONOKE_WRITE: MONONOKE_REASON}.get(state, DEFAULT_REASON)
+
+            return (readonly, reason)
+
+        def sqlisreporeadonly(self):
+            """deprecated: use sqlreporeadonlystate() to also get the reason"""
+            return self.sqlreporeadonlystate()[0]
 
         def _hgsqlnote(self, message):
             if self.ui.configbool("hgsql", "verbose"):
