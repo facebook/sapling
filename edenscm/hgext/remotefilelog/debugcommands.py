@@ -495,11 +495,11 @@ def debugwaitonprefetch(repo):
 
 
 def debughttp(ui, repo, **opts):
-    """Perform a health check of the API server."""
+    """Query the hostname of the API server."""
     edenapi.bailifdisabled(ui)
     try:
-        repo.edenapi.health_check()
-        ui.write(_("successfully connected to: %s\n") % edenapi.getbaseurl(ui))
+        hostname = repo.edenapi.hostname()
+        ui.write(_("successfully connected to: %s\n") % hostname)
     except RuntimeError as e:
         raise error.Abort(e)
 

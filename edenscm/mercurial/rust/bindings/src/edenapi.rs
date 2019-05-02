@@ -80,6 +80,10 @@ py_class!(class client |py| {
             .map_pyerr::<exc::RuntimeError>(py)
     }
 
+    def hostname(&self) -> PyResult<String> {
+        self.inner(py).hostname().map_pyerr::<exc::RuntimeError>(py)
+    }
+
     def get_files(&self, keys: Vec<(PyBytes, PyBytes)>) -> PyResult<PyBytes> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))

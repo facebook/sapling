@@ -28,6 +28,7 @@ mod driver;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";
+    pub const HOSTNAME: &str = "/hostname";
     pub const DATA: &str = "eden/data";
     pub const HISTORY: &str = "eden/history";
 }
@@ -101,6 +102,20 @@ impl EdenApi for EdenApiCurlClient {
         );
 
         Ok(())
+    }
+
+    fn hostname(&self) -> Fallible<String> {
+        let mut handle = self.easy()?;
+        let url = self.base_url.join(paths::HOSTNAME)?;
+        handle.url(url.as_str())?;
+        handle.get(true)?;
+        handle.perform()?;
+
+        let code = handle.response_code()?;
+        ensure!(code == 200, "Received HTTP status code {}", code);
+
+        let response = String::from_utf8(handle.get_ref().0.to_vec())?;
+        Ok(response)
     }
 
     fn get_files(&self, keys: Vec<Key>) -> Fallible<PathBuf> {

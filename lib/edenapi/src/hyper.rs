@@ -88,6 +88,7 @@ impl EdenApiHyperClient {
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";
+    pub const HOSTNAME: &str = "/hostname";
     pub const GET_FILE: &str = "gethgfile/";
     pub const GET_HISTORY: &str = "getfilehistory/";
 }
@@ -121,6 +122,33 @@ impl EdenApi for EdenApiHyperClient {
         ensure!(body == "I_AM_ALIVE", "Unexpected response: {:?}", &body);
 
         Ok(())
+    }
+
+    /// Get the hostname of the API server.
+    fn hostname(&self) -> Fallible<String> {
+        let url = self.base_url.join(paths::HOSTNAME)?.to_uri();
+
+        let fut = self.client.get(url).map_err(Error::from).and_then(|res| {
+            log::debug!("Received response: {:#?}", &res);
+            let status = res.status();
+            res.into_body()
+                .concat2()
+                .from_err()
+                .and_then(|body| Ok(String::from_utf8(body.into_bytes().to_vec())?))
+                .map(move |body| (status, body))
+        });
+
+        let mut runtime = Runtime::new()?;
+        let (status, body) = runtime.block_on(fut)?;
+
+        ensure!(
+            status.is_success(),
+            "Request failed (status code: {:?}): {:?}",
+            &status,
+            &body
+        );
+
+        Ok(body)
     }
 
     /// Fetch the content of the specified file from the API server and write

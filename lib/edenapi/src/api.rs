@@ -12,6 +12,9 @@ pub trait EdenApi: Send + Sync {
     /// (e.g., if there was a connection problem or an unexpected repsonse).
     fn health_check(&self) -> Fallible<()>;
 
+    /// Get the hostname of the API server.
+    fn hostname(&self) -> Fallible<String>;
+
     /// Fetch the content of the specified files from the API server and write
     /// them to a datapack in the configured cache directory. Returns the path
     /// of the resulting packfile.
