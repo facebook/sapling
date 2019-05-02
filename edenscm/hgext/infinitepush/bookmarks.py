@@ -3,14 +3,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import json
+import struct
+
 from edenscm.mercurial import error, extensions, node as nodemod
 from edenscm.mercurial.i18n import _
 
-from . import common
+
+def remotebookmarksenabled(ui):
+    return "remotenames" in extensions._extensions and ui.configbool(
+        "remotenames", "bookmarks"
+    )
 
 
 def readremotebookmarks(ui, repo, other):
-    if common.isremotebooksenabled(ui):
+    if remotebookmarksenabled(ui):
         remotenamesext = extensions.find("remotenames")
         remotepath = remotenamesext.activepath(repo.ui, other)
         result = {}
@@ -98,3 +105,26 @@ def deleteremotebookmarks(ui, repo, path, names):
             bookmarks[name] = node
 
     remotenamesext.saveremotenames(repo, path, bookmarks)
+
+
+def encodebookmarks(bookmarks):
+    encoded = {}
+    for bookmark, node in bookmarks.iteritems():
+        encoded[bookmark] = node
+    dumped = json.dumps(encoded)
+    result = struct.pack(">i", len(dumped)) + dumped
+    return result
+
+
+def decodebookmarks(stream):
+    sizeofjsonsize = struct.calcsize(">i")
+    size = struct.unpack(">i", stream.read(sizeofjsonsize))[0]
+    unicodedict = json.loads(stream.read(size))
+    # python json module always returns unicode strings. We need to convert
+    # it back to bytes string
+    result = {}
+    for bookmark, node in unicodedict.iteritems():
+        bookmark = bookmark.encode("ascii")
+        node = node.encode("ascii")
+        result[bookmark] = node
+    return result

@@ -3,13 +3,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import json
 import os
-import struct
 import tempfile
 
-from edenscm.mercurial import error, extensions, util
-from edenscm.mercurial.node import hex
+from edenscm.mercurial import (
+    encoding,
+    error,
+    extensions,
+    node as nodemod,
+    pushkey,
+    util,
+    wireproto,
+)
+from edenscm.mercurial.commands import debug as debugcommands
+
+from . import bundleparts
 
 
 def isserver(ui):
@@ -20,32 +28,43 @@ def reposetup(ui, repo):
     repo._scratchbranchmatcher = scratchbranchmatcher(ui)
 
 
-def isremotebooksenabled(ui):
-    return "remotenames" in extensions._extensions and ui.configbool(
-        "remotenames", "bookmarks"
+def extsetup(ui):
+    wireproto.commands["listkeyspatterns"] = (
+        wireprotolistkeyspatterns,
+        "namespace patterns",
+    )
+    wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
+    extensions.wrapfunction(
+        debugcommands, "_debugbundle2part", bundleparts.debugbundle2part
     )
 
 
-def encodebookmarks(bookmarks):
-    encoded = {}
-    for bookmark, node in bookmarks.iteritems():
-        encoded[bookmark] = node
-    dumped = json.dumps(encoded)
-    result = struct.pack(">i", len(dumped)) + dumped
-    return result
+def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
+    patterns = wireproto.decodelist(patterns)
+    d = repo.listkeys(encoding.tolocal(namespace), patterns).iteritems()
+    return pushkey.encodekeys(d)
+
+
+def wireprotoknownnodes(repo, proto, nodes, others):
+    """similar to 'known' but also check in infinitepush storage"""
+    nodes = wireproto.decodelist(nodes)
+    knownlocally = repo.known(nodes)
+    for index, known in enumerate(knownlocally):
+        # TODO: make a single query to the bundlestore.index
+        if not known and repo.bundlestore.index.getnodebyprefix(
+            nodemod.hex(nodes[index])
+        ):
+            knownlocally[index] = True
+    return "".join(b and "1" or "0" for b in knownlocally)
 
 
 def downloadbundle(repo, unknownbinhead):
     index = repo.bundlestore.index
     store = repo.bundlestore.store
-    bundleid = index.getbundle(hex(unknownbinhead))
+    bundleid = index.getbundle(nodemod.hex(unknownbinhead))
     if bundleid is None:
-        raise error.Abort("%s head is not known" % hex(unknownbinhead))
-    bundleraw = store.read(bundleid)
-    return _makebundlefromraw(bundleraw)
-
-
-def _makebundlefromraw(data):
+        raise error.Abort("%s head is not known" % nodemod.hex(unknownbinhead))
+    data = store.read(bundleid)
     fp = None
     fd, bundlefile = tempfile.mkstemp()
     try:  # guards bundlefile

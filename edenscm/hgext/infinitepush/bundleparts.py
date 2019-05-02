@@ -3,24 +3,84 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import errno
+import os
+import tempfile
+
 from edenscm.mercurial import (
     bundle2,
     changegroup,
     error,
+    exchange,
     extensions,
     mutation,
+    node as nodemod,
     revsetlang,
     util,
 )
 from edenscm.mercurial.i18n import _
 
-from .common import encodebookmarks
+from . import bookmarks, server
 
 
 scratchbranchparttype = "b2x:infinitepush"
 scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"
 scratchmutationparttype = "b2x:infinitepushmutation"
 pushrebaseparttype = "b2x:rebase"
+
+
+def uisetup(ui):
+    bundle2.capabilities[scratchbranchparttype] = ()
+    bundle2.capabilities[scratchbookmarksparttype] = ()
+    bundle2.capabilities[scratchmutationparttype] = ()
+
+
+@exchange.b2partsgenerator(scratchbranchparttype)
+def partgen(pushop, bundler):
+    bookmark = pushop.ui.config("experimental", "server-bundlestore-bookmark")
+    bookmarknode = pushop.ui.config("experimental", "server-bundlestore-bookmarknode")
+    create = pushop.ui.configbool("experimental", "server-bundlestore-create")
+    scratchpush = pushop.ui.configbool("experimental", "infinitepush-scratchpush")
+    if "changesets" in pushop.stepsdone or not scratchpush:
+        return
+
+    if scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
+        return
+
+    pushop.stepsdone.add("changesets")
+    pushop.stepsdone.add("treepack")
+    if not bookmark and not pushop.outgoing.missing:
+        pushop.ui.status(_("no changes found\n"))
+        pushop.cgresult = 0
+        return
+
+    # This parameter tells the server that the following bundle is an
+    # infinitepush. This let's it switch the part processing to our infinitepush
+    # code path.
+    bundler.addparam("infinitepush", "True")
+
+    nonforwardmove = pushop.force or pushop.ui.configbool(
+        "experimental", "non-forward-move"
+    )
+    scratchparts = getscratchbranchparts(
+        pushop.repo,
+        pushop.remote,
+        pushop.outgoing,
+        nonforwardmove,
+        pushop.ui,
+        bookmark,
+        create,
+        bookmarknode,
+    )
+
+    for scratchpart in scratchparts:
+        bundler.addpart(scratchpart)
+
+    def handlereply(op):
+        # server either succeeds or aborts; no code to read
+        pushop.cgresult = 1
+
+    return handlereply
 
 
 def getscratchbranchparts(
@@ -89,12 +149,13 @@ def getscratchbranchparts(
     return parts
 
 
-def getscratchbookmarkspart(peer, bookmarks):
+def getscratchbookmarkspart(peer, scratchbookmarks):
     if scratchbookmarksparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_("no server support for %r") % scratchbookmarksparttype)
 
     return bundle2.bundlepart(
-        scratchbookmarksparttype.upper(), data=encodebookmarks(bookmarks)
+        scratchbookmarksparttype.upper(),
+        data=bookmarks.encodebookmarks(scratchbookmarks),
     )
 
 
@@ -146,3 +207,86 @@ class copiedpart(object):
             return self._io.read()
         else:
             return self._io.read(size)
+
+
+@bundle2.b2streamparamhandler("infinitepush")
+def processinfinitepush(unbundler, param, value):
+    """ process the bundle2 stream level parameter containing whether this push
+    is an infinitepush or not. """
+    if value and unbundler.ui.configbool("infinitepush", "bundle-stream", False):
+        pass
+
+
+@bundle2.parthandler(
+    scratchbranchparttype, ("bookmark", "create", "force", "cgversion")
+)
+def bundle2scratchbranch(op, part):
+    """unbundle a bundle2 part containing a changegroup to store"""
+
+    bundler = bundle2.bundle20(op.repo.ui)
+    cgversion = part.params.get("cgversion", "01")
+    cgpart = bundle2.bundlepart("changegroup", data=part.read())
+    cgpart.addparam("version", cgversion)
+    bundler.addpart(cgpart)
+    buf = util.chunkbuffer(bundler.getchunks())
+
+    fd, bundlefile = tempfile.mkstemp()
+    try:
+        try:
+            fp = os.fdopen(fd, "wb")
+            fp.write(buf.read())
+        finally:
+            fp.close()
+        server.storebundle(op, part.params, bundlefile)
+    finally:
+        try:
+            os.unlink(bundlefile)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
+
+    return 1
+
+
+@bundle2.parthandler(scratchbookmarksparttype)
+def bundle2scratchbookmarks(op, part):
+    """Handler deletes bookmarks first then adds new bookmarks.
+    """
+    index = op.repo.bundlestore.index
+    decodedbookmarks = bookmarks.decodebookmarks(part)
+    toinsert = {}
+    todelete = []
+    for bookmark, node in decodedbookmarks.iteritems():
+        if node:
+            toinsert[bookmark] = node
+        else:
+            todelete.append(bookmark)
+    log = server._getorcreateinfinitepushlogger(op)
+    with server.logservicecall(log, scratchbookmarksparttype), index:
+        if todelete:
+            index.deletebookmarks(todelete)
+        if toinsert:
+            index.addmanybookmarks(toinsert)
+
+
+@bundle2.parthandler(scratchmutationparttype)
+def bundle2scratchmutation(op, part):
+    mutation.unbundle(op.repo, part.read())
+
+
+def debugbundle2part(orig, ui, part, all, **opts):
+    if part.type == scratchmutationparttype:
+        entries = mutation.mutationstore.unbundle(part.read())
+        ui.write(("    %s entries\n") % len(entries))
+        for entry in entries:
+            pred = ",".join([nodemod.hex(p) for p in entry.preds()])
+            succ = nodemod.hex(entry.succ())
+            split = entry.split()
+            if split:
+                succ = ",".join([nodemod.hex(s) for s in split] + [succ])
+            ui.write(
+                ("      %s -> %s (%s by %s at %s)\n")
+                % (pred, succ, entry.op(), entry.user(), entry.time())
+            )
+
+    orig(ui, part, all, **opts)

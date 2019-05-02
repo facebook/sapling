@@ -100,28 +100,15 @@ Configs::
 
 from __future__ import absolute_import
 
-import errno
-import json
-import os
-import struct
-import tempfile
-
 from edenscm.mercurial import (
     bundle2,
     changegroup,
     discovery,
-    encoding,
     error,
-    exchange,
     extensions,
-    i18n,
-    mutation,
     node as nodemod,
-    pushkey,
     util,
-    wireproto,
 )
-from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _
 
 from . import bundleparts, bundlestore, client, common, infinitepushcommands, server
@@ -134,24 +121,6 @@ colortable = {
     "commitcloud.meta": "bold",
     "commitcloud.commitcloud": "yellow",
 }
-
-
-def _debugbundle2part(orig, ui, part, all, **opts):
-    if part.type == bundleparts.scratchmutationparttype:
-        entries = mutation.mutationstore.unbundle(part.read())
-        ui.write(("    %s entries\n") % len(entries))
-        for entry in entries:
-            pred = ",".join([nodemod.hex(p) for p in entry.preds()])
-            succ = nodemod.hex(entry.succ())
-            split = entry.split()
-            if split:
-                succ = ",".join([nodemod.hex(s) for s in split] + [succ])
-            ui.write(
-                ("      %s -> %s (%s by %s at %s)\n")
-                % (pred, succ, entry.op(), entry.user(), entry.time())
-            )
-
-    orig(ui, part, all, **opts)
 
 
 def reposetup(ui, repo):
@@ -167,126 +136,16 @@ def uisetup(ui):
     order.remove("infinitepush")
     order.append("infinitepush")
     extensions._order = order
+    # Register bundleparts capabilities and handlers.
+    bundleparts.uisetup(ui)
 
 
 def extsetup(ui):
-    commonextsetup(ui)
+    common.extsetup(ui)
     if common.isserver(ui):
         server.extsetup(ui)
     else:
         client.extsetup(ui)
-
-
-def commonextsetup(ui):
-    wireproto.commands["listkeyspatterns"] = (
-        wireprotolistkeyspatterns,
-        "namespace patterns",
-    )
-    wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
-    extensions.wrapfunction(debugcommands, "_debugbundle2part", _debugbundle2part)
-
-
-def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
-    patterns = wireproto.decodelist(patterns)
-    d = repo.listkeys(encoding.tolocal(namespace), patterns).iteritems()
-    return pushkey.encodekeys(d)
-
-
-def wireprotoknownnodes(repo, proto, nodes, others):
-    """similar to 'known' but also check in infinitepush storage"""
-    nodes = wireproto.decodelist(nodes)
-    knownlocally = repo.known(nodes)
-    for index, known in enumerate(knownlocally):
-        # TODO: make a single query to the bundlestore.index
-        if not known and repo.bundlestore.index.getnodebyprefix(
-            nodemod.hex(nodes[index])
-        ):
-            knownlocally[index] = True
-    return "".join(b and "1" or "0" for b in knownlocally)
-
-
-def _decodebookmarks(stream):
-    sizeofjsonsize = struct.calcsize(">i")
-    size = struct.unpack(">i", stream.read(sizeofjsonsize))[0]
-    unicodedict = json.loads(stream.read(size))
-    # python json module always returns unicode strings. We need to convert
-    # it back to bytes string
-    result = {}
-    for bookmark, node in unicodedict.iteritems():
-        bookmark = bookmark.encode("ascii")
-        node = node.encode("ascii")
-        result[bookmark] = node
-    return result
-
-
-bundle2.capabilities[bundleparts.scratchbranchparttype] = ()
-bundle2.capabilities[bundleparts.scratchbookmarksparttype] = ()
-bundle2.capabilities[bundleparts.scratchmutationparttype] = ()
-
-
-@bundle2.b2streamparamhandler("infinitepush")
-def processinfinitepush(unbundler, param, value):
-    """ process the bundle2 stream level parameter containing whether this push
-    is an infinitepush or not. """
-    if value and unbundler.ui.configbool("infinitepush", "bundle-stream", False):
-        pass
-
-
-@bundle2.parthandler(
-    bundleparts.scratchbranchparttype, ("bookmark", "create", "force", "cgversion")
-)
-def bundle2scratchbranch(op, part):
-    """unbundle a bundle2 part containing a changegroup to store"""
-
-    bundler = bundle2.bundle20(op.repo.ui)
-    cgversion = part.params.get("cgversion", "01")
-    cgpart = bundle2.bundlepart("changegroup", data=part.read())
-    cgpart.addparam("version", cgversion)
-    bundler.addpart(cgpart)
-    buf = util.chunkbuffer(bundler.getchunks())
-
-    fd, bundlefile = tempfile.mkstemp()
-    try:
-        try:
-            fp = os.fdopen(fd, "wb")
-            fp.write(buf.read())
-        finally:
-            fp.close()
-        server.storebundle(op, part.params, bundlefile)
-    finally:
-        try:
-            os.unlink(bundlefile)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
-
-    return 1
-
-
-@bundle2.parthandler(bundleparts.scratchbookmarksparttype)
-def bundle2scratchbookmarks(op, part):
-    """Handler deletes bookmarks first then adds new bookmarks.
-    """
-    index = op.repo.bundlestore.index
-    decodedbookmarks = _decodebookmarks(part)
-    toinsert = {}
-    todelete = []
-    for bookmark, node in decodedbookmarks.iteritems():
-        if node:
-            toinsert[bookmark] = node
-        else:
-            todelete.append(bookmark)
-    log = server._getorcreateinfinitepushlogger(op)
-    with server.logservicecall(log, bundleparts.scratchbookmarksparttype), index:
-        if todelete:
-            index.deletebookmarks(todelete)
-        if toinsert:
-            index.addmanybookmarks(toinsert)
-
-
-@bundle2.parthandler(bundleparts.scratchmutationparttype)
-def bundle2scratchmutation(op, part):
-    mutation.unbundle(op.repo, part.read())
 
 
 def _deltaparent(orig, self, revlog, rev, p1, p2, prev):

@@ -32,7 +32,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import bookmarks, bundleparts, common
+from . import bookmarks, bundleparts
 
 
 _maybehash = re.compile(r"^[a-f0-9]+$").search
@@ -184,7 +184,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         # know about them. Let's save it before push and restore after
         remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, dest)
         result = orig(ui, repo, dest, *args, **opts)
-        if common.isremotebooksenabled(ui):
+        if bookmarks.remotebookmarksenabled(ui):
             if bookmark and scratchpush:
                 other = hg.peer(repo, opts, dest)
                 fetchedbookmarks = other.listkeyspatterns(
@@ -363,7 +363,7 @@ def _dopull(orig, ui, repo, source="default", **opts):
         # TODO(stash): race condition is possible
         # if scratch bookmarks was updated right after orig.
         # But that's unlikely and shouldn't be harmful.
-        if common.isremotebooksenabled(ui):
+        if bookmarks.remotebookmarksenabled(ui):
             remotescratchbookmarks.update(scratchbookmarks)
             bookmarks.saveremotebookmarks(repo, remotescratchbookmarks, source)
         else:
@@ -461,7 +461,7 @@ def _tryhoist(ui, remotebookmark):
     infinitepush.
     """
 
-    if common.isremotebooksenabled(ui):
+    if bookmarks.remotebookmarksenabled(ui):
         hoist = ui.config("remotenames", "hoist") + "/"
         if remotebookmark.startswith(hoist):
             return remotebookmark[len(hoist) :]
@@ -502,51 +502,3 @@ def knownnodes(self, nodes):
         yield [bool(int(b)) for b in d]
     except ValueError:
         error.Abort(error.ResponseError(_("unexpected response:"), d))
-
-
-@exchange.b2partsgenerator(bundleparts.scratchbranchparttype)
-def partgen(pushop, bundler):
-    bookmark = pushop.ui.config("experimental", "server-bundlestore-bookmark")
-    bookmarknode = pushop.ui.config("experimental", "server-bundlestore-bookmarknode")
-    create = pushop.ui.configbool("experimental", "server-bundlestore-create")
-    scratchpush = pushop.ui.configbool("experimental", "infinitepush-scratchpush")
-    if "changesets" in pushop.stepsdone or not scratchpush:
-        return
-
-    if bundleparts.scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
-        return
-
-    pushop.stepsdone.add("changesets")
-    pushop.stepsdone.add("treepack")
-    if not bookmark and not pushop.outgoing.missing:
-        pushop.ui.status(_("no changes found\n"))
-        pushop.cgresult = 0
-        return
-
-    # This parameter tells the server that the following bundle is an
-    # infinitepush. This let's it switch the part processing to our infinitepush
-    # code path.
-    bundler.addparam("infinitepush", "True")
-
-    nonforwardmove = pushop.force or pushop.ui.configbool(
-        "experimental", "non-forward-move"
-    )
-    scratchparts = bundleparts.getscratchbranchparts(
-        pushop.repo,
-        pushop.remote,
-        pushop.outgoing,
-        nonforwardmove,
-        pushop.ui,
-        bookmark,
-        create,
-        bookmarknode,
-    )
-
-    for scratchpart in scratchparts:
-        bundler.addpart(scratchpart)
-
-    def handlereply(op):
-        # server either succeeds or aborts; no code to read
-        pushop.cgresult = 1
-
-    return handlereply
