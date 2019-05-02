@@ -21,8 +21,8 @@ from .contentstore import (
     remotefilelogcontentstore,
     unioncontentstore,
 )
-from .datapack import datapackstore, mutabledatapack
-from .historypack import historypackstore, mutablehistorypack
+from .datapack import datapackstore
+from .historypack import historypackstore
 from .metadatastore import (
     remotefilelogmetadatastore,
     remotemetadatastore,
@@ -507,44 +507,31 @@ class remotefileslog(filelog.fileslog):
 
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
+        self._mutablelocalpacks = mutablestores.pendingmutablepack(
+            repo,
+            lambda: shallowutil.getlocalpackpath(
+                self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+            ),
+        )
         self.makeunionstores()
-        self._mutablelocalpacks = None
 
     def getmutablelocalpacks(self):
-        if self._mutablelocalpacks is None:
-            packpath = shallowutil.getlocalpackpath(
-                self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-            )
-            self._mutablelocalpacks = (
-                mutabledatapack(self.ui, packpath),
-                mutablehistorypack(self.ui, packpath, repo=self.repo),
-            )
-        return self._mutablelocalpacks
+        return self._mutablelocalpacks.getmutablepack()
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
-        if self._mutablelocalpacks is not None:
-            dpack, hpack = self._mutablelocalpacks
-            self._mutablelocalpacks = None
+        self._mutablelocalpacks.commit()
 
-            dpack.close()
-            hpack.close()
-
-            for store in self.localdatastores:
-                store.markforrefresh()
-            for store in self.localhistorystores:
-                store.markforrefresh()
+        for store in self.localdatastores:
+            store.markforrefresh()
+        for store in self.localhistorystores:
+            store.markforrefresh()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
-        if self._mutablelocalpacks is not None:
-            dpack, hpack = self._mutablelocalpacks
-            self._mutablelocalpacks = None
-
-            dpack.abort()
-            hpack.abort()
+        self._mutablelocalpacks.abort()
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""
@@ -576,7 +563,9 @@ class remotefileslog(filelog.fileslog):
                 cachecontent, cachemetadata
             )
 
-        mutablelocalstore = mutablestores.mutabledatahistorystore(self)
+        mutablelocalstore = mutablestores.mutabledatahistorystore(
+            lambda: self._mutablelocalpacks
+        )
 
         # Instantiate union stores
         self.contentstore = unioncontentstore(

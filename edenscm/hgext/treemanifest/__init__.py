@@ -511,7 +511,9 @@ def setuptreestores(repo, mfl):
     if ui.configbool("treemanifest", "server"):
         packpath = repo.localvfs.join("cache/packs/%s" % PACK_CATEGORY)
 
-        mutablelocalstore = mutablestores.mutabledatahistorystore(mfl)
+        mutablelocalstore = mutablestores.mutabledatahistorystore(
+            lambda: mfl._mutablelocalpacks
+        )
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
@@ -581,8 +583,12 @@ def setuptreestores(repo, mfl):
     remotestore = remotetreestore(repo)
     ondemandstore = ondemandtreedatastore(repo)
 
-    mutablelocalstore = mutablestores.mutabledatahistorystore(mfl)
-    mutablesharedstore = mutablestores.mutabledatahistorystore(mfl, shared=True)
+    mutablelocalstore = mutablestores.mutabledatahistorystore(
+        lambda: mfl._mutablelocalpacks
+    )
+    mutablesharedstore = mutablestores.mutabledatahistorystore(
+        lambda: mfl._mutablesharedpacks
+    )
 
     # Data store
     # TODO: support cstore.uniondatapackstore here
@@ -647,9 +653,14 @@ def setuptreestores(repo, mfl):
 
 
 class basetreemanifestlog(object):
-    def __init__(self):
-        self._mutablelocalpacks = None
-        self._mutablesharedpacks = None
+    def __init__(self, repo):
+        self._mutablelocalpacks = mutablestores.pendingmutablepack(
+            repo,
+            lambda: shallowutil.getlocalpackpath(self._opener.vfs.base, "manifests"),
+        )
+        self._mutablesharedpacks = mutablestores.pendingmutablepack(
+            repo, lambda: shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
+        )
         self.recentlinknode = None
 
     def add(
@@ -695,22 +706,10 @@ class basetreemanifestlog(object):
 
     def _getmutablelocalpacks(self):
         """Returns a tuple containing a data pack and a history pack."""
-        if self._mutablelocalpacks is None:
-            packpath = shallowutil.getlocalpackpath(self._opener.vfs.base, "manifests")
-            self._mutablelocalpacks = (
-                mutabledatapack(self.ui, packpath),
-                mutablehistorypack(self.ui, packpath, repo=self._repo),
-            )
-        return self._mutablelocalpacks
+        return self._mutablelocalpacks.getmutablepack()
 
     def getmutablesharedpacks(self):
-        if self._mutablesharedpacks is None:
-            packpath = shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
-            self._mutablesharedpacks = (
-                mutabledatapack(self.ui, packpath),
-                mutablehistorypack(self.ui, packpath, repo=self._repo),
-            )
-        return self._mutablesharedpacks
+        return self._mutablesharedpacks.getmutablepack()
 
     def _addtopack(
         self,
@@ -801,40 +800,15 @@ class basetreemanifestlog(object):
         return node
 
     def commitpending(self):
-        if self._mutablelocalpacks is not None:
-            dpack, hpack = self._mutablelocalpacks
-            self._mutablelocalpacks = None
+        self._mutablelocalpacks.commit()
+        self._mutablesharedpacks.commit()
 
-            dpack.close()
-            hpack.close()
-
-            self.datastore.markforrefresh()
-            self.historystore.markforrefresh()
-
-        if self._mutablesharedpacks is not None:
-            dpack, hpack = self._mutablesharedpacks
-            self._mutablesharedpacks = None
-
-            dpack.close()
-            hpack.close()
-
-            self.datastore.markforrefresh()
-            self.historystore.markforrefresh()
+        self.datastore.markforrefresh()
+        self.historystore.markforrefresh()
 
     def abortpending(self):
-        if self._mutablelocalpacks is not None:
-            dpack, hpack = self._mutablelocalpacks
-            self._mutablelocalpacks = None
-
-            dpack.abort()
-            hpack.abort()
-
-        if self._mutablesharedpacks is not None:
-            dpack, hpack = self._mutablesharedpacks
-            self._mutablesharedpacks = None
-
-            dpack.abort()
-            hpack.abort()
+        self._mutablelocalpacks.abort()
+        self._mutablesharedpacks.abort()
 
     def __nonzero__(self):
         return True
@@ -863,7 +837,8 @@ class basetreemanifestlog(object):
 
 class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
     def __init__(self, opener, repo, treemanifest=False):
-        basetreemanifestlog.__init__(self)
+        self._repo = repo.unfiltered()
+        basetreemanifestlog.__init__(self, self._repo)
         assert treemanifest is False
         cachesize = 4
 
@@ -873,8 +848,6 @@ class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
         if opts is not None:
             cachesize = opts.get("manifestcachesize", cachesize)
         self._treeinmem = True
-
-        self._repo = repo.unfiltered()
 
         self._opener = opener
 
@@ -891,10 +864,10 @@ class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
 
 class treeonlymanifestlog(basetreemanifestlog):
     def __init__(self, opener, repo):
-        super(treeonlymanifestlog, self).__init__()
+        self._repo = repo.unfiltered()
+        super(treeonlymanifestlog, self).__init__(self._repo)
         self._opener = opener
         self.ui = repo.ui
-        self._repo = repo.unfiltered()
 
     def clearcaches(self):
         pass
@@ -1128,6 +1101,27 @@ def getbundlemanifestlog(orig, self):
     if isinstance(mfl, hybridmanifestlog):
         wrapmfl = mfl.treemanifestlog
 
+    class pendingmempack(object):
+        def __init__(self):
+            self._mutabledpack = None
+            self._mutablehpack = None
+
+        def getmutabledpack(self, read=False):
+            if self._mutabledpack is None and not read:
+                self._mutabledpack = memdatapack()
+            return self._mutabledpack
+
+        def getmutablehpack(self, read=False):
+            if self._mutablehpack is None and not read:
+                self._mutablehpack = memhistorypack()
+            return self._mutablehpack
+
+        def getmutablepack(self):
+            dpack = self.getmutabledpack()
+            hpack = self.getmutablehpack()
+
+            return dpack, hpack
+
     class bundlemanifestlog(wrapmfl.__class__):
         def add(
             self,
@@ -1152,16 +1146,6 @@ def getbundlemanifestlog(orig, self):
                 linkrev=linkrev,
             )
 
-        def _getmutablelocalpacks(self):
-            if self._mutablelocalpacks is None:
-                self._mutablelocalpacks = (memdatapack(), memhistorypack())
-            return self._mutablelocalpacks
-
-        def getmutablesharedpacks(self):
-            if self._mutablesharedpacks is None:
-                self._mutablesharedpacks = (memdatapack(), memhistorypack())
-            return self._mutablesharedpacks
-
         def commitpending(self):
             pass
 
@@ -1170,6 +1154,8 @@ def getbundlemanifestlog(orig, self):
             self._mutablesharedpacks = None
 
     wrapmfl.__class__ = bundlemanifestlog
+    wrapmfl._mutablelocalpacks = pendingmempack()
+    wrapmfl._mutablesharedpacks = pendingmempack()
     return mfl
 
 
