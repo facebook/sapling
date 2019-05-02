@@ -32,7 +32,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import bookmarks, bundleparts
+from . import bookmarks, constants
 
 
 _maybehash = re.compile(r"^[a-f0-9]+$").search
@@ -93,10 +93,10 @@ def extsetup(ui):
     # to avoid generation of both parts.
     partorder = exchange.b2partsgenorder
     index = partorder.index("changeset")
-    if bundleparts.pushrebaseparttype in partorder:
-        index = min(index, partorder.index(bundleparts.pushrebaseparttype))
+    if constants.pushrebaseparttype in partorder:
+        index = min(index, partorder.index(constants.pushrebaseparttype))
     partorder.insert(
-        index, partorder.pop(partorder.index(bundleparts.scratchbranchparttype))
+        index, partorder.pop(partorder.index(constants.scratchbranchparttype))
     )
 
 

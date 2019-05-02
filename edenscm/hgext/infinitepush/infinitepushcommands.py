@@ -30,7 +30,7 @@ from edenscm.mercurial.i18n import _
 # Mercurial
 from edenscm.mercurial.node import bin
 
-from . import common
+from . import common, server
 
 
 cmdtable = {}
@@ -56,7 +56,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
             raise error.Abort(_("node %s is not found") % node)
 
         if node not in repo:
-            newbundlefile = common.downloadbundle(repo, bin(node))
+            newbundlefile = server.downloadbundle(repo, bin(node))
             bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
             bundlerepo = hg.repository(ui, bundlepath)
             repo = bundlerepo

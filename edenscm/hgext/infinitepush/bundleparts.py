@@ -14,28 +14,21 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     mutation,
-    node as nodemod,
     revsetlang,
     util,
 )
 from edenscm.mercurial.i18n import _
 
-from . import bookmarks, server
-
-
-scratchbranchparttype = "b2x:infinitepush"
-scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"
-scratchmutationparttype = "b2x:infinitepushmutation"
-pushrebaseparttype = "b2x:rebase"
+from . import bookmarks, constants, server
 
 
 def uisetup(ui):
-    bundle2.capabilities[scratchbranchparttype] = ()
-    bundle2.capabilities[scratchbookmarksparttype] = ()
-    bundle2.capabilities[scratchmutationparttype] = ()
+    bundle2.capabilities[constants.scratchbranchparttype] = ()
+    bundle2.capabilities[constants.scratchbookmarksparttype] = ()
+    bundle2.capabilities[constants.scratchmutationparttype] = ()
 
 
-@exchange.b2partsgenerator(scratchbranchparttype)
+@exchange.b2partsgenerator(constants.scratchbranchparttype)
 def partgen(pushop, bundler):
     bookmark = pushop.ui.config("experimental", "server-bundlestore-bookmark")
     bookmarknode = pushop.ui.config("experimental", "server-bundlestore-bookmarknode")
@@ -44,7 +37,7 @@ def partgen(pushop, bundler):
     if "changesets" in pushop.stepsdone or not scratchpush:
         return
 
-    if scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
+    if constants.scratchbranchparttype not in bundle2.bundle2caps(pushop.remote):
         return
 
     pushop.stepsdone.add("changesets")
@@ -86,8 +79,10 @@ def partgen(pushop, bundler):
 def getscratchbranchparts(
     repo, peer, outgoing, confignonforwardmove, ui, bookmark, create, bookmarknode=None
 ):
-    if scratchbranchparttype not in bundle2.bundle2caps(peer):
-        raise error.Abort(_("no server support for %r") % scratchbranchparttype)
+    if constants.scratchbranchparttype not in bundle2.bundle2caps(peer):
+        raise error.Abort(
+            _("no server support for %r") % constants.scratchbranchparttype
+        )
 
     _validaterevset(repo, revsetlang.formatspec("%ln", outgoing.missing), bookmark)
 
@@ -116,19 +111,22 @@ def getscratchbranchparts(
     #  handler
     parts.append(
         bundle2.bundlepart(
-            scratchbranchparttype.upper(), advisoryparams=params.iteritems(), data=cg
+            constants.scratchbranchparttype.upper(),
+            advisoryparams=params.iteritems(),
+            data=cg,
         )
     )
 
     if mutation.recording(repo):
-        if scratchmutationparttype not in bundle2.bundle2caps(peer):
+        if constants.scratchmutationparttype not in bundle2.bundle2caps(peer):
             repo.ui.warn(
-                _("no server support for %r - skipping\n") % scratchmutationparttype
+                _("no server support for %r - skipping\n")
+                % constants.scratchmutationparttype
             )
         else:
             parts.append(
                 bundle2.bundlepart(
-                    scratchmutationparttype,
+                    constants.scratchmutationparttype,
                     data=mutation.bundle(repo, outgoing.missing),
                 )
             )
@@ -150,11 +148,13 @@ def getscratchbranchparts(
 
 
 def getscratchbookmarkspart(peer, scratchbookmarks):
-    if scratchbookmarksparttype not in bundle2.bundle2caps(peer):
-        raise error.Abort(_("no server support for %r") % scratchbookmarksparttype)
+    if constants.scratchbookmarksparttype not in bundle2.bundle2caps(peer):
+        raise error.Abort(
+            _("no server support for %r") % constants.scratchbookmarksparttype
+        )
 
     return bundle2.bundlepart(
-        scratchbookmarksparttype.upper(),
+        constants.scratchbookmarksparttype.upper(),
         data=bookmarks.encodebookmarks(scratchbookmarks),
     )
 
@@ -184,31 +184,6 @@ def _handlelfs(repo, missing):
         return
 
 
-class copiedpart(object):
-    """a copy of unbundlepart content that can be consumed later"""
-
-    def __init__(self, part):
-        # copy "public properties"
-        self.type = part.type
-        self.id = part.id
-        self.mandatory = part.mandatory
-        self.mandatoryparams = part.mandatoryparams
-        self.advisoryparams = part.advisoryparams
-        self.params = part.params
-        self.mandatorykeys = part.mandatorykeys
-        # copy the buffer
-        self._io = util.stringio(part.read())
-
-    def consume(self):
-        return
-
-    def read(self, size=None):
-        if size is None:
-            return self._io.read()
-        else:
-            return self._io.read(size)
-
-
 @bundle2.b2streamparamhandler("infinitepush")
 def processinfinitepush(unbundler, param, value):
     """ process the bundle2 stream level parameter containing whether this push
@@ -218,7 +193,7 @@ def processinfinitepush(unbundler, param, value):
 
 
 @bundle2.parthandler(
-    scratchbranchparttype, ("bookmark", "create", "force", "cgversion")
+    constants.scratchbranchparttype, ("bookmark", "create", "force", "cgversion")
 )
 def bundle2scratchbranch(op, part):
     """unbundle a bundle2 part containing a changegroup to store"""
@@ -248,7 +223,7 @@ def bundle2scratchbranch(op, part):
     return 1
 
 
-@bundle2.parthandler(scratchbookmarksparttype)
+@bundle2.parthandler(constants.scratchbookmarksparttype)
 def bundle2scratchbookmarks(op, part):
     """Handler deletes bookmarks first then adds new bookmarks.
     """
@@ -262,31 +237,13 @@ def bundle2scratchbookmarks(op, part):
         else:
             todelete.append(bookmark)
     log = server._getorcreateinfinitepushlogger(op)
-    with server.logservicecall(log, scratchbookmarksparttype), index:
+    with server.logservicecall(log, constants.scratchbookmarksparttype), index:
         if todelete:
             index.deletebookmarks(todelete)
         if toinsert:
             index.addmanybookmarks(toinsert)
 
 
-@bundle2.parthandler(scratchmutationparttype)
+@bundle2.parthandler(constants.scratchmutationparttype)
 def bundle2scratchmutation(op, part):
     mutation.unbundle(op.repo, part.read())
-
-
-def debugbundle2part(orig, ui, part, all, **opts):
-    if part.type == scratchmutationparttype:
-        entries = mutation.mutationstore.unbundle(part.read())
-        ui.write(("    %s entries\n") % len(entries))
-        for entry in entries:
-            pred = ",".join([nodemod.hex(p) for p in entry.preds()])
-            succ = nodemod.hex(entry.succ())
-            split = entry.split()
-            if split:
-                succ = ",".join([nodemod.hex(s) for s in split] + [succ])
-            ui.write(
-                ("      %s -> %s (%s by %s at %s)\n")
-                % (pred, succ, entry.op(), entry.user(), entry.time())
-            )
-
-    orig(ui, part, all, **opts)

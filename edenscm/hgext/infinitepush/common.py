@@ -10,6 +10,7 @@ from edenscm.mercurial import (
     encoding,
     error,
     extensions,
+    mutation,
     node as nodemod,
     pushkey,
     util,
@@ -17,7 +18,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.commands import debug as debugcommands
 
-from . import bundleparts
+from . import constants
 
 
 def isserver(ui):
@@ -34,9 +35,7 @@ def extsetup(ui):
         "namespace patterns",
     )
     wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
-    extensions.wrapfunction(
-        debugcommands, "_debugbundle2part", bundleparts.debugbundle2part
-    )
+    extensions.wrapfunction(debugcommands, "_debugbundle2part", debugbundle2part)
 
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
@@ -58,30 +57,22 @@ def wireprotoknownnodes(repo, proto, nodes, others):
     return "".join(b and "1" or "0" for b in knownlocally)
 
 
-def downloadbundle(repo, unknownbinhead):
-    index = repo.bundlestore.index
-    store = repo.bundlestore.store
-    bundleid = index.getbundle(nodemod.hex(unknownbinhead))
-    if bundleid is None:
-        raise error.Abort("%s head is not known" % nodemod.hex(unknownbinhead))
-    data = store.read(bundleid)
-    fp = None
-    fd, bundlefile = tempfile.mkstemp()
-    try:  # guards bundlefile
-        try:  # guards fp
-            fp = os.fdopen(fd, "wb")
-            fp.write(data)
-        finally:
-            fp.close()
-    except Exception:
-        try:
-            os.unlink(bundlefile)
-        except Exception:
-            # we would rather see the original exception
-            pass
-        raise
+def debugbundle2part(orig, ui, part, all, **opts):
+    if part.type == constants.scratchmutationparttype:
+        entries = mutation.mutationstore.unbundle(part.read())
+        ui.write(("    %s entries\n") % len(entries))
+        for entry in entries:
+            pred = ",".join([nodemod.hex(p) for p in entry.preds()])
+            succ = nodemod.hex(entry.succ())
+            split = entry.split()
+            if split:
+                succ = ",".join([nodemod.hex(s) for s in split] + [succ])
+            ui.write(
+                ("      %s -> %s (%s by %s at %s)\n")
+                % (pred, succ, entry.op(), entry.user(), entry.time())
+            )
 
-    return bundlefile
+    orig(ui, part, all, **opts)
 
 
 class scratchbranchmatcher(object):

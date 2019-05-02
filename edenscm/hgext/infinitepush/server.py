@@ -31,7 +31,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _, _n
 
-from . import bundleparts, common
+from . import constants
 
 
 def extsetup(ui):
@@ -77,7 +77,7 @@ def bundle2pushkey(orig, op, part):
     The only goal is to skip calling the original function if flag is set.
     It's set if infinitepush push is happening.
     """
-    if op.records[bundleparts.scratchbranchparttype + "_skippushkey"]:
+    if op.records[constants.scratchbranchparttype + "_skippushkey"]:
         if op.reply is not None:
             rpart = op.reply.newpart("reply:pushkey")
             rpart.addparam("in-reply-to", str(part.id), mandatory=False)
@@ -94,7 +94,7 @@ def bundle2handlephases(orig, op, part):
     It's set if infinitepush push is happening.
     """
 
-    if op.records[bundleparts.scratchbranchparttype + "_skipphaseheads"]:
+    if op.records[constants.scratchbranchparttype + "_skipphaseheads"]:
         return
 
     return orig(op, part)
@@ -166,7 +166,7 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
         for head in heads:
             if head not in repo.changelog.nodemap:
                 if head not in nodestobundle:
-                    newbundlefile = common.downloadbundle(repo, head)
+                    newbundlefile = downloadbundle(repo, head)
                     bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
                     bundlerepo = hg.repository(repo.ui, bundlepath)
 
@@ -279,6 +279,32 @@ def _decodebundle2caps(bundlecaps):
             blob = util.urlreq.unquote(bcaps[len("bundle2=") :])
             b2caps.update(bundle2.decodecaps(blob))
     return b2caps
+
+
+def downloadbundle(repo, unknownbinhead):
+    index = repo.bundlestore.index
+    store = repo.bundlestore.store
+    bundleid = index.getbundle(nodemod.hex(unknownbinhead))
+    if bundleid is None:
+        raise error.Abort("%s head is not known" % nodemod.hex(unknownbinhead))
+    data = store.read(bundleid)
+    fp = None
+    fd, bundlefile = tempfile.mkstemp()
+    try:  # guards bundlefile
+        try:  # guards fp
+            fp = os.fdopen(fd, "wb")
+            fp.write(data)
+        finally:
+            fp.close()
+    except Exception:
+        try:
+            os.unlink(bundlefile)
+        except Exception:
+            # we would rather see the original exception
+            pass
+        raise
+
+    return bundlefile
 
 
 def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
@@ -425,7 +451,7 @@ def processparts(orig, repo, op, unbundler):
 
     handleallparts = repo.ui.configbool("infinitepush", "storeallparts")
 
-    partforwardingwhitelist = [bundleparts.scratchmutationparttype]
+    partforwardingwhitelist = [constants.scratchmutationparttype]
     try:
         treemfmod = extensions.find("treemanifest")
         partforwardingwhitelist.append(treemfmod.TREEGROUP_PARTTYPE2)
@@ -443,7 +469,7 @@ def processparts(orig, repo, op, unbundler):
             if part.type == "replycaps":
                 # This configures the current operation to allow reply parts.
                 bundle2._processpart(op, part)
-            elif part.type == bundleparts.scratchbranchparttype:
+            elif part.type == constants.scratchbranchparttype:
                 # Scratch branch parts need to be converted to normal
                 # changegroup parts, and the extra parameters stored for later
                 # when we upload to the store. Eventually those parameters will
@@ -459,19 +485,19 @@ def processparts(orig, repo, op, unbundler):
                 # the part.
                 if not handleallparts:
                     op.records.add(
-                        bundleparts.scratchbranchparttype + "_skippushkey", True
+                        constants.scratchbranchparttype + "_skippushkey", True
                     )
                     op.records.add(
-                        bundleparts.scratchbranchparttype + "_skipphaseheads", True
+                        constants.scratchbranchparttype + "_skipphaseheads", True
                     )
-            elif part.type == bundleparts.scratchbookmarksparttype:
+            elif part.type == constants.scratchbookmarksparttype:
                 # Save this for later processing. Details below.
                 #
                 # Upstream https://phab.mercurial-scm.org/D1389 and its
                 # follow-ups stop part.seek support to reduce memory usage
                 # (https://bz.mercurial-scm.org/5691). So we need to copy
                 # the part so it can be consumed later.
-                scratchbookpart = bundleparts.copiedpart(part)
+                scratchbookpart = copiedpart(part)
             else:
                 if handleallparts or part.type in partforwardingwhitelist:
                     # Ideally we would not process any parts, and instead just
@@ -519,6 +545,31 @@ def processparts(orig, repo, op, unbundler):
     # references are available in the store.
     if scratchbookpart:
         bundle2._processpart(op, scratchbookpart)
+
+
+class copiedpart(object):
+    """a copy of unbundlepart content that can be consumed later"""
+
+    def __init__(self, part):
+        # copy "public properties"
+        self.type = part.type
+        self.id = part.id
+        self.mandatory = part.mandatory
+        self.mandatoryparams = part.mandatoryparams
+        self.advisoryparams = part.advisoryparams
+        self.params = part.params
+        self.mandatorykeys = part.mandatorykeys
+        # copy the buffer
+        self._io = util.stringio(part.read())
+
+    def consume(self):
+        return
+
+    def read(self, size=None):
+        if size is None:
+            return self._io.read()
+        else:
+            return self._io.read(size)
 
 
 def _getorcreateinfinitepushlogger(op):
@@ -576,10 +627,10 @@ def logservicecall(logger, service, **kwargs):
 def storebundle(op, params, bundlefile):
     log = _getorcreateinfinitepushlogger(op)
     parthandlerstart = time.time()
-    log(bundleparts.scratchbranchparttype, eventtype="start")
+    log(constants.scratchbranchparttype, eventtype="start")
     index = op.repo.bundlestore.index
     store = op.repo.bundlestore.store
-    op.records.add(bundleparts.scratchbranchparttype + "_skippushkey", True)
+    op.records.add(constants.scratchbranchparttype + "_skippushkey", True)
 
     bundle = None
     try:  # guards bundle
@@ -656,7 +707,7 @@ def storebundle(op, params, bundlefile):
             if bookmark and bookmarknode:
                 index.addbookmark(bookmark, bookmarknode)
         log(
-            bundleparts.scratchbranchparttype,
+            constants.scratchbranchparttype,
             eventtype="success",
             elapsedms=(time.time() - parthandlerstart) * 1000,
         )
@@ -670,7 +721,7 @@ def storebundle(op, params, bundlefile):
                 _asyncsavemetadata(op.repo.root, [ctx.hex() for ctx in nodesctx])
     except Exception as e:
         log(
-            bundleparts.scratchbranchparttype,
+            constants.scratchbranchparttype,
             eventtype="failure",
             elapsedms=(time.time() - parthandlerstart) * 1000,
             errormsg=str(e),
