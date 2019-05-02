@@ -134,6 +134,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.fastheaddiscovery (bool)
   undocumented: remotenames.forcecompat (bool)
   undocumented: remotenames.forceto (bool)
+  undocumented: remotenames.hoist (str)
   undocumented: remotenames.pushanonheads (bool)
   undocumented: remotenames.pushrev (str)
   undocumented: remotenames.resolvenodes (bool)

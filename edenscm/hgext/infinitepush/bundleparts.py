@@ -20,6 +20,7 @@ from .common import encodebookmarks
 scratchbranchparttype = "b2x:infinitepush"
 scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"
 scratchmutationparttype = "b2x:infinitepushmutation"
+pushrebaseparttype = "b2x:rebase"
 
 
 def getscratchbranchparts(
