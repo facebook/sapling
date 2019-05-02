@@ -65,6 +65,11 @@ ping test
   \r (esc)
   I_AM_ALIVE
 
+hostname test
+  $ sslcurl $APISERVER/hostname > output
+  $ echo >> output # Add trailing newline.
+  $ diff output - <<< $HOSTNAME
+
 test cat file
   $ sslcurl $APISERVER/repo/raw/$COMMIT1/test > output
   $ diff output - <<< $TEST_CONTENT

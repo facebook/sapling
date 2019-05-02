@@ -14,6 +14,7 @@ use clap::{value_t, Arg};
 use failure::Fallible;
 use futures::{future::err, Future};
 use futures_ext::FutureExt;
+use hostname::get_hostname;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
@@ -606,6 +607,17 @@ fn main() -> Fallible<()> {
                     // removing ScubaSampleBuilder will disable scuba logging for this request.
                     req.extensions_mut().remove::<ScubaSampleBuilder>();
                     HttpResponse::Ok().body("I_AM_ALIVE")
+                },
+            )
+            .route(
+                "/hostname",
+                http::Method::GET,
+                |_req: HttpRequest<HttpServerState>| {
+                    if let Some(hostname) = get_hostname() {
+                        HttpResponse::Ok().body(hostname)
+                    } else {
+                        HttpResponse::InternalServerError().body("Failed to get hostname")
+                    }
                 },
             )
             .scope("/{repo}", |repo| {
