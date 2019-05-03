@@ -168,8 +168,8 @@ def _posixworker(ui, func, staticargs, args):
 
                 def workerfunc():
                     os.close(rfd)
-                    for i, item in func(*(staticargs + (pargs,))):
-                        os.write(wfd, "%d %s\n" % (i, item))
+                    for i, size, item in func(*(staticargs + (pargs,))):
+                        os.write(wfd, "%d %d %s\n" % (i, size, item))
                     return 0
 
                 ret = scmutil.callcatch(ui, workerfunc)
@@ -203,8 +203,8 @@ def _posixworker(ui, func, staticargs, args):
 
     try:
         for line in util.iterfile(fp):
-            l = line.split(" ", 1)
-            yield int(l[0]), l[1][:-1]
+            l = line.split(" ", 2)
+            yield int(l[0]), int(l[1]), l[2][:-1]
     except:  # re-raises
         killworkers()
         cleanup()

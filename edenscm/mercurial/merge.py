@@ -1456,11 +1456,11 @@ def batchremove(repo, wctx, actions):
         except OSError as inst:
             repo.ui.warn(_("update failed to remove %s: %s!\n") % (f, inst.strerror))
         if i == 100:
-            yield i, f
+            yield i, 0, f
             i = 0
         i += 1
     if i > 0:
-        yield i, f
+        yield i, f, 0
 
     if cwd and not pycompat.getcwdsafe():
         # cwd was removed in the course of removing files; print a helpful
@@ -1485,6 +1485,7 @@ def batchget(repo, mctx, wctx, actions):
     fctx = mctx.filectx
     ui = repo.ui
     i = 0
+    size = 0
     with repo.wvfs.backgroundclosing(ui, expectedcount=len(actions)):
         for f, (flags, backup), msg in actions:
             repo.ui.debug(" %s: %s -> g\n" % (f, msg))
@@ -1505,13 +1506,16 @@ def batchget(repo, mctx, wctx, actions):
                 if repo.wvfs.lexists(absf):
                     util.rename(absf, orig)
             wctx[f].clearunknown()
-            wctx[f].write(fctx(f).data(), flags, backgroundclose=True)
+            data = fctx(f).data()
+            size += len(data)
+            wctx[f].write(data, flags, backgroundclose=True)
             if i == 100:
-                yield i, f
+                yield i, size, f
                 i = 0
+                size = 0
             i += 1
     if i > 0:
-        yield i, f
+        yield i, size, f
 
 
 @util.timefunction("applyupdates", 0, "ui")
@@ -1615,7 +1619,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         workerprog = worker.worker(
             repo.ui, cost, batchremove, (repo, wctx), actions["r"]
         )
-        for i, item in workerprog:
+        for i, size, item in workerprog:
             z += i
             prog.value = (z, item)
         removed = len(actions["r"])
@@ -1633,13 +1637,16 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             prog.value = (z, f)
 
         # get in parallel
+        writesize = 0
         workerprog = worker.worker(
             repo.ui, cost, batchget, (repo, mctx, wctx), actions["g"]
         )
-        for i, item in workerprog:
+        for i, size, item in workerprog:
             z += i
+            writesize += size
             prog.value = (z, item)
         updated = len(actions["g"])
+        perftrace.tracebytes("Disk Writes", writesize)
 
         # forget (manifest only, just log it) (must come first)
         for f, args, msg in actions["f"]:
@@ -1695,6 +1702,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             wctx[f].audit()
             wctx[f].setflags("l" in flags, "x" in flags)
             updated += 1
+
+        perftrace.tracevalue("Deleted Files", removed)
+        perftrace.tracevalue("Written Files", updated)
 
         # the ordering is important here -- ms.mergedriver will raise if the
         # merge driver has changed, and we want to be able to bypass it when
