@@ -54,7 +54,7 @@ local:
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
-	  build_rust_ext -i -l\
+	  build_rust_ext -i -l $(RFLAG)\
 	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
