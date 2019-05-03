@@ -259,14 +259,14 @@ HgImporter::HgImporter(
   // primarily in our integration tests.
   if (importHelperScript.has_value()) {
     cmd.push_back(importHelperScript.value().value());
+    cmd.push_back(repoPath.value().str());
   } else if (FLAGS_hgImportUseDebugSubcommand) {
     cmd.push_back(FLAGS_hgPath);
     cmd.push_back("debugedenimporthelper");
   } else {
     cmd.push_back(getImportHelperPath().value());
+    cmd.push_back(repoPath.value().str());
   }
-
-  cmd.push_back(repoPath.value().str());
 
 #ifndef EDEN_WIN
   cmd.push_back("--out-fd");
