@@ -10,7 +10,7 @@ import struct
 from collections import defaultdict
 from StringIO import StringIO
 
-from edenscm.mercurial import progress
+from edenscm.mercurial import perftrace, progress
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
@@ -76,6 +76,7 @@ def receivepack(ui, fh, dpack, hpack):
     receiveddata = []
     receivedhistory = []
 
+    size = 0
     with progress.bar(ui, _("receiving pack")) as prog:
         while True:
             filename = readpath(fh)
@@ -87,15 +88,18 @@ def receivepack(ui, fh, dpack, hpack):
                 hpack.add(filename, node, p1, p2, linknode, copyfrom)
                 receivedhistory.append((filename, node))
                 count += 1
+                size += len(filename) + len(node) + sum(len(x or "") for x in value)
 
             for node, deltabase, delta in readdeltas(fh):
                 dpack.add(filename, node, deltabase, delta)
                 receiveddata.append((filename, node))
                 count += 1
+                size += len(filename) + len(node) + len(deltabase) + len(delta)
 
             if count == 0 and filename == "":
                 break
             prog.value += 1
+    perftrace.tracebytes("Received Pack Size", size)
 
     return receiveddata, receivedhistory
 
