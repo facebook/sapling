@@ -419,6 +419,7 @@ class fileserverclient(object):
             self.connect()
         perftrace.traceflag("packs")
         cache = self.remotecache
+        fileslog = self.repo.fileslog
 
         total = len(fileids)
         totalfetches = 0
@@ -433,8 +434,10 @@ class fileserverclient(object):
             getkeys = [file + "\0" + node for file, node in fileids]
             if fetchdata:
                 cache.getdatapack(getkeys)
+                fileslog.contentstore.markforrefresh()
             if fetchhistory:
                 cache.gethistorypack(getkeys)
+                fileslog.metadatastore.markforrefresh()
 
             # receive both data and history
             misses = []
@@ -476,6 +479,12 @@ class fileserverclient(object):
                 datapackpath, histpackpath = self._fetchpackfiles(
                     misses, fetchdata, fetchhistory
                 )
+
+                if datapackpath:
+                    fileslog.contentstore.markforrefresh()
+                if histpackpath:
+                    fileslog.metadatastore.markforrefresh()
+
                 self.updatecache(datapackpath, histpackpath)
         finally:
             os.umask(oldumask)

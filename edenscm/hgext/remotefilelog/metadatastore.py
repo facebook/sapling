@@ -161,7 +161,6 @@ class remotemetadatastore(object):
         self._fileservice.prefetch(
             [(name, hex(node))], force=True, fetchdata=False, fetchhistory=True
         )
-        self._shared.markforrefresh()
 
     def getancestors(self, name, node, known=None):
         self._prefetch(name, node)
