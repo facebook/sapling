@@ -53,20 +53,18 @@ TreeEntryType treeEntryTypeFromMononoke(MononokeFileType type) {
 MononokeThriftBackingStore::MononokeThriftBackingStore(
     std::string serviceName,
     std::string repo,
-    std::shared_ptr<folly::Executor> executor)
-    : MononokeThriftBackingStore(
-          /*client=*/servicerouter::cpp2::getClientFactory()
-              .getClientUnique<MononokeAPIServiceAsyncClient>(serviceName),
-          /*repo=*/std::move(repo),
-          /*executor=*/std::move(executor)) {}
+    folly::Executor* executor)
+    : serviceName_(std::move(serviceName)),
+      repo_(std::move(repo)),
+      executor_(executor) {}
 
 MononokeThriftBackingStore::MononokeThriftBackingStore(
-    std::unique_ptr<MononokeAPIServiceAsyncClient> client,
+    std::unique_ptr<MononokeAPIServiceAsyncClient> testClient,
     std::string repo,
-    std::shared_ptr<folly::Executor> executor)
+    folly::Executor* executor)
     : repo_(std::move(repo)),
-      client_(std::move(client)),
-      executor_(std::move(executor)) {}
+      executor_(executor),
+      testClient_(std::move(testClient)) {}
 
 MononokeThriftBackingStore::~MononokeThriftBackingStore() {}
 
@@ -82,8 +80,11 @@ folly::Future<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
   params.set_repo(repo_);
   params.set_tree_hash(treeHash);
 
-  return client_->semifuture_get_tree(params)
-      .via(executor_.get())
+  return withClient([params = std::move(params)](
+                        MononokeAPIServiceAsyncClient* client) {
+           return client->semifuture_get_tree(params);
+         })
+      .via(folly::getCPUExecutor().get())
       .thenValue([id](const MononokeDirectory&& response) {
         auto& files = response.get_files();
 
@@ -121,8 +122,11 @@ folly::Future<std::unique_ptr<Blob>> MononokeThriftBackingStore::getBlob(
   params.set_repo(repo_);
   params.set_blob_hash(blobHash);
 
-  return client_->semifuture_get_blob(params)
-      .via(executor_.get())
+  return withClient([params = std::move(params)](
+                        MononokeAPIServiceAsyncClient* client) {
+           return client->semifuture_get_blob(params);
+         })
+      .via(folly::getCPUExecutor().get())
       .thenValue([id](const MononokeBlob&& response) {
         return std::make_unique<Blob>(id, std::move(*response.get_content()));
       });
@@ -139,11 +143,30 @@ MononokeThriftBackingStore::getTreeForCommit(const Hash& commitID) {
   params.set_repo(repo_);
   params.set_revision(rev);
 
-  return client_->semifuture_get_changeset(params)
-      .via(executor_.get())
+  return withClient([params = std::move(params)](
+                        MononokeAPIServiceAsyncClient* client) {
+           return client->semifuture_get_changeset(params);
+         })
+      .via(executor_)
       .thenValue([this](const MononokeChangeset&& response) {
         return getTree(Hash(response.get_manifest().get_hash()));
       });
 }
+
+template <typename Func>
+std::invoke_result_t<Func, MononokeAPIServiceAsyncClient*>
+MononokeThriftBackingStore::withClient(Func&& func) {
+  return folly::via(executor_, [this, func = std::forward<Func>(func)]() {
+    if (testClient_) {
+      return func(testClient_.get());
+    }
+
+    auto client =
+        servicerouter::cpp2::getClientFactory()
+            .getClientUnique<MononokeAPIServiceAsyncClient>(serviceName_);
+    return func(client.get());
+  });
+}
+
 } // namespace eden
 } // namespace facebook

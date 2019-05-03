@@ -8,10 +8,11 @@
  *
  */
 #pragma once
-
-#include <scm/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
-
 #include "eden/fs/store/BackingStore.h"
+
+namespace scm::mononoke::apiserver::thrift {
+class MononokeAPIServiceAsyncClient;
+}
 
 namespace facebook {
 namespace eden {
@@ -20,13 +21,14 @@ class MononokeThriftBackingStore : public BackingStore {
   MononokeThriftBackingStore(
       std::string tierName,
       std::string repo,
-      std::shared_ptr<folly::Executor> executor);
+      folly::Executor* executor);
+
   MononokeThriftBackingStore(
       std::unique_ptr<
           scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient>
-          client,
+          testClient,
       std::string repo,
-      std::shared_ptr<folly::Executor> executor);
+      folly::Executor* executor);
 
   virtual ~MononokeThriftBackingStore() override;
 
@@ -40,11 +42,19 @@ class MononokeThriftBackingStore : public BackingStore {
   MononokeThriftBackingStore(MononokeThriftBackingStore&&) = delete;
   MononokeThriftBackingStore& operator=(MononokeThriftBackingStore&&) = delete;
 
+  template <typename Func>
+  std::invoke_result_t<
+      Func,
+      scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient*>
+  withClient(Func&& func);
+
+  std::string serviceName_;
   std::string repo_;
+  folly::Executor* executor_;
+
   std::unique_ptr<
       scm::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient>
-      client_;
-  std::shared_ptr<folly::Executor> executor_;
+      testClient_;
 };
 } // namespace eden
 } // namespace facebook

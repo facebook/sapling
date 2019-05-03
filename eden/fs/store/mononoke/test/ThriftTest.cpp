@@ -165,7 +165,7 @@ class MononokeThriftTest : public ::testing::Test {
   MononokeThriftBackingStore store = MononokeThriftBackingStore(
       runner.newClient<MononokeAPIServiceAsyncClient>(),
       "fbsource",
-      folly::getIOExecutor());
+      folly::getIOExecutor().get());
 };
 
 TEST_F(MononokeThriftTest, getBlob) {

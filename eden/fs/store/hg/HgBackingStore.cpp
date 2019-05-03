@@ -401,12 +401,11 @@ std::unique_ptr<MononokeThriftBackingStore>
 HgBackingStore::initializeThriftMononokeBackingStore() {
   auto edenConfig = config_->getEdenConfig();
   auto tierName = edenConfig->getMononokeTierName();
-  auto executor = folly::getIOExecutor();
 
   XLOG(DBG2) << "Initializing thrift Mononoke backing store for repository "
              << repoName_ << ", using tier " << tierName;
   return std::make_unique<MononokeThriftBackingStore>(
-      tierName, repoName_, executor);
+      tierName, repoName_, serverThreadPool_);
 }
 #endif
 
@@ -544,7 +543,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
         })
         .thenError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
                        const folly::exception_wrapper& ex) mutable {
-          XLOG(WARN) << "got exception from MononokeHttpBackingStore: "
+          XLOG(WARN) << "got exception from Mononoke backing store: "
                      << ex.what();
           return fetchTreeFromHgCacheOrImporter(
               manifestNode,
