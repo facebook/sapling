@@ -14,8 +14,6 @@ from tempfile import NamedTemporaryFile
 from edenscm.mercurial import error
 from edenscm.mercurial.i18n import _
 
-from . import fileindex, sqlindex
-
 
 class bundlestore(object):
     def __init__(self, repo):
@@ -31,8 +29,14 @@ class bundlestore(object):
 
         indextype = repo.ui.config("infinitepush", "indextype", "")
         if indextype == "disk":
+            from . import fileindex
+
             self.index = fileindex.fileindex(repo)
         elif indextype == "sql":
+            # Delayed import of sqlindex to avoid including unnecessary
+            # dependencies on mysql.connector.
+            from . import sqlindex
+
             self.index = sqlindex.sqlindex(repo)
         else:
             raise error.Abort(
