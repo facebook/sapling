@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
-use futures::{Async, Future, Poll, Stream};
+use futures::{try_ready, Async, Future, Poll, Stream};
 use tokio_io::codec::Decoder;
 
 use super::BytesStream;

@@ -7,25 +7,9 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
-#[cfg(test)]
-extern crate async_unit;
-extern crate bytes;
-extern crate failure;
-#[macro_use]
-extern crate futures;
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-extern crate tokio;
-extern crate tokio_io;
-extern crate tokio_threadpool;
-
 use bytes::Bytes;
 use futures::sync::{mpsc, oneshot};
-use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
+use futures::{future, try_ready, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
 use tokio::timer::Delay;
 use tokio_io::codec::{Decoder, Encoder};
 use tokio_io::AsyncWrite;
@@ -697,6 +681,7 @@ mod test {
 
     use std::time::{self, Duration};
 
+    use assert_matches::assert_matches;
     use futures::stream;
     use futures::sync::mpsc;
     use futures::Stream;

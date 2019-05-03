@@ -10,7 +10,7 @@ use std::cmp;
 use std::io::{self, BufRead, Read};
 
 use bytes::{BufMut, Bytes, BytesMut};
-use futures::{Async, Poll, Stream};
+use futures::{try_ready, Async, Poll, Stream};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 

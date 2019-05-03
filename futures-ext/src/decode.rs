@@ -15,7 +15,7 @@
 //! an underlying transport.
 
 use bytes::{BufMut, Bytes, BytesMut};
-use futures::{Async, Poll, Stream};
+use futures::{try_ready, Async, Poll, Stream};
 use tokio_io::codec::Decoder;
 
 use crate::{BoxStreamWrapper, StreamWrapper};
@@ -120,8 +120,7 @@ where
 
 #[cfg(test)]
 mod test {
-    extern crate netstring;
-    use self::netstring::NetstringDecoder;
+    use netstring::NetstringDecoder;
 
     use std::io;
 

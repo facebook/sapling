@@ -6,7 +6,7 @@
 
 use futures::sink::Sink;
 use futures::stream::{Fuse, Stream};
-use futures::{Async, AsyncSink, Future, Poll};
+use futures::{try_ready, Async, AsyncSink, Future, Poll};
 
 /// Fork a Stream into two
 ///

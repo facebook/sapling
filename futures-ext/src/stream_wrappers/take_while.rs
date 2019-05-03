@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::{Async, Future, IntoFuture, Poll, Stream};
+use futures::{try_ready, Async, Future, IntoFuture, Poll, Stream};
 
 use super::StreamWrapper;
 

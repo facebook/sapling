@@ -95,6 +95,7 @@ mod test {
     use super::*;
     use bytes::{BigEndian, BufMut, ByteOrder};
     use futures::Future;
+    use quickcheck::quickcheck;
     use std::io;
     use std::iter::Iterator;
     use std::vec;
