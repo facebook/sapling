@@ -3361,13 +3361,15 @@ def timed(func):
 
 
 _sizeunits = (
-    ("m", 2 ** 20),
-    ("k", 2 ** 10),
-    ("g", 2 ** 30),
+    ("b", 1),
     ("kb", 2 ** 10),
     ("mb", 2 ** 20),
     ("gb", 2 ** 30),
-    ("b", 1),
+    ("tb", 2 ** 40),
+    ("m", 2 ** 20),
+    ("k", 2 ** 10),
+    ("g", 2 ** 30),
+    ("t", 2 ** 40),
 )
 
 
@@ -3380,15 +3382,41 @@ def sizetoint(s):
     2252
     >>> sizetoint(b'6M')
     6291456
+    >>> sizetoint(b'1 gb')
+    1073741824
     """
     t = s.strip().lower()
     try:
-        for k, u in _sizeunits:
+        # Iterate in reverse order so we check "b" last, otherwise we'd match
+        # "b" instead of "kb".
+        for k, u in reversed(_sizeunits):
             if t.endswith(k):
                 return int(float(t[: -len(k)]) * u)
         return int(t)
     except ValueError:
         raise error.ParseError(_("couldn't parse size: %s") % s)
+
+
+def inttosize(value):
+    """Convert a number to a string representing the numbers of bytes.
+
+    >>> inttosize(30)
+    '30.0B'
+    >>> inttosize(1.6 * 1024)
+    '1.6KB'
+    >>> inttosize(2.4 * 1024 * 1024)
+    '2.4MB'
+    >>> inttosize(8.1 * 1024 * 1024 * 1024)
+    '8.1GB'
+    """
+    last = _sizeunits[0]
+
+    for suffix, unit in _sizeunits:
+        if value < unit:
+            break
+        last = (suffix, unit)
+
+    return "{0:.1f}{1:s}".format((value / float(last[1])), last[0].upper())
 
 
 class hooks(object):

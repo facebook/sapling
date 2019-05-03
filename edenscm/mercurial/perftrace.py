@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 import time
-
 from contextlib import contextmanager
 
-from . import encoding, error
+from . import encoding, error, util
+
 
 spans = []
 
@@ -28,6 +28,20 @@ class Span(object):
 
     def duration(self):
         return self.end - self.start
+
+
+class StringValue(object):
+    __slots__ = ["value"]
+
+    def __init__(self, value):
+        self.value = value
+
+
+class ByteValue(object):
+    __slots__ = ["value"]
+
+    def __init__(self, value):
+        self.value = value
 
 
 def traces():
@@ -86,7 +100,7 @@ def tracevalue(name, value):
     latest = spans[-1]
 
     # TODO: report when overwriting a value
-    latest.values[name] = value
+    latest.values[name] = StringValue("%s" % value)
 
 
 def tracebytes(name, value):
@@ -99,7 +113,10 @@ def tracebytes(name, value):
         )
 
     latest = spans[-1]
-    latest.values[name] = latest.values.get(name, 0) + value
+    if name in latest.values:
+        latest.values[name].value += value
+    else:
+        latest.values[name] = ByteValue(value)
 
 
 def tracefunc(name):
@@ -158,6 +175,14 @@ class _AsciiRenderer(object):
         )
 
         for name, value in sorted(span.values.iteritems()):
+            if isinstance(value, ByteValue):
+                value = value.value
+                quantity = util.inttosize(value)
+                speed = _format_bytes_per_sec(value, duration)
+                value = "%s (%s)" % (quantity, speed)
+            else:
+                value = value.value
+
             output.append(
                 "{mark} {indent} * {name}: {value}".format(
                     mark=":".rjust(self.start_width),
@@ -197,3 +222,8 @@ def _format_duration(seconds):
     if seconds < 3600:
         return "{0}m {1}s".format(int(seconds / 60), seconds % 60)
     return "{0}h {1}m".format(int(seconds / 3600), int((seconds % 3600) / 60))
+
+
+def _format_bytes_per_sec(value, time):
+    persec = value / float(time)
+    return "%s/s" % util.inttosize(persec)

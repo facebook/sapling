@@ -15,6 +15,7 @@ import re
 from edenscm.mercurial import (
     error,
     pathutil,
+    perftrace,
     progress,
     url as urlmod,
     util,
@@ -309,6 +310,7 @@ class _gitlfsremote(object):
         response = self._batchrequest(pointers, action)
         objects = self._extractobjects(response, pointers, action)
         total = sum(x.get("size", 0) for x in objects)
+        perftrace.tracebytes("Size", total)
         sizes = {}
         for obj in objects:
             sizes[obj.get("oid")] = obj.get("size", 0)
