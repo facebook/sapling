@@ -180,6 +180,175 @@ impl IdMap {
     }
 }
 
+// Interaction with a DAG.
+impl IdMap {
+    /// Assign an id for a head in a DAG. This implies ancestors of the
+    /// head will also have ids assigned.
+    ///
+    /// This function is incremental. If the head or any of its ancestors
+    /// already have an id stored in this map, the existing ids will be
+    /// reused.
+    ///
+    /// This function needs roughly `O(N)` heap memory. `N` is the number of
+    /// ids to assign. It also needs `O(M)` stack memory. `M` is the number
+    /// of merges to assign. In case it can stack overflow or OOM, try to
+    /// assign ids to a known ancestor first.
+    pub fn assign_head<F>(&mut self, head: &[u8], parents_by_name: &F) -> Fallible<Id>
+    where
+        F: Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
+    {
+        if let Some(id) = self.find_id_by_slice(head)? {
+            return Ok(id);
+        }
+
+        // C     For a merge C, it has choice to assign numbers to A or B
+        // |\    first (A and B are abstract branches that have many nodes).
+        // A B   Suppose branch A is linear and B have merges, and D is
+        // |/    (::A & ::B). Then:
+        // D
+        //
+        // - If `D` is empty or already assigned, it's better to assign A last.
+        //   This is because (A+C) can then always form a segment regardless of
+        //   the complexity of B:
+        //
+        //      B   A   C       vs.        A   B   C
+        //     ~~~  ^^^^^                     ~~~
+        //     xxxxxx                          *****
+        //                                 xxxxx
+        //
+        //   [~]: Might be complex (ex. many segments)
+        //   [^]: Can always form a segment. (better)
+        //   [*]: Can only be a segment if segment size is large enough.
+        //   [x]: Cannot form a segment.
+        //
+        // - If `D` is not empty (and not assigned), it _might_ be better to
+        //   assign D and A first. This provides benefits for A and D to be
+        //   continuous, with the downside that A and C are not continuous.
+        //
+        //   A typical pattern is one branch continuously merges into the other
+        //   (see also segmented-changelog.pdf, page 19):
+        //
+        //        B---D---F
+        //         \   \   \
+        //      A---C---E---G
+        //
+        //   We use a naive heuristic to detect this case.
+
+        // Find `::head - ::(head & merge())`.
+        // Store the merge in `result.merge`, the non-merges in `result.names`.
+        fn get_branch_info<F: Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>>(
+            this: &IdMap,
+            head: &[u8],
+            get_parents: &F,
+        ) -> Fallible<BranchInfo> {
+            let mut names = Vec::new();
+            let mut name: Box<[u8]> = head.to_vec().into_boxed_slice();
+            let mut merge = None;
+            while let None = this.find_id_by_slice(&name)? {
+                let parents = get_parents(&name)?;
+                match parents.len() {
+                    0 => {
+                        names.push(name);
+                        break;
+                    }
+                    1 => {
+                        names.push(name);
+                        name = parents[0].clone();
+                    }
+                    _ => {
+                        merge = Some(name);
+                        break;
+                    }
+                }
+            }
+            Ok(BranchInfo { names, merge })
+        };
+
+        // Return value of `get_branch_info`.
+        struct BranchInfo {
+            // `names` are sorted: head first, oldest last. `names` do not have
+            // merges.
+            names: Vec<Box<[u8]>>,
+
+            // If `merge` is set, it's the parent of the oldest node in `names`,
+            // or the parent of the given `head` if `names` is empty.
+            //
+            // If `merge` is not set, the last item in `names` has all its
+            // parents assigned already.
+            merge: Option<Box<[u8]>>,
+        }
+
+        impl BranchInfo {
+            fn is_empty(&self) -> bool {
+                self.names.is_empty() && self.merge.is_none()
+            }
+        }
+
+        let head_parents = parents_by_name(head)?;
+
+        // First pass: Assign flat parent branches if they obviously overlap
+        // with other branches. This is the "naive heuristic" mentioned above.
+        for parent in head_parents.iter() {
+            let branch = get_branch_info(self, parent, parents_by_name)?;
+            if branch.is_empty() {
+                continue;
+            }
+            if branch.merge.is_none() {
+                let names: HashSet<Box<[u8]>> = branch.names.iter().cloned().collect();
+                let mut should_assign = false;
+                'other_parent_loop: for other_parent in head_parents.iter() {
+                    if other_parent == parent {
+                        continue;
+                    }
+                    // PERF: This can be improved if len(parents) > 2.
+                    let other_branch = get_branch_info(self, other_parent, parents_by_name)?;
+                    if let Some(merge) = other_branch.merge {
+                        for parent in parents_by_name(&merge)? {
+                            if names.contains(&parent) {
+                                should_assign = true;
+                                break 'other_parent_loop;
+                            }
+                        }
+                    }
+                }
+
+                if should_assign {
+                    for name in branch.names.iter().rev() {
+                        self.insert(self.next_free_id(), name)?;
+                    }
+                }
+            }
+        }
+
+        // Second pass: Assign parent branches with merges.
+        for parent in head_parents.iter() {
+            // BranchInfo needs to be re-calculated since they might have changed.
+            let branch = get_branch_info(self, parent, parents_by_name)?;
+            if let Some(merge) = branch.merge {
+                self.assign_head(&merge, parents_by_name)?;
+                for name in branch.names.iter().rev() {
+                    self.insert(self.next_free_id(), name)?;
+                }
+            };
+        }
+
+        // Third pass: Assign remaining parent branches.
+        // They should be flat (linear) now.
+        for parent in head_parents.iter() {
+            let branch = get_branch_info(self, parent, parents_by_name)?;
+            assert!(branch.merge.is_none());
+            for name in branch.names.iter().rev() {
+                self.insert(self.next_free_id(), name)?;
+            }
+        }
+
+        // Finally, assign id to this name.
+        let id = self.next_free_id();
+        self.insert(self.next_free_id(), head)?;
+        Ok(id)
+    }
+}
+
 impl<'a> SyncableIdMap<'a> {
     /// Write pending changes to disk.
     ///
