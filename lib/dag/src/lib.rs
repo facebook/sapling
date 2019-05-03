@@ -10,4 +10,5 @@
 //! Building blocks for the commit graph used by source control.
 
 pub mod idmap;
+pub mod segment;
 pub mod spanset;
