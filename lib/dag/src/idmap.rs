@@ -347,6 +347,29 @@ impl IdMap {
         self.insert(self.next_free_id(), head)?;
         Ok(id)
     }
+
+    /// Translate `get_parents` from taking slices to taking `Id`s.
+    pub fn build_get_parents_by_id<'a>(
+        &'a self,
+        get_parents_by_name: &'a Fn(&[u8]) -> Fallible<Vec<Box<[u8]>>>,
+    ) -> impl Fn(Id) -> Fallible<Vec<Id>> + 'a {
+        let func = move |id: Id| -> Fallible<Vec<Id>> {
+            let name = self
+                .find_slice_by_id(id)?
+                .unwrap_or_else(|| panic!("logic error: id {} is referred but not assigned", id));
+            let parent_names = get_parents_by_name(&name)?;
+            let mut result = Vec::with_capacity(parent_names.len());
+            for parent_name in parent_names {
+                if let Some(parent_id) = self.find_id_by_slice(&parent_name)? {
+                    result.push(parent_id);
+                } else {
+                    panic!("logic error: ancestor ids must be available");
+                }
+            }
+            Ok(result)
+        };
+        func
+    }
 }
 
 impl<'a> SyncableIdMap<'a> {
