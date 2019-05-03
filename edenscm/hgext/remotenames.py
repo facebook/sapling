@@ -96,6 +96,8 @@ journalremotebookmarktype = "remotebookmark"
 # happened
 _selectivepullenabledfile = "selectivepullenabled"
 _selectivepullaccessedbookmarks = "selectivepullaccessedbookmarks"
+# separate lock to update accessed bookmarks
+_selectivepullaccessedbookmarkslock = "selectivepullaccessedbookmarks.lock"
 
 
 def exbookcalcupdate(orig, ui, repo, checkout):
@@ -195,33 +197,31 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
 
     vfs = repo.sharedvfs
 
-    if vfs.exists(_selectivepullaccessedbookmarks):
-        knownbooks = set(_readremotenamesfrom(vfs, _selectivepullaccessedbookmarks))
-    else:
-        knownbooks = set()
-
     totalaccessednames = 0
-    with repo.wlock(), vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
-        newbookmarks = {}
-        for node, nametype, oldremote, rname in knownbooks:
-            if nametype != "bookmarks":
-                continue
+    with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
+        knownbooks = set(_readremotenamesfrom(vfs, _selectivepullaccessedbookmarks))
 
-            if oldremote != remotepath:
+        with vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
+            newbookmarks = {}
+            for node, nametype, oldremote, rname in knownbooks:
+                if nametype != "bookmarks":
+                    continue
+
+                if oldremote != remotepath:
+                    totalaccessednames += 1
+                    _writesingleremotename(f, oldremote, nametype, rname, node)
+                else:
+                    newbookmarks[rname] = node
+
+            nodemap = repo.unfiltered().changelog.nodemap
+            for rname, node in bookmarks.iteritems():
+                # if the node is known locally, update the old value or add new
+                if bin(node) in nodemap:
+                    newbookmarks[rname] = node
+
+            for rname, node in newbookmarks.iteritems():
                 totalaccessednames += 1
-                _writesingleremotename(f, oldremote, nametype, rname, node)
-            else:
-                newbookmarks[rname] = node
-
-        nodemap = repo.unfiltered().changelog.nodemap
-        for rname, node in bookmarks.iteritems():
-            # if the node is known locally, update the old value or add new
-            if bin(node) in nodemap:
-                newbookmarks[rname] = node
-
-        for rname, node in newbookmarks.iteritems():
-            totalaccessednames += 1
-            _writesingleremotename(f, remotepath, "bookmarks", rname, node)
+                _writesingleremotename(f, remotepath, "bookmarks", rname, node)
 
     # log the number of accessed bookmarks currently tracked
     repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)
@@ -940,6 +940,8 @@ def extsetup(ui):
     bookcmd = extensions.wrapcommand(commands.table, "bookmarks", exbookmarks)
     pushcmd = extensions.wrapcommand(commands.table, "push", expushcmd)
 
+    localrepo.localrepository._wlockfreeprefix.add("selectivepullaccessedbookmarks")
+
     if _tracking(ui):
         bookcmd[1].append(
             ("t", "track", "", "track this bookmark or remote name", "BOOKMARK")
@@ -1639,33 +1641,35 @@ def shareawarecachevfs(repo):
 
 
 def _readremotenamesfrom(vfs, filename):
-    if not vfs.exists(filename):
+    try:
+        f = vfs(filename)
+    except EnvironmentError as er:
+        if er.errno != errno.ENOENT:
+            raise
         return
 
-    f = vfs(filename)
-    for line in f:
-        nametype = None
-        line = line.strip()
-        if not line:
-            continue
-        nametype = None
-        remote, rname = None, None
+    with f:
+        for line in f:
+            nametype = None
+            line = line.strip()
+            if not line:
+                continue
+            nametype = None
+            remote, rname = None, None
 
-        node, name = line.split(" ", 1)
+            node, name = line.split(" ", 1)
 
-        # check for nametype being written into the file format
-        if " " in name:
-            nametype, name = name.split(" ", 1)
+            # check for nametype being written into the file format
+            if " " in name:
+                nametype, name = name.split(" ", 1)
 
-        remote, rname = splitremotename(name)
+            remote, rname = splitremotename(name)
 
-        # skip old data that didn't write the name (only wrote the alias)
-        if not rname:
-            continue
+            # skip old data that didn't write the name (only wrote the alias)
+            if not rname:
+                continue
 
-        yield node, nametype, remote, rname
-
-    f.close()
+            yield node, nametype, remote, rname
 
 
 def readbookmarknames(repo, remote):
