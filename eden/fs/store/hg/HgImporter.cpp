@@ -85,11 +85,7 @@ DEFINE_string(
 DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
 #endif
 
-#if defined(__APPLE__) || defined(EDEN_WIN)
 constexpr bool kEnableHgImportSubcommand = true;
-#else
-constexpr bool kEnableHgImportSubcommand = false;
-#endif
 
 DEFINE_bool(
     hgImportUseDebugSubcommand,
