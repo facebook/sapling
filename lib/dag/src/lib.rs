@@ -12,3 +12,6 @@
 pub mod idmap;
 pub mod segment;
 pub mod spanset;
+
+#[cfg(test)]
+mod tests;

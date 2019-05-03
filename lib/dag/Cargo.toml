@@ -14,6 +14,7 @@ indexmap = "1.0.1"
 tempfile = "3.0.7"
 
 [dev-dependencies]
+drawdag = { path = "../drawdag" }
 minibench = { path = "../minibench" }
 quickcheck = "0.6"
 
