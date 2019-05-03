@@ -26,3 +26,4 @@ target_link_libraries(
   hg_store_tester
     eden_store_hg
 )
+add_subdirectory(test)

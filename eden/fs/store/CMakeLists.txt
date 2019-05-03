@@ -20,3 +20,4 @@ target_link_libraries(
 add_subdirectory(hg)
 add_subdirectory(git)
 add_subdirectory(mononoke)
+add_subdirectory(test)

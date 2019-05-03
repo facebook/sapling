@@ -40,14 +40,14 @@ TEST(IoFuture, read) {
 
   // Wait for READ readiness
   auto f = waitForIO(&evb, sockets.first.fd(), EventHandler::READ, 1s);
-  evb.loopOnce();
+  evb.loopOnce(EVLOOP_NONBLOCK);
   EXPECT_FALSE(f.isReady());
 
   auto bytesSent = send(sockets.second.fd(), "foo", 3, 0);
   checkUnixError(bytesSent, "send failed");
   EXPECT_FALSE(f.isReady());
 
-  evb.loopOnce();
+  evb.loopOnce(EVLOOP_NONBLOCK);
   EXPECT_TRUE(f.isReady());
 }
 

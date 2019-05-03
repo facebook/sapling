@@ -9,3 +9,4 @@ target_link_libraries(
     eden_service
     Folly::folly
 )
+add_subdirectory(test)

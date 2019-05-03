@@ -79,8 +79,13 @@ TEST(proc_util, splitTest) {
   EXPECT_EQ(kvPair.second, "");
 }
 
+static AbsolutePath dataPath(PathComponentPiece name) {
+  auto thisFile = realpath(__FILE__);
+  return thisFile.dirname() + "test-data"_relpath + name;
+}
+
 TEST(proc_util, procStatusRssBytes) {
-  auto procPath = realpath("eden/fs/utils/test/test-data/ProcStatus.txt");
+  auto procPath = dataPath("ProcStatus.txt"_pc);
   std::ifstream input(procPath.c_str());
   auto statMap = proc_util::parseProcStatus(input);
   auto rssBytes = proc_util::getUnsignedLongLongValue(
@@ -92,7 +97,7 @@ TEST(proc_util, procStatusRssBytes) {
 }
 
 TEST(proc_util, procStatusSomeInvalidInput) {
-  auto procPath = realpath("eden/fs/utils/test/test-data/ProcStatusError.txt");
+  auto procPath = dataPath("ProcStatusError.txt"_pc);
   std::ifstream input(procPath.c_str());
   auto statMap = proc_util::parseProcStatus(input);
   EXPECT_EQ(statMap["Name"], "edenfs");
@@ -121,7 +126,7 @@ TEST(proc_util, procStatusNoThrow) {
 }
 
 TEST(proc_util, procSmapsPrivateBytes) {
-  auto procPath = realpath("eden/fs/utils/test/test-data/ProcSmapsSimple.txt");
+  auto procPath = dataPath("ProcSmapsSimple.txt"_pc);
   std::ifstream input(procPath.c_str());
   auto smapsListOfMaps = proc_util::parseProcSmaps(input);
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps).value();
@@ -129,15 +134,14 @@ TEST(proc_util, procSmapsPrivateBytes) {
 }
 
 TEST(proc_util, procSmapsSomeInvalidInput) {
-  auto procPath = realpath("eden/fs/utils/test/test-data/ProcSmapsError.txt");
+  auto procPath = dataPath("ProcSmapsError.txt"_pc);
   auto smapsListOfMaps = proc_util::loadProcSmaps(procPath.c_str());
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps).value();
   EXPECT_EQ(privateBytes, 4096);
 }
 
 TEST(proc_util, procSmapsUnknownFormat) {
-  auto procPath =
-      realpath("eden/fs/utils/test/test-data/ProcSmapsUnknownFormat.txt");
+  auto procPath = dataPath("ProcSmapsUnknownFormat.txt"_pc);
   auto smapsListOfMaps = proc_util::loadProcSmaps(procPath.c_str());
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps);
   EXPECT_EQ(privateBytes, std::nullopt);

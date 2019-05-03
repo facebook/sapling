@@ -800,42 +800,24 @@ TEST(PathFuncs, localDirCreateRemove) {
   ASSERT_FALSE(removeRecursively(topDir));
 }
 
-// std::string is nothrow move constructible and assignable, so the
-// path types should be as well.
-static_assert(
-    std::is_nothrow_move_constructible<AbsolutePath>::value,
-    "AbsolutePath should be nothrow move constructible");
-static_assert(
-    std::is_nothrow_move_constructible<AbsolutePathPiece>::value,
-    "AbsolutePathPiece should be nothrow move constructible");
-static_assert(
-    std::is_nothrow_move_constructible<RelativePath>::value,
-    "RelativePath should be nothrow move constructible");
-static_assert(
-    std::is_nothrow_move_constructible<RelativePathPiece>::value,
-    "RelativePathPiece should be nothrow move constructible");
-static_assert(
-    std::is_nothrow_move_constructible<PathComponent>::value,
-    "PathComponent should be nothrow move constructible");
-static_assert(
-    std::is_nothrow_move_constructible<PathComponentPiece>::value,
-    "PathComponentPiece should be nothrow move constructible");
+TEST(PathFuncs, noThrow) {
+  // if std::string is nothrow move constructible and assignable, the
+  // path types should be as well.
+  if (std::is_nothrow_move_constructible<std::string>::value) {
+    ASSERT_TRUE(std::is_nothrow_move_constructible<AbsolutePath>::value);
+    ASSERT_TRUE(std::is_nothrow_move_constructible<AbsolutePathPiece>::value);
+    ASSERT_TRUE(std::is_nothrow_move_constructible<RelativePath>::value);
+    ASSERT_TRUE(std::is_nothrow_move_constructible<RelativePathPiece>::value);
+    ASSERT_TRUE(std::is_nothrow_move_constructible<PathComponent>::value);
+    ASSERT_TRUE(std::is_nothrow_move_constructible<PathComponentPiece>::value);
+  }
 
-static_assert(
-    std::is_nothrow_move_assignable<AbsolutePath>::value,
-    "AbsolutePath should be nothrow move assignable");
-static_assert(
-    std::is_nothrow_move_assignable<AbsolutePathPiece>::value,
-    "AbsolutePathPiece should be nothrow move assignable");
-static_assert(
-    std::is_nothrow_move_assignable<RelativePath>::value,
-    "RelativePath should be nothrow move assignable");
-static_assert(
-    std::is_nothrow_move_assignable<RelativePathPiece>::value,
-    "RelativePathPiece should be nothrow move assignable");
-static_assert(
-    std::is_nothrow_move_assignable<PathComponent>::value,
-    "PathComponent should be nothrow move assignable");
-static_assert(
-    std::is_nothrow_move_assignable<PathComponentPiece>::value,
-    "PathComponentPiece should be nothrow move assignable");
+  if (std::is_nothrow_move_assignable<std::string>::value) {
+    ASSERT_TRUE(std::is_nothrow_move_assignable<AbsolutePath>::value);
+    ASSERT_TRUE(std::is_nothrow_move_assignable<AbsolutePathPiece>::value);
+    ASSERT_TRUE(std::is_nothrow_move_assignable<RelativePath>::value);
+    ASSERT_TRUE(std::is_nothrow_move_assignable<RelativePathPiece>::value);
+    ASSERT_TRUE(std::is_nothrow_move_assignable<PathComponent>::value);
+    ASSERT_TRUE(std::is_nothrow_move_assignable<PathComponentPiece>::value);
+  }
+}

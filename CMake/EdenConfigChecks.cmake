@@ -40,8 +40,11 @@ include_directories(${FBTHRIFT_INCLUDE_DIR})
 
 find_package(yarpl CONFIG REQUIRED)
 find_package(rsocket CONFIG REQUIRED)
+
 find_package(GMock MODULE REQUIRED)
 include_directories(${GMOCK_INCLUDEDIR} ${LIBGMOCK_INCLUDE_DIR})
+include(GoogleTest)
+enable_testing()
 
 find_package(OpenSSL MODULE REQUIRED)
 
