@@ -10,6 +10,7 @@ vlqencoding = { path = "../vlqencoding" }
 byteorder = "1.2.7"
 failure = "0.1.5"
 fs2 = "0.4.3"
+indexmap = "1.0.1"
 tempfile = "3.0.7"
 
 [dev-dependencies]

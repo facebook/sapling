@@ -13,6 +13,7 @@ use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use failure::{bail, Fallible};
 use fs2::FileExt;
 use indexedlog::log;
+use indexmap::set::IndexSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fs::{self, File};
 use std::io::Cursor;
@@ -252,6 +253,113 @@ impl Dag {
             if low + last_threshold <= high {
                 self.insert(0, low, high, &current_parents)?;
             }
+        }
+
+        Ok(())
+    }
+
+    /// Find segments that covers `id..` range at the given level.
+    fn next_segments(&self, id: Id, level: Level) -> Fallible<Vec<Segment>> {
+        let lower_bound = Self::serialize_lookup_key(id, level);
+        let upper_bound = [level + 1];
+        let mut result = Vec::new();
+        for entry in self
+            .log
+            .lookup_range(Self::INDEX_HEAD, (&lower_bound[..])..&upper_bound)?
+        {
+            let (_, values) = entry?;
+            for value in values {
+                result.push(Segment(value?));
+            }
+        }
+        Ok(result)
+    }
+
+    /// Incrementally build high level segments at the given `level`.
+    ///
+    /// The new, high level segments are built on top of the lower level
+    /// (`level - 1`) segments. Each high level segment covers at most `size`
+    /// `level - 1` segments.
+    ///
+    /// If `drop_last` is `true`, the last segment is dropped because it's
+    /// likely to be incomplete. This helps reduce fragmentation if segments
+    /// are built frequently.
+    pub fn build_high_level_segments(
+        &mut self,
+        level: Level,
+        size: usize,
+        drop_last: bool,
+    ) -> Fallible<()> {
+        assert!(level > 0);
+
+        // `get_parents` is on the previous level of segments.
+        let get_parents = |head: Id| -> Fallible<Vec<Id>> {
+            if let Some(seg) = self.find_segment_by_head(head, level - 1)? {
+                seg.parents()
+            } else {
+                panic!("programming error: get_parents called with wrong head");
+            }
+        };
+
+        let new_segments = {
+            let low = self.next_free_id(level)?;
+
+            // Find all segments on the previous level that haven't been built.
+            let segments: Vec<_> = self.next_segments(low, level - 1)?;
+
+            // Sanity check: They should be sorted and connected.
+            for i in 1..segments.len() {
+                assert_eq!(segments[i - 1].high()? + 1, segments[i].span()?.low);
+            }
+
+            // Build the graph from the first head. `low_idx` is the
+            // index of `segments`.
+            let find_segment = |low_idx: usize| -> Fallible<_> {
+                let segment_low = segments[low_idx].span()?.low;
+                let mut heads = BTreeSet::new();
+                let mut parents = IndexSet::new();
+                let mut candidate = None;
+                for i in low_idx..segments.len().min(low_idx + size) {
+                    let head = segments[i].head()?;
+                    heads.insert(head);
+                    let direct_parents = get_parents(head)?;
+                    for p in &direct_parents {
+                        if *p < segment_low {
+                            // No need to remove p from heads, since it cannot be a head.
+                            parents.insert(*p);
+                        } else {
+                            heads.remove(p);
+                        }
+                    }
+                    if heads.len() == 1 {
+                        candidate = Some((i, segment_low, head, parents.len()));
+                    }
+                }
+                // There must be at least one valid high-level segment,
+                // because `segments[low_idx]` is such a high-level segment.
+                let (new_idx, low, high, parent_count) = candidate.unwrap();
+                let parents = parents.into_iter().take(parent_count).collect::<Vec<Id>>();
+                Ok((new_idx, low, high, parents))
+            };
+
+            let mut idx = 0;
+            let mut new_segments = Vec::new();
+            while idx < segments.len() {
+                let segment_info = find_segment(idx)?;
+                idx = segment_info.0 + 1;
+                new_segments.push(segment_info);
+            }
+
+            // Drop the last segment. It could be incomplete.
+            if drop_last {
+                new_segments.pop();
+            }
+
+            new_segments
+        };
+
+        for (_, low, high, parents) in new_segments {
+            self.insert(level, low, high, &parents)?;
         }
 
         Ok(())
