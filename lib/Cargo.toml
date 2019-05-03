@@ -6,6 +6,7 @@ members = [
     "cpython-ext",
     "cpython-failure",
     "dag",
+    "drawdag",
     "edenapi",
     "encoding",
     "hg_watchman_client",
