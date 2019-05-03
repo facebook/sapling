@@ -17,6 +17,7 @@ from edenscm.mercurial import (
     error,
     hg,
     mutation,
+    node as nodemod,
     phases,
     registrar,
     scmutil,
@@ -30,11 +31,55 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
+def editmessages(repo, revs):
+    """Invoke editor to edit messages in batch. Return {node: new message}"""
+    nodebanners = []
+    editortext = ""
+
+    for rev in revs:
+        ctx = repo[rev]
+        message = ctx.description()
+        short = nodemod.short(ctx.node())
+        bannerstart = cmdutil.hgprefix(_("Begin of commit %s") % short)
+        bannerend = cmdutil.hgprefix(_("End of commit %s") % short)
+        nodebanners.append((ctx.node(), bannerstart, bannerend))
+        if editortext:
+            editortext += cmdutil.hgprefix("-" * 77) + "\n"
+        else:
+            editortext += (
+                cmdutil.hgprefix(
+                    _(
+                        "Editing %s commits in batch. Do not change lines starting with 'HG:'."
+                    )
+                    % len(revs)
+                )
+                + "\n"
+            )
+
+        editortext += "%s\n%s\n%s\n" % (bannerstart, message, bannerend)
+
+    result = {}
+    ui = repo.ui
+    newtext = ui.edit(editortext, ui.username(), action="metaedit")
+    for node, bannerstart, bannerend in nodebanners:
+        if bannerstart in newtext and bannerend in newtext:
+            newmessage = newtext.split(bannerstart, 1)[1].split(bannerend, 1)[0]
+            result[node] = newmessage
+
+    return result
+
+
 @command(
     "^metaedit",
     [
         ("r", "rev", [], _("revision to edit")),
         ("", "fold", False, _("fold specified revisions into one")),
+        (
+            "",
+            "batch",
+            False,
+            _("edit messages of multiple commits in one editor invocation"),
+        ),
     ]
     + commands.commitopts
     + commands.commitopts2
@@ -80,6 +125,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
 
     with repo.wlock(), repo.lock():
         revs = scmutil.revrange(repo, revs)
+        msgmap = {}  # {node: message}, predefined messages, currently used by --batch
 
         if opts["fold"]:
             root, head = fold._foldcheck(repo, revs)
@@ -109,6 +155,8 @@ def metaedit(ui, repo, templ, *revs, **opts):
                         for c in allctx
                     ]
                 else:
+                    if opts["batch"] and len(revs) > 1:
+                        msgmap = editmessages(repo, revs)
                     msgs = [head.description()]
                 commitopts["message"] = "\n".join(msgs)
                 commitopts["edit"] = True
@@ -143,6 +191,11 @@ def metaedit(ui, repo, templ, *revs, **opts):
                     allctxopt = sorted(allctxopt, key=lambda copt: copt["ctx"].rev())
 
                 def _rewritesingle(c, _commitopts):
+                    # Predefined message overrides other message editing choices.
+                    msg = msgmap.get(c.node())
+                    if msg is not None:
+                        _commitopts["message"] = msg
+                        _commitopts["edit"] = False
                     if _commitopts.get("edit", False):
                         _commitopts["message"] = (
                             "HG: Commit message of changeset %s\n%s"

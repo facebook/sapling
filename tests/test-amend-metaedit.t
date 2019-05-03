@@ -405,3 +405,65 @@ Test empty commit
   |
   o  0:426bada5c675@default(draft) A
   
+Test editing multiple commits in batch (--batch)
+
+  $ newrepo multi-commits
+  $ drawdag << 'EOS'
+  > A3
+  > |
+  > A2
+  > |
+  > A1
+  > EOS
+
+  $ HGEDITOR=cat hg metaedit --batch -r 'all()'
+  HG: Editing 3 commits in batch. Do not change lines starting with 'HG:'.
+  HG: Begin of commit b008d5d798a3
+  A1
+  HG: End of commit b008d5d798a3
+  HG: -----------------------------------------------------------------------------
+  HG: Begin of commit 9083513d0ea9
+  A2
+  HG: End of commit 9083513d0ea9
+  HG: -----------------------------------------------------------------------------
+  HG: Begin of commit dad6906767c0
+  A3
+  HG: End of commit dad6906767c0
+  nothing changed
+  [1]
+  $ hg log -Gr 'all()' -T '{desc}'
+  o  A3
+  |
+  o  A2
+  |
+  o  A1
+  
+
+#if no-osx
+(BSD-flavored sed has an incompatible -'i')
+  $ HGEDITOR="s'e'd -i 's/A/B/g'" hg metaedit --batch -r 'all()'
+  $ hg log -Gr 'all()' -T '{desc}'
+  o  B3
+  |
+  o  B2
+  |
+  o  B1
+  
+#endif
+
+Editing a single commit using --batch uses the single-commit template
+
+  $ HGEDITOR=cat hg metaedit --batch -r tip
+  HG: Commit message of changeset 758b5e8264f6
+  B3
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added A3
+  nothing changed
+  [1]
+
