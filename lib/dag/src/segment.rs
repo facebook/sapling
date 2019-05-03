@@ -210,6 +210,54 @@ impl Dag {
     }
 }
 
+// Build segments.
+impl Dag {
+    /// Incrementally build flat (level 0) segments towards `high` (inclusive).
+    ///
+    /// `get_parents` describes the DAG. Its input and output are `Id`s.
+    ///
+    /// `last_threshold` decides the minimal size for the last incomplete flat
+    /// segment. Setting it to 0 will makes sure flat segments cover the given
+    /// `high - 1`, with the downside of increasing fragmentation.  Setting it
+    /// to a larger value will reduce fragmentation, with the downside of
+    /// [`Dag`] covers less ids.
+    pub fn build_flat_segments<F>(
+        &mut self,
+        high: Id,
+        get_parents: &F,
+        last_threshold: Id,
+    ) -> Fallible<()>
+    where
+        F: Fn(Id) -> Fallible<Vec<Id>>,
+    {
+        let low = self.next_free_id(0)?;
+
+        let mut current_low = None;
+        let mut current_parents = Vec::new();
+        for id in low..=high {
+            let parents = get_parents(id)?;
+            if parents.len() != 1 || parents[0] + 1 != id {
+                // Must start a new segment.
+                if let Some(low) = current_low {
+                    debug_assert!(id > 0);
+                    self.insert(0, low, id - 1, &current_parents)?;
+                }
+                current_parents = parents;
+                current_low = Some(id);
+            }
+        }
+
+        // For the last flat segment, only build it if its length satisfies the threshold.
+        if let Some(low) = current_low {
+            if low + last_threshold <= high {
+                self.insert(0, low, high, &current_parents)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl<'a> SyncableDag<'a> {
     /// Write pending changes to disk.
     ///
