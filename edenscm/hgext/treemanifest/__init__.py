@@ -455,6 +455,7 @@ def wraprepo(repo):
 
             self._prefetchtrees("", mfnodes, basemfnodes, [])
 
+        @perftrace.tracefunc("Fetch Trees")
         def _prefetchtrees(
             self, rootdir, mfnodes, basemfnodes, directories, depth=None
         ):
