@@ -64,6 +64,187 @@ pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
 // for the worse case (i.e. each flat segment has length 1). Each segment has
 // only 1 byte overhead.
 
+impl Dag {
+    const INDEX_HEAD: usize = 0;
+    const KEY_LEN: usize = Segment::OFFSET_DELTA;
+
+    /// Open [`Dag`] at the given directory. Create it on demand.
+    pub fn open(path: impl AsRef<Path>) -> Fallible<Self> {
+        let path = path.as_ref();
+        let log = log::OpenOptions::new()
+            .create(true)
+            .index("head", |_| {
+                vec![log::IndexOutput::Reference(0..Self::KEY_LEN as u64)]
+            })
+            .open(path)?;
+        // The first byte of the largest key is the maximum level.
+        let max_level = match log.lookup_range(Self::INDEX_HEAD, ..)?.rev().nth(0) {
+            None => 0,
+            Some(key) => key?.0.get(0).cloned().unwrap_or(0),
+        };
+        Ok(Self {
+            log,
+            path: path.to_path_buf(),
+            max_level,
+        })
+    }
+
+    /// Find segment by level and head.
+    pub(crate) fn find_segment_by_head(&self, head: Id, level: u8) -> Fallible<Option<Segment>> {
+        let key = Self::serialize_lookup_key(head, level);
+        match self.log.lookup(Self::INDEX_HEAD, &key)?.nth(0) {
+            None => Ok(None),
+            Some(bytes) => Ok(Some(Segment(bytes?))),
+        }
+    }
+
+    /// Find segment of the specified level containing the given id.
+    pub(crate) fn find_segment_including_id(&self, id: Id, level: u8) -> Fallible<Option<Segment>> {
+        debug_assert_eq!(
+            level, 0,
+            "logic error: find_segment_by_value is only meaningful for level 0"
+        );
+        let low = Self::serialize_lookup_key(id, level);
+        let high = [level + 1];
+        let iter = self
+            .log
+            .lookup_range(Self::INDEX_HEAD, &low[..]..&high[..])?;
+        for entry in iter {
+            let (_, entries) = entry?;
+            for entry in entries {
+                let entry = entry?;
+                let seg = Segment(entry);
+                if seg.span()?.low > id {
+                    return Ok(None);
+                }
+                // low <= rev
+                debug_assert!(seg.high()? >= id); // by range query
+                return Ok(Some(seg));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Add a new segment.
+    ///
+    /// For simplicity, it does not check if the new segment overlaps with
+    /// an existing segment (which is a logic error). Those checks can be
+    /// offline.
+    pub fn insert(&mut self, level: Level, low: Id, high: Id, parents: &[Id]) -> Fallible<()> {
+        let buf = Segment::serialize(level, low, high, parents);
+        self.log.append(buf)?;
+        Ok(())
+    }
+
+    /// Return the next unused id for segments of the specified level.
+    ///
+    /// Useful for building segments incrementally.
+    pub fn next_free_id(&self, level: Level) -> Fallible<Id> {
+        let prefix = [level];
+        match self
+            .log
+            .lookup_prefix(Self::INDEX_HEAD, &prefix)?
+            .rev()
+            .nth(0)
+        {
+            None => Ok(0),
+            Some(result) => {
+                let (key, _) = result?;
+                // This is an abuse of Segment. Segment expects the input buffer
+                // to be a complete entry. This input buffer is the key, which is
+                // the prefix of a complete entry (see `index` in `open`). However,
+                // the prefix is enough to answer the "high" question.
+                Ok(Segment(&key).high()? + 1)
+            }
+        }
+    }
+
+    /// Return a [`SyncableDag`] instance that provides race-free
+    /// filesytem read and write access by taking an exclusive lock.
+    ///
+    /// The [`SyncableDag`] instance provides a `sync` method that
+    /// actually writes changes to disk.
+    ///
+    /// Block if another instance is taking the lock.
+    ///
+    /// Panic if there are pending in-memory writes.
+    pub fn prepare_filesystem_sync(&mut self) -> Fallible<SyncableDag> {
+        assert!(
+            self.log.iter_dirty().next().is_none(),
+            "programming error: prepare_filesystem_sync must be called without dirty in-memory entries",
+        );
+
+        // Take a filesystem lock. The file name 'lock' is taken by indexedlog
+        // running on Windows, so we choose another file name here.
+        let lock_file = {
+            let mut path = self.path.clone();
+            path.push("wlock");
+            File::open(&path).or_else(|_| {
+                fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&path)
+            })?
+        };
+        lock_file.lock_exclusive()?;
+
+        // Reload. So we get latest data.
+        self.log.sync()?;
+
+        Ok(SyncableDag {
+            dag: self,
+            lock_file,
+        })
+    }
+
+    // Used internally to generate the index key for lookup
+    fn serialize_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEN] {
+        let mut buf = [0u8; Self::KEY_LEN];
+        {
+            let mut cur = Cursor::new(&mut buf[..]);
+            cur.write_u8(level).unwrap();
+            cur.write_u64::<BigEndian>(value).unwrap();
+            debug_assert_eq!(cur.position(), Self::KEY_LEN as u64);
+        }
+        buf
+    }
+}
+
+impl<'a> SyncableDag<'a> {
+    /// Write pending changes to disk.
+    ///
+    /// This method must be called if there are new entries inserted.
+    /// Otherwise [`SyncableDag`] will panic once it gets dropped.
+    pub fn sync(&mut self) -> Fallible<()> {
+        self.dag.log.sync()?;
+        Ok(())
+    }
+}
+
+impl<'a> Deref for SyncableDag<'a> {
+    type Target = Dag;
+
+    fn deref(&self) -> &Self::Target {
+        self.dag
+    }
+}
+
+impl<'a> DerefMut for SyncableDag<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.dag
+    }
+}
+
+impl<'a> Drop for SyncableDag<'a> {
+    fn drop(&mut self) {
+        // TODO: handles `sync` failures gracefully.
+        assert!(
+            self.dag.log.iter_dirty().next().is_none(),
+            "programming error: sync must be called before dropping WritableIdMap"
+        );
+    }
+}
+
 impl<'a> Segment<'a> {
     const OFFSET_LEVEL: usize = 0;
     const OFFSET_HIGH: usize = Self::OFFSET_LEVEL + 1;
@@ -143,5 +324,62 @@ mod tests {
                 && node.parents().unwrap() == parents
         }
         quickcheck(prop as fn(Level, Id, Id, Vec<Id>) -> bool);
+    }
+
+    #[test]
+    fn test_segment_basic_lookups() {
+        let dir = tempdir().unwrap();
+        let mut dag = Dag::open(dir.path()).unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap(), 0);
+        assert_eq!(dag.next_free_id(1).unwrap(), 0);
+
+        let mut dag = dag.prepare_filesystem_sync().unwrap();
+
+        dag.insert(0, 0, 50, &vec![]).unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap(), 51);
+        dag.insert(0, 51, 100, &vec![50]).unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap(), 101);
+        dag.insert(0, 101, 150, &vec![100]).unwrap();
+        assert_eq!(dag.next_free_id(0).unwrap(), 151);
+        assert_eq!(dag.next_free_id(1).unwrap(), 0);
+        dag.insert(1, 0, 100, &vec![]).unwrap();
+        assert_eq!(dag.next_free_id(1).unwrap(), 101);
+        dag.insert(1, 101, 150, &vec![100]).unwrap();
+        assert_eq!(dag.next_free_id(1).unwrap(), 151);
+        dag.sync().unwrap();
+
+        // Helper functions to make the below lines shorter.
+        let low_by_head = |head, level| match dag.find_segment_by_head(head, level) {
+            Ok(Some(seg)) => seg.span().unwrap().low as i64,
+            Ok(None) => -1,
+            _ => panic!("unexpected error"),
+        };
+
+        let low_by_id = |id, level| match dag.find_segment_including_id(id, level) {
+            Ok(Some(seg)) => seg.span().unwrap().low as i64,
+            Ok(None) => -1,
+            _ => panic!("unexpected error"),
+        };
+
+        assert_eq!(low_by_head(0, 0), -1);
+        assert_eq!(low_by_head(49, 0), -1);
+        assert_eq!(low_by_head(50, 0), 0);
+        assert_eq!(low_by_head(51, 0), -1);
+        assert_eq!(low_by_head(150, 0), 101);
+        assert_eq!(low_by_head(100, 1), 0);
+
+        assert_eq!(low_by_id(0, 0), 0);
+        assert_eq!(low_by_id(30, 0), 0);
+        assert_eq!(low_by_id(49, 0), 0);
+        assert_eq!(low_by_id(50, 0), 0);
+        assert_eq!(low_by_id(51, 0), 51);
+        assert_eq!(low_by_id(52, 0), 51);
+        assert_eq!(low_by_id(99, 0), 51);
+        assert_eq!(low_by_id(100, 0), 51);
+        assert_eq!(low_by_id(101, 0), 101);
+        assert_eq!(low_by_id(102, 0), 101);
+        assert_eq!(low_by_id(149, 0), 101);
+        assert_eq!(low_by_id(150, 0), 101);
+        assert_eq!(low_by_id(151, 0), -1);
     }
 }
