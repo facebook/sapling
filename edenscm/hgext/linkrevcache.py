@@ -47,6 +47,13 @@ Config examples::
     # - When set to True, filelog will be read and existing linkrevs won't be
     #   stored in the database.
     readfilelog = False
+
+    # Upper bound fo memory usage for debugbuildlinkrevcache (default: 2441406)
+    # - debugbuildlinkrevcache will try to reduce memory to sastify the limit
+    # - has no effect if readfilelog is False
+    # - has no effect for non-Linux platforms
+    # - it is a best effort and the program might fail to sastify the limit
+    maxpagesize = 2441406
 """
 
 import os
@@ -342,9 +349,20 @@ def debugbuildlinkrevcache(ui, repo, *pats, **opts):
         db.close()
 
 
+def _getrsspagecount():
+    """Get RSS memory usage in pages. Only works on Linux"""
+    try:
+        # The second column is VmRSS. See "man procfs".
+        return sum(map(int, open("/proc/self/statm").read().split()[1]))
+    except Exception:
+        return 0
+
+
 def _buildlinkrevcache(ui, repo, db, end):
     checkancestor = ui.configbool("linkrevcache", "checkancestor", True)
     readfilelog = ui.configbool("linkrevcache", "readfilelog", True)
+    # 2441406: 10G by default (assuming page size = 4K).
+    maxpagesize = ui.configint("linkrevcache", "maxpagesize") or 2441406
 
     repo = repo.unfiltered()
     cl = repo.changelog
@@ -355,6 +373,10 @@ def _buildlinkrevcache(ui, repo, db, end):
 
     def _getfilelog(path):
         if path not in filelogcache:
+            # Make memory usage bounded
+            if len(filelogcache) % 1000 == 0:
+                if _getrsspagecount() > maxpagesize:
+                    filelogcache.clear()
             filelogcache[path] = filelog.filelog(repo.svfs, path)
         return filelogcache[path]
 
