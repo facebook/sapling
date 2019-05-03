@@ -12,6 +12,7 @@
 # the python modules in the source tree doesn't match their
 # runtime names; we therefore massage them into the installation
 # image, and pull in a couple of third party dependencies from pypi.
+import argparse
 import os
 import shutil
 import subprocess
@@ -22,7 +23,7 @@ from pipes import quote as shellquote
 
 
 # Where to find the eden OSS directory; it contains this script.
-OSS_DIR = os.path.abspath(os.path.dirname(__file__))
+DEFAULT_OSS_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # third party deps to include in the executable
 DEPS = ["future", "six", "toml"]
@@ -37,8 +38,6 @@ MODULES = [
     ("eden/cli", "eden/cli"),
     # A helper for the eden thrift client
     ("eden/fs/service", "eden/thrift"),
-    # The thrift runtime
-    ("external/fbthrift/thrift/lib/py", "thrift"),
 ]
 
 
@@ -56,7 +55,7 @@ def run_cmd(cmd, env=None, cwd=None):
     subprocess.check_call(cmd, env=env, cwd=cwd)
 
 
-def generate_thrift_code(gen_dir):
+def generate_thrift_code(thrift_compiler, oss_dir, gen_dir):
     """ Generate python thrift clients for a couple of things """
     thrift_files = [
         "eden/fs/service/eden.thrift",
@@ -66,14 +65,14 @@ def generate_thrift_code(gen_dir):
     for t in thrift_files:
         run_cmd(
             [
-                os.path.join(OSS_DIR, "external/install/bin/thrift1"),
+                thrift_compiler,
                 "-I",
-                OSS_DIR,
+                oss_dir,
                 "-gen",
                 "py:new_style",
                 "-out",
                 gen_dir,
-                os.path.join(OSS_DIR, t),
+                os.path.join(oss_dir, t),
             ]
         )
 
@@ -115,21 +114,32 @@ def move_site_packages_to_root(instdir):
             os.rename(os.path.join(sp, child), os.path.join(instdir, child))
 
 
-if len(sys.argv) > 1:
-    PYTHON = sys.argv[1]
-else:
-    PYTHON = "/usr/bin/env python3"
+parser = argparse.ArgumentParser()
+parser.add_argument("python")
+parser.add_argument("--oss_dir", default=DEFAULT_OSS_DIR)
+parser.add_argument(
+    "--thrift-compiler",
+    default=os.path.join(DEFAULT_OSS_DIR, "external/install/bin/thrift1"),
+)
+parser.add_argument(
+    "--thrift-py",
+    default=os.path.join(DEFAULT_OSS_DIR, "external/fbthrift/thrift/lib/py"),
+)
+args = parser.parse_args()
 
 with tempfile.TemporaryDirectory() as instdir:
-    generate_thrift_code(instdir)
+    generate_thrift_code(args.thrift_compiler, args.oss_dir, instdir)
 
     for src_dir, dest_prefix in MODULES:
-        copy_py(os.path.join(OSS_DIR, src_dir), instdir, dest_prefix)
+        copy_py(os.path.join(args.oss_dir, src_dir), instdir, dest_prefix)
+
+    # And the python thrift runtime
+    copy_py(args.thrift_py, instdir, "thrift")
 
     for dep in DEPS:
         # There's no supported way to call `pip` in process, so we just
         # have to shell out and install it where we want it.
-        run_cmd([sys.executable, "-m", "pip", "install", dep, "--prefix", instdir])
+        run_cmd([args.python, "-m", "pip", "install", dep, "--prefix", instdir])
 
     move_site_packages_to_root(instdir)
     # run_cmd(["find", instdir])
@@ -140,5 +150,5 @@ with tempfile.TemporaryDirectory() as instdir:
     # that we'll keep running, but it seems more likely that we will than if we
     # hard coded it.
     zipapp.create_archive(
-        instdir, target="eden.zip", interpreter=PYTHON, main="eden.cli.main:main"
+        instdir, target="eden.zip", interpreter=args.python, main="eden.cli.main:main"
     )
