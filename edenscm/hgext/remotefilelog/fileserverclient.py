@@ -449,6 +449,7 @@ class fileserverclient(object):
                     allmisses.update(cache.receive(prog))
 
                 misses = map(lambda key: key.split("\0"), allmisses)
+                perftrace.tracevalue("Memcache Misses", len(misses))
             except CacheConnectionError:
                 misses = fileids
                 self.ui.warn(
@@ -552,6 +553,7 @@ class fileserverclient(object):
 
             global fetchmisses
             missedlen = len(missed)
+            perftrace.tracevalue("Memcache Misses", len(missed))
             fetchmisses += missedlen
 
             fromcache = total - missedlen
