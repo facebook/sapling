@@ -291,6 +291,12 @@ impl SpanSet {
             ),
         }
     }
+
+    /// Internal use only. Append a span, which must have lower boundaries
+    /// than existing spans.
+    pub(crate) fn push_span(&mut self, span: Span) {
+        push_with_union(&mut self.spans, span);
+    }
 }
 
 /// Push a span to `Vec<Span>`. Try to union them in-place.

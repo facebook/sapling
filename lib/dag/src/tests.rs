@@ -146,6 +146,67 @@ Lv3: 0-21[]"#
     );
 }
 
+#[test]
+fn test_segment_ancestors_example1() {
+    // DAG from segmented-changelog.pdf
+    let ascii_dag = r#"
+            2-3-\     /--8--9--\
+        0-1------4-5-6-7--------10-11"#;
+    let result = build_segments(ascii_dag, "11", 3, 3);
+    let dag = result.dag;
+
+    for (id, count) in vec![
+        (11, 12),
+        (10, 11),
+        (9, 9),
+        (8, 8),
+        (7, 8),
+        (6, 7),
+        (5, 6),
+        (4, 5),
+        (3, 2),
+        (2, 1),
+        (1, 2),
+        (0, 1),
+    ] {
+        assert_eq!(dag.ancestors(id).unwrap().count(), count);
+    }
+
+    for (a, b, ancestor) in vec![
+        (10, 3, 3.into()),
+        (11, 0, 0.into()),
+        (11, 10, 10.into()),
+        (11, 9, 9.into()),
+        (3, 0, None),
+        (7, 1, 1.into()),
+        (9, 2, 2.into()),
+        (9, 7, 6.into()),
+    ] {
+        assert_eq!(dag.ancestor(a, b).unwrap(), ancestor);
+    }
+}
+
+#[test]
+fn test_segment_multiple_gcas() {
+    let ascii_dag = r#"
+        B---C
+         \ /
+        A---D"#;
+    let result = build_segments(ascii_dag, "C D", 3, 1);
+    assert_eq!(
+        result.ascii[1],
+        r#"
+        1---2
+         \ /
+        0---3
+Lv0: 0-0[] 1-1[] 2-2[0, 1] 3-3[0, 1]
+Lv1: 0-2[] 3-3[0, 1]"#
+    );
+    let dag = result.dag;
+    // This is kind of "undefined" whether it's 1 or 0.
+    assert_eq!(dag.ancestor(2, 3).unwrap(), Some(1));
+}
+
 // Test utilities
 
 impl IdMap {

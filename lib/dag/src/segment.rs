@@ -366,6 +366,49 @@ impl Dag {
     }
 }
 
+// Algorithms using SpanSet as output.
+impl Dag {
+    /// Calculate all ancestors reachable from the given `id`.
+    pub fn ancestors(&self, id: Id) -> Fallible<SpanSet> {
+        let mut result = SpanSet::empty();
+        let mut to_visit = BinaryHeap::new();
+        to_visit.push(id);
+
+        'outer: while let Some(id) = to_visit.pop() {
+            if result.contains(id) {
+                continue;
+            }
+            for level in (0..=self.max_level).rev() {
+                let seg = match level {
+                    0 => self.find_segment_including_id(id, 0)?,
+                    _ => self.find_segment_by_head(id, level)?,
+                };
+                if let Some(seg) = seg {
+                    let span = (seg.span()?.low..=id).into();
+                    result.push_span(span);
+                    for parent in seg.parents()? {
+                        to_visit.push(parent);
+                    }
+                    continue 'outer;
+                }
+            }
+            panic!("logic error: flat segments are expected to cover everything but they are not");
+        }
+
+        Ok(result)
+    }
+
+    /// Calculate one "greatest common ancestor" of two given `id`s.
+    ///
+    /// If there are no common ancestors, return None.
+    /// If there are multiple greatest common ancestors, return an arbitrarily
+    /// picked one.
+    pub fn ancestor(&self, a: Id, b: Id) -> Fallible<Option<Id>> {
+        let set = self.ancestors(a)?.intersection(&self.ancestors(b)?);
+        Ok(set.iter().nth(0))
+    }
+}
+
 impl<'a> SyncableDag<'a> {
     /// Write pending changes to disk.
     ///
