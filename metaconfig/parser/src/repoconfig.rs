@@ -10,8 +10,7 @@
 use serde_derive::Deserialize;
 use std::{
     collections::HashMap,
-    fs::File,
-    io::{BufReader, Read},
+    fs,
     num::NonZeroUsize,
     path::{Path, PathBuf},
     str,
@@ -93,7 +92,7 @@ impl RepoConfigs {
                     .into());
                 }
 
-                let content = Self::read_file(path.as_ref())?;
+                let content = fs::read(path)?;
                 let raw_config = toml::from_slice::<RawCommonConfig>(&content)?;
                 let mut tiers_num = 0;
                 let whitelisted_entries: Result<Vec<_>> = raw_config
@@ -156,16 +155,6 @@ impl RepoConfigs {
         Ok(None)
     }
 
-    fn read_file(path: &Path) -> Result<Vec<u8>> {
-        let file = File::open(path).context(format!("while opening {:?}", path))?;
-        let mut buf_reader = BufReader::new(file);
-        let mut contents = vec![];
-        buf_reader
-            .read_to_end(&mut contents)
-            .context(format!("while reading {:?}", path))?;
-        Ok(contents)
-    }
-
     fn read_single_repo_config(
         repo_config_path: &Path,
         config_root_path: &Path,
@@ -192,7 +181,7 @@ impl RepoConfigs {
             .into());
         }
 
-        let raw_config = toml::from_slice::<RawRepoConfig>(&Self::read_file(&config_file)?)?;
+        let raw_config = toml::from_slice::<RawRepoConfig>(&fs::read(&config_file)?)?;
 
         let hooks = raw_config.hooks.clone();
         // Easier to deal with empty vector than Option
@@ -231,7 +220,7 @@ impl RepoConfigs {
                     config_root_path.join(path)
                 };
 
-                let contents = Self::read_file(&path_adjusted)
+                let contents = fs::read(&path_adjusted)
                     .context(format!("while reading hook {:?}", path_adjusted))?;
                 let code = str::from_utf8(&contents)?;
                 let code = code.to_string();
