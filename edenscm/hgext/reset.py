@@ -101,7 +101,7 @@ def _revive(repo, rev):
             if ctx.obsolete():
                 torevive = unfi.set("::%d & obsolete()", ctx.rev())
                 obsolete.revive(torevive, operation="reset")
-        visibility.add(repo, ctx.node())
+        visibility.add(repo, [ctx.node()])
 
     try:
         revs = scmutil.revrange(repo, [rev])
