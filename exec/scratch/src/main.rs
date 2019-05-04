@@ -114,7 +114,10 @@ impl Config {
         let mut result = Self::default();
 
         let config_files = [
+            #[cfg(unix)]
             Some("/etc/scratch.toml".into()),
+            #[cfg(windows)]
+            Some("C:/ProgramData/facebook/scratch.toml".into()),
             Some(format!("{}/.scratch.toml", home_dir())),
             std::env::var("SCRATCH_CONFIG_PATH").ok(),
         ];
