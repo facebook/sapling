@@ -872,13 +872,18 @@ fn process_hg_sync_subcommand<'a>(
         Arc::new(args::open_sql(&matches, "books").expect("Failed to open the db with bookmarks"));
 
     match sub_m.subcommand() {
-        (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match (sub_m.value_of("set"), sub_m.is_present("skip-blobimport"), sub_m.is_present("dry-run")) {
+        (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match (
+            sub_m.value_of("set"),
+            sub_m.is_present("skip-blobimport"),
+            sub_m.is_present("dry-run"),
+        ) {
             (Some(..), true, ..) => {
                 future::err(err_msg("cannot pass both --set and --skip-blobimport")).boxify()
             }
-            (.., false, true) => {
-                future::err(err_msg("--dry-run is meaningless without --skip-blobimport")).boxify()
-            }
+            (.., false, true) => future::err(err_msg(
+                "--dry-run is meaningless without --skip-blobimport",
+            ))
+            .boxify(),
             (Some(new_value), false, false) => {
                 let new_value = i64::from_str_radix(new_value, 10).unwrap();
                 mutable_counters
@@ -927,47 +932,53 @@ fn process_hg_sync_subcommand<'a>(
                             // We'd like to skip, but we didn't find the current counter!
                             future::err(err_msg("cannot proceed without a counter")).boxify()
                         }
-                        (true, Some(counter)) => {
-                            bookmarks.skip_over_bookmark_log_entries_with_reason(
+                        (true, Some(counter)) => bookmarks
+                            .skip_over_bookmark_log_entries_with_reason(
                                 ctx.clone(),
                                 counter as u64,
                                 repo_id,
                                 BookmarkUpdateReason::Blobimport,
-                            ).and_then({
+                            )
+                            .and_then({
                                 cloned!(ctx, repo_id);
                                 move |maybe_new_counter| match (maybe_new_counter, dry_run) {
                                     (Some(new_counter), true) => {
-                                        info!(logger, "Counter for {:?} would be updated to {}", repo_id, new_counter);
+                                        info!(
+                                            logger,
+                                            "Counter for {:?} would be updated to {}",
+                                            repo_id,
+                                            new_counter
+                                        );
                                         future::ok(()).boxify()
                                     }
-                                    (Some(new_counter), false) => {
-                                        mutable_counters.set_counter(
+                                    (Some(new_counter), false) => mutable_counters
+                                        .set_counter(
                                             ctx.clone(),
                                             repo_id,
                                             LATEST_REPLAYED_REQUEST_KEY,
                                             new_counter as i64,
-                                            Some(counter)
+                                            Some(counter),
                                         )
-                                        .and_then(move |success| {
-                                            match success {
-                                                true => {
-                                                    info!(logger, "Counter for {:?} was updated to {}", repo_id, new_counter);
-                                                    future::ok(())
-                                                }
-                                                false => {
-                                                    future::err(err_msg("update conflicted"))
-                                                }
+                                        .and_then(move |success| match success {
+                                            true => {
+                                                info!(
+                                                    logger,
+                                                    "Counter for {:?} was updated to {}",
+                                                    repo_id,
+                                                    new_counter
+                                                );
+                                                future::ok(())
                                             }
+                                            false => future::err(err_msg("update conflicted")),
                                         })
-                                        .boxify()
-                                    }
-                                    (None, ..) => {
-                                        future::err(err_msg("no valid counter position to skip ahead to")).boxify()
-                                    }
+                                        .boxify(),
+                                    (None, ..) => future::err(err_msg(
+                                        "no valid counter position to skip ahead to",
+                                    ))
+                                    .boxify(),
                                 }
                             })
-                            .boxify()
-                        }
+                            .boxify(),
                     }
                 })
                 .boxify(),
@@ -998,7 +1009,7 @@ fn process_hg_sync_subcommand<'a>(
                             ctx,
                             counter,
                             repo_id,
-                            exclude_reason
+                            exclude_reason,
                         )
                     }
                 })
@@ -1015,10 +1026,7 @@ fn process_hg_sync_subcommand<'a>(
 
                             info!(
                                 logger,
-                                "Remaining {} to replay in {:?}: {}",
-                                name,
-                                repo_id,
-                                remaining
+                                "Remaining {} to replay in {:?}: {}", name, repo_id, remaining
                             );
                         }
                     }
@@ -1096,7 +1104,7 @@ fn main() -> Result<()> {
     let logger = args::get_logger(&matches);
     let blobstore_args = args::parse_blobstore_args(&matches);
 
-    let repo_id = args::get_repo_id(&matches);
+    let repo_id = args::get_repo_id(&matches)?;
 
     let future = match matches.subcommand() {
         (BLOBSTORE_FETCH, Some(sub_m)) => {

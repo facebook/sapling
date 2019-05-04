@@ -283,13 +283,13 @@ pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error =
         .right_future()
 }
 
-pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
+pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
     let repo_id = matches
         .value_of("repo-id")
-        .unwrap()
+        .ok_or(err_msg("Missing repo-id"))?
         .parse::<u32>()
-        .expect("expected repository ID to be a u32");
-    RepositoryId::new(repo_id as i32)
+        .map_err(|_| err_msg("Couldn't parse repo-id as u32"))?;
+    Ok(RepositoryId::new(repo_id as i32))
 }
 
 pub fn open_sql<T>(matches: &ArgMatches, name: &'static str) -> Result<T>
@@ -535,7 +535,7 @@ pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
 }
 
 pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
-    let repo_id = get_repo_id(matches);
+    let repo_id = get_repo_id(matches)?;
 
     let configs = read_configs(matches)?;
     let repo_config = configs
@@ -557,7 +557,12 @@ fn open_repo_internal<'a>(
     let repo_id = get_repo_id(matches);
 
     let (reponame, config) = try_boxfuture!(get_config(matches));
-    info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
+    info!(
+        logger,
+        "using repo \"{}\" repoid {:?}",
+        reponame,
+        repo_id.as_ref().unwrap()
+    );
     let logger = match config.repotype {
         RepoType::BlobFiles(ref data_dir) => {
             setup_repo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
@@ -578,14 +583,18 @@ fn open_repo_internal<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
-    open_blobrepo(
-        logger.clone(),
-        config.repotype.clone(),
-        repo_id,
-        myrouter_port,
-        config.bookmarks_cache_ttl,
-    )
-    .boxify()
+    repo_id
+        .into_future()
+        .and_then(move |repo_id| {
+            open_blobrepo(
+                logger.clone(),
+                config.repotype.clone(),
+                repo_id,
+                myrouter_port,
+                config.bookmarks_cache_ttl,
+            )
+        })
+        .boxify()
 }
 
 pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {

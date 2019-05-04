@@ -328,7 +328,7 @@ fn main() -> Result<()> {
         .parse()
         .expect("Minimum Changeset Id should be numeric");
 
-    let repoid = args::get_repo_id(&matches);
+    let repoid = args::get_repo_id(&matches).expect("Need repo id");
 
     let blobrepo = args::open_repo(&logger, &matches);
     let aliasimport = blobrepo.and_then(move |blobrepo| {

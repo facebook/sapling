@@ -153,7 +153,7 @@ fn parse_args() -> Result<Config, Error> {
     );
 
     let matches = app.get_matches();
-    let repo_id = args::get_repo_id(&matches);
+    let repo_id = args::get_repo_id(&matches)?;
 
     let repo_config = args::read_configs(&matches)?
         .repos

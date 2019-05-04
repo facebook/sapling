@@ -61,7 +61,7 @@ fn main() -> Result<()> {
 
     let matches = setup_app().get_matches();
 
-    let repo_id = args::get_repo_id(&matches);
+    let repo_id = args::get_repo_id(&matches).unwrap();
     let bookmarks = args::open_sql::<SqlBookmarks>(&matches, "books").unwrap();
 
     let name = matches.value_of(BOOKMARK).unwrap().to_string();
