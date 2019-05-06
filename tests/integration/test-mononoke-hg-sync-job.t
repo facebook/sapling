@@ -207,7 +207,8 @@ Use the same code here as in the actual opsfiles hook
   >     if allowed_replay_books and actual_book not in allowed_replay_books:
   >         ui.warn("[ReplayVerification] only allowed to unbundlereplay on %r\n" % (allowed_replay_books, ))
   >         return 1
-  > 
+  >     expected_head = expected_head or None
+  >     actual_head = actual_head or None
   >     if expected_book == actual_book and expected_head == actual_head:
   >        ui.note("[ReplayVerification] Everything seems in order\n")
   >        return 0
@@ -572,3 +573,86 @@ Test hook bypass using REPLAY_BYPASS file
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * successful sync of entry #2 (glob)
+
+Test bookmark deletion sync
+  $ cat >>$TESTTMP/repo-hg-3/.hg/hgrc <<CONFIG
+  > [hooks]
+  > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
+  > CONFIG
+  $ cd $TESTTMP/client-push
+  $ hgmn -q up master_bookmark
+  $ hgmn -q push --rev . --to book_to_delete --create
+  [1]
+  $ hg log -r master_bookmark
+  changeset:   8:6f24f1b38581
+  bookmark:    default/book_to_delete
+  bookmark:    default/master_bookmark
+  hoistedname: book_to_delete
+  hoistedname: master_bookmark
+  parent:      6:a7acac33c050
+  user:        test
+  date:        * (glob)
+  summary:     symlink
+  
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop repo-hg-3 7
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #8 ... (glob)
+  * successful prepare of entry #8 (glob)
+  * syncing log entry #8 ... (glob)
+  running * serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities: * (glob)
+  remote: 1
+  creating a peer took: * (glob)
+  using * as a reports file (glob)
+  sending unbundlereplay command
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
+  * successful sync of entry #8 (glob)
+  $ cd $TESTTMP/client-push
+  $ hgmn push --delete book_to_delete
+  pushing to * (glob)
+  remote: * (glob)
+  searching for changes
+  no changes found
+  deleting remote bookmark book_to_delete
+  [1]
+  $ hg log -r master_bookmark
+  changeset:   8:6f24f1b38581
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
+  parent:      6:a7acac33c050
+  user:        test
+  date:        * (glob)
+  summary:     symlink
+  
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop repo-hg-3 8
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #9 ... (glob)
+  * successful prepare of entry #9 (glob)
+  * syncing log entry #9 ... (glob)
+  running * 'hg -R repo-hg-3 serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities: * (glob)
+  remote: 1
+  creating a peer took: * (glob)
+  using * as a reports file (glob)
+  sending unbundlereplay command
+  single wireproto command took: * (glob)
+  unbundle replay batch item #0 successfully sent
+  * successful sync of entry #9 (glob)
+  $ cd $TESTTMP/repo-hg-3
+  $ hg log -r master_bookmark
+  changeset:   6:6f24f1b38581
+  bookmark:    master_bookmark
+  tag:         tip
+  user:        test
+  date:        * (glob)
+  summary:     symlink
+  
