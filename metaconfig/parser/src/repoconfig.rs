@@ -491,11 +491,13 @@ impl RepoConfigs {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawCommonConfig {
     whitelist_entry: Option<Vec<RawWhitelistEntry>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 struct RawWhitelistEntry {
     tier: Option<String>,
     identity_data: Option<String>,
