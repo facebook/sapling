@@ -22,7 +22,7 @@ Test UI worker interaction
   > def runme(ui, args):
   >     for arg in args:
   >         ui.status('run\n')
-  >         yield 1, arg
+  >         yield 1, 0, arg
   >     time.sleep(0.1) # easier to trigger killworkers code path
   > functable = {
   >     'abort': abort,
@@ -37,7 +37,7 @@ Test UI worker interaction
   >     func = functable[func]
   >     ui.status('start\n')
   >     runs = worker.worker(ui, cost, func, (ui,), range(8))
-  >     for n, i in runs:
+  >     for n, size, i in runs:
   >         pass
   >     ui.status('done\n')
   > EOF
