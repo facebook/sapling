@@ -19,6 +19,9 @@
    6.0      Check Unknown Files (1.0s)
    9.0    Apply Updates (1.0s)
      :      * Actions: 3
+     :      * Deleted Files: 0
+     :      * Disk Writes: 3.0B (*) (glob)
+     :      * Written Files: 3
   11.0
   
   $ cat .hg/blackbox.log
@@ -31,5 +34,8 @@
    6.0      Check Unknown Files (1.0s)
    9.0    Apply Updates (1.0s)
      :      * Actions: 3
+     :      * Deleted Files: 0
+     :      * Disk Writes: 3.0B (*) (glob)
+     :      * Written Files: 3
   11.0
   
