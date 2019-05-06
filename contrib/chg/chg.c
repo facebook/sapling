@@ -35,12 +35,6 @@
 #define PATH_MAX 4096
 #endif
 
-/* Maximum time waiting for the validate message.
- * Start a new server if exceeds. */
-#ifndef CHG_VALIDATE_THRESHOLD
-#define CHG_VALIDATE_THRESHOLD 0.1
-#endif
-
 struct cmdserveropts {
   char sockname[PATH_MAX];
   char initsockname[PATH_MAX];
@@ -348,10 +342,16 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
         "wrapper to chg. Alternatively, set $CHGHG to the "
         "path of real hg.");
 
-  if (isunsupported(argc - 1, argv + 1)) {
+  if (isunsupported(argc - 1, argv + 1) || nice(0) > 0) {
     // For cases when chg and original hg are the same binary,
     // we need to tell the original hg that we've already made
     // a decision to not use chg logic
+    //
+    // Besides, if the process has a high nice value (i.e.
+    // low priority), do not start a chg server which will
+    // inherit the low priority, and do not use a chg server,
+    // since the user wants the process to have a lower
+    // priority.
     setenv("CHGDISABLE", "1", 1);
     execoriginalhg(argv);
   }
@@ -395,12 +395,6 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
       needreconnect = runinstructions(&opts, insts);
       free(insts);
       debugmsg("validate took %.4f seconds", validate_interval);
-      if (!needreconnect && retry == 0 && configint("CHGSTARTTIMECHECK", 1) &&
-          validate_interval > CHG_VALIDATE_THRESHOLD) {
-        debugmsg("server too slow - killing");
-        killcmdserver(&opts);
-        needreconnect = 1;
-      }
     }
     if (!needreconnect)
       break;
