@@ -79,19 +79,6 @@ class FindExeClass(object):
         )
 
     @cached_property
-    def EDEN_HG_IMPORT_HELPER(self) -> str:
-        return self._find_exe(
-            "hg_import_helper",
-            env="EDENFS_HG_IMPORT_HELPER",
-            candidates=[
-                os.path.join(
-                    self.BUCK_OUT, "gen/eden/fs/store/hg/hg_import_helper.par"
-                ),
-                os.path.join(self.REPO_ROOT, "eden/fs/store/hg/hg_import_helper.py"),
-            ],
-        )
-
-    @cached_property
     def FSATTR(self) -> str:
         return self._find_exe(
             "fsattr",

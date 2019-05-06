@@ -190,8 +190,6 @@ class EdenFS(object):
             "2",
             "--local_storage_engine_unsafe",
             self._storage_engine,
-            "--hgImportHelper",
-            typing.cast(str, FindExe.EDEN_HG_IMPORT_HELPER),  # T38947910
             "--hgPath",
             typing.cast(str, FindExe.HG_REAL),  # T38947910
         ]
