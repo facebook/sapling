@@ -10,7 +10,7 @@ extern crate sql;
 use std::path::Path;
 
 use failure::prelude::*;
-use sql::{myrouter, Connection, rusqlite::Connection as SqliteConnection};
+use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
 
 pub struct SqlConnections {
     pub write_connection: Connection,
@@ -78,6 +78,37 @@ pub fn create_myrouter_connections(
     }
 }
 
+pub fn create_raw_xdb_connections(tier: impl ToString) -> Result<SqlConnections> {
+    let tier = tier.to_string();
+
+    let write_connection = Connection::Raw(raw::RawConnection::new_from_tier(
+        &tier,
+        raw::InstanceRequirement::Master,
+        None,
+        None,
+    )?);
+
+    let read_connection = Connection::Raw(raw::RawConnection::new_from_tier(
+        &tier,
+        raw::InstanceRequirement::ReplicaFirst,
+        None,
+        None,
+    )?);
+
+    let read_master_connection = Connection::Raw(raw::RawConnection::new_from_tier(
+        &tier,
+        raw::InstanceRequirement::Master,
+        None,
+        None,
+    )?);
+
+    Ok(SqlConnections {
+        write_connection,
+        read_connection,
+        read_master_connection,
+    })
+}
+
 /// Set of useful constructors for Mononoke's sql based data access objects
 pub trait SqlConstructors: Sized {
     const LABEL: &'static str;
@@ -103,6 +134,20 @@ pub trait SqlConstructors: Sized {
         );
 
         Self::from_connections(write_connection, read_connection, read_master_connection)
+    }
+
+    fn with_raw_xdb_tier(tier: impl ToString) -> Result<Self> {
+        let SqlConnections {
+            write_connection,
+            read_connection,
+            read_master_connection,
+        } = create_raw_xdb_connections(tier)?;
+
+        Ok(Self::from_connections(
+            write_connection,
+            read_connection,
+            read_master_connection,
+        ))
     }
 
     fn with_sqlite_in_memory() -> Result<Self> {

@@ -16,7 +16,7 @@ use changesets::{CachingChangests, SqlChangesets};
 use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
 use failure_ext::prelude::*;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{Error, Result};
 use fileblob::Fileblob;
 use filenodes::CachingFilenodes;
 use futures::{
@@ -113,27 +113,16 @@ pub fn open_blobrepo(
             ref db_address,
             write_lock_db_address: _,
             ref filenode_shards,
-        } => {
-            let myrouter_port = match myrouter_port {
-                None => {
-                    return future::err(err_msg(
-                        "Missing myrouter port, unable to open BlobRemote repo",
-                    ))
-                    .left_future();
-                }
-                Some(myrouter_port) => myrouter_port,
-            };
-            new_remote(
-                logger,
-                blobstores_args,
-                db_address.clone(),
-                filenode_shards.clone(),
-                repoid,
-                myrouter_port,
-                bookmarks_cache_ttl,
-            )
-            .right_future()
-        }
+        } => new_remote(
+            logger,
+            blobstores_args,
+            db_address.clone(),
+            filenode_shards.clone(),
+            repoid,
+            myrouter_port,
+            bookmarks_cache_ttl,
+        )
+        .right_future(),
     }
 }
 
@@ -169,14 +158,14 @@ pub fn new_remote(
     db_address: String,
     filenode_shards: Option<usize>,
     repoid: RepositoryId,
-    myrouter_port: u16,
+    myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     // recursively construct blobstore from arguments
     fn eval_remote_args(
         args: RemoteBlobstoreArgs,
         repoid: RepositoryId,
-        myrouter_port: u16,
+        myrouter_port: Option<u16>,
         queue: Arc<BlobstoreSyncQueue>,
     ) -> BoxFuture<Arc<Blobstore>, Error> {
         match args {
@@ -193,12 +182,19 @@ pub fn new_remote(
                     .boxify()
             }
             RemoteBlobstoreArgs::Mysql(args) => {
-                let blobstore: Arc<Blobstore> = Arc::new(Sqlblob::with_myrouter(
-                    repoid,
-                    args.shardmap,
-                    myrouter_port,
-                    args.shard_num,
-                ));
+                let blobstore: Arc<Blobstore> = match myrouter_port {
+                    Some(myrouter_port) => Arc::new(try_boxfuture!(Sqlblob::with_myrouter(
+                        repoid,
+                        args.shardmap,
+                        myrouter_port,
+                        args.shard_num,
+                    ))),
+                    None => Arc::new(try_boxfuture!(Sqlblob::with_raw_xdb_shardmap(
+                        repoid,
+                        args.shardmap,
+                        args.shard_num,
+                    ))),
+                };
                 future::ok(blobstore).boxify()
             }
             RemoteBlobstoreArgs::Multiplexed {
@@ -231,11 +227,17 @@ pub fn new_remote(
         }
     }
 
-    let blobstore_sync_queue: Arc<BlobstoreSyncQueue> = Arc::new(
-        SqlBlobstoreSyncQueue::with_myrouter(&db_address, myrouter_port),
-    );
-    eval_remote_args(args.clone(), repoid, myrouter_port, blobstore_sync_queue).and_then(
-        move |blobstore| {
+    let blobstore_sync_queue: Arc<BlobstoreSyncQueue> = match myrouter_port {
+        Some(myrouter_port) => Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
+            &db_address,
+            myrouter_port,
+        )),
+        None => Arc::new(try_boxfuture!(SqlBlobstoreSyncQueue::with_raw_xdb_tier(
+            &db_address
+        ))),
+    };
+    eval_remote_args(args.clone(), repoid, myrouter_port, blobstore_sync_queue)
+        .and_then(move |blobstore| {
             let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
             let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
                 ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
@@ -246,11 +248,15 @@ pub fn new_remote(
                 ))?);
             let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-            let filenodes = match filenode_shards {
-                Some(shards) => {
-                    SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards)
+            let filenodes = match (filenode_shards, myrouter_port) {
+                (Some(shards), Some(myrouter_port)) => {
+                    SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards)?
                 }
-                None => SqlFilenodes::with_myrouter(&db_address, myrouter_port),
+                (None, Some(myrouter_port)) => {
+                    SqlFilenodes::with_myrouter(&db_address, myrouter_port)
+                }
+                (Some(shards), None) => SqlFilenodes::with_sharded_raw_xdb(&db_address, shards)?,
+                (None, None) => SqlFilenodes::with_raw_xdb_tier(&db_address)?,
             };
             let filenodes = CachingFilenodes::new(
                 Arc::new(filenodes),
@@ -262,7 +268,12 @@ pub fn new_remote(
             );
 
             let bookmarks: Arc<dyn Bookmarks> = {
-                let bookmarks = Arc::new(SqlBookmarks::with_myrouter(&db_address, myrouter_port));
+                let bookmarks = match myrouter_port {
+                    Some(myrouter_port) => {
+                        Arc::new(SqlBookmarks::with_myrouter(&db_address, myrouter_port))
+                    }
+                    None => Arc::new(SqlBookmarks::with_raw_xdb_tier(&db_address)?),
+                };
                 if let Some(ttl) = bookmarks_cache_ttl {
                     Arc::new(CachedBookmarks::new(bookmarks, ttl))
                 } else {
@@ -270,7 +281,10 @@ pub fn new_remote(
                 }
             };
 
-            let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
+            let changesets = match myrouter_port {
+                Some(myrouter_port) => SqlChangesets::with_myrouter(&db_address, myrouter_port),
+                None => SqlChangesets::with_raw_xdb_tier(&db_address)?,
+            };
             let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
                 ErrorKind::MissingCachePool("changesets".to_string()),
             ))?;
@@ -278,7 +292,12 @@ pub fn new_remote(
                 CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
             let changesets = Arc::new(changesets);
 
-            let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port);
+            let bonsai_hg_mapping = match myrouter_port {
+                Some(myrouter_port) => {
+                    SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port)
+                }
+                None => SqlBonsaiHgMapping::with_raw_xdb_tier(&db_address)?,
+            };
             let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
                 Arc::new(bonsai_hg_mapping),
                 cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
@@ -307,6 +326,6 @@ pub fn new_remote(
                 Arc::new(changeset_fetcher_factory),
                 Arc::new(MemcacheOps::new("bonsai-hg-generation", "")?),
             ))
-        },
-    )
+        })
+        .boxify()
 }

@@ -85,7 +85,7 @@ fn maybe_schedule_healer_for_repo(
                         args.shardmap,
                         myrouter_port,
                         args.shard_num,
-                    ));
+                    )?);
                     blobstores.insert(id, ok(blobstore).boxify());
                 }
                 RemoteBlobstoreArgs::Multiplexed { .. } => {

@@ -38,7 +38,9 @@ use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use mononoke_types::{hash, RepositoryId};
 pub use sql_ext::SqlConstructors;
-use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
+use sql_ext::{
+    create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
+};
 
 use errors::ErrorKind;
 
@@ -191,7 +193,31 @@ impl SqlConstructors for SqlFilenodes {
 }
 
 impl SqlFilenodes {
-    pub fn with_sharded_myrouter(tier: impl ToString, port: u16, shard_count: usize) -> Self {
+    pub fn with_sharded_myrouter(
+        tier: impl ToString,
+        port: u16,
+        shard_count: usize,
+    ) -> Result<Self> {
+        Self::with_sharded_factory(shard_count, |shard_id| {
+            Ok(create_myrouter_connections(
+                format!("{}.{}", tier.to_string(), shard_id),
+                port,
+                PoolSizeConfig::for_sharded_connection(),
+                "shardedfilenodes",
+            ))
+        })
+    }
+
+    pub fn with_sharded_raw_xdb(tier: impl ToString, shard_count: usize) -> Result<Self> {
+        Self::with_sharded_factory(shard_count, |shard_id| {
+            create_raw_xdb_connections(format!("{}.{}", tier.to_string(), shard_id))
+        })
+    }
+
+    fn with_sharded_factory(
+        shard_count: usize,
+        factory: impl Fn(usize) -> Result<SqlConnections>,
+    ) -> Result<Self> {
         let mut write_connections = vec![];
         let mut read_connections = vec![];
         let mut read_master_connections = vec![];
@@ -202,23 +228,18 @@ impl SqlFilenodes {
                 write_connection,
                 read_connection,
                 read_master_connection,
-            } = create_myrouter_connections(
-                format!("{}.{}", tier.to_string(), shard_id),
-                port,
-                PoolSizeConfig::for_sharded_connection(),
-                "shardedfilenodes",
-            );
+            } = factory(shard_id)?;
 
             write_connections.push(write_connection);
             read_connections.push(read_connection);
             read_master_connections.push(read_master_connection);
         }
 
-        Self {
+        Ok(Self {
             write_connection: Arc::new(write_connections),
             read_connection: Arc::new(read_connections),
             read_master_connection: Arc::new(read_master_connections),
-        }
+        })
     }
 
     pub fn with_sharded_sqlite(shard_count: usize) -> Result<Self> {

@@ -22,7 +22,9 @@ use futures_ext::{BoxFuture, FutureExt};
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
+use sql_ext::{
+    create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
+};
 use stats::{define_stats, Timeseries};
 use std::fmt;
 use std::num::NonZeroUsize;
@@ -68,43 +70,61 @@ impl Sqlblob {
         shardmap: impl ToString,
         port: u16,
         shard_num: NonZeroUsize,
-    ) -> Self {
+    ) -> Result<Self> {
+        Self::with_connection_factory(repo_id, shard_num, |shard_id| {
+            Ok(create_myrouter_connections(
+                format!("{}.{}", shardmap.to_string(), shard_id),
+                port,
+                PoolSizeConfig::for_sharded_connection(),
+                "blobstore",
+            ))
+        })
+    }
+
+    pub fn with_raw_xdb_shardmap(
+        repo_id: RepositoryId,
+        shardmap: impl ToString,
+        shard_num: NonZeroUsize,
+    ) -> Result<Self> {
+        Self::with_connection_factory(repo_id, shard_num, |shard_id| {
+            create_raw_xdb_connections(format!("{}.{}", shardmap.to_string(), shard_id))
+        })
+    }
+
+    fn with_connection_factory(
+        repo_id: RepositoryId,
+        shard_num: NonZeroUsize,
+        connection_factory: impl Fn(usize) -> Result<SqlConnections>,
+    ) -> Result<Self> {
         struct Cons {
             write_connection: Vec<Connection>,
             read_connection: Vec<Connection>,
             read_master_connection: Vec<Connection>,
         }
 
-        let cons = Cons {
+        let mut cons = Cons {
             write_connection: Vec::with_capacity(shard_num.get()),
             read_connection: Vec::with_capacity(shard_num.get()),
             read_master_connection: Vec::with_capacity(shard_num.get()),
         };
 
-        let cons = (1..=shard_num.get()).fold(cons, |mut cons, shard_id| {
+        for shard_id in 1..=shard_num.get() {
             let SqlConnections {
                 write_connection,
                 read_connection,
                 read_master_connection,
-            } = create_myrouter_connections(
-                format!("{}.{}", shardmap.to_string(), shard_id),
-                port,
-                PoolSizeConfig::for_sharded_connection(),
-                "blobstore",
-            );
+            } = connection_factory(shard_id)?;
 
             cons.write_connection.push(write_connection);
             cons.read_connection.push(read_connection);
             cons.read_master_connection.push(read_master_connection);
-
-            cons
-        });
+        }
 
         let write_connection = Arc::new(cons.write_connection);
         let read_connection = Arc::new(cons.read_connection);
         let read_master_connection = Arc::new(cons.read_master_connection);
 
-        Self {
+        Ok(Self {
             data_store: DataSqlStore::new(
                 repo_id,
                 shard_num,
@@ -133,7 +153,7 @@ impl Sqlblob {
                 ),
                 ChunkCacheTranslator::new(repo_id),
             ),
-        }
+        })
     }
 
     pub fn with_sqlite_in_memory(repo_id: RepositoryId) -> Result<Self> {

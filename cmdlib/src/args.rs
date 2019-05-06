@@ -301,11 +301,7 @@ where
         RepoType::BlobFiles(ref data_dir)
         | RepoType::BlobRocks(ref data_dir)
         | RepoType::BlobSqlite(ref data_dir) => T::with_sqlite_path(data_dir.join(name)),
-        RepoType::BlobRemote { ref db_address, .. } => {
-            let myrouter_port =
-                parse_myrouter_port(matches).expect("myrouter port provided is not provided");
-            Ok(T::with_myrouter(&db_address, myrouter_port))
-        }
+        RepoType::BlobRemote { ref db_address, .. } => T::with_raw_xdb_tier(&db_address),
     }
 }
 
