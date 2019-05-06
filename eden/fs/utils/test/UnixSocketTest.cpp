@@ -137,7 +137,7 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
       });
 
   std::optional<UnixSocket::Message> receivedMessage;
-  socket2->receive(500ms)
+  socket2->receive(2s)
       .thenValue([&receivedMessage](UnixSocket::Message&& msg) {
         receivedMessage = std::move(msg);
       })
