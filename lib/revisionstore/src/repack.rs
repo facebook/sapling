@@ -254,6 +254,7 @@ pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fall
         repackmaxpacksize = 400 * 1024 * 1024;
     }
     let repacksizelimit = 100 * 1024 * 1024;
+    let min_packs = 50;
 
     let mut packssizes = packs
         .into_iter()
@@ -270,14 +271,21 @@ pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fall
     // Sort by file size in increasing order
     packssizes.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 
+    let mut num_packs = packssizes.len();
     let mut accumulated_sizes = 0;
     Ok(packssizes
         .into_iter()
         .take_while(|e| {
-            if e.1 > repacksizelimit || e.1 + accumulated_sizes > repackmaxpacksize {
+            if e.1 + accumulated_sizes > repackmaxpacksize {
+                return false;
+            }
+
+            if e.1 > repacksizelimit && num_packs < min_packs {
                 false
             } else {
                 accumulated_sizes += e.1;
+                num_packs -= 1;
+
                 true
             }
         })
