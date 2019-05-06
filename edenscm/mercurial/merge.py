@@ -1460,7 +1460,7 @@ def batchremove(repo, wctx, actions):
             i = 0
         i += 1
     if i > 0:
-        yield i, f, 0
+        yield i, 0, f
 
     if cwd and not pycompat.getcwdsafe():
         # cwd was removed in the course of removing files; print a helpful
