@@ -716,6 +716,13 @@ impl BlobRepo {
         self.bookmarks.create_transaction(ctx, self.repoid)
     }
 
+    pub fn get_bonsai_heads(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
+        self.get_bonsai_bookmarks(ctx)
+    }
+
     pub fn get_linknode_opt(
         &self,
         ctx: CoreContext,

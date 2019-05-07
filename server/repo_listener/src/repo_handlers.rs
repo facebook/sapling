@@ -204,7 +204,7 @@ pub fn repo_handlers(
                                         SqlPhases::with_sqlite_path(data_dir.join("phases"))
                                             .expect("unable to initialize sqlite db for phases"),
                                     );
-                                    Arc::new(HintPhases::new(storage, skip_index.clone()))
+                                    Arc::new(HintPhases::new(storage))
                                 }
                                 RepoType::BlobRemote { ref db_address, .. } => {
                                     let storage = Arc::new(SqlPhases::with_myrouter(
@@ -213,12 +213,12 @@ pub fn repo_handlers(
                                             "myrouter_port not provided for BlobRemote repo",
                                         ),
                                     ));
-                                    Arc::new(CachingHintPhases::new(storage, skip_index.clone()))
+                                    Arc::new(CachingHintPhases::new(storage))
                                 }
                             };
 
                             // initialize lca hint from the skip index
-                            let lca_hint: Arc<LeastCommonAncestorsHint> = skip_index;
+                            let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skip_index;
 
                             (
                                 reponame,

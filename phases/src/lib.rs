@@ -8,8 +8,6 @@ mod caching;
 pub use caching::CachingHintPhases;
 mod errors;
 pub use errors::*;
-mod hint;
-pub use hint::PhasesReachabilityHint;
 
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
@@ -22,7 +20,6 @@ use futures::{
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
-use skiplist::SkiplistIndex;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -36,7 +33,7 @@ use try_from::TryFrom;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
     Draft,
     Public,
@@ -115,7 +112,7 @@ impl ConvIr<Phase> for Phase {
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct PhasesMapping {
     pub calculated: HashMap<ChangesetId, Phase>,
     pub unknown: Vec<ChangesetId>,
@@ -169,11 +166,6 @@ pub trait Phases: Send + Sync {
         cs_ids: Vec<ChangesetId>,
         maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
     ) -> BoxFuture<PhasesMapping, Error>;
-}
-
-pub struct HintPhases {
-    phases_store: Arc<Phases>, // phases_store is the underlying persistent storage (db)
-    phases_reachability_hint: PhasesReachabilityHint, // phases_reachability_hint for slow path calculation
 }
 
 #[derive(Clone)]
@@ -332,12 +324,13 @@ impl Phases for SqlPhases {
     }
 }
 
+pub struct HintPhases {
+    phases_store: Arc<dyn Phases>, // phases_store is the underlying persistent storage (db)
+}
+
 impl HintPhases {
-    pub fn new(phases_store: Arc<Phases>, skip_index: Arc<SkiplistIndex>) -> Self {
-        Self {
-            phases_store,
-            phases_reachability_hint: PhasesReachabilityHint::new(skip_index),
-        }
+    pub fn new(phases_store: Arc<dyn Phases>) -> Self {
+        Self { phases_store }
     }
 }
 
@@ -421,76 +414,75 @@ impl Phases for HintPhases {
         cs_ids: Vec<ChangesetId>,
         maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
     ) -> BoxFuture<PhasesMapping, Error> {
-        cloned!(self.phases_store, self.phases_reachability_hint);
-        // Try to fetch from the underlying storage.
+        cloned!(self.phases_store);
         phases_store
-            .get_all(ctx.clone(), repo.clone(), cs_ids)
-            .and_then(move |phases_mapping| {
-                // For not found part calculate phases using the phases_reachability_hint.
-                let not_found_in_db = phases_mapping.unknown;
-                let found_in_db = phases_mapping.calculated;
-
-                // Public heads are required (only if not_found_in_db is not empty).
-                // Fetch them once or reuse known.
-                // Pass them to the response, so they can be reused.
-                let public_heads_fut = if maybe_public_heads.is_some() {
-                    future::ok(maybe_public_heads).boxify() // known
-                } else if not_found_in_db.is_empty() {
-                    future::ok(None).boxify() // not needed
-                } else {
-                    repo.get_bonsai_bookmarks(ctx.clone()) // calculate
-                        .map(|(_, cs_id)| cs_id)
-                        .collect()
-                        .map(move |bookmarks| Some(Arc::new(bookmarks.into_iter().collect())))
-                        .boxify()
-                };
-
-                let calculated_fut = {
-                    cloned!(ctx, repo);
-                    public_heads_fut.and_then(move |maybe_public_heads| {
-                        if let Some(ref public_heads) = maybe_public_heads {
-                            phases_reachability_hint
-                                .get_all(
-                                    ctx,
-                                    repo.get_changeset_fetcher(),
-                                    not_found_in_db,
-                                    public_heads.clone(),
-                                )
-                                .left_future()
-                        } else {
-                            future::ok(HashMap::new()).right_future()
-                        }
-                        .map(move |calculated| (calculated, maybe_public_heads))
-                    })
-                };
-
-                calculated_fut.and_then(move |(mut calculated, maybe_public_heads)| {
-                    // Refresh newly calculated phases in the underlying storage (public commits only).
-                    let add_to_db = calculated
-                        .iter()
-                        .filter_map(|(cs_id, phase)| {
-                            if phase == &Phase::Public {
-                                Some((cs_id.clone(), phase.clone()))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-
-                    // Join the found in the db and calculated into the returned result.
-                    calculated.extend(found_in_db);
-
-                    phases_store
-                        .add_all(ctx, repo, add_to_db)
-                        .map(move |_| PhasesMapping {
-                            calculated,
-                            unknown: vec![],
-                            maybe_public_heads,
-                        })
-                })
+            .get_all_with_bookmarks(
+                ctx.clone(),
+                repo.clone(),
+                cs_ids,
+                maybe_public_heads.clone(),
+            )
+            .and_then(move |phases| {
+                fill_unkown_phases(ctx, repo, phases_store, maybe_public_heads, phases)
             })
             .boxify()
     }
+}
+
+// resolve unknown phases and return update result
+fn fill_unkown_phases(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    phases_store: Arc<dyn Phases>,
+    maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
+    phases: PhasesMapping,
+) -> impl Future<Item = PhasesMapping, Error = Error> {
+    if phases.unknown.is_empty() {
+        return future::ok(PhasesMapping {
+            maybe_public_heads,
+            ..phases
+        })
+        .left_future();
+    }
+
+    let PhasesMapping {
+        calculated: calculated_input,
+        unknown,
+        ..
+    } = phases;
+    match maybe_public_heads {
+        Some(public_heads) => future::ok(public_heads).left_future(),
+        None => repo
+            .get_bonsai_heads(ctx.clone())
+            .map(|(_, cs_id)| cs_id)
+            .collect()
+            .map(move |bookmarks| Arc::new(bookmarks.into_iter().collect()))
+            .right_future(),
+    }
+    .and_then(move |public_heads| {
+        mark_reachable_as_public(
+            ctx.clone(),
+            repo.clone(),
+            phases_store.clone(),
+            &*public_heads,
+        )
+        .and_then(move |_| phases_store.get_all(ctx, repo, unknown))
+        .map(move |phases| {
+            let PhasesMapping {
+                mut calculated,
+                unknown,
+                ..
+            } = phases;
+            calculated.extend(calculated_input);
+            calculated.extend(unknown.into_iter().map(|cs| (cs, Phase::Draft)));
+            PhasesMapping {
+                calculated,
+                unknown: Vec::new(),
+                maybe_public_heads: Some(public_heads),
+            }
+        })
+    })
+    .right_future()
 }
 
 /// Mark all commits reachable from `public_heads` as public
@@ -752,7 +744,7 @@ mod tests {
             .unwrap();
 
         let phases_store = Arc::new(SqlPhases::with_sqlite_in_memory().unwrap());
-        let hint_phases = HintPhases::new(phases_store.clone(), Arc::new(SkiplistIndex::new()));
+        let hint_phases = HintPhases::new(phases_store.clone());
 
         assert_eq!(
             hint_phases

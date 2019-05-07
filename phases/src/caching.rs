@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::*;
-use crate::{Phase, Phases, PhasesMapping, PhasesReachabilityHint};
+use crate::{fill_unkown_phases, Phase, Phases, PhasesMapping};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
@@ -13,7 +13,6 @@ use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
-use skiplist::SkiplistIndex;
 use stats::{define_stats, Timeseries};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -40,18 +39,16 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: ChangesetId) -> String {
 }
 
 pub struct CachingHintPhases {
-    phases_store: Arc<Phases>, // phases_store is the underlying persistent storage (db)
-    phases_reachability_hint: PhasesReachabilityHint, // phases_reachability_hint for slow path calculation
-    memcache: MemcacheClient,                         // Memcache Client for temporary caching
+    phases_store: Arc<dyn Phases>, // phases_store is the underlying persistent storage (db)
+    memcache: MemcacheClient,      // Memcache Client for temporary caching
     keygen: KeyGen,
 }
 
 impl CachingHintPhases {
-    pub fn new(phases_store: Arc<Phases>, skip_index: Arc<SkiplistIndex>) -> Self {
+    pub fn new(phases_store: Arc<dyn Phases>) -> Self {
         let key_prefix = "scm.mononoke.phases";
         Self {
             phases_store,
-            phases_reachability_hint: PhasesReachabilityHint::new(skip_index),
             memcache: MemcacheClient::new(),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
         }
@@ -117,7 +114,7 @@ impl Phases for CachingHintPhases {
             // Calculate the difference.
 
             // Some phases are missing or different in the memcache. They should be updated in memcache.
-            let add_to_memcache: Vec<(ChangesetId, Phase)> = phases
+            let add_to_memcache: HashMap<_, _> = phases
                 .into_iter()
                 .filter_map(|(cs_id, phase)| {
                     if let Some(current_phase) = phases_mapping.calculated.get(&cs_id) {
@@ -131,7 +128,7 @@ impl Phases for CachingHintPhases {
 
             // Refresh the underlying persistent storage.
             // Same set of phases but for public commits only.
-            let add_to_db: Vec<(ChangesetId, Phase)> = add_to_memcache
+            let add_to_db = add_to_memcache
                 .iter()
                 .filter_map(|(cs_id, phase)| {
                     if phase == &Phase::Public {
@@ -142,7 +139,7 @@ impl Phases for CachingHintPhases {
                 })
                 .collect();
 
-            set_phases_to_memcache(&memcache, &keygen, repo_id, add_to_memcache)
+            set_phases_to_memcache(&memcache, &keygen, repo_id, &add_to_memcache)
                 .and_then(move |_| phases_store.add_all(ctx, repo, add_to_db))
         })
         .boxify()
@@ -190,104 +187,26 @@ impl Phases for CachingHintPhases {
         cs_ids: Vec<ChangesetId>,
         maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
     ) -> BoxFuture<PhasesMapping, Error> {
-        cloned!(
-            self.keygen,
-            self.memcache,
-            self.phases_store,
-            self.phases_reachability_hint
-        );
+        cloned!(self.keygen, self.memcache, self.phases_store);
         let repo_id = repo.get_repoid();
-        // Look up in the memcache.
         get_phases_from_memcache(&memcache, &keygen, repo_id, cs_ids)
-            .and_then(move |phases_mapping| {
-                let found_in_memcache = phases_mapping.calculated;
-                let not_found_in_memcache = phases_mapping.unknown;
-                // Some phases are missing in memcache. Try to fetch from the underlying storage.
-                phases_store
-                    .get_all(ctx.clone(), repo.clone(), not_found_in_memcache)
-                    .and_then(move |phases_mapping| {
-                        // Some phases are missing in the underlying storage.
-                        // Try to calculate it using phases_reachability_hint.
-                        let found_in_db = phases_mapping.calculated;
-                        let not_found_in_db = phases_mapping.unknown;
-
-                        // Public heads are required (only if not_found_in_db is not empty).
-                        // Fetch them once or reuse known.
-                        // Pass them to the response, so they can be reused.
-                        let public_heads_fut = if maybe_public_heads.is_some() {
-                            future::ok(maybe_public_heads).boxify() // known
-                        } else if not_found_in_db.is_empty() {
-                            future::ok(None).boxify() // not needed
-                        } else {
-                            repo.get_bonsai_bookmarks(ctx.clone()) // calculate
-                                    .map(|(_, cs_id)| cs_id)
-                                    .collect()
-                                    .map(move |bookmarks| Some(Arc::new(bookmarks.into_iter().collect())))
-                                    .boxify()
-                        };
-
-                        let calculated_fut = {
-                            cloned!(ctx, repo);
-                            public_heads_fut.and_then(move |maybe_public_heads| {
-                                if let Some(ref public_heads) = maybe_public_heads {
-                                    phases_reachability_hint
-                                        .get_all(
-                                            ctx,
-                                            repo.get_changeset_fetcher(),
-                                            not_found_in_db,
-                                            public_heads.clone(),
-                                        )
-                                        .left_future()
-                                } else {
-                                    future::ok(HashMap::new()).right_future()
-                                }
-                                .map(move |calculated| (calculated, maybe_public_heads))
-                            })
-                        };
-
-                        calculated_fut.and_then(move |(calculated, maybe_public_heads)| {
-                            // These phases are calculated. Refresh the underlying storage (for public commits only).
-                            let add_to_db: Vec<(ChangesetId, Phase)> = calculated
-                                .iter()
-                                .filter_map(|(cs_id, phase)| {
-                                    if phase == &Phase::Public {
-                                        Some((cs_id.clone(), phase.clone()))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect();
-
-                            // Add calculated and found_in_db phases in memcache
-                            let add_to_memcache: Vec<(ChangesetId, Phase)> =
-                                calculated.into_iter().chain(found_in_db).collect();
-
-                            // Chain all calculated, found in memcache and found in the db phases to the returned result
-                            // This the same as add_to_memcache + found_in_memcache
-                            let mut calculated = found_in_memcache;
-                            calculated.extend(
-                                add_to_memcache
-                                    .iter()
-                                    .map(|(cs_id, phase)| (cs_id.clone(), phase.clone())),
-                            );
-
-                            phases_store
-                                .add_all(ctx, repo, add_to_db)
-                                .and_then(move |_| {
-                                    set_phases_to_memcache(
-                                        &memcache,
-                                        &keygen,
-                                        repo_id,
-                                        add_to_memcache,
-                                    )
-                                })
-                                .map(move |_| PhasesMapping {
-                                    calculated,
-                                    unknown: vec![],
-                                    maybe_public_heads,
-                                })
-                        })
-                    })
+            .and_then(move |phases_memcache| {
+                fill_unkown_phases(
+                    ctx,
+                    repo,
+                    phases_store,
+                    maybe_public_heads,
+                    phases_memcache.clone(),
+                )
+                .and_then(move |phases| {
+                    let calculated = phases_memcache
+                        .unknown
+                        .into_iter()
+                        .flat_map(|k| phases.calculated.get(&k).map(move |v| (k, *v)))
+                        .collect();
+                    set_phases_to_memcache(&memcache, &keygen, repo_id, &calculated)
+                        .map(move |_| phases)
+                })
             })
             .boxify()
     }
@@ -389,7 +308,7 @@ fn set_phases_to_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
     repo_id: RepositoryId,
-    phases: Vec<(ChangesetId, Phase)>,
+    phases: &HashMap<ChangesetId, Phase>,
 ) -> impl Future<Item = (), Error = Error> {
     cloned!(memcache, keygen, repo_id);
     stream::futures_unordered(
