@@ -1113,6 +1113,7 @@ def bundle2rebase(op, part):
                 )
 
     with extensions.wrappedfunction(context.basectx, "_fileinfo", _fileinfo):
+        ontoparam = params.get("onto", donotrebasemarker)
         try:  # guards bundlefile
             cgversion = params.get("cgversion", "01")
             bundlefile = _makebundlefile(op, part, cgversion)
@@ -1125,7 +1126,6 @@ def bundle2rebase(op, part):
                     "ontorev": ontoctx and ontoctx.hex(),
                 }
 
-            ontoparam = params.get("onto", donotrebasemarker)
             ontoctx = resolveonto(op.repo, ontoparam)
             setrecordingparams(op.repo, ontoparam, ontoctx)
 
