@@ -20,8 +20,10 @@ use failure::{err_msg, SlogKVError};
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use itertools::join;
 use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
+use scuba_ext::ScubaSampleBuilderExt;
 use slog::{Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
 use tokio;
@@ -166,16 +168,6 @@ fn accept(
             }
         }))
         .and_then(move |((stdio, identities), addr)| {
-            if !security_checker.check_if_connections_allowed(&identities) {
-                let err: Error = ErrorKind::AuthorizationFailed.into();
-                let tmp_conn_log = create_conn_logger(&stdio);
-                // This log goes to the user
-                error!(tmp_conn_log, "Authorization failed: {}", err);
-                // This log goes to the server stdout/stderr
-                error!(root_log, "Authorization failed"; SlogKVError(err));
-                return Err(()).into_future().left_future();
-            }
-
             repo_handlers
                 .get(&stdio.preamble.reponame)
                 .cloned()
@@ -188,16 +180,30 @@ fn accept(
                     )
                 })
                 .into_future()
-                .and_then(move |handler| {
-                    request_handler(
-                        handler.clone(),
-                        identities,
-                        stdio,
-                        addr,
-                        handler.repo.hook_manager(),
-                    )
+                .and_then(move |mut handler| {
+                    handler
+                        .scuba
+                        .add_preamble(&stdio.preamble)
+                        .add("client_ip", addr.to_string())
+                        .add("client_identities", join(identities.iter(), ","));
+
+                    if security_checker.check_if_connections_allowed(&identities) {
+                        request_handler(handler.clone(), stdio, handler.repo.hook_manager())
+                            .left_future()
+                    } else {
+                        let err: Error = ErrorKind::AuthorizationFailed.into();
+                        let tmp_conn_log = create_conn_logger(&stdio);
+                        // Log to scuba
+                        handler
+                            .scuba
+                            .log_with_msg("Authorization failed", format!("{}", err));
+                        // This log goes to the user
+                        error!(tmp_conn_log, "Authorization failed: {}", err);
+                        // This log goes to the server stdout/stderr
+                        error!(root_log, "Authorization failed"; SlogKVError(err));
+                        future::err(()).right_future()
+                    }
                 })
-                .right_future()
         })
         .boxify()
 }

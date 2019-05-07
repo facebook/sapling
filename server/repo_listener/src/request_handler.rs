@@ -5,15 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use std::mem;
-use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use aclchecker::Identity;
 use failure::{prelude::*, SlogKVError};
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
-use itertools::join;
 use slog::{self, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
@@ -50,9 +47,7 @@ pub fn request_handler(
         phases_hint,
         preserve_raw_bundle2,
     }: RepoHandler,
-    client_identities: Vec<Identity>,
     stdio: Stdio,
-    addr: SocketAddr,
     hook_manager: Arc<HookManager>,
 ) -> impl Future<Item = (), Error = ()> {
     let mut scuba_logger = scuba;
@@ -106,14 +101,6 @@ pub fn request_handler(
         // Don't fail logging if the client goes away
         let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
         Logger::root(drain, o!("session_uuid" => format!("{}", session_uuid)))
-    };
-
-    let mut scuba_logger = {
-        scuba_logger
-            .add_preamble(&preamble)
-            .add("client_ip", addr.to_string())
-            .add("client_identities", join(client_identities, ","));
-        scuba_logger
     };
 
     scuba_logger.log_with_msg("Connection established", None);
