@@ -54,7 +54,7 @@ use phases::{Phase, Phases, SqlPhases};
 use prefixblob::PrefixBlobstore;
 use revset::RangeNodeStream;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
-use slog::{debug, info, warn, Logger};
+use slog::{debug, error, info, warn, Logger};
 
 mod bookmarks_manager;
 
@@ -1092,7 +1092,7 @@ fn process_hg_sync_subcommand<'a>(
             process_hg_sync_verify(ctx, repo_id, mutable_counters, bookmarks, logger)
         }
         _ => {
-            println!("{}", matches.usage());
+            eprintln!("{}", matches.usage());
             ::std::process::exit(1);
         }
     }
@@ -1102,6 +1102,8 @@ fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
     let logger = args::get_logger(&matches);
+    let error_logger = logger.clone();
+
     let blobstore_args = args::parse_blobstore_args(&matches);
 
     let repo_id = args::get_repo_id(&matches)?;
@@ -1477,7 +1479,7 @@ fn main() -> Result<()> {
                 .boxify()
         }
         _ => {
-            println!("{}", matches.usage());
+            eprintln!("{}", matches.usage());
             ::std::process::exit(1);
         }
     };
@@ -1485,15 +1487,10 @@ fn main() -> Result<()> {
     let debug = matches.is_present("debug");
 
     tokio::run(future.map_err(move |err| {
-        // Flush so output is ordered as expected in tests. Ignore errors since there is nothing we
-        // can do about them.
-        let _ = std::io::stdout().flush();
-        let _ = std::io::stderr().flush();
-
-        println!("{:?}", err);
+        error!(error_logger, "{:?}", err);
         if debug {
-            println!("\n============ DEBUG ERROR ============");
-            println!("{:#?}", err);
+            error!(error_logger, "\n============ DEBUG ERROR ============");
+            error!(error_logger, "{:#?}", err);
         }
         ::std::process::exit(1);
     }));
