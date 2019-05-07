@@ -57,6 +57,7 @@ create new commit in repo2 and check that push fails
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
   query 1; heads
   sending batch command
   searching for changes

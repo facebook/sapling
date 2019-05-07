@@ -101,6 +101,8 @@ Sync a pushrebase bookmark move
   remote: * (glob)
   remote: capabilities* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -130,6 +132,8 @@ Sync a pushrebase bookmark move
   remote: * (glob)
   remote: capabilities* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -165,6 +169,8 @@ Sync a pushrebase bookmark move
   remote: * (glob)
   remote: capabilities* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -256,6 +262,8 @@ Use the same code here as in the actual opsfiles hook
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -273,9 +281,11 @@ Use the same code here as in the actual opsfiles hook
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 554
+  remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -293,9 +303,11 @@ Use the same code here as in the actual opsfiles hook
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 554
+  remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -328,6 +340,8 @@ Now bookmark is not blocked
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -374,6 +388,8 @@ Replay in a loop
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -420,6 +436,8 @@ Continue replay
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -486,6 +504,8 @@ Continue replay
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -565,6 +585,8 @@ Test hook bypass using REPLAY_BYPASS file
   remote: * (glob)
   remote: capabilities:* (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -606,6 +628,8 @@ Test bookmark deletion sync
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
@@ -641,6 +665,8 @@ Test bookmark deletion sync
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command

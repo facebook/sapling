@@ -457,6 +457,7 @@ treemanifest=
 fastmanifest=!
 remotefilelog=
 smartlog=
+clienttelemetry=
 [treemanifest]
 server=True
 sendtrees=True
@@ -477,6 +478,7 @@ treemanifest=
 remotefilelog=
 fastmanifest=
 smartlog=
+clienttelemetry=
 [treemanifest]
 sendtrees=True
 treeonly=True
@@ -499,6 +501,7 @@ function setup_hg_server() {
 [extensions]
 treemanifest=
 remotefilelog=
+clienttelemetry=
 [treemanifest]
 server=True
 [remotefilelog]
@@ -512,6 +515,7 @@ function setup_hg_client() {
 [extensions]
 treemanifest=
 remotefilelog=
+clienttelemetry=
 [treemanifest]
 server=False
 treeonly=True

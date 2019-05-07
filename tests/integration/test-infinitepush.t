@@ -62,6 +62,7 @@ Do infinitepush (aka commit cloud) push
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
   query 1; heads
   sending batch command
   searching for changes
@@ -135,6 +136,7 @@ Pushbackup also works
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
   sending knownnodes command
   backing up stack rooted at 47da8b81097c
   2 changesets found
@@ -200,6 +202,7 @@ Pushbackup that pushes only bookmarks
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  sending clienttelemetry command
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
