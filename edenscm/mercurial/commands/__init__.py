@@ -5397,36 +5397,26 @@ def resolve(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """change the specified files to match a commit
 
-    .. note::
+    With no revision specified, restore the contents of files to an
+    unmodified state and unschedule adds, removes, copies, and renames.
+    In other words, revert the specified files or directories to the
+    contents they had in the current commit. If you are in the middle of
+    an unfinished merge state, you must explicitly specify a revision.
 
-       To check out earlier revisions, you should use :hg:`update REV`.
-       To cancel an uncommitted merge (and lose your changes),
-       use :hg:`update --clean .`.
+    Use the -r/--rev option to revert the given files or directories to
+    their states as of a specific commit. Because revert does not actually
+    check out the specified commit, the files appear as modified and show
+    up as pending changes in :hg:`status`.
 
-    With no revision specified, revert the specified files or directories
-    to the contents they had in the parent of the working directory.
-    This restores the contents of files to an unmodified
-    state and unschedules adds, removes, copies, and renames. If the
-    working directory has two parents, you must explicitly specify a
-    revision.
+    Revert causes files to match their contents in another commit. If
+    instead you want to undo a specific landed commit, use :hg:`backout`
+    instead. Run `hg help backout` for more information.
 
-    Using the -r/--rev or -d/--date options, revert the given files or
-    directories to their states as of a specific revision. Because
-    revert does not change the working directory parents, this will
-    cause these files to appear modified. This can be helpful to "back
-    out" some or all of an earlier change. See :hg:`backout` for a
-    related method.
-
-    Modified files are saved with a .orig suffix before reverting.
-    To disable these backups, use --no-backup. It is possible to store
-    the backup files in a custom directory relative to the root of the
-    repository by setting the ``ui.origbackuppath`` configuration
+    Modified files are saved with an .orig suffix before reverting.
+    To disable these backups, use --no-backup. You can configure Mercurial
+    to store these backup files in a custom directory relative to the root
+    of the repository by setting the ``ui.origbackuppath`` configuration
     option.
-
-    See :hg:`help dates` for a list of formats valid for -d/--date.
-
-    See :hg:`help backout` for a way to reverse the effect of an
-    earlier changeset.
 
     Returns 0 on success.
     """

@@ -94,32 +94,27 @@ def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
 def purge(ui, repo, *dirs, **opts):
     """delete untracked files
 
-    Delete files not known to Mercurial. This is useful to test local
-    and uncommitted changes in an otherwise-clean source tree.
+    Delete all untracked files in your checkout. Untracked files are files
+    that are unknown to Mercurial. They are marked with "?" when you run
+    :hg:`status`.
 
-    This means that purge will delete the following by default:
-
-    - Unknown files: files marked with "?" by :hg:`status`
-    - Empty directories: in fact Mercurial ignores directories unless
-      they contain files under source control management
-
-    But it will leave untouched:
+    By default, :hg:`purge` does not affect::
 
     - Modified and unmodified tracked files
     - Ignored files (unless --all is specified)
-    - New files added to the repository (with :hg:`add`)
-
-    The --files and --dirs options can be used to direct purge to delete
-    only files, only directories, or both. If neither option is given,
-    both will be deleted.
+    - New files added to the repository with :hg:`add`, but not yet
+      committed
+    - Empty directories that contain no files (unless --dirs is
+      specified)
 
     If directories are given on the command line, only files in these
     directories are considered.
 
-    Be careful with purge, as you could irreversibly delete some files
-    you forgot to add to the repository. If you only want to print the
-    list of files that this program would delete, use the --print
-    option.
+    Caution: Be careful with purge, as you might irreversibly delete some files
+    you forgot to add to the repository. There is no way to undo an
+    :hg:`purge` operation. Run :hg:`status` first to verify the list of
+    files that will be deleted, or use the --print option with :hg:`purge`
+    to preview the results.
     """
     act = not opts.get("print")
     eol = "\n"
