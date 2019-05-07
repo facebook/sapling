@@ -108,7 +108,7 @@ where
 {
     let mut delta_cache = DeltaCache::new(repo.clone());
     deltaed
-        .and_then(move |FilelogDeltaed { path, chunk }| {
+        .map(move |FilelogDeltaed { path, chunk }| {
             let CgDeltaChunk {
                 node,
                 base,
@@ -152,6 +152,7 @@ where
                 .from_err()
                 .boxify()
         })
+        .buffer_unordered(100)
         .boxify()
 }
 
