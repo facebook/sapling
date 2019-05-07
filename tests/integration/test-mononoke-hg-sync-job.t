@@ -649,6 +649,7 @@ Test bookmark deletion sync
   sending unbundlereplay command
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
+  * queue size after processing #8: 0 (glob)
   * successful sync of entry #8 (glob)
   $ cd $TESTTMP/client-push
   $ hgmn push --delete book_to_delete
@@ -686,6 +687,7 @@ Test bookmark deletion sync
   sending unbundlereplay command
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
+  * queue size after processing #9: 0 (glob)
   * successful sync of entry #9 (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r master_bookmark
