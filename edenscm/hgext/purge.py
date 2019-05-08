@@ -102,10 +102,8 @@ def purge(ui, repo, *dirs, **opts):
 
     - Modified and unmodified tracked files
     - Ignored files (unless --all is specified)
-    - New files added to the repository with :hg:`add`, but not yet
-      committed
-    - Empty directories that contain no files (unless --dirs is
-      specified)
+    - New files added to the repository with :hg:`add`, but not yet committed
+    - Empty directories that contain no files (unless --dirs is specified)
 
     If directories are given on the command line, only files in these
     directories are considered.
