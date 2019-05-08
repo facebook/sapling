@@ -86,9 +86,9 @@ def wraprepo(repo):
 
         @localrepo.unfilteredmethod
         def close(self):
+            result = super(shallowrepository, self).close()
             self.fileservice.close()
-
-            return super(shallowrepository, self).close()
+            return result
 
         @localrepo.unfilteredmethod
         def commitctx(self, ctx, error=False):
