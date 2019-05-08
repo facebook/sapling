@@ -246,6 +246,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\fs\config\CachedParsedFileMonitor.h" />
     <ClInclude Include="..\..\fs\config\CheckoutConfig.h" />
+    <ClInclude Include="..\..\fs\config\ConfigSetting.h" />
     <ClInclude Include="..\..\fs\config\EdenConfig.h" />
     <ClInclude Include="..\..\fs\config\FieldConverter.h" />
     <ClInclude Include="..\..\fs\config\FileChangeMonitor.h" />

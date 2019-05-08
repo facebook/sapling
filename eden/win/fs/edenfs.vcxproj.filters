@@ -457,6 +457,9 @@
     <ClInclude Include="..\..\fs\config\CheckoutConfig.h">
       <Filter>fs\Config</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\fs\config\ConfigSetting.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\fs\config\EdenConfig.h">
       <Filter>fs\Config</Filter>
     </ClInclude>
