@@ -557,24 +557,6 @@ class remotefileslog(filelog.fileslog):
         cachecontent, cachemetadata = self.makecachestores()
         localcontent, localmetadata = self.makelocalstores()
 
-        if not self.ui.configbool("remotefilelog", "indexedlogdatastore"):
-            sunioncontentstore = spackcontent
-        else:
-            path = shallowutil.getexperimentalcachepath(repo)
-            path = os.path.join(path, "indexedlogdatastore")
-
-            sindexedlogcontent = indexedlogdatastore(path)
-            sunioncontentstore = unioncontentstore(sindexedlogcontent, spackcontent)
-
-        if self.ui.configbool("remotefilelog", "fetchpacks"):
-            remotecontent, remotemetadata = self.makeremotestores(
-                sunioncontentstore, spackmetadata
-            )
-        else:
-            remotecontent, remotemetadata = self.makeremotestores(
-                cachecontent, cachemetadata
-            )
-
         mutablelocalstore = mutablestores.mutabledatahistorystore(
             lambda: self._mutablelocalpacks
         )
@@ -583,35 +565,49 @@ class remotefileslog(filelog.fileslog):
             lambda: self._mutablesharedpacks
         )
 
-        # Instantiate union stores
-        self.contentstore = unioncontentstore(
-            sunioncontentstore,
+        sharedcontentstores = [spackcontent, mutablesharedstore]
+        sharedmetadatastores = [spackmetadata, mutablesharedstore]
+        if self.ui.configbool("remotefilelog", "fetchpacks"):
+            if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
+                path = shallowutil.getexperimentalcachepath(repo)
+                path = os.path.join(path, "indexedlogdatastore")
+                sharedcontentstores += [indexedlogdatastore(path)]
+
+            sunioncontentstore = unioncontentstore(*sharedcontentstores)
+            sunionmetadatastore = unionmetadatastore(
+                *sharedmetadatastores, allowincomplete=True
+            )
+            remotecontent, remotemetadata = self.makeremotestores(
+                sunioncontentstore, sunionmetadatastore
+            )
+        else:
+            remotecontent, remotemetadata = self.makeremotestores(
+                cachecontent, cachemetadata
+            )
+
+        contentstores = sharedcontentstores + [
             cachecontent,
             lpackcontent,
             localcontent,
-            mutablesharedstore,
             mutablelocalstore,
             remotecontent,
-            mutablesharedstore,
-        )
-
-        self.metadatastore = unionmetadatastore(
-            spackmetadata,
+        ]
+        metadatastores = sharedmetadatastores + [
             cachemetadata,
             lpackmetadata,
             localmetadata,
-            mutablesharedstore,
             mutablelocalstore,
             remotemetadata,
-            mutablesharedstore,
-        )
+        ]
+
+        # Instantiate union stores
+        self.contentstore = unioncontentstore(*contentstores)
+        self.metadatastore = unionmetadatastore(*metadatastores)
+
         self.loosefilewritestore = localcontent
 
         fileservicedatawrite = cachecontent
         fileservicehistorywrite = cachemetadata
-        if repo.ui.configbool("remotefilelog", "fetchpacks"):
-            fileservicedatawrite = sunioncontentstore
-            fileservicehistorywrite = spackmetadata
         repo.fileservice.setstore(
             self.contentstore,
             self.metadatastore,
