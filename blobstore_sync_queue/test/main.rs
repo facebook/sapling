@@ -43,13 +43,9 @@ fn test_simple() {
     // add
     assert!(rt
         .block_on(queue.add(ctx.clone(), entry0.clone()))
-        .expect("Adding entry failed"));
-    assert!(rt
-        .block_on(queue.add(ctx.clone(), entry1.clone()))
-        .expect("Adding entry with the same key should succeed"));
-    assert!(rt
-        .block_on(queue.add(ctx.clone(), entry2.clone()))
-        .expect("Adding yet another entry"));
+        .is_ok());
+    assert!(rt.block_on(queue.add(ctx.clone(), entry1.clone())).is_ok());
+    assert!(rt.block_on(queue.add(ctx.clone(), entry2.clone())).is_ok());
 
     // get
     let entries1 = rt

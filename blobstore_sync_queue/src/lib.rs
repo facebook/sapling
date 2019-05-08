@@ -66,7 +66,7 @@ impl BlobstoreSyncQueueEntry {
 }
 
 pub trait BlobstoreSyncQueue: Send + Sync {
-    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<bool, Error>;
+    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error>;
 
     /// Returns list of entries that consist of two groups of entries:
     /// 1. Group with at most `limit` entries that are older than `older_than`
@@ -94,7 +94,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
 }
 
 impl BlobstoreSyncQueue for Arc<BlobstoreSyncQueue> {
-    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
         (**self).add(ctx, entry)
     }
 
@@ -208,7 +208,7 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
 }
 
 impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
-    fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
         STATS::adds.add_value(1);
 
         let BlobstoreSyncQueueEntry {
@@ -223,7 +223,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             &self.write_connection,
             &[(&repo_id, &blobstore_key, &blobstore_id, &timestamp.into())],
         )
-        .map(|result| result.affected_rows() == 1)
+        .map(|_| ())
         .boxify()
     }
 

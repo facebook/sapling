@@ -310,7 +310,7 @@ fn populate_healer_queue(
                 let state = state.with_current(entry.range.clone());
 
                 let enqueue = if config.dry_run {
-                    future::ok(false).left_future()
+                    future::ok(()).left_future()
                 } else {
                     queue
                         .add(

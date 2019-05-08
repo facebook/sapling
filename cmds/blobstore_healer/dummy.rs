@@ -64,9 +64,9 @@ impl<Q: BlobstoreSyncQueue> DummyBlobstoreSyncQueue<Q> {
 }
 
 impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
-    fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
         info!(self.logger, "I would have written {:#?}", entry);
-        Ok(false).into_future().boxify()
+        Ok(()).into_future().boxify()
     }
 
     fn iter(
