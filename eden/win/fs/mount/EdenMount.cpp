@@ -10,7 +10,7 @@
 
 #include "eden/win/fs/mount/EdenMount.h"
 
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
@@ -37,7 +37,7 @@ static uint64_t generateLuid() {
 }
 
 std::shared_ptr<EdenMount> EdenMount::create(
-    std::unique_ptr<ClientConfig> config,
+    std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<ServerState> serverState) {
   return std::shared_ptr<EdenMount>(
@@ -47,7 +47,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
 }
 
 EdenMount::EdenMount(
-    std::unique_ptr<ClientConfig> config,
+    std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<ServerState> serverState)
     : config_{std::move(config)},

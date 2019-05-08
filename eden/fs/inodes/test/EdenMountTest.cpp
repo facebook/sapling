@@ -21,7 +21,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"

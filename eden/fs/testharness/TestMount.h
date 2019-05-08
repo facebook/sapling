@@ -33,7 +33,7 @@ class ManualExecutor;
 namespace facebook {
 namespace eden {
 class BlobCache;
-class ClientConfig;
+class CheckoutConfig;
 class FakeBackingStore;
 class FakeFuse;
 class FakePrivHelper;
@@ -164,12 +164,12 @@ class TestMount {
   void startFuseAndWait(std::shared_ptr<FakeFuse>);
 
   /**
-   * Get the ClientConfig object.
+   * Get the CheckoutConfig object.
    *
-   * The ClientConfig object provides methods to get the paths to the mount
+   * The CheckoutConfig object provides methods to get the paths to the mount
    * point, the client directory, etc.
    */
-  ClientConfig* getConfig() const {
+  CheckoutConfig* getConfig() const {
     return config_.get();
   }
 
@@ -350,7 +350,7 @@ class TestMount {
    * config_ is only set before edenMount_ has been initialized.
    * When edenMount_ is created we pass ownership of the config to edenMount_.
    */
-  std::unique_ptr<ClientConfig> config_;
+  std::unique_ptr<CheckoutConfig> config_;
 
   /**
    * A counter for creating temporary commit hashes via the nextCommitHash()

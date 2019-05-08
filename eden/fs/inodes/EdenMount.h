@@ -47,8 +47,8 @@ namespace eden {
 
 class BindMount;
 class BlobCache;
+class CheckoutConfig;
 class CheckoutConflict;
-class ClientConfig;
 class Clock;
 class DiffContext;
 class EdenDispatcher;
@@ -114,7 +114,7 @@ class EdenMount {
    * called on the EdenMount until initialize() has successfully completed.
    */
   static std::shared_ptr<EdenMount> create(
-      std::unique_ptr<ClientConfig> config,
+      std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState);
@@ -233,7 +233,7 @@ class EdenMount {
 
   /*
    * Return bind mounts that are applied for this mount. These are based on the
-   * state of the ClientConfig when this EdenMount was created.
+   * state of the CheckoutConfig when this EdenMount was created.
    */
   const std::vector<BindMount>& getBindMounts() const;
 
@@ -300,7 +300,7 @@ class EdenMount {
     return mountGeneration_;
   }
 
-  const ClientConfig* getConfig() const {
+  const CheckoutConfig* getConfig() const {
     return config_.get();
   }
 
@@ -614,7 +614,7 @@ class EdenMount {
   void transitionToFuseInitializationErrorState();
 
   EdenMount(
-      std::unique_ptr<ClientConfig> config,
+      std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState);
@@ -675,7 +675,7 @@ class EdenMount {
 
   static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
-  const std::unique_ptr<const ClientConfig> config_;
+  const std::unique_ptr<const CheckoutConfig> config_;
 
   /**
    * A promise associated with the future returned from
@@ -724,7 +724,7 @@ class EdenMount {
 
   /*
    * Note that this config will not be updated if the user modifies the
-   * underlying config files after the ClientConfig was created.
+   * underlying config files after the CheckoutConfig was created.
    */
   const std::vector<BindMount> bindMounts_;
 

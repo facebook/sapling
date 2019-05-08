@@ -37,27 +37,35 @@ inline void operator<<(std::ostream& out, const BindMount& bindMount) {
       << "; pathInMountDir=" << bindMount.pathInMountDir << "}";
 }
 
-class ClientConfig {
+/**
+ * CheckoutConfig contains the configuration state for a single Eden checkout.
+ *
+ * This data is stored on disk in the file
+ * EDEN_DIR/clients/CHECKOUT_NAME/config.toml
+ */
+class CheckoutConfig {
  public:
   /**
-   * Manually construct a ClientConfig object.
+   * Manually construct a CheckoutConfig object.
    *
    * Note that most callers will probably want to use the
-   * loadFromClientDirectory() factory function to create a ClientConfig object
-   * from an existing client directory, rather than directly calling this
+   * loadFromClientDirectory() factory function to create a CheckoutConfig
+   * object from an existing client directory, rather than directly calling this
    * constructor.
    */
-  ClientConfig(AbsolutePathPiece mountPath, AbsolutePathPiece clientDirectory);
+  CheckoutConfig(
+      AbsolutePathPiece mountPath,
+      AbsolutePathPiece clientDirectory);
 
   /**
-   * Load a ClientConfig object from the edenrc file in a client directory.
+   * Load a CheckoutConfig object from the edenrc file in a client directory.
    *
    * @param mountPath  The path where the client is (or will be) mounted.
    * @param clientDirectory  The eden client data directory, where the client
    *     configuration file can be found (along with its overlay and other
    *     data).
    */
-  static std::unique_ptr<ClientConfig> loadFromClientDirectory(
+  static std::unique_ptr<CheckoutConfig> loadFromClientDirectory(
       AbsolutePathPiece mountPath,
       AbsolutePathPiece clientDirectory);
 
@@ -114,7 +122,7 @@ class ClientConfig {
   const AbsolutePath& getClientDirectory() const;
 
  private:
-  ClientConfig(
+  CheckoutConfig(
       AbsolutePathPiece clientDirectory,
       AbsolutePathPiece mountPath,
       std::vector<BindMount>&& bindMounts);

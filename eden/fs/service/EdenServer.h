@@ -181,7 +181,7 @@ class EdenServer : private TakeoverHandler {
    * Mount and return an EdenMount.
    */
   FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
-      std::unique_ptr<ClientConfig> initialConfig,
+      std::unique_ptr<CheckoutConfig> initialConfig,
       std::optional<TakeoverData::MountInfo>&& optionalTakeover = std::nullopt);
 
   /**

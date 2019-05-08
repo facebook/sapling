@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
@@ -18,7 +18,7 @@
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::BindMount;
-using facebook::eden::ClientConfig;
+using facebook::eden::CheckoutConfig;
 using facebook::eden::Hash;
 using facebook::eden::RelativePath;
 using folly::StringPiece;
@@ -27,7 +27,7 @@ namespace {
 
 using folly::test::TemporaryDirectory;
 
-class ClientConfigTest : public ::testing::Test {
+class CheckoutConfigTest : public ::testing::Test {
  protected:
   std::unique_ptr<TemporaryDirectory> edenDir_;
   folly::fs::path clientDir_;
@@ -67,8 +67,8 @@ class ClientConfigTest : public ::testing::Test {
 };
 } // namespace
 
-TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
-  auto config = ClientConfig::loadFromClientDirectory(
+TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
+  auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   auto parents = config->getParentCommits();
@@ -86,7 +86,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   EXPECT_EQ(expectedBindMounts, config->getBindMounts());
 }
 
-TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
+TEST_F(CheckoutConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   // Overwrite config.toml with no bind-mounts entry.
   auto data =
       "[repository]\n"
@@ -94,7 +94,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
       "type = \"git\"\n";
   folly::writeFile(folly::StringPiece{data}, configDotToml_.c_str());
 
-  auto config = ClientConfig::loadFromClientDirectory(
+  auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   auto parents = config->getParentCommits();
@@ -107,8 +107,8 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   EXPECT_EQ(expectedBindMounts, config->getBindMounts());
 }
 
-TEST_F(ClientConfigTest, testMultipleParents) {
-  auto config = ClientConfig::loadFromClientDirectory(
+TEST_F(CheckoutConfigTest, testMultipleParents) {
+  auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   // Overwrite the SNAPSHOT file to indicate that there are two parents
@@ -129,8 +129,8 @@ TEST_F(ClientConfigTest, testMultipleParents) {
       Hash{"abcdef98765432100123456789abcdef00112233"}, parents.parent2());
 }
 
-TEST_F(ClientConfigTest, testWriteSnapshot) {
-  auto config = ClientConfig::loadFromClientDirectory(
+TEST_F(CheckoutConfigTest, testWriteSnapshot) {
+  auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   Hash hash1{"99887766554433221100aabbccddeeffabcdef99"};
@@ -170,19 +170,19 @@ TEST_F(ClientConfigTest, testWriteSnapshot) {
 }
 
 template <typename ExceptionType>
-void ClientConfigTest::testBadSnapshot(
+void CheckoutConfigTest::testBadSnapshot(
     StringPiece contents,
     const char* errorRegex) {
   SCOPED_TRACE(
       folly::to<std::string>("SNAPSHOT contents: ", folly::hexlify(contents)));
   folly::writeFile(contents, (clientDir_ / "SNAPSHOT").c_str());
 
-  auto config = ClientConfig::loadFromClientDirectory(
+  auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
   EXPECT_THROW_RE(config->getParentCommits(), ExceptionType, errorRegex);
 }
 
-TEST_F(ClientConfigTest, testBadSnapshot) {
+TEST_F(CheckoutConfigTest, testBadSnapshot) {
   testBadSnapshot("eden", "SNAPSHOT file is too short");
   testBadSnapshot(StringPiece{"eden\0\0\0", 7}, "SNAPSHOT file is too short");
   testBadSnapshot(

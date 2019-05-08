@@ -155,7 +155,7 @@ class EdenInstance:
             ${HOME} will be replaced by the user's home dir,
             ${USER} will be replaced by the user's login name.
             These are coupled with the equivalent code in
-            eden/fs/config/ClientConfig.cpp and must be kept in sync.
+            eden/fs/config/CheckoutConfig.cpp and must be kept in sync.
         """
         parser = configutil.EdenConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(

@@ -24,7 +24,7 @@
 #include <folly/Subprocess.h>
 #endif
 
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
@@ -171,7 +171,7 @@ static const uint64_t globalProcessGeneration =
 static std::atomic<uint16_t> mountGeneration{0};
 
 std::shared_ptr<EdenMount> EdenMount::create(
-    std::unique_ptr<ClientConfig> config,
+    std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState) {
@@ -183,7 +183,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
 }
 
 EdenMount::EdenMount(
-    std::unique_ptr<ClientConfig> config,
+    std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState)

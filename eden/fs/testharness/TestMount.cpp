@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
@@ -222,8 +222,8 @@ void TestMount::initTestDirectory() {
   auto mountPath = testDirPath + "mount"_pc;
   makedir(mountPath);
 
-  // Create the ClientConfig using our newly-populated client directory
-  config_ = make_unique<ClientConfig>(mountPath, clientDirectory);
+  // Create the CheckoutConfig using our newly-populated client directory
+  config_ = make_unique<CheckoutConfig>(mountPath, clientDirectory);
 
   // Create localStore_ and backingStore_
   localStore_ = make_shared<MemoryLocalStore>();
@@ -246,8 +246,8 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
 }
 
 void TestMount::remount() {
-  // Create a new copy of the ClientConfig
-  auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
+  // Create a new copy of the CheckoutConfig
+  auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(localStore_, backingStore_);
 
@@ -269,8 +269,8 @@ void TestMount::remount() {
 }
 
 void TestMount::remountGracefully() {
-  // Create a new copy of the ClientConfig
-  auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
+  // Create a new copy of the CheckoutConfig
+  auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(localStore_, backingStore_);
 

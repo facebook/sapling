@@ -7,7 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
+
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
 
 #include <folly/Range.h>
@@ -31,7 +32,7 @@ using std::string;
 
 namespace {
 // TOML config file for the individual client.
-const facebook::eden::RelativePathPiece kClientConfig{"config.toml"};
+const facebook::eden::RelativePathPiece kCheckoutConfig{"config.toml"};
 
 // Keys for the TOML config file.
 constexpr folly::StringPiece kBindMountsSection{"bind-mounts"};
@@ -64,12 +65,12 @@ enum : uint32_t {
 namespace facebook {
 namespace eden {
 
-ClientConfig::ClientConfig(
+CheckoutConfig::CheckoutConfig(
     AbsolutePathPiece mountPath,
     AbsolutePathPiece clientDirectory)
     : clientDirectory_(clientDirectory), mountPath_(mountPath) {}
 
-ParentCommits ClientConfig::getParentCommits() const {
+ParentCommits CheckoutConfig::getParentCommits() const {
   // Read the snapshot.
   auto snapshotFile = getSnapshotPath();
   string snapshotFileContents;
@@ -129,7 +130,7 @@ ParentCommits ClientConfig::getParentCommits() const {
   return parents;
 }
 
-void ClientConfig::setParentCommits(const ParentCommits& parents) const {
+void CheckoutConfig::setParentCommits(const ParentCommits& parents) const {
   std::array<uint8_t, kSnapshotHeaderSize + (2 * Hash::RAW_SIZE)> buffer;
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{buffer});
   folly::io::RWPrivateCursor cursor{&buf};
@@ -155,32 +156,32 @@ void ClientConfig::setParentCommits(const ParentCommits& parents) const {
 #endif
 }
 
-void ClientConfig::setParentCommits(Hash parent1, std::optional<Hash> parent2)
+void CheckoutConfig::setParentCommits(Hash parent1, std::optional<Hash> parent2)
     const {
   return setParentCommits(ParentCommits{parent1, parent2});
 }
 
-const AbsolutePath& ClientConfig::getClientDirectory() const {
+const AbsolutePath& CheckoutConfig::getClientDirectory() const {
   return clientDirectory_;
 }
 
-AbsolutePath ClientConfig::getSnapshotPath() const {
+AbsolutePath CheckoutConfig::getSnapshotPath() const {
   return clientDirectory_ + kSnapshotFile;
 }
 
-AbsolutePath ClientConfig::getOverlayPath() const {
+AbsolutePath CheckoutConfig::getOverlayPath() const {
   return clientDirectory_ + kOverlayDir;
 }
 
-std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
+std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
     AbsolutePathPiece mountPath,
     AbsolutePathPiece clientDirectory) {
   // Extract repository name from the client config file
-  auto configPath = clientDirectory + kClientConfig;
+  auto configPath = clientDirectory + kCheckoutConfig;
   auto configRoot = cpptoml::parse_file(configPath.c_str());
 
-  // Construct ClientConfig object
-  auto config = std::make_unique<ClientConfig>(mountPath, clientDirectory);
+  // Construct CheckoutConfig object
+  auto config = std::make_unique<CheckoutConfig>(mountPath, clientDirectory);
 
   // Load repository information
   auto repository = configRoot->get_table(kRepoSection.str());
@@ -203,7 +204,8 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   return config;
 }
 
-folly::dynamic ClientConfig::loadClientDirectoryMap(AbsolutePathPiece edenDir) {
+folly::dynamic CheckoutConfig::loadClientDirectoryMap(
+    AbsolutePathPiece edenDir) {
   // Extract the JSON and strip any comments.
   std::string jsonContents;
   auto configJsonFile = edenDir + kClientDirectoryMap;

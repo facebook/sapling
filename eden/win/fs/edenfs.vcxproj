@@ -159,7 +159,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\fs\config\ClientConfig.cpp" />
+    <ClCompile Include="..\..\fs\config\CheckoutConfig.cpp" />
     <ClCompile Include="..\..\fs\config\EdenConfig.cpp" />
     <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp" />
     <ClCompile Include="..\..\fs\config\ReloadableConfig.cpp" />
@@ -244,7 +244,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\config\CachedParsedFileMonitor.h" />
-    <ClInclude Include="..\..\fs\config\ClientConfig.h" />
+    <ClInclude Include="..\..\fs\config\CheckoutConfig.h" />
     <ClInclude Include="..\..\fs\config\EdenConfig.h" />
     <ClInclude Include="..\..\fs\config\FileChangeMonitor.h" />
     <ClInclude Include="..\..\fs\config\ReloadableConfig.h" />

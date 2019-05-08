@@ -23,7 +23,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "common/stats/ServiceData.h"
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef EDEN_WIN
 #include "eden/win/fs/mount/EdenMount.h" // @manual
@@ -537,7 +537,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
     const auto stateDirectory = info.stateDirectory;
     auto mountFuture =
         makeFutureWith([&] {
-          auto initialConfig = ClientConfig::loadFromClientDirectory(
+          auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{info.mountPath},
               AbsolutePathPiece{info.stateDirectory});
           return mount(std::move(initialConfig), std::move(info));
@@ -569,7 +569,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   std::vector<Future<Unit>> mountFutures;
   folly::dynamic dirs = folly::dynamic::object();
   try {
-    dirs = ClientConfig::loadClientDirectoryMap(edenDir_.getPath());
+    dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
   } catch (const std::exception& ex) {
     logger->warn(
         "Could not parse config.json file: ",
@@ -594,7 +594,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
           auto edenClientPath =
               edenDir_.getCheckoutStateDir(client.second.asString());
           mountInfo.edenClientPath = edenClientPath.stringPiece().str();
-          auto initialConfig = ClientConfig::loadFromClientDirectory(
+          auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{mountInfo.mountPoint},
               AbsolutePathPiece{mountInfo.edenClientPath});
           return mount(std::move(initialConfig));
@@ -791,7 +791,7 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
 #endif // !EDEN_WIN
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
-    std::unique_ptr<ClientConfig> initialConfig,
+    std::unique_ptr<CheckoutConfig> initialConfig,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());

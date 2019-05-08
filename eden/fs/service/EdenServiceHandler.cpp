@@ -43,7 +43,7 @@
 #endif // EDEN_WIN
 
 #include "common/stats/ServiceData.h"
-#include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -275,7 +275,7 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, argument->get_mountPoint());
   try {
-    auto initialConfig = ClientConfig::loadFromClientDirectory(
+    auto initialConfig = CheckoutConfig::loadFromClientDirectory(
         AbsolutePathPiece{argument->mountPoint},
         AbsolutePathPiece{argument->edenClientPath});
     server_->mount(std::move(initialConfig)).get();
