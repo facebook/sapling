@@ -99,7 +99,9 @@ impl<'a> Iterator for Elements<'a> {
     type Item = Fallible<Element>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position >= self.byte_slice.len() {
+        // We check position + 1 because some of the entries that we have in storage are missing
+        // the final line feed.
+        if self.position + 1 >= self.byte_slice.len() {
             return None;
         }
         let end = match self.byte_slice[self.position..]
