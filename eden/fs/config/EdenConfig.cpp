@@ -47,13 +47,13 @@ namespace eden {
 
 std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {
   switch (cs) {
-    case facebook::eden::DEFAULT:
+    case ConfigSource::DEFAULT:
       return "default";
-    case facebook::eden::COMMAND_LINE:
+    case ConfigSource::COMMAND_LINE:
       return "command-line";
-    case facebook::eden::USER_CONFIG_FILE:
+    case ConfigSource::USER_CONFIG_FILE:
       return userConfigPath_.c_str();
-    case facebook::eden::SYSTEM_CONFIG_FILE:
+    case ConfigSource::SYSTEM_CONFIG_FILE:
       return systemConfigPath_.c_str();
   }
   throw std::invalid_argument(
@@ -119,15 +119,12 @@ EdenConfig::EdenConfig(
       systemConfigDir_(systemConfigDir) {
   // Force set defaults that require passed arguments
   edenDir_.setValue(
-      userHomePath_ + kDefaultEdenDirectory, facebook::eden::DEFAULT, true);
+      userHomePath_ + kDefaultEdenDirectory, ConfigSource::DEFAULT, true);
   userIgnoreFile_.setValue(
-      userHomePath + kDefaultUserIgnoreFile, facebook::eden::DEFAULT, true);
+      userHomePath + kDefaultUserIgnoreFile, ConfigSource::DEFAULT, true);
   systemIgnoreFile_.setValue(
-      systemConfigDir_ + kDefaultSystemIgnoreFile,
-      facebook::eden::DEFAULT,
-      true);
-  clientCertificate_.setValue(
-      kUnspecifiedDefault, facebook::eden::DEFAULT, true);
+      systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::DEFAULT, true);
+  clientCertificate_.setValue(kUnspecifiedDefault, ConfigSource::DEFAULT, true);
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -328,17 +325,17 @@ static void getConfigStat(
 }
 
 void EdenConfig::loadSystemConfig() {
-  clearAll(facebook::eden::SYSTEM_CONFIG_FILE);
+  clearAll(ConfigSource::SYSTEM_CONFIG_FILE);
   loadConfig(
       systemConfigPath_,
-      facebook::eden::SYSTEM_CONFIG_FILE,
+      ConfigSource::SYSTEM_CONFIG_FILE,
       &systemConfigFileStat_);
 }
 
 void EdenConfig::loadUserConfig() {
-  clearAll(facebook::eden::USER_CONFIG_FILE);
+  clearAll(ConfigSource::USER_CONFIG_FILE);
   loadConfig(
-      userConfigPath_, facebook::eden::USER_CONFIG_FILE, &userConfigFileStat_);
+      userConfigPath_, ConfigSource::USER_CONFIG_FILE, &userConfigFileStat_);
 }
 
 void EdenConfig::loadConfig(

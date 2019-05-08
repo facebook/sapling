@@ -31,7 +31,7 @@ namespace eden {
  * they should be ordered from 0 to kConfigSourceLastIndex, with increments
  * of 1.
  */
-enum ConfigSource {
+enum class ConfigSource {
   DEFAULT = 0,
   SYSTEM_CONFIG_FILE = 1,
   USER_CONFIG_FILE = 2,
@@ -133,7 +133,7 @@ class ConfigSetting : public ConfigSettingBase {
       T value,
       ConfigSettingManager* configSettingManager)
       : ConfigSettingBase(key, configSettingManager) {
-    configValueArray_[facebook::eden::DEFAULT].emplace(std::move(value));
+    getSlot(ConfigSource::DEFAULT).emplace(std::move(value));
   }
 
   /**
@@ -158,18 +158,17 @@ class ConfigSetting : public ConfigSettingBase {
 
   /** Get the highest priority ConfigSource (we ignore unpopulated values).*/
   ConfigSource getSource() const override {
-    return (ConfigSource)getHighestPriorityIdx();
+    return static_cast<ConfigSource>(getHighestPriorityIdx());
   }
 
   /** Get the highest priority value for this setting.*/
   const T& getValue() const {
-    return configValueArray_[getHighestPriorityIdx()].value();
+    return getSlot(getSource()).value();
   }
 
   /** Get the string value for this setting. Intended for debug purposes. .*/
   std::string getStringValue() const override {
-    return folly::to<std::string>(
-        configValueArray_[getHighestPriorityIdx()].value());
+    return folly::to<std::string>(getValue());
   }
 
   /**
@@ -181,13 +180,13 @@ class ConfigSetting : public ConfigSettingBase {
       folly::StringPiece stringValue,
       const std::map<std::string, std::string>& attrMap,
       ConfigSource newSource) override {
-    if (newSource == facebook::eden::DEFAULT) {
+    if (newSource == ConfigSource::DEFAULT) {
       return folly::makeUnexpected<std::string>(
           "Convert ignored for default value");
     }
     Converter c;
     return c(stringValue, attrMap).then([&](T&& convertResult) {
-      configValueArray_[newSource].emplace(std::move(convertResult));
+      getSlot(newSource).emplace(std::move(convertResult));
     });
   }
 
@@ -195,40 +194,48 @@ class ConfigSetting : public ConfigSettingBase {
    * Set the value with the identified source.
    */
   void setValue(T newVal, ConfigSource newSource, bool force = false) {
-    if (force || newSource != facebook::eden::DEFAULT) {
-      configValueArray_[newSource].emplace(std::move(newVal));
+    if (force || newSource != ConfigSource::DEFAULT) {
+      getSlot(newSource).emplace(std::move(newVal));
     }
   }
 
   /** Clear the value for the passed ConfigSource. The operation will be
-   * ignored for ConfigSource.DEFAULT. */
+   * ignored for ConfigSource::DEFAULT. */
   void clearValue(ConfigSource source) override {
-    if (source != facebook::eden::DEFAULT &&
-        configValueArray_[source].has_value()) {
-      configValueArray_[source].reset();
+    if (source != ConfigSource::DEFAULT && getSlot(source).has_value()) {
+      getSlot(source).reset();
     }
   }
 
   virtual ~ConfigSetting() {}
 
  private:
-  /**
-   * Stores the values, indexed by ConfigSource (as int). Optional is used to
-   * allow unpopulated entries. Default values should always be present.
-   */
-  std::array<std::optional<T>, kConfigSourceLastIndex + 1> configValueArray_;
+  std::optional<T>& getSlot(ConfigSource source) {
+    return configValueArray_[static_cast<size_t>(source)];
+  }
+  const std::optional<T>& getSlot(ConfigSource source) const {
+    return configValueArray_[static_cast<size_t>(source)];
+  }
+
   /**
    *  Get the index of the highest priority source that is populated.
    */
   size_t getHighestPriorityIdx() const {
-    for (auto idx = kConfigSourceLastIndex; idx > facebook::eden::DEFAULT;
+    for (auto idx = static_cast<size_t>(kConfigSourceLastIndex);
+         idx > static_cast<size_t>(ConfigSource::DEFAULT);
          --idx) {
       if (configValueArray_[idx].has_value()) {
         return idx;
       }
     }
-    return facebook::eden::DEFAULT;
+    return static_cast<size_t>(ConfigSource::DEFAULT);
   }
+
+  /**
+   * Stores the values, indexed by ConfigSource (as int). Optional is used to
+   * allow unpopulated entries. Default values should always be present.
+   */
+  std::array<std::optional<T>, kConfigSourceLastIndex + 1> configValueArray_;
 };
 
 } // namespace eden

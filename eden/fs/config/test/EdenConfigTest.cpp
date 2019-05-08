@@ -16,18 +16,14 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-using facebook::eden::AbsolutePath;
-using facebook::eden::Hash;
-using facebook::eden::RelativePath;
 using folly::StringPiece;
+using folly::test::TemporaryDirectory;
 using std::optional;
 using namespace folly::literals::string_piece_literals;
+using namespace facebook::eden;
 using namespace facebook::eden::path_literals;
 
 namespace {
-
-using facebook::eden::EdenConfig;
-using folly::test::TemporaryDirectory;
 
 class EdenConfigTest : public ::testing::Test {
  protected:
@@ -102,7 +98,7 @@ TEST_F(EdenConfigTest, defaultTest) {
   AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
   AbsolutePath systemConfigDir{"/etc/eden"};
 
-  auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+  auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
@@ -128,7 +124,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath systemConfigPath{"/etc/eden/fix/edenfs.rc"};
   AbsolutePath systemConfigDir{"/etc/eden/fix"};
 
-  auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+  auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
@@ -153,13 +149,12 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->setSystemConfigPath(updatedSystemConfigPath);
 
   // Configuration
-  edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
-  edenConfig->setSystemIgnoreFile(
-      systemIgnoreFile, facebook::eden::COMMAND_LINE);
-  edenConfig->setEdenDir(edenDir, facebook::eden::COMMAND_LINE);
+  edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::COMMAND_LINE);
+  edenConfig->setSystemIgnoreFile(systemIgnoreFile, ConfigSource::COMMAND_LINE);
+  edenConfig->setEdenDir(edenDir, ConfigSource::COMMAND_LINE);
   edenConfig->setClientCertificate(
-      clientCertificate, facebook::eden::COMMAND_LINE);
-  edenConfig->setUseMononoke(useMononoke, facebook::eden::COMMAND_LINE);
+      clientCertificate, ConfigSource::COMMAND_LINE);
+  edenConfig->setUseMononoke(useMononoke, ConfigSource::COMMAND_LINE);
 
   // Config path
   EXPECT_EQ(edenConfig->getUserConfigPath(), updatedUserConfigPath);
@@ -187,7 +182,7 @@ TEST_F(EdenConfigTest, cloneTest) {
 
   std::shared_ptr<EdenConfig> configCopy;
   {
-    auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+    auto edenConfig = std::make_shared<EdenConfig>(
         testUser_,
         uid_t{},
         testHomeDir_,
@@ -196,13 +191,13 @@ TEST_F(EdenConfigTest, cloneTest) {
         systemConfigPath);
 
     // Configuration
-    edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::COMMAND_LINE);
+    edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::COMMAND_LINE);
     edenConfig->setSystemIgnoreFile(
-        systemIgnoreFile, facebook::eden::SYSTEM_CONFIG_FILE);
-    edenConfig->setEdenDir(edenDir, facebook::eden::USER_CONFIG_FILE);
+        systemIgnoreFile, ConfigSource::SYSTEM_CONFIG_FILE);
+    edenConfig->setEdenDir(edenDir, ConfigSource::USER_CONFIG_FILE);
     edenConfig->setClientCertificate(
-        clientCertificate, facebook::eden::USER_CONFIG_FILE);
-    edenConfig->setUseMononoke(useMononoke, facebook::eden::USER_CONFIG_FILE);
+        clientCertificate, ConfigSource::USER_CONFIG_FILE);
+    edenConfig->setUseMononoke(useMononoke, ConfigSource::USER_CONFIG_FILE);
 
     EXPECT_EQ(edenConfig->getUserConfigPath(), userConfigPath);
     EXPECT_EQ(edenConfig->getSystemConfigPath(), systemConfigPath);
@@ -227,9 +222,9 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getClientCertificate(), clientCertificate);
   EXPECT_EQ(configCopy->getUseMononoke(), useMononoke);
 
-  configCopy->clearAll(facebook::eden::USER_CONFIG_FILE);
-  configCopy->clearAll(facebook::eden::SYSTEM_CONFIG_FILE);
-  configCopy->clearAll(facebook::eden::COMMAND_LINE);
+  configCopy->clearAll(ConfigSource::USER_CONFIG_FILE);
+  configCopy->clearAll(ConfigSource::SYSTEM_CONFIG_FILE);
+  configCopy->clearAll(ConfigSource::COMMAND_LINE);
 
   EXPECT_EQ(configCopy->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(configCopy->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
@@ -243,7 +238,7 @@ TEST_F(EdenConfigTest, clearAllTest) {
   AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
   AbsolutePath systemConfigDir{"/etc/eden"};
 
-  auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+  auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
@@ -258,13 +253,13 @@ TEST_F(EdenConfigTest, clearAllTest) {
   // We will set the config on 3 properties, each with different sources
   // We will then run for each source to check results
   edenConfig->setUserIgnoreFile(
-      fromUserConfigPath, facebook::eden::USER_CONFIG_FILE);
+      fromUserConfigPath, ConfigSource::USER_CONFIG_FILE);
   edenConfig->setSystemIgnoreFile(
-      fromSystemConfigPath, facebook::eden::SYSTEM_CONFIG_FILE);
-  edenConfig->setEdenDir(fromCommandLine, facebook::eden::COMMAND_LINE);
-  edenConfig->setEdenDir(fromUserConfigPath, facebook::eden::USER_CONFIG_FILE);
+      fromSystemConfigPath, ConfigSource::SYSTEM_CONFIG_FILE);
+  edenConfig->setEdenDir(fromCommandLine, ConfigSource::COMMAND_LINE);
+  edenConfig->setEdenDir(fromUserConfigPath, ConfigSource::USER_CONFIG_FILE);
   edenConfig->setEdenDir(
-      fromSystemConfigPath, facebook::eden::SYSTEM_CONFIG_FILE);
+      fromSystemConfigPath, ConfigSource::SYSTEM_CONFIG_FILE);
 
   // Check over-rides
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), fromUserConfigPath);
@@ -272,19 +267,19 @@ TEST_F(EdenConfigTest, clearAllTest) {
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
   // Clear USER_CONFIG_FILE and check
-  edenConfig->clearAll(facebook::eden::USER_CONFIG_FILE);
+  edenConfig->clearAll(ConfigSource::USER_CONFIG_FILE);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), fromSystemConfigPath);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
   // Clear SYSTEM_CONFIG_FILE and check
-  edenConfig->clearAll(facebook::eden::SYSTEM_CONFIG_FILE);
+  edenConfig->clearAll(ConfigSource::SYSTEM_CONFIG_FILE);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
   // Clear COMMAND_LINE and check
-  edenConfig->clearAll(facebook::eden::COMMAND_LINE);
+  edenConfig->clearAll(ConfigSource::COMMAND_LINE);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
@@ -295,7 +290,7 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
   AbsolutePath systemConfigDir{"/etc/eden"};
 
-  auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+  auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
@@ -311,20 +306,20 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   AbsolutePath ignoreFile{"/USER_IGNORE_FILE"};
   AbsolutePath systemIgnoreFile{"/SYSTEM_IGNORE_FILE"};
 
-  edenConfig->setUserIgnoreFile(cliIgnoreFile, facebook::eden::COMMAND_LINE);
+  edenConfig->setUserIgnoreFile(cliIgnoreFile, ConfigSource::COMMAND_LINE);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 
   edenConfig->setUserIgnoreFile(
-      cliIgnoreFile, facebook::eden::SYSTEM_CONFIG_FILE);
+      cliIgnoreFile, ConfigSource::SYSTEM_CONFIG_FILE);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 
-  edenConfig->setUserIgnoreFile(ignoreFile, facebook::eden::USER_CONFIG_FILE);
+  edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::USER_CONFIG_FILE);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 }
 
 TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   // TODO: GET THE BASE NAME FOR THE SYSTEM CONFIG DIR!
-  auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+  auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
@@ -358,7 +353,7 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   auto systemConfigDir = AbsolutePath{"/etc/eden"};
   auto systemConfigPath = AbsolutePath{"/etc/eden/FILE_DOES_NOT_EXIST.rc"};
 
-  auto edenConfig = std::make_shared<facebook::eden::EdenConfig>(
+  auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,

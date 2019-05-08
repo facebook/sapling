@@ -48,7 +48,7 @@ void findEdenDir(EdenConfig& config) {
     // makes sure that any future updates to the config file do not affect the
     // value we use.  Once we start we want to always use a fixed location for
     // the eden directory.
-    config.setEdenDir(resolvedDir, facebook::eden::COMMAND_LINE);
+    config.setEdenDir(resolvedDir, ConfigSource::COMMAND_LINE);
   } catch (const std::exception& ex) {
     throw ArgumentError(
         "error creating ", boostPath.string(), ": ", folly::exceptionStr(ex));
