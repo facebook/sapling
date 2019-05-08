@@ -162,6 +162,7 @@
     <ClCompile Include="..\..\fs\config\ClientConfig.cpp" />
     <ClCompile Include="..\..\fs\config\EdenConfig.cpp" />
     <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp" />
+    <ClCompile Include="..\..\fs\config\ReloadableConfig.cpp" />
     <ClCompile Include="..\..\fs\inodes\ServerState.cpp" />
     <ClCompile Include="..\..\fs\journal\Journal.cpp" />
     <ClCompile Include="..\..\fs\journal\JournalDelta.cpp" />
@@ -245,7 +246,8 @@
     <ClInclude Include="..\..\fs\config\CachedParsedFileMonitor.h" />
     <ClInclude Include="..\..\fs\config\ClientConfig.h" />
     <ClInclude Include="..\..\fs\config\EdenConfig.h" />
-    <ClInclude Include="..\..\fs\config\filechangemonitor.h" />
+    <ClInclude Include="..\..\fs\config\FileChangeMonitor.h" />
+    <ClInclude Include="..\..\fs\config\ReloadableConfig.h" />
     <ClInclude Include="..\..\fs\tracing\EdenStats.h" />
     <ClInclude Include="..\..\fs\inodes\ServerState.h" />
     <ClInclude Include="..\..\fs\journal\Journal.h" />

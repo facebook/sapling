@@ -34,9 +34,6 @@ DEFINE_bool(
 namespace facebook {
 namespace eden {
 
-/** Throttle EdenConfig change checks, max of 1 per kEdenConfigMinPollSeconds */
-constexpr std::chrono::seconds kEdenConfigMinPollSeconds{5};
-
 /** Throttle Ignore change checks, max of 1 per kUserIgnoreMinPollSeconds */
 constexpr std::chrono::seconds kUserIgnoreMinPollSeconds{5};
 
@@ -56,7 +53,7 @@ ServerState::ServerState(
       clock_{std::move(clock)},
       processNameCache_{std::move(processNameCache)},
       faultInjector_{new FaultInjector(FLAGS_enable_fault_injection)},
-      configState_{ConfigState{edenConfig}},
+      config_{edenConfig},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->getUserIgnoreFile(),
           kUserIgnoreMinPollSeconds}},
@@ -77,38 +74,6 @@ ServerState::ServerState(
 }
 
 ServerState::~ServerState() {}
-
-std::shared_ptr<const EdenConfig> ServerState::getEdenConfig(bool skipUpdate) {
-  if (!skipUpdate) {
-    return getUpdatedEdenConfig();
-  }
-  return configState_.rlock()->config;
-}
-
-// TODO: Update this monitoring code to use FileChangeMonitor.
-std::shared_ptr<const EdenConfig> ServerState::getUpdatedEdenConfig() {
-  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  // Throttle the updates
-  auto cfgStatePtr = configState_.wlock();
-  if ((now - cfgStatePtr->lastCheck) > kEdenConfigMinPollSeconds) {
-    // Update the throttle setting - to prevent thrashing.
-    cfgStatePtr->lastCheck = now;
-    bool userConfigChanged = cfgStatePtr->config->hasUserConfigFileChanged();
-    bool systemConfigChanged =
-        cfgStatePtr->config->hasSystemConfigFileChanged();
-    if (userConfigChanged || systemConfigChanged) {
-      auto newConfig = std::make_shared<EdenConfig>(*cfgStatePtr->config);
-      if (userConfigChanged) {
-        newConfig->loadUserConfig();
-      }
-      if (systemConfigChanged) {
-        newConfig->loadSystemConfig();
-      }
-      cfgStatePtr->config = std::move(newConfig);
-    }
-  }
-  return cfgStatePtr->config;
-}
 
 std::unique_ptr<TopLevelIgnores> ServerState::getTopLevelIgnores() {
   // Update EdenConfig to detect changes to the system or user ignore files

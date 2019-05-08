@@ -42,7 +42,7 @@ class UnboundedQueueExecutor;
  * This is normally owned by the main EdenServer object.  However unit tests
  * also create ServerState objects without an EdenServer.
  */
-class ServerState : public ReloadableConfig {
+class ServerState {
  public:
   ServerState(
       UserInfo userInfo,
@@ -79,14 +79,22 @@ class ServerState : public ReloadableConfig {
     return edenStats_;
   }
 
+  ReloadableConfig& getReloadableConfig() {
+    return config_;
+  }
+  const ReloadableConfig& getReloadableConfig() const {
+    return config_;
+  }
+
   /**
    * Get the EdenConfig; We check for changes in the config files, reload as
    * necessary and return an updated EdenConfig. The update checks are
    * throttleSeconds to kEdenConfigMinPollSeconds. If 'skipUpdate' is set, no
    * update check is performed and the current EdenConfig is returned.
    */
-  std::shared_ptr<const EdenConfig> getEdenConfig(
-      bool skipUpdate = false) override;
+  std::shared_ptr<const EdenConfig> getEdenConfig(bool skipUpdate = false) {
+    return config_.getEdenConfig(skipUpdate);
+  }
 
   /**
    * Get the TopLevelIgnores. It is based on the system and user git ignore
@@ -134,21 +142,6 @@ class ServerState : public ReloadableConfig {
   }
 
  private:
-  struct ConfigState {
-    explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
-        : config{config} {}
-    std::chrono::steady_clock::time_point lastCheck;
-    std::shared_ptr<const EdenConfig> config;
-  };
-
-  /**
-   * Check if any if system or user configuration files have changed. If so,
-   * parse and apply the changes to the EdenConfig. This method throttles
-   * update requests to once per kEdenConfigMinPollSeconds.
-   * @return the updated EdenConfig.
-   */
-  std::shared_ptr<const EdenConfig> getUpdatedEdenConfig();
-
   AbsolutePath socketPath_;
   UserInfo userInfo_;
   EdenStats edenStats_;
@@ -158,7 +151,7 @@ class ServerState : public ReloadableConfig {
   std::shared_ptr<ProcessNameCache> processNameCache_;
   std::unique_ptr<FaultInjector> const faultInjector_;
 
-  folly::Synchronized<ConfigState> configState_;
+  ReloadableConfig config_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       userIgnoreFileMonitor_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>

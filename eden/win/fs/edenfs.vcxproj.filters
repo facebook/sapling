@@ -194,6 +194,9 @@
     <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp">
       <Filter>fs\Config</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\config\ReloadableConfig.cpp">
+      <Filter>fs\Config</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\fs\service\EdenServiceHandler.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
@@ -454,7 +457,10 @@
     <ClInclude Include="..\..\fs\config\EdenConfig.h">
       <Filter>fs\Config</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\fs\config\filechangemonitor.h">
+    <ClInclude Include="..\..\fs\config\FileChangeMonitor.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\config\ReloadableConfig.h">
       <Filter>fs\Config</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\service\EdenServiceHandler.h">

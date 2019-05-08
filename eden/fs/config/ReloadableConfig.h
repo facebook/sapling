@@ -8,28 +8,51 @@
  *
  */
 #pragma once
-#include "eden/fs/config/EdenConfig.h"
+
+#include <chrono>
+#include <memory>
+
+#include <folly/Synchronized.h>
 
 namespace facebook {
 namespace eden {
 
-/** An interface that defines how to obtain a possibly reloaded EdenConfig
+class EdenConfig;
+
+/**
+ * An interface that defines how to obtain a possibly reloaded EdenConfig
  * instance.
- *
- * This class is used to avoid passing down too much state information
- * from the top level of the server and into the depths.
  */
 class ReloadableConfig {
  public:
+  explicit ReloadableConfig(std::shared_ptr<const EdenConfig> config);
+  ~ReloadableConfig();
+
   /**
    * Get the EdenConfig; We check for changes in the config files, reload as
    * necessary and return an updated EdenConfig. The update checks are
    * throttleSeconds to kEdenConfigMinPollSeconds. If 'skipUpdate' is set, no
    * update check is performed and the current EdenConfig is returned.
    */
-  virtual std::shared_ptr<const EdenConfig> getEdenConfig(
-      bool skipUpdate = false) = 0;
-  virtual ~ReloadableConfig() {}
+  std::shared_ptr<const EdenConfig> getEdenConfig(bool skipUpdate = false);
+
+ private:
+  struct ConfigState {
+    explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
+        : config{config} {}
+    std::chrono::steady_clock::time_point lastCheck;
+    std::shared_ptr<const EdenConfig> config;
+  };
+
+  /**
+   * Check if any if system or user configuration files have changed. If so,
+   * parse and apply the changes to the EdenConfig. This method throttles
+   * update requests to once per kEdenConfigMinPollSeconds.
+   * @return the updated EdenConfig.
+   */
+  std::shared_ptr<const EdenConfig> getUpdatedEdenConfig();
+
+  folly::Synchronized<ConfigState> state_;
 };
 
 } // namespace eden

@@ -37,21 +37,6 @@ FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 DEFINE_string(keySpace, "", "operate on just a single key space");
 
 namespace {
-class StoreConfig : public ReloadableConfig {
- public:
-  explicit StoreConfig(std::shared_ptr<EdenConfig> config)
-      : config_(std::move(config)) {}
-
-  std::shared_ptr<const EdenConfig> getEdenConfig(
-      bool /* skipUpdate */ = false) override {
-    // We don't ever bother checking for an update for now.
-    // We don't expect to be a long-lived process.
-    return config_;
-  }
-
- private:
-  std::shared_ptr<EdenConfig> config_;
-};
 
 LocalStore::KeySpace stringToKeySpace(StringPiece name) {
   if (name == "blob") {
@@ -104,7 +89,9 @@ class Command {
     const auto rocksPath = getLocalStorePath();
     ensureDirectoryExists(rocksPath);
     auto localStore = make_unique<RocksDbLocalStore>(
-        rocksPath, &faultInjector_, std::make_shared<StoreConfig>(config_));
+        rocksPath,
+        &faultInjector_,
+        std::make_shared<ReloadableConfig>(config_));
     XLOG(INFO) << "Opened RocksDB store in "
                << (watch.elapsed().count() / 1000.0) << " seconds.";
     return localStore;
@@ -199,12 +186,26 @@ class RepairCommand : public Command {
   }
 };
 
+class ShowSizesCommand : public Command {
+ public:
+  static constexpr auto name = StringPiece("show_sizes");
+  static constexpr auto help =
+      StringPiece("Report approximate sizes of each key space.");
+
+  void run() override {
+    auto localStore = openLocalStore();
+    (void)localStore;
+    printf("show sizes\n");
+  }
+};
+
 std::unique_ptr<Command> createCommand(StringPiece name) {
   auto commands = make_array<std::unique_ptr<CommandFactory>>(
       make_unique<CommandFactoryT<GcCommand>>(),
       make_unique<CommandFactoryT<ClearCommand>>(),
       make_unique<CommandFactoryT<CompactCommand>>(),
-      make_unique<CommandFactoryT<RepairCommand>>());
+      make_unique<CommandFactoryT<RepairCommand>>(),
+      make_unique<CommandFactoryT<ShowSizesCommand>>());
 
   std::unique_ptr<Command> command;
   for (const auto& factory : commands) {
