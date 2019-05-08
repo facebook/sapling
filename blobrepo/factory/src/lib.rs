@@ -27,8 +27,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
 use memblob::EagerMemblob;
-use metaconfig_types::RemoteBlobstoreArgs;
-use metaconfig_types::{self, RepoType};
+use metaconfig_types::{self, RemoteBlobstoreArgs, RepoType, ShardedFilenodesParams};
 use mononoke_types::RepositoryId;
 use multiplexedblob::MultiplexedBlobstore;
 use prefixblob::PrefixBlobstore;
@@ -112,12 +111,12 @@ pub fn open_blobrepo(
             ref blobstores_args,
             ref db_address,
             write_lock_db_address: _,
-            ref filenode_shards,
+            ref sharded_filenodes,
         } => new_remote(
             logger,
             blobstores_args,
             db_address.clone(),
-            filenode_shards.clone(),
+            sharded_filenodes.clone(),
             repoid,
             myrouter_port,
             bookmarks_cache_ttl,
@@ -152,11 +151,59 @@ pub fn new_memblob_empty(
     ))
 }
 
+fn new_filenodes(
+    db_address: &String,
+    sharded_filenodes: Option<ShardedFilenodesParams>,
+    myrouter_port: Option<u16>,
+) -> Result<CachingFilenodes> {
+    let (tier, filenodes) = match (sharded_filenodes, myrouter_port) {
+        (
+            Some(ShardedFilenodesParams {
+                shard_map,
+                shard_num,
+            }),
+            Some(port),
+        ) => {
+            let conn = SqlFilenodes::with_sharded_myrouter(&shard_map, port, shard_num.into())?;
+            (shard_map, conn)
+        }
+        (
+            Some(ShardedFilenodesParams {
+                shard_map,
+                shard_num,
+            }),
+            None,
+        ) => {
+            let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into())?;
+            (shard_map, conn)
+        }
+        (None, Some(port)) => {
+            let conn = SqlFilenodes::with_myrouter(&db_address, port);
+            (db_address.clone(), conn)
+        }
+        (None, None) => {
+            let conn = SqlFilenodes::with_raw_xdb_tier(&db_address)?;
+            (db_address.clone(), conn)
+        }
+    };
+
+    let filenodes = CachingFilenodes::new(
+        Arc::new(filenodes),
+        cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
+            "filenodes".to_string(),
+        )))?,
+        "sqlfilenodes",
+        &tier,
+    );
+
+    Ok(filenodes)
+}
+
 pub fn new_remote(
     logger: Logger,
     args: &RemoteBlobstoreArgs,
     db_address: String,
-    filenode_shards: Option<usize>,
+    sharded_filenodes: Option<ShardedFilenodesParams>,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
@@ -248,24 +295,7 @@ pub fn new_remote(
                 ))?);
             let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-            let filenodes = match (filenode_shards, myrouter_port) {
-                (Some(shards), Some(myrouter_port)) => {
-                    SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards)?
-                }
-                (None, Some(myrouter_port)) => {
-                    SqlFilenodes::with_myrouter(&db_address, myrouter_port)
-                }
-                (Some(shards), None) => SqlFilenodes::with_sharded_raw_xdb(&db_address, shards)?,
-                (None, None) => SqlFilenodes::with_raw_xdb_tier(&db_address)?,
-            };
-            let filenodes = CachingFilenodes::new(
-                Arc::new(filenodes),
-                cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
-                    "filenodes".to_string(),
-                )))?,
-                "sqlfilenodes",
-                &db_address,
-            );
+            let filenodes = new_filenodes(&db_address, sharded_filenodes, myrouter_port)?;
 
             let bookmarks: Arc<dyn Bookmarks> = {
                 let bookmarks = match myrouter_port {

@@ -24,7 +24,7 @@ use metaconfig_types::{
     BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
     CommonConfig, GlusterArgs, HookBypass, HookConfig, HookManagerParams, HookParams, HookType,
     LfsParams, ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig,
-    RepoReadOnly, RepoType, WhitelistEntry,
+    RepoReadOnly, RepoType, ShardedFilenodesParams, WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -368,10 +368,28 @@ impl RepoConfigs {
                     }
                 };
 
+                let sharded_filenodes: Result<Option<ShardedFilenodesParams>> = this
+                    .sharded_filenodes
+                    .map(|params| {
+                        let RawShardedFilenodesParams {
+                            shard_map,
+                            shard_num,
+                        } = params;
+                        let err =
+                            ErrorKind::InvalidConfig("filenodes shard_num must be > 0".into());
+                        let shard_num: Result<NonZeroUsize> =
+                            NonZeroUsize::new(shard_num).ok_or(err.into());
+                        Ok(ShardedFilenodesParams {
+                            shard_map,
+                            shard_num: shard_num?,
+                        })
+                    })
+                    .transpose();
+
                 RepoType::BlobRemote {
                     blobstores_args,
                     db_address,
-                    filenode_shards: this.filenode_shards,
+                    sharded_filenodes: sharded_filenodes?,
                     write_lock_db_address,
                 }
             }
@@ -514,7 +532,6 @@ struct RawRepoConfig {
     repoid: i32,
     db_address: Option<String>,
     write_lock_db_address: Option<String>,
-    filenode_shards: Option<usize>,
     scuba_table: Option<String>,
     blobstore_scuba_table: Option<String>,
     delay_mean: Option<u64>,
@@ -532,6 +549,7 @@ struct RawRepoConfig {
     skiplist_index_blobstore_key: Option<String>,
     remote_blobstore: Option<Vec<RawRemoteBlobstoreConfig>>,
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
+    sharded_filenodes: Option<RawShardedFilenodesParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -652,6 +670,13 @@ struct RawBundle2ReplayParams {
     preserve_raw_bundle2: Option<bool>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawShardedFilenodesParams {
+    shard_map: String,
+    shard_num: usize,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -743,6 +768,9 @@ mod test {
             threshold = 1000
             [bundle2_replay_params]
             preserve_raw_bundle2 = true
+            [sharded_filenodes]
+            shard_map = "db_address_shards"
+            shard_num = 123
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -805,7 +833,10 @@ mod test {
                 repotype: RepoType::BlobRemote {
                     db_address: "db_address".into(),
                     blobstores_args,
-                    filenode_shards: None,
+                    sharded_filenodes: Some(ShardedFilenodesParams {
+                        shard_map: "db_address_shards".into(),
+                        shard_num: NonZeroUsize::new(123).unwrap(),
+                    }),
                     write_lock_db_address: Some("write_lock_db_address".into()),
                 },
                 generation_cache_size: 1024 * 1024,

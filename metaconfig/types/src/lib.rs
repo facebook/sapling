@@ -467,8 +467,8 @@ pub enum RepoType {
         blobstores_args: RemoteBlobstoreArgs,
         /// Identifies the SQL database to connect to.
         db_address: String,
-        /// If present, the number of shards to spread filenodes across
-        filenode_shards: Option<usize>,
+        /// If present, sharding configuration for filenodes.
+        sharded_filenodes: Option<ShardedFilenodesParams>,
         /// Address of the SQL database used to lock writes to a repo.
         write_lock_db_address: Option<String>,
     },
@@ -479,4 +479,13 @@ pub enum RepoType {
 pub struct Bundle2ReplayParams {
     /// A flag specifying whether to preserve raw bundle2 contents in the blobstore
     pub preserve_raw_bundle2: bool,
+}
+
+/// Storage setup for sharded filenodes
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ShardedFilenodesParams {
+    /// Identifies the SQL database to connect to.
+    pub shard_map: String,
+    /// Number of shards to distribute filenodes across.
+    pub shard_num: NonZeroUsize,
 }
