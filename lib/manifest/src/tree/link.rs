@@ -52,9 +52,9 @@ impl Link {
         Link::Durable(Arc::new(DurableEntry::new(node)))
     }
 
-    pub fn mut_ephemeral_links<S: Store>(
+    pub fn mut_ephemeral_links(
         &mut self,
-        store: &S,
+        store: &dyn Store,
         parent: &RepoPath,
     ) -> Fallible<&mut BTreeMap<PathComponentBuf, Link>> {
         loop {
@@ -78,9 +78,9 @@ impl DurableEntry {
         }
     }
 
-    pub fn get_links<S: Store>(
+    pub fn get_links(
         &self,
-        store: &S,
+        store: &dyn Store,
         path: &RepoPath,
     ) -> Fallible<&BTreeMap<PathComponentBuf, Link>> {
         // TODO: be smarter around how failures are handled when reading from the store

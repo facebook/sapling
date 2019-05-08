@@ -18,9 +18,9 @@ use crate::tree::store::Store;
 /// Because this structure intends to back iterators, it is designed so that `step()` is called on
 /// every invocation of `next()`. This should simplify iterator implementations what may want to
 /// return the root of the subtree that is being iterated.
-pub struct Cursor<'a, S> {
+pub struct Cursor<'a> {
     state: State,
-    store: &'a S,
+    store: &'a dyn Store,
     path: RepoPathBuf,
     link: &'a Link,
     stack: Vec<btree_map::Iter<'a, PathComponentBuf, Link>>,
@@ -46,9 +46,9 @@ enum State {
     Done,
 }
 
-impl<'a, S> Cursor<'a, S> {
+impl<'a> Cursor<'a> {
     /// Default constructor for Cursor.
-    pub fn new(store: &'a S, path: RepoPathBuf, link: &'a Link) -> Self {
+    pub fn new(store: &'a dyn Store, path: RepoPathBuf, link: &'a Link) -> Self {
         Cursor {
             state: State::Init,
             store,
@@ -97,7 +97,7 @@ impl<'a, S> Cursor<'a, S> {
     }
 }
 
-impl<'a, S: Store> Cursor<'a, S> {
+impl<'a> Cursor<'a> {
     /// Advances the cursor towards a new [`Link`]. Visiting is done in pre-order.
     /// Errors are an interesting topic. At the time of this writing errors only appear when
     /// computing [`DurableEntry`] (which cache their failures). To protect against potential
@@ -129,7 +129,7 @@ impl<'a, S: Store> Cursor<'a, S> {
                             self.state = State::Next;
                         }
                         Link::Durable(durable_entry) => {
-                            match durable_entry.get_links(self.store, &self.path) {
+                            match durable_entry.get_links(&*self.store, &self.path) {
                                 Err(err) => {
                                     self.state = State::Done;
                                     return Step::Err(err);
