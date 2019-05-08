@@ -170,6 +170,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
 }
 
 TEST_F(EdenConfigTest, cloneTest) {
+  uid_t userID{};
   AbsolutePath userConfigPath{"/home/bob/.edenrc"};
   AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
   AbsolutePath systemConfigDir{"/etc/eden"};
@@ -184,7 +185,7 @@ TEST_F(EdenConfigTest, cloneTest) {
   {
     auto edenConfig = std::make_shared<EdenConfig>(
         testUser_,
-        uid_t{},
+        userID,
         testHomeDir_,
         userConfigPath,
         systemConfigDir,
@@ -199,6 +200,8 @@ TEST_F(EdenConfigTest, cloneTest) {
         clientCertificate, ConfigSource::USER_CONFIG_FILE);
     edenConfig->setUseMononoke(useMononoke, ConfigSource::USER_CONFIG_FILE);
 
+    EXPECT_EQ(edenConfig->getUserName(), testUser_);
+    EXPECT_EQ(edenConfig->getUserID(), userID);
     EXPECT_EQ(edenConfig->getUserConfigPath(), userConfigPath);
     EXPECT_EQ(edenConfig->getSystemConfigPath(), systemConfigPath);
     EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
@@ -212,6 +215,8 @@ TEST_F(EdenConfigTest, cloneTest) {
     configCopy = std::make_shared<EdenConfig>(*edenConfig);
   }
 
+  EXPECT_EQ(configCopy->getUserName(), testUser_);
+  EXPECT_EQ(configCopy->getUserID(), userID);
   EXPECT_EQ(configCopy->getUserConfigPath(), userConfigPath);
   EXPECT_EQ(configCopy->getSystemConfigPath(), systemConfigPath);
   EXPECT_EQ(configCopy->getSystemConfigDir(), systemConfigDir);

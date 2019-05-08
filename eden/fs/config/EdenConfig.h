@@ -175,6 +175,16 @@ class EdenConfig : public ConfigSettingManager {
    */
   AbsolutePathPiece getUserHomePath() const;
 
+  /**
+   * Returns the user's username
+   */
+  const std::string& getUserName() const;
+
+  /**
+   * Returns the user's UID
+   */
+  uid_t getUserID() const;
+
  private:
   /**
    * Utility method for converting ConfigSource to the filename (or cli).

@@ -135,12 +135,22 @@ AbsolutePathPiece EdenConfig::getUserHomePath() const {
   return userHomePath_;
 }
 
+const std::string& EdenConfig::getUserName() const {
+  return userName_;
+}
+
+uid_t EdenConfig::getUserID() const {
+  return userID_;
+}
+
 EdenConfig& EdenConfig::operator=(const EdenConfig& source) {
   doCopy(source);
   return *this;
 }
 
 void EdenConfig::doCopy(const EdenConfig& source) {
+  userName_ = source.userName_;
+  userID_ = source.userID_;
   userHomePath_ = source.userHomePath_;
   userConfigPath_ = source.userConfigPath_;
   systemConfigPath_ = source.systemConfigPath_;
