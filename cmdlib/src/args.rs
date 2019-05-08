@@ -301,7 +301,10 @@ where
         RepoType::BlobFiles(ref data_dir)
         | RepoType::BlobRocks(ref data_dir)
         | RepoType::BlobSqlite(ref data_dir) => T::with_sqlite_path(data_dir.join(name)),
-        RepoType::BlobRemote { ref db_address, .. } => T::with_raw_xdb_tier(&db_address),
+        RepoType::BlobRemote { ref db_address, .. } => match parse_myrouter_port(matches) {
+            Some(myrouter_port) => Ok(T::with_myrouter(&db_address, myrouter_port)),
+            None => T::with_raw_xdb_tier(&db_address),
+        }
     }
 }
 
