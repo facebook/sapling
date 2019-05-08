@@ -191,6 +191,9 @@
     <ClCompile Include="..\..\fs\config\EdenConfig.cpp">
       <Filter>fs\Config</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\config\FieldConverter.cpp">
+      <Filter>fs\Config</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp">
       <Filter>fs\Config</Filter>
     </ClCompile>
@@ -455,6 +458,9 @@
       <Filter>fs\Config</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\config\EdenConfig.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\config\FieldConverter.h">
       <Filter>fs\Config</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\config\FileChangeMonitor.h">

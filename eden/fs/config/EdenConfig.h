@@ -9,17 +9,14 @@
  */
 #pragma once
 
+#include <optional>
+
 #include <folly/dynamic.h>
-#ifdef EDEN_WIN
 #include <folly/portability/SysStat.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
-#else
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#endif
-#include <optional>
+
+#include "eden/fs/config/FieldConverter.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -54,8 +51,6 @@ constexpr size_t kConfigSourceLastIndex = 3;
 } // namespace facebook
 namespace facebook {
 namespace eden {
-
-bool isValidAbsolutePath(folly::StringPiece path);
 
 class ConfigSettingBase;
 
@@ -135,63 +130,6 @@ class ConfigSettingBase {
 
  protected:
   std::string key_;
-};
-
-/**
- * Converters are used to convert strings into ConfigSettings. For example,
- * they are used to convert the string settings of configuration files.
- */
-template <typename T>
-class FieldConverter {};
-
-template <>
-class FieldConverter<AbsolutePath> {
- public:
-  /**
-   * Convert the passed string piece to an AbsolutePath.
-   * @param convData is a map of conversion data that can be used by conversions
-   * method (for example $HOME value.)
-   * @return the converted AbsolutePath or an error message.
-   */
-  folly::Expected<AbsolutePath, std::string> operator()(
-      folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
-};
-
-template <>
-class FieldConverter<std::string> {
- public:
-  folly::Expected<std::string, std::string> operator()(
-      folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
-};
-
-template <>
-class FieldConverter<bool> {
- public:
-  /**
-   * Convert the passed string piece to a boolean.
-   * @param convData is a map of conversion data that can be used by conversions
-   * method (for example $HOME value.)
-   * @return the converted boolean or an error message.
-   */
-  folly::Expected<bool, std::string> operator()(
-      folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
-};
-
-template <>
-class FieldConverter<uint16_t> {
- public:
-  /**
-   * Convert the passed string piece to a uint16_t.
-   * @param convData is a map of conversion data that can be used by conversions
-   * method (for example $HOME value.)
-   * @return the converted value or an error message.
-   */
-  folly::Expected<uint16_t, std::string> operator()(
-      folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
 };
 
 /**

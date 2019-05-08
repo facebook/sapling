@@ -7,35 +7,28 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "EdenConfig.h"
+#include "eden/fs/config/EdenConfig.h"
+
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <array>
+
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
-#include <folly/io/IOBuf.h>
 #include <folly/json.h>
 #include <folly/logging/xlog.h>
-#include <array>
-#include "FileChangeMonitor.h"
+
+#include "eden/fs/config/FileChangeMonitor.h"
 
 #ifdef EDEN_WIN
 #include "eden/win/fs/utils/Stub.h" // @manual
 #endif
 
-using folly::ByteRange;
-using folly::IOBuf;
 using folly::StringPiece;
 using std::optional;
 using std::string;
-using namespace folly::string_piece_literals;
-
-constexpr std::array<folly::StringPiece, 3> kEnvVars = {
-    folly::StringPiece{"HOME"},
-    folly::StringPiece{"USER"},
-    folly::StringPiece{"USER_ID"},
-};
 
 const facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
 const facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{".edenignore"};
@@ -43,23 +36,10 @@ const facebook::eden::RelativePathPiece kDefaultSystemIgnoreFile{"ignore"};
 const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
 namespace {
-
-/**
- * Check if string represents a well-formed file path.
- */
-bool isValidAbsolutePath(folly::StringPiece path) {
-  // Should we be more strict? (regex based?)
-  if (!path.empty() && path.front() == '/') {
-    return true;
-  }
-  return false;
-}
-
 template <typename String>
 void toAppend(facebook::eden::EdenConfig& ec, String* result) {
   folly::toAppend(ec.toString(), result);
 }
-
 } // namespace
 
 namespace facebook {
@@ -471,79 +451,6 @@ void EdenConfig::parseAndApplyConfigFile(
         }
       }
     }
-  }
-}
-
-folly::Expected<AbsolutePath, std::string> FieldConverter<AbsolutePath>::
-operator()(
-    folly::StringPiece value,
-    const std::map<std::string, std::string>& convData) const {
-  auto sString = value.str();
-  for (auto varName : kEnvVars) {
-    auto it = convData.find(varName.str());
-    if (it != convData.end()) {
-      auto envVar = folly::to<std::string>("${", varName, "}");
-      // There may be multiple ${USER} tokens to replace, so loop
-      // until we've processed all of them
-      while (true) {
-        auto idx = sString.find(envVar);
-        if (idx == std::string::npos) {
-          break;
-        }
-        sString.replace(idx, envVar.size(), it->second);
-      }
-    }
-  }
-
-  if (!::isValidAbsolutePath(sString)) {
-    return folly::makeUnexpected<std::string>(folly::to<std::string>(
-        "Cannot convert value '", value, "' to an absolute path"));
-  }
-  // normalizeBestEffort typically will not throw, but, we want to handle
-  // cases where it does, eg. getcwd fails.
-  try {
-    return facebook::eden::normalizeBestEffort(sString);
-  } catch (const std::exception& ex) {
-    return folly::makeUnexpected<string>(folly::to<std::string>(
-        "Failed to convert value '",
-        value,
-        "' to an absolute path, error : ",
-        ex.what()));
-  }
-}
-
-folly::Expected<std::string, std::string> FieldConverter<std::string>::
-operator()(
-    folly::StringPiece value,
-    const std::map<std::string, std::string>& /* unused */) const {
-  return folly::makeExpected<std::string, std::string>(value.toString());
-}
-
-folly::Expected<bool, std::string> FieldConverter<bool>::operator()(
-    folly::StringPiece value,
-    const std::map<std::string, std::string>& /* unused */) const {
-  auto aString = value.str();
-  if (aString == "true") {
-    return true;
-  } else if (aString == "false") {
-    return false;
-  }
-  return folly::makeUnexpected<string>(folly::to<std::string>(
-      "Unexpected value: '", value, "'. Expected \"true\" or \"false\""));
-}
-
-folly::Expected<uint16_t, std::string> FieldConverter<uint16_t>::operator()(
-    folly::StringPiece value,
-    const std::map<std::string, std::string>& /* unused */) const {
-  auto aString = value.str();
-
-  try {
-    return folly::to<uint16_t>(aString);
-  } catch (const std::exception&) {
-    return folly::makeUnexpected<string>(folly::to<std::string>(
-        "Unexpected value: '",
-        value,
-        ". Expected a uint16_t compatible value"));
   }
 }
 
