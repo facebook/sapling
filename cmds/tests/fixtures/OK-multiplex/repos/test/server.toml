@@ -1,26 +1,29 @@
 repoid = 123
-repotype="blob:remote"
-db_address="xdb.mononoke_production"
+storage_config = "multiplex"
 
-[[remote_blobstore]]
-blobstore_id=1
-blobstore_type="manifold"
-manifold_bucket="mononoke_prod"
+[storage.multiplex]
+db.db_address="xdb.mononoke_production"
+blobstore_type = "multiplexed"
 
-[[remote_blobstore]]
-blobstore_id=2
-blobstore_type="manifold"
-manifold_bucket="mononoke_prod_replica"
+  [[storage.multiplex.components]]
+  blobstore_id=1
+  blobstore_type="manifold"
+  manifold_bucket="mononoke_prod"
 
-[[remote_blobstore]]
-blobstore_id=3
-blobstore_type="mysql"
-mysql_shardmap="mononoke_replica"
-mysql_shard_num=123
+  [[storage.multiplex.components]]
+  blobstore_id=2
+  blobstore_type="manifold"
+  manifold_bucket="mononoke_prod_replica"
 
-[[remote_blobstore]]
-blobstore_id=4
-blobstore_type="gluster"
-gluster_tier="mononoke"
-gluster_export="groot"
-gluster_basepath="mononoke/replica"
+  [[storage.multiplex.components]]
+  blobstore_id=3
+  blobstore_type="mysql"
+  mysql_shardmap="mononoke_replica"
+  mysql_shard_num=123
+
+  [[storage.multiplex.components]]
+  blobstore_id=4
+  blobstore_type="gluster"
+  gluster_tier="mononoke"
+  gluster_export="groot"
+  gluster_basepath="mononoke/replica"

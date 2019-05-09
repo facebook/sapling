@@ -1,3 +1,7 @@
 repoid = 123
-repotype = "blob:files"
-path = "/tmp/blobstore"
+storage_config = "files"
+
+[storage.files]
+db.local_db_path = "/tmp/foo"
+blobstore_type = "blob:files"
+path = "/tmp/foo"

@@ -6,6 +6,7 @@
 
 use std::{
     cmp::min,
+    collections::HashMap,
     fs,
     num::NonZeroUsize,
     path::{Path, PathBuf},
@@ -37,7 +38,7 @@ use blobrepo_factory::open_blobrepo;
 use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{BlobConfig, MetadataDBConfig, RepoConfig};
+use metaconfig_types::{BlobConfig, MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -534,6 +535,15 @@ pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
         .value_of("mononoke-config-path")
         .ok_or(err_msg("mononoke-config-path must be specified"))?;
     RepoConfigs::read_configs(config_path)
+}
+
+pub fn read_storage_configs<'a>(
+    matches: &ArgMatches<'a>,
+) -> Result<HashMap<String, StorageConfig>> {
+    let config_path = matches
+        .value_of("mononoke-config-path")
+        .ok_or(err_msg("mononoke-config-path must be specified"))?;
+    RepoConfigs::read_storage_configs(config_path)
 }
 
 pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {

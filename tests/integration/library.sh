@@ -242,12 +242,25 @@ CONFIG
 
   mkdir -p repos/repo
   cat > repos/repo/server.toml <<CONFIG
-path="$TESTTMP/repo"
-repotype="$REPOTYPE"
 repoid=0
 enabled=true
 hash_validation_percentage=100
 bookmarks_cache_ttl=2000
+storage_config = "blobstore"
+CONFIG
+
+if [[ -v READ_ONLY_REPO ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+readonly=true
+CONFIG
+fi
+
+cat >> repos/repo/server.toml <<CONFIG
+[storage.blobstore]
+db.local_db_path = "$TESTTMP/repo"
+blobstore_type = "$REPOTYPE"
+path = "$TESTTMP/repo"
+
 CONFIG
 
 if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
@@ -263,12 +276,6 @@ if [[ -v ONLY_FAST_FORWARD_BOOKMARK_REGEX ]]; then
 [[bookmarks]]
 regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
 only_fast_forward=true
-CONFIG
-fi
-
-if [[ -v READ_ONLY_REPO ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-readonly=true
 CONFIG
 fi
 
@@ -331,10 +338,14 @@ fi
 
   mkdir -p repos/disabled_repo
   cat > repos/disabled_repo/server.toml <<CONFIG
-path="$TESTTMP/disabled_repo"
-repotype="$REPOTYPE"
 repoid=2
 enabled=false
+storage_config = "blobstore"
+
+[storage.blobstore]
+blobstore_type = "$REPOTYPE"
+path = "$TESTTMP/disabled_repo"
+db.local_db_path = "$TESTTMP/disabled_repo"
 CONFIG
 }
 
