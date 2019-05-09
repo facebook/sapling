@@ -18,7 +18,10 @@ use serde_cbor;
 use url::Url;
 
 use driver::MultiDriver;
-use types::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse, Key};
+use types::{
+    api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse},
+    Key,
+};
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
