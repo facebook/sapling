@@ -405,7 +405,8 @@ Test empty commit
   |
   o  0:426bada5c675@default(draft) A
   
-Test editing multiple commits in batch (--batch)
+Create some commits for testing the editing of commits in batch using `--batch`
+option
 
   $ newrepo multi-commits
   $ drawdag << 'EOS'
@@ -415,6 +416,24 @@ Test editing multiple commits in batch (--batch)
   > |
   > A1
   > EOS
+
+Editing a single commit using `--batch` uses the single-commit template
+
+  $ HGEDITOR=cat hg metaedit --batch -r 'tip'
+  HG: Commit message of changeset dad6906767c0
+  A3
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added A3
+  nothing changed
+  [1]
+
+Test editing mutiple commits in a batch (--batch)
 
   $ HGEDITOR=cat hg metaedit --batch -r 'all()'
   HG: Editing 3 commits in batch. Do not change lines starting with 'HG:'.
@@ -440,6 +459,19 @@ Test editing multiple commits in batch (--batch)
   
 
 #if no-osx
+Test actually editing the commits
+
+- Test editing a single commit
+(BSD-flavored sed has an incompatible -'i')
+  $ HGEDITOR="s'e'd -i 's/A/B/g'" hg metaedit --batch -r 'tip'
+  $ hg log -Gr 'all()' -T '{desc}'
+  o  B3
+  |
+  o  A2
+  |
+  o  A1
+  
+- Test editing multiple commits
 (BSD-flavored sed has an incompatible -'i')
   $ HGEDITOR="s'e'd -i 's/A/B/g'" hg metaedit --batch -r 'all()'
   $ hg log -Gr 'all()' -T '{desc}'
@@ -450,20 +482,3 @@ Test editing multiple commits in batch (--batch)
   o  B1
   
 #endif
-
-Editing a single commit using --batch uses the single-commit template
-
-  $ HGEDITOR=cat hg metaedit --batch -r tip
-  HG: Commit message of changeset 758b5e8264f6
-  B3
-  
-  
-  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-  HG: Leave message empty to abort commit.
-  HG: --
-  HG: user: test
-  HG: branch 'default'
-  HG: added A3
-  nothing changed
-  [1]
-
