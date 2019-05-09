@@ -47,7 +47,7 @@ use errors::ErrorKind;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
+const DEFAULT_INSERT_CHUNK_SIZE: usize = 1000;
 
 pub struct SqlFilenodes {
     write_connection: Arc<Vec<Connection>>,
