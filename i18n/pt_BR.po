@@ -18083,6 +18083,9 @@ msgstr "comando %s desconhecido"
 msgid "abort: %s\n"
 msgstr "abortado: %s\n"
 
+msgid "abort"
+msgstr "abortado"
+
 #, python-format
 msgid "listening at %s\n"
 msgstr "ouvindo em %s\n"

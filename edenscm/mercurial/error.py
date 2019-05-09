@@ -38,6 +38,18 @@ class Hint(object):
         super(Hint, self).__init__(*args, **kw)
 
 
+class Component(object):
+    """Mix-in to privide component identity of an error
+
+    This should come before Exception in the inheritance list to consume the
+    component name and pass the remaining arguments to the exception class.
+    """
+
+    def __init__(self, *args, **kw):
+        self.component = kw.pop(r"component", None)
+        super(Component, self).__init__(*args, **kw)
+
+
 class RevlogError(Hint, Exception):
     __bytes__ = _tobytes
 
@@ -86,7 +98,7 @@ class InterventionRequired(Hint, Exception):
     __bytes__ = _tobytes
 
 
-class Abort(Hint, Exception):
+class Abort(Hint, Component, Exception):
     """Raised if a command needs to print an error and exit."""
 
     __bytes__ = _tobytes

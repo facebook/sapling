@@ -802,6 +802,21 @@ class ui(object):
 
         return "".join(self._buffers.pop())
 
+    def _addprefixesandlabels(self, args, opts, addlabels):
+        msgs = []
+        for item in r"error", r"notice", r"component":
+            itemvalue = opts.get(item)
+            if itemvalue:
+                itemvalue = "%s:" % itemvalue
+                if addlabels:
+                    itemvalue = self.label(itemvalue, "ui.prefix.%s" % item)
+                msgs.extend((itemvalue, " "))
+        msgs.extend(args)
+        if addlabels:
+            label = opts.get(r"label", "")
+            msgs = [self.label(m, label) for m in msgs]
+        return msgs
+
     def write(self, *args, **opts):
         """write args to output
 
@@ -817,23 +832,22 @@ class ui(object):
         When labeling output for a specific command, a label of
         "cmdname.type" is recommended. For example, status issues
         a label of "status.modified" for modified files.
+
+        The output can optionally be prefixed by an error prefix, warning prefix
+        note prefix, or a component name if the corresponding keyword argument
+        is set.  The prefix will be labelled with the "ui.prefix.PREFIXNAME"
+        label.
         """
         if self._buffers and not opts.get(r"prompt", False):
-            if self._bufferapplylabels:
-                label = opts.get(r"label", "")
-                self._buffers[-1].extend(self.label(a, label) for a in args)
-            else:
-                self._buffers[-1].extend(args)
-        elif self._colormode == "win32":
-            # windows color printing is its own can of crab, defer to
-            # the color module and that is it.
-            color.win32print(self, self._write, *args, **opts)
+            msgs = self._addprefixesandlabels(args, opts, self._bufferapplylabels)
+            self._buffers[-1].extend(msgs)
         else:
-            msgs = args
-            if self._colormode is not None:
-                label = opts.get(r"label", "")
-                msgs = [self.label(a, label) for a in args]
-            self._write(*msgs, **opts)
+            msgs = self._addprefixesandlabels(args, opts, self._colormode)
+            if self._colormode == "win32":
+                # windows color printing is its own can of crab
+                color.win32print(self, self._write, *msgs, **opts)
+            else:
+                self._write(*msgs, **opts)
 
     def _write(self, *msgs, **opts):
         with progress.suspend():
@@ -851,16 +865,13 @@ class ui(object):
         with progress.suspend():
             if self._bufferstates and self._bufferstates[-1][0]:
                 self.write(*args, **opts)
-            elif self._colormode == "win32":
-                # windows color printing is its own can of crab, defer to
-                # the color module and that is it.
-                color.win32print(self, self._write_err, *args, **opts)
             else:
-                msgs = args
-                if self._colormode is not None:
-                    label = opts.get(r"label", "")
-                    msgs = [self.label(a, label) for a in args]
-                self._write_err(*msgs, **opts)
+                msgs = self._addprefixesandlabels(args, opts, self._colormode)
+                if self._colormode == "win32":
+                    # windows color printing is its own can of crab
+                    color.win32print(self, self._write_err, *msgs, **opts)
+                else:
+                    self._write_err(*msgs, **opts)
 
     def _write_err(self, *msgs, **opts):
         try:

@@ -143,30 +143,31 @@ def callcatch(ui, func):
             reason = _("timed out waiting for lock held by %r") % inst.lockinfo
         else:
             reason = _("lock held by %r") % inst.lockinfo
-        ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
+        ui.warn(_("%s: %s\n") % (inst.desc or inst.filename, reason), error=_("abort"))
         if not inst.lockinfo:
             ui.warn(_("(lock might be very busy)\n"))
     except error.LockUnavailable as inst:
         ui.warn(
-            _("abort: could not lock %s: %s\n")
-            % (inst.desc or inst.filename, encoding.strtolocal(inst.strerror))
+            _("could not lock %s: %s\n")
+            % (inst.desc or inst.filename, encoding.strtolocal(inst.strerror)),
+            error=_("abort"),
         )
     except error.OutOfBandError as inst:
         if inst.args:
-            msg = _("abort: remote error:\n")
+            msg = _("remote error:\n")
         else:
-            msg = _("abort: remote error\n")
-        ui.warn(msg)
+            msg = _("remote error\n")
+        ui.warn(msg, error=_("abort"))
         if inst.args:
             ui.warn("".join(inst.args))
         if inst.hint:
             ui.warn("(%s)\n" % inst.hint)
     except error.RepoError as inst:
-        ui.warn(_("abort: %s!\n") % inst)
+        ui.warn(_("%s!\n") % inst, error=_("abort"))
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
     except error.ResponseError as inst:
-        ui.warn(_("abort: %s") % inst.args[0])
+        ui.warn(inst.args[0], error=_("abort"))
         if not isinstance(inst.args[1], basestring):  # noqa
             ui.warn(" %r\n" % (inst.args[1],))
         elif not inst.args[1]:
@@ -174,23 +175,23 @@ def callcatch(ui, func):
         else:
             ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
     except error.CensoredNodeError as inst:
-        ui.warn(_("abort: file censored %s!\n") % inst)
+        ui.warn(_("file censored %s!\n") % inst, error=_("abort"))
     except error.RevlogError as inst:
-        ui.warn(_("abort: %s!\n") % inst)
+        ui.warn(_("%s!\n") % inst, error=_("abort"))
     except error.InterventionRequired as inst:
         ui.warn("%s\n" % inst)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
         return 1
     except error.WdirUnsupported:
-        ui.warn(_("abort: working directory revision cannot be specified\n"))
+        ui.warn(_("working directory revision cannot be specified\n"), error=_("abort"))
     except error.Abort as inst:
-        ui.warn(_("abort: %s\n") % inst)
+        ui.warn(_("%s\n") % inst, error=_("abort"), component=inst.component)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
         return inst.exitcode
     except ImportError as inst:
-        ui.warn(_("abort: %s!\n") % inst)
+        ui.warn(_("%s!\n") % inst, error=_("abort"))
         m = str(inst).split()[-1]
         if m in "mpatch bdiff".split():
             ui.warn(_("(did you forget to compile extensions?)\n"))
@@ -198,7 +199,7 @@ def callcatch(ui, func):
             ui.warn(_("(is your Python install correct?)\n"))
     except IOError as inst:
         if util.safehasattr(inst, "code"):
-            ui.warn(_("abort: %s\n") % inst)
+            ui.warn(_("%s\n") % inst, error=_("abort"))
         elif util.safehasattr(inst, "reason"):
             try:  # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
@@ -208,7 +209,7 @@ def callcatch(ui, func):
             if isinstance(reason, unicode):  # noqa
                 # SSLError of Python 2.7.9 contains a unicode
                 reason = encoding.unitolocal(reason)
-            ui.warn(_("abort: error: %s\n") % reason)
+            ui.warn(_("error: %s\n") % reason, error=_("abort"))
         elif (
             util.safehasattr(inst, "args") and inst.args and inst.args[0] == errno.EPIPE
         ):
@@ -216,29 +217,31 @@ def callcatch(ui, func):
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
                 ui.warn(
-                    _("abort: %s: %s\n")
-                    % (encoding.strtolocal(inst.strerror), inst.filename)
+                    _("%s: %s\n") % (encoding.strtolocal(inst.strerror), inst.filename),
+                    error=_("abort"),
                 )
             else:
-                ui.warn(_("abort: %s\n") % encoding.strtolocal(inst.strerror))
+                ui.warn(
+                    _("%s\n") % encoding.strtolocal(inst.strerror), error=_("abort")
+                )
         else:
-            ui.warn(_("abort: %s\n") % inst)
+            ui.warn(_("%s\n") % inst, error=_("abort"))
     except OSError as inst:
         if getattr(inst, "filename", None) is not None:
             ui.warn(
-                _("abort: %s: '%s'\n")
-                % (encoding.strtolocal(inst.strerror), inst.filename)
+                _("%s: '%s'\n") % (encoding.strtolocal(inst.strerror), inst.filename),
+                error=_("abort"),
             )
         else:
-            ui.warn(_("abort: %s\n") % encoding.strtolocal(inst.strerror))
+            ui.warn(_("%s\n") % encoding.strtolocal(inst.strerror), error=_("abort"))
     except MemoryError:
-        ui.warn(_("abort: out of memory\n"))
+        ui.warn(_("out of memory\n"), error=_("abort"))
     except SystemExit as inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and pass exit code to caller.
         return inst.code
     except socket.error as inst:
-        ui.warn(_("abort: %s\n") % inst.args[-1])
+        ui.warn(_("%s\n") % inst.args[-1], error=_("abort"))
 
     return -1
 
@@ -274,7 +277,7 @@ def checkportable(ui, f):
             msg = "%s: %s" % (msg, util.shellquote(f))
             if abort:
                 raise error.Abort(msg)
-            ui.warn(_("warning: %s\n") % msg)
+            ui.warn(_("%s\n") % msg, notice=_("warning"))
 
 
 def checkportabilityalert(ui):
@@ -326,7 +329,7 @@ class casecollisionauditor(object):
             msg = _("possible case-folding collision for %s") % f
             if self._abort:
                 raise error.Abort(msg)
-            self._ui.warn(_("warning: %s\n") % msg)
+            self._ui.warn(_("%s\n") % msg, notice=_("warning"))
         self._newfiles.add(f)
 
 

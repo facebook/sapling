@@ -52,11 +52,6 @@ def trigger(name, *args, **kwargs):
             messages.append((name, msg.rstrip()))
 
 
-def _prefix(ui, name):
-    """Return "hint[%s]" % name, colored"""
-    return ui.label(_("hint[%s]: ") % (name,), "hint.prefix")
-
-
 def show(ui):
     """Show all triggered hint messages"""
     if ui.plain("hint"):
@@ -76,13 +71,11 @@ def show(ui):
     names = []
     for name, msg in messages:
         if not isacked(name):
-            prefix = _prefix(ui, name)
-            ui.write_err(("%s%s\n") % (prefix, msg.rstrip()))
+            ui.write_err(("%s\n") % msg.rstrip(), notice=_("hint[%s]") % name)
             names.append(name)
     if names and not isacked("hint-ack"):
-        prefix = _prefix(ui, "hint-ack")
         msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)
-        ui.write_err(prefix + msg)
+        ui.write_err(msg, notice=_("hint[%s]") % "hint-ack")
 
 
 def silence(ui, names):

@@ -403,10 +403,8 @@ def getdag(ui, repo, revs, master):
     try:
         results.sort(key=lambda x: order[x[0]], reverse=True)
     except ValueError:  # Happened when 'order' is empty
-        msg = _("note: smartlog encountered an error\n")
-        hint = _("(so the sorting might be wrong.\n\n)")
-        ui.warn(msg)
-        ui.warn(hint)
+        ui.warn(_("smartlog encountered an error\n"), notice=_("note"))
+        ui.warn(_("(so the sorting might be wrong.\n\n)"))
         results.reverse()
 
     # indent the top non-public stack
@@ -686,7 +684,8 @@ def _smartlog(ui, repo, *pats, **opts):
         pass
 
     if hiddenchanges:
-        msg = _("note: hiding %s old heads without bookmarks\n") % hiddenchanges
-        hint = _("(use --all to see them)\n")
-        ui.warn(msg)
-        ui.warn(hint)
+        ui.warn(
+            _("hiding %s old heads without bookmarks\n") % hiddenchanges,
+            notice=_("note"),
+        )
+        ui.warn(_("(use --all to see them)\n"))

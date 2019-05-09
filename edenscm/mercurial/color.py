@@ -118,7 +118,6 @@ _defaultstyles = {
     "formatvariant.config.special": "yellow",
     "formatvariant.config.default": "green",
     "formatvariant.default": "",
-    "hint.prefix": "yellow",
     "histedit.remaining": "red bold",
     "log.changeset": "yellow",
     "processtree.descendants": "green",
@@ -149,6 +148,9 @@ _defaultstyles = {
     "tags.normal": "green",
     "tags.local": "black bold",
     "ui.metrics": "#777:color242:dim",
+    "ui.prefix.component": "cyan",
+    "ui.prefix.error": "brightred:red",
+    "ui.prefix.notice": "yellow",
 }
 
 
@@ -552,7 +554,7 @@ if pycompat.iswindows:
         else:
             origattr = csbi.wAttributes
             ansire = re.compile(
-                "\033\[([^m]*)m([^\033]*)(.*)", re.MULTILINE | re.DOTALL
+                "\033\\[([^m]*)m([^\033]*)(.*)", re.MULTILINE | re.DOTALL
             )
 
     def win32print(ui, writefunc, *msgs, **opts):
@@ -560,7 +562,6 @@ if pycompat.iswindows:
             _win32print(ui, text, writefunc, **opts)
 
     def _win32print(ui, text, writefunc, **opts):
-        label = opts.get(r"label", "")
         attr = origattr
 
         def mapcolor(val, attr):
@@ -573,36 +574,24 @@ if pycompat.iswindows:
             else:
                 return (val & 0x07) | (attr & 0xF8)
 
-        # determine console attributes based on labels
-        for l in label.split():
-            style = ui._styles.get(l, "")
-            for effect in style.split():
-                try:
-                    attr = mapcolor(w32effects[effect], attr)
-                except KeyError:
-                    # w32effects could not have certain attributes so we skip
-                    # them if not found
-                    pass
-        # hack to ensure regexp finds data
-        if not text.startswith("\033["):
-            text = "\033[m" + text
-
         # Look for ANSI-like codes embedded in text
         m = re.match(ansire, text)
-
-        try:
-            while m:
-                for sattr in m.group(1).split(";"):
-                    if sattr:
-                        attr = mapcolor(int(sattr), attr)
+        if m:
+            try:
+                while m:
+                    for sattr in m.group(1).split(";"):
+                        if sattr:
+                            attr = mapcolor(int(sattr), attr)
+                    ui.flush()
+                    _kernel32.SetConsoleTextAttribute(stdout, attr)
+                    writefunc(m.group(2), **opts)
+                    m = re.match(ansire, m.group(3))
+            finally:
+                # Explicitly reset original attributes
                 ui.flush()
-                _kernel32.SetConsoleTextAttribute(stdout, attr)
-                writefunc(m.group(2), **opts)
-                m = re.match(ansire, m.group(3))
-        finally:
-            # Explicitly reset original attributes
-            ui.flush()
-            _kernel32.SetConsoleTextAttribute(stdout, origattr)
+                _kernel32.SetConsoleTextAttribute(stdout, origattr)
+        else:
+            writefunc(text, **opts)
 
 
 def supportedcolors():

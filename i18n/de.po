@@ -14705,6 +14705,9 @@ msgstr "Hinweis: Nicht synchronisierte entfernte Änderungen!\n"
 msgid "abort: %s\n"
 msgstr "Abbruch: %s\n"
 
+msgid "abort"
+msgstr "Abbruch"
+
 #, python-format
 msgid "hg: parse error at %s: %s\n"
 msgstr "hg: Parserfehler bei %s: %s\n"
