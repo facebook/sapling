@@ -62,7 +62,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // this overlay format even if we change how the overlay is saved in the
   // future.
   auto tmpdir = makeTempDir("eden_test");
-  Subprocess tarProcess({"/bin/tar",
+  Subprocess tarProcess({"/usr/bin/tar",
                          "-xzf",
                          "eden/test-data/overlay-v2.tgz",
                          "-C",
