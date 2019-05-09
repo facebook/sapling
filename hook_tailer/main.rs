@@ -89,7 +89,7 @@ fn main() -> Result<()> {
 
     let blobrepo = open_blobrepo(
         logger.clone(),
-        config.repotype.clone(),
+        config.storage_config.clone(),
         RepositoryId::new(config.repoid),
         myrouter_port,
         config.bookmarks_cache_ttl,
@@ -322,14 +322,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("exclude")
                 .short("e")
                 .help("a comma separated list of changesets to exclude")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("exclude_file")
                 .long("exclude_file")
                 .short("f")
                 .help("a file containing changesets to exclude that is separated by new lines")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("limit")

@@ -83,7 +83,7 @@ impl MononokeRepo {
         let sha1_cache = cachelib::get_pool("content-sha1");
         open_blobrepo(
             logger.clone(),
-            config.repotype,
+            config.storage_config.clone(),
             repoid,
             myrouter_port,
             config.bookmarks_cache_ttl,

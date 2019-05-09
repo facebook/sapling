@@ -4,8 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::sync::Arc;
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use clap::Arg;
 use cloned::cloned;
@@ -21,12 +20,18 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobs
 use cmdlib::args;
 use context::CoreContext;
 use manifoldblob::{ManifoldRange, ThriftManifoldBlob};
-use metaconfig_types::{BlobstoreId, ManifoldArgs, RemoteBlobstoreArgs, RepoType};
+use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, StorageConfig};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use sql_ext::SqlConstructors;
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
+
+#[derive(Debug)]
+struct ManifoldArgs {
+    bucket: String,
+    prefix: String,
+}
 
 /// Configuration options
 #[derive(Debug)]
@@ -182,32 +187,29 @@ fn parse_args() -> Result<Config, Error> {
         ));
     }
 
-    let (blobstores_args, db_address) = match &repo_config.repotype {
-        RepoType::BlobRemote {
-            blobstores_args,
-            db_address,
-            ..
-        } => (blobstores_args, db_address),
-        repo_type => return Err(format_err!("unsupported repotype: {:?}", repo_type)),
+    let (blobstores, db_address) = match &repo_config.storage_config {
+        StorageConfig {
+            dbconfig: MetadataDBConfig::Mysql { db_address, .. },
+            blobstore: BlobConfig::Multiplexed { blobstores, .. },
+        } => (blobstores, db_address),
+        storage => return Err(format_err!("unsupported storage: {:?}", storage)),
     };
-    let manifold_args = match blobstores_args {
-        RemoteBlobstoreArgs::Multiplexed { blobstores, .. } => blobstores
-            .iter()
-            .filter(|(id, _)| src_blobstore_id == **id)
-            .map(|(_, args)| args)
-            .next()
-            .ok_or(format_err!(
-                "failed to find source blobstore id: {:?}",
-                src_blobstore_id,
-            ))
-            .and_then(|args| match args {
-                RemoteBlobstoreArgs::Manifold(args) => Ok(args.clone()),
-                _ => Err(err_msg("source blobstore must be a manifold")),
+    let manifold_args = blobstores
+        .iter()
+        .filter(|(id, _)| src_blobstore_id == *id)
+        .map(|(_, args)| args)
+        .next()
+        .ok_or(format_err!(
+            "failed to find source blobstore id: {:?}",
+            src_blobstore_id,
+        ))
+        .and_then(|args| match args {
+            BlobConfig::Manifold { bucket, prefix } => Ok(ManifoldArgs {
+                bucket: bucket.clone(),
+                prefix: prefix.clone(),
             }),
-        _ => Err(err_msg(
-            "toplevel blobstore expected to be a multiplexed blobstore",
-        )),
-    }?;
+            _ => Err(err_msg("source blobstore must be a manifold")),
+        })?;
 
     let myrouter_port =
         args::parse_myrouter_port(&matches).ok_or(err_msg("myrouter-port must be specified"))?;

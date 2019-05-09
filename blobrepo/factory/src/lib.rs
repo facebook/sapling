@@ -4,124 +4,201 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::{path::Path, sync::Arc, time::Duration};
+
+use cloned::cloned;
+use failure_ext::prelude::*;
+use failure_ext::{err_msg, Error, Result};
+use futures::{
+    future::{self, IntoFuture},
+    Future,
+};
+use futures_ext::{BoxFuture, FutureExt};
+use slog::{self, o, Discard, Drain, Logger};
+
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
-use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
+use blobstore::{Blobstore, DisabledBlob};
+use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, new_memcache_blobstore, MemcacheOps};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangests, SqlChangesets};
-use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::prelude::*;
-use failure_ext::{Error, Result};
 use fileblob::Fileblob;
 use filenodes::CachingFilenodes;
-use futures::{
-    future::{self, IntoFuture},
-    Future,
-};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
 use memblob::EagerMemblob;
-use metaconfig_types::{self, RemoteBlobstoreArgs, RepoType, ShardedFilenodesParams};
+use metaconfig_types::{self, BlobConfig, MetadataDBConfig, ShardedFilenodesParams, StorageConfig};
 use mononoke_types::RepositoryId;
 use multiplexedblob::MultiplexedBlobstore;
 use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
 use scuba::ScubaClient;
-use slog::{self, o, Discard, Drain, Logger};
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
-use std::path::Path;
-use std::sync::Arc;
-use std::time::Duration;
 
-/// Create a new BlobRepo with purely local state.
-fn new_local(
-    logger: Logger,
-    path: &Path,
-    blobstore: Arc<Blobstore>,
-    repoid: RepositoryId,
-) -> Result<BlobRepo> {
-    let bookmarks = SqlBookmarks::with_sqlite_path(path.join("books"))
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-    let filenodes = SqlFilenodes::with_sqlite_path(path.join("filenodes"))
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-    let changesets = SqlChangesets::with_sqlite_path(path.join("changesets"))
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-    let bonsai_hg_mapping = SqlBonsaiHgMapping::with_sqlite_path(path.join("bonsai_hg_mapping"))
-        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
-
-    Ok(BlobRepo::new(
-        logger,
-        Arc::new(bookmarks),
-        blobstore,
-        Arc::new(filenodes),
-        Arc::new(changesets),
-        Arc::new(bonsai_hg_mapping),
-        repoid,
-        Arc::new(DummyLease {}),
-    ))
-}
-
-/// Most local use cases should use new_rocksdb instead. This is only meant for test
-/// fixtures.
-fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
-    let blobstore = Fileblob::create(path.join("blobs"))
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    new_local(logger, path, Arc::new(blobstore), repoid)
-}
-
-fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
-    let options = rocksdb::Options::new().create_if_missing(true);
-    let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    new_local(logger, path, Arc::new(blobstore), repoid)
-}
-
-fn new_sqlite(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<BlobRepo> {
-    let blobstore = Sqlblob::with_sqlite_path(repoid, path.join("blobs"))
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-    new_local(logger, path, Arc::new(blobstore), repoid)
-}
-
+/// Construct a new BlobRepo with the given storage configuration. If the metadata DB is
+/// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
+/// it's assumed to be a test configuration.
+///
+/// The blobstore config is actually orthogonal to this, but it wouldn't make much sense to
+/// configure a local blobstore with a remote db, or vice versa. There's no error checking
+/// at this level (aside from disallowing a multiplexed blobstore with a local db).
 pub fn open_blobrepo(
     logger: slog::Logger,
-    repotype: RepoType,
+    storage_config: StorageConfig,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
-    use metaconfig_types::RepoType::*;
+) -> BoxFuture<BlobRepo, Error> {
+    let blobstore = make_blobstore(
+        repoid,
+        &storage_config.blobstore,
+        &storage_config.dbconfig,
+        myrouter_port,
+    );
 
-    match repotype {
-        BlobFiles(ref path) => new_files(logger, &path, repoid).into_future().left_future(),
-        BlobRocks(ref path) => new_rocksdb(logger, &path, repoid)
+    blobstore
+        .and_then(move |blobstore| match storage_config.dbconfig {
+            MetadataDBConfig::LocalDB { path } => new_local(logger, &path, blobstore, repoid),
+            MetadataDBConfig::Mysql {
+                db_address,
+                sharded_filenodes,
+            } => new_remote(
+                logger,
+                db_address,
+                sharded_filenodes,
+                blobstore,
+                repoid,
+                myrouter_port,
+                bookmarks_cache_ttl,
+            ),
+        })
+        .boxify()
+}
+
+/// Construct a blobstore according to the specification. The multiplexed blobstore
+/// needs an SQL DB for its queue, as does the MySQL blobstore.
+fn make_blobstore(
+    repoid: RepositoryId,
+    blobconfig: &BlobConfig,
+    dbconfig: &MetadataDBConfig,
+    myrouter_port: Option<u16>,
+) -> BoxFuture<Arc<Blobstore>, Error> {
+    use BlobConfig::*;
+
+    match blobconfig {
+        Disabled => {
+            Ok(Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn Blobstore>)
+                .into_future()
+                .boxify()
+        }
+
+        Files { path } => Fileblob::create(path.join("blobs"))
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))
+            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+            .map_err(Error::from)
             .into_future()
-            .left_future(),
-        BlobSqlite(ref path) => new_sqlite(logger, &path, repoid)
+            .boxify(),
+
+        Rocks { path } => {
+            let options = rocksdb::Options::new().create_if_missing(true);
+            Rocksblob::open_with_options(path.join("blobs"), options)
+                .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))
+                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+                .map_err(Error::from)
+                .into_future()
+                .boxify()
+        }
+
+        Sqlite { path } => Sqlblob::with_sqlite_path(repoid, path.join("blobs"))
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))
+            .map_err(Error::from)
+            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
             .into_future()
-            .left_future(),
-        BlobRemote {
-            ref blobstores_args,
-            ref db_address,
-            write_lock_db_address: _,
-            ref sharded_filenodes,
-        } => new_remote(
-            logger,
-            blobstores_args,
-            db_address.clone(),
-            sharded_filenodes.clone(),
-            repoid,
-            myrouter_port,
-            bookmarks_cache_ttl,
-        )
-        .right_future(),
+            .boxify(),
+
+        Manifold { bucket, prefix } => ThriftManifoldBlob::new(bucket.clone())
+            .map({
+                cloned!(prefix);
+                move |manifold| PrefixBlobstore::new(manifold, format!("flat/{}", prefix))
+            })
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))
+            .map_err(Error::from)
+            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+            .into_future()
+            .boxify(),
+
+        Gluster {
+            tier,
+            export,
+            basepath,
+        } => Glusterblob::with_smc(tier.clone(), export.clone(), basepath.clone())
+            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+            .boxify(),
+
+        Mysql {
+            shard_map,
+            shard_num,
+        } => if let Some(myrouter_port) = myrouter_port {
+            Sqlblob::with_myrouter(repoid, shard_map, myrouter_port, *shard_num)
+        } else {
+            Sqlblob::with_raw_xdb_shardmap(repoid, shard_map, *shard_num)
+        }
+        .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+        .into_future()
+        .boxify(),
+
+        Multiplexed {
+            scuba_table,
+            blobstores,
+        } => {
+            let queue = dbconfig
+                .get_db_address()
+                .ok_or_else(|| err_msg("Multiplexed blobstore requires remote DB for queue"))
+                .and_then(move |dbaddr| {
+                    myrouter_port
+                        .ok_or_else(|| err_msg("Need myrouter port for remote DB"))
+                        .map(|port| (dbaddr, port))
+                })
+                .map(|(addr, port)| Arc::new(SqlBlobstoreSyncQueue::with_myrouter(addr, port)))
+                .into_future();
+
+            let components: Vec<_> = blobstores
+                .iter()
+                .map({
+                    cloned!(dbconfig);
+                    move |(blobstoreid, config)| {
+                        cloned!(blobstoreid);
+                        make_blobstore(repoid, config, &dbconfig, myrouter_port)
+                            .map({ move |store| (blobstoreid, store) })
+                    }
+                })
+                .collect();
+
+            queue
+                .and_then({
+                    cloned!(scuba_table);
+                    move |queue| {
+                        future::join_all(components).map({
+                            move |components| {
+                                MultiplexedBlobstore::new(
+                                    repoid,
+                                    components,
+                                    queue,
+                                    scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
+                                )
+                            }
+                        })
+                    }
+                })
+                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+                .boxify()
+        }
     }
 }
 
@@ -199,163 +276,110 @@ fn new_filenodes(
     Ok(filenodes)
 }
 
-pub fn new_remote(
+/// Create a new BlobRepo with purely local state. (Well, it could be a remote blobstore, but
+/// that would be weird to use with a local metadata db.)
+fn new_local(
     logger: Logger,
-    args: &RemoteBlobstoreArgs,
+    dbpath: &Path,
+    blobstore: Arc<Blobstore>,
+    repoid: RepositoryId,
+) -> Result<BlobRepo> {
+    let bookmarks = SqlBookmarks::with_sqlite_path(dbpath.join("books"))
+        .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+    let filenodes = SqlFilenodes::with_sqlite_path(dbpath.join("filenodes"))
+        .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+    let changesets = SqlChangesets::with_sqlite_path(dbpath.join("changesets"))
+        .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+    let bonsai_hg_mapping = SqlBonsaiHgMapping::with_sqlite_path(dbpath.join("bonsai_hg_mapping"))
+        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+
+    Ok(BlobRepo::new(
+        logger,
+        Arc::new(bookmarks),
+        blobstore,
+        Arc::new(filenodes),
+        Arc::new(changesets),
+        Arc::new(bonsai_hg_mapping),
+        repoid,
+        Arc::new(DummyLease {}),
+    ))
+}
+
+fn open_xdb<T: SqlConstructors>(addr: &str, myrouter_port: Option<u16>) -> Result<Arc<T>> {
+    let ret = if let Some(myrouter_port) = myrouter_port {
+        T::with_myrouter(addr, myrouter_port)
+    } else {
+        T::with_raw_xdb_tier(addr)?
+    };
+    Ok(Arc::new(ret))
+}
+
+/// If the DB is remote then set up for a full production configuration.
+/// In theory this could be with a local blobstore, but that would just be weird.
+fn new_remote(
+    logger: Logger,
     db_address: String,
     sharded_filenodes: Option<ShardedFilenodesParams>,
+    blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
-    // recursively construct blobstore from arguments
-    fn eval_remote_args(
-        args: RemoteBlobstoreArgs,
-        repoid: RepositoryId,
-        myrouter_port: Option<u16>,
-        queue: Arc<BlobstoreSyncQueue>,
-    ) -> BoxFuture<Arc<Blobstore>, Error> {
-        match args {
-            RemoteBlobstoreArgs::Manifold(manifold_args) => {
-                let blobstore: Arc<Blobstore> = Arc::new(PrefixBlobstore::new(
-                    try_boxfuture!(ThriftManifoldBlob::new(manifold_args.bucket.clone())),
-                    format!("flat/{}", manifold_args.prefix),
-                ));
-                future::ok(blobstore).boxify()
-            }
-            RemoteBlobstoreArgs::Gluster(args) => {
-                Glusterblob::with_smc(args.tier, args.export, args.basepath)
-                    .map(|blobstore| -> Arc<Blobstore> { Arc::new(blobstore) })
-                    .boxify()
-            }
-            RemoteBlobstoreArgs::Mysql(args) => {
-                let blobstore: Arc<Blobstore> = match myrouter_port {
-                    Some(myrouter_port) => Arc::new(try_boxfuture!(Sqlblob::with_myrouter(
-                        repoid,
-                        args.shardmap,
-                        myrouter_port,
-                        args.shard_num,
-                    ))),
-                    None => Arc::new(try_boxfuture!(Sqlblob::with_raw_xdb_shardmap(
-                        repoid,
-                        args.shardmap,
-                        args.shard_num,
-                    ))),
-                };
-                future::ok(blobstore).boxify()
-            }
-            RemoteBlobstoreArgs::Multiplexed {
-                scuba_table,
-                blobstores,
-            } => {
-                let blobstores: Vec<_> = blobstores
-                    .into_iter()
-                    .map(|(blobstore_id, arg)| {
-                        eval_remote_args(arg, repoid, myrouter_port, queue.clone())
-                            .map(move |blobstore| (blobstore_id, blobstore))
-                    })
-                    .collect();
-                future::join_all(blobstores)
-                    .map(move |blobstores| {
-                        if blobstores.len() == 1 {
-                            let (_, blobstore) = blobstores.into_iter().next().unwrap();
-                            blobstore
-                        } else {
-                            Arc::new(MultiplexedBlobstore::new(
-                                repoid,
-                                blobstores,
-                                queue.clone(),
-                                scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
-                            ))
-                        }
-                    })
-                    .boxify()
-            }
+) -> Result<BlobRepo> {
+    let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
+    let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
+        ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
+    ))?);
+    let presence_pool = Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
+        ErrorKind::MissingCachePool("blobstore-presence".to_string()),
+    ))?);
+    let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
+
+    let filenodes = new_filenodes(&db_address, sharded_filenodes, myrouter_port)?;
+
+    let bookmarks: Arc<dyn Bookmarks> = {
+        let bookmarks = open_xdb::<SqlBookmarks>(&db_address, myrouter_port)?;
+        if let Some(ttl) = bookmarks_cache_ttl {
+            Arc::new(CachedBookmarks::new(bookmarks, ttl))
+        } else {
+            bookmarks
         }
-    }
-
-    let blobstore_sync_queue: Arc<BlobstoreSyncQueue> = match myrouter_port {
-        Some(myrouter_port) => Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
-            &db_address,
-            myrouter_port,
-        )),
-        None => Arc::new(try_boxfuture!(SqlBlobstoreSyncQueue::with_raw_xdb_tier(
-            &db_address
-        ))),
     };
-    eval_remote_args(args.clone(), repoid, myrouter_port, blobstore_sync_queue)
-        .and_then(move |blobstore| {
-            let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
-            let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
-                ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
-            ))?);
-            let presence_pool =
-                Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
-                    ErrorKind::MissingCachePool("blobstore-presence".to_string()),
-                ))?);
-            let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-            let filenodes = new_filenodes(&db_address, sharded_filenodes, myrouter_port)?;
+    let changesets = open_xdb::<SqlChangesets>(&db_address, myrouter_port)?;
+    let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
+        ErrorKind::MissingCachePool("changesets".to_string()),
+    ))?;
+    let changesets = CachingChangests::new(changesets, changesets_cache_pool.clone());
+    let changesets = Arc::new(changesets);
 
-            let bookmarks: Arc<dyn Bookmarks> = {
-                let bookmarks = match myrouter_port {
-                    Some(myrouter_port) => {
-                        Arc::new(SqlBookmarks::with_myrouter(&db_address, myrouter_port))
-                    }
-                    None => Arc::new(SqlBookmarks::with_raw_xdb_tier(&db_address)?),
-                };
-                if let Some(ttl) = bookmarks_cache_ttl {
-                    Arc::new(CachedBookmarks::new(bookmarks, ttl))
-                } else {
-                    bookmarks
-                }
-            };
+    let bonsai_hg_mapping = open_xdb::<SqlBonsaiHgMapping>(&db_address, myrouter_port)?;
+    let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
+        bonsai_hg_mapping,
+        cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(ErrorKind::MissingCachePool(
+            "bonsai_hg_mapping".to_string(),
+        )))?,
+    );
 
-            let changesets = match myrouter_port {
-                Some(myrouter_port) => SqlChangesets::with_myrouter(&db_address, myrouter_port),
-                None => SqlChangesets::with_raw_xdb_tier(&db_address)?,
-            };
-            let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
-                ErrorKind::MissingCachePool("changesets".to_string()),
-            ))?;
-            let changesets =
-                CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
-            let changesets = Arc::new(changesets);
+    let changeset_fetcher_factory = {
+        cloned!(changesets, repoid);
+        move || {
+            let res: Arc<ChangesetFetcher + Send + Sync> = Arc::new(SimpleChangesetFetcher::new(
+                changesets.clone(),
+                repoid.clone(),
+            ));
+            res
+        }
+    };
 
-            let bonsai_hg_mapping = match myrouter_port {
-                Some(myrouter_port) => {
-                    SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port)
-                }
-                None => SqlBonsaiHgMapping::with_raw_xdb_tier(&db_address)?,
-            };
-            let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
-                Arc::new(bonsai_hg_mapping),
-                cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
-                    ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
-                ))?,
-            );
-
-            let changeset_fetcher_factory = {
-                cloned!(changesets, repoid);
-                move || {
-                    let res: Arc<ChangesetFetcher + Send + Sync> = Arc::new(
-                        SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
-                    );
-                    res
-                }
-            };
-
-            Ok(BlobRepo::new_with_changeset_fetcher_factory(
-                logger,
-                bookmarks,
-                blobstore,
-                Arc::new(filenodes),
-                changesets,
-                Arc::new(bonsai_hg_mapping),
-                repoid,
-                Arc::new(changeset_fetcher_factory),
-                Arc::new(MemcacheOps::new("bonsai-hg-generation", "")?),
-            ))
-        })
-        .boxify()
+    Ok(BlobRepo::new_with_changeset_fetcher_factory(
+        logger,
+        bookmarks,
+        blobstore,
+        Arc::new(filenodes),
+        changesets,
+        Arc::new(bonsai_hg_mapping),
+        repoid,
+        Arc::new(changeset_fetcher_factory),
+        Arc::new(MemcacheOps::new("bonsai-hg-generation", "")?),
+    ))
 }

@@ -23,8 +23,8 @@ use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::{
-    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams, HookType,
-    RepoConfig, RepoReadOnly, RepoType,
+    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams,
+    HookType, MetadataDBConfig, RepoConfig, RepoReadOnly, StorageConfig,
 };
 use mononoke_types::FileType;
 use regex::Regex;
@@ -1188,7 +1188,13 @@ fn to_mpath(string: &str) -> MPath {
 
 fn default_repo_config() -> RepoConfig {
     RepoConfig {
-        repotype: RepoType::BlobFiles("whatev".into()),
+        storage_config: StorageConfig {
+            blobstore: BlobConfig::Disabled,
+            dbconfig: MetadataDBConfig::LocalDB {
+                path: "/some/place".into(),
+            },
+        },
+        write_lock_db_address: None,
         enabled: true,
         generation_cache_size: 1,
         repoid: 1,

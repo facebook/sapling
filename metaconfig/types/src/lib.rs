@@ -10,6 +10,8 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
+use std::{collections::HashMap, num::NonZeroUsize, path::PathBuf, str, sync::Arc, time::Duration};
+
 use bookmarks::Bookmark;
 use regex::Regex;
 use scuba::ScubaValue;
@@ -19,41 +21,6 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
-use std::collections::HashMap;
-use std::num::NonZeroUsize;
-use std::path::PathBuf;
-use std::str;
-use std::sync::Arc;
-use std::time::Duration;
-
-/// Arguments for setting up a Manifold blobstore.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ManifoldArgs {
-    /// Bucket of the backing Manifold blobstore to connect to
-    pub bucket: String,
-    /// Prefix to be prepended to all the keys. In prod it should be ""
-    pub prefix: String,
-}
-
-/// Arguments for settings up a Gluster blobstore
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GlusterArgs {
-    /// Gluster tier
-    pub tier: String,
-    /// Nfs export name
-    pub export: String,
-    /// Content prefix path
-    pub basepath: String,
-}
-
-/// Arguments for setting up a Mysql blobstore.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MysqlBlobstoreArgs {
-    /// Name of the Mysql shardmap to use
-    pub shardmap: String,
-    /// Number of shards in the Mysql shardmap
-    pub shard_num: NonZeroUsize,
-}
 
 /// Single entry that
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -77,15 +44,18 @@ pub struct CommonConfig {
 }
 
 /// Configuration of a single repository
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct RepoConfig {
     /// If false, this repo config is completely ignored.
     pub enabled: bool,
-    /// Defines the type of repository
-    pub repotype: RepoType,
+    /// Persistent storage for this repo
+    pub storage_config: StorageConfig,
+    /// Address of the SQL database used to lock writes to a repo.
+    pub write_lock_db_address: Option<String>,
     /// How large a cache to use (in bytes) for RepoGenCache derived information
     pub generation_cache_size: usize,
     /// Numerical repo id of the repo.
+    // XXX Use RepositoryId?
     pub repoid: i32,
     /// Scuba table for logging performance of operations
     pub scuba_table: Option<String>,
@@ -119,10 +89,7 @@ pub struct RepoConfig {
 impl RepoConfig {
     /// Returns a db address that is referenced in this config or None if there is none
     pub fn get_db_address(&self) -> Option<&str> {
-        match self.repotype {
-            RepoType::BlobRemote { ref db_address, .. } => Some(&db_address),
-            _ => None,
-        }
+        self.storage_config.dbconfig.get_db_address()
     }
 }
 
@@ -133,6 +100,12 @@ pub enum RepoReadOnly {
     ReadOnly(String),
     /// This repo should accept writes.
     ReadWrite,
+}
+
+impl Default for RepoReadOnly {
+    fn default() -> Self {
+        RepoReadOnly::ReadWrite
+    }
 }
 
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
@@ -378,36 +351,6 @@ impl Default for LfsParams {
     }
 }
 
-/// Remote blobstore arguments
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RemoteBlobstoreArgs {
-    /// Manifold arguments
-    Manifold(ManifoldArgs),
-    /// Gluster blobstore arguemnts
-    Gluster(GlusterArgs),
-    /// Mysql blobstore arguments
-    Mysql(MysqlBlobstoreArgs),
-    /// Multiplexed
-    Multiplexed {
-        /// Scuba table for tracking performance of blobstore operations
-        scuba_table: Option<String>,
-        /// Multiplexed blobstores
-        blobstores: HashMap<BlobstoreId, RemoteBlobstoreArgs>,
-    },
-}
-
-impl From<ManifoldArgs> for RemoteBlobstoreArgs {
-    fn from(manifold_args: ManifoldArgs) -> Self {
-        RemoteBlobstoreArgs::Manifold(manifold_args)
-    }
-}
-
-impl From<GlusterArgs> for RemoteBlobstoreArgs {
-    fn from(gluster_args: GlusterArgs) -> Self {
-        RemoteBlobstoreArgs::Gluster(gluster_args)
-    }
-}
-
 /// Id used to discriminate diffirent underlying blobstore instances
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Deserialize)]
 pub struct BlobstoreId(u64);
@@ -447,31 +390,142 @@ impl From<BlobstoreId> for ScubaValue {
     }
 }
 
-/// Types of repositories supported
+/// Define storage needed for repo.
+/// Storage consists of a blobstore and some kind of SQL DB for metadata. The configurations
+/// can be broadly classified as "local" and "remote". "Local" is primarily for testing, and is
+/// only suitable for single hosts. "Remote" is durable storage which can be shared by multiple
+/// BlobRepo instances on different hosts.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct StorageConfig {
+    /// Blobstores. If the blobstore has a BlobstoreId then it can be used as a component of
+    /// a Multiplexed blobstore.
+    pub blobstore: BlobConfig,
+    /// Metadata DB
+    pub dbconfig: MetadataDBConfig,
+}
+
+/// Configuration for a blobstore
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RepoType {
-    /// Blob repository with path pointing to on-disk files with data. The files are stored in a
-    ///
-    ///
+pub enum BlobConfig {
+    /// Administratively disabled blobstore
+    Disabled,
+    /// Blob repository with path pointing to on-disk files with data. Blobs are stored in
+    /// separate files.
     /// NOTE: this is read-only and for development/testing only. Production uses will break things.
-    BlobFiles(PathBuf),
+    Files {
+        /// Path to directory containing files
+        path: PathBuf,
+    },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database
-    BlobRocks(PathBuf),
+    Rocks {
+        /// Path to RocksDB directory
+        path: PathBuf,
+    },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// Sqlite database
-    BlobSqlite(PathBuf),
-    /// Blob repository with path pointing to the directory where a server socket is going to be.
-    BlobRemote {
-        /// Remote blobstores arguments
-        blobstores_args: RemoteBlobstoreArgs,
+    Sqlite {
+        /// Path to SQLite DB
+        path: PathBuf,
+    },
+    /// Store in a manifold bucket
+    Manifold {
+        /// Bucket of the backing Manifold blobstore to connect to
+        bucket: String,
+        /// Prefix to be prepended to all the keys. In prod it should be ""
+        prefix: String,
+    },
+    /// Store in a gluster mount
+    Gluster {
+        /// Gluster tier
+        tier: String,
+        /// Nfs export name
+        export: String,
+        /// Content prefix path
+        basepath: String,
+    },
+    /// Store in a sharded Mysql
+    Mysql {
+        /// Name of the Mysql shardmap to use
+        shard_map: String,
+        /// Number of shards in the Mysql shardmap
+        shard_num: NonZeroUsize,
+    },
+    /// Multiplex across multiple blobstores for redundancy
+    Multiplexed {
+        /// A scuba table I guess
+        scuba_table: Option<String>,
+        /// Set of blobstores being multiplexed over
+        blobstores: Vec<(BlobstoreId, BlobConfig)>,
+    },
+}
+
+impl BlobConfig {
+    /// Return true if the blobstore is strictly local. Multiplexed blobstores are local iff
+    /// all their components are.
+    pub fn is_local(&self) -> bool {
+        use BlobConfig::*;
+
+        match self {
+            Disabled | Files { .. } | Rocks { .. } | Sqlite { .. } => true,
+            Manifold { .. } | Gluster { .. } | Mysql { .. } => false,
+            Multiplexed { blobstores, .. } => blobstores
+                .iter()
+                .map(|(_, config)| config)
+                .all(BlobConfig::is_local),
+        }
+    }
+}
+
+impl Default for BlobConfig {
+    fn default() -> Self {
+        BlobConfig::Disabled
+    }
+}
+
+/// Configuration for the Metadata DB
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum MetadataDBConfig {
+    /// Remove MySQL DB
+    Mysql {
         /// Identifies the SQL database to connect to.
         db_address: String,
         /// If present, sharding configuration for filenodes.
         sharded_filenodes: Option<ShardedFilenodesParams>,
-        /// Address of the SQL database used to lock writes to a repo.
-        write_lock_db_address: Option<String>,
     },
+    /// Local SQLite dbs
+    LocalDB {
+        /// Path to directory of sqlite dbs
+        path: PathBuf,
+    },
+}
+
+impl Default for MetadataDBConfig {
+    fn default() -> Self {
+        MetadataDBConfig::LocalDB {
+            path: PathBuf::default(),
+        }
+    }
+}
+
+impl MetadataDBConfig {
+    /// Return true if this is a local on-disk DB.
+    pub fn is_local(&self) -> bool {
+        match self {
+            MetadataDBConfig::LocalDB { .. } => true,
+            MetadataDBConfig::Mysql { .. } => false,
+        }
+    }
+
+    /// Return address we should connect to for a remote DB
+    /// (Assumed to be Mysql)
+    pub fn get_db_address(&self) -> Option<&str> {
+        if let MetadataDBConfig::Mysql { db_address, .. } = self {
+            Some(db_address.as_str())
+        } else {
+            None
+        }
+    }
 }
 
 /// Params fro the bunle2 replay

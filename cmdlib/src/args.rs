@@ -37,9 +37,7 @@ use blobrepo_factory::open_blobrepo;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{
-    ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfig, RepoType,
-};
+use metaconfig_types::{BlobConfig, MetadataDBConfig, RepoConfig};
 use mononoke_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -301,14 +299,15 @@ where
     T: SqlConstructors,
 {
     let (_, config) = get_config(matches)?;
-    match config.repotype {
-        RepoType::BlobFiles(ref data_dir)
-        | RepoType::BlobRocks(ref data_dir)
-        | RepoType::BlobSqlite(ref data_dir) => T::with_sqlite_path(data_dir.join(name)),
-        RepoType::BlobRemote { ref db_address, .. } => match parse_myrouter_port(matches) {
-            Some(myrouter_port) => Ok(T::with_myrouter(&db_address, myrouter_port)),
-            None => T::with_raw_xdb_tier(&db_address),
-        },
+    match &config.storage_config.dbconfig {
+        MetadataDBConfig::LocalDB { path } => T::with_sqlite_path(path.join(name)),
+        MetadataDBConfig::Mysql { db_address, .. } => {
+            assert!(name != "filenodes");
+            match parse_myrouter_port(matches) {
+                Some(myrouter_port) => Ok(T::with_myrouter(&db_address, myrouter_port)),
+                None => T::with_raw_xdb_tier(&db_address),
+            }
+        }
     }
 }
 
@@ -541,14 +540,20 @@ pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> 
     let repo_id = get_repo_id(matches)?;
 
     let configs = read_configs(matches)?;
-    let repo_config = configs
+    let mut repo_config: Vec<_> = configs
         .repos
         .into_iter()
         .filter(|(_, config)| RepositoryId::new(config.repoid) == repo_id)
-        .last();
-    match repo_config {
-        Some((name, config)) => Ok((name, config)),
-        None => Err(err_msg(format!("unknown repoid {:?}", repo_id))),
+        .collect();
+    if repo_config.is_empty() {
+        Err(err_msg(format!("unknown repoid {:?}", repo_id)))
+    } else if repo_config.len() > 1 {
+        Err(err_msg(format!(
+            "repoid {:?} defined multiple times",
+            repo_id
+        )))
+    } else {
+        Ok(repo_config.pop().unwrap())
     }
 }
 
@@ -566,23 +571,37 @@ fn open_repo_internal<'a>(
         reponame,
         repo_id.as_ref().unwrap()
     );
-    let logger = match config.repotype {
-        RepoType::BlobFiles(ref data_dir) => {
-            setup_repo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
-            logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()])
+    let logger = match &config.storage_config.blobstore {
+        BlobConfig::Disabled => {
+            logger.new(o!["BlobConfig:Disabled" => "Disabled in config".to_string()])
         }
-        RepoType::BlobRocks(ref data_dir) => {
-            setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
-            logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()])
+        BlobConfig::Files { path } => {
+            setup_repo_dir(path, create).expect("Setting up file blobrepo failed");
+            logger.new(o!["BlobConfig:Files" => path.to_string_lossy().into_owned()])
         }
-        RepoType::BlobSqlite(ref data_dir) => {
-            setup_repo_dir(&data_dir, create).expect("Setting up sqlite blobrepo failed");
-            logger.new(o!["BlobRepo:Sqlite" => data_dir.to_string_lossy().into_owned()])
+        BlobConfig::Rocks { path } => {
+            setup_repo_dir(path, create).expect("Setting up rocksdb blobrepo failed");
+            logger.new(o!["BlobConfig:Rocksdb" => path.to_string_lossy().into_owned()])
         }
-        RepoType::BlobRemote {
-            ref blobstores_args,
-            ..
-        } => logger.new(o!["BlobRepo:Remote" => format!("{:?}", blobstores_args)]),
+        BlobConfig::Sqlite { path } => {
+            setup_repo_dir(path, create).expect("Setting up sqlite blobrepo failed");
+            logger.new(o!["BlobConfig:Sqlite" => path.to_string_lossy().into_owned()])
+        }
+        BlobConfig::Manifold { bucket, prefix } => {
+            logger.new(o!["BlobConfig:Manifold" => format!("{} {}", bucket, prefix)])
+        }
+        BlobConfig::Gluster {
+            tier,
+            export,
+            basepath,
+        } => logger.new(o!["BlobConfig:Gluster" => format!("{} {} {}", tier, export, basepath)]),
+        BlobConfig::Mysql {
+            shard_map,
+            shard_num,
+        } => logger.new(o!["BlobConfig:Mysql" => format!("{} {}", shard_map, shard_num)]),
+        BlobConfig::Multiplexed { blobstores, .. } => {
+            logger.new(o!["BlobConfig:Multiplexed" => format!("{:?}", blobstores)])
+        }
     };
 
     let myrouter_port = parse_myrouter_port(matches);
@@ -591,7 +610,7 @@ fn open_repo_internal<'a>(
         .and_then(move |repo_id| {
             open_blobrepo(
                 logger.clone(),
-                config.repotype.clone(),
+                config.storage_config,
                 repo_id,
                 myrouter_port,
                 config.bookmarks_cache_ttl,
@@ -600,12 +619,12 @@ fn open_repo_internal<'a>(
         .boxify()
 }
 
-pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {
+pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> BlobConfig {
     // The unwraps here are safe because default values have already been provided in mononoke_app
     // above.
     match matches.value_of("mysql-blobstore-shardmap") {
-        Some(shardmap) => RemoteBlobstoreArgs::Mysql(MysqlBlobstoreArgs {
-            shardmap: shardmap.to_string(),
+        Some(shardmap) => BlobConfig::Mysql {
+            shard_map: shardmap.to_string(),
             shard_num: matches
                 .value_of("mysql-blobstore-shard-num")
                 .unwrap()
@@ -613,11 +632,11 @@ pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs
                 .ok()
                 .and_then(NonZeroUsize::new)
                 .expect("Provided mysql-blobstore-shard-num must be int larger than 0"),
-        }),
-        None => RemoteBlobstoreArgs::Manifold(ManifoldArgs {
+        },
+        None => BlobConfig::Manifold {
             bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
             prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
-        }),
+        },
     }
 }
 

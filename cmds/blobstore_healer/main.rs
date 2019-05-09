@@ -18,7 +18,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
-use failure_ext::{bail_msg, ensure_msg, err_msg, prelude::*};
+use failure_ext::{bail_msg, err_msg, prelude::*};
 use futures::{
     future::{join_all, loop_fn, ok, Loop},
     prelude::*,
@@ -27,7 +27,7 @@ use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use glusterblob::Glusterblob;
 use healer::RepoHealer;
 use manifoldblob::ThriftManifoldBlob;
-use metaconfig_types::{RemoteBlobstoreArgs, RepoConfig, RepoType};
+use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use rate_limiter::RateLimiter;
@@ -41,22 +41,20 @@ use tokio_timer::Delay;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 
-fn maybe_schedule_healer_for_repo(
+fn maybe_schedule_healer_for_storage(
     dry_run: bool,
     blobstore_sync_queue_limit: usize,
     logger: Logger,
     rate_limiter: RateLimiter,
-    config: RepoConfig,
+    repo_id: RepositoryId,
+    storage_config: StorageConfig,
     myrouter_port: u16,
     replication_lag_db_regions: Vec<String>,
 ) -> Result<BoxFuture<(), Error>> {
-    ensure_msg!(config.enabled, "Repo is disabled");
-
-    let (db_address, blobstores_args) = match config.repotype {
-        RepoType::BlobRemote {
-            ref db_address,
-            blobstores_args: RemoteBlobstoreArgs::Multiplexed { ref blobstores, .. },
-            ..
+    let (db_address, blobstores_args) = match &storage_config {
+        StorageConfig {
+            dbconfig: MetadataDBConfig::Mysql { db_address, .. },
+            blobstore: BlobConfig::Multiplexed { blobstores, .. },
         } => (db_address.clone(), blobstores.clone()),
         _ => bail_msg!("Repo doesn't use Multiplexed blobstore"),
     };
@@ -65,32 +63,36 @@ fn maybe_schedule_healer_for_repo(
         let mut blobstores = HashMap::new();
         for (id, args) in blobstores_args.into_iter() {
             match args {
-                RemoteBlobstoreArgs::Manifold(args) => {
-                    let blobstore = ThriftManifoldBlob::new(args.bucket)
+                BlobConfig::Manifold { bucket, prefix } => {
+                    let blobstore = ThriftManifoldBlob::new(bucket)
                         .chain_err("While opening ThriftManifoldBlob")?;
-                    let blobstore =
-                        PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));
+                    let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", prefix));
                     let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
                     blobstores.insert(id, ok(blobstore).boxify());
                 }
-                RemoteBlobstoreArgs::Gluster(args) => {
-                    let blobstore = Glusterblob::with_smc(args.tier, args.export, args.basepath)
+                BlobConfig::Gluster {
+                    tier,
+                    export,
+                    basepath,
+                } => {
+                    let blobstore = Glusterblob::with_smc(tier, export, basepath)
                         .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) })
                         .boxify();
                     blobstores.insert(id, blobstore);
                 }
-                RemoteBlobstoreArgs::Mysql(args) => {
+                BlobConfig::Mysql {
+                    shard_map,
+                    shard_num,
+                } => {
                     let blobstore: Arc<dyn Blobstore> = Arc::new(Sqlblob::with_myrouter(
-                        RepositoryId::new(config.repoid),
-                        args.shardmap,
+                        repo_id,
+                        shard_map,
                         myrouter_port,
-                        args.shard_num,
+                        shard_num,
                     )?);
                     blobstores.insert(id, ok(blobstore).boxify());
                 }
-                RemoteBlobstoreArgs::Multiplexed { .. } => {
-                    bail_msg!("Unsupported nested Multiplexed blobstore")
-                }
+                unsupported => bail_msg!("Unsupported blobstore type {:?}", unsupported),
             }
         }
 
@@ -146,7 +148,7 @@ fn maybe_schedule_healer_for_repo(
         let repo_healer = RepoHealer::new(
             logger.clone(),
             blobstore_sync_queue_limit,
-            RepositoryId::new(config.repoid),
+            repo_id,
             rate_limiter,
             sync_queue,
             Arc::new(blobstores),
@@ -281,12 +283,13 @@ fn main() -> Result<()> {
                 "repo" => format!("{} ({})", name, config.repoid),
             ));
 
-            let scheduled = maybe_schedule_healer_for_repo(
+            let scheduled = maybe_schedule_healer_for_storage(
                 dry_run,
                 blobstore_sync_queue_limit,
                 logger.clone(),
                 rate_limiter.clone(),
-                config,
+                RepositoryId::new(config.repoid),
+                config.storage_config,
                 myrouter_port,
                 matches
                     .value_of("db-regions")

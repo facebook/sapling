@@ -9,7 +9,7 @@
 
 use serde_derive::Deserialize;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs,
     num::NonZeroUsize,
     path::{Path, PathBuf},
@@ -21,10 +21,10 @@ use crate::errors::*;
 use bookmarks::Bookmark;
 use failure_ext::ResultExt;
 use metaconfig_types::{
-    BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    CommonConfig, GlusterArgs, HookBypass, HookConfig, HookManagerParams, HookParams, HookType,
-    LfsParams, ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams, RemoteBlobstoreArgs, RepoConfig,
-    RepoReadOnly, RepoType, ShardedFilenodesParams, WhitelistEntry,
+    BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
+    CacheWarmupParams, CommonConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
+    HookType, LfsParams, MetadataDBConfig, PushrebaseParams, RepoConfig, RepoReadOnly,
+    ShardedFilenodesParams, StorageConfig, WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -46,12 +46,16 @@ pub struct RepoConfigs {
 
 impl RepoConfigs {
     /// Read repo configs
-    pub fn read_configs<P: AsRef<Path>>(config_path: P) -> Result<Self> {
-        let repos_dir = config_path.as_ref().join("repos");
+    pub fn read_configs(config_path: impl AsRef<Path>) -> Result<Self> {
+        let config_path = config_path.as_ref();
+
+        let repos_dir = config_path.join("repos");
         if !repos_dir.is_dir() {
-            return Err(
-                ErrorKind::InvalidFileStructure("expected 'repos' directory".into()).into(),
-            );
+            return Err(ErrorKind::InvalidFileStructure(format!(
+                "expected 'repos' directory under {}",
+                config_path.display()
+            ))
+            .into());
         }
         let mut repo_configs = HashMap::new();
         for entry in repos_dir.read_dir()? {
@@ -59,13 +63,13 @@ impl RepoConfigs {
             let dir_path = entry.path();
             if dir_path.is_dir() {
                 let (name, config) =
-                    RepoConfigs::read_single_repo_config(&dir_path, config_path.as_ref())
+                    RepoConfigs::read_single_repo_config(&dir_path, config_path)
                         .context(format!("while opening config for {:?} repo", dir_path))?;
                 repo_configs.insert(name, config);
             }
         }
 
-        let common_dir = config_path.as_ref().join("common");
+        let common_dir = config_path.join("common");
         let maybe_common_config = if common_dir.is_dir() {
             Self::read_common_config(&common_dir)?
         } else {
@@ -279,10 +283,32 @@ impl RepoConfigs {
             })
         }
 
-        let repotype = match this.repotype {
-            RawRepoType::Files => RepoType::BlobFiles(get_path(&this)?),
-            RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
-            RawRepoType::BlobSqlite => RepoType::BlobSqlite(get_path(&this)?),
+        let storage_config = match this.repotype {
+            RawRepoType::Files => StorageConfig {
+                blobstore: BlobConfig::Files {
+                    path: get_path(&this)?,
+                },
+                dbconfig: MetadataDBConfig::LocalDB {
+                    path: get_path(&this)?,
+                },
+            },
+            RawRepoType::BlobRocks => StorageConfig {
+                blobstore: BlobConfig::Rocks {
+                    path: get_path(&this)?,
+                },
+                dbconfig: MetadataDBConfig::LocalDB {
+                    path: get_path(&this)?,
+                },
+            },
+            RawRepoType::BlobSqlite => StorageConfig {
+                blobstore: BlobConfig::Sqlite {
+                    path: get_path(&this)?,
+                },
+                dbconfig: MetadataDBConfig::LocalDB {
+                    path: get_path(&this)?,
+                },
+            },
+
             RawRepoType::BlobRemote => {
                 let remote_blobstores = this.remote_blobstore;
                 if remote_blobstores.is_empty() {
@@ -295,9 +321,7 @@ impl RepoConfigs {
                     "xdb tier was not specified".into(),
                 ))?;
 
-                let write_lock_db_address = this.write_lock_db_address;
-
-                let mut blobstores = HashMap::new();
+                let mut blobstores = BTreeMap::new();
                 for blobstore in remote_blobstores {
                     let args = match blobstore.blobstore_type {
                         RawBlobstoreType::Manifold => {
@@ -305,11 +329,10 @@ impl RepoConfigs {
                                 blobstore.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                                     "manifold bucket must be specified".into(),
                                 ))?;
-                            let manifold_args = ManifoldArgs {
+                            BlobConfig::Manifold {
                                 bucket: manifold_bucket,
                                 prefix: blobstore.manifold_prefix.unwrap_or("".into()),
-                            };
-                            RemoteBlobstoreArgs::Manifold(manifold_args)
+                            }
                         }
                         RawBlobstoreType::Gluster => {
                             let tier = blobstore.gluster_tier.ok_or(ErrorKind::InvalidConfig(
@@ -322,11 +345,11 @@ impl RepoConfigs {
                                 blobstore.gluster_basepath.ok_or(ErrorKind::InvalidConfig(
                                     "gluster basepath must be specified".into(),
                                 ))?;
-                            RemoteBlobstoreArgs::Gluster(GlusterArgs {
+                            BlobConfig::Gluster {
                                 tier,
                                 export,
                                 basepath,
-                            })
+                            }
                         }
                         RawBlobstoreType::Mysql => {
                             let shardmap = blobstore.mysql_shardmap.ok_or(
@@ -346,10 +369,10 @@ impl RepoConfigs {
                                      than 0"
                                         .into(),
                                 ))?;
-                            RemoteBlobstoreArgs::Mysql(MysqlBlobstoreArgs {
-                                shardmap,
+                            BlobConfig::Mysql {
+                                shard_map: shardmap,
                                 shard_num,
-                            })
+                            }
                         }
                     };
                     if blobstores.insert(blobstore.blobstore_id, args).is_some() {
@@ -364,9 +387,9 @@ impl RepoConfigs {
                     let (_, args) = blobstores.into_iter().next().unwrap();
                     args
                 } else {
-                    RemoteBlobstoreArgs::Multiplexed {
+                    BlobConfig::Multiplexed {
                         scuba_table: this.blobstore_scuba_table,
-                        blobstores,
+                        blobstores: blobstores.into_iter().collect(),
                     }
                 };
 
@@ -388,11 +411,12 @@ impl RepoConfigs {
                     })
                     .transpose();
 
-                RepoType::BlobRemote {
-                    blobstores_args,
-                    db_address,
-                    sharded_filenodes: sharded_filenodes?,
-                    write_lock_db_address,
+                StorageConfig {
+                    blobstore: blobstores_args,
+                    dbconfig: MetadataDBConfig::Mysql {
+                        db_address,
+                        sharded_filenodes: sharded_filenodes?,
+                    },
                 }
             }
         };
@@ -486,7 +510,8 @@ impl RepoConfigs {
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
         Ok(RepoConfig {
             enabled,
-            repotype,
+            storage_config,
+            write_lock_db_address: this.write_lock_db_address.clone(),
             generation_cache_size,
             repoid,
             scuba_table,
@@ -811,43 +836,41 @@ mod test {
 
         let repoconfig = RepoConfigs::read_configs(tmp_dir.path()).expect("failed to read configs");
 
-        let first_manifold_args = ManifoldArgs {
-            bucket: "bucket".into(),
-            prefix: "".into(),
-        };
-        let second_gluster_args = GlusterArgs {
-            tier: "mononoke.gluster.tier".into(),
-            export: "groot".into(),
-            basepath: "mononoke/glusterblob-test".into(),
-        };
-        let mut blobstores = HashMap::new();
-        blobstores.insert(
-            BlobstoreId::new(0),
-            RemoteBlobstoreArgs::Manifold(first_manifold_args),
-        );
-        blobstores.insert(
-            BlobstoreId::new(1),
-            RemoteBlobstoreArgs::Gluster(second_gluster_args),
-        );
-        let blobstores_args = RemoteBlobstoreArgs::Multiplexed {
-            scuba_table: Some("blobstore_scuba_table".to_string()),
-            blobstores,
-        };
-
         let mut repos = HashMap::new();
         repos.insert(
             "fbsource".to_string(),
             RepoConfig {
                 enabled: true,
-                repotype: RepoType::BlobRemote {
-                    db_address: "db_address".into(),
-                    blobstores_args,
-                    sharded_filenodes: Some(ShardedFilenodesParams {
-                        shard_map: "db_address_shards".into(),
-                        shard_num: NonZeroUsize::new(123).unwrap(),
-                    }),
-                    write_lock_db_address: Some("write_lock_db_address".into()),
+                storage_config: StorageConfig {
+                    dbconfig: MetadataDBConfig::Mysql {
+                        db_address: "db_address".into(),
+                        sharded_filenodes: Some(ShardedFilenodesParams {
+                            shard_map: "db_address_shards".into(),
+                            shard_num: NonZeroUsize::new(123).unwrap(),
+                        }),
+                    },
+                    blobstore: BlobConfig::Multiplexed {
+                        scuba_table: Some("blobstore_scuba_table".to_string()),
+                        blobstores: vec![
+                            (
+                                BlobstoreId::new(0),
+                                BlobConfig::Manifold {
+                                    bucket: "bucket".into(),
+                                    prefix: String::new(),
+                                },
+                            ),
+                            (
+                                BlobstoreId::new(1),
+                                BlobConfig::Gluster {
+                                    tier: "mononoke.gluster.tier".into(),
+                                    export: "groot".into(),
+                                    basepath: "mononoke/glusterblob-test".into(),
+                                },
+                            ),
+                        ],
+                    },
                 },
+                write_lock_db_address: Some("write_lock_db_address".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
                 scuba_table: Some("scuba_table".to_string()),
@@ -944,7 +967,15 @@ mod test {
             "www".to_string(),
             RepoConfig {
                 enabled: true,
-                repotype: RepoType::BlobFiles("/tmp/www".into()),
+                storage_config: StorageConfig {
+                    dbconfig: MetadataDBConfig::LocalDB {
+                        path: "/tmp/www".into(),
+                    },
+                    blobstore: BlobConfig::Files {
+                        path: "/tmp/www".into(),
+                    },
+                },
+                write_lock_db_address: None,
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: 1,
                 scuba_table: Some("scuba_table".to_string()),

@@ -44,7 +44,7 @@ use mercurial_types::{
     Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope, HgManifestEnvelope,
     HgManifestId, MPath, MPathElement, Manifest,
 };
-use metaconfig_types::RemoteBlobstoreArgs;
+use metaconfig_types::BlobConfig;
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
@@ -1168,8 +1168,8 @@ fn subcommand_blobstore_fetch(
     let blobstore_args = args::parse_blobstore_args(&matches);
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
 
-    let manifold_args = match blobstore_args {
-        RemoteBlobstoreArgs::Manifold(args) => args,
+    let (bucket, prefix) = match blobstore_args {
+        BlobConfig::Manifold { bucket, prefix } => (bucket, prefix),
         bad => panic!("Unsupported blobstore: {:#?}", bad),
     };
 
@@ -1179,7 +1179,7 @@ fn subcommand_blobstore_fetch(
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
     let no_prefix = sub_m.is_present("no-prefix");
 
-    let blobstore = ManifoldBlob::new_with_prefix(&manifold_args.bucket, &manifold_args.prefix);
+    let blobstore = ManifoldBlob::new_with_prefix(&bucket, &prefix);
 
     match (use_memcache, no_prefix) {
         (None, false) => {
@@ -1188,14 +1188,12 @@ fn subcommand_blobstore_fetch(
         }
         (None, true) => blobstore.get(ctx, key.clone()).boxify(),
         (Some(mode), false) => {
-            let blobstore =
-                new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket).unwrap();
+            let blobstore = new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
             let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
         }
         (Some(mode), true) => {
-            let blobstore =
-                new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket).unwrap();
+            let blobstore = new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
         }
     }

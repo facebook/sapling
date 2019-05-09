@@ -22,7 +22,7 @@ use cache_warmup::cache_warmup;
 use context::CoreContext;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
-use metaconfig_types::{RepoConfig, RepoType};
+use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -61,11 +61,11 @@ pub fn repo_handlers(
         .map(|(reponame, config)| {
             info!(
                 root_log,
-                "Start warming for repo {}, type {:?}", reponame, config.repotype
+                "Start warming for repo {}, type {:?}", reponame, config.storage_config.blobstore
             );
             // TODO(T37478150, luk): this is not a test use case, need to address this later
             let ctx = CoreContext::test_mock();
-            let ensure_myrouter_ready = match config.get_db_address() {
+            let ensure_myrouter_ready = match config.storage_config.dbconfig.get_db_address() {
                 None => future::ok(()).left_future(),
                 Some(db_address) => {
                     let myrouter_port = try_boxfuture!(myrouter_port.ok_or_else(|| format_err!(
@@ -84,7 +84,7 @@ pub fn repo_handlers(
             let repoid = RepositoryId::new(config.repoid);
             open_blobrepo(
                 logger.clone(),
-                config.repotype.clone(),
+                config.storage_config.clone(),
                 repoid,
                 myrouter_port,
                 config.bookmarks_cache_ttl,
@@ -106,29 +106,28 @@ pub fn repo_handlers(
                 info!(root_log, "Loading hooks");
                 try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
 
-                let streaming_clone = match config.repotype {
-                    RepoType::BlobRemote { ref db_address, .. } => {
+                let streaming_clone =
+                    if let Some(db_address) = config.storage_config.dbconfig.get_db_address() {
                         Some(try_boxfuture!(streaming_clone(
                             blobrepo.clone(),
                             &db_address,
                             myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
                             repoid
                         )))
-                    }
-                    _ => None,
-                };
+                    } else {
+                        None
+                    };
 
-                let read_write_fetcher = match &config.repotype {
-                    RepoType::BlobRemote {
-                        write_lock_db_address: Some(addr),
-                        ..
-                    } => RepoReadWriteFetcher::with_myrouter(
+                // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
+                let read_write_fetcher = if let Some(addr) = config.write_lock_db_address {
+                    RepoReadWriteFetcher::with_myrouter(
                         config.readonly.clone(),
                         reponame.clone(),
                         addr.clone(),
                         myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
-                    ),
-                    _ => RepoReadWriteFetcher::new(config.readonly.clone(), reponame.clone()),
+                    )
+                } else {
+                    RepoReadWriteFetcher::new(config.readonly.clone(), reponame.clone())
                 };
 
                 let repo = MononokeRepo::new(
@@ -172,7 +171,7 @@ pub fn repo_handlers(
                 };
 
                 let RepoConfig {
-                    repotype,
+                    storage_config: StorageConfig { dbconfig, .. },
                     cache_warmup: cache_warmup_params,
                     ..
                 } = config;
@@ -196,17 +195,15 @@ pub fn repo_handlers(
                             info!(root_log, "Repo warmup for {} complete", reponame);
 
                             // initialize phases hint from the skip index
-                            let phases_hint: Arc<Phases> = match repotype {
-                                RepoType::BlobFiles(ref data_dir)
-                                | RepoType::BlobRocks(ref data_dir)
-                                | RepoType::BlobSqlite(ref data_dir) => {
+                            let phases_hint: Arc<Phases> = match dbconfig {
+                                MetadataDBConfig::LocalDB { path } => {
                                     let storage = Arc::new(
-                                        SqlPhases::with_sqlite_path(data_dir.join("phases"))
+                                        SqlPhases::with_sqlite_path(path.join("phases"))
                                             .expect("unable to initialize sqlite db for phases"),
                                     );
                                     Arc::new(HintPhases::new(storage))
                                 }
-                                RepoType::BlobRemote { ref db_address, .. } => {
+                                MetadataDBConfig::Mysql { db_address, .. } => {
                                     let storage = Arc::new(SqlPhases::with_myrouter(
                                         &db_address,
                                         myrouter_port.expect(
