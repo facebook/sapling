@@ -184,8 +184,6 @@ impl RepoConfigs {
         let raw_config = toml::from_slice::<RawRepoConfig>(&fs::read(&config_file)?)?;
 
         let hooks = raw_config.hooks.clone();
-        // Easier to deal with empty vector than Option
-        let hooks = hooks.unwrap_or(Vec::new());
 
         let mut all_hook_params = vec![];
         for raw_hook_config in hooks {
@@ -286,9 +284,13 @@ impl RepoConfigs {
             RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
             RawRepoType::BlobSqlite => RepoType::BlobSqlite(get_path(&this)?),
             RawRepoType::BlobRemote => {
-                let remote_blobstores = this.remote_blobstore.ok_or(ErrorKind::InvalidConfig(
-                    "remote blobstores must be specified".into(),
-                ))?;
+                let remote_blobstores = this.remote_blobstore;
+                if remote_blobstores.is_empty() {
+                    return Err(ErrorKind::InvalidConfig(
+                        "remote blobstores must be specified".into(),
+                    )
+                    .into());
+                }
                 let db_address = this.db_address.ok_or(ErrorKind::InvalidConfig(
                     "xdb tier was not specified".into(),
                 ))?;
@@ -395,7 +397,7 @@ impl RepoConfigs {
             }
         };
 
-        let enabled = this.enabled.unwrap_or(true);
+        let enabled = this.enabled;
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = this.repoid;
         let scuba_table = this.scuba_table;
@@ -409,39 +411,35 @@ impl RepoConfigs {
             weightlimit: params.weightlimit,
             disable_acl_checker: params.disable_acl_checker,
         });
-        let bookmarks = match this.bookmarks {
-            Some(bookmarks) => {
-                let mut bookmark_params = Vec::new();
-                for bookmark in bookmarks {
-                    let bookmark_or_regex = match (bookmark.regex, bookmark.name) {
-                        (None, Some(name)) => {
-                            BookmarkOrRegex::Bookmark(Bookmark::new(name).unwrap())
-                        }
-                        (Some(regex), None) => BookmarkOrRegex::Regex(regex.0),
-                        _ => {
-                            return Err(ErrorKind::InvalidConfig(
-                                "bookmark's params need to specify regex xor name".into(),
-                            )
-                            .into());
-                        }
-                    };
+        let bookmarks = {
+            let mut bookmark_params = Vec::new();
+            for bookmark in this.bookmarks.iter().cloned() {
+                let bookmark_or_regex = match (bookmark.regex, bookmark.name) {
+                    (None, Some(name)) => BookmarkOrRegex::Bookmark(Bookmark::new(name).unwrap()),
+                    (Some(regex), None) => BookmarkOrRegex::Regex(regex.0),
+                    _ => {
+                        return Err(ErrorKind::InvalidConfig(
+                            "bookmark's params need to specify regex xor name".into(),
+                        )
+                        .into());
+                    }
+                };
 
-                    let only_fast_forward = bookmark.only_fast_forward.unwrap_or(false);
-                    let allowed_users = bookmark.allowed_users.map(|re| re.0);
+                let only_fast_forward = bookmark.only_fast_forward;
+                let allowed_users = bookmark.allowed_users.map(|re| re.0);
 
-                    bookmark_params.push(BookmarkParams {
-                        bookmark: bookmark_or_regex,
-                        hooks: match bookmark.hooks {
-                            Some(hooks) => hooks.into_iter().map(|rbmh| rbmh.hook_name).collect(),
-                            None => vec![],
-                        },
-                        only_fast_forward,
-                        allowed_users,
-                    });
-                }
-                bookmark_params
+                bookmark_params.push(BookmarkParams {
+                    bookmark: bookmark_or_regex,
+                    hooks: bookmark
+                        .hooks
+                        .into_iter()
+                        .map(|rbmh| rbmh.hook_name)
+                        .collect(),
+                    only_fast_forward,
+                    allowed_users,
+                });
             }
-            None => vec![],
+            bookmark_params
         };
         let bookmarks_cache_ttl = this.bookmarks_cache_ttl.map(Duration::from_millis);
 
@@ -479,7 +477,7 @@ impl RepoConfigs {
 
         let hash_validation_percentage = this.hash_validation_percentage.unwrap_or(0);
 
-        let readonly = if this.readonly.unwrap_or(false) {
+        let readonly = if this.readonly {
             RepoReadOnly::ReadOnly("Set by config option".to_string())
         } else {
             RepoReadOnly::ReadWrite
@@ -522,12 +520,17 @@ struct RawWhitelistEntry {
     identity_type: Option<String>,
 }
 
+fn is_true() -> bool {
+    true
+}
+
 #[derive(Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 struct RawRepoConfig {
     path: Option<PathBuf>,
     repotype: RawRepoType,
-    enabled: Option<bool>,
+    #[serde(default = "is_true")]
+    enabled: bool,
     generation_cache_size: Option<usize>,
     repoid: i32,
     db_address: Option<String>,
@@ -537,17 +540,21 @@ struct RawRepoConfig {
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
     cache_warmup: Option<RawCacheWarmupConfig>,
-    bookmarks: Option<Vec<RawBookmarkConfig>>,
+    #[serde(default)]
+    bookmarks: Vec<RawBookmarkConfig>,
     bookmarks_cache_ttl: Option<u64>,
-    hooks: Option<Vec<RawHookConfig>>,
+    #[serde(default)]
+    hooks: Vec<RawHookConfig>,
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
     wireproto_scribe_category: Option<String>,
     hash_validation_percentage: Option<usize>,
-    readonly: Option<bool>,
+    #[serde(default)]
+    readonly: bool,
     hook_manager_params: Option<HookManagerParams>,
     skiplist_index_blobstore_key: Option<String>,
-    remote_blobstore: Option<Vec<RawRemoteBlobstoreConfig>>,
+    #[serde(default)]
+    remote_blobstore: Vec<RawRemoteBlobstoreConfig>,
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
     sharded_filenodes: Option<RawShardedFilenodesParams>,
 }
@@ -578,9 +585,11 @@ struct RawBookmarkConfig {
     /// Either the regex or the name should be provided, not both
     regex: Option<RawRegex>,
     name: Option<String>,
-    hooks: Option<Vec<RawBookmarkHook>>,
+    #[serde(default)]
+    hooks: Vec<RawBookmarkHook>,
     // Are non fastforward moves allowed for this bookmark
-    only_fast_forward: Option<bool>,
+    #[serde(default)]
+    only_fast_forward: bool,
     /// Only users matching this pattern will be allowed to move this bookmark
     allowed_users: Option<RawRegex>,
 }
