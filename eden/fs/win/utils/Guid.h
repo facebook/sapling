@@ -8,7 +8,7 @@
  *
  */
 #pragma once
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/utils/WinError.h"
 #include "folly/portability/Windows.h"
 
 namespace facebook {

@@ -15,7 +15,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/utils/WinError.h"
 
 namespace facebook {
 namespace eden {

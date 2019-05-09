@@ -9,7 +9,7 @@
  */
 #include <iostream>
 #include <string>
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/utils/WinError.h"
 #include "gtest/gtest.h"
 using namespace facebook::eden;
 

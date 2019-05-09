@@ -17,8 +17,8 @@
 #include "userenv.h"
 
 #include "UserInfo.h"
-#include "eden/win/fs/utils/Handle.h"
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/utils/Handle.h"
+#include "eden/fs/win/utils/WinError.h"
 using namespace std;
 using namespace folly;
 using namespace folly::detail;

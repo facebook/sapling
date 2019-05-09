@@ -18,7 +18,7 @@
 #include <folly/json.h>
 
 #ifdef EDEN_WIN
-#include "eden/win/fs/utils/FileUtils.h" // @manual
+#include "eden/fs/win/utils/FileUtils.h" // @manual
 #else
 #include <folly/File.h>
 #include <folly/FileUtil.h>

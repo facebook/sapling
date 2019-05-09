@@ -23,7 +23,7 @@
 #include "eden/fs/config/FileChangeMonitor.h"
 
 #ifdef EDEN_WIN
-#include "eden/win/fs/utils/Stub.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 
 using folly::StringPiece;

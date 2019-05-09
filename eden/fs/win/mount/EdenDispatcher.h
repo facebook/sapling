@@ -16,9 +16,9 @@
 #include <cstring>
 #include <map>
 #include <string>
-#include "eden/win/fs/mount/Enumerator.h"
-#include "eden/win/fs/store/WinStore.h"
-#include "eden/win/fs/utils/Guid.h"
+#include "eden/fs/win/mount/Enumerator.h"
+#include "eden/fs/win/store/WinStore.h"
+#include "eden/fs/win/utils/Guid.h"
 #include "folly/Synchronized.h"
 
 constexpr uint32_t kDispatcherCode = 0x1155aaff;

@@ -203,69 +203,6 @@
     <ClCompile Include="..\..\fs\service\EdenServiceHandler.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_constants.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_data.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_binary.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_compact.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_binary.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_compact.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.cpp">
-      <Filter>cpp2\Eden</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_binary.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_compact.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_constants.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_data.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
-    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.cpp">
-      <Filter>cpp2\Fb303</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\fs\service\StreamingSubscriber.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
@@ -331,6 +268,69 @@
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\ServiceAddress.cpp">
       <Filter>fs\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookService.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_binary.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_compact.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_constants.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_data.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_types.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenService.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_binary.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_compact.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_constants.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_data.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_types.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_binary.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_compact.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.cpp">
+      <Filter>fs\Store\Hg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -475,69 +475,6 @@
     <ClInclude Include="..\..\fs\service\EdenServiceHandler.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_constants.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_data.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types_custom_protocol.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_custom_protocol.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types_custom_protocol.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_custom_protocol.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.h">
-      <Filter>cpp2\Eden</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_custom_protocol.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_constants.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_data.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
-    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types_custom_protocol.h">
-      <Filter>cpp2\Fb303</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\fs\service\StreamingSubscriber.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
@@ -610,31 +547,82 @@
     <ClInclude Include="..\..\fs\utils\ServiceAddress.h">
       <Filter>fs\Util</Filter>
     </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookService.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookService_custom_protocol.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_constants.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_data.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_types.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_types_custom_protocol.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenService.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenService_custom_protocol.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_constants.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_data.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_types.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_types_custom_protocol.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_custom_protocol.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_types_custom_protocol.h">
+      <Filter>Win</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.tcc">
-      <Filter>cpp2\Eden</Filter>
-    </None>
-    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.tcc">
-      <Filter>cpp2\Eden</Filter>
-    </None>
-    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.tcc">
-      <Filter>cpp2\Eden</Filter>
-    </None>
-    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.tcc">
-      <Filter>cpp2\Eden</Filter>
-    </None>
-    <None Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.tcc">
-      <Filter>cpp2\Fb303</Filter>
-    </None>
-    <None Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.tcc">
-      <Filter>cpp2\Fb303</Filter>
-    </None>
     <None Include="D:\edenwin64\pklib\include\thrift\lib\cpp2\protocol\Cpp2Ops.tcc">
       <Filter>cpp2\Fb303</Filter>
     </None>
     <None Include="..\..\fs\service\eden.thrift">
       <Filter>fs\Service</Filter>
     </None>
+    <None Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\FacebookService.tcc" />
+    <None Include="$(SolutionDir)build\thrift\common\fb303\if\gen-cpp2\fb303_types.tcc" />
+    <None Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\EdenService.tcc" />
+    <None Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\eden_types.tcc" />
+    <None Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.tcc" />
+    <None Include="$(SolutionDir)build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.tcc" />
   </ItemGroup>
 </Project>

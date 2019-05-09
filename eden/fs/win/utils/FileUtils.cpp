@@ -15,8 +15,8 @@
 #include "FileUtils.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/win/fs/utils/StringConv.h"
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/utils/StringConv.h"
+#include "eden/fs/win/utils/WinError.h"
 
 using folly::ByteRange;
 using folly::MutableByteRange;

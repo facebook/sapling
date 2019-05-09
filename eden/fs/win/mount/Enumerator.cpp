@@ -11,8 +11,8 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h>
-#include "eden/win/fs/mount/Enumerator.h"
-#include "eden/win/fs/store/WinStore.h"
+#include "eden/fs/win/mount/Enumerator.h"
+#include "eden/fs/win/store/WinStore.h"
 
 namespace facebook {
 namespace eden {

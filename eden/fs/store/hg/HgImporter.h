@@ -15,7 +15,7 @@
 #include <folly/Subprocess.h>
 #else
 #include <folly/portability/IOVec.h>
-#include "eden/win/fs/utils/Subprocess.h" // @manual
+#include "eden/fs/win/utils/Subprocess.h" // @manual
 #endif
 
 #include "eden/fs/eden-config.h"

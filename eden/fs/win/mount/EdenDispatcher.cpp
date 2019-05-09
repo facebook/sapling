@@ -15,11 +15,11 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenError.h"
-#include "eden/win/fs/mount/EdenDispatcher.h"
-#include "eden/win/fs/mount/EdenMount.h"
-#include "eden/win/fs/store/WinStore.h"
-#include "eden/win/fs/utils/StringConv.h"
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/mount/EdenDispatcher.h"
+#include "eden/fs/win/mount/EdenMount.h"
+#include "eden/fs/win/store/WinStore.h"
+#include "eden/fs/win/utils/StringConv.h"
+#include "eden/fs/win/utils/WinError.h"
 
 using folly::sformat;
 using std::make_unique;

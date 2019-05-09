@@ -17,7 +17,7 @@
 #include "userenv.h"
 
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/win/fs/utils/UserInfo.h"
+#include "eden/fs/win/utils/UserInfo.h"
 #include "gtest/gtest.h"
 
 using namespace facebook::eden;

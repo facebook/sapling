@@ -10,7 +10,7 @@
 #pragma once
 #include <memory>
 #ifdef EDEN_WIN
-#include "eden/win/fs/mount/EdenMount.h" // @manual
+#include "eden/fs/win/mount/EdenMount.h" // @manual
 #else
 #include "eden/fs/inodes/EdenMount.h"
 #endif

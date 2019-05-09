@@ -17,8 +17,8 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef EDEN_WIN
-#include "eden/win/fs/utils/Stub.h" // @manual
-#include "eden/win/fs/utils/UserInfo.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
+#include "eden/fs/win/utils/UserInfo.h" // @manual
 #else
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #endif

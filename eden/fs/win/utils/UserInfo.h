@@ -11,7 +11,7 @@
 #pragma once
 #include <string>
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/win/fs/utils/Stub.h"
+#include "eden/fs/win/utils/Stub.h"
 
 namespace facebook {
 namespace eden {

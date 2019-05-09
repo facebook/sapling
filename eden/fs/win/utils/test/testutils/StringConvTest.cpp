@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/win/fs/utils/StringConv.h"
+#include "eden/fs/win/utils/StringConv.h"
 #include <string>
 #include "gtest/gtest.h"
 using namespace facebook::eden;

@@ -8,7 +8,7 @@
  *
  */
 
-#include "eden/win/fs/mount/EdenMount.h"
+#include "eden/fs/win/mount/EdenMount.h"
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/model/Hash.h"

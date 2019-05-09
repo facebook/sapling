@@ -11,8 +11,8 @@
 #include <string>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/win/fs/utils/Handle.h"
-#include "eden/win/fs/utils/StringConv.h"
+#include "eden/fs/win/utils/Handle.h"
+#include "eden/fs/win/utils/StringConv.h"
 #include "folly/Range.h"
 #include "folly/portability/IOVec.h"
 

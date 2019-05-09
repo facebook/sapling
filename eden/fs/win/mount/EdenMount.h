@@ -26,9 +26,9 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/win/fs/mount/EdenDispatcher.h"
-#include "eden/win/fs/mount/FsChannel.h"
-#include "eden/win/fs/utils/Stub.h" // @manual
+#include "eden/fs/win/mount/EdenDispatcher.h"
+#include "eden/fs/win/mount/FsChannel.h"
+#include "eden/fs/win/utils/Stub.h" // @manual
 
 namespace folly {
 class EventBase;

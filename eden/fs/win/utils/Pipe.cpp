@@ -16,7 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/utils/WinError.h"
 #include "folly/logging/xlog.h"
 
 namespace facebook {

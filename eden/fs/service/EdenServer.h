@@ -33,9 +33,9 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef EDEN_WIN
-#include "eden/win/fs/mount/EdenMount.h" // @manual
-#include "eden/win/fs/utils/Stub.h" // @manual
-#include "eden/win/fs/utils/UserInfo.h" // @manual
+#include "eden/fs/win/mount/EdenMount.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
+#include "eden/fs/win/utils/UserInfo.h" // @manual
 #else
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/EdenMount.h"

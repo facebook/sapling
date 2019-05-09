@@ -25,7 +25,7 @@
 
 #ifdef EDEN_WIN
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/win/fs/utils/stub.h" // @manual
+#include "eden/fs/win/utils/stub.h" // @manual
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Differ.h"

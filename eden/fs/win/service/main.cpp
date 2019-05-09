@@ -20,8 +20,8 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenServer.h"
-#include "eden/win/fs/service/StartupLogger.h"
-#include "eden/win/fs/utils/StringConv.h"
+#include "eden/fs/win/service/StartupLogger.h"
+#include "eden/fs/win/utils/StringConv.h"
 #include "folly/io/IOBuf.h"
 
 #ifndef EDEN_WIN

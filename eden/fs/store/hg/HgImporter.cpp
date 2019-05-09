@@ -28,9 +28,9 @@
 #ifndef EDEN_WIN
 #include <unistd.h>
 #else
-#include "eden/win/fs/utils/Pipe.h" // @manual
-#include "eden/win/fs/utils/Subprocess.h" // @manual
-#include "eden/win/fs/utils/WinError.h" // @manual
+#include "eden/fs/win/utils/Pipe.h" // @manual
+#include "eden/fs/win/utils/Subprocess.h" // @manual
+#include "eden/fs/win/utils/WinError.h" // @manual
 #endif
 
 #include <mutex>

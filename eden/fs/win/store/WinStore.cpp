@@ -8,7 +8,7 @@
  *
  */
 
-#include "eden/win/fs/store/WinStore.h"
+#include "eden/fs/win/store/WinStore.h"
 #include <folly/Format.h>
 #include <folly/logging/xlog.h>
 #include <cstring>
@@ -17,8 +17,8 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/store/BlobMetadata.h"
-#include "eden/win/fs/mount/EdenMount.h"
-#include "eden/win/fs/utils/StringConv.h"
+#include "eden/fs/win/mount/EdenMount.h"
+#include "eden/fs/win/utils/StringConv.h"
 
 namespace facebook {
 namespace eden {

@@ -16,7 +16,7 @@
 #include <iostream>
 #include <string>
 #include "Pipe.h"
-#include "eden/win/fs/Edenwin.h"
+#include "eden/fs/win/Edenwin.h"
 
 namespace facebook {
 namespace eden {

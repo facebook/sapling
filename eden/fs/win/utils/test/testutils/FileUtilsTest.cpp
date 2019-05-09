@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/win/fs/utils/FileUtils.h"
+#include "eden/fs/win/utils/FileUtils.h"
 #include <iostream>
 #include <string>
 #include "folly/experimental/TestUtil.h"

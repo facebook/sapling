@@ -12,11 +12,11 @@
 
 #include <folly/logging/xlog.h>
 #include <string>
-#include "eden/win/fs/mount/EdenDispatcher.h"
-#include "eden/win/fs/mount/EdenMount.h"
-#include "eden/win/fs/utils/Guid.h"
-#include "eden/win/fs/utils/StringConv.h"
-#include "eden/win/fs/utils/WinError.h"
+#include "eden/fs/win/mount/EdenDispatcher.h"
+#include "eden/fs/win/mount/EdenMount.h"
+#include "eden/fs/win/utils/Guid.h"
+#include "eden/fs/win/utils/StringConv.h"
+#include "eden/fs/win/utils/WinError.h"
 
 using folly::sformat;
 

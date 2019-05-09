@@ -26,9 +26,9 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef EDEN_WIN
-#include "eden/win/fs/mount/EdenMount.h" // @manual
-#include "eden/win/fs/service/StartupLogger.h" // @manual
-#include "eden/win/fs/utils/Stub.h" // @manual
+#include "eden/fs/win/mount/EdenMount.h" // @manual
+#include "eden/fs/win/service/StartupLogger.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
 #else
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/FileHandleBase.h"
