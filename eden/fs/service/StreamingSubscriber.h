@@ -9,7 +9,7 @@
  */
 #pragma once
 #include <memory>
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
 #else
 #include "eden/fs/inodes/EdenMount.h"

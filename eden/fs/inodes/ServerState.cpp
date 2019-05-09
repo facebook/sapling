@@ -13,7 +13,7 @@
 #include <gflags/gflags.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #endif
 #include "eden/fs/inodes/TopLevelIgnores.h"

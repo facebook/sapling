@@ -20,7 +20,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 

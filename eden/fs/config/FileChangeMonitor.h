@@ -15,7 +15,7 @@
 #include <functional>
 #include <optional>
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" //@manual
 #endif
 

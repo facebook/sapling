@@ -32,7 +32,7 @@
 #include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #include "eden/fs/win/utils/UserInfo.h" // @manual
@@ -67,7 +67,7 @@ class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
 class StartupLogger;
-#ifndef EDEN_WIN
+#ifndef _WIN32
 class TakeoverServer;
 #endif
 /*
@@ -441,7 +441,7 @@ class EdenServer : private TakeoverHandler {
 
   folly::Synchronized<MountMap> mountPoints_;
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   /**
    * A server that waits on a new edenfs process to attempt
    * a graceful restart, taking over our running mount points.
@@ -449,7 +449,7 @@ class EdenServer : private TakeoverHandler {
   std::unique_ptr<TakeoverServer> takeoverServer_;
   folly::Promise<TakeoverData> takeoverPromise_;
 
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
   /**
    * Information about whether the EdenServer is starting, running, or shutting

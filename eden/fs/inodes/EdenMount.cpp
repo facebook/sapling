@@ -20,7 +20,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 #include <gflags/gflags.h>
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #include <folly/Subprocess.h>
 #endif
 

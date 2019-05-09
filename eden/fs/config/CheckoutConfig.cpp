@@ -17,7 +17,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/utils/FileUtils.h" // @manual
 #else
 #include <folly/File.h>
@@ -75,7 +75,7 @@ ParentCommits CheckoutConfig::getParentCommits() const {
   auto snapshotFile = getSnapshotPath();
   string snapshotFileContents;
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
   readFile(snapshotFile.c_str(), snapshotFileContents);
 #else
   folly::readFile(snapshotFile.c_str(), snapshotFileContents);
@@ -149,7 +149,7 @@ void CheckoutConfig::setParentCommits(const ParentCommits& parents) const {
   }
   size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
   ByteRange snapshotData{buffer.data(), writtenSize};
-#ifdef EDEN_WIN
+#ifdef _WIN32
   writeFileAtomic(getSnapshotPath().c_str(), snapshotData);
 #else
   folly::writeFileAtomic(getSnapshotPath().stringPiece(), snapshotData);
@@ -209,7 +209,7 @@ folly::dynamic CheckoutConfig::loadClientDirectoryMap(
   // Extract the JSON and strip any comments.
   std::string jsonContents;
   auto configJsonFile = edenDir + kClientDirectoryMap;
-#ifdef EDEN_WIN
+#ifdef _WIN32
   readFile(configJsonFile.c_str(), jsonContents);
 #else
   folly::readFile(configJsonFile.c_str(), jsonContents);

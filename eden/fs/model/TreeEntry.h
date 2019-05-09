@@ -10,7 +10,7 @@
 #pragma once
 
 #include "eden/fs/model/Hash.h"
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #include "eden/fs/utils/DirType.h"
 #endif
 #include "eden/fs/utils/PathFuncs.h"
@@ -83,7 +83,7 @@ class TreeEntry {
     return type_;
   }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   dtype_t getDType() const {
     switch (type_) {
       case TreeEntryType::TREE:
@@ -97,7 +97,7 @@ class TreeEntry {
         return dtype_t::Unknown;
     }
   }
-#endif //! EDEN_WIN
+#endif //! _WIN32
 
   std::string toLogString() const;
 

@@ -159,7 +159,7 @@ TEST_F(HgImportTest, importTest) {
 
 // TODO(T33797958): Check hg_importer_helper's exit code on Windows (in
 // HgImportTest).
-#ifndef EDEN_WIN
+#ifndef _WIN32
 TEST_F(HgImportTest, importerHelperExitsCleanly) {
   HgImporter importer(repo_.path(), &localStore_, stats_);
   auto status = importer.debugStopHelperProcess();

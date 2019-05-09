@@ -1056,7 +1056,7 @@ class RelativePathBase : public ComposedPathBase<
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
   void operator()(folly::StringPiece val) const {
-#ifndef EDEN_WIN
+#ifndef _WIN32
     // This won't work on Windows. The usermode Windows path can start with
     // a drive letter in front: c:\folder\file.txt
     if (!val.startsWith(kDirSeparator)) {

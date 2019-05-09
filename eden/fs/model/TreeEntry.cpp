@@ -18,7 +18,7 @@
 namespace facebook {
 namespace eden {
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 mode_t modeFromTreeEntryType(TreeEntryType ft) {
   switch (ft) {
     case TreeEntryType::TREE:

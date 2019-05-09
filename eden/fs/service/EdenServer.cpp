@@ -25,7 +25,7 @@
 #include "common/stats/ServiceData.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/tracing/EdenStats.h"
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/mount/EdenMount.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
@@ -44,7 +44,7 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
 #include "eden/fs/utils/ProcessNameCache.h"
-#endif // EDEN_WIN
+#endif // _WIN32
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/BlobCache.h"
@@ -69,7 +69,7 @@ DEFINE_bool(
     "If another edenfs process is already running, "
     "attempt to gracefully takeover its mount points.");
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #define DEFAULT_STORAGE_ENGINE "rocksdb"
 #define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
 #else
@@ -207,7 +207,7 @@ EdenServer::EdenServer(
 EdenServer::~EdenServer() {}
 
 Future<Unit> EdenServer::unmountAll() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   std::vector<Future<Unit>> futures;
   {
     const auto mountPoints = mountPoints_.wlock();
@@ -241,10 +241,10 @@ Future<Unit> EdenServer::unmountAll() {
       });
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 Future<TakeoverData> EdenServer::stopMountsForTakeover() {
   std::vector<Future<optional<TakeoverData::MountInfo>>> futures;
   {
@@ -311,7 +311,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
 }
 #endif
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 void EdenServer::scheduleFlushStats() {
   mainEventBase_->timer().scheduleTimeoutFn(
       [this] {
@@ -321,9 +321,9 @@ void EdenServer::scheduleFlushStats() {
       },
       std::chrono::seconds(1));
 }
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 void EdenServer::unloadInodes() {
   struct Root {
     std::string mountName;
@@ -367,7 +367,7 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
       },
       timeout);
 }
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
 Future<Unit> EdenServer::prepare(
     std::shared_ptr<StartupLogger> logger,
@@ -404,7 +404,7 @@ Future<Unit> EdenServer::prepareImpl(
   // the main thread.  The runServer() code will end up driving this EventBase.
   mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
   auto thriftRunningFuture = createThriftServer();
-#ifndef EDEN_WIN
+#ifndef _WIN32
   // Start the PrivHelper client, using our main event base to drive its I/O
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
 
@@ -416,7 +416,7 @@ Future<Unit> EdenServer::prepareImpl(
   // periodic job for unloading inodes to zero on EdenServer start.
   stats::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   // Schedule a periodic job to unload unused inodes based on the last access
   // time. currently Eden does not have accurate timestamp tracking for inodes,
   // so using unloadChildrenNow just to validate the behaviour. We will have to
@@ -433,7 +433,7 @@ Future<Unit> EdenServer::prepareImpl(
 #endif
   TakeoverData takeoverData;
   if (doingTakeover) {
-#ifndef EDEN_WIN
+#ifndef _WIN32
     logger->log(
         "Requesting existing edenfs process to gracefully "
         "transfer its mount points...");
@@ -448,7 +448,7 @@ Future<Unit> EdenServer::prepareImpl(
     server_->useExistingSocket(takeoverData.thriftSocket.release());
 #else
     NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
   } else {
     // Remove any old thrift socket from a previous (now dead) edenfs daemon.
     prepareThriftAddress();
@@ -472,7 +472,7 @@ Future<Unit> EdenServer::prepareImpl(
         "Opened SQLite store in ",
         watch.elapsed().count() / 1000.0,
         " seconds.");
-#ifndef EDEN_WIN
+#ifndef _WIN32
   } else if (FLAGS_local_storage_engine_unsafe == "rocksdb") {
     logger->log("Opening local RocksDB store...");
     folly::stop_watch<std::chrono::milliseconds> watch;
@@ -488,28 +488,28 @@ Future<Unit> EdenServer::prepareImpl(
         watch.elapsed().count() / 1000.0,
         " seconds.");
 
-#endif // !EDEN_WIN
+#endif // !_WIN32
   } else {
     throw std::runtime_error(folly::to<string>(
         "invalid --local_storage_engine_unsafe flag: ",
         FLAGS_local_storage_engine_unsafe));
   }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   // Start listening for graceful takeover requests
   takeoverServer_.reset(
       new TakeoverServer(getMainEventBase(), takeoverPath, this));
   takeoverServer_->start();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
   std::vector<Future<Unit>> mountFutures;
   if (doingTakeover) {
-#ifndef EDEN_WIN
+#ifndef _WIN32
     mountFutures =
         prepareMountsTakeover(logger, std::move(takeoverData.mountPoints));
 #else
     NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
   } else {
     mountFutures = prepareMounts(logger);
   }
@@ -532,7 +532,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
   // Trigger remounting of existing mount points
   // If doingTakeover is true, use the mounts received in TakeoverData
   std::vector<Future<Unit>> mountFutures;
-#ifndef EDEN_WIN
+#ifndef _WIN32
   for (auto& info : takeoverMounts) {
     const auto stateDirectory = info.stateDirectory;
     auto mountFuture =
@@ -619,7 +619,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
 }
 
 void EdenServer::performCleanup() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   bool takeover;
   folly::File thriftSocket;
   {
@@ -645,7 +645,7 @@ void EdenServer::performCleanup() {
   std::move(shutdownFuture).get();
 }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
   // stop processing new FUSE requests for the mounts,
   return stopMountsForTakeover().thenValue(
@@ -674,10 +674,10 @@ Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
         return future;
       });
 }
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
 Future<Unit> EdenServer::performNormalShutdown() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   takeoverServer_.reset();
 
   // Clean up all the server mount points before shutting down the privhelper.
@@ -687,11 +687,11 @@ Future<Unit> EdenServer::performNormalShutdown() {
   });
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 void EdenServer::shutdownPrivhelper() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
   const auto privhelperExitCode = serverState_->getPrivHelper()->stop();
@@ -723,7 +723,7 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
 }
 
 void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   auto counters = stats::ServiceData::get()->getDynamicCounters();
   // Register callback for getting Loaded inodes in the memory
   // for a mountPoint.
@@ -738,29 +738,29 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
       });
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 void EdenServer::unregisterStats(EdenMount* edenMount) {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   auto counters = stats::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(edenMount->getCounterName(CounterName::LOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::UNLOADED));
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 folly::Future<folly::Unit> EdenServer::performFreshFuseStart(
     std::shared_ptr<EdenMount> edenMount) {
   // Start up the fuse workers.
   return edenMount->startFuse();
 }
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 Future<Unit> EdenServer::performTakeoverFuseStart(
     std::shared_ptr<EdenMount> edenMount,
     TakeoverData::MountInfo&& info) {
@@ -788,7 +788,7 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
   return folly::makeFutureWith(
       [&] { edenMount->takeoverFuse(std::move(channelData)); });
 }
-#endif // !EDEN_WIN
+#endif // !_WIN32
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
@@ -797,7 +797,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
   auto objectStore = ObjectStore::create(getLocalStore(), backingStore);
 
-#if EDEN_WIN
+#if _WIN32
   // Create the EdenMount object and insert the mount into the mountPoints_ map.
   auto edenMount = EdenMount::create(
       std::move(initialConfig), std::move(objectStore), serverState_);
@@ -881,7 +881,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 }
 
 Future<Unit> EdenServer::unmount(StringPiece mountPath) {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   return makeFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
@@ -910,13 +910,13 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
       });
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 void EdenServer::mountFinished(
     EdenMount* edenMount,
     std::optional<TakeoverData::MountInfo> takeover) {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   const auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
@@ -957,7 +957,7 @@ void EdenServer::mountFinished(
       });
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
@@ -1043,7 +1043,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
             serverState_, &serverState_->getReloadableConfig()),
         getSharedStats());
   } else if (type == "git") {
-#ifndef EDEN_WIN
+#ifndef _WIN32
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());
 #else
@@ -1069,7 +1069,7 @@ Future<Unit> EdenServer::createThriftServer() {
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
   folly::SocketAddress thriftAddress;
-#ifdef EDEN_WIN
+#ifdef _WIN32
   // Until we have Python support for Unix Domain sockets on Windows
   // we will fall back to using loopback interface.
   thriftAddress.setFromIpPort("127.0.0.1:20201");
@@ -1077,7 +1077,7 @@ Future<Unit> EdenServer::createThriftServer() {
   thriftAddress.setFromPath(thriftSocketPath.stringPiece());
 #endif
   server_->setAddress(thriftAddress);
-#ifndef EDEN_WIN
+#ifndef _WIN32
   serverState_->setSocketPath(thriftSocketPath);
 #endif
 
@@ -1109,7 +1109,7 @@ void EdenServer::stop() {
 }
 
 folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   // Make sure we aren't already shutting down, then update our state
   // to indicate that we should perform mount point takeover shutdown
   // once runServer() returns.
@@ -1152,7 +1152,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
   return takeoverPromise_.getFuture();
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 void EdenServer::shutdownSubscribers() {
@@ -1162,7 +1162,7 @@ void EdenServer::shutdownSubscribers() {
   // If we have any subscription sessions from watchman, we want to shut
   // those down now, otherwise they will block the server_->stop() call
   // below
-#ifndef EDEN_WIN
+#ifndef _WIN32
   XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
   auto mountPoints = mountPoints_.wlock();
   for (auto& entry : *mountPoints) {
@@ -1171,7 +1171,7 @@ void EdenServer::shutdownSubscribers() {
   }
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 void EdenServer::flushStatsNow() {
@@ -1179,7 +1179,7 @@ void EdenServer::flushStatsNow() {
 }
 
 void EdenServer::reportProcStats() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   auto now = std::chrono::system_clock::now().time_since_epoch();
   // Throttle stats collection to every kMemoryPollSeconds
   if (std::chrono::duration_cast<std::chrono::seconds>(
@@ -1200,7 +1200,7 @@ void EdenServer::reportProcStats() {
   }
 #else
   NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
 }
 
 } // namespace eden

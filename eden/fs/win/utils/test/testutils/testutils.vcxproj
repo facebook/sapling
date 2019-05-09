@@ -91,7 +91,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;EDEN_WIN;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\edenwin64\pklib\include;$(SolutionDir)\..\..\</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>

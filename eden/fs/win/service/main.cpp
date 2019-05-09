@@ -24,7 +24,7 @@
 #include "eden/fs/win/utils/StringConv.h"
 #include "folly/io/IOBuf.h"
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #error This is a Windows only source file;
 #endif
 // DEFINE_bool(allowRoot, false, "Allow running eden directly as root");

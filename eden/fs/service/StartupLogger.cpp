@@ -17,7 +17,7 @@
 #include <gflags/gflags.h>
 #include <sys/types.h>
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include <folly/portability/Unistd.h>
 #else
 #include <sys/wait.h>

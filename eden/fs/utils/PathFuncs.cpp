@@ -16,7 +16,7 @@
 #include <folly/Exception.h>
 #include <folly/portability/Stdlib.h>
 #include <optional>
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include <folly/portability/Unistd.h>
 #else
 #include <unistd.h>

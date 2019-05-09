@@ -16,7 +16,7 @@
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" //@manual
 #endif
 
@@ -66,7 +66,7 @@ class CachedParsedFileMonitor {
    * failed)
    */
   folly::Expected<T, int> getFileContents() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
     fileChangeMonitor_.invokeIfUpdated(
         [this](folly::File&& f, int errorNum, AbsolutePathPiece filePath) {
           processUpdatedFile(std::move(f), errorNum, filePath);
@@ -77,7 +77,7 @@ class CachedParsedFileMonitor {
     return parsedData_;
 #else
     NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
+#endif // !_WIN32
   }
 
   void processUpdatedFile(

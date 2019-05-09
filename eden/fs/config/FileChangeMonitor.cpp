@@ -12,7 +12,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 #include "eden/fs/utils/StatTimes.h"
@@ -24,7 +24,7 @@ namespace eden {
 bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept {
   return stat1.st_dev == stat2.st_dev && stat1.st_size == stat2.st_size &&
       stat1.st_ino == stat2.st_ino && stat1.st_mode == stat2.st_mode &&
-#ifdef EDEN_WIN
+#ifdef _WIN32
       stat1.st_ctime == stat2.st_ctime && stat1.st_mtime == stat2.st_mtime
 #else
       stCtime(stat1) == stCtime(stat2) && stMtime(stat1) == stMtime(stat2)

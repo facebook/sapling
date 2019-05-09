@@ -11,7 +11,7 @@
 
 #include <folly/Range.h>
 #include <optional>
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #include <folly/Subprocess.h>
 #else
 #include <folly/portability/IOVec.h>
@@ -42,7 +42,7 @@ class HgManifestImporter;
 class StoreResult;
 class Tree;
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 typedef HANDLE edenfd_t;
 const edenfd_t kInvalidFd = INVALID_HANDLE_VALUE;
 #else
@@ -143,7 +143,7 @@ class HgImporter : public Importer {
 
   virtual ~HgImporter();
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   folly::ProcessReturnCode debugStopHelperProcess();
 #endif
 
@@ -291,7 +291,7 @@ class HgImporter : public Importer {
   TransactionID sendPrefetchFilesRequest(
       const std::vector<std::pair<RelativePath, Hash>>& files);
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   folly::Subprocess helper_;
 #else
   facebook::eden::Subprocess helper_;

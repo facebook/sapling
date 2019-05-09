@@ -25,7 +25,7 @@
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#ifndef EDEN_WIN
+#ifndef _WIN32
 #include <unistd.h>
 #else
 #include "eden/fs/win/utils/Pipe.h" // @manual
@@ -54,7 +54,7 @@ using folly::ByteRange;
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
-#ifndef EDEN_WIN
+#ifndef _WIN32
 using folly::Subprocess;
 #else
 using facebook::eden::Pipe;
@@ -72,7 +72,7 @@ DEFINE_string(
     "",
     "The path to the mercurial import helper script");
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 // We will use the known path to HG executable instead of searching in the
 // path. This would make sure we are picking the right mercurial. In future
 // we should find a chef config to lookup the path.
@@ -154,7 +154,7 @@ AbsolutePath findImportHelperPath() {
     return access(path.value().c_str(), X_OK) == 0;
   };
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 
   // TODO EDENWIN: Remove the hardcoded path and use isHelper to find
   AbsolutePath dir{"C:\\eden\\hg_import_helper\\hg_import_helper.exe"};
@@ -215,7 +215,7 @@ AbsolutePath getImportHelperPath() {
   return helperPath;
 }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 std::string findInPath(folly::StringPiece executable) {
   auto path = getenv("PATH");
   if (!path) {
@@ -268,7 +268,7 @@ HgImporter::HgImporter(
     cmd.push_back(repoPath.value().str());
   }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
   cmd.push_back("--out-fd");
   cmd.push_back(folly::to<string>(HELPER_PIPE_FD));
 
@@ -418,7 +418,7 @@ HgImporter::~HgImporter() {
   stopHelperProcess();
 }
 
-#ifndef EDEN_WIN
+#ifndef _WIN32
 folly::ProcessReturnCode HgImporter::debugStopHelperProcess() {
   stopHelperProcess();
   return helper_.returnCode();
@@ -426,7 +426,7 @@ folly::ProcessReturnCode HgImporter::debugStopHelperProcess() {
 #endif
 
 void HgImporter::stopHelperProcess() {
-#ifndef EDEN_WIN
+#ifndef _WIN32
   if (helper_.returnCode().running()) {
     helper_.closeParentFd(STDIN_FILENO);
     helper_.wait();
@@ -864,7 +864,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
 void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
   size_t bytesRead;
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
   try {
     bytesRead = Pipe::read(helperOut_, buf, size);
   } catch (const std::exception& ex) {
@@ -908,7 +908,7 @@ void HgImporter::writeToHelper(
     struct iovec* iov,
     size_t numIov,
     StringPiece context) {
-#ifdef EDEN_WIN
+#ifdef _WIN32
   try {
     auto result = Pipe::writeiov(helperIn_, iov, numIov);
   } catch (const std::exception& ex) {

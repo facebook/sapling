@@ -8,7 +8,7 @@
  *
  */
 
-#ifdef EDEN_WIN
+#ifdef _WIN32
 #include "folly/portability/Time.h"
 #endif
 
