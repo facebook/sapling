@@ -105,11 +105,11 @@ Test for `hg diff --since-last-submit`
   $ hg log -r '.' -T '{node}'
   a8080066a666ffa51c0a171e87d5a0396ecb559a (no-eol)
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a8080066a666
   remote: pushing 1 commit:
   remote:     a8080066a666  Differential Revision: https://phabricator.fb.com/
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cat > $TESTTMP/mockduit << EOF
@@ -134,11 +134,11 @@ Test for `hg diff --since-last-submit`
   $ hg amend
 
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 95847be64d6a
   remote: pushing 1 commit:
   remote:     95847be64d6a  Differential Revision: https://phabricator.fb.com/
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -146,7 +146,7 @@ Test for `hg diff --since-last-submit`
   $ cd client2
 
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -155,7 +155,7 @@ Test for `hg diff --since-last-submit`
   added 1 changesets with 3 changes to 3 files
   new changesets 95847be64d6a
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ hg up 95847be64d6a
@@ -185,7 +185,7 @@ Test for `hg diff --since-last-submit`
   $ cd client3
 
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -194,7 +194,7 @@ Test for `hg diff --since-last-submit`
   added 1 changesets with 3 changes to 3 files
   new changesets 95847be64d6a
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ hg up 95847be64d6a

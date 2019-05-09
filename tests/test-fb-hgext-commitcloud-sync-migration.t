@@ -102,11 +102,11 @@ See how the migration going
   $ mkcommit "commit3"
 
   $ hg cloud sync --config paths.infinitepush=ssh://user@dummy/server1
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits storage have been switched
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commit storage has been switched
                from: ssh://user@dummy/server
                to: ssh://user@dummy/server1
-  #commitcloud some heads are missing at ssh://user@dummy/server1
+  commitcloud: some heads are missing at ssh://user@dummy/server1
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -124,7 +124,7 @@ See how the migration going
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     26d5a99991bd  commit3
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
   $ cd ..
@@ -134,14 +134,14 @@ New path should work fine
   $ cd client2
   $ mkcommit "commit4"
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   abort: unknown revision '26d5a99991bd2ef9c7e76874a58f8a4dca6f6710'!
   [255]
 
   $ hg cloud sync --config paths.infinitepush=ssh://user@dummy/server1
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits storage have been switched
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commit storage has been switched
                from: ssh://user@dummy/server
                to: ssh://user@dummy/server1
   pulling from ssh://user@dummy/server1
@@ -157,12 +157,12 @@ New path should work fine
   remote:     fa5d62c46fd7  commit1
   remote:     02f6fc2b7154  commit2
   remote:     c701070be855  commit4
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
   $ hg cloud sync # backwards migration
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits storage have been switched
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commit storage has been switched
                from: ssh://user@dummy/server1
                to: ssh://user@dummy/server
   pushing to ssh://user@dummy/server
@@ -172,5 +172,5 @@ New path should work fine
   remote:     02f6fc2b7154  commit2
   remote:     c701070be855  commit4
   remote:     26d5a99991bd  commit3
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)

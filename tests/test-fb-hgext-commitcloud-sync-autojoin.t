@@ -33,7 +33,7 @@ Set autocloud join, now pushbackup does connect to commit cloud sync
 
 Deliberately disconnect.  Auto cloud join shouldn't make us reconect.
   $ hg cloud leave
-  #commitcloud this repository is now disconnected from commit cloud
+  commitcloud: this repository is now disconnected from commit cloud
   $ cat .hg/store/commitcloudrc
   [commitcloud]
   disconnected=true
@@ -45,9 +45,9 @@ Deliberately disconnect.  Auto cloud join shouldn't make us reconect.
 
 But we can manually reconnect
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ cat .hg/store/commitcloudrc
   [commitcloud]

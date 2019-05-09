@@ -21,9 +21,9 @@ Create a client with some initial commits and sync them to the cloud workspace.
   setting authentication token
   authentication successful
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ drawdag << EOS
   > B D    # amend: A -> C -> E
@@ -46,14 +46,14 @@ Create a client with some initial commits and sync them to the cloud workspace.
   @  0: d20a80d4def3 'base'
   
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
   remote: pushing 4 commits:
   remote:     dae3b312bb78  Z
   remote:     2d0f0af04f18  C
   remote:     6ba5de8abe43  D
   remote:     c70a9bd6bfd1  E
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
 Create another client and use it to modify the commits and create some new ones.
@@ -67,8 +67,8 @@ Create another client and use it to modify the commits and create some new ones.
   updating authentication token
   authentication successful
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -81,7 +81,7 @@ Create another client and use it to modify the commits and create some new ones.
   added 1 changesets with 1 changes to 2 files (+1 heads)
   new changesets dae3b312bb78:c70a9bd6bfd1
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
   o  4: c70a9bd6bfd1 'E'
@@ -112,14 +112,14 @@ Create another client and use it to modify the commits and create some new ones.
   o  0: d20a80d4def3 'base'
   
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
   remote: pushing 4 commits:
   remote:     dae3b312bb78  Z
   remote:     c70a9bd6bfd1  E
   remote:     d8fc5ae9b7ef  D
   remote:     dd114d9b2f9e  X
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
 Before syncing, create a new commit in the original client
@@ -148,7 +148,7 @@ Now cloud sync.  The sets of commits should be merged.
   o  0: d20a80d4def3 'base'
   
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -167,7 +167,7 @@ Now cloud sync.  The sets of commits should be merged.
   remote:     c70a9bd6bfd1  E
   remote:     ba83c5428cb2  F
   remote:     6caded0e9807  D
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
   o  10: dd114d9b2f9e 'X'
@@ -189,7 +189,7 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
 
   $ cd $TESTTMP/client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -202,7 +202,7 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   added 1 changesets with 0 changes to 2 files (+1 heads)
   new changesets ba83c5428cb2:6caded0e9807
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
   o  8: 6caded0e9807 'D'
@@ -253,8 +253,8 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   updating authentication token
   authentication successful
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -275,7 +275,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   added 1 changesets with 0 changes to 2 files (+1 heads)
   new changesets dae3b312bb78:6caded0e9807
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
   o  6: 6caded0e9807 'D'
@@ -300,13 +300,13 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ hg amend -m F-amended
   $ hg amend -m F-amended-again
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
   remote: pushing 3 commits:
   remote:     dae3b312bb78  Z
   remote:     c70a9bd6bfd1  E
   remote:     b5ea82a7973c  F-amended-again
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ hg undo
   undone to *, before amend -m F-amended-again (glob)
@@ -315,18 +315,18 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
   hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
   remote: pushing 3 commits:
   remote:     dae3b312bb78  Z
   remote:     c70a9bd6bfd1  E
   remote:     1ef69cfd595b  F-amended
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
   $ cd ../client3
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -336,19 +336,19 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   obsoleted 1 changesets
   new changesets 1ef69cfd595b
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
   $ cd ../client1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * sec (glob)
 
   $ cd ../client3
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
   o  7: 1ef69cfd595b 'F-amended'

@@ -11,10 +11,7 @@ import json
 import os
 import socket
 import ssl
-import tempfile
 import time
-from multiprocessing.pool import ThreadPool
-from subprocess import PIPE, Popen
 
 from edenscm.mercurial import error, util
 from edenscm.mercurial.i18n import _
@@ -23,8 +20,6 @@ from . import baseservice, commitcloudcommon
 
 
 httplib = util.httplib
-highlightdebug = commitcloudcommon.highlightdebug
-highlightstatus = commitcloudcommon.highlightstatus
 
 try:
     xrange
@@ -124,9 +119,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 context=sslcontext,
                 timeout=DEFAULT_TIMEOUT,
             )
-        highlightdebug(
-            self.ui,
+        self.ui.debug(
             "will be connecting to %s:%d\n" % (self.remote_host, self.remote_port),
+            component="commitcloud",
         )
 
     def requiresauthentication(self):
@@ -208,8 +203,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # workspace with that name for that repo.
         # TODO: Make this a dedicated request
 
-        highlightdebug(
-            self.ui, "sending empty 'get_references' request to check authentication\n"
+        self.ui.debug(
+            "sending empty 'get_references' request to check authentication\n",
+            component="commitcloud",
         )
         path = "/commit_cloud/get_references"
         response = self._send(path, {})
@@ -217,7 +213,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
 
     def getreferences(self, reponame, workspace, baseversion):
-        highlightdebug(self.ui, "sending 'get_references' request\n")
+        self.ui.debug("sending 'get_references' request\n", component="commitcloud")
 
         # send request
         path = "/commit_cloud/get_references"
@@ -229,7 +225,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         start = time.time()
         response = self._send(path, data)
         elapsed = time.time() - start
-        highlightdebug(self.ui, "response received in %0.2f sec\n" % elapsed)
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
 
         if "error" in response:
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
@@ -237,28 +235,25 @@ class HttpsCommitCloudService(baseservice.BaseService):
         version = response["ref"]["version"]
 
         if version == 0:
-            highlightdebug(
-                self.ui,
-                _(
-                    "'get_references' "
-                    "returns that workspace '%s' is not known by server\n"
-                )
+            self.ui.debug(
+                "'get_references' returns that workspace '%s' is not known by server\n"
                 % workspace,
+                component="commitcloud",
             )
             return baseservice.References(version, None, None, None, None)
 
         if version == baseversion:
-            highlightdebug(
-                self.ui,
-                "'get_references' "
-                "confirms the current version %s is the latest\n" % version,
+            self.ui.debug(
+                "'get_references' confirms the current version %s is the latest\n"
+                % version,
+                component="commitcloud",
             )
             return baseservice.References(version, None, None, None, None)
 
-        highlightdebug(
-            self.ui,
-            "'get_references' "
-            "returns version %s, current version %s\n" % (version, baseversion),
+        self.ui.debug(
+            "'get_references' returns version %s, current version %s\n"
+            % (version, baseversion),
+            component="commitcloud",
         )
         return self._makereferences(response["ref"])
 
@@ -273,7 +268,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         newbookmarks,
         newobsmarkers,
     ):
-        highlightdebug(self.ui, "sending 'update_references' request\n")
+        self.ui.debug("sending 'update_references' request\n", component="commitcloud")
 
         # remove duplicates, must preserve order in the newheads list
         newheadsset = set(newheads)
@@ -299,7 +294,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         start = time.time()
         response = self._send(path, data)
         elapsed = time.time() - start
-        highlightdebug(self.ui, "response received in %0.2f sec\n" % elapsed)
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
 
         if "error" in response:
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
@@ -309,26 +306,24 @@ class HttpsCommitCloudService(baseservice.BaseService):
         newversion = data["version"]
 
         if rc != 0:
-            highlightdebug(
-                self.ui,
-                "'update_references' "
-                "rejected update, current version %d is old, "
+            self.ui.debug(
+                "'update_references' rejected update, current version %d is old, "
                 "client needs to sync to version %d first\n" % (version, newversion),
+                component="commitcloud",
             )
             return False, self._makereferences(data)
 
-        highlightdebug(
-            self.ui,
-            "'update_references' "
-            "accepted update, old version is %d, new version is %d\n"
+        self.ui.debug(
+            "'update_references' accepted update, old version is %d, new version is %d\n"
             % (version, newversion),
+            component="commitcloud",
         )
 
         return True, baseservice.References(newversion, None, None, None, None)
 
     def getsmartlog(self, reponame, workspace, repo):
 
-        highlightdebug(self.ui, "sending 'get_smartlog' request\n")
+        self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
 
         path = "/commit_cloud/get_smartlog"
         data = {"repo_name": reponame, "workspace": workspace}
@@ -336,7 +331,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         start = time.time()
         response = self._send(path, data)
         elapsed = time.time() - start
-        highlightdebug(self.ui, "responce received in %0.2f sec\n" % elapsed)
+        self.ui.debug(
+            "responce received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
 
         if "error" in response:
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
@@ -348,8 +345,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # }
         smartlog = response["smartlog"]
 
-        highlightdebug(
-            self.ui, "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"])
+        self.ui.debug(
+            "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
+            component="commitcloud",
         )
 
         nodes = self._makenodes(smartlog)

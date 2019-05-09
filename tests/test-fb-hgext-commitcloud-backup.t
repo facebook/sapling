@@ -102,8 +102,8 @@ Check that backup doesn't interfere with commit cloud
   setting authentication token
   authentication successful
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'master' repo
-  #commitcloud synchronizing 'master' with 'user/test/default'
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'master' repo
+  commitcloud: synchronizing 'master' with 'user/test/default'
   backing up stack rooted at * (glob)
   remote: pushing 3 commits:
   remote:     *  A1 (glob)
@@ -113,7 +113,7 @@ Check that backup doesn't interfere with commit cloud
   remote: pushing 2 commits:
   remote:     *  B1 (glob)
   remote:     *  B2 (glob)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in *.*sec (glob)
 
   $ hg up $B2
@@ -128,11 +128,11 @@ Check that backup doesn't interfere with commit cloud
   remote:     *  B3 (glob)
 
   $ hg cloud sync
-  #commitcloud synchronizing 'master' with 'user/test/default'
+  commitcloud: synchronizing 'master' with 'user/test/default'
   backing up stack rooted at * (glob)
   remote: pushing 3 commits:
   remote:     *  B1 (glob)
   remote:     *  B2 (glob)
   remote:     *  B3 (glob)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in *.* (glob)

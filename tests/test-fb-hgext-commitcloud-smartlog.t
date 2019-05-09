@@ -57,7 +57,7 @@ Tests for hg cloud sl
   > }
   > EOF
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
 
@@ -126,7 +126,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
   o  b8d4ca  Test User 2018-07-19 23:03 +0000
@@ -423,7 +423,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
   o  d7c298  Test User 2018-07-24 23:58 +0000
@@ -869,7 +869,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
   o  7544e6  Test User 2018-07-25 12:37 +0000
@@ -1216,7 +1216,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
   o  2711a3  Test User 2018-07-24 20:53 +0000
@@ -1448,7 +1448,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
   o  773bd8  Test User 2018-07-25 13:31 +0000 somebookmark
@@ -1526,7 +1526,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
-  #commitcloud searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
   o  b545c3  Test User 2018-06-18 15:06 +0000

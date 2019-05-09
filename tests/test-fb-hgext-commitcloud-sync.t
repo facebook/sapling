@@ -69,37 +69,37 @@ Make the first clone of the server
   $ cat ../shared.rc >> .hg/hgrc
 Registration:
   $ hg cloud auth
-  abort: #commitcloud registration error: authentication with commit cloud required
+  abort: commitcloud: registration error: authentication with commit cloud required
   authentication instructions:
   visit https://localhost/oauth to generate a registration token
-  please read `hg cloud authenticate --help` for more information
-  please contact The Test Team @ FB if you are unable to authenticate
+  (please read 'hg cloud authenticate --help' for more information)
+  (please contact The Test Team @ FB if you are unable to authenticate)
   (use 'hg cloud auth --token TOKEN' to set a token)
   [255]
   $ hg cloud auth -t xxxxxx
   setting authentication token
   authentication successful
   $ hg cloud auth -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir"
-  abort: #commitcloud config error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
-  please contact The Test Team @ FB to report misconfiguration
+  abort: commitcloud: config error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
+  (please contact The Test Team @ FB to report misconfiguration)
   [255]
 Joining:
   $ hg cloud sync
-  abort: #commitcloud workspace error: undefined workspace
-  your repo is not connected to any workspace
-  use 'hg cloud join --help' for more details
+  abort: commitcloud: workspace error: undefined workspace
+  (your repo is not connected to any workspace)
+  (use 'hg cloud join --help' for more details)
   [255]
   $ hg cloud join -w feature
-  #commitcloud this repository is now connected to the 'user/test/feature' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/feature'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/feature' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/feature'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hg cloud leave
-  #commitcloud this repository is now disconnected from commit cloud
+  commitcloud: this repository is now disconnected from commit cloud
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -117,9 +117,9 @@ Registration:
   authentication successful
 Joining:
   $ hg cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -128,18 +128,18 @@ Make a commit in the first client, and sync it
   $ cd client1
   $ mkcommit "commit1"
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
   remote: pushing 1 commit:
   remote:     fa5d62c46fd7  commit1
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ cd ..
 
 Sync from the second client - the commit should appear
   $ cd client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -148,7 +148,7 @@ Sync from the second client - the commit should appear
   added 1 changesets with 1 changes to 1 files
   new changesets fa5d62c46fd7
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ hg up -q tip
@@ -160,12 +160,12 @@ Sync from the second client - the commit should appear
 Make a commit from the second client and sync it
   $ mkcommit "commit2"
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     02f6fc2b7154  commit2
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ cd ..
 
@@ -173,7 +173,7 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   $ cd client1
   $ hg bookmark -r 0 bookmark1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -182,7 +182,7 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   added 1 changesets with 1 changes to 2 files
   new changesets 02f6fc2b7154
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
   o  2: 02f6fc2b7154 'commit2'
@@ -196,8 +196,8 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
 Sync the bookmark back to the second client
   $ cd client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
   @  2: 02f6fc2b7154 'commit2'
@@ -209,8 +209,8 @@ Sync the bookmark back to the second client
 Move the bookmark on the second client, and then sync it
   $ hg bookmark -r 2 -f bookmark1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -219,9 +219,9 @@ Move the bookmark also on the first client, it should be forked in the sync
   $ cd client1
   $ hg bookmark -r 1 -f bookmark1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   bookmark1 changed locally and remotely, local bookmark renamed to bookmark1-testhost
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
   o  2: 02f6fc2b7154 'commit2' bookmark1
@@ -240,12 +240,12 @@ Try to push selectively
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
 
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     48610b1a7ec0  commit2
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglog
@@ -261,7 +261,7 @@ Try to push selectively
 Sync the amended commit to the other client
   $ cd client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -271,9 +271,9 @@ Sync the amended commit to the other client
   obsoleted 2 changesets
   new changesets a7bb357e7299:48610b1a7ec0
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
+  commitcloud: current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
   hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
   [commitcloud]
   updateonmove = true
@@ -295,14 +295,14 @@ Test recovery from broken state (example: invalid json)
   $ cd client1
   $ echo '}}}' >> .hg/store/commitcloudstate.usertestdefault.b6eca
   $ hg cloud sync 2>&1
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  abort: #commitcloud invalid workspace data: 'failed to parse commitcloudstate.usertestdefault.b6eca'
-  please run 'hg cloud recover'
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  abort: commitcloud: invalid workspace data: 'failed to parse commitcloudstate.usertestdefault.b6eca'
+  (please run 'hg cloud recover')
   [255]
   $ hg cloud recover
-  #commitcloud clearing local commit cloud cache
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: clearing local commit cloud cache
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -319,19 +319,19 @@ Expected result: the message telling that revision has been moved to another rev
   (activating bookmark bookmark1)
   $ hg amend -m "`hg descr | head -n1` amended"
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     41f3b9359864  commit2 amended
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
 
   $ cd client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -341,9 +341,9 @@ Expected result: the message telling that revision has been moved to another rev
   obsoleted 1 changesets
   new changesets 41f3b9359864
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
+  commitcloud: current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
   hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
   [commitcloud]
   updateonmove = true
@@ -376,12 +376,12 @@ Expected result: client2 should be moved to the amended version
   $ hg id -i
   8134e74ecdc8
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     8134e74ecdc8  commit2 amended amended
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -394,7 +394,7 @@ Expected result: client2 should be moved to the amended version
   $ hg up 41f3b9359864
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -404,9 +404,9 @@ Expected result: client2 should be moved to the amended version
   obsoleted 1 changesets
   new changesets 8134e74ecdc8
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision 41f3b9359864 has been moved remotely to 8134e74ecdc8
+  commitcloud: current revision 41f3b9359864 has been moved remotely to 8134e74ecdc8
   updating to 8134e74ecdc8
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
@@ -438,13 +438,13 @@ Expected result: move should not happen, expect a message that move is ambiguous
   $ hg id -i
   cebbb614447e
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 3 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     abd5311ab3c6  commit2 amended amended
   remote:     cebbb614447e  commit2 amended amended
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -452,7 +452,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   $ cd client2
   $ hg up 41f3b9359864 -q
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -465,10 +465,10 @@ Expected result: move should not happen, expect a message that move is ambiguous
   added 1 changesets with 1 changes to 3 files (+1 heads)
   new changesets abd5311ab3c6:cebbb614447e
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision 41f3b9359864 has been replaced remotely with multiple revisions
-  Please run `hg update` to go to the desired revision
+  commitcloud: current revision 41f3b9359864 has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)
   $ tglog
   o  8: cebbb614447e 'commit2 amended amended'
   |
@@ -503,12 +503,12 @@ Expected result: client2 should be moved to fada67350ab0
   $ hg id -i
   fada67350ab0
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     fada67350ab0  commit2 amended amended amended amended amended
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -516,7 +516,7 @@ Expected result: client2 should be moved to fada67350ab0
   $ cd client2
   $ hg up abd5311ab3c6 -q
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -526,9 +526,9 @@ Expected result: client2 should be moved to fada67350ab0
   obsoleted 1 changesets
   new changesets fada67350ab0
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision abd5311ab3c6 has been moved remotely to fada67350ab0
+  commitcloud: current revision abd5311ab3c6 has been moved remotely to fada67350ab0
   updating to fada67350ab0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -567,12 +567,12 @@ Expected result: client2 should be moved to 68e035cc1996
   |
   ~
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     68e035cc1996  commit2 amended amended rebased amended rebased am
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -723,8 +723,8 @@ Check cloud sync in the source repo doesn't need to do anything
   o  0: d20a80d4def3 'base'
   
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
 
 Check cloud sync pulls in the shared commit in the other client
@@ -742,22 +742,22 @@ Check cloud sync pulls in the shared commit in the other client
   
 Check '--workspace_version' option
   $ hg cloud sync --workspace-version 1
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud this version has been already synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: this version has been already synchronized
 
 Check '--check_autosync_enabled' option
   $ hg cloud sync --check-autosync-enabled
-  #commitcloud automatic backup and synchronization is currently disabled
+  commitcloud: automatic backup and synchronization is currently disabled
   $ hg backupdisable
   note: background backup was already disabled
   background backup is now disabled until * (glob)
   $ hg cloud sync --check-autosync-enabled
-  #commitcloud automatic backup and synchronization is currently disabled
+  commitcloud: automatic backup and synchronization is currently disabled
   $ hg backupenable
   background backup is enabled
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
 
 Check handling of failures
@@ -786,7 +786,7 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   o  0: d20a80d4def3 'base'
   
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 4b4f26511f8b
   remote: pushing 4 commits:
   remote:     4b4f26511f8b  race attempt
@@ -827,9 +827,9 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   remote:     715c1454ae33  stack commit 2
   remote:     9bd68ef10d6b  toobig
   push of head 9bd68ef10d6b failed: bundle is too big: 1695 bytes. max allowed size is 0 MB
-  abort: #commitcloud failed to synchronize commits: '2 heads could not be pushed'
-  please retry 'hg cloud sync'
-  please contact The Test Team @ FB if this error persists
+  abort: commitcloud: failed to synchronize commits: '2 heads could not be pushed'
+  (please retry 'hg cloud sync')
+  (please contact The Test Team @ FB if this error persists)
   [255]
 
   $ hg isbackedup -r .
@@ -841,8 +841,8 @@ Set the limit back high.  Sync in the other repo and check it still looks ok
   $ mv $TESTTMP/server-hgrc.bak ../server/.hg/hgrc
   $ cd ../client1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
   o  19: 715c1454ae33 'stack commit 2' testbookmark
@@ -856,14 +856,14 @@ Now sync in the repo we failed in.  This time it should work.
 
   $ cd ../client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 4b4f26511f8b
   remote: pushing 4 commits:
   remote:     4b4f26511f8b  race attempt
   remote:     715c1454ae33  stack commit 2
   remote:     a6b97eebbf74  shared commit updated
   remote:     9bd68ef10d6b  toobig
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hg isbackedup -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 backed up
@@ -883,7 +883,7 @@ And the commits should now be availble in the other client.
 
   $ cd ../client1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -896,7 +896,7 @@ And the commits should now be availble in the other client.
   added 1 changesets with 1 changes to 3 files (+1 heads)
   new changesets a6b97eebbf74:9bd68ef10d6b
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
   o  22: 9bd68ef10d6b 'toobig' testbookmark toobig
@@ -941,7 +941,7 @@ Make one of the commits public when it shouldn't be.
 
   $ hg phase -p e58a6603d256
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 9a3e7907fd5c
   remote: abort: 00changelog.i@e58a6603d256: unknown parent!
   push failed: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -954,14 +954,14 @@ Make one of the commits public when it shouldn't be.
   remote: pushing 2 commits:
   remote:     3597ff85ead0  stack 2 first
   remote:     799d22972c4e  stack 2 second
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
 Commit still becomes available in the other repo
 
   $ cd ../client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -974,7 +974,7 @@ Commit still becomes available in the other repo
   added 2 changesets with 2 changes to 2 files (+1 heads)
   new changesets e58a6603d256:799d22972c4e
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
   o  21: 799d22972c4e 'stack 2 second'
@@ -1031,7 +1031,7 @@ Create another public commit on the server, moving one of the bookmarks
 Sync this onto the second client, the remote bookmarks don't change.
   $ cd ../client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -1045,7 +1045,7 @@ Sync this onto the second client, the remote bookmarks don't change.
   obsoleted 2 changesets
   new changesets acd5b9e8c656:2da6c73964b8
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
   o  2da6c73964b8 'stack 1 second'
@@ -1092,7 +1092,7 @@ Rebase the commits again, and resync to the first client.
   $ hg cloud sync -q
   $ cd ../client1
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -1106,7 +1106,7 @@ Rebase the commits again, and resync to the first client.
   obsoleted 2 changesets
   new changesets 97250524560a:af621240884f
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
   o  af621240884f 'stack 1 second'
@@ -1154,7 +1154,7 @@ Check subscription when join/leave and also scm service health check
   repo_name=server
   repo_root=$TESTTMP/client1/.hg
   $ hg cloud leave
-  #commitcloud this repository is now disconnected from commit cloud
+  commitcloud: this repository is now disconnected from commit cloud
   $ ls $TESTTMP/.commitcloud/joined/
   $ hg cloud join -q
   $ cat $TESTTMP/.commitcloud/joined/*
@@ -1177,18 +1177,18 @@ Rejoin
   $ cat ../shared.rc >> .hg/hgrc
 
   $ hg cloud reconnect --config "commitcloud.user_token_path=$TESTTMP/othertokenlocation" # invalid token
-  #commitcloud unable to reconnect: not authenticated with Commit Cloud on this host
+  commitcloud: unable to reconnect: not authenticated with Commit Cloud on this host
   learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
 
   $ hg cloud reconnect --config "commitcloud.servicelocation=$TESTTMP/otherservicelocation" # token is valid but server is different
-  #commitcloud trying to reconnect to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud unable to reconnect: this workspace has been never connected to Commit Cloud for this repo
+  commitcloud: trying to reconnect to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: unable to reconnect: this workspace has been never connected to Commit Cloud for this repo
   learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
 
   $ hg cloud reconnect 			# should be able to reconnect
-  #commitcloud trying to reconnect to the 'user/test/default' workspace for the 'server' repo
-  #commitcloud the repository is now reconnected
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: trying to reconnect to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: the repository is now reconnected
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -1201,7 +1201,7 @@ Rejoin
   added 2 changesets with 3 changes to 3 files
   new changesets 3597ff85ead0:af621240884f
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ hg trglog

@@ -357,14 +357,14 @@ class SubscriptionManager(object):
             self._restart_service_subscriptions(warn_service_not_running=False)
 
     def _warn_service_not_running(self):
-        commitcloudcommon.highlightstatus(
-            self.ui,
+        self.ui.status(
             _(
-                "warning: scm daemon is not running and automatic synchronization may not work\n"
-                "run `hg cloud sync` manually if your workspace is not synchronized\n"
-                "please contact %s if this warning persists\n"
+                "scm daemon is not running and automatic synchronization may not work\n"
+                "(run 'hg cloud sync' manually if your workspace is not synchronized)\n"
+                "(please contact %s if this warning persists)\n"
             )
             % commitcloudcommon.getownerteam(self.ui),
+            component="commitcloud",
         )
 
     def _test_service_is_running(self):
@@ -569,7 +569,7 @@ def backuplockcheck(ui, repo):
             else:
                 etimemsg = ""
             bgstep = getsyncprogress(repo) or "synchronizing"
-            commitcloudcommon.highlightstatus(
-                ui,
+            ui.status(
                 _("background cloud sync is in progress: %s%s\n") % (bgstep, etimemsg),
+                component="commitcloud",
             )

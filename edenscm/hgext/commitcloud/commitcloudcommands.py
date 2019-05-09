@@ -9,7 +9,6 @@ import errno
 
 from edenscm.mercurial import (
     cmdutil,
-    commands,
     error,
     graphmod,
     lock as lockmod,
@@ -17,7 +16,6 @@ from edenscm.mercurial import (
     progress,
     registrar,
     scmutil,
-    visibility,
 )
 from edenscm.mercurial.i18n import _
 
@@ -34,8 +32,6 @@ from . import (
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-highlightdebug = commitcloudcommon.highlightdebug
-highlightstatus = commitcloudcommon.highlightstatus
 
 pullopts = [
     (
@@ -100,13 +96,10 @@ def cloudjoin(ui, repo, **opts):
         commitcloudutil.SubscriptionManager(repo).removesubscription()
     workspace.setworkspace(repo, workspacename)
 
-    highlightstatus(
-        ui,
-        _(
-            "this repository is now connected to the '%s' "
-            "workspace for the '%s' repo\n"
-        )
+    ui.status(
+        _("this repository is now connected to the '%s' workspace for the '%s' repo\n")
         % (workspacename, commitcloudutil.getreponame(repo)),
+        component="commitcloud",
     )
     cloudsync(ui, repo, **opts)
 
@@ -135,18 +128,18 @@ def cloudrejoin(ui, repo, **opts):
                 workspacename = workspace.currentworkspace(repo)
             if workspacename is None:
                 workspacename = workspace.defaultworkspace(ui)
-            highlightstatus(
-                ui,
+            ui.status(
                 _("trying to reconnect to the '%s' workspace for the '%s' repo\n")
                 % (workspacename, reponame),
+                component="commitcloud",
             )
             cloudrefs = serv.getreferences(reponame, workspacename, 0)
             if cloudrefs.version == 0:
-                highlightstatus(
-                    ui,
+                ui.status(
                     _(
                         "unable to reconnect: this workspace has been never connected to Commit Cloud for this repo\n"
                     ),
+                    component="commitcloud",
                 )
                 if educationpage:
                     ui.status(
@@ -154,14 +147,17 @@ def cloudrejoin(ui, repo, **opts):
                     )
             else:
                 workspace.setworkspace(repo, workspacename)
-                highlightstatus(ui, _("the repository is now reconnected\n"))
+                ui.status(
+                    _("the repository is now reconnected\n"), component="commitcloud"
+                )
                 cloudsync(ui, repo, cloudrefs=cloudrefs, **opts)
             return
         except commitcloudcommon.RegistrationError:
             pass
 
-    highlightstatus(
-        ui, _("unable to reconnect: not authenticated with Commit Cloud on this host\n")
+    ui.status(
+        _("unable to reconnect: not authenticated with Commit Cloud on this host\n"),
+        component="commitcloud",
     )
     if educationpage:
         ui.status(_("learn more about Commit Cloud at %s\n") % educationpage)
@@ -176,13 +172,17 @@ def cloudleave(ui, repo, **opts):
     """
     # do no crash on run cloud leave multiple times
     if not workspace.currentworkspace(repo):
-        highlightstatus(
-            ui, _("this repository has been already disconnected from commit cloud\n")
+        ui.status(
+            _("this repository has been already disconnected from commit cloud\n"),
+            component="commitcloud",
         )
         return
     commitcloudutil.SubscriptionManager(repo).removesubscription()
     workspace.clearworkspace(repo)
-    highlightstatus(ui, _("this repository is now disconnected from commit cloud\n"))
+    ui.status(
+        _("this repository is now disconnected from commit cloud\n"),
+        component="commitcloud",
+    )
 
 
 @subcmd("authenticate", [("t", "token", "", _("set or update token"))])
@@ -233,10 +233,10 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
 
-    highlightstatus(
-        ui,
+    ui.status(
         _("searching draft commits for the '%s' workspace for the '%s' repo\n")
         % (workspacename, reponame),
+        component="commitcloud",
     )
 
     serv = service.get(ui, commitcloudutil.TokenLocator(ui).token)
@@ -254,7 +254,10 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     if smartlogstyle:
         opts["template"] = "{%s}" % smartlogstyle
     else:
-        highlightdebug(ui, _("style %s is not defined, skipping") % smartlogstyle)
+        ui.debug(
+            _("style %s is not defined, skipping") % smartlogstyle,
+            component="commitcloud",
+        )
 
     # show all the nodes
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
@@ -383,8 +386,9 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         dependencies.infinitepushbackup is None
         or not dependencies.infinitepushbackup.autobackupenabled(ui)
     ):
-        highlightstatus(
-            ui, _("automatic backup and synchronization is currently disabled\n")
+        ui.status(
+            _("automatic backup and synchronization is currently disabled\n"),
+            component="commitcloud",
         )
         return 0
 
@@ -405,10 +409,10 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
                 etime = commitcloudutil.getprocessetime(e.lockinfo)
                 if etime:
                     etimemsg = _(", running for %d min %d sec") % divmod(etime, 60)
-                highlightstatus(
-                    ui,
+                ui.status(
                     _("background cloud sync is already in progress (pid %s on %s%s)\n")
                     % (e.lockinfo.uniqueid, e.lockinfo.namespace, etimemsg),
+                    component="commitcloud",
                 )
                 ui.flush()
 
@@ -448,7 +452,7 @@ def cloudrecover(ui, repo, **opts):
     Clear the local cache of commit cloud service state, and resynchronize
     the repository from scratch.
     """
-    highlightstatus(ui, "clearing local commit cloud cache\n")
+    ui.status(_("clearing local commit cloud cache\n"), component="commitcloud")
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))

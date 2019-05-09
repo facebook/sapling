@@ -71,20 +71,20 @@ Make a commit in the first client, and sync it
   $ cd client1
   $ mkcommit "feature1"
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 1cf4a5a0e8fc
   remote: pushing 1 commit:
   remote:     1cf4a5a0e8fc  feature1
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ hg amend -m "feature1 renamed"
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at b68dd726c6c6
   remote: pushing 1 commit:
   remote:     b68dd726c6c6  feature1 renamed
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -92,7 +92,7 @@ Make a commit in the first client, and sync it
 Sync from the second client and `hg unamend` there
   $ cd client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -101,7 +101,7 @@ Sync from the second client and `hg unamend` there
   added 1 changesets with 1 changes to 1 files
   new changesets b68dd726c6c6
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglog
@@ -135,11 +135,11 @@ Sync from the second client and `hg unamend` there
   
 
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 1cf4a5a0e8fc
   remote: pushing 1 commit:
   remote:     1cf4a5a0e8fc  feature1
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ cd ..
@@ -147,10 +147,10 @@ Sync from the second client and `hg unamend` there
   $ cd client1
 
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision b68dd726c6c6 has been moved remotely to 1cf4a5a0e8fc
+  commitcloud: current revision b68dd726c6c6 has been moved remotely to 1cf4a5a0e8fc
   hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
   [commitcloud]
   updateonmove = true
@@ -170,22 +170,22 @@ Amend twice, unamend, then unhide.  This causes a cycle in the obsgraph.
   $ hg unamend
   $ hg unhide 74b668b6b779
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at cb45bbd0ae75
   remote: pushing 1 commit:
   remote:     cb45bbd0ae75  feature1 renamed2
   backing up stack rooted at 74b668b6b779
   remote: pushing 1 commit:
   remote:     74b668b6b779  feature1 renamed3
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
-  #commitcloud current revision cb45bbd0ae75 has been replaced remotely with multiple revisions
-  Please run `hg update` to go to the desired revision
+  commitcloud: current revision cb45bbd0ae75 has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)
 
 Now cloud sync in the other client.  The cycle means we can't reliably pick a destination.
   $ cd ../client2
   $ hg cloud sync
-  #commitcloud synchronizing 'server' with 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -198,7 +198,7 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   added 1 changesets with 0 changes to 1 files (+1 heads)
   new changesets cb45bbd0ae75:74b668b6b779
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * sec (glob)
-  #commitcloud current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
-  Please run `hg update` to go to the desired revision
+  commitcloud: current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)

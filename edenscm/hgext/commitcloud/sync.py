@@ -31,9 +31,6 @@ from . import (
 )
 
 
-highlightstatus = commitcloudcommon.highlightstatus
-
-
 def _getheads(repo):
     if visibility.enabled(repo):
         return [nodemod.hex(n) for n in visibility.heads(repo)]
@@ -66,7 +63,11 @@ def docloudsync(ui, repo, cloudrefs=None, **opts):
     if workspacename is None:
         raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
     serv = service.get(ui, tokenlocator.token)
-    highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspacename))
+    ui.status(
+        _("synchronizing '%s' with '%s'\n") % (reponame, workspacename),
+        component="commitcloud",
+    )
+
     commitcloudutil.writesyncprogress(
         repo, "starting synchronizing with '%s'" % workspacename
     )
@@ -77,7 +78,9 @@ def docloudsync(ui, repo, cloudrefs=None, **opts):
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
     if version and version.isdigit() and int(version) <= lastsyncstate.version:
-        highlightstatus(ui, _("this version has been already synchronized\n"))
+        ui.status(
+            _("this version has been already synchronized\n"), component="commitcloud"
+        )
         return 0
 
     if opts.get("full"):
@@ -89,14 +92,14 @@ def docloudsync(ui, repo, cloudrefs=None, **opts):
     # the remote backend for storing Commit Cloud commit have been changed
     # switching between Mercurial <-> Mononoke
     if lastsyncstate.remotepath and remotepath != lastsyncstate.remotepath:
-        highlightstatus(
-            ui,
+        ui.status(
             _(
-                "commits storage have been switched\n"
+                "commit storage has been switched\n"
                 "             from: %s\n"
                 "             to: %s\n"
             )
             % (lastsyncstate.remotepath, remotepath),
+            component="commitcloud",
         )
         fetchversion = 0
 
@@ -323,7 +326,7 @@ def docloudsync(ui, repo, cloudrefs=None, **opts):
         raise commitcloudcommon.SynchronizationError(
             ui, _("%d heads could not be pushed") % len(pushfailures)
         )
-    highlightstatus(ui, _("commits synchronized\n"))
+    ui.status(_("commits synchronized\n"), component="commitcloud")
     # check that Scm Service is running and a subscription exists
     commitcloudutil.SubscriptionManager(repo).checksubscription()
     elapsed = time.time() - start
@@ -340,10 +343,10 @@ def maybeupdateworkingcopy(ui, repo, currentnode):
         return 0
 
     if destination and destination in repo:
-        highlightstatus(
-            ui,
+        ui.status(
             _("current revision %s has been moved remotely to %s\n")
             % (nodemod.short(currentnode), nodemod.short(destination)),
+            component="commitcloud",
         )
         if ui.configbool("commitcloud", "updateonmove"):
             if repo[destination].mutable():
@@ -360,14 +363,13 @@ def maybeupdateworkingcopy(ui, repo, currentnode):
         else:
             hintutil.trigger("commitcloud-update-on-move")
     else:
-        highlightstatus(
-            ui,
+        ui.status(
             _(
-                "current revision %s has been replaced remotely "
-                "with multiple revisions\n"
-                "Please run `hg update` to go to the desired revision\n"
+                "current revision %s has been replaced remotely with multiple revisions\n"
+                "(run 'hg update HASH' to go to the desired revision)\n"
             )
             % nodemod.short(currentnode),
+            component="commitcloud",
         )
     return 0
 
@@ -398,7 +400,9 @@ def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
 
     if len(notbackedupheads) != len(notbackeduplocalheads):
         missingheads = list(notbackedupheads - notbackeduplocalheads)
-        highlightstatus(repo.ui, _("some heads are missing at %s\n") % remotepath)
+        repo.ui.status(
+            _("some heads are missing at %s\n") % remotepath, component="commitcloud"
+        )
         commitcloudutil.writesyncprogress(repo, "pulling %s" % missingheads[0][:12])
         pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
         pullopts["rev"] = missingheads
@@ -659,10 +663,10 @@ def _filterpushside(ui, repo, pushheads, localheads, lastsyncstateheads):
         skippedlist = "\n".join(
             ["    %s    %s" % (hexnode[:16], firstline(hexnode)) for hexnode in skipped]
         )
-        highlightstatus(
-            ui,
+        ui.status(
             _("push filter: list of unsynced local heads that will be skipped\n%s\n")
             % skippedlist,
+            component="commitcloud",
         )
 
     return list(set(localheads) & (set(lastsyncstateheads) | set(pushheads)))

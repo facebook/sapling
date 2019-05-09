@@ -80,14 +80,13 @@ def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):
 
 def _smartlogbackupsuggestion(orig, ui, repo):
     if workspace.currentworkspace(repo):
-        commitcloudcommon.highlightstatus(
-            ui,
+        ui.status(
             _(
-                "Run `hg cloud sync` to synchronize your workspace. "
-                "If this fails,\n"
-                "please report to %s.\n"
+                "run 'hg cloud sync' to synchronize your workspace.\n"
+                "(if this fails, please report to %s)\n"
             )
             % commitcloudcommon.getownerteam(ui),
+            component="commitcloud",
         )
     else:
         orig(ui, repo)
