@@ -12,7 +12,7 @@ use futures::Stream;
 use serde::Serialize;
 use serde_cbor;
 
-use types::{FileDataResponse, FileHistoryResponse};
+use types::api::{FileDataResponse, FileHistoryResponse};
 
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};

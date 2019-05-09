@@ -17,7 +17,7 @@ use apiserver_thrift::types::{
     MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
     MononokeListDirectoryParams, MononokeRevision,
 };
-use types::{FileDataRequest, FileHistoryRequest};
+use types::api::{FileDataRequest, FileHistoryRequest};
 
 use super::lfs::BatchRequest;
 

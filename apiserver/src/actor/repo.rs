@@ -38,8 +38,8 @@ use uuid::Uuid;
 use mercurial_types::{manifest::Content, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use types::{
-    DataEntry, FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse, Key,
-    WireHistoryEntry,
+    api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse},
+    DataEntry, Key, WireHistoryEntry,
 };
 
 use mononoke_types::{FileContents, MPath, RepositoryId};
