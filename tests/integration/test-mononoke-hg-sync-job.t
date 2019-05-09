@@ -698,3 +698,15 @@ Test bookmark deletion sync
   date:        * (glob)
   summary:     symlink
   
+Test the job exits when the exit file is set
+  $ cd $TESTTMP/client-push
+  $ hg up -q master_bookmark
+  $ mkcommit exitcommit
+  $ hgmn push -r . --to master_bookmark -q
+  $ touch $TESTTMP/exit-file
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop repo-hg-3 8 --exit-file $TESTTMP/exit-file
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #10 ... (glob)
+  * successful prepare of entry #10 (glob)
+  * path "$TESTTMP/exit-file" exists: exiting ... (glob)
