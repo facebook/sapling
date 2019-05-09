@@ -62,9 +62,9 @@ start mononoke
   setting authentication token
   authentication successful
   $ hgmn cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'client1' repo
-  #commitcloud synchronizing 'client1' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'client1' repo
+  commitcloud: synchronizing 'client1' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
   $ cd ../client2
@@ -72,9 +72,9 @@ start mononoke
   updating authentication token
   authentication successful
   $ hgmn cloud join
-  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'client2' repo
-  #commitcloud synchronizing 'client2' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'client2' repo
+  commitcloud: synchronizing 'client2' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
 
@@ -85,10 +85,10 @@ Make commits in the first client, and sync it
   $ mkcommit "commit2"
   $ mkcommit "commit3"
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client1' with 'user/test/default'
+  commitcloud: synchronizing 'client1' with 'user/test/default'
   backing up stack rooted at 660cb078da57
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglogp
@@ -104,7 +104,7 @@ Make commits in the first client, and sync it
 Sync from the second client - the commits should appear
   $ cd ../client2
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client2' with 'user/test/default'
+  commitcloud: synchronizing 'client2' with 'user/test/default'
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -114,7 +114,7 @@ Sync from the second client - the commits should appear
   added 3 changesets with 0 changes to 0 files
   new changesets 660cb078da57:44641a2b1a42
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglogp
@@ -132,10 +132,10 @@ Make commits from the second client and sync it
   $ mkcommit "commit5"
   $ mkcommit "commit6"
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client2' with 'user/test/default'
+  commitcloud: synchronizing 'client2' with 'user/test/default'
   backing up stack rooted at 15f040cf571c
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
 
@@ -143,7 +143,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   $ cd ../client1
   $ hg bookmark -r 0 bookmark1
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client1' with 'user/test/default'
+  commitcloud: synchronizing 'client1' with 'user/test/default'
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -153,7 +153,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   added 3 changesets with 0 changes to 0 files (+1 heads)
   new changesets 15f040cf571c:58508421158d
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglogp
@@ -179,17 +179,17 @@ On the first client rebase the stack
   rebasing 5:a1806767adaa "commit5"
   rebasing 6:58508421158d "commit6" (tip)
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client1' with 'user/test/default'
+  commitcloud: synchronizing 'client1' with 'user/test/default'
   backing up stack rooted at 660cb078da57
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
 
 On the second client sync it
   $ cd ../client2
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client2' with 'user/test/default'
+  commitcloud: synchronizing 'client2' with 'user/test/default'
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -200,9 +200,9 @@ On the second client sync it
   obsoleted 3 changesets
   new changesets f0345b3976c9:8e3f03f8d9db
   (run 'hg update' to get a working copy)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
-  #commitcloud current revision 58508421158d has been moved remotely to 8e3f03f8d9db
+  commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
   updating to 8e3f03f8d9db
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -234,8 +234,8 @@ On the second client hide all draft commits
   working directory now at 8b2dca0c8a72
   6 changesets hidden
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client2' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'client2' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
 
@@ -246,8 +246,8 @@ On the second client hide all draft commits
 On the first client check that all commits were hidden
   $ cd ../client1
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client1' with 'user/test/default'
-  #commitcloud commits synchronized
+  commitcloud: synchronizing 'client1' with 'user/test/default'
+  commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
 
@@ -276,7 +276,7 @@ On the first client make 2 stacks
 Make one of the commits public when it shouldn't be.
   $ hgmn phase -p 8d621fa11677
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client1' with 'user/test/default'
+  commitcloud: synchronizing 'client1' with 'user/test/default'
   backing up stack rooted at ec61bf312a03
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: Command failed
@@ -301,14 +301,14 @@ Make one of the commits public when it shouldn't be.
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   backing up stack rooted at 77a917e6c3a5
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
 
 Commit still becomes available in the other repo
   $ cd ../client2
   $ hgmn cloud sync
-  #commitcloud synchronizing 'client2' with 'user/test/default'
+  commitcloud: synchronizing 'client2' with 'user/test/default'
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -318,7 +318,7 @@ Commit still becomes available in the other repo
   added 4 changesets with 0 changes to 0 files (+2 heads)
   new changesets * (glob)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  #commitcloud commits synchronized
+  commitcloud: commits synchronized
   finished in * (glob)
 
 # Mononoke order is not stable, so the stacks print stacks separately
