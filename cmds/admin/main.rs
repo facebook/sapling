@@ -17,6 +17,7 @@ use std::sync::{
 };
 use std::time::Duration;
 
+use crate::common::format_bookmark_log_entry;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use failure_ext::{err_msg, format_err, Error, Result};
@@ -57,6 +58,7 @@ use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, error, info, warn, Logger};
 
 mod bookmarks_manager;
+mod common;
 
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
 const BONSAI_FETCH: &'static str = "bonsai-fetch";
@@ -69,6 +71,7 @@ const HG_CHANGESET_DIFF: &'static str = "diff";
 const HG_CHANGESET_RANGE: &'static str = "range";
 const HG_SYNC_BUNDLE: &'static str = "hg-sync-bundle";
 const HG_SYNC_REMAINS: &'static str = "remains";
+const HG_SYNC_SHOW: &'static str = "show";
 const HG_SYNC_FETCH_BUNDLE: &'static str = "fetch-bundle";
 const HG_SYNC_LAST_PROCESSED: &'static str = "last-processed";
 const HG_SYNC_VERIFY: &'static str = "verify";
@@ -221,6 +224,16 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .takes_value(false)
                         .help("exclude blobimport entries from the count"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_SHOW).about("show hg hashes of yet to be replayed bundles")
+                .arg(
+                    Arg::with_name("limit")
+                        .long("limit")
+                        .required(false)
+                        .takes_value(true)
+                        .help("how many bundles to show"),
+                )
         )
         .subcommand(
             SubCommand::with_name(HG_SYNC_FETCH_BUNDLE)
@@ -1042,6 +1055,54 @@ fn process_hg_sync_subcommand<'a>(
                     }
                 })
                 .boxify()
+        }
+        (HG_SYNC_SHOW, Some(sub_m)) => {
+            let limit = args::get_u64(sub_m, "limit", 10);
+            args::init_cachelib(&matches);
+            let repo_fut = args::open_repo(&logger, &matches);
+
+            let current_counter = mutable_counters
+                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                .map(|maybe_counter| {
+                    // yes, technically if the sync hasn't started yet
+                    // and there exists a counter #0, we want return the
+                    // correct value, but it's ok, since (a) there won't
+                    // be a counter #0 and (b) this is just an advisory data
+                    maybe_counter.unwrap_or(0)
+                });
+
+            repo_fut.and_then(move |repo| {
+                current_counter.map({
+                    cloned!(ctx);
+                    move |id| {
+                    bookmarks.read_next_bookmark_log_entries(ctx.clone(), id as u64, repo_id, limit)
+                }})
+                .flatten_stream()
+                .and_then({
+                    cloned!(ctx);
+                    move |entry| {
+                        match entry.to_changeset_id {
+                            Some(bcs_id) => repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                                .map(|hg_cs_id| format!("{}", hg_cs_id)).left_future(),
+                            None => future::ok("DELETED".to_string()).right_future()
+                        }.map(move |hg_cs_id| {
+                            format_bookmark_log_entry(
+                                false, /* json_flag */
+                                hg_cs_id,
+                                entry.reason,
+                                entry.timestamp,
+                                "hg",
+                                entry.bookmark_name,
+                            )
+                        })
+                    }
+                })
+                .for_each(|s| {
+                    println!("{}", s);
+                    Ok(())
+                })
+            })
+            .boxify()
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
             args::init_cachelib(&matches);

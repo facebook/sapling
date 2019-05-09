@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::common::format_bookmark_log_entry;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
@@ -11,7 +12,7 @@ use failure_ext::Error;
 use futures::{future, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::HgChangesetId;
-use mononoke_types::{DateTime, Timestamp};
+use mononoke_types::Timestamp;
 use serde_json::{json, to_string_pretty};
 use slog::Logger;
 
@@ -150,35 +151,6 @@ fn handle_get<'a>(
     }
 }
 
-fn format_log_output(
-    json_flag: bool,
-    changeset_id: String,
-    reason: BookmarkUpdateReason,
-    timestamp: Timestamp,
-    changeset_type: &str,
-) -> String {
-    let reason_str = reason.to_string();
-    if json_flag {
-        let answer = json!({
-            "changeset_type": changeset_type,
-            "changeset_id": changeset_id,
-            "reason": reason_str,
-            "timestamp_sec": timestamp.timestamp_seconds()
-        });
-        to_string_pretty(&answer).unwrap()
-    } else {
-        let dt: DateTime = timestamp.into();
-        let dts = dt.as_chrono().format("%b %e %T %Y");
-        format!(
-            "({}) {} {} {}",
-            changeset_type.to_uppercase(),
-            changeset_id,
-            reason,
-            dts
-        )
-    }
-}
-
 fn list_hg_bookmark_log_entries(
     repo: BlobRepo,
     ctx: CoreContext,
@@ -221,7 +193,7 @@ fn handle_log<'a>(
     match changeset_type {
         "hg" => repo
             .and_then(move |repo| {
-                list_hg_bookmark_log_entries(repo, ctx, bookmark, max_rec)
+                list_hg_bookmark_log_entries(repo, ctx, bookmark.clone(), max_rec)
                     .buffered(100)
                     .map(move |rows| {
                         let (cs_id, reason, timestamp) = rows;
@@ -230,7 +202,14 @@ fn handle_log<'a>(
                             Some(x) => x.to_string(),
                         };
                         let output =
-                            format_log_output(json_flag, cs_id_str, reason, timestamp, "hg");
+                            format_bookmark_log_entry(
+                                json_flag,
+                                cs_id_str,
+                                reason,
+                                timestamp,
+                                "hg",
+                                bookmark.clone(),
+                            );
                         println!("{}", output);
                     })
                     .for_each(|_x| Ok(()))
@@ -239,7 +218,7 @@ fn handle_log<'a>(
 
         "bonsai" => repo
             .and_then(move |repo| {
-                repo.list_bookmark_log_entries(ctx, bookmark, max_rec)
+                repo.list_bookmark_log_entries(ctx, bookmark.clone(), max_rec)
                     .map(move |rows| {
                         let (cs_id, reason, timestamp) = rows;
                         let cs_id_str = match cs_id {
@@ -247,7 +226,14 @@ fn handle_log<'a>(
                             Some(x) => x.to_string(),
                         };
                         let output =
-                            format_log_output(json_flag, cs_id_str, reason, timestamp, "bonsai");
+                            format_bookmark_log_entry(
+                                json_flag,
+                                cs_id_str,
+                                reason,
+                                timestamp,
+                                "bonsai",
+                                bookmark.clone(),
+                            );
                         println!("{}", output);
                     })
                     .for_each(|_| Ok(()))
