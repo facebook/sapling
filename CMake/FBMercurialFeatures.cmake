@@ -64,6 +64,11 @@ if (IS_DIRECTORY "${FB_MERCURIAL_DIR}")
     ${OPENSSL_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
   )
+  if (WIN32)
+  # We need to define EDEN_WIN to include the correct definition of mman.h, 
+  # which is different for Mercurial Windows and Eden Windows.
+    target_compile_definitions(datapack PUBLIC -DEDEN_WIN)
+  endif()
 else()
   message(FATAL_ERROR "fb-mercurial treemanifest support not found")
 endif()
