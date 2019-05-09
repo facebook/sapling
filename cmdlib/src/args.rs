@@ -4,22 +4,26 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::cmp::min;
-use std::fs;
-use std::num::NonZeroUsize;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::{
+    cmp::min,
+    fs,
+    num::NonZeroUsize,
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
+};
 
 use clap::{App, Arg, ArgMatches};
-use failure::{err_msg, Error, Result, ResultExt};
+use failure_ext::{bail_msg, err_msg, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
-use futures_ext::FutureExt;
+use futures_ext::{try_boxfuture, FutureExt};
 use panichandler::{self, Fate};
 use scuba_ext::ScubaSampleBuilder;
-use slog::{Drain, Logger};
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
-use sloggers::types::{Format, Severity, SourceLocation};
-use sloggers::Build;
+use slog::{debug, info, o, Drain, Logger};
+use sloggers::{
+    terminal::{Destination, TerminalLoggerBuilder},
+    types::{Format, Severity, SourceLocation},
+    Build,
+};
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
@@ -292,7 +296,7 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
     Ok(RepositoryId::new(repo_id as i32))
 }
 
-pub fn open_sql<T>(matches: &ArgMatches, name: &'static str) -> Result<T>
+pub fn open_sql<T>(matches: &ArgMatches<'_>, name: &'static str) -> Result<T>
 where
     T: SqlConstructors,
 {
@@ -304,11 +308,11 @@ where
         RepoType::BlobRemote { ref db_address, .. } => match parse_myrouter_port(matches) {
             Some(myrouter_port) => Ok(T::with_myrouter(&db_address, myrouter_port)),
             None => T::with_raw_xdb_tier(&db_address),
-        }
+        },
     }
 }
 
-pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
+pub fn open_sql_changesets(matches: &ArgMatches<'_>) -> Result<SqlChangesets> {
     open_sql::<SqlChangesets>(matches, "changesets")
 }
 
