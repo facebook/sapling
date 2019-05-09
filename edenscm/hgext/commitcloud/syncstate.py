@@ -12,7 +12,7 @@ import time
 
 from edenscm.mercurial.i18n import _
 
-from . import commitcloudcommon, commitcloudutil
+from . import commitcloudcommon
 
 
 class SyncState(object):

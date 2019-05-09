@@ -117,7 +117,14 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import commitcloudcommands, commitcloudcommon, commitcloudutil, state, workspace
+from . import (
+    commitcloudcommands,
+    commitcloudcommon,
+    commitcloudutil,
+    dependencies,
+    syncstate,
+    workspace,
+)
 
 
 cmdtable = commitcloudcommands.cmdtable
@@ -138,60 +145,10 @@ configitem("commitcloud", "backuplimitnocheck", default=4)
 configitem("commitcloud", "autocloudjoin", default=False)
 
 
-def _smartlogbackupmessagemap(orig, ui, repo):
-    if workspace.currentworkspace(repo):
-        return {
-            "inprogress": "syncing",
-            "pending": "sync pending",
-            "failed": "not synced",
-        }
-    else:
-        return orig(ui, repo)
-
-
-def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
-    if command:
-        return orig(ui, repo, dest, command, **opts)
-    elif workspace.currentworkspace(repo):
-        return orig(ui, repo, dest, ["hg", "cloud", "sync"], **opts)
-    elif ui.configbool("commitcloud", "autocloudjoin") and not workspace.disconnected(
-        repo
-    ):
-        # Only auto-join if the user has never connected before.  If they
-        # deliberately disconnected, don't automatically rejoin.
-        return orig(ui, repo, dest, ["hg", "cloud", "join"], **opts)
-    else:
-        return orig(ui, repo, dest, **opts)
-
-
-def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):
-    if workspace.currentworkspace(repo):
-        commitcloudutil.SubscriptionManager(repo).checksubscription()
-        commitcloudcommands.backuplockcheck(ui, repo)
-        hintutil.trigger("commitcloud-old-commits", repo)
-    else:
-        return orig(ui, repo, **opts)
-
-
-def _smartlogbackupsuggestion(orig, ui, repo):
-    if workspace.currentworkspace(repo):
-        commitcloudcommon.highlightstatus(
-            ui,
-            _(
-                "Run `hg cloud sync` to synchronize your workspace. "
-                "If this fails,\n"
-                "please report to %s.\n"
-            )
-            % commitcloudcommon.getownerteam(ui),
-        )
-    else:
-        orig(ui, repo)
-
-
 @hint("commitcloud-old-commits")
 def _smartlogomittedcommitsmsg(repo):
     workspacename = workspace.currentworkspace(repo)
-    lastsyncstate = state.SyncState(repo, workspacename)
+    lastsyncstate = syncstate.SyncState(repo, workspacename)
     if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:
         return _(
             "some older commits or bookmarks have not been synced to this repo\n"
@@ -202,38 +159,11 @@ def _smartlogomittedcommitsmsg(repo):
 
 
 def extsetup(ui):
-    try:
-        infinitepush = extensions.find("infinitepush")
-    except KeyError:
-        msg = _("The commitcloud extension requires the infinitepush extension")
-        raise error.Abort(msg)
-    try:
-        infinitepushbackup = extensions.find("infinitepushbackup")
-    except KeyError:
-        infinitepushbackup = None
-
-    if infinitepushbackup is not None:
-        extensions.wrapfunction(
-            infinitepushbackup, "_dobackgroundbackup", _dobackgroundcloudsync
-        )
-        extensions.wrapfunction(
-            infinitepushbackup, "_smartlogbackupsuggestion", _smartlogbackupsuggestion
-        )
-        extensions.wrapfunction(
-            infinitepushbackup, "_smartlogbackupmessagemap", _smartlogbackupmessagemap
-        )
-        extensions.wrapfunction(
-            infinitepushbackup,
-            "_smartlogbackuphealthcheckmsg",
-            _smartlogbackuphealthcheckmsg,
-        )
-
-    commitcloudcommands.infinitepush = infinitepush
-    commitcloudcommands.infinitepushbackup = infinitepushbackup
+    dependencies.extsetup(ui)
 
     localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._obsmarkerssyncing)
     localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._syncprogress)
-    localrepo.localrepository._lockfreeprefix.add(state.SyncState.prefix)
+    localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.prefix)
 
 
 def reposetup(ui, repo):
@@ -292,7 +222,7 @@ def cloudremote(repo, subset, x):
     args = [n[1] for n in args]
 
     try:
-        hexnodespulled = commitcloudcommands.missingcloudrevspull(
+        hexnodespulled = missingcloudrevspull(
             repo, [nodemod.bin(nodehex) for nodehex in args]
         )
         return subset & repo.unfiltered().revs("%ls", hexnodespulled)
@@ -301,3 +231,22 @@ def cloudremote(repo, subset, x):
             repo.ui, _("unable to pull all changesets from the remote store\n%s\n") % e
         )
     return smartset.baseset([])
+
+
+def missingcloudrevspull(repo, nodes):
+    """pull wrapper for changesets that are known to the obstore and unknown for the repo
+
+    This is, for example, the case for all hidden revs on new clone + cloud sync.
+    """
+    unfi = repo.unfiltered()
+
+    def obscontains(nodebin):
+        return bool(unfi.obsstore.successors.get(nodebin, None))
+
+    nodes = [node for node in nodes if node not in unfi and obscontains(node)]
+    if nodes:
+        pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
+        pullopts["rev"] = [nodemod.hex(node) for node in nodes]
+        pullcmd(repo.ui, unfi, **pullopts)
+
+    return nodes

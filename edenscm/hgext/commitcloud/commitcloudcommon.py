@@ -12,6 +12,11 @@ from edenscm.mercurial import error
 from edenscm.mercurial.i18n import _
 
 
+# This must match the name from infinitepushbackup in order to maintain
+# mutual exclusivity with infinitepushbackups.
+backuplockname = "infinitepushbackup.lock"
+
+
 def highlightmsg(ui, msg):
     """
     The tag is used to highlight important messages from Commit Cloud

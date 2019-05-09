@@ -14,6 +14,7 @@ import socket
 from subprocess import PIPE, Popen
 
 from edenscm.mercurial import (
+    commands,
     config,
     encoding,
     error,
@@ -539,3 +540,36 @@ def getsyncprogress(repo):
             raise
     else:
         return data.get("step")
+
+
+def getcommandandoptions(command):
+    cmd = commands.table[command][0]
+    opts = dict(opt[1:3] for opt in commands.table[command][1])
+    return cmd, opts
+
+
+def backuplockcheck(ui, repo):
+    try:
+        with lockmod.trylock(
+            ui, repo.sharedvfs, commitcloudcommon.backuplockname, 0, 0
+        ):
+            pass
+    except error.LockHeld as e:
+        if e.lockinfo.isrunning():
+            lockinfo = e.lockinfo
+            etime = getprocessetime(lockinfo)
+            if etime:
+                minutes, seconds = divmod(etime, 60)
+                etimemsg = _("\n(pid %s on %s, running for %d min %d sec)") % (
+                    lockinfo.uniqueid,
+                    lockinfo.namespace,
+                    minutes,
+                    seconds,
+                )
+            else:
+                etimemsg = ""
+            bgstep = getsyncprogress(repo) or "synchronizing"
+            commitcloudcommon.highlightstatus(
+                ui,
+                _("background cloud sync is in progress: %s%s\n") % (bgstep, etimemsg),
+            )
