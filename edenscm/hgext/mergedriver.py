@@ -11,10 +11,11 @@ from __future__ import absolute_import
 import errno
 import sys
 
-from edenscm.mercurial import commands, error, extensions, hook, merge
+from edenscm.mercurial import commands, error, extensions, hook, merge, perftrace
 from edenscm.mercurial.i18n import _
 
 
+@perftrace.tracefunc("Merge Driver Preprocess")
 def wrappreprocess(orig, repo, ms, wctx, labels=None):
     ui = repo.ui
     r, raised = _rundriver(repo, ms, "preprocess", wctx, labels)
@@ -43,6 +44,7 @@ def wrappreprocess(orig, repo, ms, wctx, labels=None):
     return True
 
 
+@perftrace.tracefunc("Merge Driver Conclude")
 def wrapconclude(orig, repo, ms, wctx, labels=None):
     ui = repo.ui
     r, raised = _rundriver(repo, ms, "conclude", wctx, labels)
