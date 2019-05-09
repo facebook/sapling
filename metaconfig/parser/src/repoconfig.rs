@@ -1100,7 +1100,7 @@ mod test {
     }
 
     #[test]
-    fn test_broken_config() {
+    fn test_broken_bypass_config() {
         // Two bypasses for one hook
         let hook1_content = "this is hook1";
         let content = r#"
@@ -1109,6 +1109,7 @@ mod test {
 
             [storage.rocks]
             db.local_db_path = "/tmp/fbsource"
+            blobstore_type = "blob:files"
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1131,7 +1132,10 @@ mod test {
         let tmp_dir = write_files(&paths);
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
+        let msg = format!("{:?}", res);
+        println!("res = {}", msg);
         assert!(res.is_err());
+        assert!(msg.contains("TooManyBypassOptions"));
 
         // Incorrect bypass string
         let hook1_content = "this is hook1";
@@ -1141,6 +1145,7 @@ mod test {
 
             [storage.rocks]
             db.local_db_path = "/tmp/fbsource"
+            blobstore_type = "blob:files"
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1162,16 +1167,23 @@ mod test {
         let tmp_dir = write_files(&paths);
 
         let res = RepoConfigs::read_configs(tmp_dir.path());
+        let msg = format!("{:?}", res);
+        println!("res = {}", msg);
         assert!(res.is_err());
+        assert!(msg.contains("InvalidPushvar"));
     }
 
     #[test]
     fn test_broken_common_config() {
-        fn check_fails(common: &str) -> bool {
+        fn check_fails(common: &str, expect: &str) {
             let content = r#"
-                path="/tmp/fbsource"
-                repotype="blob:rocks"
-                repoid=0
+                repoid = 0
+                storage_config = "storage"
+
+                [storage.storage]
+                blobstore_type = "blob:rocks"
+                path = "/tmp/fbsource"
+                db.local_db_path = "/tmp/fbsource"
             "#;
 
             let paths = btreemap! {
@@ -1182,20 +1194,28 @@ mod test {
             let tmp_dir = write_files(&paths);
 
             let res = RepoConfigs::read_configs(tmp_dir.path());
-            res.is_err()
+            println!("res = {:?}", res);
+            let msg = format!("{:?}", res);
+            assert!(res.is_err(), "unexpected success for {}", common);
+            assert!(
+                msg.contains(expect),
+                "wrong failure, wanted \"{}\" in {}",
+                expect,
+                common
+            );
         }
 
         let common = r#"
         [[whitelist_entry]]
         identity_type="user"
         "#;
-        assert!(check_fails(common));
+        check_fails(common, "identity type and data must be specified");
 
         let common = r#"
         [[whitelist_entry]]
         identity_data="user"
         "#;
-        assert!(check_fails(common));
+        check_fails(common, "identity type and data must be specified");
 
         let common = r#"
         [[whitelist_entry]]
@@ -1203,7 +1223,7 @@ mod test {
         identity_type="user"
         identity_data="user"
         "#;
-        assert!(check_fails(common));
+        check_fails(common, "tier and identity cannot be both specified");
 
         // Only one tier is allowed
         let common = r#"
@@ -1212,7 +1232,7 @@ mod test {
         [[whitelist_entry]]
         tier="tier2"
         "#;
-        assert!(check_fails(common));
+        check_fails(common, "only one tier is allowed");
     }
 
     #[test]
