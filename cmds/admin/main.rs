@@ -869,12 +869,13 @@ fn process_hg_sync_verify(
 
 const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
 
-fn process_hg_sync_subcommand<'a>(
-    sub_m: &ArgMatches<'a>,
-    matches: &ArgMatches<'a>,
-    repo_id: RepositoryId,
+fn subcommand_process_hg_sync(
+    sub_m: &ArgMatches<'_>,
+    matches: &ArgMatches<'_>,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
+    let repo_id = try_boxfuture!(args::get_repo_id(&matches));
+
     let ctx = CoreContext::test_mock();
     let mutable_counters: Arc<SqlMutableCounters> = Arc::new(
         args::open_sql(&matches, "mutable_counters")
@@ -1159,184 +1160,398 @@ fn process_hg_sync_subcommand<'a>(
     }
 }
 
+fn subcommand_blobstore_fetch(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    let blobstore_args = args::parse_blobstore_args(&matches);
+    let repo_id = try_boxfuture!(args::get_repo_id(&matches));
+
+    let manifold_args = match blobstore_args {
+        RemoteBlobstoreArgs::Manifold(args) => args,
+        bad => panic!("Unsupported blobstore: {:#?}", bad),
+    };
+
+    let ctx = CoreContext::test_mock();
+    let key = sub_m.value_of("KEY").unwrap().to_string();
+    let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
+    let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
+    let no_prefix = sub_m.is_present("no-prefix");
+
+    let blobstore = ManifoldBlob::new_with_prefix(&manifold_args.bucket, &manifold_args.prefix);
+
+    match (use_memcache, no_prefix) {
+        (None, false) => {
+            let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
+            blobstore.get(ctx, key.clone()).boxify()
+        }
+        (None, true) => blobstore.get(ctx, key.clone()).boxify(),
+        (Some(mode), false) => {
+            let blobstore =
+                new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket).unwrap();
+            let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
+            get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+        }
+        (Some(mode), true) => {
+            let blobstore =
+                new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket).unwrap();
+            get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+        }
+    }
+    .map(move |value| {
+        println!("{:?}", value);
+        if let Some(value) = value {
+            let decode_as = decode_as.as_ref().and_then(|val| {
+                let val = val.as_str();
+                if val == "auto" {
+                    detect_decode(&key, &logger)
+                } else {
+                    Some(val)
+                }
+            });
+
+            match decode_as {
+                Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
+                Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
+                Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
+                // TODO: (rain1) T30974137 add a better way to print out file contents
+                Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
+                _ => (),
+            }
+        }
+    })
+    .boxify()
+}
+
+fn subcommand_bonsai_fetch(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    let rev = sub_m
+        .value_of("HG_CHANGESET_OR_BOOKMARK")
+        .unwrap()
+        .to_string();
+
+    args::init_cachelib(&matches);
+
+    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+    let ctx = CoreContext::test_mock();
+    let json_flag = sub_m.is_present("json");
+
+    args::open_repo(&logger, &matches)
+        .and_then(move |blobrepo| fetch_bonsai_changeset(ctx, &rev, &blobrepo))
+        .map(move |bcs| {
+            if json_flag {
+                match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => println!("{}", e),
+                }
+            } else {
+                println!(
+                    "BonsaiChangesetId: {} \n\
+                     Author: {} \n\
+                     Message: {} \n\
+                     FileChanges:",
+                    bcs.get_changeset_id(),
+                    bcs.author(),
+                    bcs.message().lines().next().unwrap_or("")
+                );
+
+                for (path, file_change) in bcs.file_changes() {
+                    match file_change {
+                        Some(file_change) => match file_change.copy_from() {
+                            Some(_) => {
+                                println!("\t COPY/MOVE: {} {}", path, file_change.content_id())
+                            }
+                            None => {
+                                println!("\t ADDED/MODIFIED: {} {}", path, file_change.content_id())
+                            }
+                        },
+                        None => println!("\t REMOVED: {}", path),
+                    }
+                }
+            }
+        })
+        .boxify()
+}
+
+fn subcommand_content_fetch(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
+    let path = sub_m.value_of("PATH").unwrap().to_string();
+
+    args::init_cachelib(&matches);
+
+    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+    let ctx = CoreContext::test_mock();
+
+    args::open_repo(&logger, &matches)
+        .and_then(move |blobrepo| fetch_content(ctx, logger.clone(), &blobrepo, &rev, &path))
+        .and_then(|content| {
+            match content {
+                Content::Executable(_) => {
+                    println!("Binary file");
+                }
+                Content::File(contents) | Content::Symlink(contents) => match contents {
+                    FileContents::Bytes(bytes) => {
+                        let content =
+                            String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
+                        println!("{}", content);
+                    }
+                },
+                Content::Tree(mf) => {
+                    let entries: Vec<_> = mf.list().collect();
+                    let mut longest_len = 0;
+                    for entry in entries.iter() {
+                        let basename_len =
+                            entry.get_name().map(|basename| basename.len()).unwrap_or(0);
+                        if basename_len > longest_len {
+                            longest_len = basename_len;
+                        }
+                    }
+                    for entry in entries {
+                        let mut basename = String::from_utf8_lossy(
+                            entry.get_name().expect("empty basename found").as_bytes(),
+                        )
+                        .to_string();
+                        for _ in basename.len()..longest_len {
+                            basename.push(' ');
+                        }
+                        println!("{} {} {:?}", basename, entry.get_hash(), entry.get_type());
+                    }
+                }
+            }
+            future::ok(()).boxify()
+        })
+        .boxify()
+}
+
+fn subcommand_hg_changeset(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    match sub_m.subcommand() {
+        (HG_CHANGESET_DIFF, Some(sub_m)) => {
+            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+            let ctx = CoreContext::test_mock();
+
+            let left_cs = sub_m
+                .value_of("LEFT_CS")
+                .ok_or(format_err!("LEFT_CS argument expected"))
+                .and_then(HgChangesetId::from_str);
+            let right_cs = sub_m
+                .value_of("RIGHT_CS")
+                .ok_or(format_err!("RIGHT_CS argument expected"))
+                .and_then(HgChangesetId::from_str);
+
+            args::init_cachelib(&matches);
+            args::open_repo(&logger, &matches)
+                .and_then(move |repo| {
+                    (left_cs, right_cs)
+                        .into_future()
+                        .and_then(move |(left_cs, right_cs)| {
+                            hg_changeset_diff(ctx, repo, left_cs, right_cs)
+                        })
+                })
+                .and_then(|diff| {
+                    serde_json::to_writer(io::stdout(), &diff)
+                        .map(|_| ())
+                        .map_err(Error::from)
+                })
+                .boxify()
+        }
+        (HG_CHANGESET_RANGE, Some(sub_m)) => {
+            let start_cs = sub_m
+                .value_of("START_CS")
+                .ok_or(format_err!("START_CS argument expected"))
+                .and_then(HgChangesetId::from_str);
+            let stop_cs = sub_m
+                .value_of("STOP_CS")
+                .ok_or(format_err!("STOP_CS argument expected"))
+                .and_then(HgChangesetId::from_str);
+
+            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+            let ctx = CoreContext::test_mock();
+
+            args::init_cachelib(&matches);
+            args::open_repo(&logger, &matches)
+                .and_then(move |repo| {
+                    (start_cs, stop_cs)
+                        .into_future()
+                        .and_then({
+                            cloned!(ctx, repo);
+                            move |(start_cs, stop_cs)| {
+                                (
+                                    repo.get_bonsai_from_hg(ctx.clone(), start_cs),
+                                    repo.get_bonsai_from_hg(ctx, stop_cs),
+                                )
+                            }
+                        })
+                        .and_then(|(start_cs_opt, stop_cs_opt)| {
+                            (
+                                start_cs_opt.ok_or(err_msg("failed to resolve changeset")),
+                                stop_cs_opt.ok_or(err_msg("failed to resovle changeset")),
+                            )
+                        })
+                        .and_then({
+                            cloned!(repo);
+                            move |(start_cs, stop_cs)| {
+                                RangeNodeStream::new(
+                                    ctx.clone(),
+                                    repo.get_changeset_fetcher(),
+                                    start_cs,
+                                    stop_cs,
+                                )
+                                .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                                .buffered(100)
+                                .map(|cs| cs.to_hex().to_string())
+                                .collect()
+                            }
+                        })
+                        .and_then(|css| {
+                            serde_json::to_writer(io::stdout(), &css)
+                                .map(|_| ())
+                                .map_err(Error::from)
+                        })
+                })
+                .boxify()
+        }
+        _ => {
+            println!("{}", sub_m.usage());
+            ::std::process::exit(1);
+        }
+    }
+}
+
+fn subcommand_skiplist(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    match sub_m.subcommand() {
+        (SKIPLIST_BUILD, Some(sub_m)) => {
+            let key = sub_m
+                .value_of("BLOBSTORE_KEY")
+                .expect("blobstore key is not specified")
+                .to_string();
+
+            args::init_cachelib(&matches);
+            let ctx = CoreContext::test_mock();
+            let sql_changesets = args::open_sql_changesets(&matches);
+            let repo = args::open_repo(&logger, &matches);
+            repo.join(sql_changesets)
+                .and_then(move |(repo, sql_changesets)| {
+                    build_skiplist_index(ctx, repo, key, logger, sql_changesets)
+                })
+                .boxify()
+        }
+        (SKIPLIST_READ, Some(sub_m)) => {
+            let key = sub_m
+                .value_of("BLOBSTORE_KEY")
+                .expect("blobstore key is not specified")
+                .to_string();
+
+            args::init_cachelib(&matches);
+            let ctx = CoreContext::test_mock();
+            args::open_repo(&logger, &matches)
+                .and_then(move |repo| read_skiplist_index(ctx.clone(), repo, key, logger))
+                .boxify()
+        }
+        _ => {
+            println!("{}", sub_m.usage());
+            ::std::process::exit(1);
+        }
+    }
+}
+
+fn subcommand_hash_convert(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    let source_hash = sub_m.value_of("HASH").unwrap().to_string();
+    let source = sub_m.value_of("from").unwrap().to_string();
+    let target = sub_m.value_of("to").unwrap();
+    // Check that source and target are different types.
+    assert_eq!(
+        false,
+        (source == "hg") ^ (target == "bonsai"),
+        "source and target should be different"
+    );
+    args::init_cachelib(&matches);
+    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+    let ctx = CoreContext::test_mock();
+    args::open_repo(&logger, &matches)
+        .and_then(move |repo| {
+            if source == "hg" {
+                repo.get_bonsai_from_hg(
+                    ctx,
+                    HgChangesetId::from_str(&source_hash)
+                        .expect("source hash is not valid hg changeset id"),
+                )
+                .and_then(move |maybebonsai| {
+                    match maybebonsai {
+                        Some(bonsai) => {
+                            println!("{}", bonsai);
+                        }
+                        None => {
+                            panic!("no matching mononoke id found");
+                        }
+                    }
+                    Ok(())
+                })
+                .left_future()
+            } else {
+                repo.get_hg_from_bonsai_changeset(
+                    ctx,
+                    ChangesetId::from_str(&source_hash)
+                        .expect("source hash is not valid mononoke id"),
+                )
+                .and_then(move |mercurial| {
+                    println!("{}", mercurial);
+                    Ok(())
+                })
+                .right_future()
+            }
+        })
+        .boxify()
+}
+
+fn subcommand_add_public_phases(
+    logger: Logger,
+    matches: &ArgMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    let path = String::from(sub_m.value_of("input-file").unwrap());
+    let chunk_size = sub_m
+        .value_of("chunk-size")
+        .and_then(|chunk_size| chunk_size.parse::<usize>().ok())
+        .unwrap_or(16384);
+    let ctx = CoreContext::test_mock();
+    args::init_cachelib(&matches);
+    let phases: Arc<SqlPhases> =
+        Arc::new(args::open_sql(&matches, "phases").expect("Failed to open the db with phases"));
+    args::open_repo(&logger, &matches)
+        .and_then(move |repo| add_public_phases(ctx, repo, phases, logger, path, chunk_size))
+        .boxify()
+}
+
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
     let logger = args::get_logger(&matches);
     let error_logger = logger.clone();
 
-    let blobstore_args = args::parse_blobstore_args(&matches);
-
-    let repo_id = args::get_repo_id(&matches)?;
-
     let future = match matches.subcommand() {
-        (BLOBSTORE_FETCH, Some(sub_m)) => {
-            let manifold_args = match blobstore_args {
-                RemoteBlobstoreArgs::Manifold(args) => args,
-                bad => panic!("Unsupported blobstore: {:#?}", bad),
-            };
-
-            let ctx = CoreContext::test_mock();
-            let key = sub_m.value_of("KEY").unwrap().to_string();
-            let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
-            let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
-            let no_prefix = sub_m.is_present("no-prefix");
-
-            let blobstore =
-                ManifoldBlob::new_with_prefix(&manifold_args.bucket, &manifold_args.prefix);
-
-            match (use_memcache, no_prefix) {
-                (None, false) => {
-                    let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-                    blobstore.get(ctx, key.clone()).boxify()
-                }
-                (None, true) => blobstore.get(ctx, key.clone()).boxify(),
-                (Some(mode), false) => {
-                    let blobstore =
-                        new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket)
-                            .unwrap();
-                    let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-                    get_cache(ctx.clone(), &blobstore, key.clone(), mode)
-                }
-                (Some(mode), true) => {
-                    let blobstore =
-                        new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket)
-                            .unwrap();
-                    get_cache(ctx.clone(), &blobstore, key.clone(), mode)
-                }
-            }
-            .map(move |value| {
-                println!("{:?}", value);
-                if let Some(value) = value {
-                    let decode_as = decode_as.as_ref().and_then(|val| {
-                        let val = val.as_str();
-                        if val == "auto" {
-                            detect_decode(&key, &logger)
-                        } else {
-                            Some(val)
-                        }
-                    });
-
-                    match decode_as {
-                        Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
-                        Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
-                        Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
-                        // TODO: (rain1) T30974137 add a better way to print out file contents
-                        Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
-                        _ => (),
-                    }
-                }
-            })
-            .boxify()
-        }
-        (BONSAI_FETCH, Some(sub_m)) => {
-            let rev = sub_m
-                .value_of("HG_CHANGESET_OR_BOOKMARK")
-                .unwrap()
-                .to_string();
-
-            args::init_cachelib(&matches);
-
-            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-            let ctx = CoreContext::test_mock();
-            let json_flag = sub_m.is_present("json");
-
-            args::open_repo(&logger, &matches)
-                .and_then(move |blobrepo| fetch_bonsai_changeset(ctx, &rev, &blobrepo))
-                .map(move |bcs| {
-                    if json_flag {
-                        match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
-                            Ok(json) => println!("{}", json),
-                            Err(e) => println!("{}", e),
-                        }
-                    } else {
-                        println!(
-                            "BonsaiChangesetId: {} \n\
-                             Author: {} \n\
-                             Message: {} \n\
-                             FileChanges:",
-                            bcs.get_changeset_id(),
-                            bcs.author(),
-                            bcs.message().lines().next().unwrap_or("")
-                        );
-
-                        for (path, file_change) in bcs.file_changes() {
-                            match file_change {
-                                Some(file_change) => match file_change.copy_from() {
-                                    Some(_) => println!(
-                                        "\t COPY/MOVE: {} {}",
-                                        path,
-                                        file_change.content_id()
-                                    ),
-                                    None => println!(
-                                        "\t ADDED/MODIFIED: {} {}",
-                                        path,
-                                        file_change.content_id()
-                                    ),
-                                },
-                                None => println!("\t REMOVED: {}", path),
-                            }
-                        }
-                    }
-                })
-                .boxify()
-        }
-        (CONTENT_FETCH, Some(sub_m)) => {
-            let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
-            let path = sub_m.value_of("PATH").unwrap().to_string();
-
-            args::init_cachelib(&matches);
-
-            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-            let ctx = CoreContext::test_mock();
-
-            args::open_repo(&logger, &matches)
-                .and_then(move |blobrepo| {
-                    fetch_content(ctx, logger.clone(), &blobrepo, &rev, &path)
-                })
-                .and_then(|content| {
-                    match content {
-                        Content::Executable(_) => {
-                            println!("Binary file");
-                        }
-                        Content::File(contents) | Content::Symlink(contents) => match contents {
-                            FileContents::Bytes(bytes) => {
-                                let content = String::from_utf8(bytes.to_vec())
-                                    .expect("non-utf8 file content");
-                                println!("{}", content);
-                            }
-                        },
-                        Content::Tree(mf) => {
-                            let entries: Vec<_> = mf.list().collect();
-                            let mut longest_len = 0;
-                            for entry in entries.iter() {
-                                let basename_len =
-                                    entry.get_name().map(|basename| basename.len()).unwrap_or(0);
-                                if basename_len > longest_len {
-                                    longest_len = basename_len;
-                                }
-                            }
-                            for entry in entries {
-                                let mut basename = String::from_utf8_lossy(
-                                    entry.get_name().expect("empty basename found").as_bytes(),
-                                )
-                                .to_string();
-                                for _ in basename.len()..longest_len {
-                                    basename.push(' ');
-                                }
-                                println!(
-                                    "{} {} {:?}",
-                                    basename,
-                                    entry.get_hash(),
-                                    entry.get_type()
-                                );
-                            }
-                        }
-                    }
-                    future::ok(()).boxify()
-                })
-                .boxify()
-        }
+        (BLOBSTORE_FETCH, Some(sub_m)) => subcommand_blobstore_fetch(logger, &matches, sub_m),
+        (BONSAI_FETCH, Some(sub_m)) => subcommand_bonsai_fetch(logger, &matches, sub_m),
+        (CONTENT_FETCH, Some(sub_m)) => subcommand_content_fetch(logger, &matches, sub_m),
         (BOOKMARKS, Some(sub_m)) => {
             args::init_cachelib(&matches);
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
@@ -1344,201 +1559,13 @@ fn main() -> Result<()> {
             let repo_fut = args::open_repo(&logger, &matches).boxify();
             bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)
         }
-        (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
-            (HG_CHANGESET_DIFF, Some(sub_m)) => {
-                // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-                let ctx = CoreContext::test_mock();
-
-                let left_cs = sub_m
-                    .value_of("LEFT_CS")
-                    .ok_or(format_err!("LEFT_CS argument expected"))
-                    .and_then(HgChangesetId::from_str);
-                let right_cs = sub_m
-                    .value_of("RIGHT_CS")
-                    .ok_or(format_err!("RIGHT_CS argument expected"))
-                    .and_then(HgChangesetId::from_str);
-
-                args::init_cachelib(&matches);
-                args::open_repo(&logger, &matches)
-                    .and_then(move |repo| {
-                        (left_cs, right_cs)
-                            .into_future()
-                            .and_then(move |(left_cs, right_cs)| {
-                                hg_changeset_diff(ctx, repo, left_cs, right_cs)
-                            })
-                    })
-                    .and_then(|diff| {
-                        serde_json::to_writer(io::stdout(), &diff)
-                            .map(|_| ())
-                            .map_err(Error::from)
-                    })
-                    .boxify()
-            }
-            (HG_CHANGESET_RANGE, Some(sub_m)) => {
-                let start_cs = sub_m
-                    .value_of("START_CS")
-                    .ok_or(format_err!("START_CS argument expected"))
-                    .and_then(HgChangesetId::from_str);
-                let stop_cs = sub_m
-                    .value_of("STOP_CS")
-                    .ok_or(format_err!("STOP_CS argument expected"))
-                    .and_then(HgChangesetId::from_str);
-
-                // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-                let ctx = CoreContext::test_mock();
-
-                args::init_cachelib(&matches);
-                args::open_repo(&logger, &matches)
-                    .and_then(move |repo| {
-                        (start_cs, stop_cs)
-                            .into_future()
-                            .and_then({
-                                cloned!(ctx, repo);
-                                move |(start_cs, stop_cs)| {
-                                    (
-                                        repo.get_bonsai_from_hg(ctx.clone(), start_cs),
-                                        repo.get_bonsai_from_hg(ctx, stop_cs),
-                                    )
-                                }
-                            })
-                            .and_then(|(start_cs_opt, stop_cs_opt)| {
-                                (
-                                    start_cs_opt.ok_or(err_msg("failed to resolve changeset")),
-                                    stop_cs_opt.ok_or(err_msg("failed to resovle changeset")),
-                                )
-                            })
-                            .and_then({
-                                cloned!(repo);
-                                move |(start_cs, stop_cs)| {
-                                    RangeNodeStream::new(
-                                        ctx.clone(),
-                                        repo.get_changeset_fetcher(),
-                                        start_cs,
-                                        stop_cs,
-                                    )
-                                    .map(move |cs| {
-                                        repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
-                                    })
-                                    .buffered(100)
-                                    .map(|cs| cs.to_hex().to_string())
-                                    .collect()
-                                }
-                            })
-                            .and_then(|css| {
-                                serde_json::to_writer(io::stdout(), &css)
-                                    .map(|_| ())
-                                    .map_err(Error::from)
-                            })
-                    })
-                    .boxify()
-            }
-            _ => {
-                println!("{}", sub_m.usage());
-                ::std::process::exit(1);
-            }
-        },
+        (HG_CHANGESET, Some(sub_m)) => subcommand_hg_changeset(logger, &matches, sub_m),
         (HG_SYNC_BUNDLE, Some(sub_m)) => {
-            process_hg_sync_subcommand(sub_m, &matches, repo_id, logger.clone())
+            subcommand_process_hg_sync(sub_m, &matches, logger.clone())
         }
-        (SKIPLIST, Some(sub_m)) => match sub_m.subcommand() {
-            (SKIPLIST_BUILD, Some(sub_m)) => {
-                let key = sub_m
-                    .value_of("BLOBSTORE_KEY")
-                    .expect("blobstore key is not specified")
-                    .to_string();
-
-                args::init_cachelib(&matches);
-                let ctx = CoreContext::test_mock();
-                let sql_changesets = args::open_sql_changesets(&matches);
-                let repo = args::open_repo(&logger, &matches);
-                repo.join(sql_changesets)
-                    .and_then(move |(repo, sql_changesets)| {
-                        build_skiplist_index(ctx, repo, key, logger, sql_changesets)
-                    })
-                    .boxify()
-            }
-            (SKIPLIST_READ, Some(sub_m)) => {
-                let key = sub_m
-                    .value_of("BLOBSTORE_KEY")
-                    .expect("blobstore key is not specified")
-                    .to_string();
-
-                args::init_cachelib(&matches);
-                let ctx = CoreContext::test_mock();
-                args::open_repo(&logger, &matches)
-                    .and_then(move |repo| read_skiplist_index(ctx.clone(), repo, key, logger))
-                    .boxify()
-            }
-            _ => {
-                println!("{}", sub_m.usage());
-                ::std::process::exit(1);
-            }
-        },
-        (HASH_CONVERT, Some(sub_m)) => {
-            let source_hash = sub_m.value_of("HASH").unwrap().to_string();
-            let source = sub_m.value_of("from").unwrap().to_string();
-            let target = sub_m.value_of("to").unwrap();
-            // Check that source and target are different types.
-            assert_eq!(
-                false,
-                (source == "hg") ^ (target == "bonsai"),
-                "source and target should be different"
-            );
-            args::init_cachelib(&matches);
-            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-            let ctx = CoreContext::test_mock();
-            args::open_repo(&logger, &matches)
-                .and_then(move |repo| {
-                    if source == "hg" {
-                        repo.get_bonsai_from_hg(
-                            ctx,
-                            HgChangesetId::from_str(&source_hash)
-                                .expect("source hash is not valid hg changeset id"),
-                        )
-                        .and_then(move |maybebonsai| {
-                            match maybebonsai {
-                                Some(bonsai) => {
-                                    println!("{}", bonsai);
-                                }
-                                None => {
-                                    panic!("no matching mononoke id found");
-                                }
-                            }
-                            Ok(())
-                        })
-                        .left_future()
-                    } else {
-                        repo.get_hg_from_bonsai_changeset(
-                            ctx,
-                            ChangesetId::from_str(&source_hash)
-                                .expect("source hash is not valid mononoke id"),
-                        )
-                        .and_then(move |mercurial| {
-                            println!("{}", mercurial);
-                            Ok(())
-                        })
-                        .right_future()
-                    }
-                })
-                .boxify()
-        }
-        (ADD_PUBLIC_PHASES, Some(sub_m)) => {
-            let path = String::from(sub_m.value_of("input-file").unwrap());
-            let chunk_size = sub_m
-                .value_of("chunk-size")
-                .and_then(|chunk_size| chunk_size.parse::<usize>().ok())
-                .unwrap_or(16384);
-            let ctx = CoreContext::test_mock();
-            args::init_cachelib(&matches);
-            let phases: Arc<SqlPhases> = Arc::new(
-                args::open_sql(&matches, "phases").expect("Failed to open the db with phases"),
-            );
-            args::open_repo(&logger, &matches)
-                .and_then(move |repo| {
-                    add_public_phases(ctx, repo, phases, logger, path, chunk_size)
-                })
-                .boxify()
-        }
+        (SKIPLIST, Some(sub_m)) => subcommand_skiplist(logger, &matches, sub_m),
+        (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(logger, &matches, sub_m),
+        (ADD_PUBLIC_PHASES, Some(sub_m)) => subcommand_add_public_phases(logger, &matches, sub_m),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
