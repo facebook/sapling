@@ -310,7 +310,7 @@ fn main() -> Result<()> {
     let logger = args::get_logger(&matches);
 
     args::init_cachelib(&matches);
-    let sqlchangesets = Arc::new(args::open_sql_changesets(&matches)?);
+    let sqlchangesets = Arc::new(args::open_sql::<SqlChangesets>(&matches)?);
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
         "verify" => Mode::Verify,

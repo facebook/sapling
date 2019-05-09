@@ -64,7 +64,7 @@ Push to Mononoke
   [1]
 
 Check that new entry was added to the sync database. 3 pushes and 1 blobimport
-  $ sqlite3 "$TESTTMP/repo/books" "select count(*) from bookmarks_update_log";
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "select count(*) from bookmarks_update_log";
   4
 
 Sync it to another client
@@ -254,7 +254,7 @@ Use the same code here as in the actual opsfiles hook
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
@@ -364,7 +364,7 @@ Now bookmark is not blocked
   * caused by: sync failed (glob)
 
 Set the correct timestamp back
-  $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
 
   $ cd repo-hg-2
   $ hg log -r master_bookmark
@@ -585,7 +585,7 @@ Test hook bypass using REPLAY_BYPASS file
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ sqlite3 "$TESTTMP/repo/books" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ touch repo-hg-2/.hg/REPLAY_BYPASS
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)

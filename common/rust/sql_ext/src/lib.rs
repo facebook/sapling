@@ -111,6 +111,7 @@ pub fn create_raw_xdb_connections(tier: impl ToString) -> Result<SqlConnections>
 
 /// Set of useful constructors for Mononoke's sql based data access objects
 pub trait SqlConstructors: Sized {
+    /// Label used for stats accounting, and also for the local DB name
     const LABEL: &'static str;
 
     fn from_connections(

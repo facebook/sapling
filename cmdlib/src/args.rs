@@ -34,7 +34,7 @@ use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo;
-use changesets::{SqlChangesets, SqlConstructors};
+use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, RepoConfig};
@@ -294,25 +294,25 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
     Ok(RepositoryId::new(repo_id as i32))
 }
 
-pub fn open_sql<T>(matches: &ArgMatches<'_>, name: &'static str) -> Result<T>
+pub fn open_sql<T>(matches: &ArgMatches<'_>) -> Result<T>
 where
     T: SqlConstructors,
 {
+    let name = T::LABEL;
+
     let (_, config) = get_config(matches)?;
     match &config.storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => T::with_sqlite_path(path.join(name)),
-        MetadataDBConfig::Mysql { db_address, .. } => {
-            assert!(name != "filenodes");
+        MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
             match parse_myrouter_port(matches) {
                 Some(myrouter_port) => Ok(T::with_myrouter(&db_address, myrouter_port)),
                 None => T::with_raw_xdb_tier(&db_address),
             }
         }
+        MetadataDBConfig::Mysql { .. } => Err(err_msg(
+            "Use SqlFilenodes::with_sharded_myrouter for filenodes",
+        )),
     }
-}
-
-pub fn open_sql_changesets(matches: &ArgMatches<'_>) -> Result<SqlChangesets> {
-    open_sql::<SqlChangesets>(matches, "changesets")
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.

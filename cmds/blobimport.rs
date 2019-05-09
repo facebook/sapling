@@ -92,7 +92,7 @@ fn main() -> Result<()> {
 
     let no_bookmark = matches.is_present("no-bookmark");
 
-    let phases_store = Arc::new(args::open_sql::<SqlPhases>(&matches, "phases")?);
+    let phases_store = Arc::new(args::open_sql::<SqlPhases>(&matches)?);
 
     let blobimport = args::create_repo(&ctx.logger(), &matches).and_then(move |repo| {
         let blobrepo = Arc::new(repo.clone());

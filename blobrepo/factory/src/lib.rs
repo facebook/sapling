@@ -284,7 +284,7 @@ fn new_local(
     blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
 ) -> Result<BlobRepo> {
-    let bookmarks = SqlBookmarks::with_sqlite_path(dbpath.join("books"))
+    let bookmarks = SqlBookmarks::with_sqlite_path(dbpath.join("bookmarks"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
     let filenodes = SqlFilenodes::with_sqlite_path(dbpath.join("filenodes"))
         .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;

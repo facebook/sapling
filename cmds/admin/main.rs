@@ -877,13 +877,14 @@ fn subcommand_process_hg_sync(
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
 
     let ctx = CoreContext::test_mock();
-    let mutable_counters: Arc<SqlMutableCounters> = Arc::new(
-        args::open_sql(&matches, "mutable_counters")
+    let mutable_counters: Arc<_> = Arc::new(
+        args::open_sql::<SqlMutableCounters>(&matches)
             .expect("Failed to open the db with mutable_counters"),
     );
 
-    let bookmarks: Arc<SqlBookmarks> =
-        Arc::new(args::open_sql(&matches, "books").expect("Failed to open the db with bookmarks"));
+    let bookmarks: Arc<_> = Arc::new(
+        args::open_sql::<SqlBookmarks>(&matches).expect("Failed to open the db with bookmarks"),
+    );
 
     match sub_m.subcommand() {
         (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match (
@@ -1441,7 +1442,7 @@ fn subcommand_skiplist(
 
             args::init_cachelib(&matches);
             let ctx = CoreContext::test_mock();
-            let sql_changesets = args::open_sql_changesets(&matches);
+            let sql_changesets = args::open_sql::<SqlChangesets>(&matches);
             let repo = args::open_repo(&logger, &matches);
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {
@@ -1533,8 +1534,8 @@ fn subcommand_add_public_phases(
         .unwrap_or(16384);
     let ctx = CoreContext::test_mock();
     args::init_cachelib(&matches);
-    let phases: Arc<SqlPhases> =
-        Arc::new(args::open_sql(&matches, "phases").expect("Failed to open the db with phases"));
+    let phases: Arc<_> =
+        Arc::new(args::open_sql::<SqlPhases>(&matches).expect("Failed to open the db with phases"));
     args::open_repo(&logger, &matches)
         .and_then(move |repo| add_public_phases(ctx, repo, phases, logger, path, chunk_size))
         .boxify()

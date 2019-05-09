@@ -11,7 +11,7 @@ setup configuration
   $ create_books_sqlite3_db
   $ write_stub_log_entry create "$ZERO"
   $ write_stub_log_entry update "$ZERO" "$ONE"
-  $ sqlite3 "$TESTTMP/repo/books" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
 
@@ -27,7 +27,7 @@ it is satisfied with only non-blobimport entries
 it is satisfied with only blobimport entries
   $ write_stub_log_entry --blobimport update "$ONE" "$TWO"
   $ write_stub_log_entry --blobimport update "$TWO" "$THREE"
-  $ sqlite3 "$TESTTMP/repo/books" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
   3|0|1111111111111111111111111111111111111111111111111111111111111111|blobimport

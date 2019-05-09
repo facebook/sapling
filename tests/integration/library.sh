@@ -89,7 +89,7 @@ function init_mutable_counters_sqlite3_db {
 }
 
 function create_books_sqlite3_db {
-  cat >> "$TESTTMP"/books.sql <<SQL
+  cat >> "$TESTTMP"/bookmarks.sql <<SQL
   CREATE TABLE bookmarks_update_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   repo_id INT UNSIGNED NOT NULL,
@@ -101,7 +101,7 @@ function create_books_sqlite3_db {
 );
 SQL
 
-  sqlite3 "$TESTTMP/repo/books" "$(cat "$TESTTMP"/books.sql)"
+  sqlite3 "$TESTTMP/repo/bookmarks" "$(cat "$TESTTMP"/bookmarks.sql)"
 }
 
 function mononoke_hg_sync_loop {
@@ -214,12 +214,12 @@ function init_pushrebaserecording_sqlite3_db {
 }
 
 function init_bookmark_log_sqlite3_db {
-  sqlite3 "$TESTTMP/repo/books" \
+  sqlite3 "$TESTTMP/repo/bookmarks" \
   "insert into bookmarks_update_log \
   (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp) \
   values(0, 'master_bookmark', NULL, X'04C1EA537B01FFF207445E043E310807F9059572DD3087A0FCE458DEC005E4BD', 'pushrebase', 0)";
 
-  sqlite3 "$TESTTMP/repo/books" "select * from bookmarks_update_log";
+  sqlite3 "$TESTTMP/repo/bookmarks" "select * from bookmarks_update_log";
 }
 
 function setup_mononoke_config {
