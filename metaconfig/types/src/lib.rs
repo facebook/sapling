@@ -520,10 +520,18 @@ impl MetadataDBConfig {
     /// Return address we should connect to for a remote DB
     /// (Assumed to be Mysql)
     pub fn get_db_address(&self) -> Option<&str> {
-        if let MetadataDBConfig::Mysql { db_address, .. } = self {
-            Some(db_address.as_str())
-        } else {
-            None
+        match self {
+            MetadataDBConfig::Mysql { db_address, .. } => Some(db_address.as_str()),
+            MetadataDBConfig::LocalDB { .. } => None,
+        }
+        }
+
+    /// Return local path that stores local DB
+    /// (Assumed to be Sqlite)
+    pub fn get_local_address(&self) -> Option<&PathBuf> {
+        match self {
+            MetadataDBConfig::LocalDB { path } => Some(path),
+            MetadataDBConfig::Mysql { .. } => None,
         }
     }
 }

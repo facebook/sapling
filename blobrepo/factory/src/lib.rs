@@ -157,16 +157,22 @@ fn make_blobstore(
             scuba_table,
             blobstores,
         } => {
-            let queue = dbconfig
-                .get_db_address()
-                .ok_or_else(|| err_msg("Multiplexed blobstore requires remote DB for queue"))
-                .and_then(move |dbaddr| {
-                    myrouter_port
-                        .ok_or_else(|| err_msg("Need myrouter port for remote DB"))
-                        .map(|port| (dbaddr, port))
-                })
-                .map(|(addr, port)| Arc::new(SqlBlobstoreSyncQueue::with_myrouter(addr, port)))
-                .into_future();
+            let queue = if dbconfig.is_local() {
+                dbconfig.get_local_address()
+                    .ok_or_else(|| err_msg("Local db path is not specified"))
+                    .and_then(|path| Ok(Arc::new(SqlBlobstoreSyncQueue::with_sqlite_path(path.join("blobstore_sync_queue"))?)))
+                    .into_future()
+            } else {
+                dbconfig.get_db_address()
+                    .ok_or_else(|| err_msg("remote db address is not specified"))
+                    .and_then(move |dbaddr| {
+                        myrouter_port
+                            .ok_or_else(|| err_msg("Need myrouter port for remote DB"))
+                            .map(|port| (dbaddr, port))
+                    })
+                    .map(|(addr, port)| Arc::new(SqlBlobstoreSyncQueue::with_myrouter(addr, port)))
+                    .into_future()
+            };
 
             let components: Vec<_> = blobstores
                 .iter()
