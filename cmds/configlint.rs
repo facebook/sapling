@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         )
         .get_matches();
 
-    let _quiet = matches.is_present("quiet");
+    let quiet = matches.is_present("quiet");
     let verbose = matches.is_present("verbose");
 
     // Most of the work is done here - this validates that the files are present,
@@ -53,10 +53,29 @@ fn main() -> Result<()> {
     let mut bad = false;
 
     for (name, config) in &configs.repos {
+        let (isbad, locality) = match (
+            config.storage_config.dbconfig.is_local(),
+            config.storage_config.blobstore.is_local(),
+        ) {
+            (true, true) => (false, "local"),
+            (false, false) => (false, "remote"),
+            (true, false) => (true, "MIXED - local DB, remote blobstore"),
+            (false, true) => (true, "MIXED - remote DB, local blobstore"),
+        };
+
+        bad |= isbad;
+
         repoids
             .entry(config.repoid)
             .and_modify(|names| names.push(name.as_str()))
             .or_insert(vec![name.as_str()]);
+
+        if isbad || !quiet {
+            println!(
+                "Repo {}: {} - enabled: {:?} locality: {}",
+                config.repoid, name, config.enabled, locality
+            );
+        }
     }
 
     for (id, names) in repoids {

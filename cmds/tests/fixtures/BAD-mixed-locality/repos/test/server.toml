@@ -1,0 +1,7 @@
+repoid = 123
+storage_config = "simple"
+
+[storage.simple]
+db.local_db_path = "/tmp/foo"
+blobstore_type = "manifold"
+manifold_bucket = "bucket"
