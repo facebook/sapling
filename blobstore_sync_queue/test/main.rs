@@ -8,13 +8,6 @@
 
 #![deny(warnings)]
 
-extern crate blobstore_sync_queue;
-extern crate context;
-extern crate futures;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-extern crate tokio;
-
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue, SqlConstructors,
 };
@@ -41,9 +34,7 @@ fn test_simple() {
     let entry2 = BlobstoreSyncQueueEntry::new(repo_id, key1.clone(), bs0, t1);
 
     // add
-    assert!(rt
-        .block_on(queue.add(ctx.clone(), entry0.clone()))
-        .is_ok());
+    assert!(rt.block_on(queue.add(ctx.clone(), entry0.clone())).is_ok());
     assert!(rt.block_on(queue.add(ctx.clone(), entry1.clone())).is_ok());
     assert!(rt.block_on(queue.add(ctx.clone(), entry2.clone())).is_ok());
 

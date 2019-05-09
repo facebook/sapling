@@ -9,7 +9,9 @@
 
 use bytes::Bytes;
 use futures::sync::{mpsc, oneshot};
-use futures::{future, try_ready, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
+use futures::{
+    future, stream, try_ready, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream,
+};
 use tokio::timer::Delay;
 use tokio_io::codec::{Decoder, Encoder};
 use tokio_io::AsyncWrite;
@@ -265,6 +267,13 @@ pub trait StreamExt: Stream {
             delay: Delay::new(Instant::now() + duration),
         }
     }
+
+    fn batch(self, limit: usize) -> BatchStream<Self>
+    where
+        Self: Sized,
+    {
+        BatchStream::new(self, limit)
+    }
 }
 
 impl<T> StreamExt for T where T: Stream {}
@@ -480,6 +489,7 @@ impl<S: Stream<Error = failure::Error>> Stream for StreamWithTimeout<S> {
 /// `Poll::NotReady` is returned if it indicates `WouldBlock` or otherwise `Err`
 /// is returned.
 #[macro_export]
+#[rustfmt::skip]
 macro_rules! handle_nb {
     ($e:expr) => {
         match $e {
@@ -496,6 +506,7 @@ macro_rules! handle_nb {
 /// BoxFuture. The result of it is either Ok part of Result or immediate returning the Err part
 /// converted into BoxFuture.
 #[macro_export]
+#[rustfmt::skip]
 macro_rules! try_boxfuture {
     ($e:expr) => {
         match $e {
@@ -509,6 +520,7 @@ macro_rules! try_boxfuture {
 /// BoxStream. The result of it is either Ok part of Result or immediate returning the Err part
 /// converted into BoxStream.
 #[macro_export]
+#[rustfmt::skip]
 macro_rules! try_boxstream {
     ($e:expr) => {
         match $e {
@@ -522,6 +534,7 @@ macro_rules! try_boxstream {
 /// expected return type is BoxFuture. Exits a function early with an Error if the condition is not
 /// satisfied.
 #[macro_export]
+#[rustfmt::skip]
 macro_rules! ensure_boxfuture {
     ($cond:expr, $e:expr) => {
         if !($cond) {
@@ -534,6 +547,7 @@ macro_rules! ensure_boxfuture {
 /// expected return type is BoxStream. Exits a function early with an Error if the condition is not
 /// satisfied.
 #[macro_export]
+#[rustfmt::skip]
 macro_rules! ensure_boxstream {
     ($cond:expr, $e:expr) => {
         if !($cond) {
@@ -671,6 +685,67 @@ where
         match self.sink.close() {
             Ok(res) => Ok(res),
             Err(err) => Err(create_std_error(err)),
+        }
+    }
+}
+
+/// It's a combinator that converts Stream<A> into Stream<Vec<A>>.
+/// So interface is similar to `.chunks()` method, but there's an important difference:
+/// BatchStream won't wait until the whole batch fills up i.e. as soon as underlying stream
+/// return NotReady, then new batch is returned from BatchStream
+pub struct BatchStream<S>
+where
+    S: Stream,
+{
+    inner: stream::Fuse<S>,
+    err: Option<S::Error>,
+    limit: usize,
+}
+
+impl<S: Stream> BatchStream<S> {
+    pub fn new(s: S, limit: usize) -> Self {
+        Self {
+            inner: s.fuse(),
+            err: None,
+            limit,
+        }
+    }
+}
+
+impl<S: Stream> Stream for BatchStream<S> {
+    type Item = Vec<S::Item>;
+    type Error = S::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        let mut batch = vec![];
+
+        if let Some(err) = self.err.take() {
+            return Err(err);
+        }
+
+        while batch.len() < self.limit {
+            match self.inner.poll() {
+                Ok(Async::Ready(Some(v))) => batch.push(v),
+                Ok(Async::NotReady) | Ok(Async::Ready(None)) => break,
+                Err(err) => {
+                    self.err = Some(err);
+                    break;
+                }
+            }
+        }
+
+        if batch.is_empty() {
+            if let Some(err) = self.err.take() {
+                return Err(err);
+            }
+
+            if self.inner.is_done() {
+                Ok(Async::Ready(None))
+            } else {
+                Ok(Async::NotReady)
+            }
+        } else {
+            Ok(Async::Ready(Some(batch)))
         }
     }
 }

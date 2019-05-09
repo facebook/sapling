@@ -6,30 +6,17 @@
 
 #![deny(warnings)]
 
-extern crate failure_ext as failure;
-extern crate futures;
-
-extern crate cloned;
-extern crate context;
-extern crate futures_ext;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-#[macro_use]
-extern crate sql;
-extern crate sql_ext;
-#[macro_use]
-extern crate stats;
-
 use cloned::cloned;
 use context::CoreContext;
-use failure::{format_err, Error};
-use futures::{future, Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use failure_ext::{err_msg, format_err, Error};
+use futures::sync::{mpsc, oneshot};
+use futures::{future, Future, IntoFuture, Stream};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{DateTime, RepositoryId, Timestamp};
-use sql::Connection;
+use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
-use stats::Timeseries;
+use stats::{define_stats, Timeseries};
 use std::sync::Arc;
 
 define_stats! {
@@ -124,9 +111,12 @@ impl BlobstoreSyncQueue for Arc<BlobstoreSyncQueue> {
 
 #[derive(Clone)]
 pub struct SqlBlobstoreSyncQueue {
-    write_connection: Connection,
+    write_connection: Arc<Connection>,
     read_connection: Connection,
     read_master_connection: Connection,
+    write_sender:
+        Arc<mpsc::UnboundedSender<(oneshot::Sender<Result<(), Error>>, BlobstoreSyncQueueEntry)>>,
+    ensure_worker_scheduled: future::Shared<BoxFuture<(), ()>>,
 }
 
 queries! {
@@ -195,10 +185,57 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
         read_connection: Connection,
         read_master_connection: Connection,
     ) -> Self {
+        let write_connection = Arc::new(write_connection);
+        type ChannelType = (oneshot::Sender<Result<(), Error>>, BlobstoreSyncQueueEntry);
+        let (sender, receiver): (mpsc::UnboundedSender<ChannelType>, _) = mpsc::unbounded();
+
+        let ensure_worker_scheduled = future::lazy({
+            cloned!(write_connection);
+            move || {
+                let batch_writes = receiver.batch(WRITE_BUFFER_SIZE).for_each({
+                    cloned!(write_connection);
+                    move |batch| {
+                        let (senders, entries): (Vec<_>, Vec<_>) = batch.into_iter().unzip();
+
+                        insert_entries(write_connection.clone(), entries).then(move |res| {
+                            match res {
+                                Ok(()) => {
+                                    for sender in senders {
+                                        // Ignoring the error, because receiver might have gone
+                                        let _ = sender.send(Ok(()));
+                                    }
+                                }
+                                Err(err) => {
+                                    let s = format!("failed to insert {}", err);
+                                    for sender in senders {
+                                        // Ignoring the error, because receiver might have gone
+                                        let _ = sender.send(Err(err_msg(s.clone())));
+                                    }
+                                }
+                            }
+                            Ok(())
+                        })
+                    }
+                });
+
+                tokio::spawn(batch_writes.then(|_res| -> Result<(), ()> {
+                    // If batching task finished, then any write to BlobstoreSyncQueue will fail.
+                    // Normally it shouldn't happen, but if it happens it's safer to just kill
+                    // the whole process.
+                    panic!("blobstore sync queue writer unexpectedly ended");
+                }));
+                Ok(())
+            }
+        })
+        .boxify()
+        .shared();
+
         Self {
             write_connection,
             read_connection,
             read_master_connection,
+            write_sender: Arc::new(sender),
+            ensure_worker_scheduled,
         }
     }
 
@@ -207,24 +244,58 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
     }
 }
 
+const WRITE_BUFFER_SIZE: usize = 1000;
+
+fn insert_entries(
+    write_connection: Arc<Connection>,
+    entries: Vec<BlobstoreSyncQueueEntry>,
+) -> BoxFuture<(), Error> {
+    let entries: Vec<_> = entries
+        .into_iter()
+        .map(|entry| {
+            let BlobstoreSyncQueueEntry {
+                repo_id,
+                blobstore_key,
+                blobstore_id,
+                timestamp,
+                ..
+            } = entry;
+            let t: Timestamp = timestamp.into();
+            (repo_id, blobstore_key, blobstore_id, t)
+        })
+        .collect();
+
+    let entries_ref: Vec<_> = entries
+        .iter()
+        .map(|(a, b, c, d)| (a, b, c, d)) // &(a, b, ...) into (&a, &b, ...)
+        .collect();
+
+    InsertEntry::query(&write_connection, entries_ref.as_ref())
+        .map(|_| ())
+        .boxify()
+}
+
 impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     fn add(&self, _ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
         STATS::adds.add_value(1);
 
-        let BlobstoreSyncQueueEntry {
-            repo_id,
-            blobstore_key,
-            blobstore_id,
-            timestamp,
-            ..
-        } = entry.clone();
+        cloned!(self.write_sender);
+        self.ensure_worker_scheduled
+            .clone()
+            .then(move |res| match res {
+                Ok(_) => {
+                    let (send, recv) = oneshot::channel();
+                    try_boxfuture!(write_sender.unbounded_send((send, entry)));
 
-        InsertEntry::query(
-            &self.write_connection,
-            &[(&repo_id, &blobstore_key, &blobstore_id, &timestamp.into())],
-        )
-        .map(|_| ())
-        .boxify()
+                    recv.map_err(|err| err_msg(format!("failed to receive result {}", err)))
+                        .and_then(|res| res)
+                        .boxify()
+                }
+                Err(_) => {
+                    panic!("failed to schedule write worker for BlobstoreSyncQueue");
+                }
+            })
+            .boxify()
     }
 
     fn iter(
