@@ -12,16 +12,16 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FileDataRequest {
+pub struct DataRequest {
     pub keys: Vec<Key>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FileDataResponse {
+pub struct DataResponse {
     pub entries: Vec<DataEntry>,
 }
 
-impl FileDataResponse {
+impl DataResponse {
     pub fn new(data: impl IntoIterator<Item = DataEntry>) -> Self {
         Self {
             entries: data.into_iter().collect(),
@@ -29,7 +29,7 @@ impl FileDataResponse {
     }
 }
 
-impl IntoIterator for FileDataResponse {
+impl IntoIterator for DataResponse {
     type Item = DataEntry;
     type IntoIter = std::vec::IntoIter<DataEntry>;
 
@@ -39,17 +39,17 @@ impl IntoIterator for FileDataResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FileHistoryRequest {
+pub struct HistoryRequest {
     pub keys: Vec<Key>,
     pub depth: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FileHistoryResponse {
+pub struct HistoryResponse {
     pub entries: Vec<(RepoPathBuf, WireHistoryEntry)>,
 }
 
-impl FileHistoryResponse {
+impl HistoryResponse {
     pub fn new(history: impl IntoIterator<Item = (RepoPathBuf, WireHistoryEntry)>) -> Self {
         Self {
             entries: history.into_iter().collect(),
@@ -57,7 +57,7 @@ impl FileHistoryResponse {
     }
 }
 
-impl IntoIterator for FileHistoryResponse {
+impl IntoIterator for HistoryResponse {
     type Item = HistoryEntry;
     type IntoIter = Box<Iterator<Item = HistoryEntry> + Send + 'static>;
 
@@ -89,7 +89,7 @@ mod tests {
             data_entry(BAR_KEY.clone(), b"bar data"),
             data_entry(BAZ_KEY.clone(), b"baz data"),
         ];
-        let response = FileDataResponse::new(data.clone());
+        let response = DataResponse::new(data.clone());
 
         let res = response.into_iter().collect::<Vec<_>>();
         assert_eq!(data, res);
@@ -121,7 +121,7 @@ mod tests {
             (repo_path_buf("bar"), bar),
             (repo_path_buf("baz"), baz),
         ];
-        let response = FileHistoryResponse::new(history);
+        let response = HistoryResponse::new(history);
 
         let res = response.into_iter().collect::<Vec<_>>();
         let expected = vec![

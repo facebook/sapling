@@ -20,7 +20,7 @@ use url::Url;
 use driver::MultiDriver;
 use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::{
-    api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse},
+    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse},
     Key,
 };
 
@@ -141,11 +141,11 @@ impl EdenApi for EdenApiCurlClient {
         log::debug!("Preparing {} requests", num_requests);
 
         let chunks = keys.into_iter().chunks(batch_size);
-        let requests = (&chunks).into_iter().map(|batch| FileDataRequest {
+        let requests = (&chunks).into_iter().map(|batch| DataRequest {
             keys: batch.into_iter().collect(),
         });
 
-        let responses: Vec<FileDataResponse> = self.multi_request(&url, requests, progress)?;
+        let responses: Vec<DataResponse> = self.multi_request(&url, requests, progress)?;
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -185,12 +185,12 @@ impl EdenApi for EdenApiCurlClient {
         log::debug!("Preparing {} requests", num_requests);
 
         let chunks = keys.into_iter().chunks(batch_size);
-        let requests = (&chunks).into_iter().map(|batch| FileHistoryRequest {
+        let requests = (&chunks).into_iter().map(|batch| HistoryRequest {
             keys: batch.into_iter().collect(),
             depth: max_depth,
         });
 
-        let responses: Vec<FileHistoryResponse> = self.multi_request(&url, requests, progress)?;
+        let responses: Vec<HistoryResponse> = self.multi_request(&url, requests, progress)?;
 
         log::debug!(
             "Received {} responses with {} total entries",

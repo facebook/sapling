@@ -7,9 +7,10 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{key::Key, node::Node, parents::Parents};
 
-/// Structure representing a file's data content on the wire.
-/// Includes the information required to add the file to
-/// a MutableDataPack, along with the filenode parent
+/// Structure representing source control data (typically
+/// either file content or a tree entry) on the wire.
+/// Includes the information required to add the data to
+/// a MutableDataPack, along with the node's parent
 /// information to allow for hash verification.
 #[derive(
     Clone,
@@ -31,11 +32,10 @@ pub struct DataEntry {
 
 impl DataEntry {
     /// Compute the filenode hash of this `DataEntry` using the parents and
-    /// file content, and compare it with the known filenode hash from
-    /// the entry's `Key`.
+    /// content, and compare it with the known node hash from the entry's `Key`.
     pub fn validate(&self) -> Fallible<()> {
-        // Mercurial hashes the parent filesnodes in sorted order
-        // when computing the filenode hash.
+        // Mercurial hashes the parent nodes in sorted order
+        // when computing the node hash.
         let (p1, p2) = match self.parents.clone().into_nodes() {
             (p1, p2) if p1 > p2 => (p2, p1),
             (p1, p2) => (p1, p2),
@@ -53,7 +53,7 @@ impl DataEntry {
 
         ensure!(
             &computed == expected,
-            "Filenode validation failed. Expected: {}; Computed: {}",
+            "Content hash validation failed. Expected: {}; Computed: {}",
             expected.to_hex(),
             computed.to_hex()
         );

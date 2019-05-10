@@ -5,8 +5,8 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{key::Key, node::Node, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
 
 /// Structure containing the fields corresponding to a HistoryPack's
-/// in-memory representation of a file history entry. Useful for
-/// adding new entries to a MutableHistoryPack.
+/// in-memory representation of a history entry. Useful for adding
+/// new entries to a MutableHistoryPack.
 #[derive(
     Clone,
     Debug,
@@ -26,25 +26,24 @@ pub struct HistoryEntry {
 
 impl HistoryEntry {
     /// A WireHistoryEntry doesn't contain enough information to construct
-    /// a HistoryEntry because it doesn't contain the name of file to which
-    /// the entry refers. (The name is a bytestring that usually consists
-    /// of the file's path.) As such, the name needs to be supplied by the
-    /// caller in order to perform the conversion.
+    /// a HistoryEntry because it doesn't contain the path of the file or
+    /// directory to which the entry refers. As such, the path needs to be
+    /// supplied by the caller in order to perform the conversion.
     pub fn from_wire(entry: WireHistoryEntry, path: RepoPathBuf) -> Self {
-        // If this file was copied, use the original name as the name of
-        // the p1 key instead of the current entry's name.
-        let p1_name = entry.copyfrom.unwrap_or_else(|| path.clone());
+        // If this entry represents a copied file, use the original path as the path of
+        // the p1 key instead of the current entry's path.
+        let p1_path = entry.copyfrom.unwrap_or_else(|| path.clone());
         let parents = match entry.parents {
             Parents::None => Default::default(),
             Parents::One(p1) => {
-                let p1 = Key::new(p1_name, p1);
-                // If there is no p2, its node hash is null and its name is empty.
+                let p1 = Key::new(p1_path, p1);
+                // If there is no p2, its node hash is null and its path is empty.
                 let p2 = Key::default();
                 [p1, p2]
             }
             Parents::Two(p1, p2) => {
-                let p1 = Key::new(p1_name, p1);
-                // If there is a p2, its name must match the current entry's name.
+                let p1 = Key::new(p1_path, p1);
+                // If there is a p2, its path must match the current entry's path.
                 let p2 = Key::new(path.clone(), p2);
                 [p1, p2]
             }
@@ -69,7 +68,7 @@ impl From<(WireHistoryEntry, RepoPathBuf)> for HistoryEntry {
 /// History entry structure containing fields corresponding to
 /// a single history record in Mercurial's loose file format.
 /// This format contains less information than a HistoryEntry
-/// (namely, it doesn't contain the name of the file), and has
+/// (namely, it doesn't contain the path of the file), and has
 /// less redundancy, making it more suitable as a compact
 /// representation of a history entry for data exchange between
 /// the client and server.
@@ -95,8 +94,8 @@ pub struct WireHistoryEntry {
 impl From<HistoryEntry> for WireHistoryEntry {
     fn from(entry: HistoryEntry) -> Self {
         let [p1, p2] = entry.nodeinfo.parents;
-        // If the p1's name differs from the entry's name, this means the file
-        // was copied, so populate the copyfrom path with the p1 name.
+        // If the p1's path differs from the entry's path, this means the file
+        // was copied, so populate the copyfrom path with the p1 path.
         let copyfrom = if !p1.node.is_null() && !p1.path.is_empty() && p1.path != entry.key.path {
             Some(p1.path)
         } else {
@@ -121,16 +120,16 @@ impl Arbitrary for HistoryEntry {
         let key = Key::arbitrary(g);
         let mut nodeinfo = NodeInfo::arbitrary(g);
 
-        // If this entry has a p2, then that p2's name must match
-        // this entry's Key name. In the case of copies, Mercurial
-        // always puts the copied from path in the p1 Key name,
-        // so p2's name must always match the current entry's name
+        // If this entry has a p2, then that p2's path must match
+        // this entry's Key path. In the case of copies, Mercurial
+        // always puts the copied from path in the p1 Key's path,
+        // so p2's path must always match the current entry's path
         // unless p2 is null.
         if !nodeinfo.parents[1].node.is_null() {
             nodeinfo.parents[1].path = key.path.clone();
         }
 
-        // If p1's key contains a null node hash or an empty name,
+        // If p1's key contains a null node hash or an empty path,
         // the other field must also be null/empty, since it doesn't
         // make sense to have a file path with a null hash or an empty
         // path with a non-null hash.
