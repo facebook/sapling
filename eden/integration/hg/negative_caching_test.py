@@ -48,27 +48,22 @@ class NegativeCachingTest(EdenHgTestCase):
         # (TODO: it would be nice if we had a better programmatic way to
         # confirm this.)
         self.eden.set_log_level("eden.strace", "DBG7")
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 1 (enoent)", file=sys.stderr)
         self.assertEqual("hello world\n", self.read_file("src/main.c"))
         self.assert_enoent("src/hello.c")
 
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 2 (enoent)", file=sys.stderr)
         self.assert_enoent("src/hello.c")
 
         # Check out commit2, where src/hello.c exists
         self.eden.set_log_level("eden.strace", "ERR")
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== checkout", file=sys.stderr)
         self.repo.update(self.commit2)
         self.eden.set_log_level("eden.strace", "DBG7")
 
         # Make sure we can successfully read src/hello.c after the checkout
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 3", file=sys.stderr)
         self.assertEqual("hello2\n", self.read_file("src/hello.c"))
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 4", file=sys.stderr)
         self.assertEqual("hello2\n", self.read_file("src/hello.c"))
 
@@ -76,14 +71,12 @@ class NegativeCachingTest(EdenHgTestCase):
 
     def test_directory(self) -> None:
         self.eden.set_log_level("eden.strace", "DBG7")
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 1 (enoent)", file=sys.stderr)
         self.assertEqual("hello world\n", self.read_file("src/main.c"))
         self.assert_enoent("src/hello.c")
         self.assert_enoent("src/test/test.c")
         self.assert_enoent("src/test")
 
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 2 (enoent)", file=sys.stderr)
         self.assert_enoent("src/hello.c")
         self.assert_enoent("src/test/test.c")
@@ -91,18 +84,15 @@ class NegativeCachingTest(EdenHgTestCase):
 
         # Check out commit1, where src/test/test.c exists
         self.eden.set_log_level("eden.strace", "ERR")
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== checkout", file=sys.stderr)
         self.repo.update(self.commit1)
         self.eden.set_log_level("eden.strace", "DBG7")
 
         # Make sure we can successfully read src/test/test.c and src/hello.c
         # after the checkout
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 3", file=sys.stderr)
         self.assertEqual("test\n", self.read_file("src/test/test.c"))
         self.assertEqual("hello2\n", self.read_file("src/hello.c"))
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== read 4", file=sys.stderr)
         self.assertEqual("test\n", self.read_file("src/test/test.c"))
         self.assertEqual("hello2\n", self.read_file("src/hello.c"))

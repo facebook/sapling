@@ -36,6 +36,7 @@ class RollbackTest(EdenHgTestCase):
             b"transaction abort!\nrollback completed\n"
             b"abort: pretxncommit hook exited with status 1\n"
         )
+        # pyre-fixme[16]: `_E` has no attribute `stderr`.
         self.assertIn(expected_msg, context.exception.stderr)
 
         self.assertEqual(

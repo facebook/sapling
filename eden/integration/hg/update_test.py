@@ -178,6 +178,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertIn(
             b"1 conflicts while merging foo/bar.txt! "
             b"(edit, then use 'hg resolve --mark')",
+            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
         self.assert_status({"foo/bar.txt": "M"}, op="merge")
@@ -212,6 +213,7 @@ class UpdateTest(EdenHgTestCase):
         # both the working copy and the destination.
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
+        # pyre-fixme[16]: `_E` has no attribute `stderr`.
         self.assertIn(b"abort: conflicting changes", context.exception.stderr)
         self.assertEqual(
             base_commit,
@@ -275,6 +277,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertIn(
             b"warning: 1 conflicts while merging some_new_file.txt! "
             b"(edit, then use 'hg resolve --mark')",
+            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
         self.assertEqual(

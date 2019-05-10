@@ -431,7 +431,6 @@ def _replicate_eden_repo_test(
 # Given an input test class named "MyTest", this will create two separate
 # classes named "MyTestHg" and "MyTestGit", which run the tests with
 # mercurial and git repositories, respectively.
-# pyre-fixme[6]: Expected `Callable[..., Iterable[Tuple[str, Type[TestCase]]]]` for 1...
 eden_repo_test = test_replicator(_replicate_eden_repo_test)
 
 

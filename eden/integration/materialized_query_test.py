@@ -106,7 +106,10 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         with self.assertRaises(EdenService.EdenError) as context:
             self.client.getFilesChangedSince(self.mount_path_bytes, pos)
         self.assertEqual(
-            errno.ERANGE, context.exception.errorCode, msg="Must return ERANGE"
+            # pyre-fixme[16]: `_E` has no attribute `errorCode`.
+            errno.ERANGE,
+            context.exception.errorCode,
+            msg="Must return ERANGE",
         )
 
     def test_removeFile(self) -> None:

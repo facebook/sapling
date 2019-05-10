@@ -47,6 +47,8 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
             return
 
         try:
+            # pyre-fixme[6]: Expected `_PathLike[AnyStr]` for 1st param but got
+            #  `Union[_PathLike[Any], str]`.
             parent_dir = os.path.dirname(path)
             os.chmod(parent_dir, 0o755)
             # func() is the function that failed.

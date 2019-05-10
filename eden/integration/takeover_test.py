@@ -104,10 +104,8 @@ class TakeoverTest(testcase.EdenRepoTest):
             os.unlink(deleted)
             os.unlink(deleted_local)
 
-            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             print("=== beginning restart ===", file=sys.stderr)
             self.eden.graceful_restart()
-            # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `Text...
             print("=== restart complete ===", file=sys.stderr)
 
             # Ensure that our file handle is still live across
@@ -202,7 +200,6 @@ class TakeoverTest(testcase.EdenRepoTest):
         # (Just in case anything hangs and we need to abort the mount
         # using /sys/fs/fuse/connections/<dev>/)
         st = os.lstat(self.mount)
-        # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `TextIO`.
         print("=== eden mount device=%d ===" % st.st_dev, file=sys.stderr)
 
         # Start several threads doing I/O while we we perform a takeover
@@ -222,10 +219,8 @@ class TakeoverTest(testcase.EdenRepoTest):
 
             # Restart edenfs
             for n in range(num_restarts):
-                # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `...
                 print("=== beginning restart %d ===" % n, file=sys.stderr)
                 self.eden.graceful_restart()
-                # pyre-fixme[6]: Expected `Optional[_Writer]` for 2nd param but got `...
                 print("=== restart %d complete ===" % n, file=sys.stderr)
         finally:
             stop.set()

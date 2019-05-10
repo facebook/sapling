@@ -519,6 +519,8 @@ def unpack_into(snapshot_path: Path, output_path: Path) -> BaseSnapshot:
         if snapshot_type is None:
             raise UnknownSnapshotTypeError(type_name)
 
+        # pyre-fixme[38]: Abstract method(s) `verify_snapshot_data` in class
+        #  `BaseSnapshot` are never initialized.
         snapshot = snapshot_type(output_path)
         snapshot.resume()
         return snapshot

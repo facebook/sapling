@@ -111,6 +111,7 @@ class FakeMountTable(mtab.MountTable):
         if isinstance(result, BaseException):
             raise result
         else:
+            # pyre-fixme[22]: The cast is redundant.
             return typing.cast(mtab.MTStat, result)
 
     def check_path_access(self, path: bytes) -> None:

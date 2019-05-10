@@ -290,6 +290,5 @@ def _toml_type_name(type: Type) -> str:
 
 def _toml_value(value: Union[bool, str]) -> str:
     TomlEncoder: Type = toml.TomlEncoder  # type: ignore
-    # pyre-fixme[29]: `Type[Any]` is not a function.
     value_toml: str = TomlEncoder().dump_inline_table(value)
     return value_toml.rstrip()
