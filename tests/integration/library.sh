@@ -488,6 +488,7 @@ remotefilelog=
 smartlog=
 clienttelemetry=
 [treemanifest]
+flatcompat=False
 server=True
 sendtrees=True
 treeonly=True
@@ -509,6 +510,7 @@ fastmanifest=
 smartlog=
 clienttelemetry=
 [treemanifest]
+flatcompat=False
 sendtrees=True
 treeonly=True
 [remotefilelog]
@@ -546,6 +548,7 @@ treemanifest=
 remotefilelog=
 clienttelemetry=
 [treemanifest]
+flatcompat=False
 server=False
 treeonly=True
 [remotefilelog]
