@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, ops::Deref, path::PathBuf};
 
 use failure::Fallible;
 
@@ -16,6 +16,11 @@ pub type Ancestors = HashMap<Key, NodeInfo>;
 pub trait HistoryStore: LocalStore {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors>;
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo>;
+}
+
+pub trait MutableHistoryStore {
+    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()>;
+    fn close(self) -> Fallible<PathBuf>;
 }
 
 /// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.
