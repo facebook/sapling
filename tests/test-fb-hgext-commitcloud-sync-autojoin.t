@@ -2,6 +2,7 @@
   $ enable amend directaccess commitcloud infinitepush infinitepushbackup share
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
   $ setconfig commitcloud.hostname=testhost
+  $ setconfig remotefilelog.reponame=server
   $ cat > $TESTTMP/.commitcloudrc <<EOF
   > [commitcloud]
   > user_token=xxxxx

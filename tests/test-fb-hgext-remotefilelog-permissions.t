@@ -42,5 +42,5 @@
   $ mkdir $CACHEDIR
   $ hg -q clone --shallow ssh://user@dummy/master shallow2 --config remotefilelog.cachegroup="`id -g -n`"
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  $ ls -ld $CACHEDIR/11
-  drwxrws* $TESTTMP/hgcache/11 (glob)
+  $ ls -ld $CACHEDIR/reponame-default/11
+  drwxrws* $TESTTMP/hgcache/reponame-default/11 (glob)

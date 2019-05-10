@@ -17,6 +17,8 @@
   > evolution = createmarkers, allowunstable
   > EOF
 
+  $ setconfig remotefilelog.reponame=server
+
   $ hg init server
   $ cd server
   $ cat >> .hg/hgrc << EOF

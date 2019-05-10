@@ -1527,6 +1527,10 @@ class Test(unittest.TestCase):
             # treemanifest
             hgrc.write(b"[treemanifest]\n")
             hgrc.write(b"flatcompat=True\n")
+            hgrc.write(b"[remotefilelog]\n")
+            hgrc.write(b"reponame=reponame-default\n")
+            hgrc.write(b"cachepath=$TESTTMP/default-hgcache\n")
+
             for opt in self._extraconfigopts:
                 section, key = opt.encode("utf-8").split(b".", 1)
                 assert b"=" in key, (

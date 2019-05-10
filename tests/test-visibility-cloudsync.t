@@ -4,6 +4,7 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.user=test mutation.date="0 0"
+  $ setconfig remotefilelog.reponame=server
 
   $ newrepo server
   $ setconfig infinitepush.server=yes infinitepush.indextype=disk infinitepush.storetype=disk infinitepush.reponame=testrepo

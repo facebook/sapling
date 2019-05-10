@@ -16,6 +16,8 @@
   > sl_cloud = "{truncatelonglines(node, 6)} {ifeq(phase, 'public', '(public)', '')} {ifeq(phase, 'draft', author, '')} {date|isodate} {bookmarks}\n{desc|firstline}\n "
   > EOF
 
+  $ setconfig remotefilelog.reponame=server
+
   $ hg init server
   $ cd server
   $ cat >> .hg/hgrc << EOF

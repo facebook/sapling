@@ -12,6 +12,7 @@
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
+  $ setconfig remotefilelog.reponame=server
 
   $ mkcommit() {
   >   echo "$1" > "$1"
