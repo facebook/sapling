@@ -821,7 +821,7 @@ class fileserverclient(object):
                     prog._total = dlt
                     prog.value = dl
 
-            return self.repo.edenapi.get_history(fileids, depth, progcallback)
+            return self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
 
     def connect(self):
         if self.cacheprocess:

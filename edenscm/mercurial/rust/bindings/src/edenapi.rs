@@ -7,12 +7,12 @@ use std::str;
 
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
-use encoding::{local_bytes_to_path, path_to_local_bytes};
+use encoding::local_bytes_to_path;
 use failure::format_err;
 use log;
 
 use edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient, ProgressFn, ProgressStats};
-use pyrevisionstore::PythonMutableDataPack;
+use pyrevisionstore::{PythonMutableDataPack, PythonMutableHistoryPack};
 use types::{Key, Node, RepoPath};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -105,22 +105,23 @@ py_class!(class client |py| {
     def get_history(
         &self,
         keys: Vec<(PyBytes, PyBytes)>,
+        store: PyObject,
         depth: Option<u32> = None,
         progress_cb: Option<PyObject> = None
-    ) -> PyResult<PyBytes> {
+    ) -> PyResult<PyObject> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
+        let mut store = PythonMutableHistoryPack::new(store)?;
+
         let client = self.inner(py);
         let progress_cb = progress_cb.map(wrap_callback);
-        let out_path = py.allow_threads(move || {
-            client.get_history(keys, depth, progress_cb)
+        py.allow_threads(move || {
+            client.get_history(keys, &mut store, depth, progress_cb)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
-        let out_path = path_to_local_bytes(&out_path)
-            .map_pyerr::<exc::RuntimeError>(py)?;
-        Ok(PyBytes::new(py, &out_path))
+        Ok(Python::None(py))
     }
 });
 

@@ -25,13 +25,6 @@ pub trait MutableHistoryStore {
     fn add_entry(&mut self, entry: &HistoryEntry) -> Fallible<()> {
         self.add(&entry.key, &entry.nodeinfo)
     }
-
-    fn add_entries(&mut self, entries: impl IntoIterator<Item = HistoryEntry>) -> Fallible<()> {
-        for entry in entries {
-            self.add(&entry.key, &entry.nodeinfo)?;
-        }
-        Ok(())
-    }
 }
 
 /// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.

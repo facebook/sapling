@@ -519,5 +519,7 @@ def debuggethistory(ui, repo, **opts):
     input = (line.split() for line in sys.stdin.readlines())
     keys = [(path, node) for node, path in input]
     depth = opts.get("depth") or None
-    packpath = repo.edenapi.get_history(keys, depth)
+    __, hpack = repo.fileslog.getmutablesharedpacks()
+    repo.edenapi.get_history(keys, hpack, depth)
+    __, packpath = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote historypack: %s\n") % packpath)

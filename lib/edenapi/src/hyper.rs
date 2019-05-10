@@ -19,13 +19,13 @@ use tokio::runtime::Runtime;
 use url::Url;
 use webpki_roots::TLS_SERVER_ROOTS;
 
-use revisionstore::MutableDeltaStore;
+use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::{HistoryEntry, Key, WireHistoryEntry};
 use url_ext::UrlExt;
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::packs::{write_historypack, write_to_deltastore};
+use crate::packs::{write_to_deltastore, write_to_historystore};
 use crate::progress::ProgressFn;
 
 pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
@@ -177,14 +177,14 @@ impl EdenApi for EdenApiHyperClient {
     }
 
     /// Fetch the history of the specified file from the API server and write
-    /// it to a historypack in the configured cache directory. Returns the path
-    /// of the resulting packfile.
+    /// it to the passed in history store.
     fn get_history(
         &self,
         keys: Vec<Key>,
+        store: &mut MutableHistoryStore,
         max_depth: Option<u32>,
         _: Option<ProgressFn>,
-    ) -> Fallible<PathBuf> {
+    ) -> Fallible<()> {
         let client = Arc::clone(&self.client);
         let prefix = self.repo_base_url()?.join(paths::GET_HISTORY)?;
 
@@ -197,7 +197,7 @@ impl EdenApi for EdenApiHyperClient {
         let mut runtime = Runtime::new()?;
         let entries = runtime.block_on(work)?.into_iter().flatten();
 
-        write_historypack(self.pack_cache_path(), entries)
+        write_to_historystore(store, entries)
     }
 }
 

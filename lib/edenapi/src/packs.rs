@@ -1,13 +1,9 @@
 // Copyright Facebook, Inc. 2019
 
-use std::path::{Path, PathBuf};
-
 use bytes::Bytes;
 use failure::Fallible;
 
-use revisionstore::{
-    Delta, HistoryPackVersion, Metadata, MutableDeltaStore, MutableHistoryPack, MutableHistoryStore,
-};
+use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{HistoryEntry, Key};
 
 /// Populate the store with the file contents provided by the given iterator. Each Delta written to
@@ -35,13 +31,16 @@ pub fn write_to_deltastore(
     Ok(())
 }
 
-/// Create a new historypack in the given directory, and populate it
-/// with the given history entries.
-pub fn write_historypack(
-    pack_dir: impl AsRef<Path>,
+/// Populate the store will the history entries provided by the given iterator.
+///
+/// Flushing the store for the written content to be visible is the responsability of the caller.
+pub fn write_to_historystore(
+    store: &mut MutableHistoryStore,
     entries: impl IntoIterator<Item = HistoryEntry>,
-) -> Fallible<PathBuf> {
-    let mut historypack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
-    historypack.add_entries(entries)?;
-    historypack.close()
+) -> Fallible<()> {
+    for entry in entries {
+        store.add_entry(&entry)?;
+    }
+
+    Ok(())
 }
