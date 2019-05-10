@@ -12,8 +12,8 @@ use context::CoreContext;
 use futures_ext::BoxFuture;
 use mononoke_types::{ChangesetId, RepositoryId};
 
-use {ChangesetEntry, ChangesetInsert, Changesets};
-use errors::*;
+use crate::errors::*;
+use crate::{ChangesetEntry, ChangesetInsert, Changesets};
 
 impl Changesets for Arc<Changesets> {
     fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {

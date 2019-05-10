@@ -24,7 +24,7 @@ use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, new_memcache_blobstore, MemcacheOps};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
-use changesets::{CachingChangests, SqlChangesets};
+use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
 use fileblob::Fileblob;
 use filenodes::CachingFilenodes;
@@ -355,7 +355,7 @@ fn new_remote(
     let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
         ErrorKind::MissingCachePool("changesets".to_string()),
     ))?;
-    let changesets = CachingChangests::new(changesets, changesets_cache_pool.clone());
+    let changesets = CachingChangesets::new(changesets, changesets_cache_pool.clone());
     let changesets = Arc::new(changesets);
 
     let bonsai_hg_mapping = open_xdb::<SqlBonsaiHgMapping>(&db_address, myrouter_port)?;

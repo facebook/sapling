@@ -4,19 +4,29 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::{changeset_entry_thrift, ChangesetEntry, ChangesetInsert, Changesets};
+use super::{ChangesetEntry, ChangesetInsert, Changesets};
+use bytes::Bytes;
 use cachelib;
+#[cfg(test)]
+use caching_ext::MockStoreStats;
+use caching_ext::{
+    CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult, MemcacheHandler,
+};
 use changeset_entry_thrift as thrift;
 use context::CoreContext;
-use errors::*;
-use futures::{future, Future};
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
+use iobuf::IOBuf;
+use maplit::hashset;
+use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 use rust_thrift::compact_protocol;
-use stats::Timeseries;
+use stats::{define_stats, Timeseries};
+use std::collections::HashSet;
+use std::iter::FromIterator;
 use std::sync::Arc;
-use tokio;
+
+use crate::errors::*;
 
 define_stats! {
     prefix = "mononoke.changesets";
@@ -26,35 +36,107 @@ define_stats! {
     memcache_deserialize_err: timeseries("memcache.deserialize_err"; RATE, SUM),
 }
 
-pub fn get_cache_key(repo_id: RepositoryId, cs_id: ChangesetId) -> String {
+pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id).to_string()
 }
 
-pub struct CachingChangests {
+pub struct CachingChangesets {
     changesets: Arc<Changesets>,
-    cache_pool: cachelib::LruCachePool,
-    memcache: MemcacheClient,
+    cachelib: CachelibHandler<ChangesetEntry>,
+    memcache: MemcacheHandler,
     keygen: KeyGen,
 }
 
-impl CachingChangests {
+fn get_keygen() -> KeyGen {
+    let key_prefix = "scm.mononoke.changesets";
+
+    KeyGen::new(
+        key_prefix,
+        thrift::MC_CODEVER as u32,
+        thrift::MC_SITEVER as u32,
+    )
+}
+
+impl CachingChangesets {
     pub fn new(changesets: Arc<Changesets>, cache_pool: cachelib::LruCachePool) -> Self {
-        let key_prefix = "scm.mononoke.changesets";
+        Self {
+            changesets,
+            cachelib: cache_pool.into(),
+            memcache: MemcacheClient::new().into(),
+            keygen: get_keygen(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn mocked(changesets: Arc<Changesets>) -> Self {
+        let cachelib = CachelibHandler::create_mock();
+        let memcache = MemcacheHandler::create_mock();
 
         Self {
             changesets,
-            cache_pool,
-            memcache: MemcacheClient::new(),
-            keygen: KeyGen::new(
-                key_prefix,
-                thrift::MC_CODEVER as u32,
-                thrift::MC_SITEVER as u32,
-            ),
+            cachelib,
+            memcache,
+            keygen: get_keygen(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn fork_cachelib(&self) -> Self {
+        Self {
+            changesets: self.changesets.clone(),
+            cachelib: CachelibHandler::create_mock(),
+            memcache: self.memcache.clone(),
+            keygen: self.keygen.clone(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn cachelib_stats(&self) -> MockStoreStats {
+        match self.cachelib {
+            CachelibHandler::Real(_) => unimplemented!(),
+            CachelibHandler::Mock(ref mock) => mock.stats(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn memcache_stats(&self) -> MockStoreStats {
+        match self.memcache {
+            MemcacheHandler::Real(_) => unimplemented!(),
+            MemcacheHandler::Mock(ref mock) => mock.stats(),
+        }
+    }
+
+    fn req(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+    ) -> GetOrFillMultipleFromCacheLayers<ChangesetId, ChangesetEntry> {
+        let get_cache_key = Arc::new(get_cache_key);
+
+        let changesets = self.changesets.clone();
+
+        let get_from_db = move |keys: HashSet<ChangesetId>| {
+            changesets
+                .get_many(ctx.clone(), repo_id, keys.into_iter().collect())
+                .map(|entries| entries.into_iter().map(|e| (e.cs_id, e)).collect())
+                .boxify()
+        };
+
+        GetOrFillMultipleFromCacheLayers {
+            repo_id,
+            get_cache_key,
+            cachelib: self.cachelib.clone(),
+            keygen: self.keygen.clone(),
+            memcache: self.memcache.clone(),
+            deserialize: Arc::new(deserialize_changeset_entry),
+            serialize: Arc::new(serialize_changeset_entry),
+            report_mc_result: Arc::new(report_mc_result),
+            get_from_db: Arc::new(get_from_db),
         }
     }
 }
 
-impl Changesets for CachingChangests {
+impl Changesets for CachingChangesets {
     fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
         self.changesets.add(ctx, cs)
     }
@@ -65,113 +147,44 @@ impl Changesets for CachingChangests {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        let cache_key = get_cache_key(repo_id, cs_id);
-
-        cloned!(self.changesets, self.keygen, self.memcache);
-        cachelib::get_cached_or_fill(&self.cache_pool, cache_key, || {
-            get_changeset_from_memcache(&self.memcache, &self.keygen, repo_id, cs_id)
-                .then(move |res| match res {
-                    Ok(res) => {
-                        return future::ok(Some(res)).boxify();
-                    }
-                    Err(()) => changesets
-                        .get(ctx, repo_id, cs_id)
-                        .inspect(move |res| {
-                            if let Some(cs_entry) = res {
-                                schedule_fill_changesets_memcache(
-                                    memcache,
-                                    keygen,
-                                    repo_id,
-                                    cs_entry.clone(),
-                                )
-                            }
-                        })
-                        .boxify(),
-                })
-                .boxify()
-        })
+        self.req(ctx, repo_id)
+            .run(hashset![cs_id])
+            .map(move |mut map| map.remove(&cs_id))
+            .boxify()
     }
 
     fn get_many(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
-        cs_id: Vec<ChangesetId>,
+        cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
-        // TODO(stash): T39204057 add caching
-        self.changesets.get_many(ctx, repo_id, cs_id)
+        let keys = HashSet::from_iter(cs_ids);
+
+        self.req(ctx, repo_id)
+            .run(keys)
+            .map(|map| map.into_iter().map(|(_, val)| val).collect())
+            .boxify()
     }
 }
 
-// Local error type to help with proper logging metrics
-enum ErrorKind {
-    // error came from calling memcache API
-    MemcacheInternal,
-    // value returned from memcache was None
-    Missing,
-    // deserialization of memcache data to Rust structures via thrift failed
-    Deserialization,
+fn deserialize_changeset_entry(buf: IOBuf) -> ::std::result::Result<ChangesetEntry, ()> {
+    let bytes: Bytes = buf.into();
+
+    compact_protocol::deserialize(bytes)
+        .and_then(|entry| ChangesetEntry::from_thrift(entry))
+        .map_err(|_| ())
 }
 
-fn get_mc_key_for_changeset(
-    keygen: &KeyGen,
-    repo_id: RepositoryId,
-    changeset: ChangesetId,
-) -> String {
-    keygen.key(get_cache_key(repo_id, changeset))
+fn serialize_changeset_entry(entry: &ChangesetEntry) -> Bytes {
+    compact_protocol::serialize(&entry.clone().into_thrift())
 }
 
-fn get_changeset_from_memcache(
-    memcache: &MemcacheClient,
-    keygen: &KeyGen,
-    repo_id: RepositoryId,
-    cs_id: ChangesetId,
-) -> impl Future<Item = ChangesetEntry, Error = ()> {
-    memcache
-        .get(get_mc_key_for_changeset(keygen, repo_id, cs_id))
-        .map_err(|()| ErrorKind::MemcacheInternal)
-        .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
-        .and_then(|serialized| {
-            let thrift_entry: ::std::result::Result<
-                changeset_entry_thrift::ChangesetEntry,
-                ErrorKind,
-            > = compact_protocol::deserialize(Vec::from(serialized))
-                .map_err(|_| ErrorKind::Deserialization);
-
-            let thrift_entry = thrift_entry.and_then(|entry| {
-                ChangesetEntry::from_thrift(entry).map_err(|_| ErrorKind::Deserialization)
-            });
-            thrift_entry
-        })
-        .then(move |res| {
-            match res {
-                Ok(res) => {
-                    STATS::memcache_hit.add_value(1);
-                    return Ok(res);
-                }
-                Err(ErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-                Err(ErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-                Err(ErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-            }
-            Err(())
-        })
-}
-
-fn schedule_fill_changesets_memcache(
-    memcache: MemcacheClient,
-    keygen: KeyGen,
-    repo_id: RepositoryId,
-    changeset: ChangesetEntry,
-) {
-    let cs_id = changeset.cs_id.clone();
-    let serialized = compact_protocol::serialize(&changeset.into_thrift());
-
-    // Quite unlikely that single changeset will be bigger than MEMCACHE_VALUE_MAX_SIZE
-    // It's probably not even worth logging it
-    if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
-        tokio::spawn(memcache.set(
-            get_mc_key_for_changeset(&keygen, repo_id, cs_id),
-            serialized,
-        ));
-    }
+fn report_mc_result<T>(res: McResult<T>) {
+    match res {
+        Ok(..) => STATS::memcache_hit.add_value(1),
+        Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
+        Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
+        Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
+    };
 }

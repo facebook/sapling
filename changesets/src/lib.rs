@@ -1,4 +1,4 @@
-// Copyright (c) 2018-present, Facebook, Inc.
+// Copyright (c) 2019-present, Facebook, Inc.
 // All Rights Reserved.
 //
 // This software may be used and distributed according to the terms of the
@@ -6,56 +6,28 @@
 
 #![deny(warnings)]
 
-extern crate abomonation;
-#[macro_use]
-extern crate abomonation_derive;
-extern crate bytes;
-extern crate cachelib;
-#[macro_use]
-extern crate cloned;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate heapsize;
-#[macro_use]
-extern crate heapsize_derive;
-extern crate memcache;
-#[macro_use]
-extern crate sql;
-extern crate sql_ext;
-extern crate tokio;
-
-extern crate changeset_entry_thrift;
-extern crate context;
-#[macro_use]
-extern crate futures_ext;
-extern crate mononoke_types;
-#[cfg(test)]
-extern crate mononoke_types_mocks;
-extern crate rust_thrift;
-#[macro_use]
-extern crate stats;
-
+use abomonation_derive::Abomonation;
+use bytes::Bytes;
+use cloned::cloned;
+use context::CoreContext;
+use futures::{future::ok, stream, Future, IntoFuture};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use heapsize_derive::HeapSizeOf;
+use mononoke_types::{ChangesetId, RepositoryId};
+use rust_thrift::compact_protocol;
+use sql::{queries, Connection, Transaction};
+pub use sql_ext::SqlConstructors;
+use stats::{define_stats, Timeseries};
 use std::collections::{HashMap, HashSet};
 use std::result;
 
-use bytes::Bytes;
-
-use sql::{Connection, Transaction};
-pub use sql_ext::SqlConstructors;
-
-use context::CoreContext;
-use futures::{future::ok, stream, Future, IntoFuture};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mononoke_types::{ChangesetId, RepositoryId};
-use rust_thrift::compact_protocol;
-use stats::Timeseries;
-
 mod caching;
 mod errors;
+#[cfg(test)]
+mod test;
 mod wrappers;
 
-pub use caching::{get_cache_key, CachingChangests};
+pub use caching::{get_cache_key, CachingChangesets};
 pub use errors::*;
 
 define_stats! {
