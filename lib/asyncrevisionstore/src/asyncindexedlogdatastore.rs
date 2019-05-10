@@ -8,7 +8,7 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::{Delta, IndexedLogDataStore, Metadata};
+use revisionstore::{Delta, IndexedLogDataStore, Metadata, MutableDeltaStore};
 
 pub struct AsyncMutableIndexedLogDataStore {
     inner: Option<IndexedLogDataStore>,
@@ -48,7 +48,7 @@ impl AsyncMutableIndexedLogDataStore {
                 blocking(|| {
                     let inner = self.inner.take();
                     let inner = inner.expect("The indexedlog is closed");
-                    inner.close()
+                    inner.close().map(|_| ())
                 })
             }
         })

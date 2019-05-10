@@ -31,7 +31,7 @@ mod tests {
     use tokio::runtime::Runtime;
 
     use revisionstore::{
-        testutil::*, DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack,
+        testutil::*, DataPackVersion, Delta, Metadata, MutableDataPack, MutableDeltaStore,
     };
     use types::testutil::*;
 

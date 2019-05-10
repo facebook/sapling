@@ -55,6 +55,10 @@ impl MutableHistoryPack {
         })
     }
 
+    pub fn close(self) -> Fallible<PathBuf> {
+        self.close_pack()
+    }
+
     pub fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         // Ideally we could use something like:
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())

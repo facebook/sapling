@@ -8,7 +8,7 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::{DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack};
+use revisionstore::{DataPackVersion, Delta, Metadata, MutableDataPack, MutableDeltaStore};
 
 struct AsyncMutableDataPackInner {
     data: MutableDataPack,

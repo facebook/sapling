@@ -8,7 +8,7 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::{HistoryPackVersion, MutableHistoryPack, MutablePack};
+use revisionstore::{HistoryPackVersion, MutableHistoryPack};
 use types::{HistoryEntry, Key, NodeInfo};
 
 pub struct AsyncMutableHistoryPackInner {

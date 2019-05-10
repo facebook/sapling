@@ -15,7 +15,7 @@ use failure::{format_err, Error, Fail, Fallible};
 use types::Key;
 
 use crate::datapack::{DataPack, DataPackVersion};
-use crate::datastore::DataStore;
+use crate::datastore::{DataStore, MutableDeltaStore};
 use crate::historypack::{HistoryPack, HistoryPackVersion};
 use crate::historystore::HistoryStore;
 use crate::localstore::LocalStore;
@@ -153,7 +153,7 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable>(
         return Err(RepackFailure::Total(errors).into());
     }
 
-    let new_pack_path = mut_pack.close()?;
+    let new_pack_path = mut_pack.close_pack()?;
     let new_pack = U::from_path(&new_pack_path)?;
 
     let mut successfully_repacked = 0;

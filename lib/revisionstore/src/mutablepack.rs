@@ -50,7 +50,7 @@ pub trait MutablePack {
 
     /// Close the packfile, returning the path of the final immutable pack on disk. The
     /// `MutablePack` is no longer usable after being closed.
-    fn close(self) -> Fallible<PathBuf>
+    fn close_pack(self) -> Fallible<PathBuf>
     where
         Self: Sized,
     {

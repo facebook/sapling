@@ -5,7 +5,7 @@
 
 use std::{
     io::{Cursor, Seek, SeekFrom, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -20,7 +20,7 @@ use lz4_pyframe::{compress, decompress};
 use types::{Key, Node};
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata},
+    datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
     error::KeyError,
     localstore::LocalStore,
     sliceext::SliceExt,
@@ -146,20 +146,23 @@ impl IndexedLogDataStore {
         Ok(IndexedLogDataStore { log })
     }
 
-    pub fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    pub fn flush(&mut self) -> Fallible<()> {
+        self.log.flush()?;
+        Ok(())
+    }
+}
+
+impl MutableDeltaStore for IndexedLogDataStore {
+    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
         entry.write_to_log(&mut self.log)
     }
 
-    pub fn flush(&mut self) -> Fallible<()> {
-        self.log.flush()?;
-        Ok(())
-    }
-
-    pub fn close(mut self) -> Fallible<()> {
-        self.flush()
+    fn close(mut self) -> Fallible<PathBuf> {
+        self.flush()?;
+        Ok(PathBuf::new())
     }
 }
 

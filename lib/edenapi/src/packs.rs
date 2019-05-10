@@ -6,8 +6,8 @@ use bytes::Bytes;
 use failure::Fallible;
 
 use revisionstore::{
-    DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableHistoryPack,
-    MutablePack,
+    DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableDeltaStore,
+    MutableHistoryPack,
 };
 use types::{HistoryEntry, Key};
 

@@ -35,7 +35,7 @@ mod tests {
 
     use cloned::cloned;
     use futures_ext::FutureExt;
-    use revisionstore::{Ancestors, HistoryPackVersion, MutableHistoryPack, MutablePack};
+    use revisionstore::{Ancestors, HistoryPackVersion, MutableHistoryPack};
     use types::{testutil::*, Key, NodeInfo};
 
     fn make_historypack(

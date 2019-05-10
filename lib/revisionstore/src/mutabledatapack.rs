@@ -21,7 +21,7 @@ use types::{Key, Node};
 
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
-use crate::datastore::{DataStore, Delta, Metadata};
+use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
 use crate::error::EmptyMutablePack;
 use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
@@ -72,8 +72,41 @@ impl MutableDataPack {
         })
     }
 
+    fn read_entry(&self, key: &Key) -> Fallible<(Delta, Metadata)> {
+        let location: &DeltaLocation = self.mem_index.get(&key.node).ok_or::<Error>(
+            MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
+                .into(),
+        )?;
+        // Make sure the buffers are empty so the reads below are consistent with what is being
+        // written.
+        self.data_file.flush_inner()?;
+        let mut file = self.data_file.get_mut();
+
+        let mut data = Vec::with_capacity(location.size as usize);
+        unsafe { data.set_len(location.size as usize) };
+
+        file.seek(SeekFrom::Start(location.offset))?;
+        file.read_exact(&mut data)?;
+        // The add function assumes the file position is always at the end, so reset it.
+        file.seek(SeekFrom::End(0))?;
+
+        let entry = DataEntry::new(&data, 0, DataPackVersion::One)?;
+        Ok((
+            Delta {
+                data: entry.delta()?,
+                base: entry
+                    .delta_base()
+                    .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
+                key: Key::new(key.path.clone(), entry.node().clone()),
+            },
+            entry.metadata().clone(),
+        ))
+    }
+}
+
+impl MutableDeltaStore for MutableDataPack {
     /// Adds the given entry to the mutable datapack.
-    pub fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         let path_slice = delta.key.path.as_byte_slice();
         if path_slice.len() >= u16::MAX as usize {
             return Err(MutableDataPackError("delta path is longer than 2^16".into()).into());
@@ -115,35 +148,8 @@ impl MutableDataPack {
         Ok(())
     }
 
-    fn read_entry(&self, key: &Key) -> Fallible<(Delta, Metadata)> {
-        let location: &DeltaLocation = self.mem_index.get(&key.node).ok_or::<Error>(
-            MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
-                .into(),
-        )?;
-        // Make sure the buffers are empty so the reads below are consistent with what is being
-        // written.
-        self.data_file.flush_inner()?;
-        let mut file = self.data_file.get_mut();
-
-        let mut data = Vec::with_capacity(location.size as usize);
-        unsafe { data.set_len(location.size as usize) };
-
-        file.seek(SeekFrom::Start(location.offset))?;
-        file.read_exact(&mut data)?;
-        // The add function assumes the file position is always at the end, so reset it.
-        file.seek(SeekFrom::End(0))?;
-
-        let entry = DataEntry::new(&data, 0, DataPackVersion::One)?;
-        Ok((
-            Delta {
-                data: entry.delta()?,
-                base: entry
-                    .delta_base()
-                    .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
-                key: Key::new(key.path.clone(), entry.node().clone()),
-            },
-            entry.metadata().clone(),
-        ))
+    fn close(self) -> Fallible<PathBuf> {
+        self.close_pack()
     }
 }
 
