@@ -22,7 +22,7 @@ use crate::ancestors::{AncestorIterator, AncestorTraversal};
 use crate::error::EmptyMutablePack;
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
-use crate::historystore::{Ancestors, HistoryStore};
+use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
@@ -53,37 +53,6 @@ impl MutableHistoryPack {
             dir: dir.to_path_buf(),
             mem_index: HashMap::new(),
         })
-    }
-
-    pub fn close(self) -> Fallible<PathBuf> {
-        self.close_pack()
-    }
-
-    pub fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
-        // Ideally we could use something like:
-        //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
-        // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
-        // key.name().clone() though. So we have to do it the long way to avoid the allocation.
-        let entries = self
-            .mem_index
-            .entry(key.path.clone())
-            .or_insert_with(|| HashMap::new());
-        entries.insert(key.clone(), info.clone());
-        Ok(())
-    }
-
-    pub fn add_entry(&mut self, entry: &types::HistoryEntry) -> Fallible<()> {
-        self.add(&entry.key, &entry.nodeinfo)
-    }
-
-    pub fn add_entries(
-        &mut self,
-        entries: impl IntoIterator<Item = types::HistoryEntry>,
-    ) -> Fallible<()> {
-        for entry in entries {
-            self.add(&entry.key, &entry.nodeinfo)?;
-        }
-        Ok(())
     }
 
     fn write_section<'a>(
@@ -135,6 +104,25 @@ impl MutableHistoryPack {
 
         nodes.insert(file_name, node_locations);
         Ok(())
+    }
+}
+
+impl MutableHistoryStore for MutableHistoryPack {
+    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        // Ideally we could use something like:
+        //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
+        // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
+        // key.name().clone() though. So we have to do it the long way to avoid the allocation.
+        let entries = self
+            .mem_index
+            .entry(key.path.clone())
+            .or_insert_with(|| HashMap::new());
+        entries.insert(key.clone(), info.clone());
+        Ok(())
+    }
+
+    fn close(self) -> Fallible<PathBuf> {
+        self.close_pack()
     }
 }
 

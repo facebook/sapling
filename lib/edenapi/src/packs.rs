@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 use bytes::Bytes;
 use failure::Fallible;
 
-use revisionstore::{Delta, HistoryPackVersion, Metadata, MutableDeltaStore, MutableHistoryPack};
+use revisionstore::{
+    Delta, HistoryPackVersion, Metadata, MutableDeltaStore, MutableHistoryPack, MutableHistoryStore,
+};
 use types::{HistoryEntry, Key};
 
 /// Populate the store with the file contents provided by the given iterator. Each Delta written to
