@@ -28,7 +28,7 @@ pub mod uniondatastore;
 pub mod unionhistorystore;
 
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
-pub use crate::datastore::{DataStore, Delta, Metadata};
+pub use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{Ancestors, HistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogDataStore;

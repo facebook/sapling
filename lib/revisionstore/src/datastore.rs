@@ -6,6 +6,7 @@
 use std::{
     io::{Cursor, Write},
     ops::Deref,
+    path::PathBuf,
 };
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -35,6 +36,11 @@ pub trait DataStore: LocalStore {
     fn get_delta(&self, key: &Key) -> Fallible<Delta>;
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;
     fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
+}
+
+pub trait MutableDeltaStore {
+    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
+    fn close(self) -> Fallible<PathBuf>;
 }
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
