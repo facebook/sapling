@@ -8,6 +8,7 @@ mod datastorepyext;
 mod historystorepyext;
 mod pyerror;
 mod pythondatastore;
+mod pythonhistorystore;
 mod pythonutil;
 mod repackablepyext;
 
@@ -15,3 +16,4 @@ mod repackablepyext;
 pub mod pyext;
 
 pub use crate::pythondatastore::PythonMutableDataPack;
+pub use crate::pythonhistorystore::PythonMutableHistoryPack;
