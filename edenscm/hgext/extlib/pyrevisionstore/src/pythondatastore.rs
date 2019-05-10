@@ -216,7 +216,7 @@ impl MutableDeltaStore for PythonMutableDataPack {
         Ok(())
     }
 
-    fn close(self) -> Fallible<PathBuf> {
+    fn close(self) -> Fallible<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -225,6 +225,6 @@ impl MutableDeltaStore for PythonMutableDataPack {
             .call_method(py, "close", NoArgs, None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_path = PyBytes::extract(py, &py_path).map_err(|e| pyerr_to_error(py, e))?;
-        Ok(local_bytes_to_path(py_path.data(py))?.into_owned())
+        Ok(Some(local_bytes_to_path(py_path.data(py))?.into_owned()))
     }
 }

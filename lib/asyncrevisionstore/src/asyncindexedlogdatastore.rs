@@ -42,13 +42,13 @@ impl AsyncMutableIndexedLogDataStore {
         .map(move |inner| AsyncMutableIndexedLogDataStore { inner: Some(inner) })
     }
 
-    pub fn close(mut self) -> impl Future<Item = (), Error = Error> + Send + 'static {
+    pub fn close(mut self) -> impl Future<Item = Option<PathBuf>, Error = Error> + Send + 'static {
         poll_fn({
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
                     let inner = inner.expect("The indexedlog is closed");
-                    inner.close().map(|_| ())
+                    inner.close()
                 })
             }
         })

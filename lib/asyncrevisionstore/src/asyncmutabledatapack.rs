@@ -68,7 +68,7 @@ impl AsyncMutableDataPack {
 
     /// Close the mutabledatapack. Once this Future finishes, the pack file is written to the disk
     /// and its path is returned.
-    pub fn close(mut self) -> impl Future<Item = PathBuf, Error = Error> + Send + 'static {
+    pub fn close(mut self) -> impl Future<Item = Option<PathBuf>, Error = Error> + Send + 'static {
         poll_fn({
             move || {
                 blocking(|| {
@@ -113,7 +113,7 @@ mod tests {
         let work = work.and_then(move |datapack| datapack.close());
 
         let mut runtime = Runtime::new().unwrap();
-        let datapackbase = runtime.block_on(work).unwrap();
+        let datapackbase = runtime.block_on(work).unwrap().unwrap();
         let path = datapackbase.with_extension("datapack");
 
         let pack = DataPack::new(&path).unwrap();
@@ -130,7 +130,7 @@ mod tests {
         let work = mutabledatapack.and_then(move |datapack| datapack.close());
         let mut runtime = Runtime::new().unwrap();
 
-        let datapackbase = runtime.block_on(work).unwrap();
+        let datapackbase = runtime.block_on(work).unwrap().unwrap();
         assert_eq!(datapackbase, PathBuf::new());
     }
 }

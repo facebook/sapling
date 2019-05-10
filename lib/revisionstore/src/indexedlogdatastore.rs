@@ -160,9 +160,8 @@ impl MutableDeltaStore for IndexedLogDataStore {
         entry.write_to_log(&mut self.log)
     }
 
-    fn close(mut self) -> Fallible<PathBuf> {
-        self.flush()?;
-        Ok(PathBuf::new())
+    fn close(mut self) -> Fallible<Option<PathBuf>> {
+        self.flush().map(|()| None)
     }
 }
 

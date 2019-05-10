@@ -44,7 +44,7 @@ mod tests {
             mutdatapack.add(delta, metadata).unwrap();
         }
 
-        let path = mutdatapack.close().unwrap();
+        let path = mutdatapack.close().unwrap().unwrap();
 
         AsyncDataPack::new(path)
     }

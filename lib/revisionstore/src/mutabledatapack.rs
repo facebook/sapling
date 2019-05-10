@@ -148,8 +148,8 @@ impl MutableDeltaStore for MutableDataPack {
         Ok(())
     }
 
-    fn close(self) -> Fallible<PathBuf> {
-        self.close_pack()
+    fn close(self) -> Fallible<Option<PathBuf>> {
+        self.close_pack().map(|path| Some(path))
     }
 }
 
@@ -239,7 +239,7 @@ mod tests {
             key: Key::new(RepoPathBuf::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).expect("add");
-        let datapackbase = mutdatapack.close().expect("close");
+        let datapackbase = mutdatapack.close().expect("close").unwrap();
         let datapackpath = datapackbase.with_extension("datapack");
         let dataindexpath = datapackbase.with_extension("dataidx");
 
