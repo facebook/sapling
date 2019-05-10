@@ -61,7 +61,6 @@ impl Config {
 
     /// Number of keys that should be fetched per file data request.
     /// Setting this to `None` disables batching.
-    /// Only the curl backend will honor this setting.
     pub fn data_batch_size(mut self, size: Option<usize>) -> Self {
         self.data_batch_size = size;
         self
@@ -69,7 +68,6 @@ impl Config {
 
     /// Number of keys that should be fetched per file history request.
     /// Setting this to `None` disables batching.
-    /// Only the curl backend will honor this setting.
     pub fn history_batch_size(mut self, size: Option<usize>) -> Self {
         self.history_batch_size = size;
         self

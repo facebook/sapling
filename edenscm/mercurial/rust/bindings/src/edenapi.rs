@@ -8,10 +8,8 @@ use std::str;
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
-use failure::format_err;
-use log;
 
-use edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient, ProgressFn, ProgressStats};
+use edenapi::{Config, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
 use pyrevisionstore::{PythonMutableDataPack, PythonMutableHistoryPack};
 use types::{Key, Node, RepoPath};
 
@@ -23,14 +21,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class client |py| {
-    data inner: Box<dyn EdenApi>;
+    data inner: EdenApiCurlClient;
 
     def __new__(
         _cls,
         url: &PyBytes,
         cachepath: &PyBytes,
         repo: &PyBytes,
-        backend: &PyBytes,
         creds: Option<(&PyBytes, &PyBytes)> = None,
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
@@ -39,7 +36,6 @@ py_class!(class client |py| {
         let url = str::from_utf8(url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let cachepath = local_bytes_to_path(&cachepath.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-        let backend = str::from_utf8(backend.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
 
         let mut config = Config::new()
             .base_url_str(url)
@@ -56,22 +52,7 @@ py_class!(class client |py| {
             config = config.client_creds(cert, key);
         }
 
-        let inner = match backend {
-            "curl" => {
-                log::debug!("Using curl-backed Eden API client");
-                let client = EdenApiCurlClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
-                Box::new(client) as Box<dyn EdenApi>
-            },
-            "hyper" => {
-                log::debug!("Using hyper-backed Eden API client");
-                let client = EdenApiHyperClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
-                Box::new(client) as Box<dyn EdenApi>
-            },
-            invalid => {
-                return Err(format_err!("Invalid Eden API backend: {}", invalid)).map_pyerr::<exc::RuntimeError>(py);
-            },
-        };
-
+        let inner = EdenApiCurlClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
         client::create_instance(py, inner)
     }
 

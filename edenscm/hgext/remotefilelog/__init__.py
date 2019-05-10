@@ -137,8 +137,6 @@ Configs for Eden API (HTTP data fetching):
 
     ``edenapi.url`` specifies the base URL of the API server.
 
-    ``edenapi.backend`` specifies which HTTP client library to use.
-
     ``edenapi.databatchsize`` specifies the batch size for file data requests
     for backends that support batching.
 
@@ -243,7 +241,6 @@ configitem("remotefilelog", "server", default=None)
 configitem("edenapi", "enabled", default=False)
 configitem("edenapi", "debug", default=False)
 configitem("edenapi", "url", default=None)
-configitem("edenapi", "backend", default="curl")
 configitem("edenapi", "databatchsize", default=None)
 configitem("edenapi", "historybatchsize", default=None)
 configitem("edenapi", "validatefiles", default=True)
