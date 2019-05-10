@@ -77,7 +77,7 @@ impl AsyncMutableHistoryPack {
 
     /// Close the historypack. Once this Future finishes, the pack file will be written to the disk
     /// and its path is returned.
-    pub fn close(mut self) -> impl Future<Item = PathBuf, Error = Error> + Send + 'static {
+    pub fn close(mut self) -> impl Future<Item = Option<PathBuf>, Error = Error> + Send + 'static {
         poll_fn({
             move || {
                 blocking(|| {
@@ -111,7 +111,7 @@ mod tests {
         let work = mutablehistorypack.and_then(move |historypack| historypack.close());
         let mut runtime = Runtime::new().unwrap();
 
-        let historypackpath = runtime.block_on(work).unwrap();
+        let historypackpath = runtime.block_on(work).unwrap().unwrap();
         assert_eq!(historypackpath, PathBuf::new());
     }
 
@@ -138,7 +138,7 @@ mod tests {
         });
         let mut runtime = Runtime::new().unwrap();
 
-        let historypackpath = runtime.block_on(work).unwrap();
+        let historypackpath = runtime.block_on(work).unwrap().unwrap();
         let path = historypackpath.with_extension("histpack");
 
         let pack = HistoryPack::new(&path).unwrap();

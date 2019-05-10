@@ -121,8 +121,8 @@ impl MutableHistoryStore for MutableHistoryPack {
         Ok(())
     }
 
-    fn close(self) -> Fallible<PathBuf> {
-        self.close_pack()
+    fn close(self) -> Fallible<Option<PathBuf>> {
+        self.close_pack().map(|path| Some(path))
     }
 }
 
@@ -359,7 +359,7 @@ mod tests {
         for (key, info) in entries.iter() {
             muthistorypack.add(&key, &info).unwrap();
         }
-        let path = muthistorypack.close().unwrap();
+        let path = muthistorypack.close().unwrap().unwrap();
         let pack = HistoryPack::new(&path).unwrap();
 
         let actual_order = pack.iter().map(|x| x.unwrap()).collect::<Vec<Key>>();
