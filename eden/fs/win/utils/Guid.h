@@ -8,9 +8,9 @@
  *
  */
 #pragma once
+#include <combaseapi.h>
 #include "eden/fs/win/utils/WinError.h"
 #include "folly/portability/Windows.h"
-
 namespace facebook {
 namespace eden {
 
