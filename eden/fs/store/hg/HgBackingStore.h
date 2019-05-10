@@ -34,7 +34,7 @@ namespace facebook {
 namespace eden {
 
 class Importer;
-class ImporterOptions;
+struct ImporterOptions;
 class LocalStore;
 class MononokeHttpBackingStore;
 class MononokeThriftBackingStore;
