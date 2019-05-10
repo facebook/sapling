@@ -255,13 +255,31 @@ readonly=true
 CONFIG
 fi
 
+if [[ -v MULTIPLEXED ]]; then
 cat >> repos/repo/server.toml <<CONFIG
+[storage.blobstore]
+db.local_db_path = "$TESTTMP/repo"
+blobstore_type="multiplexed"
+
+    [[storage.blobstore.components]]
+    blobstore_id=0
+    blobstore_type="blob:files"
+    path = "$TESTTMP/repo/0"
+
+    [[storage.blobstore.components]]
+    blobstore_id=1
+    blobstore_type="blob:files"
+    path = "$TESTTMP/repo/1"
+CONFIG
+else
+  cat >> repos/repo/server.toml <<CONFIG
 [storage.blobstore]
 db.local_db_path = "$TESTTMP/repo"
 blobstore_type = "$REPOTYPE"
 path = "$TESTTMP/repo"
 
 CONFIG
+fi
 
 if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
   cat >> repos/repo/server.toml <<CONFIG
