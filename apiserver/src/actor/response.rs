@@ -12,7 +12,7 @@ use futures::Stream;
 use serde::Serialize;
 use serde_cbor;
 
-use types::api::{FileDataResponse, FileHistoryResponse};
+use types::api::{DataResponse, HistoryResponse};
 
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
@@ -54,12 +54,8 @@ pub enum MononokeRepoResponse {
         response: BatchResponse,
     },
     UploadLargeFile {},
-    EdenGetData {
-        response: FileDataResponse,
-    },
-    EdenGetHistory {
-        response: FileHistoryResponse,
-    },
+    EdenGetData(DataResponse),
+    EdenGetHistory(HistoryResponse),
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -107,8 +103,8 @@ impl Responder for MononokeRepoResponse {
             DownloadLargeFile { content } => Ok(binary_response(content.into())),
             LfsBatch { response } => Json(response).respond_to(req),
             UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
-            EdenGetData { response } => Ok(cbor_response(response)),
-            EdenGetHistory { response } => Ok(cbor_response(response)),
+            EdenGetData(response) => Ok(cbor_response(response)),
+            EdenGetHistory(response) => Ok(cbor_response(response)),
         }
     }
 }

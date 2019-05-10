@@ -38,7 +38,7 @@ use uuid::Uuid;
 use mercurial_types::{manifest::Content, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use types::{
-    api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse},
+    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse},
     DataEntry, Key, WireHistoryEntry,
 };
 
@@ -453,9 +453,7 @@ impl MononokeRepo {
         iter_ok(fetches)
             .buffer_unordered(10)
             .collect()
-            .map(|entries| MononokeRepoResponse::EdenGetData {
-                response: FileDataResponse::new(entries),
-            })
+            .map(|entries| MononokeRepoResponse::EdenGetData(DataResponse::new(entries)))
             .from_err()
             .boxify()
     }
@@ -493,8 +491,10 @@ impl MononokeRepo {
         iter_ok(fetches)
             .buffer_unordered(10)
             .collect()
-            .map(|history| MononokeRepoResponse::EdenGetHistory {
-                response: FileHistoryResponse::new(history.into_iter().flatten()),
+            .map(|history| {
+                MononokeRepoResponse::EdenGetHistory(HistoryResponse::new(
+                    history.into_iter().flatten(),
+                ))
             })
             .boxify()
     }
@@ -531,8 +531,8 @@ impl MononokeRepo {
                 lfs_url,
             } => self.lfs_batch(repo_name, req, lfs_url),
             UploadLargeFile { oid, body } => self.upload_large_file(ctx, oid, body),
-            EdenGetData(FileDataRequest { keys }) => self.eden_get_data(ctx, keys),
-            EdenGetHistory(FileHistoryRequest { keys, depth }) => {
+            EdenGetData(DataRequest { keys }) => self.eden_get_data(ctx, keys),
+            EdenGetHistory(HistoryRequest { keys, depth }) => {
                 self.eden_get_history(ctx, keys, depth)
             }
         }
