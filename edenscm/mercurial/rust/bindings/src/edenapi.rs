@@ -12,6 +12,7 @@ use failure::format_err;
 use log;
 
 use edenapi::{Config, EdenApi, EdenApiCurlClient, EdenApiHyperClient, ProgressFn, ProgressStats};
+use pyrevisionstore::PythonMutableDataPack;
 use types::{Key, Node, RepoPath};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -84,20 +85,20 @@ py_class!(class client |py| {
         self.inner(py).hostname().map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>, progress_fn: Option<PyObject> = None) -> PyResult<PyBytes> {
+    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<PyObject> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
+        let mut store = PythonMutableDataPack::new(store)?;
+
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        let out_path = py.allow_threads(move || {
-            client.get_files(keys, progress_fn)
+        py.allow_threads(move || {
+            client.get_files(keys, &mut store, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
-        let out_path = path_to_local_bytes(&out_path)
-            .map_pyerr::<exc::RuntimeError>(py)?;
-        Ok(PyBytes::new(py, &out_path))
+        Ok(Python::None(py))
 
     }
 

@@ -6,7 +6,7 @@ edition = "2018"
 
 [lib]
 name = "pyrevisionstore"
-crate-type = ["cdylib"]
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 encoding = { path = "../../../../lib/encoding" }

@@ -5,21 +5,18 @@ use std::path::{Path, PathBuf};
 use bytes::Bytes;
 use failure::Fallible;
 
-use revisionstore::{
-    DataPackVersion, Delta, HistoryPackVersion, Metadata, MutableDataPack, MutableDeltaStore,
-    MutableHistoryPack,
-};
+use revisionstore::{Delta, HistoryPackVersion, Metadata, MutableDeltaStore, MutableHistoryPack};
 use types::{HistoryEntry, Key};
 
-/// Create a new datapack in the given directory, and populate it with the file
-/// contents provided by the given iterator. Each Delta written to the datapack is
-/// assumed to contain the full text of the corresponding file, and as a result the
+/// Populate the store with the file contents provided by the given iterator. Each Delta written to
+/// the store is assumed to contain the full text of the corresponding file, and as a result the
 /// base revision for each file is always specified as None.
-pub fn write_datapack(
-    pack_dir: impl AsRef<Path>,
+///
+/// Flushing the store for the written content to be visible is the responsability of the caller.
+pub fn write_to_deltastore(
+    store: &mut MutableDeltaStore,
     files: impl IntoIterator<Item = (Key, Bytes)>,
-) -> Fallible<PathBuf> {
-    let mut datapack = MutableDataPack::new(pack_dir, DataPackVersion::One)?;
+) -> Fallible<()> {
     for (key, data) in files {
         let metadata = Metadata {
             size: Some(data.len() as u64),
@@ -30,9 +27,10 @@ pub fn write_datapack(
             base: None,
             key,
         };
-        datapack.add(&delta, &metadata)?;
+        store.add(&delta, &metadata)?;
     }
-    datapack.close()
+
+    Ok(())
 }
 
 /// Create a new historypack in the given directory, and populate it

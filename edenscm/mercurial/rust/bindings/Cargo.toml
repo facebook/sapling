@@ -26,6 +26,7 @@ log = "0.4.6"
 mutationstore = { path = "../../../../lib/mutationstore" }
 nodemap = { path = "../../../../lib/nodemap" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
+pyrevisionstore = { path = "../../../hgext/extlib/pyrevisionstore" }
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
 vlqencoding = { path = "../../../../lib/vlqencoding" }

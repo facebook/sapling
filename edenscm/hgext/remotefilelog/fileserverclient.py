@@ -781,12 +781,13 @@ class fileserverclient(object):
         # will result in a type error, so convert them here.
         fileids = [tuple(i) for i in fileids]
 
-        datapackpath = self._httpfetchdata(fileids) if fetchdata else None
-        histpackpath = self._httpfetchhistory(fileids) if fetchhistory else None
+        dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
+        datapackpath = self._httpfetchdata(fileids, dpack) if fetchdata else None
+        histpackpath = self._httpfetchhistory(fileids, hpack) if fetchhistory else None
 
         return datapackpath, histpackpath
 
-    def _httpfetchdata(self, fileids):
+    def _httpfetchdata(self, fileids, dpack):
         """Fetch file data over HTTP using the Eden API"""
         if edenapi.debug(self.ui):
             self.ui.warn(_("fetching data for %d files over HTTP\n") % len(fileids))
@@ -802,9 +803,9 @@ class fileserverclient(object):
                     prog._total = dlt
                     prog.value = dl
 
-            return self.repo.edenapi.get_files(fileids, progcallback)
+            return self.repo.edenapi.get_files(fileids, dpack, progcallback)
 
-    def _httpfetchhistory(self, fileids, depth=None):
+    def _httpfetchhistory(self, fileids, hpack, depth=None):
         """Fetch file history over HTTP using the Eden API"""
         if edenapi.debug(self.ui):
             self.ui.warn(_("fetching history for %d files over HTTP\n") % len(fileids))

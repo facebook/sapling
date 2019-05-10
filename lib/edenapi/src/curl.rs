@@ -18,6 +18,7 @@ use serde_cbor;
 use url::Url;
 
 use driver::MultiDriver;
+use revisionstore::MutableDeltaStore;
 use types::{
     api::{FileDataRequest, FileDataResponse, FileHistoryRequest, FileHistoryResponse},
     Key,
@@ -25,7 +26,7 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::packs::{write_datapack, write_historypack};
+use crate::packs::{write_historypack, write_to_deltastore};
 use crate::progress::{ProgressFn, ProgressHandle, ProgressManager, ProgressStats};
 
 mod driver;
@@ -124,7 +125,12 @@ impl EdenApi for EdenApiCurlClient {
         Ok(response)
     }
 
-    fn get_files(&self, keys: Vec<Key>, progress: Option<ProgressFn>) -> Fallible<PathBuf> {
+    fn get_files(
+        &self,
+        keys: Vec<Key>,
+        store: &mut MutableDeltaStore,
+        progress: Option<ProgressFn>,
+    ) -> Fallible<()> {
         log::debug!("Fetching {} files", keys.len());
 
         let url = self.repo_base_url()?.join(paths::DATA)?;
@@ -159,9 +165,7 @@ impl EdenApi for EdenApiCurlClient {
             files.push((entry.key, entry.data));
         }
 
-        let cache_path = self.pack_cache_path();
-        log::debug!("Writing pack file in directory: {:?}", &cache_path);
-        write_datapack(cache_path, files)
+        write_to_deltastore(store, files)
     }
 
     fn get_history(

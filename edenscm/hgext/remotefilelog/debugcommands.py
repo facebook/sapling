@@ -508,7 +508,9 @@ def debuggetfiles(ui, repo, **opts):
     edenapi.bailifdisabled(ui)
     input = (line.split() for line in sys.stdin.readlines())
     keys = [(path, node) for node, path in input]
-    packpath = repo.edenapi.get_files(keys)
+    dpack, __ = repo.fileslog.getmutablesharedpacks()
+    repo.edenapi.get_files(keys, dpack)
+    packpath, __ = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote datapack: %s\n") % packpath)
 
 
