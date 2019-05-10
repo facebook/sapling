@@ -1,5 +1,6 @@
 
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.flatcompat=False
 
   $ enable lfs treemanifest pushrebase
   $ setconfig treemanifest.treeonly=True

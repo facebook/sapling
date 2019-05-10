@@ -1,4 +1,5 @@
 #testcases vfscachestore simplecachestore
+  $ setconfig treemanifest.flatcompat=False
 
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=

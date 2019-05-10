@@ -1524,6 +1524,9 @@ class Test(unittest.TestCase):
             hgrc.write(b"address = localhost\n")
             hgrc.write(b"ipv6 = %s\n" % str(self._useipv6).encode("ascii"))
 
+            # treemanifest
+            hgrc.write(b"[treemanifest]\n")
+            hgrc.write(b"flatcompat=True\n")
             for opt in self._extraconfigopts:
                 section, key = opt.encode("utf-8").split(b".", 1)
                 assert b"=" in key, (

@@ -1,5 +1,6 @@
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
+  $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server
@@ -612,6 +613,7 @@ Test pulling to a treeonly client from a treeonly server
 
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
+  treemanifest.flatcompat=False
   treemanifest.sendtrees=True
   treemanifest.demanddownload=True
   treemanifest.treeonly=True

@@ -1,5 +1,6 @@
 
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.flatcompat=False
 
   $ hginit master
   $ cd master

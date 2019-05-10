@@ -1,5 +1,6 @@
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
+  $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server

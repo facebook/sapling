@@ -1,4 +1,5 @@
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.flatcompat=False
 
 Setup the server
 
