@@ -41,3 +41,11 @@ pub trait EdenApi: Send + Sync {
         progress: Option<ProgressFn>,
     ) -> Fallible<()>;
 }
+
+// Statically ensure that the EdenApi trait is object safe using
+// a dummy function that takes an EdenApi trait object.
+//
+// We want the trait to be object safe so that it is possible to
+// dynamically choose between multiple implementations in the
+// Python bindings.
+fn _assert_object_safety(_: &EdenApi) {}
