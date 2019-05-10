@@ -5,21 +5,18 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
-use futures::{Future, future::ok};
+use futures::{future::ok, Future};
 use futures_ext::FutureExt;
 use iobuf::IOBuf;
 use memcache::MemcacheClient;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
+use mock_store::MockStore;
+use std::sync::atomic::Ordering;
 
 #[derive(Clone)]
 pub enum MemcacheHandler {
     Real(MemcacheClient),
     #[allow(dead_code)]
-    Mock {
-        data: Arc<Mutex<HashMap<String, Bytes>>>,
-        get_count: Arc<AtomicUsize>,
-    },
+    Mock(MockStore<Bytes>),
 }
 
 impl From<MemcacheClient> for MemcacheHandler {
@@ -32,14 +29,8 @@ impl MemcacheHandler {
     pub fn get(&self, key: String) -> impl Future<Item = Option<IOBuf>, Error = ()> {
         match self {
             MemcacheHandler::Real(ref client) => client.get(key).left_future(),
-            MemcacheHandler::Mock {
-                ref data,
-                ref get_count,
-                ..
-            } => {
-                get_count.fetch_add(1, Ordering::SeqCst);
-                let data = data.lock().expect("poisoned lock");
-                ok(data.get(&key).map(|value| value.clone().into())).right_future()
+            MemcacheHandler::Mock(store) => {
+                ok(store.get(&key).map(|value| value.clone().into())).right_future()
             }
         }
     }
@@ -47,10 +38,8 @@ impl MemcacheHandler {
     pub fn set(&self, key: String, value: Bytes) -> impl Future<Item = (), Error = ()> {
         match self {
             MemcacheHandler::Real(ref client) => client.set(key, value).left_future(),
-            MemcacheHandler::Mock { ref data, .. } => {
-                data.lock()
-                    .expect("poisoned lock")
-                    .insert(key.clone(), value.clone());
+            MemcacheHandler::Mock(store) => {
+                store.set(&key, &value);
                 ok(()).right_future()
             }
         }
@@ -58,17 +47,16 @@ impl MemcacheHandler {
 
     #[allow(dead_code)]
     pub fn create_mock() -> Self {
-        MemcacheHandler::Mock {
-            data: Arc::new(Mutex::new(HashMap::new())),
-            get_count: Arc::new(AtomicUsize::new(0)),
-        }
+        MemcacheHandler::Mock(MockStore::new())
     }
 
     #[allow(dead_code)]
     pub(crate) fn gets_count(&self) -> usize {
         match self {
             MemcacheHandler::Real(_) => unimplemented!(),
-            MemcacheHandler::Mock { ref get_count, .. } => get_count.load(Ordering::SeqCst),
+            MemcacheHandler::Mock(MockStore { ref get_count, .. }) => {
+                get_count.load(Ordering::SeqCst)
+            }
         }
     }
 }

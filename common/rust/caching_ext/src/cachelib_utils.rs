@@ -6,37 +6,24 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
+use std::sync::atomic::Ordering;
 
 use cachelib::{get_cached, set_cached, Abomonation, LruCachePool};
 use failure::prelude::*;
+use mock_store::MockStore;
 
 use CachelibKey;
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
     Real(LruCachePool),
-    #[allow(dead_code)] Mock(MockCachelib<T>),
+    #[allow(dead_code)]
+    Mock(MockStore<T>),
 }
 
 impl<T> From<LruCachePool> for CachelibHandler<T> {
     fn from(cache: LruCachePool) -> Self {
         CachelibHandler::Real(cache)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct MockCachelib<T> {
-    cache: Arc<Mutex<HashMap<String, T>>>,
-    get_count: Arc<AtomicUsize>,
-}
-
-impl<T> MockCachelib<T> {
-    fn new() -> Self {
-        Self {
-            cache: Arc::new(Mutex::new(HashMap::new())),
-            get_count: Arc::new(AtomicUsize::new(0)),
-        }
     }
 }
 
@@ -78,25 +65,15 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
     fn get_cached(&self, key: &String) -> Result<Option<T>> {
         match self {
             CachelibHandler::Real(ref cache) => get_cached(cache, key),
-            CachelibHandler::Mock(MockCachelib {
-                ref cache,
-                ref get_count,
-                ..
-            }) => {
-                get_count.fetch_add(1, Ordering::SeqCst);
-                Ok(cache.lock().expect("poisoned lock").get(key).cloned())
-            }
+            CachelibHandler::Mock(store) => Ok(store.get(key)),
         }
     }
 
     fn set_cached(&self, key: &String, value: &T) -> Result<bool> {
         match self {
             CachelibHandler::Real(ref cache) => set_cached(cache, key, value),
-            CachelibHandler::Mock(MockCachelib { ref cache, .. }) => {
-                cache
-                    .lock()
-                    .expect("poisoned lock")
-                    .insert(key.clone(), value.clone());
+            CachelibHandler::Mock(store) => {
+                store.set(key, value);
                 Ok(true)
             }
         }
@@ -104,14 +81,14 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
 
     #[allow(dead_code)]
     pub fn create_mock() -> Self {
-        CachelibHandler::Mock(MockCachelib::new())
+        CachelibHandler::Mock(MockStore::new())
     }
 
     #[allow(dead_code)]
     pub(crate) fn gets_count(&self) -> usize {
         match self {
             CachelibHandler::Real(_) => unimplemented!(),
-            CachelibHandler::Mock(MockCachelib { ref get_count, .. }) => {
+            CachelibHandler::Mock(MockStore { ref get_count, .. }) => {
                 get_count.load(Ordering::SeqCst)
             }
         }
@@ -134,12 +111,12 @@ mod tests {
             let fill_query = initial_keys.clone().into_iter().map(|(key, val)| (key.clone(), (val, CachelibKey(key)))).collect();
             let get_query = keys_to_query.clone().into_iter().map(|key| (key.clone(),  CachelibKey(key))).collect();
 
-            let mock_cachelib = MockCachelib::new();
+            let mock_cachelib = MockStore::new();
             let cachelib_handler = CachelibHandler::Mock(mock_cachelib.clone());
 
             cachelib_handler.fill_multiple_cachelib(fill_query);
 
-            if *mock_cachelib.cache.lock().expect("poisoned lock") != initial_keys {
+            if mock_cachelib.data() != initial_keys {
                 return TestResult::error("After fill_multiple_cachelib the content of cache is incorrect");
             }
 

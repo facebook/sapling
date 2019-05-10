@@ -31,6 +31,7 @@ extern crate quickcheck;
 
 mod cachelib_utils;
 mod memcache_utils;
+mod mock_store;
 
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
@@ -47,6 +48,7 @@ use mononoke_types::RepositoryId;
 
 pub use cachelib_utils::CachelibHandler;
 pub use memcache_utils::MemcacheHandler;
+pub use mock_store::MockStoreStats;
 
 /// Error type to help with proper reporting of memcache errors
 pub enum McErrorKind {
