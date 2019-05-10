@@ -154,17 +154,7 @@ def sanitizeopts(repo, opts):
             raise error.Abort(_("--limit should be > 0, got %d") % limit)
 
 
-def startfrom(ui, repo, opts):
-    base, dest = "null", "tip"
-    if opts.get("bookmark"):
-        dest = opts.get("bookmark")
-    if opts.get("base"):
-        base = opts["base"]
-        if opts.get("bookmark") not in repo:
-            dest = base
-
-    basectx = scmutil.revsingle(repo, base)
-    destctx = scmutil.revsingle(repo, dest)
+def getstartcl(ui, repo, basectx, destctx):
     ctx = list(
         repo.set(
             """
@@ -185,9 +175,24 @@ def startfrom(ui, repo, opts):
         )
         if ctx.node() == basectx.node():
             ui.note(_("creating branchpoint, base %s\n") % short(basectx.node()))
-            return ctx, startcl, True
-        return ctx, startcl, False
+            return startcl, True
+        return startcl, False
     raise error.Abort(_("no valid p4 changelist number."))
+
+
+def startfrom(ui, repo, opts):
+    base, dest = "null", "tip"
+    if opts.get("bookmark"):
+        dest = opts.get("bookmark")
+    if opts.get("base"):
+        base = opts["base"]
+        if opts.get("bookmark") not in repo:
+            dest = base
+
+    basectx = scmutil.revsingle(repo, base)
+    destctx = scmutil.revsingle(repo, dest)
+    startcl, branch = getstartcl(ui, repo, basectx, destctx)
+    return destctx, startcl, branch
 
 
 def updatemetadata(ui, revisions, largefiles):
