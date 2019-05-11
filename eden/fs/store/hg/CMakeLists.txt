@@ -6,7 +6,9 @@ add_library(
 )
 
 list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS datapack)
-list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
+if (NOT WIN32)
+  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
+endif()
 list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_config)
 
 target_link_libraries(
@@ -18,12 +20,14 @@ target_link_libraries(
     ${EDEN_STORE_HG_OPTIONAL_DEPS}
 )
 
-add_executable(
-  hg_store_tester
-    tester.cpp
-)
-target_link_libraries(
-  hg_store_tester
-    eden_store_hg
-)
-add_subdirectory(test)
+if (NOT WIN32)
+  add_executable(
+    hg_store_tester
+      tester.cpp
+  )
+  target_link_libraries(
+    hg_store_tester
+      eden_store_hg
+  )
+  add_subdirectory(test)
+endif()

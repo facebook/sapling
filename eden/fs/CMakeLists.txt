@@ -5,10 +5,18 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-add_executable(
-  edenfs
-  service/oss/main.cpp
-)
+if(WIN32)
+  add_executable(
+    edenfs
+    win/service/main.cpp
+  )
+else()
+  add_executable(
+    edenfs
+    service/oss/main.cpp
+  )
+endif()
+
 install(TARGETS edenfs RUNTIME DESTINATION bin)
 target_include_directories(
   edenfs
@@ -22,16 +30,28 @@ target_link_libraries(
     Folly::folly
 )
 
+if (WIN32)
+  add_compile_definitions(_UNICODE UNICODE)
+endif()
+
 add_subdirectory(config)
-add_subdirectory(fuse)
 add_subdirectory(inodes)
 add_subdirectory(journal)
 add_subdirectory(model)
-add_subdirectory(rocksdb)
 add_subdirectory(service)
 add_subdirectory(sqlite)
 add_subdirectory(store)
-add_subdirectory(takeover)
-add_subdirectory(testharness)
 add_subdirectory(tracing)
 add_subdirectory(utils)
+
+# Platform specific code
+if (WIN32)
+  add_subdirectory(win/mount)
+  add_subdirectory(win/store)
+  add_subdirectory(win/utils)
+else()
+  add_subdirectory(fuse)
+  add_subdirectory(rocksdb)
+  add_subdirectory(takeover)
+  add_subdirectory(testharness)
+endif()
