@@ -6,10 +6,15 @@
 
 use crate::utils::run_future;
 use async_unit;
+use failure_ext::Result;
 use futures::future::Future;
+use rand::{distributions::Normal, SeedableRng};
+use rand_xorshift::XorShiftRng;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 
+use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
 use blobrepo::internal::{IncompleteFilenodes, MemoryManifestEntry, MemoryRootManifest};
 use blobrepo::HgBlobEntry;
 use context::CoreContext;
@@ -618,4 +623,40 @@ fn merge_manifests() {
             panic!("Merge failed to produce a merged tree");
         }
     })
+}
+
+#[test]
+fn save_reproducibility_under_load() -> Result<()> {
+    let ctx = CoreContext::test_mock();
+    let delay_settings = DelaySettings {
+        blobstore_put_dist: Normal::new(0.01, 0.005),
+        blobstore_get_dist: Normal::new(0.005, 0.0025),
+        db_put_dist: Normal::new(0.002, 0.001),
+        db_get_dist: Normal::new(0.002, 0.001),
+    };
+    cmdlib::args::init_cachelib_from_settings(Default::default())?;
+    let repo = new_benchmark_repo(delay_settings)?;
+
+    let mut rng = XorShiftRng::seed_from_u64(1);
+    let mut gen = GenManifest::new();
+    let settings = Default::default();
+
+    let test = gen
+        .gen_stack(
+            ctx.clone(),
+            repo.clone(),
+            &mut rng,
+            &settings,
+            None,
+            std::iter::repeat(16).take(50),
+        )
+        .and_then(move |csid| repo.get_hg_from_bonsai_changeset(ctx, csid));
+
+    let mut runtime = Runtime::new()?;
+    assert_eq!(
+        runtime.block_on(test)?,
+        "6f67e722196896e645eec15b1d40fb0ecc5488d6".parse()?,
+    );
+
+    Ok(())
 }

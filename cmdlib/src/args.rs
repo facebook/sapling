@@ -404,28 +404,90 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .args(&cache_args)
 }
 
+pub struct CachelibSettings {
+    pub cache_size: usize,
+    pub max_process_size_gib: Option<u32>,
+    pub min_process_size_gib: Option<u32>,
+    pub use_tupperware_shrinker: bool,
+    pub presence_cache_size: Option<usize>,
+    pub changesets_cache_size: Option<usize>,
+    pub filenodes_cache_size: Option<usize>,
+    pub idmapping_cache_size: Option<usize>,
+    pub with_content_sha1_cache: bool,
+    pub content_sha1_cache_size: Option<usize>,
+    pub blob_cache_size: Option<usize>,
+}
+
+impl Default for CachelibSettings {
+    fn default() -> Self {
+        Self {
+            cache_size: 20 * 1024 * 1024 * 1024,
+            max_process_size_gib: None,
+            min_process_size_gib: None,
+            use_tupperware_shrinker: false,
+            presence_cache_size: None,
+            changesets_cache_size: None,
+            filenodes_cache_size: None,
+            idmapping_cache_size: None,
+            with_content_sha1_cache: false,
+            content_sha1_cache_size: None,
+            blob_cache_size: None,
+        }
+    }
+}
+
 // TODO: (jsgf) T32777804 make the dependency between cachelib and blobrepo more visible
 pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     if matches.is_present("do-not-init-cachelib") {
         return;
     }
-    let cache_size_gb = matches
-        .value_of("cache-size-gb")
-        .unwrap_or("20")
-        .parse::<usize>()
-        .unwrap();
 
+    let mut settings = CachelibSettings::default();
+    if let Some(cache_size) = matches.value_of("cache-size-gb") {
+        settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
+    }
+    if let Some(max_process_size) = matches.value_of("max-process-size") {
+        settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
+    }
+    if let Some(min_process_size) = matches.value_of("min-process-size") {
+        settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
+    }
+    settings.use_tupperware_shrinker = matches.is_present("use-tupperware-shrinker");
+    if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
+        settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
+    }
+    if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
+        settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
+    }
+    if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
+        settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
+    }
+    if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
+        settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
+    }
+    settings.with_content_sha1_cache = matches.is_present("with-content-sha1-cache");
+    if let Some(content_sha1_cache_size) = matches.value_of("content-sha1-cache-size") {
+        settings.content_sha1_cache_size = Some(content_sha1_cache_size.parse().unwrap());
+    }
+    if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
+        settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
+    }
+
+    init_cachelib_from_settings(settings).unwrap();
+}
+
+pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
     // Millions of lookups per second
     let lock_power = 10;
     // Assume 200 bytes average cache item size and compute bucketsPower
     let expected_item_size_bytes = 200;
-    let cache_size_bytes = cache_size_gb * 1024 * 1024 * 1024;
+    let cache_size_bytes = settings.cache_size;
     let item_count = cache_size_bytes / expected_item_size_bytes;
 
     // Because `bucket_count` is a power of 2, bucket_count.trailing_zeros() is log2(bucket_count)
     let bucket_count = item_count
         .checked_next_power_of_two()
-        .expect("Cache has too many objects to fit a `usize`?!?");
+        .ok_or_else(|| err_msg("Cache has too many objects to fit a `usize`?!?"))?;
     let buckets_power = min(bucket_count.trailing_zeros() + 1 as u32, 32);
 
     let mut cache_config = cachelib::LruCacheConfig::new(cache_size_bytes)
@@ -442,26 +504,26 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         })
         .set_access_config(buckets_power, lock_power);
 
-    if matches.is_present("use-tupperware-shrinker") {
-        if matches.is_present("max-process-size") || matches.is_present("min-process-size") {
-            panic!("Can't use both Tupperware shrinker and manually configured shrinker");
+    if settings.use_tupperware_shrinker {
+        if settings.max_process_size_gib.is_some() || settings.min_process_size_gib.is_some() {
+            return Err(err_msg(
+                "Can't use both Tupperware shrinker and manually configured shrinker",
+            ));
         }
-
         cache_config = cache_config.set_tupperware_shrinker();
     } else {
-        let opt_max_process_size_gib = matches.value_of("max-process-size").map(str::parse::<u32>);
-        let opt_min_process_size_gib = matches.value_of("min-process-size").map(str::parse::<u32>);
-
-        match (opt_max_process_size_gib, opt_min_process_size_gib) {
+        match (settings.max_process_size_gib, settings.min_process_size_gib) {
             (None, None) => (),
             (Some(_), None) | (None, Some(_)) => {
-                panic!("If setting process size limits, must set both max and min")
+                return Err(err_msg(
+                    "If setting process size limits, must set both max and min",
+                ));
             }
             (Some(max), Some(min)) => {
                 cache_config = cache_config.set_shrinker(cachelib::ShrinkMonitor {
                     shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
-                        max_process_size_gib: max.unwrap(),
-                        min_process_size_gib: min.unwrap(),
+                        max_process_size_gib: max,
+                        min_process_size_gib: min,
                     },
                     interval: Duration::new(10, 0),
                     max_resize_per_iteration_percent: 25,
@@ -479,51 +541,53 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         };
     }
 
-    cachelib::init_cache_once(cache_config).unwrap();
-
-    cachelib::init_cacheadmin("mononoke").unwrap();
+    cachelib::init_cache_once(cache_config)?;
+    cachelib::init_cacheadmin("mononoke")?;
 
     // Give each cache 5% of the available space, bar the blob cache which gets everything left
     // over. We can adjust this with data.
-    let available_space = cachelib::get_available_space().unwrap();
+    let available_space = cachelib::get_available_space()?;
     cachelib::get_or_create_pool(
         "blobstore-presence",
-        get_usize(matches, "presence-cache-size", available_space / 20),
-    )
-    .unwrap();
+        settings.presence_cache_size.unwrap_or(available_space / 20),
+    )?;
+
     cachelib::get_or_create_pool(
         "changesets",
-        get_usize(matches, "changesets-cache-size", available_space / 20),
-    )
-    .unwrap();
+        settings
+            .changesets_cache_size
+            .unwrap_or(available_space / 20),
+    )?;
     cachelib::get_or_create_pool(
         "filenodes",
-        get_usize(matches, "filenodes-cache-size", available_space / 20),
-    )
-    .unwrap();
+        settings
+            .filenodes_cache_size
+            .unwrap_or(available_space / 20),
+    )?;
     cachelib::get_or_create_pool(
         "bonsai_hg_mapping",
-        get_usize(matches, "idmapping-cache-size", available_space / 20),
-    )
-    .unwrap();
+        settings
+            .idmapping_cache_size
+            .unwrap_or(available_space / 20),
+    )?;
 
-    if matches.is_present("with-content-sha1-cache") {
+    if settings.with_content_sha1_cache {
         cachelib::get_or_create_pool(
             "content-sha1",
-            get_usize(matches, "content-sha1-cache-size", available_space / 20),
-        )
-        .unwrap();
+            settings
+                .content_sha1_cache_size
+                .unwrap_or(available_space / 20),
+        )?;
     }
 
     cachelib::get_or_create_pool(
         "blobstore-blobs",
-        get_usize(
-            matches,
-            "blob-cache-size",
-            cachelib::get_available_space().unwrap(),
-        ),
-    )
-    .unwrap();
+        settings
+            .blob_cache_size
+            .unwrap_or(cachelib::get_available_space()?),
+    )?;
+
+    Ok(())
 }
 
 pub fn add_myrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
