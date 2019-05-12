@@ -629,6 +629,17 @@ impl<'a> TryFrom<&'a str> for MPath {
     }
 }
 
+impl TryFrom<Vec<MPathElement>> for MPath {
+    type Error = Error;
+
+    fn try_from(elements: Vec<MPathElement>) -> Result<Self> {
+        if elements.is_empty() {
+            return Err(err_msg("mpath can not be empty"));
+        }
+        Ok(MPath { elements })
+    }
+}
+
 lazy_static! {
     static ref COMPONENT_CHARS: Vec<u8> = (2..b'\n')
         .chain((b'\n' + 1)..b'/')
