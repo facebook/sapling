@@ -12,30 +12,32 @@ use futures::sync::{mpsc, oneshot};
 use futures::{
     future, stream, try_ready, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream,
 };
+use std::{
+    fmt::Debug,
+    io as std_io,
+    time::{Duration, Instant},
+};
 use tokio::timer::Delay;
-use tokio_io::codec::{Decoder, Encoder};
-use tokio_io::AsyncWrite;
+use tokio_io::{
+    codec::{Decoder, Encoder},
+    AsyncWrite,
+};
 use tokio_threadpool::blocking;
 
-use std::{fmt::Debug, io as std_io};
-
+pub mod bounded_traversal;
 mod bytes_stream;
+pub mod decode;
+pub mod encode;
 mod futures_ordered;
+pub mod io;
 mod select_all;
 mod stream_wrappers;
 mod streamfork;
-
-pub mod decode;
-pub mod encode;
-
-pub mod io;
 
 pub use crate::bytes_stream::{BytesStream, BytesStreamFuture};
 pub use crate::futures_ordered::{futures_ordered, FuturesOrdered};
 pub use crate::select_all::{select_all, SelectAll};
 pub use crate::stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
-
-use std::time::{Duration, Instant};
 
 /// Map `Item` and `Error` to `()`
 ///
