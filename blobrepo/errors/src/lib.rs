@@ -123,6 +123,8 @@ pub enum ErrorKind {
     UnresolvedConflicts,
     #[fail(display = "Manifest without parents did not get changed by a BonsaiChangeset")]
     UnchangedManifest,
+    #[fail(display = "Saving empty manifest which is not a root: {}", _0)]
+    SavingEmptyManifest(RepoPath),
     #[fail(
         display = "Trying to merge a manifest with two existing parents p1 {} and p2 {}",
         _0, _1

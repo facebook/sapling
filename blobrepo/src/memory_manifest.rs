@@ -15,7 +15,10 @@ use cloned::cloned;
 use failure_ext::{Error, Result};
 use futures::future::{self, Either, Future, IntoFuture};
 use futures::stream::{self, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{
+    bounded_traversal::{bounded_traversal, Iter as BTIter},
+    try_boxfuture, BoxFuture, FutureExt,
+};
 use slog::Logger;
 
 use blob_changeset::RepoBlobstore;
@@ -179,133 +182,125 @@ impl MemoryManifestEntry {
         logger: &Logger,
         incomplete_filenodes: &IncompleteFilenodes,
         path: RepoPath,
-    ) -> BoxFuture<HgBlobEntry, Error> {
-        match self {
-            // We cannot have blobs that aren't already in the repo - only MemTrees can be new
-            MemoryManifestEntry::Blob(blob) => future::ok(blob.clone()).boxify(),
-            // Conflicts cannot be saved
-            MemoryManifestEntry::Conflict(_) => {
-                future::err(ErrorKind::UnresolvedConflicts.into()).boxify()
-            }
-            MemoryManifestEntry::MemTree {
-                base_manifest_id,
-                p1,
-                p2,
-                ..
-            } => {
-                let p1 = *p1;
-                let p2 = *p2;
-                if self.is_modified() {
-                    self.get_new_children(ctx.clone(), blobstore)
-                        .and_then({
-                            cloned!(logger, blobstore, incomplete_filenodes);
-                            move |new_children| {
-                                // First save only the non-empty children
-                                let entries = stream::iter_ok(new_children.into_iter())
-                                    .and_then({
-                                        cloned!(ctx, blobstore);
-                                        move |(path_elem, entry)| {
-                                            (
-                                                entry.is_empty(ctx.clone(), &blobstore),
-                                                Ok(path_elem),
-                                                Ok(entry),
-                                            )
-                                        }
-                                    })
-                                    .filter(|(empty, ..)| !empty)
-                                    .and_then({
-                                        cloned!(ctx, logger, blobstore, path, incomplete_filenodes);
-                                        move |(_, path_elem, entry)| {
-                                            let path_elem = path_elem.clone();
-                                            // This is safe, because we only save trees
-                                            let entry_path =
-                                                extend_repopath_with_dir(&path, &path_elem);
-                                            entry
-                                                .save(
-                                                    ctx.clone(),
-                                                    &blobstore,
-                                                    &logger,
-                                                    &incomplete_filenodes,
-                                                    entry_path,
-                                                )
-                                                .map(move |entry| (path_elem, entry))
-                                        }
-                                    })
-                                    .collect();
-
-                                // Then write out a manifest for this tree node
-                                entries.and_then({
-                                    cloned!(blobstore, logger, incomplete_filenodes);
-                                    move |entries| {
-                                        let mut manifest: Vec<u8> = Vec::new();
-                                        entries.iter().for_each(|&(ref path, ref entry)| {
-                                            manifest.extend(path.as_bytes());
-                                            write!(
-                                                &mut manifest,
-                                                "\0{}{}\n",
-                                                entry.get_hash().into_nodehash(),
-                                                entry.get_type().manifest_suffix(),
-                                            )
-                                            .expect("Writing to memory failed!");
-                                        });
-
-                                        let upload_manifest = UploadHgTreeEntry {
-                                            upload_node_id: UploadHgNodeHash::Generate,
-                                            contents: manifest.into(),
-                                            p1: p1.clone(),
-                                            p2: p2.clone(),
-                                            path,
-                                        };
-                                        upload_manifest
-                                            .upload_to_blobstore(ctx, &blobstore, &logger)
-                                            .map(|(_hash, future)| future)
-                                            .into_future()
-                                            .flatten()
-                                            .map(move |(entry, path)| {
-                                                incomplete_filenodes.add(IncompleteFilenodeInfo {
-                                                    path,
-                                                    filenode: HgFileNodeId::new(
-                                                        entry.get_hash().into_nodehash(),
-                                                    ),
-                                                    p1: p1.map(|h| HgFileNodeId::new(h)),
-                                                    p2: p2.map(|h| HgFileNodeId::new(h)),
-                                                    // this is treated as merge so no copyfrom is present
-                                                    copyfrom: None,
-                                                });
-                                                entry
-                                            })
-                                    }
+    ) -> impl Future<Item = HgBlobEntry, Error = Error> {
+        let unfold = {
+            cloned!(ctx, blobstore);
+            move |(path, entry): &(RepoPath, Self)| match entry {
+                MemoryManifestEntry::Blob(_) => future::ok(Vec::new()).left_future(),
+                MemoryManifestEntry::Conflict(_) => {
+                    future::err(ErrorKind::UnresolvedConflicts.into()).left_future()
+                }
+                MemoryManifestEntry::MemTree { .. } => {
+                    if !entry.is_modified() {
+                        return future::ok(Vec::new()).left_future();
+                    }
+                    cloned!(path);
+                    entry
+                        .get_new_children(ctx.clone(), &blobstore)
+                        .map(move |children| {
+                            children
+                                .into_iter()
+                                .map(|(path_elem, child)| {
+                                    (extend_repopath_with_dir(&path, &path_elem), child)
                                 })
+                                .collect()
+                        })
+                        .right_future()
+                }
+            }
+        };
+
+        let fold = {
+            cloned!(ctx, blobstore, logger, incomplete_filenodes);
+            move |(path, entry): (RepoPath, Self), children: BTIter<Option<HgBlobEntry>>| {
+                match entry {
+                    MemoryManifestEntry::Blob(blob) => future::ok(Some(blob.clone())).left_future(),
+                    MemoryManifestEntry::Conflict(_) => {
+                        future::err(ErrorKind::UnresolvedConflicts.into()).left_future()
+                    }
+                    MemoryManifestEntry::MemTree { p1, p2, .. } if entry.is_modified() => {
+                        let mut manifest: Vec<u8> = Vec::new();
+                        for child in children.flatten() {
+                            manifest.extend(
+                                child
+                                    .get_name()
+                                    .expect("root manifest is never part of other manifest")
+                                    .as_bytes(),
+                            );
+                            write!(
+                                &mut manifest,
+                                "\0{}{}\n",
+                                child.get_hash().into_nodehash(),
+                                child.get_type().manifest_suffix(),
+                            )
+                            .expect("Writing to memory failed!");
+                        }
+                        if manifest.is_empty() && !path.is_root() {
+                            return future::ok(None).left_future();
+                        }
+                        UploadHgTreeEntry {
+                            upload_node_id: UploadHgNodeHash::Generate,
+                            contents: manifest.into(),
+                            p1: p1.clone(),
+                            p2: p2.clone(),
+                            path,
+                        }
+                        .upload_to_blobstore(ctx.clone(), &blobstore, &logger)
+                        .map(|(_hash, future)| future)
+                        .into_future()
+                        .flatten()
+                        .map({
+                            cloned!(incomplete_filenodes);
+                            move |(entry, path)| {
+                                incomplete_filenodes.add(IncompleteFilenodeInfo {
+                                    path,
+                                    filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
+                                    p1: p1.map(|h| HgFileNodeId::new(h)),
+                                    p2: p2.map(|h| HgFileNodeId::new(h)),
+                                    // this is treated as merge so no copyfrom is present
+                                    copyfrom: None,
+                                });
+                                Some(entry)
                             }
                         })
-                        .boxify()
-                } else {
-                    if p2.is_some() {
-                        future::err(ErrorKind::UnchangedManifest.into()).boxify()
-                    } else {
-                        let blobstore = blobstore.clone();
-                        base_manifest_id
-                            .ok_or(ErrorKind::UnchangedManifest.into())
-                            .into_future()
-                            .and_then(move |base_manifest_id| {
-                                match path.mpath().map(MPath::basename) {
-                                    None => Ok(HgBlobEntry::new_root(
-                                        blobstore,
-                                        HgManifestId::new(base_manifest_id),
-                                    )),
-                                    Some(path) => Ok(HgBlobEntry::new(
-                                        blobstore,
-                                        path.clone(),
-                                        base_manifest_id,
-                                        Type::Tree,
-                                    )),
-                                }
-                            })
-                            .boxify()
+                        .right_future()
+                    }
+                    MemoryManifestEntry::MemTree {
+                        base_manifest_id,
+                        p2,
+                        ..
+                    } => {
+                        if p2.is_some() {
+                            future::err(ErrorKind::UnchangedManifest.into()).left_future()
+                        } else {
+                            cloned!(blobstore, base_manifest_id);
+                            base_manifest_id
+                                .ok_or(ErrorKind::UnchangedManifest.into())
+                                .and_then(move |base_manifest_id| {
+                                    match path.mpath().map(MPath::basename) {
+                                        None => Ok(Some(HgBlobEntry::new_root(
+                                            blobstore,
+                                            HgManifestId::new(base_manifest_id),
+                                        ))),
+                                        Some(path) => Ok(Some(HgBlobEntry::new(
+                                            blobstore,
+                                            path.clone(),
+                                            base_manifest_id,
+                                            Type::Tree,
+                                        ))),
+                                    }
+                                })
+                                .into_future()
+                                .left_future()
+                        }
                     }
                 }
             }
-        }
+        };
+
+        bounded_traversal(100, (path.clone(), self.clone()), unfold, fold).and_then(move |entry| {
+            entry.ok_or_else(move || ErrorKind::SavingEmptyManifest(path).into())
+        })
     }
 
     fn apply_changes(
