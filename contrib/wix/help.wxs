@@ -15,25 +15,6 @@
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="helpdir" Name="help" FileSource="$(var.SourceDir)">
         <Component Id="help.root" Guid="$(var.help.root.guid)" Win64='$(var.IsX64)'>
-          <File Name="bundlespec.txt" />
-          <File Name="color.txt" />
-          <File Name="config.txt" KeyPath="yes" />
-          <File Name="dates.txt" />
-          <File Name="diffs.txt" />
-          <File Name="environment.txt" />
-          <File Name="extensions.txt" />
-          <File Name="filesets.txt" />
-          <File Name="flags.txt" />
-          <File Name="glossary.txt" />
-          <File Name="hgweb.txt" />
-          <File Name="merge-tools.txt" />
-          <File Name="pager.txt" />
-          <File Name="patterns.txt" />
-          <File Name="phases.txt" />
-          <File Name="revisions.txt" />
-          <File Name="scripting.txt" />
-          <File Name="templates.txt" />
-          <File Name="urls.txt" />
         </Component>
 
         <Directory Id="help.internaldir" Name="internals">

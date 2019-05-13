@@ -1,4 +1,260 @@
-The Mercurial system uses a set of configuration files to control
+# helptext.py - static help data for mercurial
+#
+# Copyright 2006 Mercurial Contributors
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
+
+bundlespec = r"""Mercurial supports generating standalone "bundle" files that hold repository
+data. These "bundles" are typically saved locally and used later or exchanged
+between different repositories, possibly on different machines. Example
+commands using bundles are :hg:`bundle` and :hg:`unbundle`.
+
+Generation of bundle files is controlled by a "bundle specification"
+("bundlespec") string. This string tells the bundle generation process how
+to create the bundle.
+
+A "bundlespec" string is composed of the following elements:
+
+type
+    A string denoting the bundle format to use.
+
+compression
+    Denotes the compression engine to use compressing the raw bundle data.
+
+parameters
+    Arbitrary key-value parameters to further control bundle generation.
+
+A "bundlespec" string has the following formats:
+
+<type>
+    The literal bundle format string is used.
+
+<compression>-<type>
+    The compression engine and format are delimited by a hyphen (``-``).
+
+Optional parameters follow the ``<type>``. Parameters are URI escaped
+``key=value`` pairs. Each pair is delimited by a semicolon (``;``). The
+first parameter begins after a ``;`` immediately following the ``<type>``
+value.
+
+Available Types
+===============
+
+The following bundle <type> strings are available:
+
+v1
+    Produces a legacy "changegroup" version 1 bundle.
+
+    This format is compatible with nearly all Mercurial clients because it is
+    the oldest. However, it has some limitations, which is why it is no longer
+    the default for new repositories.
+
+    ``v1`` bundles can be used with modern repositories using the "generaldelta"
+    storage format. However, it may take longer to produce the bundle and the
+    resulting bundle may be significantly larger than a ``v2`` bundle.
+
+    ``v1`` bundles can only use the ``gzip``, ``bzip2``, and ``none`` compression
+    formats.
+
+v2
+    Produces a version 2 bundle.
+
+    Version 2 bundles are an extensible format that can store additional
+    repository data (such as bookmarks and phases information) and they can
+    store data more efficiently, resulting in smaller bundles.
+
+    Version 2 bundles can also use modern compression engines, such as
+    ``zstd``, making them faster to compress and often smaller.
+
+Available Compression Engines
+=============================
+
+The following bundle <compression> engines can be used:
+
+.. bundlecompressionmarker
+
+Examples
+========
+
+``v2``
+    Produce a ``v2`` bundle using default options, including compression.
+
+``none-v1``
+    Produce a ``v1`` bundle with no compression.
+
+``zstd-v2``
+    Produce a ``v2`` bundle with zstandard compression using default
+    settings.
+
+``zstd-v1``
+    This errors because ``zstd`` is not supported for ``v1`` types.
+"""
+
+
+color = r"""Mercurial colorizes output from several commands.
+
+For example, the diff command shows additions in green and deletions
+in red, while the status command shows modified files in magenta. Many
+other commands have analogous colors. It is possible to customize
+these colors.
+
+To enable color (default) whenever possible use::
+
+  [ui]
+  color = yes
+
+To disable color use::
+
+  [ui]
+  color = no
+
+See :hg:`help config.ui.color` for details.
+
+.. container:: windows
+
+  The default pager on Windows does not support color, so enabling the pager
+  will effectively disable color.  See :hg:`help config.ui.paginate` to disable
+  the pager.  Alternately, MSYS and Cygwin shells provide `less` as a pager,
+  which can be configured to support ANSI color mode.  Windows 10 natively
+  supports ANSI color mode.
+
+Mode
+====
+
+Mercurial can use various systems to display color. The supported modes are
+``ansi``, ``win32``, and ``terminfo``.  See :hg:`help config.color` for details
+about how to control the mode.
+
+Effects
+=======
+
+Other effects in addition to color, like bold and underlined text, are
+also available. By default, the terminfo database is used to find the
+terminal codes used to change color and effect.  If terminfo is not
+available, then effects are rendered with the ECMA-48 SGR control
+function (aka ANSI escape codes).
+
+The available effects in terminfo mode are 'blink', 'bold', 'dim',
+'inverse', 'invisible', 'italic', 'standout', and 'underline'; in
+ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
+'underline'.  How each is rendered depends on the terminal emulator.
+Some may not be available for a given terminal type, and will be
+silently ignored.
+
+If the terminfo entry for your terminal is missing codes for an effect
+or has the wrong codes, you can add or override those codes in your
+configuration::
+
+  [color]
+  terminfo.dim = \E[2m
+
+where '\E' is substituted with an escape character.
+
+Labels
+======
+
+Text receives color effects depending on the labels that it has. Many
+default Mercurial commands emit labelled text. You can also define
+your own labels in templates using the label function, see :hg:`help
+templates`. A single portion of text may have more than one label. In
+that case, effects given to the last label will override any other
+effects. This includes the special "none" effect, which nullifies
+other effects.
+
+Labels are normally invisible. In order to see these labels and their
+position in the text, use the global --color=debug option. The same
+anchor text may be associated to multiple labels, e.g.
+
+  [log.changeset changeset.secret|changeset:   22611:6f0a53c8f587]
+
+The following are the default effects for some default labels. Default
+effects may be overridden from your configuration file::
+
+  [color]
+  status.modified = blue bold underline red_background
+  status.added = green bold
+  status.removed = red bold blue_background
+  status.deleted = cyan bold underline
+  status.unknown = magenta bold underline
+  status.ignored = black bold
+
+  # 'none' turns off all effects
+  status.clean = none
+  status.copied = none
+
+  qseries.applied = blue bold underline
+  qseries.unapplied = black bold
+  qseries.missing = red bold
+
+  diff.diffline = bold
+  diff.extended = cyan bold
+  diff.file_a = red bold
+  diff.file_b = green bold
+  diff.hunk = magenta
+  diff.deleted = red
+  diff.inserted = green
+  diff.changed = white
+  diff.tab =
+  diff.trailingwhitespace = bold red_background
+
+  # Blank so it inherits the style of the surrounding label
+  changeset.public =
+  changeset.draft =
+  changeset.secret =
+
+  resolve.unresolved = red bold
+  resolve.resolved = green bold
+
+  bookmarks.active = green
+
+  branches.active = none
+  branches.closed = black bold
+  branches.current = green
+  branches.inactive = none
+
+  tags.normal = green
+  tags.local = black bold
+
+  rebase.rebased = blue
+  rebase.remaining = red bold
+
+  shelve.age = cyan
+  shelve.newest = green bold
+  shelve.name = blue bold
+
+  histedit.remaining = red bold
+
+Custom colors
+=============
+
+Because there are only eight standard colors, Mercurial allows you
+to define color names for other color slots which might be available
+for your terminal type, assuming terminfo mode.  For instance::
+
+  color.brightblue = 12
+  color.pink = 207
+  color.orange = 202
+
+to set 'brightblue' to color slot 12 (useful for 16 color terminals
+that have brighter colors defined in the upper eight) and, 'pink' and
+'orange' to colors in 256-color xterm's default color cube.  These
+defined colors may then be used as any of the pre-defined eight,
+including appending '_background' to set the background to that color.
+"""
+
+
+common = r""".. Common link and substitution definitions.
+
+.. |hg(1)| replace:: **hg**\ (1)
+.. _hg(1): hg.1.html
+.. |hgrc(5)| replace:: **hgrc**\ (5)
+.. _hgrc(5): hgrc.5.html
+"""
+
+
+config = r"""The Mercurial system uses a set of configuration files to control
 aspects of its behavior.
 
 Troubleshooting
@@ -2706,3 +2962,1959 @@ helps performance.
     Number of threads to process background file closes. Only relevant if
     ``backgroundclose`` is enabled.
     (default: 4)
+"""
+
+
+dates = r"""Some commands allow the user to specify a date, e.g.:
+
+- backout, commit, import, tag: Specify the commit date.
+- log, revert, update: Select revision(s) by date.
+
+Many date formats are valid. Here are some examples:
+
+- ``Wed Dec 6 13:18:29 2006`` (local timezone assumed)
+- ``Dec 6 13:18 -0600`` (year assumed, time offset provided)
+- ``Dec 6 13:18 UTC`` (UTC and GMT are aliases for +0000)
+- ``Dec 6`` (midnight)
+- ``13:18`` (today assumed)
+- ``3:39`` (3:39AM assumed)
+- ``3:39pm`` (15:39)
+- ``2006-12-06 13:18:29`` (ISO 8601 format)
+- ``2006-12-6 13:18``
+- ``2006-12-6``
+- ``12-6``
+- ``12/6``
+- ``12/6/6`` (Dec 6 2006)
+- ``today`` (midnight)
+- ``yesterday`` (midnight)
+- ``now`` - right now
+
+Lastly, there is Mercurial's internal format:
+
+- ``1165411109 0`` (Wed Dec 6 13:18:29 2006 UTC)
+
+This is the internal representation format for dates. The first number
+is the number of seconds since the epoch (1970-01-01 00:00 UTC). The
+second is the offset of the local timezone, in seconds west of UTC
+(negative if the timezone is east of UTC).
+
+The log command also accepts date ranges:
+
+- ``<DATE`` - at or before a given date/time
+- ``>DATE`` - on or after a given date/time
+- ``DATE to DATE`` - a date range, inclusive
+- ``-DAYS`` - within a given number of days of today
+"""
+
+
+diffs = r"""Mercurial's default format for showing changes between two versions of
+a file is compatible with the unified format of GNU diff, which can be
+used by GNU patch and many other standard tools.
+
+While this standard format is often enough, it does not encode the
+following information:
+
+- executable status and other permission bits
+- copy or rename information
+- changes in binary files
+- creation or deletion of empty files
+
+Mercurial also supports the extended diff format from the git VCS
+which addresses these limitations. The git diff format is not produced
+by default because a few widespread tools still do not understand this
+format.
+
+This means that when generating diffs from a Mercurial repository
+(e.g. with :hg:`export`), you should be careful about things like file
+copies and renames or other things mentioned above, because when
+applying a standard diff to a different repository, this extra
+information is lost. Mercurial's internal operations (like push and
+pull) are not affected by this, because they use an internal binary
+format for communicating changes.
+
+To make Mercurial produce the git extended diff format, use the --git
+option available for many commands, or set 'git = True' in the [diff]
+section of your configuration file. You do not need to set this option
+when importing diffs in this format or using them in the mq extension.
+"""
+
+
+environment = r"""HG
+    Path to the 'hg' executable, automatically passed when running
+    hooks, extensions or external tools. If unset or empty, this is
+    the hg executable's name if it's frozen, or an executable named
+    'hg' (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on
+    Windows) is searched.
+
+HGEDITOR
+    This is the name of the editor to run when committing. See EDITOR.
+
+    (deprecated, see :hg:`help config.ui.editor`)
+
+HGENCODING
+    This overrides the default locale setting detected by Mercurial.
+    This setting is used to convert data including usernames,
+    changeset descriptions, tag names, and branches. This setting can
+    be overridden with the --encoding command-line option.
+
+HGENCODINGMODE
+    This sets Mercurial's behavior for handling unknown characters
+    while transcoding user input. The default is "strict", which
+    causes Mercurial to abort if it can't map a character. Other
+    settings include "replace", which replaces unknown characters, and
+    "ignore", which drops them. This setting can be overridden with
+    the --encodingmode command-line option.
+
+HGENCODINGAMBIGUOUS
+    This sets Mercurial's behavior for handling characters with
+    "ambiguous" widths like accented Latin characters with East Asian
+    fonts. By default, Mercurial assumes ambiguous characters are
+    narrow, set this variable to "wide" if such characters cause
+    formatting problems.
+
+HGMERGE
+    An executable to use for resolving merge conflicts. The program
+    will be executed with three arguments: local file, remote file,
+    ancestor file.
+
+    (deprecated, see :hg:`help config.ui.merge`)
+
+HGRCPATH
+    A list of files or directories to search for configuration
+    files. Item separator is ":" on Unix, ";" on Windows. If HGRCPATH
+    is not set, platform default search path is used. If empty, only
+    the .hg/hgrc from the current repository is read.
+
+    For each element in HGRCPATH:
+
+    - if it's a directory, all files ending with .rc are added
+    - otherwise, the file itself will be added
+
+HGPLAIN
+    When set, this disables any configuration settings that might
+    change Mercurial's default output. This includes encoding,
+    defaults, verbose mode, debug mode, quiet mode, tracebacks, and
+    localization. This can be useful when scripting against Mercurial
+    in the face of existing user configuration.
+
+    In addition to the features disabled by ``HGPLAIN=``, the following
+    values can be specified to adjust behavior:
+
+    ``+strictflags``
+        Restrict parsing of command line flags.
+
+    Equivalent options set via command line flags or environment
+    variables are not overridden.
+
+    See :hg:`help scripting` for details.
+
+HGPLAINEXCEPT
+    This is a comma-separated list of features to preserve when
+    HGPLAIN is enabled. Currently the following values are supported:
+
+    ``alias``
+        Don't remove aliases.
+    ``color``
+        Don't disable colored output.
+    ``i18n``
+        Preserve internationalization.
+    ``revsetalias``
+        Don't remove revset aliases.
+    ``templatealias``
+        Don't remove template aliases.
+    ``progress``
+        Don't hide progress output.
+
+    Setting HGPLAINEXCEPT to anything (even an empty string) will
+    enable plain mode.
+
+HGUSER
+    This is the string used as the author of a commit. If not set,
+    available values will be considered in this order:
+
+    - HGUSER (deprecated)
+    - configuration files from the HGRCPATH
+    - EMAIL
+    - interactive prompt
+    - LOGNAME (with ``@hostname`` appended)
+
+    (deprecated, see :hg:`help config.ui.username`)
+
+EMAIL
+    May be used as the author of a commit; see HGUSER.
+
+LOGNAME
+    May be used as the author of a commit; see HGUSER.
+
+VISUAL
+    This is the name of the editor to use when committing. See EDITOR.
+
+EDITOR
+    Sometimes Mercurial needs to open a text file in an editor for a
+    user to modify, for example when writing commit messages. The
+    editor it uses is determined by looking at the environment
+    variables HGEDITOR, VISUAL and EDITOR, in that order. The first
+    non-empty one is chosen. If all of them are empty, the editor
+    defaults to 'vi'.
+
+PYTHONPATH
+    This is used by Python to find imported modules and may need to be
+    set appropriately if this Mercurial is not installed system-wide.
+"""
+
+
+extensions = r"""Mercurial has the ability to add new features through the use of
+extensions. Extensions may add new commands, add options to
+existing commands, change the default behavior of commands, or
+implement hooks.
+
+To enable the "foo" extension, either shipped with Mercurial or in the
+Python search path, create an entry for it in your configuration file,
+like this::
+
+  [extensions]
+  foo =
+
+You may also specify the full path to an extension::
+
+  [extensions]
+  myfeature = ~/.hgext/myfeature.py
+
+See :hg:`help config` for more information on configuration files.
+
+Extensions are not loaded by default for a variety of reasons:
+they can increase startup overhead; they may be meant for advanced
+usage only; they may provide potentially dangerous abilities (such
+as letting you destroy or modify history); they might not be ready
+for prime time; or they may alter some usual behaviors of stock
+Mercurial. It is thus up to the user to activate extensions as
+needed.
+
+To explicitly disable an extension enabled in a configuration file of
+broader scope, prepend its path with !::
+
+  [extensions]
+  # disabling extension bar residing in /path/to/extension/bar.py
+  bar = !/path/to/extension/bar.py
+  # ditto, but no path was supplied for extension baz
+  baz = !
+"""
+
+
+filesets = r"""Mercurial supports a functional language for selecting a set of
+files.
+
+Like other file patterns, this pattern type is indicated by a prefix,
+'set:'. The language supports a number of predicates which are joined
+by infix operators. Parenthesis can be used for grouping.
+
+Identifiers such as filenames or patterns must be quoted with single
+or double quotes if they contain characters outside of
+``[.*{}[]?/\_a-zA-Z0-9\x80-\xff]`` or if they match one of the
+predefined predicates. This generally applies to file patterns other
+than globs and arguments for predicates.
+
+Special characters can be used in quoted identifiers by escaping them,
+e.g., ``\n`` is interpreted as a newline. To prevent them from being
+interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
+
+See also :hg:`help patterns`.
+
+Operators
+=========
+
+There is a single prefix operator:
+
+``not x``
+  Files not in x. Short form is ``! x``.
+
+These are the supported infix operators:
+
+``x and y``
+  The intersection of files in x and y. Short form is ``x & y``.
+
+``x or y``
+  The union of files in x and y. There are two alternative short
+  forms: ``x | y`` and ``x + y``.
+
+``x - y``
+  Files in x but not in y.
+
+Predicates
+==========
+
+The following predicates are supported:
+
+.. predicatesmarker
+
+Examples
+========
+
+Some sample queries:
+
+- Show status of files that appear to be binary in the working directory::
+
+    hg status -A "set:binary()"
+
+- Forget files that are in .gitignore but are already tracked::
+
+    hg forget "set:gitignore() and not ignored()"
+
+- Find text files that contain a string::
+
+    hg files "set:grep(magic) and not binary()"
+
+- Find C files in a non-standard encoding::
+
+    hg files "set:**.c and not encoding('UTF-8')"
+
+- Revert copies of large binary files::
+
+    hg revert "set:copied() and binary() and size('>1M')"
+
+- Revert files that were added to the working directory::
+
+    hg revert "set:revs('wdir()', added())"
+
+- Remove files listed in foo.lst that contain the letter a or b::
+
+    hg remove "set: 'listfile:foo.lst' and (**a* or **b*)"
+"""
+
+
+flags = r"""Most Mercurial commands accept various flags.
+
+Flag names
+==========
+
+Flags for each command are listed in :hg:`help` for that command.
+Additionally, some flags, such as --repository, are global and can be used with
+any command - those are seen in :hg:`help -v`, and can be specified before or
+after the command.
+
+Every flag has at least a long name, such as --repository. Some flags may also
+have a short one-letter name, such as the equivalent -R. Using the short or long
+name is equivalent and has the same effect.
+
+Flags that have a short name can also be bundled together - for instance, to
+specify both --edit (short -e) and --interactive (short -i), one could use::
+
+    hg commit -ei
+
+If any of the bundled flags takes a value (i.e. is not a boolean), it must be
+last, followed by the value::
+
+    hg commit -im 'Message'
+
+Flag types
+==========
+
+Mercurial command-line flags can be strings, numbers, booleans, or lists of
+strings.
+
+Specifying flag values
+======================
+
+The following syntaxes are allowed, assuming a flag 'flagname' with short name
+'f'::
+
+    --flagname=foo
+    --flagname foo
+    -f foo
+    -ffoo
+
+This syntax applies to all non-boolean flags (strings, numbers or lists).
+
+Specifying boolean flags
+========================
+
+Boolean flags do not take a value parameter. To specify a boolean, use the flag
+name to set it to true, or the same name prefixed with 'no-' to set it to
+false::
+
+    hg commit --interactive
+    hg commit --no-interactive
+
+Specifying list flags
+=====================
+
+List flags take multiple values. To specify them, pass the flag multiple times::
+
+    hg files --include mercurial --include tests
+
+Setting flag defaults
+=====================
+
+In order to set a default value for a flag in an hgrc file, it is recommended to
+use aliases::
+
+    [alias]
+    commit = commit --interactive
+
+For more information on hgrc files, see :hg:`help config`.
+
+Overriding flags on the command line
+====================================
+
+If the same non-list flag is specified multiple times on the command line, the
+latest specification is used::
+
+    hg commit -m "Ignored value" -m "Used value"
+
+This includes the use of aliases - e.g., if one has::
+
+    [alias]
+    committemp = commit -m "Ignored value"
+
+then the following command will override that -m::
+
+    hg committemp -m "Used value"
+
+Overriding flag defaults
+========================
+
+Every flag has a default value, and you may also set your own defaults in hgrc
+as described above.
+Except for list flags, defaults can be overridden on the command line simply by
+specifying the flag in that location.
+
+Hidden flags
+============
+
+Some flags are not shown in a command's help by default - specifically, those
+that are deemed to be experimental, deprecated or advanced. To show all flags,
+add the --verbose flag for the help command::
+
+    hg help --verbose commit
+"""
+
+
+glossary = r"""Ancestor
+    Any changeset that can be reached by an unbroken chain of parent
+    changesets from a given changeset. More precisely, the ancestors
+    of a changeset can be defined by two properties: a parent of a
+    changeset is an ancestor, and a parent of an ancestor is an
+    ancestor. See also: 'Descendant'.
+
+Bookmark
+    Bookmarks are pointers to certain commits that move when
+    committing. They are similar to tags in that it is possible to use
+    bookmark names in all places where Mercurial expects a changeset
+    ID, e.g., with :hg:`update`. Unlike tags, bookmarks move along
+    when you make a commit.
+
+    Bookmarks can be renamed, copied and deleted. Bookmarks are local,
+    unless they are explicitly pushed or pulled between repositories.
+    Pushing and pulling bookmarks allow you to collaborate with others
+    on a branch without creating a named branch.
+
+Branch
+    (Noun) A child changeset that has been created from a parent that
+    is not a head. These are known as topological branches, see
+    'Branch, topological'. If a topological branch is named, it becomes
+    a named branch. If a topological branch is not named, it becomes
+    an anonymous branch. See 'Branch, anonymous' and 'Branch, named'.
+
+    Branches may be created when changes are pulled from or pushed to
+    a remote repository, since new heads may be created by these
+    operations. Note that the term branch can also be used informally
+    to describe a development process in which certain development is
+    done independently of other development. This is sometimes done
+    explicitly with a named branch, but it can also be done locally,
+    using bookmarks or clones and anonymous branches.
+
+    Example: "The experimental branch."
+
+    (Verb) The action of creating a child changeset which results in
+    its parent having more than one child.
+
+    Example: "I'm going to branch at X."
+
+Branch, anonymous
+    Every time a new child changeset is created from a parent that is not
+    a head and the name of the branch is not changed, a new anonymous
+    branch is created.
+
+Branch, closed
+    A named branch whose branch heads have all been closed.
+
+Branch, default
+    The branch assigned to a changeset when no name has previously been
+    assigned.
+
+Branch head
+    See 'Head, branch'.
+
+Branch, inactive
+    If a named branch has no topological heads, it is considered to be
+    inactive. As an example, a feature branch becomes inactive when it
+    is merged into the default branch. The :hg:`branches` command
+    shows inactive branches by default, though they can be hidden with
+    :hg:`branches --active`.
+
+    NOTE: this concept is deprecated because it is too implicit.
+    Branches should now be explicitly closed using :hg:`commit
+    --close-branch` when they are no longer needed.
+
+Branch tip
+    See 'Tip, branch'.
+
+Branch, topological
+    Every time a new child changeset is created from a parent that is
+    not a head, a new topological branch is created. If a topological
+    branch is named, it becomes a named branch. If a topological
+    branch is not named, it becomes an anonymous branch of the
+    current, possibly default, branch.
+
+Changelog
+    A record of the changesets in the order in which they were added
+    to the repository. This includes details such as changeset id,
+    author, commit message, date, and list of changed files.
+
+Changeset
+    A snapshot of the state of the repository used to record a change.
+
+Changeset, child
+    The converse of parent changeset: if P is a parent of C, then C is
+    a child of P. There is no limit to the number of children that a
+    changeset may have.
+
+Changeset id
+    A SHA-1 hash that uniquely identifies a changeset. It may be
+    represented as either a "long" 40 hexadecimal digit string, or a
+    "short" 12 hexadecimal digit string.
+
+Changeset, merge
+    A changeset with two parents. This occurs when a merge is
+    committed.
+
+Changeset, parent
+    A revision upon which a child changeset is based. Specifically, a
+    parent changeset of a changeset C is a changeset whose node
+    immediately precedes C in the DAG. Changesets have at most two
+    parents.
+
+Checkout
+    (Noun) The working directory being updated to a specific
+    revision. This use should probably be avoided where possible, as
+    changeset is much more appropriate than checkout in this context.
+
+    Example: "I'm using checkout X."
+
+    (Verb) Updating the working directory to a specific changeset. See
+    :hg:`help update`.
+
+    Example: "I'm going to check out changeset X."
+
+Child changeset
+    See 'Changeset, child'.
+
+Close changeset
+    See 'Head, closed branch'.
+
+Closed branch
+    See 'Branch, closed'.
+
+Clone
+    (Noun) An entire or partial copy of a repository. The partial
+    clone must be in the form of a revision and its ancestors.
+
+    Example: "Is your clone up to date?"
+
+    (Verb) The process of creating a clone, using :hg:`clone`.
+
+    Example: "I'm going to clone the repository."
+
+Closed branch head
+    See 'Head, closed branch'.
+
+Commit
+    (Noun) A synonym for changeset.
+
+    Example: "Is the bug fixed in your recent commit?"
+
+    (Verb) The act of recording changes to a repository. When files
+    are committed in a working directory, Mercurial finds the
+    differences between the committed files and their parent
+    changeset, creating a new changeset in the repository.
+
+    Example: "You should commit those changes now."
+
+Cset
+    A common abbreviation of the term changeset.
+
+DAG
+    The repository of changesets of a distributed version control
+    system (DVCS) can be described as a directed acyclic graph (DAG),
+    consisting of nodes and edges, where nodes correspond to
+    changesets and edges imply a parent -> child relation. This graph
+    can be visualized by graphical tools such as :hg:`log --graph`. In
+    Mercurial, the DAG is limited by the requirement for children to
+    have at most two parents.
+
+Deprecated
+    Feature removed from documentation, but not scheduled for removal.
+
+Default branch
+    See 'Branch, default'.
+
+Descendant
+    Any changeset that can be reached by a chain of child changesets
+    from a given changeset. More precisely, the descendants of a
+    changeset can be defined by two properties: the child of a
+    changeset is a descendant, and the child of a descendant is a
+    descendant. See also: 'Ancestor'.
+
+Diff
+    (Noun) The difference between the contents and attributes of files
+    in two changesets or a changeset and the current working
+    directory. The difference is usually represented in a standard
+    form called a "diff" or "patch". The "git diff" format is used
+    when the changes include copies, renames, or changes to file
+    attributes, none of which can be represented/handled by classic
+    "diff" and "patch".
+
+    Example: "Did you see my correction in the diff?"
+
+    (Verb) Diffing two changesets is the action of creating a diff or
+    patch.
+
+    Example: "If you diff with changeset X, you will see what I mean."
+
+Directory, working
+    The working directory represents the state of the files tracked by
+    Mercurial, that will be recorded in the next commit. The working
+    directory initially corresponds to the snapshot at an existing
+    changeset, known as the parent of the working directory. See
+    'Parent, working directory'. The state may be modified by changes
+    to the files introduced manually or by a merge. The repository
+    metadata exists in the .hg directory inside the working directory.
+
+Draft
+    Changesets in the draft phase have not been shared with publishing
+    repositories and may thus be safely changed by history-modifying
+    extensions. See :hg:`help phases`.
+
+Experimental
+    Feature that may change or be removed at a later date.
+
+Graph
+    See DAG and :hg:`log --graph`.
+
+Head
+    The term 'head' may be used to refer to both a branch head or a
+    repository head, depending on the context. See 'Head, branch' and
+    'Head, repository' for specific definitions.
+
+    Heads are where development generally takes place and are the
+    usual targets for update and merge operations.
+
+Head, branch
+    A changeset with no descendants on the same named branch.
+
+Head, closed branch
+    A changeset that marks a head as no longer interesting. The closed
+    head is no longer listed by :hg:`heads`. A branch is considered
+    closed when all its heads are closed and consequently is not
+    listed by :hg:`branches`.
+
+    Closed heads can be re-opened by committing new changeset as the
+    child of the changeset that marks a head as closed.
+
+Head, repository
+    A topological head which has not been closed.
+
+Head, topological
+    A changeset with no children in the repository.
+
+History, immutable
+    Once committed, changesets cannot be altered.  Extensions which
+    appear to change history actually create new changesets that
+    replace existing ones, and then destroy the old changesets. Doing
+    so in public repositories can result in old changesets being
+    reintroduced to the repository.
+
+History, rewriting
+    The changesets in a repository are immutable. However, extensions
+    to Mercurial can be used to alter the repository, usually in such
+    a way as to preserve changeset contents.
+
+Immutable history
+    See 'History, immutable'.
+
+Merge changeset
+    See 'Changeset, merge'.
+
+Manifest
+    Each changeset has a manifest, which is the list of files that are
+    tracked by the changeset.
+
+Merge
+    Used to bring together divergent branches of work. When you update
+    to a changeset and then merge another changeset, you bring the
+    history of the latter changeset into your working directory. Once
+    conflicts are resolved (and marked), this merge may be committed
+    as a merge changeset, bringing two branches together in the DAG.
+
+Named branch
+    See 'Branch, named'.
+
+Null changeset
+    The empty changeset. It is the parent state of newly-initialized
+    repositories and repositories with no checked out revision. It is
+    thus the parent of root changesets and the effective ancestor when
+    merging unrelated changesets. Can be specified by the alias 'null'
+    or by the changeset ID '000000000000'.
+
+Parent
+    See 'Changeset, parent'.
+
+Parent changeset
+    See 'Changeset, parent'.
+
+Parent, working directory
+    The working directory parent reflects a virtual revision which is
+    the child of the changeset (or two changesets with an uncommitted
+    merge) shown by :hg:`parents`. This is changed with
+    :hg:`update`. Other commands to see the working directory parent
+    are :hg:`summary` and :hg:`id`. Can be specified by the alias ".".
+
+Patch
+    (Noun) The product of a diff operation.
+
+    Example: "I've sent you my patch."
+
+    (Verb) The process of using a patch file to transform one
+    changeset into another.
+
+    Example: "You will need to patch that revision."
+
+Phase
+    A per-changeset state tracking how the changeset has been or
+    should be shared. See :hg:`help phases`.
+
+Public
+    Changesets in the public phase have been shared with publishing
+    repositories and are therefore considered immutable. See :hg:`help
+    phases`.
+
+Pull
+    An operation in which changesets in a remote repository which are
+    not in the local repository are brought into the local
+    repository. Note that this operation without special arguments
+    only updates the repository, it does not update the files in the
+    working directory. See :hg:`help pull`.
+
+Push
+    An operation in which changesets in a local repository which are
+    not in a remote repository are sent to the remote repository. Note
+    that this operation only adds changesets which have been committed
+    locally to the remote repository. Uncommitted changes are not
+    sent. See :hg:`help push`.
+
+Repository
+    The metadata describing all recorded states of a collection of
+    files. Each recorded state is represented by a changeset. A
+    repository is usually (but not always) found in the ``.hg``
+    subdirectory of a working directory. Any recorded state can be
+    recreated by "updating" a working directory to a specific
+    changeset.
+
+Repository head
+    See 'Head, repository'.
+
+Revision
+    A state of the repository at some point in time. Earlier revisions
+    can be updated to by using :hg:`update`.  See also 'Revision
+    number'; See also 'Changeset'.
+
+Revision number
+    This integer uniquely identifies a changeset in a specific
+    repository. It represents the order in which changesets were added
+    to a repository, starting with revision number 0. Note that the
+    revision number may be different in each clone of a repository. To
+    identify changesets uniquely between different clones, see
+    'Changeset id'.
+
+Revlog
+    History storage mechanism used by Mercurial. It is a form of delta
+    encoding, with occasional full revision of data followed by delta
+    of each successive revision. It includes data and an index
+    pointing to the data.
+
+Rewriting history
+    See 'History, rewriting'.
+
+Root
+    A changeset that has only the null changeset as its parent. Most
+    repositories have only a single root changeset.
+
+Secret
+    Changesets in the secret phase may not be shared via push, pull,
+    or clone. See :hg:`help phases`.
+
+Tag
+    An alternative name given to a changeset. Tags can be used in all
+    places where Mercurial expects a changeset ID, e.g., with
+    :hg:`update`. The creation of a tag is stored in the history and
+    will thus automatically be shared with other using push and pull.
+
+Tip
+    The changeset with the highest revision number. It is the changeset
+    most recently added in a repository.
+
+Tip, branch
+    The head of a given branch with the highest revision number. When
+    a branch name is used as a revision identifier, it refers to the
+    branch tip. See also 'Branch, head'. Note that because revision
+    numbers may be different in different repository clones, the
+    branch tip may be different in different cloned repositories.
+
+Update
+    (Noun) Another synonym of changeset.
+
+    Example: "I've pushed an update."
+
+    (Verb) This term is usually used to describe updating the state of
+    the working directory to that of a specific changeset. See
+    :hg:`help update`.
+
+    Example: "You should update."
+
+Working directory
+    See 'Directory, working'.
+
+Working directory parent
+    See 'Parent, working directory'.
+"""
+
+
+hgweb = r"""\
+Mercurial's internal web server, hgweb, can serve either a single
+repository, or a tree of repositories. In the second case, repository
+paths and global options can be defined using a dedicated
+configuration file common to :hg:`serve`, ``hgweb.wsgi``,
+``hgweb.cgi`` and ``hgweb.fcgi``.
+
+This file uses the same syntax as other Mercurial configuration files
+but recognizes only the following sections:
+
+  - web
+  - paths
+  - collections
+
+The ``web`` options are thoroughly described in :hg:`help config`.
+
+The ``paths`` section maps URL paths to paths of repositories in the
+filesystem. hgweb will not expose the filesystem directly - only
+Mercurial repositories can be published and only according to the
+configuration.
+
+The left hand side is the path in the URL. Note that hgweb reserves
+subpaths like ``rev`` or ``file``, try using different names for
+nested repositories to avoid confusing effects.
+
+The right hand side is the path in the filesystem. If the specified
+path ends with ``*`` or ``**`` the filesystem will be searched
+recursively for repositories below that point.
+With ``*`` it will not recurse into the repositories it finds (except for
+``.hg/patches``).
+With ``**`` it will also search inside repository working directories
+and possibly find subrepositories.
+
+In this example::
+
+  [paths]
+  /projects/a = /srv/tmprepos/a
+  /projects/b = c:/repos/b
+  / = /srv/repos/*
+  /user/bob = /home/bob/repos/**
+
+- The first two entries make two repositories in different directories
+  appear under the same directory in the web interface
+- The third entry will publish every Mercurial repository found in
+  ``/srv/repos/``, for instance the repository ``/srv/repos/quux/``
+  will appear as ``http://server/quux/``
+- The fourth entry will publish both ``http://server/user/bob/quux/``
+  and ``http://server/user/bob/quux/testsubrepo/``
+
+The ``collections`` section is deprecated and has been superseded by
+``paths``.
+
+URLs and Common Arguments
+=========================
+
+URLs under each repository have the form ``/{command}[/{arguments}]``
+where ``{command}`` represents the name of a command or handler and
+``{arguments}`` represents any number of additional URL parameters
+to that command.
+
+The web server has a default style associated with it. Styles map to
+a collection of named templates. Each template is used to render a
+specific piece of data, such as a changeset or diff.
+
+The style for the current request can be overwritten two ways. First,
+if ``{command}`` contains a hyphen (``-``), the text before the hyphen
+defines the style. For example, ``/atom-log`` will render the ``log``
+command handler with the ``atom`` style. The second way to set the
+style is with the ``style`` query string argument. For example,
+``/log?style=atom``. The hyphenated URL parameter is preferred.
+
+Not all templates are available for all styles. Attempting to use
+a style that doesn't have all templates defined may result in an error
+rendering the page.
+
+Many commands take a ``{revision}`` URL parameter. This defines the
+changeset to operate on. This is commonly specified as the short,
+12 digit hexadecimal abbreviation for the full 40 character unique
+revision identifier. However, any value described by
+:hg:`help revisions` typically works.
+
+Commands and URLs
+=================
+
+The following web commands and their URLs are available:
+
+  .. webcommandsmarker
+"""
+
+
+globals()[
+    "merge-tools"
+] = r"""To merge files Mercurial uses merge tools.
+
+A merge tool combines two different versions of a file into a merged
+file. Merge tools are given the two files and the greatest common
+ancestor of the two file versions, so they can determine the changes
+made on both branches.
+
+Merge tools are used both for :hg:`resolve`, :hg:`merge`, :hg:`update`,
+:hg:`backout` and in several extensions.
+
+Usually, the merge tool tries to automatically reconcile the files by
+combining all non-overlapping changes that occurred separately in
+the two different evolutions of the same initial base file. Furthermore, some
+interactive merge programs make it easier to manually resolve
+conflicting merges, either in a graphical way, or by inserting some
+conflict markers. Mercurial does not include any interactive merge
+programs but relies on external tools for that.
+
+Available merge tools
+=====================
+
+External merge tools and their properties are configured in the
+merge-tools configuration section - see hgrc(5) - but they can often just
+be named by their executable.
+
+A merge tool is generally usable if its executable can be found on the
+system and if it can handle the merge. The executable is found if it
+is an absolute or relative executable path or the name of an
+application in the executable search path. The tool is assumed to be
+able to handle the merge if it can handle symlinks if the file is a
+symlink, if it can handle binary files if the file is binary, and if a
+GUI is available if the tool requires a GUI.
+
+There are some internal merge tools which can be used. The internal
+merge tools are:
+
+.. internaltoolsmarker
+
+Internal tools are always available and do not require a GUI but will by default
+not handle symlinks or binary files.
+
+Choosing a merge tool
+=====================
+
+Mercurial uses these rules when deciding which merge tool to use:
+
+1. If a tool has been specified with the --tool option to merge or resolve, it
+   is used.  If it is the name of a tool in the merge-tools configuration, its
+   configuration is used. Otherwise the specified tool must be executable by
+   the shell.
+
+2. If the ``HGMERGE`` environment variable is present, its value is used and
+   must be executable by the shell.
+
+3. If the filename of the file to be merged matches any of the patterns in the
+   merge-patterns configuration section, the first usable merge tool
+   corresponding to a matching pattern is used. Here, binary capabilities of the
+   merge tool are not considered.
+
+4. If ui.merge is set it will be considered next. If the value is not the name
+   of a configured tool, the specified value is used and must be executable by
+   the shell. Otherwise the named tool is used if it is usable.
+
+5. If any usable merge tools are present in the merge-tools configuration
+   section, the one with the highest priority is used.
+
+6. If a program named ``hgmerge`` can be found on the system, it is used - but
+   it will by default not be used for symlinks and binary files.
+
+7. If the file to be merged is not binary and is not a symlink, then
+   internal ``:merge`` is used.
+
+8. Otherwise, ``:prompt`` is used.
+
+.. note::
+
+   After selecting a merge program, Mercurial will by default attempt
+   to merge the files using a simple merge algorithm first. Only if it doesn't
+   succeed because of conflicting changes will Mercurial actually execute the
+   merge program. Whether to use the simple merge algorithm first can be
+   controlled by the premerge setting of the merge tool. Premerge is enabled by
+   default unless the file is binary or a symlink.
+
+See the merge-tools and ui sections of hgrc(5) for details on the
+configuration of merge tools.
+"""
+
+
+pager = r"""Some Mercurial commands can produce a lot of output, and Mercurial will
+attempt to use a pager to make those commands more pleasant.
+
+To set the pager that should be used, set the application variable::
+
+  [pager]
+  pager = less -FRX
+
+If no pager is set in the user or repository configuration, Mercurial uses the
+environment variable $PAGER. If $PAGER is not set, pager.pager from the default
+or system configuration is used. If none of these are set, a default pager will
+be used, typically `less` on Unix and `more` on Windows.
+
+.. container:: windows
+
+  On Windows, `more` is not color aware, so using it effectively disables color.
+  MSYS and Cygwin shells provide `less` as a pager, which can be configured to
+  support ANSI color codes.  See :hg:`help config.color.pagermode` to configure
+  the color mode when invoking a pager.
+
+You can disable the pager for certain commands by adding them to the
+pager.ignore list::
+
+  [pager]
+  ignore = version, help, update
+
+To ignore global commands like :hg:`version` or :hg:`help`, you have
+to specify them in your user configuration file.
+
+To control whether the pager is used at all for an individual command,
+you can use --pager=<value>:
+
+  - use as needed: `auto`.
+  - require the pager: `yes` or `on`.
+  - suppress the pager: `no` or `off` (any unrecognized value
+    will also work).
+
+To globally turn off all attempts to use a pager, set::
+
+  [ui]
+  paginate = never
+
+which will prevent the pager from running.
+"""
+
+
+patterns = r"""Mercurial accepts several notations for identifying one or more files
+at a time.
+
+By default, Mercurial treats filenames as shell-style extended glob
+patterns.
+
+Alternate pattern notations must be specified explicitly.
+
+.. note::
+
+  Patterns specified in ``.gitignore`` are not rooted. And is different
+  from patterns used by **hg** in other places.
+
+.. note::
+
+  In the future, patterns might be reworked to be more consistent with
+  ``.gitignore``. For example, negative patterns are possible and patterns
+  are orders. Things listed below might change significantly.
+
+To use a plain path name without any pattern matching, start it with
+``path:``. These path names must completely match starting at the
+current repository root, and when the path points to a directory, it is matched
+recursively. To match all files in a directory non-recursively (not including
+any files in subdirectories), ``rootfilesin:`` can be used, specifying an
+absolute path (relative to the repository root).
+
+To use an extended glob, start a name with ``glob:``. Globs are rooted
+at the current directory; a glob such as ``*.c`` will only match files
+in the current directory ending with ``.c``.
+
+The supported glob syntax extensions are ``**`` to match any string
+across path separators and ``{a,b}`` to mean "a or b".
+
+To use a Perl/Python regular expression, start a name with ``re:``.
+Regexp pattern matching is anchored at the root of the repository.
+
+To read name patterns from a file, use ``listfile:`` or ``listfile0:``.
+The latter expects null delimited patterns while the former expects line
+feeds. Each string read from the file is itself treated as a file
+pattern.
+
+All patterns, except for ``glob:`` specified in command line (not for
+``-I`` or ``-X`` options), can match also against directories: files
+under matched directories are treated as matched.
+For ``-I`` and ``-X`` options, ``glob:`` will match directories recursively.
+
+Plain examples::
+
+  path:foo/bar        a name bar in a directory named foo in the root
+                      of the repository
+  path:path:name      a file or directory named "path:name"
+  rootfilesin:foo/bar the files in a directory called foo/bar, but not any files
+                      in its subdirectories and not a file bar in directory foo
+
+Glob examples::
+
+  glob:*.c       any name ending in ".c" in the current directory
+  *.c            any name ending in ".c" in the current directory
+  **.c           any name ending in ".c" in any subdirectory of the
+                 current directory including itself.
+  foo/*          any file in directory foo
+  foo/**         any file in directory foo plus all its subdirectories,
+                 recursively
+  foo/*.c        any name ending in ".c" in the directory foo
+  foo/**.c       any name ending in ".c" in any subdirectory of foo
+                 including itself.
+
+Regexp examples::
+
+  re:.*\.c$      any name ending in ".c", anywhere in the repository
+
+File examples::
+
+  listfile:list.txt  read list from list.txt with one file pattern per line
+  listfile0:list.txt read list from list.txt with null byte delimiters
+
+See also :hg:`help filesets`.
+
+Include examples::
+
+  include:path/to/mypatternfile    reads patterns to be applied to all paths
+  subinclude:path/to/subignorefile reads patterns specifically for paths in the
+                                   subdirectory
+"""
+
+
+phases = r"""What are phases?
+================
+
+Phases are a system for tracking which changesets have been or should
+be shared. This helps prevent common mistakes when modifying history
+(for instance, with the mq or rebase extensions).
+
+Each changeset in a repository is in one of the following phases:
+
+ - public : changeset is visible on a public server
+ - draft : changeset is not yet published
+ - secret : changeset should not be pushed, pulled, or cloned
+
+These phases are ordered (public < draft < secret) and no changeset
+can be in a lower phase than its ancestors. For instance, if a
+changeset is public, all its ancestors are also public. Lastly,
+changeset phases should only be changed towards the public phase.
+
+How are phases managed?
+=======================
+
+For the most part, phases should work transparently. By default, a
+changeset is created in the draft phase and is moved into the public
+phase when it is pushed to another repository.
+
+Once changesets become public, extensions like mq and rebase will
+refuse to operate on them to prevent creating duplicate changesets.
+Phases can also be manually manipulated with the :hg:`phase` command
+if needed. See :hg:`help -v phase` for examples.
+
+To make your commits secret by default, put this in your
+configuration file::
+
+  [phases]
+  new-commit = secret
+
+Phases and servers
+==================
+
+Normally, all servers are ``publishing`` by default. This means::
+
+ - all draft changesets that are pulled or cloned appear in phase
+ public on the client
+
+ - all draft changesets that are pushed appear as public on both
+ client and server
+
+ - secret changesets are neither pushed, pulled, or cloned
+
+.. note::
+
+  Pulling a draft changeset from a publishing server does not mark it
+  as public on the server side due to the read-only nature of pull.
+
+Sometimes it may be desirable to push and pull changesets in the draft
+phase to share unfinished work. This can be done by setting a
+repository to disable publishing in its configuration file::
+
+  [phases]
+  publish = False
+
+See :hg:`help config` for more information on configuration files.
+
+.. note::
+
+  Servers running older versions of Mercurial are treated as
+  publishing.
+
+.. note::
+
+   Changesets in secret phase are not exchanged with the server. This
+   applies to their content: file names, file contents, and changeset
+   metadata. For technical reasons, the identifier (e.g. d825e4025e39)
+   of the secret changeset may be communicated to the server.
+
+
+Examples
+========
+
+ - list changesets in draft or secret phase::
+
+     hg log -r "not public()"
+
+ - change all secret changesets to draft::
+
+     hg phase --draft "secret()"
+
+ - forcibly move the current changeset and descendants from public to draft::
+
+     hg phase --force --draft .
+
+ - show a list of changeset revisions and each corresponding phase::
+
+     hg log --template "{rev} {phase}\n"
+
+ - resynchronize draft changesets relative to a remote repository::
+
+     hg phase -fd "outgoing(URL)"
+
+See :hg:`help phase` for more information on manually manipulating phases.
+"""
+
+
+revisions = r"""Mercurial supports several ways to specify revisions.
+
+Specifying single revisions
+===========================
+
+A plain integer is treated as a revision number. Negative integers are
+treated as sequential offsets from the tip, with -1 denoting the tip,
+-2 denoting the revision prior to the tip, and so forth.
+
+A 40-digit hexadecimal string is treated as a unique revision identifier.
+A hexadecimal string less than 40 characters long is treated as a
+unique revision identifier and is referred to as a short-form
+identifier. A short-form identifier is only valid if it is the prefix
+of exactly one full-length identifier.
+
+Any other string is treated as a bookmark, tag, or branch name. A
+bookmark is a movable pointer to a revision. A tag is a permanent name
+associated with a revision. A branch name denotes the tipmost open branch head
+of that branch - or if they are all closed, the tipmost closed head of the
+branch. Bookmark, tag, and branch names must not contain the ":" character.
+
+The reserved name "tip" always identifies the most recent revision.
+
+The reserved name "null" indicates the null revision. This is the
+revision of an empty repository, and the parent of revision 0.
+
+The reserved name "." indicates the working directory parent. If no
+working directory is checked out, it is equivalent to null. If an
+uncommitted merge is in progress, "." is the revision of the first
+parent.
+
+Finally, commands that expect a single revision (like ``hg update``) also
+accept revsets (see below for details). When given a revset, they use the
+last revision of the revset. A few commands accept two single revisions
+(like ``hg diff``). When given a revset, they use the first and the last
+revisions of the revset.
+
+Specifying multiple revisions
+=============================
+
+Mercurial supports a functional language for selecting a set of
+revisions. Expressions in this language are called revsets.
+
+The language supports a number of predicates which are joined by infix
+operators. Parenthesis can be used for grouping.
+
+Identifiers such as branch names may need quoting with single or
+double quotes if they contain characters like ``-`` or if they match
+one of the predefined predicates.
+
+Special characters can be used in quoted identifiers by escaping them,
+e.g., ``\n`` is interpreted as a newline. To prevent them from being
+interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
+
+Operators
+=========
+
+There is a single prefix operator:
+
+``not x``
+  Changesets not in x. Short form is ``! x``.
+
+These are the supported infix operators:
+
+``x::y``
+  A DAG range, meaning all changesets that are descendants of x and
+  ancestors of y, including x and y themselves. If the first endpoint
+  is left out, this is equivalent to ``ancestors(y)``, if the second
+  is left out it is equivalent to ``descendants(x)``.
+
+  An alternative syntax is ``x..y``.
+
+``x:y``
+  All changesets with revision numbers between x and y, both
+  inclusive. Either endpoint can be left out, they default to 0 and
+  tip.
+
+``x and y``
+  The intersection of changesets in x and y. Short form is ``x & y``.
+
+``x or y``
+  The union of changesets in x and y. There are two alternative short
+  forms: ``x | y`` and ``x + y``.
+
+``x - y``
+  Changesets in x but not in y.
+
+``x % y``
+  Changesets that are ancestors of x but not ancestors of y (i.e. ::x - ::y).
+  This is shorthand notation for ``only(x, y)`` (see below). The second
+  argument is optional and, if left out, is equivalent to ``only(x)``.
+
+``x^n``
+  The nth parent of x, n == 0, 1, or 2.
+  For n == 0, x; for n == 1, the first parent of each changeset in x;
+  for n == 2, the second parent of changeset in x.
+
+``x~n``
+  The nth first ancestor of x; ``x~0`` is x; ``x~3`` is ``x^^^``.
+  For n < 0, the nth unambiguous descendent of x.
+
+``x ## y``
+  Concatenate strings and identifiers into one string.
+
+  All other prefix, infix and postfix operators have lower priority than
+  ``##``. For example, ``a1 ## a2~2`` is equivalent to ``(a1 ## a2)~2``.
+
+  For example::
+
+    [revsetalias]
+    issue(a1) = grep(r'\bissue[ :]?' ## a1 ## r'\b|\bbug\(' ## a1 ## r'\)')
+
+  ``issue(1234)`` is equivalent to
+  ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
+  in this case. This matches against all of "issue 1234", "issue:1234",
+  "issue1234" and "bug(1234)".
+
+There is a single postfix operator:
+
+``x^``
+  Equivalent to ``x^1``, the first parent of each changeset in x.
+
+Patterns
+========
+
+Where noted, predicates that perform string matching can accept a pattern
+string. The pattern may be either a literal, or a regular expression. If the
+pattern starts with ``re:``, the remainder of the pattern is treated as a
+regular expression. Otherwise, it is treated as a literal. To match a pattern
+that actually starts with ``re:``, use the prefix ``literal:``.
+
+Matching is case-sensitive, unless otherwise noted.  To perform a case-
+insensitive match on a case-sensitive predicate, use a regular expression,
+prefixed with ``(?i)``.
+
+For example, ``tag(r're:(?i)release')`` matches "release" or "RELEASE"
+or "Release", etc.
+
+Predicates
+==========
+
+The following predicates are supported:
+
+.. predicatesmarker
+
+Aliases
+=======
+
+New predicates (known as "aliases") can be defined, using any combination of
+existing predicates or other aliases. An alias definition looks like::
+
+  <alias> = <definition>
+
+in the ``revsetalias`` section of a Mercurial configuration file. Arguments
+of the form `a1`, `a2`, etc. are substituted from the alias into the
+definition.
+
+For example,
+
+::
+
+  [revsetalias]
+  h = heads()
+  d(s) = sort(s, date)
+  rs(s, k) = reverse(sort(s, k))
+
+defines three aliases, ``h``, ``d``, and ``rs``. ``rs(0:tip, author)`` is
+exactly equivalent to ``reverse(sort(0:tip, author))``.
+
+Equivalents
+===========
+
+Command line equivalents for :hg:`log`::
+
+  -f    ->  ::.
+  -d x  ->  date(x)
+  -k x  ->  keyword(x)
+  -m    ->  merge()
+  -u x  ->  user(x)
+  -b x  ->  branch(x)
+  -P x  ->  !::x
+  -l x  ->  limit(expr, x)
+
+Examples
+========
+
+Some sample queries:
+
+- Changesets on the default branch::
+
+    hg log -r "branch(default)"
+
+- Changesets on the default branch since tag 1.5 (excluding merges)::
+
+    hg log -r "branch(default) and 1.5:: and not merge()"
+
+- Open branch heads::
+
+    hg log -r "head() and not closed()"
+
+- Changesets between tags 1.3 and 1.5 mentioning "bug" that affect
+  ``hgext/*``::
+
+    hg log -r "1.3::1.5 and keyword(bug) and file('hgext/*')"
+
+- Changesets committed in May 2008, sorted by user::
+
+    hg log -r "sort(date('May 2008'), user)"
+
+- Changesets mentioning "bug" or "issue" that are not in a tagged
+  release::
+
+    hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
+
+- Update to the commit that bookmark @ is pointing to, without activating the
+  bookmark (this works because the last revision of the revset is used)::
+
+    hg update :@
+
+- Show diff between tags 1.3 and 1.5 (this works because the first and the
+  last revisions of the revset are used)::
+
+    hg diff -r 1.3::1.5
+"""
+
+
+scripting = r"""It is common for machines (as opposed to humans) to consume Mercurial.
+This help topic describes some of the considerations for interfacing
+machines with Mercurial.
+
+Choosing an Interface
+=====================
+
+Machines have a choice of several methods to interface with Mercurial.
+These include:
+
+- Executing the ``hg`` process
+- Querying a HTTP server
+- Calling out to a command server
+
+Executing ``hg`` processes is very similar to how humans interact with
+Mercurial in the shell. It should already be familiar to you.
+
+:hg:`serve` can be used to start a server. By default, this will start
+a "hgweb" HTTP server. This HTTP server has support for machine-readable
+output, such as JSON. For more, see :hg:`help hgweb`.
+
+:hg:`serve` can also start a "command server." Clients can connect
+to this server and issue Mercurial commands over a special protocol.
+For more details on the command server, including links to client
+libraries, see https://www.mercurial-scm.org/wiki/CommandServer.
+
+:hg:`serve` based interfaces (the hgweb and command servers) have the
+advantage over simple ``hg`` process invocations in that they are
+likely more efficient. This is because there is significant overhead
+to spawn new Python processes.
+
+.. tip::
+
+   If you need to invoke several ``hg`` processes in short order and/or
+   performance is important to you, use of a server-based interface
+   is highly recommended.
+
+Environment Variables
+=====================
+
+As documented in :hg:`help environment`, various environment variables
+influence the operation of Mercurial. The following are particularly
+relevant for machines consuming Mercurial:
+
+HGPLAIN
+    If not set, Mercurial's output could be influenced by configuration
+    settings that impact its encoding, verbose mode, localization, etc.
+
+    It is highly recommended for machines to set this variable when
+    invoking ``hg`` processes.
+
+HGENCODING
+    If not set, the locale used by Mercurial will be detected from the
+    environment. If the determined locale does not support display of
+    certain characters, Mercurial may render these character sequences
+    incorrectly (often by using "?" as a placeholder for invalid
+    characters in the current locale).
+
+    Explicitly setting this environment variable is a good practice to
+    guarantee consistent results. "utf-8" is a good choice on UNIX-like
+    environments.
+
+HGRCPATH
+    If not set, Mercurial will inherit config options from config files
+    using the process described in :hg:`help config`. This includes
+    inheriting user or system-wide config files.
+
+    When utmost control over the Mercurial configuration is desired, the
+    value of ``HGRCPATH`` can be set to an explicit file with known good
+    configs. In rare cases, the value can be set to an empty file or the
+    null device (often ``/dev/null``) to bypass loading of any user or
+    system config files. Note that these approaches can have unintended
+    consequences, as the user and system config files often define things
+    like the username and extensions that may be required to interface
+    with a repository.
+
+Command-line Flags
+==================
+
+Mercurial's default command-line parser is designed for humans, and is not
+robust against malicious input. For instance, you can start a debugger by
+passing ``--debugger`` as an option value::
+
+    $ REV=--debugger sh -c 'hg log -r "$REV"'
+
+This happens because several command-line flags need to be scanned without
+using a concrete command table, which may be modified while loading repository
+settings and extensions.
+
+Since Mercurial 4.4.2, the parsing of such flags may be restricted by setting
+``HGPLAIN=+strictflags``. When this feature is enabled, all early options
+(e.g. ``-R/--repository``, ``--cwd``, ``--config``) must be specified first
+amongst the other global options, and cannot be injected to an arbitrary
+location::
+
+    $ HGPLAIN=+strictflags hg -R "$REPO" log -r "$REV"
+
+In earlier Mercurial versions where ``+strictflags`` isn't available, you
+can mitigate the issue by concatenating an option value with its flag::
+
+    $ hg log -r"$REV" --keyword="$KEYWORD"
+
+Consuming Command Output
+========================
+
+It is common for machines to need to parse the output of Mercurial
+commands for relevant data. This section describes the various
+techniques for doing so.
+
+Parsing Raw Command Output
+--------------------------
+
+Likely the simplest and most effective solution for consuming command
+output is to simply invoke ``hg`` commands as you would as a user and
+parse their output.
+
+The output of many commands can easily be parsed with tools like
+``grep``, ``sed``, and ``awk``.
+
+A potential downside with parsing command output is that the output
+of commands can change when Mercurial is upgraded. While Mercurial
+does generally strive for strong backwards compatibility, command
+output does occasionally change. Having tests for your automated
+interactions with ``hg`` commands is generally recommended, but is
+even more important when raw command output parsing is involved.
+
+Using Templates to Control Output
+---------------------------------
+
+Many ``hg`` commands support templatized output via the
+``-T/--template`` argument. For more, see :hg:`help templates`.
+
+Templates are useful for explicitly controlling output so that
+you get exactly the data you want formatted how you want it. For
+example, ``log -T {node}\n`` can be used to print a newline
+delimited list of changeset nodes instead of a human-tailored
+output containing authors, dates, descriptions, etc.
+
+.. tip::
+
+   If parsing raw command output is too complicated, consider
+   using templates to make your life easier.
+
+The ``-T/--template`` argument allows specifying pre-defined styles.
+Mercurial ships with the machine-readable styles ``json`` and ``xml``,
+which provide JSON and XML output, respectively. These are useful for
+producing output that is machine readable as-is.
+
+.. important::
+
+   The ``json`` and ``xml`` styles are considered experimental. While
+   they may be attractive to use for easily obtaining machine-readable
+   output, their behavior may change in subsequent versions.
+
+   These styles may also exhibit unexpected results when dealing with
+   certain encodings. Mercurial treats things like filenames as a
+   series of bytes and normalizing certain byte sequences to JSON
+   or XML with certain encoding settings can lead to surprises.
+
+Command Server Output
+---------------------
+
+If using the command server to interact with Mercurial, you are likely
+using an existing library/API that abstracts implementation details of
+the command server. If so, this interface layer may perform parsing for
+you, saving you the work of implementing it yourself.
+
+Output Verbosity
+----------------
+
+Commands often have varying output verbosity, even when machine
+readable styles are being used (e.g. ``-T json``). Adding
+``-v/--verbose`` and ``--debug`` to the command's arguments can
+increase the amount of data exposed by Mercurial.
+
+An alternate way to get the data you need is by explicitly specifying
+a template.
+
+Other Topics
+============
+
+revsets
+   Revisions sets is a functional query language for selecting a set
+   of revisions. Think of it as SQL for Mercurial repositories. Revsets
+   are useful for querying repositories for specific data.
+
+   See :hg:`help revsets` for more.
+
+share extension
+   The ``share`` extension provides functionality for sharing
+   repository data across several working copies. It can even
+   automatically "pool" storage for logically related repositories when
+   cloning.
+
+   Configuring the ``share`` extension can lead to significant resource
+   utilization reduction, particularly around disk space and the
+   network. This is especially true for continuous integration (CI)
+   environments.
+
+   See :hg:`help -e share` for more.
+"""
+
+
+templates = r"""Mercurial allows you to customize output of commands through
+templates. You can either pass in a template or select an existing
+template-style from the command line, via the --template option.
+
+You can customize output for any "log-like" command: log,
+outgoing, incoming, tip, parents, and heads.
+
+Some built-in styles are packaged with Mercurial. These can be listed
+with :hg:`log --template list`. Example usage::
+
+    $ hg log -r1.0::1.1 --template changelog
+
+A template is a piece of text, with markup to invoke variable
+expansion::
+
+    $ hg log -r1 --template "{node}\n"
+    b56ce7b07c52de7d5fd79fb89701ea538af65746
+
+Keywords
+========
+
+Strings in curly braces are called keywords. The availability of
+keywords depends on the exact context of the templater. These
+keywords are usually available for templating a log-like command:
+
+.. keywordsmarker
+
+The "date" keyword does not produce human-readable output. If you
+want to use a date in your output, you can use a filter to process
+it. Filters are functions which return a string based on the input
+variable. Be sure to use the stringify filter first when you're
+applying a string-input filter to a list-like input variable.
+You can also use a chain of filters to get the desired output::
+
+   $ hg tip --template "{date|isodate}\n"
+   2008-08-21 18:22 +0000
+
+Filters
+=======
+
+List of filters:
+
+.. filtersmarker
+
+Note that a filter is nothing more than a function call, i.e.
+``expr|filter`` is equivalent to ``filter(expr)``.
+
+Functions
+=========
+
+In addition to filters, there are some basic built-in functions:
+
+.. functionsmarker
+
+Operators
+=========
+
+We provide a limited set of infix arithmetic operations on integers::
+
+  + for addition
+  - for subtraction
+  * for multiplication
+  / for floor division (division rounded to integer nearest -infinity)
+
+Division fulfills the law x = x / y + mod(x, y).
+
+Also, for any expression that returns a list, there is a list operator::
+
+    expr % "{template}"
+
+As seen in the above example, ``{template}`` is interpreted as a template.
+To prevent it from being interpreted, you can use an escape character ``\{``
+or a raw string prefix, ``r'...'``.
+
+The dot operator can be used as a shorthand for accessing a sub item:
+
+- ``expr.member`` is roughly equivalent to ``expr % '{member}'`` if ``expr``
+  returns a non-list/dict. The returned value is not stringified.
+- ``dict.key`` is identical to ``get(dict, 'key')``.
+
+Aliases
+=======
+
+New keywords and functions can be defined in the ``templatealias`` section of
+a Mercurial configuration file::
+
+  <alias> = <definition>
+
+Arguments of the form `a1`, `a2`, etc. are substituted from the alias into
+the definition.
+
+For example,
+
+::
+
+  [templatealias]
+  r = rev
+  rn = "{r}:{node|short}"
+  leftpad(s, w) = pad(s, w, ' ', True)
+
+defines two symbol aliases, ``r`` and ``rn``, and a function alias
+``leftpad()``.
+
+It's also possible to specify complete template strings, using the
+``templates`` section. The syntax used is the general template string syntax.
+
+For example,
+
+::
+
+  [templates]
+  nodedate = "{node|short}: {date(date, "%Y-%m-%d")}\n"
+
+defines a template, ``nodedate``, which can be called like::
+
+  $ hg log -r . -Tnodedate
+
+A template defined in ``templates`` section can also be referenced from
+another template::
+
+  $ hg log -r . -T "{rev} {nodedate}"
+
+but be aware that the keywords cannot be overridden by templates. For example,
+a template defined as ``templates.rev`` cannot be referenced as ``{rev}``.
+
+A template defined in ``templates`` section may have sub templates which
+are inserted before/after/between items::
+
+  [templates]
+  myjson = ' {dict(rev, node|short)|json}'
+  myjson:docheader = '\{\n'
+  myjson:docfooter = '\n}\n'
+  myjson:separator = ',\n'
+
+Examples
+========
+
+Some sample command line templates:
+
+- Format lists, e.g. files::
+
+   $ hg log -r 0 --template "files:\n{files % '  {file}\n'}"
+
+- Join the list of files with a ", "::
+
+   $ hg log -r 0 --template "files: {join(files, ', ')}\n"
+
+- Join the list of files ending with ".py" with a ", "::
+
+   $ hg log -r 0 --template "pythonfiles: {join(files('**.py'), ', ')}\n"
+
+- Separate non-empty arguments by a " "::
+
+   $ hg log -r 0 --template "{separate(' ', node, bookmarks, tags}\n"
+
+- Modify each line of a commit description::
+
+   $ hg log --template "{splitlines(desc) % '**** {line}\n'}"
+
+- Format date::
+
+   $ hg log -r 0 --template "{date(date, '%Y')}\n"
+
+- Display date in UTC::
+
+   $ hg log -r 0 --template "{localdate(date, 'UTC')|date}\n"
+
+- Output the description set to a fill-width of 30::
+
+   $ hg log -r 0 --template "{fill(desc, 30)}"
+
+- Use a conditional to test for the default branch::
+
+   $ hg log -r 0 --template "{ifeq(branch, 'default', 'on the main branch',
+   'on branch {branch}')}\n"
+
+- Append a newline if not empty::
+
+   $ hg tip --template "{if(author, '{author}\n')}"
+
+- Label the output for use with the color extension::
+
+   $ hg log -r 0 --template "{label('changeset.{phase}', node|short)}\n"
+
+- Invert the firstline filter, i.e. everything but the first line::
+
+   $ hg log -r 0 --template "{sub(r'^.*\n?\n?', '', desc)}\n"
+
+- Display the contents of the 'extra' field, one per line::
+
+   $ hg log -r 0 --template "{join(extras, '\n')}\n"
+
+- Mark the active bookmark with '*'::
+
+   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, '*')} '}\n"
+
+- Find the previous release candidate tag, the distance and changes since the tag::
+
+   $ hg log -r . --template "{latesttag('re:^.*-rc$') % '{tag}, {changes}, {distance}'}\n"
+
+- Mark the working copy parent with '@'::
+
+   $ hg log --template "{ifcontains(rev, revset('.'), '@')}\n"
+
+- Show details of parent revisions::
+
+   $ hg log --template "{revset('parents(%d)', rev) % '{desc|firstline}\n'}"
+
+- Show only commit descriptions that start with "template"::
+
+   $ hg log --template "{startswith('template', firstline(desc))}\n"
+
+- Print the first word of each line of a commit message::
+
+   $ hg log --template "{word(0, desc)}\n"
+"""
+
+
+urls = r"""Valid URLs are of the form::
+
+  local/filesystem/path[#revision]
+  file://local/filesystem/path[#revision]
+  http://[user[:pass]@]host[:port]/[path][#revision]
+  https://[user[:pass]@]host[:port]/[path][#revision]
+  ssh://[user@]host[:port]/[path][#revision]
+
+Paths in the local filesystem can either point to Mercurial
+repositories or to bundle files (as created by :hg:`bundle` or
+:hg:`incoming --bundle`). See also :hg:`help paths`.
+
+An optional identifier after # indicates a particular branch, tag, or
+changeset to use from the remote repository. See also :hg:`help
+revisions`.
+
+Some features, such as pushing to http:// and https:// URLs are only
+possible if the feature is explicitly enabled on the remote Mercurial
+server.
+
+Note that the security of HTTPS URLs depends on proper configuration of
+web.cacerts.
+
+Some notes about using SSH with Mercurial:
+
+- SSH requires an accessible shell account on the destination machine
+  and a copy of hg in the remote path or specified with as remotecmd.
+- path is relative to the remote user's home directory by default. Use
+  an extra slash at the start of a path to specify an absolute path::
+
+    ssh://example.com//tmp/repository
+
+- Mercurial doesn't use its own compression via SSH; the right thing
+  to do is to configure it in your ~/.ssh/config, e.g.::
+
+    Host *.mylocalnetwork.example.com
+      Compression no
+    Host *
+      Compression yes
+
+  Alternatively specify "ssh -C" as your ssh command in your
+  configuration file or with the --ssh command line option.
+
+These URLs can all be stored in your configuration file with path
+aliases under the [paths] section like so::
+
+  [paths]
+  alias1 = URL1
+  alias2 = URL2
+  ...
+
+You can then use the alias for any command that uses a URL (for
+example :hg:`pull alias1` will be treated as :hg:`pull URL1`).
+
+Two path aliases are special because they are used as defaults when
+you do not provide the URL to a command:
+
+default:
+  When you create a repository with hg clone, the clone command saves
+  the location of the source repository as the new repository's
+  'default' path. This is then used when you omit path from push- and
+  pull-like commands (including incoming and outgoing).
+
+default-push:
+  The push command will look for a path named 'default-push', and
+  prefer it over 'default' if both are defined.
+"""

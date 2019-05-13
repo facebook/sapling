@@ -18,6 +18,7 @@ from . import (
     extensions,
     filemerge,
     fileset,
+    helptext,
     identity,
     minirst,
     pycompat,
@@ -192,11 +193,7 @@ def loaddoc(topic, subdir=None):
     """Return a delayed loader for help/topic.txt."""
 
     def loader(ui):
-        docdir = os.path.join(util.datapath, "help")
-        if subdir:
-            docdir = os.path.join(docdir, subdir)
-        path = os.path.join(docdir, topic + ".txt")
-        doc = gettext(util.readfile(path))
+        doc = gettext(getattr(helptext, topic))
         for rewriter in helphooks.get(topic, []):
             doc = rewriter(ui, topic, doc)
         return doc

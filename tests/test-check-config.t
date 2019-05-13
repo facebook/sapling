@@ -23,8 +23,10 @@ Sanity check check-config.py
   > foo = ui.configint('ui', 'intdefault2', default=42)
   > EOF
 
+  $ hg help config > $TESTTMP/config.txt
+
   $ cat > files << EOF
-  > edenscm/mercurial/help/config.txt
+  > $TESTTMP/config.txt
   > $TESTTMP/testfile.py
   > EOF
 
