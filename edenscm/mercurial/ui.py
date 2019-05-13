@@ -878,8 +878,9 @@ class ui(object):
             with self.timeblockedsection("stdio"):
                 if not getattr(self.fout, "closed", False):
                     self.fout.flush()
-                for a in msgs:
-                    self.ferr.write(a)
+                # Write all messages in a single operation as stderr may be
+                # unbuffered.
+                self.ferr.write("".join(msgs))
                 # stderr may be buffered under win32 when redirected to files,
                 # including stdout.
                 if not getattr(self.ferr, "closed", False):
