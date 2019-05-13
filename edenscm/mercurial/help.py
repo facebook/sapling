@@ -204,44 +204,6 @@ def loaddoc(topic, subdir=None):
     return loader
 
 
-internalstable = sorted(
-    [
-        (["bundles"], _("Bundles"), loaddoc("bundles", subdir="internals")),
-        (["censor"], _("Censor"), loaddoc("censor", subdir="internals")),
-        (
-            ["changegroups"],
-            _("Changegroups"),
-            loaddoc("changegroups", subdir="internals"),
-        ),
-        (["config"], _("Config Registrar"), loaddoc("config", subdir="internals")),
-        (
-            ["requirements"],
-            _("Repository Requirements"),
-            loaddoc("requirements", subdir="internals"),
-        ),
-        (["revlogs"], _("Revision Logs"), loaddoc("revlogs", subdir="internals")),
-        (
-            ["wireprotocol"],
-            _("Wire Protocol"),
-            loaddoc("wireprotocol", subdir="internals"),
-        ),
-    ]
-)
-
-
-def internalshelp(ui):
-    """Generate the index for the "internals" topic."""
-    lines = [
-        'To access a subtopic, use "%s help internals.{subtopic-name}"\n'
-        % identity.prog,
-        "\n",
-    ]
-    for names, header, doc in internalstable:
-        lines.append(" :%s: %s\n" % (names[0], header))
-
-    return "".join(lines)
-
-
 helptable = sorted(
     [
         (["bundlespec"], _("Bundle File Formats"), loaddoc("bundlespec")),
@@ -282,13 +244,12 @@ helptable = sorted(
             _("Using Mercurial from scripts and automation"),
             loaddoc("scripting"),
         ),
-        (["internals"], _("Technical implementation topics"), internalshelp),
         (["pager"], _("Pager Support"), loaddoc("pager")),
     ]
 )
 
 # Maps topics with sub-topics to a list of their sub-topics.
-subtopics = {"internals": internalstable}
+subtopics = {}
 
 # Map topics to lists of callable taking the current topic help and
 # returning the updated version
