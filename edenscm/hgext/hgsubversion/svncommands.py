@@ -209,20 +209,24 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 subdir = "/" + subdir
             if subdir and subdir[-1] == "/":
                 subdir = subdir[:-1]
-            assert revpath.startswith(subdir), (
-                "That does not look like the " "right location in the repo."
-            )
 
-            # meta.layout is a config-cached property so instead of testing for
-            # None we test to see if the layout is 'auto' and, if so, try to
-            # guess the layout based on the commits (where subdir is compared to
-            # the revpath extracted from the commit)
-            if meta.layout == "auto":
+            if ui.configbool("hgsubversion", "usecommitlayout"):
                 meta.layout = meta.layout_from_commit(subdir, revpath, ctx.branch())
-            elif meta.layout == "single":
-                assert (subdir or "/") == revpath, (
-                    "Possible layout detection" " defect in replay"
+            else:
+                assert revpath.startswith(subdir), (
+                    "That does not look like the " "right location in the repo."
                 )
+
+                # meta.layout is a config-cached property so instead of testing for
+                # None we test to see if the layout is 'auto' and, if so, try to
+                # guess the layout based on the commits (where subdir is compared to
+                # the revpath extracted from the commit)
+                if meta.layout == "auto":
+                    meta.layout = meta.layout_from_commit(subdir, revpath, ctx.branch())
+                elif meta.layout == "single":
+                    assert (subdir or "/") == revpath, (
+                        "Possible layout detection" " defect in replay"
+                    )
 
             # write repository uuid if required
             if meta.uuid is None or validateuuid:
@@ -520,7 +524,7 @@ def svn(ui, repo, subcommand, *args, **opts):
             ui.status("Bad arguments for subcommand %s\n" % subcommand)
         else:
             raise
-    except KeyError as e:
+    except KeyError:
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) == 1:
             ui.status("Unknown subcommand %s\n" % subcommand)

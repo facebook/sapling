@@ -370,6 +370,11 @@ configitem("hgsubversion", "revmapimpl", default=configitem.dynamicdefault)
 # real default is 'auto'
 configitem("hgsubversion", "layout", default=configitem.dynamicdefault)
 
+# Skips the validation of Subversion layout inferred from a commit against the
+# layout configured for the repository while updating the revmap for that
+# commit. The layout inferred from the commit is used for the update.
+configitem("hgsubversion", "usecommitlayout", default=False)
+
 # real default is True
 configitem("hgsubversion", "defaultauthors", default=configitem.dynamicdefault)
 # real default is False

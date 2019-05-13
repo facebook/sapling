@@ -95,6 +95,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsubversion.stupid (bool)
   undocumented: hgsubversion.tunnels (list)
   undocumented: hgsubversion.unsafeskip (list)
+  undocumented: hgsubversion.usecommitlayout (bool)
   undocumented: hgsubversion.username (str)
   undocumented: infinitepush.bgssh (str)
   undocumented: infinitepush.bundle-stream (bool)
