@@ -13,7 +13,7 @@ use bonsai_hg_mapping::{
     SqlBonsaiHgMapping,
 };
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore};
-use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
+use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use failure::{err_msg, Error};
@@ -85,7 +85,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
             settings.db_get_dist,
             settings.db_put_dist,
         ));
-        Arc::new(CachingChangests::new(
+        Arc::new(CachingChangesets::new(
             changesets,
             cachelib::get_pool("changesets").ok_or(err_msg("no cache pool"))?,
         ))
