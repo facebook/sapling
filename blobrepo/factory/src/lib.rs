@@ -166,11 +166,16 @@ fn make_blobstore(
                 dbconfig.get_db_address()
                     .ok_or_else(|| err_msg("remote db address is not specified"))
                     .and_then(move |dbaddr| {
-                        myrouter_port
-                            .ok_or_else(|| err_msg("Need myrouter port for remote DB"))
-                            .map(|port| (dbaddr, port))
+                        let sync_queue = match myrouter_port {
+                            Some(port) => {
+                                Arc::new(SqlBlobstoreSyncQueue::with_myrouter(dbaddr, port))
+                            }
+                            None => {
+                                Arc::new(SqlBlobstoreSyncQueue::with_raw_xdb_tier(dbaddr)?)
+                            }
+                        };
+                        Ok(sync_queue)
                     })
-                    .map(|(addr, port)| Arc::new(SqlBlobstoreSyncQueue::with_myrouter(addr, port)))
                     .into_future()
             };
 
