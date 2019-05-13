@@ -228,6 +228,8 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
 
 
 def expull(orig, repo, remote, *args, **kwargs):
+    vfs = repo.sharedvfs
+
     if _isselectivepull(repo.ui):
         # if selectivepull is enabled then we don't save all of the remote
         # bookmarks in remotenames file. Instead we save only bookmarks that
@@ -241,7 +243,7 @@ def expull(orig, repo, remote, *args, **kwargs):
         # because it may slow down clients.
         path = activepath(repo.ui, remote)
         remotebookmarkslist = []
-        if repo.localvfs.exists(_selectivepullenabledfile):
+        if vfs.exists(_selectivepullenabledfile):
             # 'selectivepullenabled' file is used for transition between
             # non-selectivepull repo to selectivepull repo. It is used as
             # indicator to whether "non-interesting" bookmarks were removed
@@ -271,13 +273,13 @@ def expull(orig, repo, remote, *args, **kwargs):
     with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
         res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
-    if repo.localvfs.exists(_selectivepullenabledfile):
+    if vfs.exists(_selectivepullenabledfile):
         if not _isselectivepull(repo.ui):
             with repo.wlock():
-                repo.localvfs.unlink(_selectivepullenabledfile)
+                vfs.unlink(_selectivepullenabledfile)
     else:
         if _isselectivepull(repo.ui):
-            with repo.wlock(), repo.localvfs(_selectivepullenabledfile, "w") as f:
+            with repo.wlock(), vfs(_selectivepullenabledfile, "w") as f:
                 f.write("enabled")  # content doesn't matter
 
     if _trackaccessedbookmarks(repo.ui):
