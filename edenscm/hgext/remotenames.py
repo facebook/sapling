@@ -283,8 +283,9 @@ def expull(orig, repo, remote, *args, **kwargs):
                 f.write("enabled")  # content doesn't matter
 
     if _trackaccessedbookmarks(repo.ui):
-        if "bookmarks" in kwargs:
-            accessedbookmarks = _listremotebookmarks(remote, kwargs["bookmarks"])
+        pulledbookmarks = kwargs.get("bookmarks", [])
+        if pulledbookmarks:
+            accessedbookmarks = _listremotebookmarks(remote, pulledbookmarks)
             remotepath = activepath(repo.ui, remote)
             updateaccessedbookmarks(repo, remotepath, accessedbookmarks)
 

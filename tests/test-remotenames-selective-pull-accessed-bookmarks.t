@@ -75,7 +75,7 @@ Check used remote bookmarks tracking
      default/master            1:206754acf7d8
 
   $ checkaccessedbookmarks
-  accessedremotenames_totalnum : 0
+  No contents!
   $ hg pull -B master
   pulling from ssh://user@dummy/remoterepo
   no changes found
