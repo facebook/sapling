@@ -218,11 +218,11 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
                     }
                 });
 
-                tokio::spawn(batch_writes.then(|_res| -> Result<(), ()> {
-                    // If batching task finished, then any write to BlobstoreSyncQueue will fail.
-                    // Normally it shouldn't happen, but if it happens it's safer to just kill
-                    // the whole process.
-                    panic!("blobstore sync queue writer unexpectedly ended");
+                tokio::spawn(batch_writes.then(|res| -> Result<(), ()> {
+                    if let Err(()) = res {
+                        panic!("blobstore sync queue writer unexpectedly ended}");
+                    }
+                    Ok(())
                 }));
                 Ok(())
             }
