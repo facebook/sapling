@@ -83,11 +83,11 @@ Try to sync blobimport bookmark move, which should fail
   $ mononoke_hg_sync_with_failure_handler repo-hg 0 $TESTTMP/onfailure.sh
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #1 ... (glob)
-  * queue size after processing #1: 3 (glob)
+  * queue size after processing: 3 (glob)
   * running a failure handler: "$TESTTMP/onfailure.sh" (glob)
   Failure handling.
   * finished running a failure handler (glob)
-  * sync failed for #1 (glob)
+  * sync failed for ids [1] (glob)
   * caused by: unexpected bookmark move: blobimport (glob)
 
 Sync a pushrebase bookmark move
@@ -95,7 +95,7 @@ Sync a pushrebase bookmark move
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
   * successful prepare of entry #2 (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -111,8 +111,8 @@ Sync a pushrebase bookmark move
   remote:     1e43292ffbb3  pushcommit
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #2: 2 (glob)
-  * successful sync of entry #2 (glob)
+  * queue size after processing: 2 (glob)
+  * successful sync of entries [2] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
   changeset:   2:1e43292ffbb3
@@ -127,7 +127,7 @@ Sync a pushrebase bookmark move
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #3 ... (glob)
   * successful prepare of entry #3 (glob)
-  * syncing log entry #3 ... (glob)
+  * syncing log entries [3] ... (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -143,8 +143,8 @@ Sync a pushrebase bookmark move
   remote:     6cc06ef82eeb  anothercommit
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #3: 1 (glob)
-  * successful sync of entry #3 (glob)
+  * queue size after processing: 1 (glob)
+  * successful sync of entries [3] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
   changeset:   3:6cc06ef82eeb
@@ -165,7 +165,7 @@ Sync a pushrebase bookmark move
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #4 ... (glob)
   * successful prepare of entry #4 (glob)
-  * syncing log entry #4 ... (glob)
+  * syncing log entries [4] ... (glob)
   running * 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -179,8 +179,8 @@ Sync a pushrebase bookmark move
   sending unbundlereplay command
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #4: 0 (glob)
-  * successful sync of entry #4 (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [4] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
   changeset:   2:1e43292ffbb3
@@ -259,7 +259,7 @@ Use the same code here as in the actual opsfiles hook
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
   * successful prepare of entry #2 (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -281,7 +281,7 @@ Use the same code here as in the actual opsfiles hook
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
   * retrying attempt 2 of 3... (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -303,7 +303,7 @@ Use the same code here as in the actual opsfiles hook
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
   * retrying attempt 3 of 3... (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -324,8 +324,8 @@ Use the same code here as in the actual opsfiles hook
   single wireproto command took: * (glob)
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
-  * queue size after processing #2: 2 (glob)
-  * sync failed for #2 (glob)
+  * queue size after processing: 2 (glob)
+  * sync failed for ids [2] (glob)
   * caused by: sync failed (glob)
 Oops, we allowed a wrong bookmark to be unbundlereplayed onto
   $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
@@ -338,7 +338,7 @@ Now bookmark is not blocked
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
   * successful prepare of entry #2 (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -359,8 +359,8 @@ Now bookmark is not blocked
   single wireproto command took: * (glob)
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
-  * queue size after processing #2: 2 (glob)
-  * sync failed for #2 (glob)
+  * queue size after processing: 2 (glob)
+  * sync failed for ids [2] (glob)
   * caused by: sync failed (glob)
 
 Set the correct timestamp back
@@ -381,14 +381,14 @@ Replay in a loop
   $ mononoke_hg_sync_loop repo-hg-3 0
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #1 ... (glob)
-  * queue size after processing #1: 3 (glob)
-  * sync failed for #1 (glob)
+  * queue size after processing: 3 (glob)
+  * sync failed for ids [1] (glob)
   * unexpected bookmark move: blobimport (glob)
   $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
   * successful prepare of entry #2 (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -404,26 +404,26 @@ Replay in a loop
   remote:     1e43292ffbb3  pushcommit
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #2: 2 (glob)
-  * successful sync of entry #2 (glob)
+  * queue size after processing: 2 (glob)
+  * successful sync of entries [2] (glob)
   * preparing log entry #3 ... (glob)
   * successful prepare of entry #3 (glob)
-  * syncing log entry #3 ... (glob)
+  * syncing log entries [3] ... (glob)
   sending unbundlereplay command
   remote: * (glob)
   remote: * (glob)
   single wireproto command took: * (glob)
   unbundle replay batch item #1 successfully sent
-  * queue size after processing #3: 1 (glob)
-  * successful sync of entry #3 (glob)
+  * queue size after processing: 1 (glob)
+  * successful sync of entries [3] (glob)
   * preparing log entry #4 ... (glob)
   * successful prepare of entry #4 (glob)
-  * syncing log entry #4 ... (glob)
+  * syncing log entries [4] ... (glob)
   sending unbundlereplay command
   single wireproto command took: * (glob)
   unbundle replay batch item #2 successfully sent
-  * queue size after processing #4: 0 (glob)
-  * successful sync of entry #4 (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [4] (glob)
   $ sqlite3 "$TESTTMP/repo/mutable_counters" "select * from mutable_counters";
   0|latest-replayed-request|4
 
@@ -439,7 +439,7 @@ Continue replay
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #5 ... (glob)
   * successful prepare of entry #5 (glob)
-  * syncing log entry #5 ... (glob)
+  * syncing log entries [5] ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -455,8 +455,8 @@ Continue replay
   remote:     67d5c96d65a7  onemorecommit
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #5: 0 (glob)
-  * successful sync of entry #5 (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [5] (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r tip
   changeset:   4:67d5c96d65a7
@@ -508,7 +508,7 @@ Continue replay
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #6 ... (glob)
   * successful prepare of entry #6 (glob)
-  * syncing log entry #6 ... (glob)
+  * syncing log entries [6] ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -524,18 +524,18 @@ Continue replay
   remote:     15776eb106e6  exec mode
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #6: 1 (glob)
-  * successful sync of entry #6 (glob)
+  * queue size after processing: 1 (glob)
+  * successful sync of entries [6] (glob)
   * preparing log entry #7 ... (glob)
   * successful prepare of entry #7 (glob)
-  * syncing log entry #7 ... (glob)
+  * syncing log entries [7] ... (glob)
   sending unbundlereplay command
   remote: * (glob)
   remote:     6f060fabc8e7  symlink
   single wireproto command took: * (glob)
   unbundle replay batch item #1 successfully sent
-  * queue size after processing #7: 0 (glob)
-  * successful sync of entry #7 (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [7] (glob)
   $ cd repo-hg-3
   $ hg log -r master_bookmark^
   changeset:   5:a7acac33c050
@@ -591,7 +591,7 @@ Test hook bypass using REPLAY_BYPASS file
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
   * successful prepare of entry #2 (glob)
-  * syncing log entry #2 ... (glob)
+  * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -607,8 +607,8 @@ Test hook bypass using REPLAY_BYPASS file
   remote:     1e43292ffbb3  pushcommit
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #2: 5 (glob)
-  * successful sync of entry #2 (glob)
+  * queue size after processing: 5 (glob)
+  * successful sync of entries [2] (glob)
 
 Test bookmark deletion sync
   $ cat >>$TESTTMP/repo-hg-3/.hg/hgrc <<CONFIG
@@ -635,7 +635,7 @@ Test bookmark deletion sync
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #8 ... (glob)
   * successful prepare of entry #8 (glob)
-  * syncing log entry #8 ... (glob)
+  * syncing log entries [8] ... (glob)
   running * serve --stdio' (glob)
   sending hello command
   sending between command
@@ -649,8 +649,8 @@ Test bookmark deletion sync
   sending unbundlereplay command
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #8: 0 (glob)
-  * successful sync of entry #8 (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [8] (glob)
   $ cd $TESTTMP/client-push
   $ hgmn push --delete book_to_delete
   pushing to * (glob)
@@ -673,7 +673,7 @@ Test bookmark deletion sync
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #9 ... (glob)
   * successful prepare of entry #9 (glob)
-  * syncing log entry #9 ... (glob)
+  * syncing log entries [9] ... (glob)
   running * 'hg -R repo-hg-3 serve --stdio' (glob)
   sending hello command
   sending between command
@@ -687,8 +687,8 @@ Test bookmark deletion sync
   sending unbundlereplay command
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
-  * queue size after processing #9: 0 (glob)
-  * successful sync of entry #9 (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [9] (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r master_bookmark
   changeset:   6:6f24f1b38581
