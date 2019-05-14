@@ -362,6 +362,10 @@ impl Dag {
             self.insert(level, low, high, &parents)?;
         }
 
+        if level > self.max_level {
+            self.max_level = level;
+        }
+
         Ok(())
     }
 }
