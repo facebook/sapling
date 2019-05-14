@@ -129,6 +129,9 @@ Configs:
 
     ``remotefilelog.indexedlogdatastore`` use an experimental IndexedLog content store.
 
+    ``remotefilelog.mirrorindexedlogwrites`` all the data written to the
+    IndexedLog content store will be duplicated to a packfile.
+
 Configs for Eden API (HTTP data fetching):
 
     ``edenapi.enabled`` specifies whether HTTP data fetching should be used.
