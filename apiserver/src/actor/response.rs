@@ -56,6 +56,7 @@ pub enum MononokeRepoResponse {
     UploadLargeFile {},
     EdenGetData(DataResponse),
     EdenGetHistory(HistoryResponse),
+    EdenGetTrees(DataResponse),
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -105,6 +106,7 @@ impl Responder for MononokeRepoResponse {
             UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
             EdenGetData(response) => Ok(cbor_response(response)),
             EdenGetHistory(response) => Ok(cbor_response(response)),
+            EdenGetTrees(response) => Ok(cbor_response(response)),
         }
     }
 }

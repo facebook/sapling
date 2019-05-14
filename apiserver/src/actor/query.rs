@@ -73,6 +73,7 @@ pub enum MononokeRepoQuery {
     },
     EdenGetData(DataRequest),
     EdenGetHistory(HistoryRequest),
+    EdenGetTrees(DataRequest),
 }
 
 pub struct MononokeQuery {

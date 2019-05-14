@@ -396,6 +396,34 @@ fn eden_get_history(
     }
 }
 
+#[derive(Deserialize)]
+struct EdenGetTreesParams {
+    repo: String,
+}
+
+fn eden_get_trees(
+    (state, params, body): (State<HttpServerState>, Path<EdenGetTreesParams>, Bytes),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let params = params.into_inner();
+    match serde_cbor::from_slice(&body) {
+        Ok(request) => state
+            .mononoke
+            .send_query(
+                prepare_fake_ctx(&state),
+                MononokeQuery {
+                    repo: params.repo,
+                    kind: MononokeRepoQuery::EdenGetTrees(request),
+                },
+            )
+            .left_future(),
+        Err(e) => {
+            let msg = "POST data is invalid CBOR".into();
+            let e = ErrorKind::InvalidInput(msg, Some(e.into()));
+            err(e).right_future()
+        }
+    }
+}
+
 fn setup_logger(debug: bool) -> Logger {
     let level = if debug { Level::Debug } else { Level::Info };
 
@@ -663,6 +691,12 @@ fn main() -> Fallible<()> {
                 .resource("/eden/history", |r| {
                     r.method(http::Method::POST)
                         .with_async_config(eden_get_history, |cfg| {
+                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                        })
+                })
+                .resource("/eden/trees", |r| {
+                    r.method(http::Method::POST)
+                        .with_async_config(eden_get_trees, |cfg| {
                             (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
                         })
                 })
