@@ -209,6 +209,7 @@ fn handle_log<'a>(
                                 timestamp,
                                 "hg",
                                 bookmark.clone(),
+                                None,
                             );
                         println!("{}", output);
                     })
@@ -233,6 +234,7 @@ fn handle_log<'a>(
                                 timestamp,
                                 "bonsai",
                                 bookmark.clone(),
+                                None,
                             );
                         println!("{}", output);
                     })

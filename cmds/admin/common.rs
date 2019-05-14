@@ -15,6 +15,7 @@ pub fn format_bookmark_log_entry(
     timestamp: Timestamp,
     changeset_type: &str,
     bookmark: Bookmark,
+    bundle_id: Option<i64>,
 ) -> String {
     let reason_str = reason.to_string();
     if json_flag {
@@ -22,12 +23,19 @@ pub fn format_bookmark_log_entry(
             "changeset_type": changeset_type,
             "changeset_id": changeset_id,
             "reason": reason_str,
-            "timestamp_sec": timestamp.timestamp_seconds()
+            "timestamp_sec": timestamp.timestamp_seconds(),
+            "bundle_id": bundle_id,
         });
         to_string_pretty(&answer).unwrap()
     } else {
         let dt: DateTime = timestamp.into();
         let dts = dt.as_chrono().format("%b %e %T %Y");
-        format!("({}) {} {} {}", bookmark, changeset_id, reason, dts)
+        match bundle_id {
+            Some(bundle_id) => format!(
+                "{} ({}) {} {} {}",
+                bundle_id, bookmark, changeset_id, reason, dts
+            ),
+            None => format!("({}) {} {} {}", bookmark, changeset_id, reason, dts),
+        }
     }
 }

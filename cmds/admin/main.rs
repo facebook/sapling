@@ -1083,6 +1083,7 @@ fn subcommand_process_hg_sync(
                 .and_then({
                     cloned!(ctx);
                     move |entry| {
+                        let bundle_id = entry.id;
                         match entry.to_changeset_id {
                             Some(bcs_id) => repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                                 .map(|hg_cs_id| format!("{}", hg_cs_id)).left_future(),
@@ -1095,6 +1096,7 @@ fn subcommand_process_hg_sync(
                                 entry.timestamp,
                                 "hg",
                                 entry.bookmark_name,
+                                Some(bundle_id),
                             )
                         })
                     }
