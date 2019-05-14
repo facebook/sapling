@@ -359,6 +359,64 @@ impl Bookmarks for SqlBookmarks {
             .boxify()
     }
 
+    fn read_next_bookmark_log_entries_same_bookmark_and_reason(
+        &self,
+        _ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+        limit: u64,
+    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+        ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
+            .map(|entries| {
+                let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
+                    Some(first_entry) => {
+                        // Note: types are explicit here to protect us from query behavior change
+                        //       when tuple items 2 or 5 become something else, and we still succeed
+                        //       compiling everything because of the type inference
+                        let first_name: &Bookmark = &first_entry.2;
+                        let first_reason: &BookmarkUpdateReason = &first_entry.5;
+                        entries
+                            .into_iter()
+                            .take_while(|entry| {
+                                let name: &Bookmark = &entry.2;
+                                let reason: &BookmarkUpdateReason = &entry.5;
+                                name == first_name && reason == first_reason
+                            })
+                            .collect()
+                    }
+                    None => entries.into_iter().collect(),
+                };
+                stream::iter_ok(homogenous_entries).and_then(|entry| {
+                    let (
+                        id,
+                        repo_id,
+                        name,
+                        to_cs_id,
+                        from_cs_id,
+                        reason,
+                        timestamp,
+                        bundle_handle,
+                        commit_timestamps,
+                    ) = entry;
+                    get_bundle_replay_data(bundle_handle, commit_timestamps).and_then(
+                        |replay_data| {
+                            Ok(BookmarkUpdateLogEntry {
+                                id,
+                                repo_id,
+                                bookmark_name: name,
+                                to_changeset_id: to_cs_id,
+                                from_changeset_id: from_cs_id,
+                                reason: reason.update_bundle_replay_data(replay_data)?,
+                                timestamp,
+                            })
+                        },
+                    )
+                })
+            })
+            .flatten_stream()
+            .boxify()
+    }
+
     fn read_next_bookmark_log_entries(
         &self,
         _ctx: CoreContext,

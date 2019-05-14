@@ -223,6 +223,17 @@ impl Bookmarks for CachedBookmarks {
             .read_next_bookmark_log_entries(ctx, id, repoid, limit)
     }
 
+    fn read_next_bookmark_log_entries_same_bookmark_and_reason(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+        limit: u64,
+    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+        self.bookmarks
+            .read_next_bookmark_log_entries_same_bookmark_and_reason(ctx, id, repoid, limit)
+    }
+
     fn list_bookmark_log_entries(
         &self,
         ctx: CoreContext,
@@ -428,6 +439,16 @@ mod tests {
         }
 
         fn read_next_bookmark_log_entries(
+            &self,
+            _ctx: CoreContext,
+            _id: u64,
+            _repoid: RepositoryId,
+            _limit: u64,
+        ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+            unimplemented!()
+        }
+
+        fn read_next_bookmark_log_entries_same_bookmark_and_reason(
             &self,
             _ctx: CoreContext,
             _id: u64,

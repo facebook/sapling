@@ -174,9 +174,20 @@ pub trait Bookmarks: Send + Sync + 'static {
     /// Creates a transaction that will be used for write operations.
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction>;
 
-    /// Read the next entry from Bookmark update log. It either returns a new log entry with id
-    /// bigger than `id` or None if there are no more log entries with bigger id.
+    /// Read the next up to `limit` entries from Bookmark update log. It either returns
+    /// new log entries with id bigger than `id` or empty stream if there are no more
+    /// log entries with bigger id.
     fn read_next_bookmark_log_entries(
+        &self,
+        ctx: CoreContext,
+        id: u64,
+        repoid: RepositoryId,
+        limit: u64,
+    ) -> BoxStream<BookmarkUpdateLogEntry, Error>;
+
+    /// Same as `read_next_bookmark_log_entries`, but limits the stream of returned entries
+    /// to all have the same reason and bookmark
+    fn read_next_bookmark_log_entries_same_bookmark_and_reason(
         &self,
         ctx: CoreContext,
         id: u64,

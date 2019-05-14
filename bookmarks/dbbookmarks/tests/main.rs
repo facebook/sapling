@@ -19,7 +19,7 @@ use maplit::{btreemap, hashmap};
 use mercurial_types_mocks::nodehash as mercurial_mocks;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid::{
-    FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
+    FIVES_CSID, FOURS_CSID, ONES_CSID, SIXES_CSID, THREES_CSID, TWOS_CSID,
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
 use std::collections::BTreeMap;
@@ -902,6 +902,7 @@ fn test_log_correct_order() {
     let ctx = CoreContext::test_mock();
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
+    let name_2 = create_bookmark("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
     txn.force_set(
@@ -951,11 +952,34 @@ fn test_log_correct_order() {
     txn.commit().wait().unwrap();
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.force_set(
+        &name_2,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    assert!(txn.commit().wait().is_ok());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
     txn.update(
         &name_1,
         FIVES_CSID,
         FOURS_CSID,
         BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        },
+    )
+    .unwrap();
+    txn.commit().wait().unwrap();
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update(
+        &name_1,
+        SIXES_CSID,
+        FIVES_CSID,
+        BookmarkUpdateReason::Pushrebase {
             bundle_replay_data: None,
         },
     )
@@ -974,7 +998,7 @@ fn test_log_correct_order() {
     let log_entry = fetch_single(&bookmarks, 3);
     assert_eq!(log_entry.to_changeset_id.unwrap(), FOURS_CSID);
 
-    let log_entry = fetch_single(&bookmarks, 4);
+    let log_entry = fetch_single(&bookmarks, 5);
     assert_eq!(log_entry.to_changeset_id.unwrap(), FIVES_CSID);
 
     assert_eq!(
@@ -989,26 +1013,16 @@ fn test_log_correct_order() {
 
     assert_eq!(
         bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 5)
+            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 8)
             .collect()
             .wait()
             .unwrap()
             .len(),
-        5
-    );
-
-    assert_eq!(
-        bookmarks
-            .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 6)
-            .collect()
-            .wait()
-            .unwrap()
-            .len(),
-        5
+        7
     );
 
     let entries = bookmarks
-        .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 5)
+        .read_next_bookmark_log_entries(ctx.clone(), 0, REPO_ZERO, 6)
         .collect()
         .wait()
         .unwrap();
@@ -1019,8 +1033,40 @@ fn test_log_correct_order() {
         .collect();
     assert_eq!(
         cs_ids,
-        vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID, FIVES_CSID]
-    )
+        vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID, ONES_CSID, FIVES_CSID]
+    );
+
+    let entries = bookmarks
+        .read_next_bookmark_log_entries_same_bookmark_and_reason(ctx.clone(), 0, REPO_ZERO, 6)
+        .collect()
+        .wait()
+        .unwrap();
+
+    // FOURS_CSID -> FIVES_CSID update is missing, because it has a different bookmark
+    let cs_ids: Vec<_> = entries
+        .into_iter()
+        .map(|entry| entry.to_changeset_id.unwrap())
+        .collect();
+    assert_eq!(
+        cs_ids,
+        vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID]
+    );
+
+    let entries = bookmarks
+        .read_next_bookmark_log_entries_same_bookmark_and_reason(ctx.clone(), 5, REPO_ZERO, 6)
+        .collect()
+        .wait()
+        .unwrap();
+
+    // FIVES_CSID -> SIXES_CSID update is missing, because it has a different reason
+    let cs_ids: Vec<_> = entries
+        .into_iter()
+        .map(|entry| entry.to_changeset_id.unwrap())
+        .collect();
+    assert_eq!(
+        cs_ids,
+        vec![FIVES_CSID]
+    );
 }
 
 #[test]
