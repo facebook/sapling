@@ -17,7 +17,7 @@ import random
 import sys
 import time
 
-from . import demandimport, node
+from . import demandimport, node, pycompat
 
 
 if sys.version_info < (2, 7, 6):
@@ -81,18 +81,25 @@ class EdenThriftClient(object):
     def __init__(self, repo):
         self._repo = repo
         self._root = repo.root
+        if pycompat.iswindows:
+            # We don't have the .eden/symlinks on Windows right now
+            # will enable this code when we have them or something equivalent working.
+            self._socket_path = None
 
-        self._socket_path = readlink_retry_estale(
-            os.path.join(self._root, ".eden", "socket")
-        )
-        # Read the .eden/root symlink to see what eden thinks the name of this
-        # mount point is.  This might not match self._root in some cases.  In
-        # particular, a parent directory of the eden mount might be bind
-        # mounted somewhere else, resulting in it appearing at multiple
-        # separate locations.
-        self._eden_root = readlink_retry_estale(
-            os.path.join(self._root, ".eden", "root")
-        )
+            # On Windows, Repo root will be mount root.
+            self._eden_root = self._root
+        else:
+            self._socket_path = readlink_retry_estale(
+                os.path.join(self._root, ".eden", "socket")
+            )
+            # Read the .eden/root symlink to see what eden thinks the name of this
+            # mount point is.  This might not match self._root in some cases.  In
+            # particular, a parent directory of the eden mount might be bind
+            # mounted somewhere else, resulting in it appearing at multiple
+            # separate locations.
+            self._eden_root = readlink_retry_estale(
+                os.path.join(self._root, ".eden", "root")
+            )
 
     def _get_client(self):
         """
