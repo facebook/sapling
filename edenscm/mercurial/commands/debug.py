@@ -1212,13 +1212,21 @@ def debugignore(ui, repo, *files, **opts):
     if so, show the ignore rule (file and line number) that matched it.
     """
     ignore = repo.dirstate._ignore
-    visitdir = repo.dirstate._ignore.visitdir
     if not files:
         # Show all the patterns
         ui.write("%s\n" % repr(ignore))
     else:
+        explain = getattr(ignore, "explain", None)
+
+        # The below code can be removed after hgignore is removed.
+        visitdir = ignore.visitdir
         m = scmutil.match(repo[None], pats=files)
         for f in m.files():
+            # The matcher supports "explain", use it.
+            if explain:
+                ui.write(("%s\n") % explain(f))
+                continue
+
             nf = util.normpath(f)
             ignored = None
             if nf != ".":

@@ -9,8 +9,8 @@ use std::path::Path;
 
 use cpython::*;
 
-use ::pathmatcher::GitignoreMatcher;
 use encoding::local_bytes_to_path;
+use pathmatcher::GitignoreMatcher;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pathmatcher"].join(".");
@@ -36,8 +36,15 @@ py_class!(class gitignorematcher |py| {
         gitignorematcher::create_instance(py, matcher)
     }
 
+    def explain(&self, path: &PyBytes, is_dir: bool) -> PyResult<String> {
+        let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
+        let explain = self.matcher(py).match_relative(&path, is_dir).explain();
+        let ret = format!("{}: {}", path.to_str().unwrap_or(""), explain);
+        Ok(ret)
+    }
+
     def match_relative(&self, path: &PyBytes, is_dir: bool) -> PyResult<bool> {
         let path = local_bytes_to_path(path.data(py)).map_err(|_|encoding_error(py))?;
-        Ok(self.matcher(py).match_relative(&path, is_dir))
+        Ok(self.matcher(py).match_relative(&path, is_dir).bool_ignore())
     }
 });

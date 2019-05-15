@@ -17,8 +17,7 @@ pub struct GitignoreMatcher {
     // in the API, removing that "PathBuf" could reduce memory footprint.
     submatchers: RefCell<HashMap<PathBuf, Box<GitignoreMatcher>>>,
 
-    // Whether this directory is ignored or not.
-    ignored: bool,
+    cached: MatchResult,
 }
 
 /// Return (next_component, remaining_path), or None if remaining_path is empty.
@@ -39,19 +38,53 @@ fn split_path(path: &Path) -> Option<(&Path, &Path)> {
     })
 }
 
-#[derive(PartialEq)]
-enum MatchResult {
+#[derive(Debug, PartialEq, Clone)]
+pub enum MatchResult {
     Unspecified,
-    Ignored,
-    Whitelisted,
+    Ignored { file: String, glob: String },
+    Whitelisted { file: String, glob: String },
 }
 
-impl<T> From<ignore::Match<T>> for MatchResult {
-    fn from(v: ignore::Match<T>) -> MatchResult {
+fn nice_path(path: Option<&Path>, root_path: &Path) -> String {
+    match path {
+        Some(v) => v
+            .strip_prefix(root_path)
+            .unwrap_or(v)
+            .to_string_lossy()
+            .to_string(),
+        None => "".to_string(),
+    }
+}
+
+impl MatchResult {
+    pub fn bool_ignore(&self) -> bool {
+        match self {
+            MatchResult::Ignored { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn explain(&self) -> String {
+        match self {
+            MatchResult::Ignored { file, glob } => format!("Ignored by rule {} in {}", glob, file),
+            MatchResult::Whitelisted { file, glob } => {
+                format!("Whitelisted by rule {} in {}", glob, file)
+            }
+            MatchResult::Unspecified => "Unspecified".to_string(),
+        }
+    }
+
+    fn from_glob(v: ignore::Match<&ignore::gitignore::Glob>, root_path: &Path) -> Self {
         match v {
             ignore::Match::None => MatchResult::Unspecified,
-            ignore::Match::Ignore(_) => MatchResult::Ignored,
-            ignore::Match::Whitelist(_) => MatchResult::Whitelisted,
+            ignore::Match::Ignore(blob) => MatchResult::Ignored {
+                file: nice_path(blob.from(), root_path),
+                glob: blob.original().to_string(),
+            },
+            ignore::Match::Whitelist(blob) => MatchResult::Whitelisted {
+                file: nice_path(blob.from(), root_path),
+                glob: blob.original().to_string(),
+            },
         }
     }
 }
@@ -79,23 +112,27 @@ impl GitignoreMatcher {
         GitignoreMatcher {
             ignore,
             submatchers,
-            ignored: false,
+            cached: MatchResult::Unspecified,
         }
     }
 
-    /// Like `new`, but might mark the subtree as "ignored" entirely.
+    /// Like `new`, but might mark the subtree with a cached response
     /// Used internally by `match_subdir_path`.
     fn new_with_rootmatcher(dir: &Path, root: &GitignoreMatcher) -> Self {
         let dir_root_relative = dir.strip_prefix(root.ignore.path()).unwrap();
         let submatchers = RefCell::new(HashMap::new());
-        let (ignored, ignore) = if root.match_relative(dir_root_relative, true) {
-            (true, gitignore::Gitignore::empty())
-        } else {
-            (false, gitignore::Gitignore::new(dir.join(".gitignore")).0)
+        // Cache only "ignored" results
+        let cached = match root.match_relative(dir_root_relative, true) {
+            MatchResult::Ignored { file, glob } => MatchResult::Ignored { file, glob },
+            _ => MatchResult::Unspecified,
+        };
+        let ignore = match cached {
+            MatchResult::Unspecified => gitignore::Gitignore::new(dir.join(".gitignore")).0,
+            _ => gitignore::Gitignore::empty(),
         };
         GitignoreMatcher {
             ignore,
-            ignored,
+            cached,
             submatchers,
         }
     }
@@ -104,28 +141,32 @@ impl GitignoreMatcher {
     ///
     /// Panic if the path is not relative, or contains components like
     /// ".." or ".".
-    pub fn match_relative<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
+    pub fn match_relative<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> MatchResult {
         let path = path.as_ref();
-        self.match_path(path, is_dir, self) == MatchResult::Ignored
+        self.match_path(path, is_dir, self)
     }
 
     /// Check .gitignore for the relative path.
     fn match_path(&self, path: &Path, is_dir: bool, root: &GitignoreMatcher) -> MatchResult {
         // Everything is ignored regardless if this directory is ignored.
-        if self.ignored {
-            return MatchResult::Ignored;
-        }
+        match self.cached {
+            MatchResult::Unspecified => {
+                // Check subdir first. It can override this (parent) directory.
+                let subdir_result = match split_path(path) {
+                    None => MatchResult::Unspecified,
+                    Some((dir, rest)) => self.match_subdir_path(dir, rest, is_dir, root),
+                };
 
-        // Check subdir first. It can override this (parent) directory.
-        let subdir_result = match split_path(path) {
-            None => MatchResult::Unspecified,
-            Some((dir, rest)) => self.match_subdir_path(dir, rest, is_dir, root),
-        };
-
-        match subdir_result {
-            MatchResult::Whitelisted => MatchResult::Whitelisted,
-            MatchResult::Ignored => MatchResult::Ignored,
-            MatchResult::Unspecified => self.ignore.matched(path, is_dir).into(),
+                match subdir_result {
+                    MatchResult::Unspecified => MatchResult::from_glob(
+                        self.ignore.matched(path, is_dir),
+                        root.ignore.path(),
+                    ),
+                    v => v,
+                }
+            }
+            // If we have a cached result, return it
+            ref v => v.clone(),
         }
     }
 
@@ -184,13 +225,36 @@ mod tests {
     #[test]
     fn test_gitignore_match_directory() {
         let dir = tempdir().unwrap();
-        write(dir.path().join(".gitignore"), b"FILE\nDIR/\n");
+        let filename = dir.path().join(".gitignore");
+        write(&filename, b"FILE\nDIR/\n");
 
         let m = GitignoreMatcher::new(dir.path(), Vec::new());
-        assert!(m.match_relative("x/FILE", false));
-        assert!(m.match_relative("x/FILE", true));
-        assert!(!m.match_relative("x/DIR", false));
-        assert!(m.match_relative("x/DIR", true));
+        assert!(m.match_relative("x/FILE", false).bool_ignore());
+        assert_eq!(
+            m.match_relative("x/FILE", false),
+            MatchResult::Ignored {
+                file: ".gitignore".to_string(),
+                glob: "FILE".to_string(),
+            }
+        );
+        assert!(m.match_relative("x/FILE", true).bool_ignore());
+        assert_eq!(
+            m.match_relative("x/FILE", true),
+            MatchResult::Ignored {
+                file: ".gitignore".to_string(),
+                glob: "FILE".to_string(),
+            }
+        );
+        assert!(!m.match_relative("x/DIR", false).bool_ignore());
+        assert_eq!(m.match_relative("x/DIR", false), MatchResult::Unspecified);
+        assert!(m.match_relative("x/DIR", true).bool_ignore());
+        assert_eq!(
+            m.match_relative("x/DIR", true),
+            MatchResult::Ignored {
+                file: ".gitignore".to_string(),
+                glob: "DIR/".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -206,11 +270,49 @@ mod tests {
         write(dir.path().join("c/d/.gitignore"), b"!e\nf");
 
         let m = GitignoreMatcher::new(dir.path(), Vec::new());
-        assert!(m.match_relative("a/b", false));
-        assert!(m.match_relative("a/b/c", false));
-        assert!(m.match_relative("a/b/d", false));
-        assert!(m.match_relative("c/d/f", false));
-        assert!(!m.match_relative("c/d/e", false));
+        assert!(m.match_relative("a/b", false).bool_ignore());
+        assert_eq!(
+            m.match_relative("a/b", false),
+            MatchResult::Ignored {
+                file: ".gitignore".to_string(),
+                glob: "a/b".to_string(),
+            }
+        );
+        assert!(m.match_relative("a/b/c", false).bool_ignore());
+        assert_eq!(
+            m.match_relative("a/b/c", false),
+            MatchResult::Ignored {
+                file: ".gitignore".to_string(),
+                glob: "a/b".to_string(),
+            }
+        );
+        assert!(m.match_relative("a/b/d", false).bool_ignore());
+        assert_eq!(
+            m.match_relative("a/b/d", false),
+            MatchResult::Ignored {
+                file: ".gitignore".to_string(),
+                glob: "a/b".to_string(),
+            }
+        );
+        #[cfg(unix)]
+        {
+            assert!(m.match_relative("c/d/f", false).bool_ignore());
+            assert_eq!(
+                m.match_relative("c/d/f", false),
+                MatchResult::Ignored {
+                    file: "c/d/.gitignore".to_string(),
+                    glob: "f".to_string(),
+                }
+            );
+            assert!(!m.match_relative("c/d/e", false).bool_ignore());
+            assert_eq!(
+                m.match_relative("c/d/e", false),
+                MatchResult::Whitelisted {
+                    file: "c/d/.gitignore".to_string(),
+                    glob: "!e".to_string(),
+                }
+            );
+        }
     }
 
     #[test]
@@ -223,8 +325,22 @@ mod tests {
         write(&ignore2_path, b"b*");
 
         let m = GitignoreMatcher::new(dir.path(), vec![&ignore1_path, &ignore2_path]);
-        assert!(m.match_relative("a1", true));
-        assert!(m.match_relative("b1", true));
+        assert!(m.match_relative("a1", true).bool_ignore());
+        assert_eq!(
+            m.match_relative("a1", true),
+            MatchResult::Ignored {
+                file: "ignore1".to_string(),
+                glob: "a*".to_string(),
+            }
+        );
+        assert!(m.match_relative("b1", true).bool_ignore());
+        assert_eq!(
+            m.match_relative("b1", true),
+            MatchResult::Ignored {
+                file: "ignore2".to_string(),
+                glob: "b*".to_string(),
+            }
+        );
     }
 
     fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) {

@@ -736,6 +736,9 @@ class gitignorematcher(basematcher):
         # It should be set to whether "f" is actually a directory or not.
         return self._matcher.match_relative(f, True)
 
+    def explain(self, f):
+        return self._matcher.explain(f, True)
+
     def visitdir(self, dir):
         matched = self._matcher.match_relative(dir, True)
         if matched:
