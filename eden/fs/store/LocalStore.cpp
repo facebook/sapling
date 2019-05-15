@@ -22,6 +22,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
+#include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
@@ -33,33 +34,6 @@ using folly::io::Cursor;
 using std::optional;
 using std::string;
 using std::unique_ptr;
-
-namespace {
-using namespace facebook::eden;
-enum class Persistence : bool {
-  Ephemeral = false,
-  Persistent = true,
-};
-
-static constexpr struct KeySpaceRecord {
-  LocalStore::KeySpace keySpace;
-  Persistence persistence;
-} kKeySpaceRecords[] = {
-    {LocalStore::BlobFamily, Persistence::Ephemeral},
-    {LocalStore::BlobMetaDataFamily, Persistence::Ephemeral},
-
-    // If the trees were imported from a flatmanifest, we cannot delete them.
-    // See test_contents_are_the_same_if_handle_is_held_open when running
-    // against a flatmanifest repository.
-    {LocalStore::TreeFamily, Persistence::Persistent},
-
-    // Proxy hashes are required to fetch objects from hg from a hash.
-    // Deleting them breaks re-importing after an inode is unloaded.
-    {LocalStore::HgProxyHashFamily, Persistence::Persistent},
-
-    {LocalStore::HgCommitToTreeFamily, Persistence::Ephemeral},
-};
-} // namespace
 
 namespace facebook {
 namespace eden {

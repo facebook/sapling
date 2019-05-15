@@ -68,6 +68,16 @@ class LocalStore {
     End, // must be last!
   };
 
+  enum class Persistence : bool {
+    Ephemeral = false,
+    Persistent = true,
+  };
+
+  struct KeySpaceRecord {
+    LocalStore::KeySpace keySpace;
+    Persistence persistence;
+  };
+
   /**
    * Close the underlying store.
    */
