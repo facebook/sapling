@@ -14,10 +14,8 @@
 namespace facebook {
 namespace eden {
 
-// Beware: the KeySpace enum values cannot be used as indexes into the
-// kKeySpaceRecords array.
 static constexpr std::
-    array<LocalStore::KeySpaceRecord, LocalStore::KeySpace::End - 1>
+    array<LocalStore::KeySpaceRecord, LocalStore::KeySpace::End>
         kKeySpaceRecords = {
             LocalStore::KeySpaceRecord{LocalStore::BlobFamily,
                                        LocalStore::Persistence::Ephemeral},

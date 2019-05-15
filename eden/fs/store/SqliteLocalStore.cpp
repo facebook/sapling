@@ -26,7 +26,6 @@ namespace {
 
 // Coupled with LocalStore::KeySpace!
 constexpr auto tableNames = folly::make_array(
-    StringPiece(""), // we don't use this keyspace id
     StringPiece("blob"),
     StringPiece("blobmeta"),
     StringPiece("tree"),
@@ -74,7 +73,7 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
     SqliteStatement(db, "BEGIN").step();
 
     try {
-      for (size_t i = 1; i < buffer_.size(); ++i) {
+      for (size_t i = 0; i < buffer_.size(); ++i) {
         auto& items = buffer_[i];
         if (items.empty()) {
           continue;
@@ -122,9 +121,6 @@ SqliteLocalStore::SqliteLocalStore(
   SqliteStatement(db, "PRAGMA journal_mode=WAL").step();
 
   for (auto& name : tableNames) {
-    if (name == "") {
-      continue;
-    }
     SqliteStatement(
         db,
         "CREATE TABLE IF NOT EXISTS ",

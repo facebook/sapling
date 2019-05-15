@@ -58,12 +58,11 @@ class LocalStore {
    * coupled to the ordering of the columnFamilies descriptor in
    * RocksDbLocalStore.cpp and tableNames in SqliteLocalStore.cpp */
   enum KeySpace : uint8_t {
-    /* 0 is the default column family, which we are not using */
-    BlobFamily = 1,
-    BlobMetaDataFamily = 2,
-    TreeFamily = 3,
-    HgProxyHashFamily = 4,
-    HgCommitToTreeFamily = 5,
+    BlobFamily = 0,
+    BlobMetaDataFamily = 1,
+    TreeFamily = 2,
+    HgProxyHashFamily = 3,
+    HgCommitToTreeFamily = 4,
 
     End, // must be last!
   };

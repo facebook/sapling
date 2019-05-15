@@ -68,13 +68,16 @@ const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
 
   // Meyers singleton to avoid SIOF issues
   static const std::vector<rocksdb::ColumnFamilyDescriptor> families{
-      rocksdb::ColumnFamilyDescriptor{rocksdb::kDefaultColumnFamilyName,
-                                      options},
       rocksdb::ColumnFamilyDescriptor{"blob", blobOptions},
       rocksdb::ColumnFamilyDescriptor{"blobmeta", options},
       rocksdb::ColumnFamilyDescriptor{"tree", options},
       rocksdb::ColumnFamilyDescriptor{"hgproxyhash", options},
       rocksdb::ColumnFamilyDescriptor{"hgcommit2tree", options},
+      // Put the default column family last.
+      // This way the KeySpace enum values can be used directly as indexes
+      // into our column family vectors.
+      rocksdb::ColumnFamilyDescriptor{rocksdb::kDefaultColumnFamilyName,
+                                      options},
   };
   return families;
 }
