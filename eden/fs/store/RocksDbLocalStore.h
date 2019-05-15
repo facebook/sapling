@@ -16,7 +16,6 @@ namespace facebook {
 namespace eden {
 
 class FaultInjector;
-class ReloadableConfig;
 
 /** An implementation of LocalStore that uses RocksDB for the underlying
  * storage.
@@ -27,10 +26,7 @@ class RocksDbLocalStore : public LocalStore {
    * The given FaultInjector must be valid during the lifetime of this
    * RocksDbLocalStore object.
    */
-  explicit RocksDbLocalStore(
-      AbsolutePathPiece pathToRocksDb,
-      FaultInjector*,
-      std::shared_ptr<ReloadableConfig> config = nullptr);
+  explicit RocksDbLocalStore(AbsolutePathPiece pathToRocksDb, FaultInjector*);
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;

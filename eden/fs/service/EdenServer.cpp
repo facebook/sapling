@@ -456,18 +456,14 @@ Future<Unit> EdenServer::prepareImpl(
 
   if (FLAGS_local_storage_engine_unsafe == "memory") {
     logger->log("Creating new memory store.");
-    localStore_ = make_shared<MemoryLocalStore>(shared_ptr<ReloadableConfig>(
-        serverState_, &serverState_->getReloadableConfig()));
+    localStore_ = make_shared<MemoryLocalStore>();
   } else if (FLAGS_local_storage_engine_unsafe == "sqlite") {
     const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
     logger->log("Opening local SQLite store ", path, "...");
     folly::stop_watch<std::chrono::milliseconds> watch;
-    localStore_ = make_shared<SqliteLocalStore>(
-        path,
-        shared_ptr<ReloadableConfig>(
-            serverState_, &serverState_->getReloadableConfig()));
+    localStore_ = make_shared<SqliteLocalStore>(path);
     logger->log(
         "Opened SQLite store in ",
         watch.elapsed().count() / 1000.0,
@@ -479,10 +475,7 @@ Future<Unit> EdenServer::prepareImpl(
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
     localStore_ = make_shared<RocksDbLocalStore>(
-        rocksPath,
-        &serverState_->getFaultInjector(),
-        shared_ptr<ReloadableConfig>(
-            serverState_, &serverState_->getReloadableConfig()));
+        rocksPath, &serverState_->getFaultInjector());
     logger->log(
         "Opened RocksDB store in ",
         watch.elapsed().count() / 1000.0,

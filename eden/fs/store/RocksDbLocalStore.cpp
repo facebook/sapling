@@ -244,10 +244,8 @@ namespace eden {
 
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
-    FaultInjector* faultInjector,
-    std::shared_ptr<ReloadableConfig> config)
-    : LocalStore(std::move(config)),
-      faultInjector_(*faultInjector),
+    FaultInjector* faultInjector)
+    : faultInjector_(*faultInjector),
       dbHandles_(openDB(pathToRocksDb)),
       ioPool_(12, "RocksLocalStore") {}
 

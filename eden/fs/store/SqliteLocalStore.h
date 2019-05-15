@@ -21,9 +21,7 @@ namespace eden {
  * */
 class SqliteLocalStore : public LocalStore {
  public:
-  explicit SqliteLocalStore(
-      AbsolutePathPiece pathToDb,
-      std::shared_ptr<ReloadableConfig> config = nullptr);
+  explicit SqliteLocalStore(AbsolutePathPiece pathToDb);
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;

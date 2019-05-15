@@ -23,7 +23,7 @@ namespace eden {
  * */
 class MemoryLocalStore : public LocalStore {
  public:
-  explicit MemoryLocalStore(std::shared_ptr<ReloadableConfig> config = nullptr);
+  explicit MemoryLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;

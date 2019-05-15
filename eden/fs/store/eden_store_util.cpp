@@ -90,10 +90,8 @@ class Command {
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = getLocalStorePath();
     ensureDirectoryExists(rocksPath);
-    auto localStore = make_unique<RocksDbLocalStore>(
-        rocksPath,
-        &faultInjector_,
-        std::make_shared<ReloadableConfig>(config_));
+    auto localStore =
+        make_unique<RocksDbLocalStore>(rocksPath, &faultInjector_);
     XLOG(INFO) << "Opened RocksDB store in "
                << (watch.elapsed().count() / 1000.0) << " seconds.";
     return localStore;

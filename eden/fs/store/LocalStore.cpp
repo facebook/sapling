@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "LocalStore.h"
+#include "eden/fs/store/LocalStore.h"
 
 #include <folly/Format.h>
 #include <folly/String.h>
@@ -38,8 +38,7 @@ using std::unique_ptr;
 namespace facebook {
 namespace eden {
 
-LocalStore::LocalStore(std::shared_ptr<ReloadableConfig> config) noexcept
-    : config_(std::move(config)) {}
+LocalStore::LocalStore() noexcept {}
 
 void LocalStore::clearCachesAndCompactAll() {
   for (auto ks : kKeySpaceRecords) {
