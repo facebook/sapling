@@ -8,6 +8,8 @@
  *
  */
 #pragma once
+#include <folly/CppAttributes.h>
+
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -26,7 +28,9 @@ class RocksDbLocalStore : public LocalStore {
    * The given FaultInjector must be valid during the lifetime of this
    * RocksDbLocalStore object.
    */
-  explicit RocksDbLocalStore(AbsolutePathPiece pathToRocksDb, FaultInjector*);
+  explicit RocksDbLocalStore(
+      AbsolutePathPiece pathToRocksDb,
+      FaultInjector* FOLLY_NONNULL faultInjector);
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
