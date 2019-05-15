@@ -8,11 +8,15 @@
  *
  */
 #include "eden/fs/store/SqliteLocalStore.h"
+
 #include <folly/String.h>
 #include <folly/container/Array.h>
 #include <folly/logging/xlog.h>
+
 #include "eden/fs/sqlite/Sqlite.h"
+#include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/StoreResult.h"
+
 namespace facebook {
 namespace eden {
 
@@ -23,14 +27,6 @@ using folly::to;
 using std::string;
 
 namespace {
-
-// Coupled with LocalStore::KeySpace!
-constexpr auto tableNames = folly::make_array(
-    StringPiece("blob"),
-    StringPiece("blobmeta"),
-    StringPiece("tree"),
-    StringPiece("hgproxyhash"),
-    StringPiece("hgcommit2tree"));
 
 /**
  * Implements the write batching helper.
@@ -81,7 +77,10 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
 
         // See commentary in SqliteLocalStore::put re: `or ignore`
         SqliteStatement stmt(
-            db, "insert or ignore into ", tableNames[i], " VALUES(?, ?)");
+            db,
+            "insert or ignore into ",
+            kKeySpaceRecords[i].name,
+            " VALUES(?, ?)");
 
         for (const auto& item : items) {
           const auto& key = item.first;
@@ -120,11 +119,11 @@ SqliteLocalStore::SqliteLocalStore(
   // https://www.sqlite.org/wal.html
   SqliteStatement(db, "PRAGMA journal_mode=WAL").step();
 
-  for (auto& name : tableNames) {
+  for (const auto& ks : kKeySpaceRecords) {
     SqliteStatement(
         db,
         "CREATE TABLE IF NOT EXISTS ",
-        name,
+        ks.name,
         "(",
         "key BINARY NOT NULL,",
         "value BINARY NOT NULL,"
@@ -141,7 +140,7 @@ void SqliteLocalStore::close() {
 void SqliteLocalStore::clearKeySpace(KeySpace keySpace) {
   auto db = db_.lock();
 
-  SqliteStatement stmt(db, "delete from ", tableNames[keySpace]);
+  SqliteStatement stmt(db, "delete from ", kKeySpaceRecords[keySpace].name);
   stmt.step();
 }
 
@@ -152,7 +151,10 @@ StoreResult SqliteLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
   auto db = db_.lock();
 
   SqliteStatement stmt(
-      db, "select value from ", tableNames[keySpace], " where key = ?");
+      db,
+      "select value from ",
+      kKeySpaceRecords[keySpace].name,
+      " where key = ?");
 
   // Bind the key; parameters are 1-based
   stmt.bind(1, key);
@@ -171,7 +173,7 @@ bool SqliteLocalStore::hasKey(LocalStore::KeySpace keySpace, ByteRange key)
   auto db = db_.lock();
 
   SqliteStatement stmt(
-      db, "select 1 from ", tableNames[keySpace], " where key = ?");
+      db, "select 1 from ", kKeySpaceRecords[keySpace].name, " where key = ?");
 
   stmt.bind(1, key);
   return stmt.step();
@@ -189,7 +191,7 @@ void SqliteLocalStore::put(
       // when running our integration tests.  This implies that we're
       // over-fetching and that we have a perf improvement opportunity.
       "insert or ignore into ",
-      tableNames[keySpace],
+      kKeySpaceRecords[keySpace].name,
       " VALUES(?, ?)");
 
   stmt.bind(1, key);

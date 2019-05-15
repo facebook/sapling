@@ -8,6 +8,9 @@
  *
  */
 #include "eden/fs/store/RocksDbLocalStore.h"
+
+#include <array>
+
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
@@ -19,9 +22,10 @@
 #include <rocksdb/db.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
-#include <array>
+
 #include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
+#include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/FaultInjector.h"
 
@@ -59,26 +63,31 @@ rocksdb::ColumnFamilyOptions makeColumnOptions(uint64_t LRUblockCacheSizeMB) {
  * The ordering is coupled with the values of the LocalStore::KeySpace enum.
  */
 const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
-  // Most of the column families will share the same cache.  We
-  // want the blob data to live in its own smaller cache; the assumption
-  // is that the vfs cache will compensate for that, together with the
-  // idea that we shouldn't need to materialize a great many files.
-  auto options = makeColumnOptions(64);
-  auto blobOptions = makeColumnOptions(8);
+  auto makeColumnFamilyDescriptors = [] {
+    // Most of the column families will share the same cache.  We
+    // want the blob data to live in its own smaller cache; the assumption
+    // is that the vfs cache will compensate for that, together with the
+    // idea that we shouldn't need to materialize a great many files.
+    auto options = makeColumnOptions(64);
+    auto blobOptions = makeColumnOptions(8);
+
+    // Meyers singleton to avoid SIOF issues
+    std::vector<rocksdb::ColumnFamilyDescriptor> families;
+    for (size_t ks = 0; ks < kKeySpaceRecords.size(); ++ks) {
+      families.emplace_back(
+          kKeySpaceRecords[ks].name.str(),
+          (ks == LocalStore::BlobFamily) ? blobOptions : options);
+    }
+    // Put the default column family last.
+    // This way the KeySpace enum values can be used directly as indexes
+    // into our column family vectors.
+    families.emplace_back(rocksdb::kDefaultColumnFamilyName, options);
+    return families;
+  };
 
   // Meyers singleton to avoid SIOF issues
-  static const std::vector<rocksdb::ColumnFamilyDescriptor> families{
-      rocksdb::ColumnFamilyDescriptor{"blob", blobOptions},
-      rocksdb::ColumnFamilyDescriptor{"blobmeta", options},
-      rocksdb::ColumnFamilyDescriptor{"tree", options},
-      rocksdb::ColumnFamilyDescriptor{"hgproxyhash", options},
-      rocksdb::ColumnFamilyDescriptor{"hgcommit2tree", options},
-      // Put the default column family last.
-      // This way the KeySpace enum values can be used directly as indexes
-      // into our column family vectors.
-      rocksdb::ColumnFamilyDescriptor{rocksdb::kDefaultColumnFamilyName,
-                                      options},
-  };
+  static const std::vector<rocksdb::ColumnFamilyDescriptor> families =
+      makeColumnFamilyDescriptors();
   return families;
 }
 

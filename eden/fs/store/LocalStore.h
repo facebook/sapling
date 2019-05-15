@@ -75,6 +75,7 @@ class LocalStore {
   struct KeySpaceRecord {
     LocalStore::KeySpace keySpace;
     Persistence persistence;
+    folly::StringPiece name;
   };
 
   /**
