@@ -91,6 +91,24 @@ const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
   return families;
 }
 
+/**
+ * Return a rocksdb::Range that contains all possible keys that we store.
+ *
+ * The input string will be used to store data for the Range slices.
+ * The caller must ensure that the rangeStorage parameter remains valid and
+ * unmodified until they are done using the returned Range.
+ */
+rocksdb::Range getFullRange(std::string& rangeStorage) {
+  // An empty slice is the lowest possible value.
+  Slice begin;
+  // All of our keys are currently 20 bytes.
+  // Use a longer key to ensure that this is greater than any valid key.
+  rangeStorage = std::string(
+      21, static_cast<char>(std::numeric_limits<unsigned char>::max()));
+  Slice end(rangeStorage);
+  return rocksdb::Range(begin, end);
+}
+
 rocksdb::Slice _createSlice(folly::ByteRange bytes) {
   return Slice(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
@@ -274,18 +292,14 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   std::unique_ptr<rocksdb::Iterator> it{
       dbHandles_.db->NewIterator(ReadOptions(), columnFamily)};
   XLOG(DBG2) << "clearing column family \"" << columnFamily->GetName() << "\"";
-  Slice begin;
-  // All of our keys are currently 20 bytes.  Use a longer key to ensure that
-  // this is greater than any valid key.
-  std::string endStr(
-      21, static_cast<char>(std::numeric_limits<unsigned char>::max()));
-  Slice end(endStr);
+  std::string rangeStorage;
+  const auto fullRange = getFullRange(rangeStorage);
 
   // Delete all SST files that only contain keys in the specified range.
   // Since we are deleting everything in this column family this should
   // effectively delete everything.
-  auto status =
-      DeleteFilesInRange(dbHandles_.db.get(), columnFamily, &begin, &end);
+  auto status = DeleteFilesInRange(
+      dbHandles_.db.get(), columnFamily, &fullRange.start, &fullRange.limit);
   if (!status.ok()) {
     throw RocksException::build(
         status,
@@ -298,7 +312,8 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   // everything in the range (but it probably will in our case since we are
   // intending to delete everything).
   const WriteOptions writeOptions;
-  status = dbHandles_.db->DeleteRange(writeOptions, columnFamily, begin, end);
+  status = dbHandles_.db->DeleteRange(
+      writeOptions, columnFamily, fullRange.start, fullRange.limit);
   if (!status.ok()) {
     throw RocksException::build(
         status,
@@ -487,6 +502,17 @@ void RocksDbLocalStore::put(
       dbHandles_.columns[keySpace].get(),
       _createSlice(key),
       _createSlice(value));
+}
+
+uint64_t RocksDbLocalStore::getApproximateSize(
+    LocalStore::KeySpace keySpace) const {
+  std::string rangeStorage;
+  const auto range = getFullRange(rangeStorage);
+
+  uint64_t size = 0;
+  dbHandles_.db->GetApproximateSizes(
+      dbHandles_.columns[keySpace].get(), &range, 1, &size);
+  return size;
 }
 
 } // namespace eden

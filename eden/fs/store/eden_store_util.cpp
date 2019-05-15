@@ -13,6 +13,7 @@
 
 #include <folly/Range.h>
 #include <folly/container/Array.h>
+#include <folly/container/Enumerate.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
@@ -23,6 +24,7 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenStateDir.h"
+#include "eden/fs/store/KeySpaces.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/utils/FaultInjector.h"
 
@@ -194,8 +196,12 @@ class ShowSizesCommand : public Command {
 
   void run() override {
     auto localStore = openLocalStore();
-    (void)localStore;
-    printf("show sizes\n");
+
+    for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
+      LOG(INFO) << "Column family \"" << iter->name << "\": "
+                << localStore->getApproximateSize(
+                       static_cast<LocalStore::KeySpace>(iter.index));
+    }
   }
 };
 

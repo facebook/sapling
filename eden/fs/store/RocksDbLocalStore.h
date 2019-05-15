@@ -54,6 +54,10 @@ class RocksDbLocalStore : public LocalStore {
   // Call RocksDB's RepairDB() function on the DB at the specified location
   static void repairDB(AbsolutePathPiece path);
 
+  // Get the approximate number of bytes stored on disk for the
+  // specified key space.
+  uint64_t getApproximateSize(KeySpace keySpace) const;
+
  private:
   FaultInjector& faultInjector_;
   RocksHandles dbHandles_;
