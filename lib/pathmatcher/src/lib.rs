@@ -4,7 +4,9 @@
 // GNU General Public License version 2 or any later version.
 
 mod gitignore_matcher;
+mod tree_matcher;
 mod utils;
 
 pub use gitignore_matcher::GitignoreMatcher;
+pub use tree_matcher::TreeMatcher;
 pub use utils::expand_curly_brackets;

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+bitflags = "1.0"
+globset = "0.4.2"
 ignore = "0.4"
 
 [dev-dependencies]
