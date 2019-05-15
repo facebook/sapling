@@ -214,6 +214,19 @@ impl BookmarkAttrs {
         self.select(bookmark).any(|params| params.only_fast_forward)
     }
 
+    /// Check if a bookmark config overrides whether date should be rewritten during pushrebase.
+    /// Return None if there are no bookmark config overriding rewrite_dates.
+    pub fn should_rewrite_dates(&self, bookmark: &Bookmark) -> Option<bool> {
+        for params in self.select(bookmark) {
+            // NOTE: If there are multiple patterns matching the bookmark, the first match
+            // overrides others. It might not be the most desired behavior, though.
+            if let Some(rewrite_dates) = params.rewrite_dates {
+                return Some(rewrite_dates);
+            }
+        }
+        None
+    }
+
     /// check if provided unix name is allowed to move specified bookmark
     pub fn is_allowed_user(&self, user: &Option<String>, bookmark: &Bookmark) -> bool {
         match user {
@@ -238,6 +251,8 @@ pub struct BookmarkParams {
     pub hooks: Vec<String>,
     /// Are non fast forward moves blocked for this bookmark
     pub only_fast_forward: bool,
+    /// Whether to rewrite dates for pushrebased commits or not
+    pub rewrite_dates: Option<bool>,
     /// Only users matching this pattern will be allowed to move this bookmark
     pub allowed_users: Option<Regex>,
 }
@@ -524,7 +539,7 @@ impl MetadataDBConfig {
             MetadataDBConfig::Mysql { db_address, .. } => Some(db_address.as_str()),
             MetadataDBConfig::LocalDB { .. } => None,
         }
-        }
+    }
 
     /// Return local path that stores local DB
     /// (Assumed to be Sqlite)

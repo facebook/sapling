@@ -1334,20 +1334,27 @@ impl Bundle2Resolver {
         maybe_raw_bundle2_id: Option<RawBundle2Id>,
     ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error>
     {
+        let bookmark = &onto_bookmark.bookmark;
+        let pushrebase = {
+            let mut params = self.pushrebase.clone();
+            if let Some(rewritedates) = self.bookmark_attrs.should_rewrite_dates(bookmark) {
+                // Bookmark config overrides repo pushrebase.rewritedates config
+                params.rewritedates = rewritedates;
+            }
+            params
+        };
+
         let user = ctx.user_unix_name();
-        if !self
-            .bookmark_attrs
-            .is_allowed_user(user, &onto_bookmark.bookmark)
-        {
+        if !self.bookmark_attrs.is_allowed_user(user, bookmark) {
             return future::err(format_err!(
                 "[pushrebase] This user `{:?}` is not allowed to move `{:?}`",
                 user,
-                &onto_bookmark.bookmark
+                bookmark
             ))
             .boxify();
         }
 
-        let block_merges = self.pushrebase.block_merges.clone();
+        let block_merges = pushrebase.block_merges.clone();
         if block_merges
             && changesets
                 .iter()
@@ -1362,7 +1369,7 @@ impl Bundle2Resolver {
         }
 
         futures::lazy({
-            cloned!(self.repo, self.pushrebase, onto_bookmark);
+            cloned!(self.repo, pushrebase, onto_bookmark);
             move || {
                 ctx.scuba().clone().log_with_msg("pushrebase started", None);
                 pushrebase::do_pushrebase(

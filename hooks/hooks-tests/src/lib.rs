@@ -1224,12 +1224,14 @@ fn test_load_hooks() {
                 hooks: vec!["hook1".into(), "hook2".into()],
                 only_fast_forward: false,
                 allowed_users: None,
+                rewrite_dates: None,
             },
             BookmarkParams {
                 bookmark: Regex::new("bm2").unwrap().into(),
                 hooks: vec!["hook2".into(), "hook3".into(), "rust:restrict_users".into()],
                 only_fast_forward: false,
                 allowed_users: None,
+                rewrite_dates: None,
             },
         ];
 
@@ -1279,6 +1281,7 @@ fn test_verify_integrity_fast_failure() {
         hooks: vec!["rust:verify_integrity".into()],
         only_fast_forward: false,
         allowed_users: None,
+        rewrite_dates: None,
     }];
     config.hooks = vec![HookParams {
         name: "rust:verify_integrity".into(),
@@ -1304,6 +1307,7 @@ fn test_load_hooks_no_such_hook() {
             hooks: vec!["hook1".into(), "hook2".into()],
             only_fast_forward: false,
             allowed_users: None,
+            rewrite_dates: None,
         }];
 
         config.hooks = vec![HookParams {
@@ -1336,6 +1340,7 @@ fn test_load_hooks_bad_rust_hook() {
             hooks: vec!["rust:hook1".into()],
             only_fast_forward: false,
             allowed_users: None,
+            rewrite_dates: None,
         }];
 
         config.hooks = vec![HookParams {

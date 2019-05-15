@@ -357,6 +357,7 @@ impl RepoConfigs {
 
                 let only_fast_forward = bookmark.only_fast_forward;
                 let allowed_users = bookmark.allowed_users.map(|re| re.0);
+                let rewrite_dates = bookmark.rewrite_dates;
 
                 bookmark_params.push(BookmarkParams {
                     bookmark: bookmark_or_regex,
@@ -367,6 +368,7 @@ impl RepoConfigs {
                         .collect(),
                     only_fast_forward,
                     allowed_users,
+                    rewrite_dates,
                 });
             }
             bookmark_params
@@ -541,6 +543,8 @@ struct RawBookmarkConfig {
     only_fast_forward: bool,
     /// Only users matching this pattern will be allowed to move this bookmark
     allowed_users: Option<RawRegex>,
+    /// Whether or not to rewrite dates when processing pushrebase pushes
+    rewrite_dates: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -962,12 +966,14 @@ mod test {
                         ],
                         only_fast_forward: false,
                         allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap()),
+                        rewrite_dates: None,
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
                         hooks: vec![],
                         only_fast_forward: false,
                         allowed_users: None,
+                        rewrite_dates: None,
                     },
                 ],
                 hooks: vec![
