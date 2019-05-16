@@ -259,20 +259,22 @@ impl EdenApiCurlClient {
         progress.set_callback(progress_cb);
         driver.set_progress_manager(progress);
 
+        let mut responses = Vec::with_capacity(num_requests);
+
         log::debug!("Performing {} requests", num_requests);
         let start = Instant::now();
-        let handles = driver.perform()?.into_result()?;
+
+        driver.perform(|res| {
+            let easy = res?;
+            let data = easy.get_ref().data();
+            let response = serde_cbor::from_slice::<T>(data)?;
+            responses.push(response);
+            Ok(())
+        })?;
 
         let elapsed = start.elapsed();
         let total_bytes = driver.progress().unwrap().stats().downloaded;
         print_download_stats(total_bytes, elapsed);
-
-        let mut responses = Vec::with_capacity(handles.len());
-        for easy in handles {
-            let data = easy.get_ref().data();
-            let response = serde_cbor::from_slice::<T>(data)?;
-            responses.push(response);
-        }
 
         Ok(responses)
     }
