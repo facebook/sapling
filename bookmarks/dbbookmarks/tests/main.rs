@@ -1033,7 +1033,14 @@ fn test_log_correct_order() {
         .collect();
     assert_eq!(
         cs_ids,
-        vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID, ONES_CSID, FIVES_CSID]
+        vec![
+            ONES_CSID,
+            TWOS_CSID,
+            THREES_CSID,
+            FOURS_CSID,
+            ONES_CSID,
+            FIVES_CSID
+        ]
     );
 
     let entries = bookmarks
@@ -1047,10 +1054,7 @@ fn test_log_correct_order() {
         .into_iter()
         .map(|entry| entry.to_changeset_id.unwrap())
         .collect();
-    assert_eq!(
-        cs_ids,
-        vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID]
-    );
+    assert_eq!(cs_ids, vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID]);
 
     let entries = bookmarks
         .read_next_bookmark_log_entries_same_bookmark_and_reason(ctx.clone(), 5, REPO_ZERO, 6)
@@ -1063,10 +1067,7 @@ fn test_log_correct_order() {
         .into_iter()
         .map(|entry| entry.to_changeset_id.unwrap())
         .collect();
-    assert_eq!(
-        cs_ids,
-        vec![FIVES_CSID]
-    );
+    assert_eq!(cs_ids, vec![FIVES_CSID]);
 }
 
 #[test]
