@@ -201,16 +201,15 @@ fn handle_log<'a>(
                             None => String::new(),
                             Some(x) => x.to_string(),
                         };
-                        let output =
-                            format_bookmark_log_entry(
-                                json_flag,
-                                cs_id_str,
-                                reason,
-                                timestamp,
-                                "hg",
-                                bookmark.clone(),
-                                None,
-                            );
+                        let output = format_bookmark_log_entry(
+                            json_flag,
+                            cs_id_str,
+                            reason,
+                            timestamp,
+                            "hg",
+                            bookmark.clone(),
+                            None,
+                        );
                         println!("{}", output);
                     })
                     .for_each(|_x| Ok(()))
@@ -226,16 +225,15 @@ fn handle_log<'a>(
                             None => String::new(),
                             Some(x) => x.to_string(),
                         };
-                        let output =
-                            format_bookmark_log_entry(
-                                json_flag,
-                                cs_id_str,
-                                reason,
-                                timestamp,
-                                "bonsai",
-                                bookmark.clone(),
-                                None,
-                            );
+                        let output = format_bookmark_log_entry(
+                            json_flag,
+                            cs_id_str,
+                            reason,
+                            timestamp,
+                            "bonsai",
+                            bookmark.clone(),
+                            None,
+                        );
                         println!("{}", output);
                     })
                     .for_each(|_| Ok(()))
