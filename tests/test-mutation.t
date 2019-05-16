@@ -440,7 +440,7 @@ Drawdag
   > EOS
 
   $ tglogm
-  -  8: b2faf047aa50 'I'
+  x  8: b2faf047aa50 'I'
   |
   o  7: a1093b439e1b 'H'
   |
@@ -448,13 +448,13 @@ Drawdag
   | |
   | o  5: 64a8289d2492 'F'
   | |
-  | | -  4: 17d61397e601 'D'  (Rewritten using rebase into a1093b439e1b)
+  | | x  4: 17d61397e601 'D'  (Rewritten using rebase into a1093b439e1b)
   | | |
   | o |  3: 7fb047a69f22 'E'
   |/ /
-  | | -  2: 26805aba1e60 'C'  (Rewritten using rebase into 17d61397e601)
+  | | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 17d61397e601)
   | |/
-  | -  1: 112478962961 'B'  (Rewritten using split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
+  | x  1: 112478962961 'B'  (Rewritten using split into 7fb047a69f22, 64a8289d2492, dd319aacbb51)
   |/
   o  0: 426bada5c675 'A'
   
@@ -1184,7 +1184,7 @@ Test pullcreatemarkers can do this
   |
   o  27eaac8d0756 file2 D2345
   |
-  | -  f07a12cd100a file1 D1234 (Rewritten using land into ec3b92425d5b)
+  | x  f07a12cd100a file1 D1234 (Rewritten using land into ec3b92425d5b)
   |/
   @  d20a80d4def3 base
   

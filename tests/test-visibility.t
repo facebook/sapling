@@ -35,7 +35,7 @@ Simple creation and amending of draft commits
   |
   o  4: bc066ca12b45 draft 'draft1 amend1'
   |
-  | -  3: ca9d66205aca draft 'draft1'
+  | x  3: ca9d66205aca draft 'draft1'
   |/
   o  2: 4f416a252ac8 public 'public2'
   |
@@ -53,7 +53,7 @@ Simple creation and amending of draft commits
   $ tglogp --hidden
   @  4: bc066ca12b45 draft 'draft1 amend1'
   |
-  | -  3: ca9d66205aca draft 'draft1'
+  | x  3: ca9d66205aca draft 'draft1'
   |/
   o  2: 4f416a252ac8 public 'public2'
   |
@@ -434,11 +434,11 @@ Undo
 Viewing the log graph with filtering disabled shows the commits that have been undone
 from as invisible commits.
   $ tglogm --hidden
-  -  8: ec992ff1fd78 'E'
+  x  8: ec992ff1fd78 'E'
   |
-  -  7: 1d30cc995ea7 'D'
+  x  7: 1d30cc995ea7 'D'
   |
-  -  6: 23910a6fe564 'C'
+  x  6: 23910a6fe564 'C'
   |
   @  5: e60094faeb72 'B amended'
   |
@@ -509,7 +509,7 @@ Test that hiddenoverride has no effect on pinning hidden revisions.
   |
   | @  2: 917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
   | |
-  | -  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
+  | x  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
   |/
   o  0: 48b9aae0607f 'Z'
   
@@ -658,7 +658,7 @@ Unamend and Uncommit
   $ tglogm --hidden
   @  2: 8e8ec65c0bb7 'commit2'
   |
-  | -  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
+  | x  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
   |/
   o  0: df4f53cec30a 'base'
   
@@ -670,7 +670,7 @@ Unamend and Uncommit
   o  0: df4f53cec30a 'base'
   
   $ tglogm --hidden
-  -  2: 8e8ec65c0bb7 'commit2'
+  x  2: 8e8ec65c0bb7 'commit2'
   |
   | @  1: 4c5b9b3e14b9 'commit1'
   |/
@@ -682,9 +682,9 @@ Unamend and Uncommit
   @  0: df4f53cec30a 'base'
   
   $ tglogm --hidden
-  -  2: 8e8ec65c0bb7 'commit2'
+  x  2: 8e8ec65c0bb7 'commit2'
   |
-  | -  1: 4c5b9b3e14b9 'commit1'
+  | x  1: 4c5b9b3e14b9 'commit1'
   |/
   @  0: df4f53cec30a 'base'
   

@@ -246,9 +246,9 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   |
   o  16: 4c6ed9931ef5 's5'
   |
-  | -  15: 6b21e03c2693 'c5 (amended)'  (Rewritten using pushrebase into 7a5f07a2de1e)
+  | x  15: 6b21e03c2693 'c5 (amended)'  (Rewritten using pushrebase into 7a5f07a2de1e)
   |/
-  | -  14: 9407986f3421 'c5'  (Rewritten using amend into 6b21e03c2693)
+  | x  14: 9407986f3421 'c5'  (Rewritten using amend into 6b21e03c2693)
   |/
   o  13: 56ff167c1749 'c4 (amended)'
   |
@@ -256,9 +256,9 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   |
   o  11: 34295f2adc09 's3'
   |
-  | -  10: 254a42c0dcef 'c4 (amended)'  (Rewritten using pushrebase into 56ff167c1749)
+  | x  10: 254a42c0dcef 'c4 (amended)'  (Rewritten using pushrebase into 56ff167c1749)
   |/
-  | -  9: 3f1b3b3d517f 'c4'  (Rewritten using amend into 254a42c0dcef)
+  | x  9: 3f1b3b3d517f 'c4'  (Rewritten using amend into 254a42c0dcef)
   |/
   o  8: 5cfa12ac15ac 'c3'
   |
@@ -270,11 +270,11 @@ Test pushing to a futuristic server that doesn't support obsmarkers at all will 
   |
   o  4: 06569a64c141 's1'
   |
-  | -  3: e52ebff26308 'c2 (amended)'  (Rewritten using pushrebase into bc165ecd11df)
+  | x  3: e52ebff26308 'c2 (amended)'  (Rewritten using pushrebase into bc165ecd11df)
   | |
-  | | -  2: f558c5855324 'c2'  (Rewritten using amend into e52ebff26308)
+  | | x  2: f558c5855324 'c2'  (Rewritten using amend into e52ebff26308)
   | |/
-  | -  1: b0c40d8745c8 'c1'  (Rewritten using pushrebase into 466bbcaf803c)
+  | x  1: b0c40d8745c8 'c1'  (Rewritten using pushrebase into 466bbcaf803c)
   |/
   o  0: a7d6a32ae4ec 'base'
   

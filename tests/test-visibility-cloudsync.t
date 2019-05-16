@@ -233,9 +233,9 @@ It should also have mutations made on both sides visible.
   | |/
   | o  4: c70a9bd6bfd1 'E'
   |/
-  | -  3: 6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
+  | x  3: 6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
   | |
-  | -  2: 2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  | x  2: 2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
   |/
   o  1: dae3b312bb78 'Z'
   |
