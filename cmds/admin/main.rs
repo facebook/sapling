@@ -1073,40 +1073,51 @@ fn subcommand_process_hg_sync(
                     maybe_counter.unwrap_or(0)
                 });
 
-            repo_fut.and_then(move |repo| {
-                current_counter.map({
-                    cloned!(ctx);
-                    move |id| {
-                    bookmarks.read_next_bookmark_log_entries(ctx.clone(), id as u64, repo_id, limit)
-                }})
-                .flatten_stream()
-                .and_then({
-                    cloned!(ctx);
-                    move |entry| {
-                        let bundle_id = entry.id;
-                        match entry.to_changeset_id {
-                            Some(bcs_id) => repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                                .map(|hg_cs_id| format!("{}", hg_cs_id)).left_future(),
-                            None => future::ok("DELETED".to_string()).right_future()
-                        }.map(move |hg_cs_id| {
-                            format_bookmark_log_entry(
-                                false, /* json_flag */
-                                hg_cs_id,
-                                entry.reason,
-                                entry.timestamp,
-                                "hg",
-                                entry.bookmark_name,
-                                Some(bundle_id),
-                            )
+            repo_fut
+                .and_then(move |repo| {
+                    current_counter
+                        .map({
+                            cloned!(ctx);
+                            move |id| {
+                                bookmarks.read_next_bookmark_log_entries(
+                                    ctx.clone(),
+                                    id as u64,
+                                    repo_id,
+                                    limit,
+                                )
+                            }
                         })
-                    }
+                        .flatten_stream()
+                        .and_then({
+                            cloned!(ctx);
+                            move |entry| {
+                                let bundle_id = entry.id;
+                                match entry.to_changeset_id {
+                                    Some(bcs_id) => repo
+                                        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                                        .map(|hg_cs_id| format!("{}", hg_cs_id))
+                                        .left_future(),
+                                    None => future::ok("DELETED".to_string()).right_future(),
+                                }
+                                .map(move |hg_cs_id| {
+                                    format_bookmark_log_entry(
+                                        false, /* json_flag */
+                                        hg_cs_id,
+                                        entry.reason,
+                                        entry.timestamp,
+                                        "hg",
+                                        entry.bookmark_name,
+                                        Some(bundle_id),
+                                    )
+                                })
+                            }
+                        })
+                        .for_each(|s| {
+                            println!("{}", s);
+                            Ok(())
+                        })
                 })
-                .for_each(|s| {
-                    println!("{}", s);
-                    Ok(())
-                })
-            })
-            .boxify()
+                .boxify()
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
             args::init_cachelib(&matches);
