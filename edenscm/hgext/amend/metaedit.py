@@ -60,7 +60,7 @@ def editmessages(repo, revs):
 
     result = {}
     ui = repo.ui
-    newtext = ui.edit(editortext, ui.username(), action="metaedit")
+    newtext = ui.edit(editortext, ui.username(), action="metaedit", repopath=repo.path)
     for node, bannerstart, bannerend in nodebanners:
         if bannerstart in newtext and bannerend in newtext:
             newmessage = newtext.split(bannerstart, 1)[1].split(bannerend, 1)[0]

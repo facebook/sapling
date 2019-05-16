@@ -19,6 +19,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 
 from . import (
@@ -1373,9 +1374,12 @@ class ui(object):
         else:
             suffix = extra["suffix"]
 
-        rdir = None
-        if self.configbool("experimental", "editortmpinhg"):
-            rdir = repopath
+        rdir = repopath
+        if rdir:
+            # Create a "edit-tmp" directory on demand. So that directory only
+            # contains temporary editor files and we can GC them.
+            rdir = os.path.join(rdir, "edit-tmp")
+            util.makedirs(rdir)
         (fd, name) = tempfile.mkstemp(
             prefix="hg-" + extra["prefix"] + "-", suffix=suffix, dir=rdir
         )
@@ -1413,8 +1417,18 @@ class ui(object):
             t = util.fromnativeeol(f.read())
             f.close()
         finally:
-            os.unlink(name)
-
+            if rdir is None:
+                # If repo path is not provided, the file lives in system tmp,
+                # remove it immediately.
+                os.unlink(name)
+            else:
+                # If editing in .hg/edit-tmp, remove files older than 2 weeks.
+                paths = [os.path.join(rdir, p[0]) for p in util.listdir(rdir)]
+                stats = util.statfiles(paths)
+                deadline = time.time() - 24 * 3600 * 14
+                for path, stat in zip(paths, stats):
+                    if stat.st_mtime < deadline:
+                        os.unlink(path)
         return t
 
     def system(
