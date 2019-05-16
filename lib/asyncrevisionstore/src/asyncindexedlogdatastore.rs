@@ -7,53 +7,18 @@ use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
-use cloned::cloned;
-use revisionstore::{Delta, IndexedLogDataStore, Metadata, MutableDeltaStore};
+use revisionstore::IndexedLogDataStore;
 
-pub struct AsyncMutableIndexedLogDataStore {
-    inner: Option<IndexedLogDataStore>,
-}
+use crate::asyncmutabledeltastore::AsyncMutableDeltaStore;
+
+pub type AsyncMutableIndexedLogDataStore = AsyncMutableDeltaStore<IndexedLogDataStore>;
 
 impl AsyncMutableIndexedLogDataStore {
     pub fn new(dir: PathBuf) -> impl Future<Item = Self, Error = Error> + Send + 'static {
         poll_fn(move || blocking(|| IndexedLogDataStore::new(&dir)))
             .from_err()
             .and_then(move |res| res)
-            .map(move |res| AsyncMutableIndexedLogDataStore { inner: Some(res) })
-    }
-
-    pub fn add(
-        mut self,
-        delta: &Delta,
-        metadata: &Metadata,
-    ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
-        poll_fn({
-            cloned!(delta, metadata);
-            move || {
-                blocking(|| {
-                    let inner = self.inner.take();
-                    let mut inner = inner.expect("The indexedlog is closed");
-                    inner.add(&delta, &metadata).map(|()| inner)
-                })
-            }
-        })
-        .from_err()
-        .and_then(|res| res)
-        .map(move |inner| AsyncMutableIndexedLogDataStore { inner: Some(inner) })
-    }
-
-    pub fn close(mut self) -> impl Future<Item = Option<PathBuf>, Error = Error> + Send + 'static {
-        poll_fn({
-            move || {
-                blocking(|| {
-                    let inner = self.inner.take();
-                    let inner = inner.expect("The indexedlog is closed");
-                    inner.close()
-                })
-            }
-        })
-        .from_err()
-        .and_then(|res| res)
+            .map(move |res| AsyncMutableDeltaStore::new_(res))
     }
 }
 
@@ -65,7 +30,7 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::DataStore;
+    use revisionstore::{DataStore, Delta};
     use types::{Key, RepoPathBuf};
 
     #[test]
