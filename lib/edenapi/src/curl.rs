@@ -261,19 +261,18 @@ impl EdenApiCurlClient {
         log::debug!("Performing {} requests", num_requests);
         let start = Instant::now();
         let handles = driver.perform(true)?.into_result()?;
+
         let elapsed = start.elapsed();
+        let total_bytes = driver.progress().unwrap().stats().downloaded;
+        print_download_stats(total_bytes, elapsed);
 
         let mut responses = Vec::with_capacity(handles.len());
-        let mut total_bytes = 0;
         for easy in handles {
-            let data = &easy.get_ref().data();
-            total_bytes += data.len();
-
+            let data = easy.get_ref().data();
             let response = serde_cbor::from_slice::<T>(data)?;
             responses.push(response);
         }
 
-        print_download_stats(total_bytes, elapsed);
         Ok(responses)
     }
 }
@@ -339,7 +338,7 @@ fn prepare_cbor_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &
     Ok(())
 }
 
-fn print_download_stats(total_bytes: usize, elapsed: Duration) {
+fn print_download_stats(total_bytes: u64, elapsed: Duration) {
     let seconds = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
     let rate = total_bytes as f64 * 8.0 / 1_000_000.0 / seconds;
     log::info!(

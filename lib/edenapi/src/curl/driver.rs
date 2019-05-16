@@ -59,6 +59,10 @@ impl<H: Handler> MultiDriver<H> {
         self.progress = Some(progress);
     }
 
+    pub fn progress(&self) -> Option<&ProgressManager> {
+        self.progress.as_ref()
+    }
+
     /// Add an Easy2 handle to the Multi stack.
     pub fn add(&mut self, easy: Easy2<H>) -> Fallible<()> {
         // Assign a token to this Easy2 handle so we can correlate messages
