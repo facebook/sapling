@@ -78,6 +78,7 @@ cleanbutpackages:
 	rm -f MANIFEST MANIFEST.in edenscm/hgext/__index__.py tests/*.err
 	rm -f edenscm/mercurial/__modulepolicy__.py
 	if test -d .hg; then rm -f edenscm/mercurial/__version__.py; fi
+	rm -rf build/*
 	rm -rf build edenscm/mercurial/locale
 ifeq ($(OS),Windows_NT)
 	rm -rf hg-python hg.exe python27.dll
