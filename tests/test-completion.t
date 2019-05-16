@@ -357,7 +357,7 @@ Show all commands + options
   resolve: all, list, mark, unmark, no-status, root-relative, tool, include, exclude, template, skip
   revert: all, date, rev, no-backup, interactive, include, exclude, dry-run
   rollback: dry-run, force
-  root: 
+  root: shared
   tag: force, local, rev, remove, edit, message, date, user
   tags: template
   tip: patch, git, style, template

@@ -5532,15 +5532,22 @@ def rollback(ui, repo, **opts):
     return repo.rollback(dryrun=opts.get(r"dry_run"), force=opts.get(r"force"))
 
 
-@command("root", [], cmdtype=readonly)
-def root(ui, repo):
+@command("root", [("", "shared", None, _("show root of the shared repo"))])
+def root(ui, repo, **opts):
     """print the root (top) of the current working directory
 
     Print the root directory of the current repository.
 
     Returns 0 on success.
     """
-    ui.write(repo.root + "\n")
+    opts = pycompat.byteskwargs(opts)
+
+    if opts.get("shared"):
+        # remove the tailing /.hg from output
+        sharedpath = os.path.dirname(repo.sharedpath)
+        ui.write(sharedpath + "\n")
+    else:
+        ui.write(repo.root + "\n")
 
 
 @command(
