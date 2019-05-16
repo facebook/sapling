@@ -195,7 +195,13 @@ impl HookManager {
         if hooks.is_empty() {
             finished(Vec::new()).boxify()
         } else {
-            self.run_changeset_hooks_for_changeset_id(ctx, changeset_id, hooks, maybe_pushvars, bookmark)
+            self.run_changeset_hooks_for_changeset_id(
+                ctx,
+                changeset_id,
+                hooks,
+                maybe_pushvars,
+                bookmark,
+            )
         }
     }
 
