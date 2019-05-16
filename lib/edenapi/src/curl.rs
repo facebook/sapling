@@ -246,6 +246,7 @@ impl EdenApiCurlClient {
 
         let mut progress = ProgressManager::with_capacity(num_requests);
         let mut driver = MultiDriver::with_capacity(num_requests);
+        driver.fail_early(true);
 
         for request in requests {
             let handle = progress.register();
@@ -260,7 +261,7 @@ impl EdenApiCurlClient {
 
         log::debug!("Performing {} requests", num_requests);
         let start = Instant::now();
-        let handles = driver.perform(true)?.into_result()?;
+        let handles = driver.perform()?.into_result()?;
 
         let elapsed = start.elapsed();
         let total_bytes = driver.progress().unwrap().stats().downloaded;

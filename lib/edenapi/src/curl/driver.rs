@@ -44,6 +44,7 @@ pub struct MultiDriver<H> {
     multi: Multi,
     handles: Vec<Easy2Handle<H>>,
     progress: Option<ProgressManager>,
+    fail_early: bool,
 }
 
 impl<H: Handler> MultiDriver<H> {
@@ -52,6 +53,7 @@ impl<H: Handler> MultiDriver<H> {
             multi: Multi::new(),
             handles: Vec::with_capacity(capacity),
             progress: None,
+            fail_early: false,
         }
     }
 
@@ -86,17 +88,20 @@ impl<H: Handler> MultiDriver<H> {
         Ok(easy_vec)
     }
 
-    /// Drive all of the Easy2 handles in the Multi stack to completion.
-    ///
-    /// If `fail_early` is set to true, then this method will return early if
+    /// If `fail_early` is set to true, then the driver will return early if
     /// any transfers fail (leaving the remaining transfers in an unfinished
     /// state); otherwise, the driver will only return once all transfers
     /// have completed (successfully or otherwise).
+    pub fn fail_early(&mut self, fail_early: bool) {
+        self.fail_early = fail_early;
+    }
+
+    /// Drive all of the Easy2 handles in the Multi stack to completion.
     ///
     /// Returns all of the Easy2 handles in the Multi stack in the order
     /// they were added, along with the indices of any failed transfers
     /// (along with the corresponding error code).
-    pub(super) fn perform(&mut self, fail_early: bool) -> Fallible<MultiDriverResult<H>> {
+    pub(super) fn perform(&mut self) -> Fallible<MultiDriverResult<H>> {
         let num_transfers = self.handles.len();
         let mut in_progress = num_transfers;
         let mut failed = Vec::new();
@@ -137,7 +142,7 @@ impl<H: Handler> MultiDriver<H> {
                 }
             });
 
-            if fail_early && failed.len() > 0 {
+            if self.fail_early && failed.len() > 0 {
                 log::debug!("At least one transfer failed; aborting.");
                 break;
             }
