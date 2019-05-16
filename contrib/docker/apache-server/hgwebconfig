@@ -1,6 +1,0 @@
-[paths]
-/ = /var/hg/repos/*
-
-[web]
-allow_push = *
-push_ssl = False

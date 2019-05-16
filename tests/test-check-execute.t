@@ -28,11 +28,6 @@
   >     elif not isexec and interpreter and not isrs:
   >         print("%s is not an executable but does have #!" % path)
   > EOF
-  contrib/builddeb_fb/debian/rules is not an executable but does have #!
-  contrib/dockerlib.sh is not an executable but does have #!
-  contrib/plan9/9mail is not an executable but does have #!
-  contrib/vagrant/provision.sh is not an executable but does have #!
-  contrib/vagrant/run-tests.sh is not an executable but does have #!
   tests/fixtures/addspecial.sh is not an executable but does have #!
   tests/fixtures/mergeexternals.sh is not an executable but does have #!
   tests/fixtures/project_name_with_space.sh is not an executable but does have #!

@@ -1,9 +1,0 @@
-Welcome to Mercurial for Windows!
----------------------------------
-
-For configuration and usage directions, please read the ReadMe.html
-file that comes with this package.
-
-Also check the release notes at:
-
- https://mercurial-scm.org/wiki/WhatsNew
