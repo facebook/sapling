@@ -28,7 +28,6 @@ use crate::dechunker::Dechunker;
 use crate::errors::*;
 use crate::{GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 use context::CoreContext;
-use hooks::HookManager;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_bundles::Bundle2Item;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
@@ -38,16 +37,11 @@ const HASH_SIZE: usize = 40;
 pub struct HgCommandHandler<H> {
     ctx: CoreContext,
     commands: H,
-    hook_manager: Arc<HookManager>,
 }
 
 impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
-    pub fn new(ctx: CoreContext, commands: H, hook_manager: Arc<HookManager>) -> Self {
-        HgCommandHandler {
-            ctx,
-            commands,
-            hook_manager,
-        }
+    pub fn new(ctx: CoreContext, commands: H) -> Self {
+        HgCommandHandler { ctx, commands }
     }
 
     /// Handles a single command (not batched) by returning a stream of responses and a future
@@ -234,12 +228,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     Either::A(ok(SingleResponse::ReadyForStream)),
                     Either::B(
                         hgcmds
-                            .unbundle(
-                                heads,
-                                bundle2stream,
-                                self.hook_manager.clone(),
-                                maybe_full_content,
-                            )
+                            .unbundle(heads, bundle2stream, maybe_full_content)
                             .map(|bytes| SingleResponse::Unbundle(bytes)),
                     ),
                 ]);
@@ -704,7 +693,6 @@ pub trait HgCommands {
         &self,
         _heads: Vec<String>,
         _stream: BoxStream<Bundle2Item, Error>,
-        _hook_manager: Arc<HookManager>,
         _maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
@@ -752,8 +740,6 @@ mod test {
     use bytes::{BufMut, BytesMut};
     use context::CoreContext;
     use futures::{future, stream};
-    use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
-    use slog::{Discard, Drain, Logger};
 
     struct Dummy;
     impl HgCommands for Dummy {
@@ -781,7 +767,7 @@ mod test {
     #[test]
     fn hello() {
         let ctx = CoreContext::test_mock();
-        let handler = HgCommandHandler::new(ctx, Dummy, create_hook_manager());
+        let handler = HgCommandHandler::new(ctx, Dummy);
 
         let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -799,7 +785,7 @@ mod test {
     #[test]
     fn unimpl() {
         let ctx = CoreContext::test_mock();
-        let handler = HgCommandHandler::new(ctx, Dummy, create_hook_manager());
+        let handler = HgCommandHandler::new(ctx, Dummy);
 
         let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -914,19 +900,4 @@ mod test {
         let res = paramstream.collect().wait().unwrap();
         assert_eq!(res, vec![(MPath::new("path").unwrap(), vec![])]);
     }
-
-    fn create_hook_manager() -> Arc<HookManager> {
-        let ctx = CoreContext::test_mock();
-        let changeset_store = InMemoryChangesetStore::new();
-        let content_store = InMemoryFileContentStore::new();
-        let logger = Logger::root(Discard {}.ignore_res(), slog::o!());
-        Arc::new(HookManager::new(
-            ctx,
-            Box::new(changeset_store),
-            Arc::new(content_store),
-            Default::default(),
-            logger,
-        ))
-    }
-
 }

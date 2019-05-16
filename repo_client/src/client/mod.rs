@@ -224,6 +224,7 @@ pub struct RepoClient {
     phases_hint: Arc<Phases>,
     // Whether to save raw bundle2 content into the blobstore
     preserve_raw_bundle2: bool,
+    hook_manager: Arc<HookManager>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -327,6 +328,7 @@ impl RepoClient {
         lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
         preserve_raw_bundle2: bool,
+        hook_manager: Arc<HookManager>,
     ) -> Self {
         RepoClient {
             repo,
@@ -335,6 +337,7 @@ impl RepoClient {
             lca_hint,
             phases_hint,
             preserve_raw_bundle2,
+            hook_manager,
         }
     }
 
@@ -1009,10 +1012,11 @@ impl HgCommands for RepoClient {
         &self,
         heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
-        hook_manager: Arc<HookManager>,
         maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
         let client = self.clone();
+        cloned!(self.hook_manager);
+
         self.repo
             .readonly()
             // Assume read only if we have an error.

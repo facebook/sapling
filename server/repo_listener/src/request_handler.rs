@@ -126,11 +126,11 @@ pub fn request_handler(
             lca_hint,
             phases_hint,
             preserve_raw_bundle2,
+            hook_manager,
         ),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         wireproto_calls.clone(),
-        hook_manager,
     );
 
     // send responses back

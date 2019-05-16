@@ -14,7 +14,6 @@ use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
 use futures::{stream, Future, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
-use hooks::HookManager;
 use std::io;
 use std::sync::{Arc, Mutex};
 use tokio_io::codec::Decoder;
@@ -44,7 +43,6 @@ impl HgProtoHandler {
         reqdec: Dec,
         respenc: Enc,
         wireproto_calls: Arc<Mutex<Vec<String>>>,
-        hook_manager: Arc<HookManager>,
     ) -> Self
     where
         In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
@@ -55,7 +53,7 @@ impl HgProtoHandler {
         Error: From<Dec::Error>,
     {
         let inner = Arc::new(HgProtoHandlerInner {
-            commands_handler: HgCommandHandler::new(ctx, commands, hook_manager),
+            commands_handler: HgCommandHandler::new(ctx, commands),
             reqdec,
             respenc,
             wireproto_calls,
