@@ -78,6 +78,7 @@ const HG_SYNC_VERIFY: &'static str = "verify";
 const SKIPLIST_BUILD: &'static str = "build";
 const SKIPLIST_READ: &'static str = "read";
 const ADD_PUBLIC_PHASES: &'static str = "add-public-phases";
+const BLACKLIST: &'static str = "blacklist";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let blobstore_fetch = SubCommand::with_name(BLOBSTORE_FETCH)
@@ -273,12 +274,46 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true),
         );
 
+    let blacklist = SubCommand::with_name(BLACKLIST)
+        .about("blacklist files. a blacklisted file cannot be fetched")
+        .arg(
+            Arg::with_name("hash")
+                .help("key of the commit")
+                .long("hash")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("task")
+                .help("Task tracking the blacklisting request")
+                .long("task")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("files-list")
+                .help("list of files")
+                .long("files-list")
+                .short("fl")
+                .required(true)
+                .takes_value(true)
+                .multiple(true),
+        )
+        .arg(
+            Arg::with_name("message")
+                .help("blacklist message")
+                .short("m")
+                .takes_value(true)
+                .required(true),
+        );
+
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
         local_instances: false,
         default_glog: false,
     };
+
     app.build("Mononoke admin command line tool")
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
@@ -293,6 +328,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(convert)
         .subcommand(hg_sync)
         .subcommand(add_public_phases)
+        .subcommand(blacklist)
 }
 
 fn fetch_content_from_manifest(
@@ -1554,6 +1590,16 @@ fn subcommand_add_public_phases(
         .boxify()
 }
 
+fn subcommand_blacklist(
+    logger: Logger,
+    _matches: &ArgMatches<'_>,
+    _sub_m: &ArgMatches<'_>,
+) -> BoxFuture<(), Error> {
+    // TODO: implement the business logic
+    info!(logger, "command not yet implemented");
+    ok(()).boxify()
+}
+
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
@@ -1578,6 +1624,7 @@ fn main() -> Result<()> {
         (SKIPLIST, Some(sub_m)) => subcommand_skiplist(logger, &matches, sub_m),
         (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(logger, &matches, sub_m),
         (ADD_PUBLIC_PHASES, Some(sub_m)) => subcommand_add_public_phases(logger, &matches, sub_m),
+        (BLACKLIST, Some(sub_m)) => subcommand_blacklist(logger, &matches, sub_m),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
