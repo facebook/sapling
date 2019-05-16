@@ -1012,6 +1012,9 @@ def debugrefreshwatchmanclock(ui, repo):
         raise error.Abort(_("treestate is required"))
 
     with repo.wlock(), repo.lock(), repo.transaction("debugrefreshwatchmanclock") as tr:
+        # Don't trigger a commitcloud background backup for this.
+        repo.ignoreautobackup = True
+
         # Make sure watchman is watching the repo. This might trigger a
         # filesystem crawl.
         try:
