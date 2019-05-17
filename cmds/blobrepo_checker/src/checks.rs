@@ -350,45 +350,71 @@ fn hg_changeset_checker_task(
         .for_each(|id| future::ok(id))
 }
 
-pub fn spawn_checker_tasks(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    (bonsai_to_check_sender, bonsai_to_check_receiver): (
-        mpsc::Sender<ChangesetId>,
-        mpsc::Receiver<ChangesetId>,
-    ),
-    (content_to_check_sender, content_to_check_receiver): (
-        mpsc::Sender<FileInformation>,
-        mpsc::Receiver<FileInformation>,
-    ),
-    (hg_changeset_to_check_sender, hg_changeset_to_check_receiver): (
-        mpsc::Sender<HgChangesetId>,
-        mpsc::Receiver<HgChangesetId>,
-    ),
-    error_sender: mpsc::Sender<Error>,
-) {
-    tokio::spawn(bonsai_checker_task(
-        ctx.clone(),
-        repo.clone(),
-        bonsai_to_check_sender.clone(),
-        hg_changeset_to_check_sender.clone(),
-        content_to_check_sender,
-        bonsai_to_check_receiver,
-        error_sender.clone(),
-    ));
+pub struct Checker {
+    bonsai_to_check_sender: mpsc::Sender<ChangesetId>,
+    bonsai_to_check_receiver: mpsc::Receiver<ChangesetId>,
+    content_to_check_sender: mpsc::Sender<FileInformation>,
+    content_to_check_receiver: mpsc::Receiver<FileInformation>,
+    hg_changeset_to_check_sender: mpsc::Sender<HgChangesetId>,
+    hg_changeset_to_check_receiver: mpsc::Receiver<HgChangesetId>,
+}
 
-    tokio::spawn(content_checker_task(
-        ctx.clone(),
-        repo.clone(),
-        content_to_check_receiver,
-        error_sender.clone(),
-    ));
+impl Checker {
+    pub fn new() -> Self {
+        // This allows two parents to be sent by each changeset before blocking
+        let (bonsai_to_check_sender, bonsai_to_check_receiver) = mpsc::channel(1);
+        // Backpressure if files aren't being checked fast enough
+        let (content_to_check_sender, content_to_check_receiver) = mpsc::channel(0);
+        // Again with the two parents
+        let (hg_changeset_to_check_sender, hg_changeset_to_check_receiver) = mpsc::channel(1);
 
-    tokio::spawn(hg_changeset_checker_task(
-        ctx,
-        repo,
-        bonsai_to_check_sender,
-        hg_changeset_to_check_receiver,
-        error_sender,
-    ));
+        Self {
+            bonsai_to_check_sender,
+            bonsai_to_check_receiver,
+            content_to_check_sender,
+            content_to_check_receiver,
+            hg_changeset_to_check_sender,
+            hg_changeset_to_check_receiver,
+        }
+    }
+
+    pub fn queue_root_commits<S, E>(&self, initial: S) -> impl Future<Item = (), Error = E>
+    where
+        S: Stream<Item = ChangesetId, Error = E>,
+    {
+        initial
+            .forward(
+                self.bonsai_to_check_sender
+                    .clone()
+                    .sink_map_err(|_| panic!("Checker failed")),
+            )
+            .map(|_| ())
+    }
+
+    pub fn spawn_tasks(self, ctx: CoreContext, repo: BlobRepo, error_sender: mpsc::Sender<Error>) {
+        tokio::spawn(bonsai_checker_task(
+            ctx.clone(),
+            repo.clone(),
+            self.bonsai_to_check_sender.clone(),
+            self.hg_changeset_to_check_sender.clone(),
+            self.content_to_check_sender,
+            self.bonsai_to_check_receiver,
+            error_sender.clone(),
+        ));
+
+        tokio::spawn(content_checker_task(
+            ctx.clone(),
+            repo.clone(),
+            self.content_to_check_receiver,
+            error_sender.clone(),
+        ));
+
+        tokio::spawn(hg_changeset_checker_task(
+            ctx,
+            repo,
+            self.bonsai_to_check_sender,
+            self.hg_changeset_to_check_receiver,
+            error_sender,
+        ));
+    }
 }

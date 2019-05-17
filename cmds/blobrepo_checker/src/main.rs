@@ -9,14 +9,14 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::Error;
-use futures::{future, stream::futures_unordered, sync::mpsc, Future, Sink, Stream};
+use futures::{future, stream::futures_unordered, sync::mpsc, Future, Stream};
 use std::fmt::Debug;
 use tokio;
 
 mod errors;
 
 mod checks;
-use crate::checks::spawn_checker_tasks;
+use crate::checks::Checker;
 
 fn print_errors<S, E>(error: S) -> impl Future<Item = (), Error = ()>
 where
@@ -63,11 +63,7 @@ fn main() {
         .map(|bookmark| Bookmark::new(bookmark).expect("Bad bookmark to verify"))
         .collect();
 
-    // No commit should have more than 2 parents, so this means no waiting at send time
-    let (bonsai_to_check_sender, bonsai_to_check_receiver) = mpsc::channel(1);
-    // File lists can be big - put backpressure on the sender if the receiver isn't keeping up.
-    let (content_to_check_sender, content_to_check_receiver) = mpsc::channel(0);
-    // As each commit and/or file can only generate one error, this is effectively unbounded
+    let checkers = Checker::new();
     let (error_sender, error_receiver) = mpsc::channel(0);
 
     tokio::run(
@@ -86,25 +82,10 @@ fn main() {
                         .map_err(move |e| panic!("Bookmark {}: {:#?}", bookmark, e))
                 }));
 
-                tokio::spawn(
-                    to_check
-                        .forward(
-                            bonsai_to_check_sender
-                                .clone()
-                                .sink_map_err(|_| panic!("Checker failed")),
-                        )
-                        .map(|_| ()),
-                );
+                tokio::spawn(checkers.queue_root_commits(to_check));
 
-                spawn_checker_tasks(
-                    ctx,
-                    repo,
-                    (bonsai_to_check_sender, bonsai_to_check_receiver),
-                    (content_to_check_sender, content_to_check_receiver),
-                    // For Mercurial changesets - max 2 parents, so this should avoid backpressure
-                    mpsc::channel(1),
-                    error_sender,
-                );
+                checkers.spawn_tasks(ctx, repo, error_sender);
+
                 print_errors(error_receiver)
             }),
     )
