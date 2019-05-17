@@ -27,7 +27,13 @@ fn check_bonsai_cs(
     file_queue: mpsc::Sender<FileInformation>,
 ) -> impl Future<Item = (), Error = Error> {
     let changeset = repo.get_bonsai_changeset(ctx.clone(), cs_id);
-    let repo_parents = repo.get_changeset_parents_by_bonsai(ctx.clone(), cs_id);
+    let repo_parents = repo.get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+        .and_then(move |parents| {
+            // Add parents to the check queue ASAP - we'll validate them later
+            stream::iter_ok(parents.clone())
+                .forward(cs_queue)
+                .map(move |_| parents)
+        });
 
     changeset.join(repo_parents).and_then({
         move |(bcs, repo_parents)| {
@@ -37,16 +43,13 @@ fn check_bonsai_cs(
                 return future::err(ErrorKind::BadChangesetHash(cs_id, hash).into()).left_future();
             }
 
-            // Queue checks on parents
+            // Check parents match
             let parents: Vec<_> = bcs.parents().collect();
             let repo_parents_ok = if repo_parents == parents {
                 future::ok(())
             } else {
                 future::err(ErrorKind::DbParentsMismatch(cs_id).into())
             };
-            let queue_parents = stream::iter_ok(parents.into_iter())
-                .forward(cs_queue)
-                .map(|_| ());
 
             // Queue check on Mercurial equivalent
             let hg_cs = repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
@@ -85,8 +88,8 @@ fn check_bonsai_cs(
                     .map_err(|e| ErrorKind::InvalidChangeset(cs_id, e).into()),
             );
 
-            queue_parents
-                .join5(bcs_verifier, queue_file_changes, repo_parents_ok, hg_cs)
+            bcs_verifier
+                .join4(queue_file_changes, repo_parents_ok, hg_cs)
                 .map(|_| ())
                 .right_future()
         }
