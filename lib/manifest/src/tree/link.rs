@@ -102,7 +102,12 @@ impl DurableEntry {
         });
         match result {
             Ok(links) => Ok(links),
-            Err(error) => Err(format_err!("{}", error)),
+            Err(error) => Err(format_err!(
+                "failed to read manifest entry ({}, {}): {}",
+                path,
+                self.node,
+                error
+            )),
         }
     }
 }
