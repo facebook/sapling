@@ -43,6 +43,19 @@ class Tree {
           return entry.getName() < piece;
         });
     if (UNLIKELY(iter == entries_.cend() || iter->getName() != path)) {
+#ifdef _WIN32
+      // On Windows we need to do a case insensitive lookup for the file and
+      // directory names. For performance, we will do a case sensitive search
+      // first which should cover most of the cases and if not found then do a
+      // case sensitive search.
+      const auto& fileName = path.stringPiece();
+      for (const auto& entry : entries_) {
+        if (entry.getName().stringPiece().equals(
+                fileName, folly::AsciiCaseInsensitive())) {
+          return &entry;
+        }
+      }
+#endif
       return nullptr;
     }
     return &*iter;

@@ -47,6 +47,24 @@ TEST(Tree, testGetEntryPtr) {
   EXPECT_EQ(false, entry->isTree());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, entry->getType());
 
+#ifdef _WIN32
+  // Case insensitive testing only on Windows
+  PathComponentPiece existentPath1("A_file");
+  entry = tree.getEntryPtr(existentPath1);
+  EXPECT_NE(nullptr, entry);
+  EXPECT_EQ("a_file", entry->getName());
+
+  PathComponentPiece existentPath2("a_File");
+  entry = tree.getEntryPtr(existentPath2);
+  EXPECT_NE(nullptr, entry);
+  EXPECT_EQ("a_file", entry->getName());
+
+  PathComponentPiece existentPath3("A_FILE");
+  entry = tree.getEntryPtr(existentPath3);
+  EXPECT_NE(nullptr, entry);
+  EXPECT_EQ("a_file", entry->getName());
+#endif
+
   // Verify non-existent path.
   PathComponentPiece nonExistentPath("not_a_file");
   EXPECT_EQ(nullptr, tree.getEntryPtr(nonExistentPath));
