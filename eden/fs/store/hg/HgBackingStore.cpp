@@ -77,7 +77,7 @@ DEFINE_bool(
     "for testing/debugging purposes");
 DEFINE_int32(
     mononoke_timeout,
-    2000, // msec
+    120000, // msec
     "[unit: ms] Timeout for Mononoke requests");
 
 namespace facebook {
