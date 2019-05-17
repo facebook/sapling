@@ -216,6 +216,141 @@ impl Manifest for Tree {
 }
 
 impl Tree {
+    // TODO: return bytes for current or ability to get those bytes
+    pub fn finalize(
+        &mut self,
+        parent_trees: Vec<&Tree>,
+    ) -> Fallible<impl Iterator<Item = (RepoPathBuf, Node, Vec<Node>)>> {
+        fn compute_node<C: AsRef<[u8]>>(parent_tree_nodes: &[Node], content: C) -> Node {
+            let mut hasher = Sha1::new();
+            debug_assert!(parent_tree_nodes.len() <= 2);
+            let p1 = parent_tree_nodes.get(0).unwrap_or(Node::null_id());
+            let p2 = parent_tree_nodes.get(1).unwrap_or(Node::null_id());
+            if p1 < p2 {
+                hasher.input(p1.as_ref());
+                hasher.input(p2.as_ref());
+            } else {
+                hasher.input(p2.as_ref());
+                hasher.input(p1.as_ref());
+            }
+            hasher.input(content.as_ref());
+            let mut buf = [0u8; Node::len()];
+            hasher.result(&mut buf);
+            (&buf).into()
+        }
+        struct Executor<'a> {
+            path: RepoPathBuf,
+            converted_nodes: Vec<(RepoPathBuf, Node, Vec<Node>)>,
+            parent_trees: Vec<Cursor<'a>>,
+        };
+        impl<'a> Executor<'a> {
+            fn new(parent_trees: &[&'a Tree]) -> Fallible<Executor<'a>> {
+                let mut executor = Executor {
+                    path: RepoPathBuf::new(),
+                    converted_nodes: Vec::new(),
+                    parent_trees: parent_trees.iter().map(|v| v.root_cursor()).collect(),
+                };
+                // The first node after step is the root directory. `work()` expects cursors to
+                // be pointing to the underlying link.
+                for cursor in executor.parent_trees.iter_mut() {
+                    match cursor.step() {
+                        Step::Success | Step::End => (),
+                        Step::Err(err) => return Err(err),
+                    }
+                }
+                Ok(executor)
+            }
+            fn active_parent_tree_nodes(
+                &mut self,
+                active_parents: &[usize],
+            ) -> Fallible<Vec<Node>> {
+                let mut parent_nodes = Vec::with_capacity(active_parents.len());
+                for id in active_parents {
+                    let cursor = &mut self.parent_trees[*id];
+                    let node = match cursor.link() {
+                        Leaf(_) | Ephemeral(_) => unreachable!(),
+                        Durable(entry) => entry.node,
+                    };
+                    parent_nodes.push(node);
+                    match cursor.step() {
+                        Step::Success | Step::End => (),
+                        Step::Err(err) => return Err(err),
+                    }
+                }
+                Ok(parent_nodes)
+            }
+            fn parent_trees_for_subdirectory(
+                &mut self,
+                active_parents: &[usize],
+            ) -> Fallible<Vec<usize>> {
+                let mut result = Vec::new();
+                for id in active_parents.iter() {
+                    let cursor = &mut self.parent_trees[*id];
+                    while !cursor.finished() && cursor.path() < self.path.as_repo_path() {
+                        cursor.skip_subtree();
+                        match cursor.step() {
+                            Step::Success | Step::End => (),
+                            Step::Err(err) => return Err(err),
+                        }
+                    }
+                    if !cursor.finished() && cursor.path() == self.path.as_repo_path() {
+                        match cursor.link() {
+                            Leaf(_) => (), // files and directories don't share history
+                            Durable(_) => result.push(*id),
+                            Ephemeral(_) => {
+                                panic!("Found ephemeral parent when finalizing manifest.")
+                            }
+                        }
+                    }
+                }
+                Ok(result)
+            }
+            fn work(
+                &mut self,
+                link: &mut Link,
+                active_parents: Vec<usize>,
+            ) -> Fallible<(Node, store::Flag)> {
+                let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
+                match link {
+                    Leaf(file_metadata) => Ok((
+                        file_metadata.node,
+                        store::Flag::File(file_metadata.file_type.clone()),
+                    )),
+                    Durable(entry) => Ok((entry.node, store::Flag::Directory)),
+                    Ephemeral(links) => {
+                        let mut entry = store::EntryMut::new();
+                        for (component, link) in links.iter_mut() {
+                            self.path.push(component.as_path_component());
+                            let child_parents =
+                                self.parent_trees_for_subdirectory(&active_parents)?;
+                            let (node, flag) = self.work(link, child_parents)?;
+                            self.path.pop();
+                            let element = store::Element::new(component.clone(), node, flag);
+                            entry.add_element(element);
+                        }
+                        let entry = entry.freeze();
+                        let node = compute_node(&parent_tree_nodes, &entry);
+
+                        let cell = OnceCell::new();
+                        // TODO: remove clone
+                        cell.set(Ok(links.clone())).unwrap();
+
+                        let durable_entry = DurableEntry { node, links: cell };
+                        let inner = Arc::new(durable_entry);
+                        *link = Durable(inner);
+                        self.converted_nodes
+                            .push((self.path.clone(), node, parent_tree_nodes));
+                        Ok((node, store::Flag::Directory))
+                    }
+                }
+            }
+        }
+
+        let mut executor = Executor::new(&parent_trees)?;
+        executor.work(&mut self.root, (0..parent_trees.len()).collect())?;
+        Ok(executor.converted_nodes.into_iter())
+    }
+
     fn get_link(&self, path: &RepoPath) -> Fallible<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -410,6 +545,13 @@ mod tests {
             flag,
         ))
     }
+    fn get_node(tree: &Tree, path: &RepoPath) -> Node {
+        match tree.get_link(path).unwrap().unwrap() {
+            Leaf(file_metadata) => file_metadata.node,
+            Durable(ref entry) => entry.node,
+            Ephemeral(_) => panic!("Asked for node on path {} but found ephemeral node.", path),
+        }
+    }
 
     #[test]
     fn test_insert() {
@@ -584,6 +726,102 @@ mod tests {
     }
 
     #[test]
+    fn test_finalize_with_zero_and_one_parents() {
+        let mut tree = Tree::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("a1/b1/c1/d1"), meta("10"))
+            .unwrap();
+        tree.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        let tree_changed: Vec<_> = tree.finalize(vec![]).unwrap().collect();
+
+        assert_eq!(tree_changed.len(), 6);
+        assert_eq!(tree_changed[0].0, repo_path_buf("a1/b1/c1"));
+        assert_eq!(tree_changed[1].0, repo_path_buf("a1/b1"));
+        assert_eq!(tree_changed[2].0, repo_path_buf("a1"));
+        assert_eq!(tree_changed[3].0, repo_path_buf("a2/b2"));
+        assert_eq!(tree_changed[4].0, repo_path_buf("a2"));
+        assert_eq!(tree_changed[5].0, RepoPathBuf::new());
+
+        let mut update = tree.clone();
+        update.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
+        update.remove(repo_path("a2/b2/c2")).unwrap();
+        update.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        let update_changed: Vec<_> = update.finalize(vec![&tree]).unwrap().collect();
+        assert_eq!(update_changed[0].0, repo_path_buf("a1"));
+        assert_eq!(update_changed[0].2, vec![tree_changed[2].1]);
+        assert_eq!(update_changed[1].0, repo_path_buf("a3"));
+        assert_eq!(update_changed[1].2, vec![]);
+        assert_eq!(update_changed[2].0, RepoPathBuf::new());
+        assert_eq!(update_changed[2].2, vec![tree_changed[5].1]);
+    }
+
+    #[test]
+    fn test_finalize_merge() {
+        let store = Arc::new(TestStore::new());
+        let mut p1 = Tree::ephemeral(store.clone());
+        p1.insert(repo_path_buf("a1/b1/c1/d1"), meta("10")).unwrap();
+        p1.insert(repo_path_buf("a1/b2"), meta("20")).unwrap();
+        p1.insert(repo_path_buf("a2/b2/c2"), meta("30")).unwrap();
+        let _p1_changed = p1.finalize(vec![]).unwrap();
+
+        let mut p2 = Tree::ephemeral(store.clone());
+        p2.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
+        p2.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        let _p2_changed = p2.finalize(vec![]).unwrap();
+
+        let mut tree = p1.clone();
+        tree.insert(repo_path_buf("a1/b2"), meta("40")).unwrap();
+        tree.insert(repo_path_buf("a2/b2/c2"), meta("60")).unwrap();
+        tree.insert(repo_path_buf("a3/b1"), meta("50")).unwrap();
+        let tree_changed: Vec<_> = tree.finalize(vec![&p1, &p2]).unwrap().collect();
+        assert_eq!(tree_changed[0].0, repo_path_buf("a1"));
+        assert_eq!(
+            tree_changed[0].2,
+            vec![
+                get_node(&p1, repo_path("a1")),
+                get_node(&p2, repo_path("a1"))
+            ]
+        );
+        assert_eq!(tree_changed[1].0, repo_path_buf("a2/b2"));
+        assert_eq!(tree_changed[1].2, vec![get_node(&p1, repo_path("a2/b2"))]);
+        assert_eq!(tree_changed[2].0, repo_path_buf("a2"));
+        assert_eq!(tree_changed[3].0, repo_path_buf("a3"));
+        assert_eq!(tree_changed[3].2, vec![get_node(&p2, repo_path("a3"))]);
+        assert_eq!(tree_changed[4].0, RepoPathBuf::new());
+        assert_eq!(
+            tree_changed[4].2,
+            vec![
+                get_node(&p1, RepoPath::empty()),
+                get_node(&p2, RepoPath::empty())
+            ]
+        );
+    }
+
+    #[test]
+    fn test_finalize_file_to_directory() {
+        let store = Arc::new(TestStore::new());
+        let mut tree1 = Tree::ephemeral(store.clone());
+        tree1.insert(repo_path_buf("a1"), meta("10")).unwrap();
+        let tree1_changed: Vec<_> = tree1.finalize(vec![]).unwrap().collect();
+        assert_eq!(tree1_changed[0].0, RepoPathBuf::new());
+        assert_eq!(tree1_changed[0].2, vec![]);
+
+        let mut tree2 = Tree::ephemeral(store.clone());
+        tree2.insert(repo_path_buf("a1/b1"), meta("20")).unwrap();
+        let tree2_changed: Vec<_> = tree2.finalize(vec![&tree1]).unwrap().collect();
+        assert_eq!(tree2_changed[0].0, repo_path_buf("a1"));
+        assert_eq!(tree2_changed[0].2, vec![]);
+        assert_eq!(tree2_changed[1].0, RepoPathBuf::new());
+        assert_eq!(tree2_changed[1].2, vec![tree1_changed[0].1]);
+
+        let mut tree3 = Tree::ephemeral(store.clone());
+        tree3.insert(repo_path_buf("a1"), meta("30")).unwrap();
+        let tree3_changed: Vec<_> = tree3.finalize(vec![&tree2]).unwrap().collect();
+        assert_eq!(tree3_changed[0].0, RepoPathBuf::new());
+        assert_eq!(tree3_changed[0].2, vec![tree2_changed[1].1]);
+    }
+
+    #[test]
     fn test_cursor_skip_on_root() {
         let tree = Tree::ephemeral(Arc::new(TestStore::new()));
         let mut cursor = tree.root_cursor();
@@ -594,6 +832,7 @@ mod tests {
             Step::Err(error) => panic!(error),
         }
     }
+
     #[test]
     fn test_cursor_skip() {
         fn step<'a>(cursor: &mut Cursor<'a>) {
