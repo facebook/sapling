@@ -10,7 +10,7 @@ use once_cell::sync::OnceCell;
 
 use types::{Node, PathComponentBuf, RepoPath};
 
-use crate::tree::{store, store::TreeStore};
+use crate::tree::{store, store::InnerStore};
 use crate::FileMetadata;
 
 /// `Link` describes the type of nodes that tree manifest operates on.
@@ -54,7 +54,7 @@ impl Link {
 
     pub fn mut_ephemeral_links(
         &mut self,
-        store: &dyn TreeStore,
+        store: &InnerStore,
         parent: &RepoPath,
     ) -> Fallible<&mut BTreeMap<PathComponentBuf, Link>> {
         loop {
@@ -80,13 +80,13 @@ impl DurableEntry {
 
     pub fn get_links(
         &self,
-        store: &dyn TreeStore,
+        store: &InnerStore,
         path: &RepoPath,
     ) -> Fallible<&BTreeMap<PathComponentBuf, Link>> {
         // TODO: be smarter around how failures are handled when reading from the store
         // Currently this loses the stacktrace
         let result = self.links.get_or_init(|| {
-            let entry = store.get(path, &self.node)?;
+            let entry = store.get_entry(path, self.node)?;
             let mut links = BTreeMap::new();
             for element_result in entry.elements() {
                 let element = element_result?;

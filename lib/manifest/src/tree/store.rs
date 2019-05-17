@@ -3,11 +3,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::str::from_utf8;
+use std::{str::from_utf8, sync::Arc};
 
+use bytes::{Bytes, BytesMut};
 use failure::{format_err, Fallible};
 
-use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::{Node, PathComponent, PathComponentBuf, RepoPath};
 
 use crate::FileType;
 
@@ -15,9 +16,29 @@ use crate::FileType;
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
 pub trait TreeStore {
-    fn get(&self, path: &RepoPath, node: &Node) -> Fallible<Entry>;
+    fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes>;
 
-    fn insert(&mut self, path: RepoPathBuf, node: Node, data: Entry) -> Fallible<()>;
+    fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()>;
+}
+
+#[derive(Clone)]
+pub struct InnerStore {
+    tree_store: Arc<dyn TreeStore>,
+}
+
+impl InnerStore {
+    pub fn new(tree_store: Arc<dyn TreeStore>) -> Self {
+        InnerStore { tree_store }
+    }
+
+    pub fn get_entry(&self, path: &RepoPath, node: Node) -> Fallible<Entry> {
+        let bytes = self.tree_store.get(path, node)?;
+        Ok(Entry(bytes))
+    }
+
+    pub fn insert_entry(&self, path: &RepoPath, node: Node, entry: Entry) -> Fallible<()> {
+        self.tree_store.insert(path, node, entry.0)
+    }
 }
 
 /// The `Entry` is the data that is stored on disk. It should be seen as opaque to whether it
@@ -43,7 +64,7 @@ pub trait TreeStore {
 /// representation. For this serialization format it is important that they don't contain
 /// `\0` or `\n`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Entry(Vec<u8>);
+pub struct Entry(Bytes);
 
 /// The `Element` is a parsed element of a directory. Directory elements are either files either
 /// direcotries. The type of element is signaled by `Flag`.
@@ -75,12 +96,17 @@ impl Entry {
     pub fn from_elements<I: IntoIterator<Item = Fallible<Element>>>(
         elements: I,
     ) -> Fallible<Entry> {
-        let mut underlying = Vec::new();
+        let mut underlying = BytesMut::new();
         for element_result in elements.into_iter() {
             underlying.extend(element_result?.to_byte_vec());
-            underlying.push(b'\n');
+            underlying.extend(b"\n");
         }
-        Ok(Entry(underlying))
+        Ok(Entry(underlying.freeze()))
+    }
+
+    #[cfg(test)]
+    pub fn to_bytes(self) -> Bytes {
+        self.0
     }
 }
 
@@ -182,33 +208,42 @@ impl Element {
 }
 
 #[cfg(test)]
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
+#[cfg(test)]
+use types::RepoPathBuf;
 
 #[cfg(test)]
 /// An in memory `Store` implementation backed by HashMaps. Primarily intended for tests.
-pub struct TestStore(HashMap<RepoPathBuf, HashMap<Node, Entry>>);
+pub struct TestStore(RwLock<HashMap<RepoPathBuf, HashMap<Node, Bytes>>>);
 
 #[cfg(test)]
 impl TestStore {
     pub fn new() -> Self {
-        TestStore(HashMap::new())
+        TestStore(RwLock::new(HashMap::new()))
     }
 }
 
 #[cfg(test)]
 impl TreeStore for TestStore {
-    fn get(&self, path: &RepoPath, node: &Node) -> Fallible<Entry> {
-        let result = self
+    fn get(&self, path: &RepoPath, node: Node) -> Fallible<Bytes> {
+        let underlying = self
             .0
+            .read()
+            .map_err(|err| format_err!("Failed to acquire read lock: {}", err))?;
+        let result = underlying
             .get(path)
-            .and_then(|node_hash| node_hash.get(node))
+            .and_then(|node_hash| node_hash.get(&node))
             .map(|entry| entry.clone());
         result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, node))
     }
 
-    fn insert(&mut self, path: RepoPathBuf, node: Node, data: Entry) -> Fallible<()> {
-        self.0
-            .entry(path)
+    fn insert(&self, path: &RepoPath, node: Node, data: Bytes) -> Fallible<()> {
+        let mut underlying = self
+            .0
+            .write()
+            .map_err(|err| format_err!("Failed to acquire the write lock: {}", err))?;
+        underlying
+            .entry(path.to_owned())
             .or_insert(HashMap::new())
             .insert(node, data);
         Ok(())

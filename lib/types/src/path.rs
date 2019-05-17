@@ -41,18 +41,8 @@ use failure::{bail, Fallible};
 use serde_derive::{Deserialize, Serialize};
 
 /// An owned version of a `RepoPath`.
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Serialize,
-    Deserialize
-)]
+#[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize)]
 pub struct RepoPathBuf(String);
 
 /// A normalized path starting from the root of the repository. Paths can be broken into
