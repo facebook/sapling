@@ -16,7 +16,7 @@ use tokio;
 mod errors;
 
 mod checks;
-use crate::checks::{bonsai_checker_task, content_checker_task};
+use crate::checks::spawn_checker_tasks;
 
 fn print_errors<S, E>(error: S) -> impl Future<Item = (), Error = ()>
 where
@@ -96,22 +96,15 @@ fn main() {
                         .map(|_| ()),
                 );
 
-                tokio::spawn(bonsai_checker_task(
-                    ctx.clone(),
-                    repo.clone(),
-                    bonsai_to_check_sender,
-                    content_to_check_sender,
-                    bonsai_to_check_receiver,
-                    error_sender.clone(),
-                ));
-
-                tokio::spawn(content_checker_task(
+                spawn_checker_tasks(
                     ctx,
                     repo,
-                    content_to_check_receiver,
+                    (bonsai_to_check_sender, bonsai_to_check_receiver),
+                    (content_to_check_sender, content_to_check_receiver),
+                    // For Mercurial changesets - max 2 parents, so this should avoid backpressure
+                    mpsc::channel(1),
                     error_sender,
-                ));
-
+                );
                 print_errors(error_receiver)
             }),
     )

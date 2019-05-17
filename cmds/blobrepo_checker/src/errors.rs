@@ -6,6 +6,7 @@
 
 use crate::checks::FileInformation;
 use failure_ext::{Error, Fail};
+use mercurial_types::HgChangesetId;
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
 
 #[derive(Debug, Fail)]
@@ -31,4 +32,20 @@ pub enum ErrorKind {
     BadContentSize(FileInformation, usize),
     #[fail(display = "File {} read wrong ContentId {} in blobstore", _0, _1)]
     BadContentId(FileInformation, ContentId),
+    #[fail(
+        display = "Changeset {} maps to HG {} maps to wrong Changeset {}",
+        _0, _1, _2
+    )]
+    HgMappingBroken(ChangesetId, HgChangesetId, ChangesetId),
+    #[fail(
+        display = "Changeset {} maps to HG {} which has no matching Bonsai",
+        _0, _1
+    )]
+    HgMappingNotPresent(ChangesetId, HgChangesetId),
+    #[fail(display = "HG {} has no matching Bonsai", _0)]
+    HgDangling(HgChangesetId),
+    #[fail(display = "HG {} has different parents to its matching Bonsai", _0)]
+    ParentsMismatch(HgChangesetId),
+    #[fail(display = "Requesting HG {} fetched changeset {}", _0, _1)]
+    HgChangesetIdMismatch(HgChangesetId, HgChangesetId),
 }

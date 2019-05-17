@@ -11,6 +11,7 @@ use crate::errors::ErrorKind;
 use failure_ext::Error;
 use futures::{future, stream, Future, Sink, Stream, sync::mpsc};
 use futures_ext::{spawn_future, FutureExt};
+use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, ContentId, FileChange, MPath, blob::BlobstoreValue};
 use std::collections::HashSet;
 use std::convert::TryFrom;
@@ -22,6 +23,7 @@ fn check_bonsai_cs(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_queue: mpsc::Sender<ChangesetId>,
+    hg_cs_queue: mpsc::Sender<HgChangesetId>,
     file_queue: mpsc::Sender<FileInformation>,
 ) -> impl Future<Item = (), Error = Error> {
     let changeset = repo.get_bonsai_changeset(ctx.clone(), cs_id);
@@ -46,6 +48,26 @@ fn check_bonsai_cs(
                 .forward(cs_queue)
                 .map(|_| ());
 
+            // Queue check on Mercurial equivalent
+            let hg_cs = repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                .and_then(move |hg_cs| {
+                    repo.get_bonsai_from_hg(ctx, hg_cs)
+                        .and_then(move |new_id| {
+                            // Verify symmetry of the mapping, too
+                            match new_id {
+                                Some(new_id) if cs_id == new_id => future::ok(()),
+                                Some(new_id) => future::err(
+                                    ErrorKind::HgMappingBroken(cs_id, hg_cs, new_id).into(),
+                                ),
+                                None => {
+                                    future::err(ErrorKind::HgMappingNotPresent(cs_id, hg_cs).into())
+                                }
+                            }
+                        })
+                        .map(move |_| hg_cs)
+                })
+                .and_then(|hg_cs| hg_cs_queue.send(hg_cs).map(|_| ()).from_err());
+
             // Queue checks on files
             let file_changes: Vec<_> = bcs.file_changes()
                 .filter_map(|(mpath, opt_change)| {
@@ -64,17 +86,18 @@ fn check_bonsai_cs(
             );
 
             queue_parents
-                .join4(bcs_verifier, queue_file_changes, repo_parents_ok)
+                .join5(bcs_verifier, queue_file_changes, repo_parents_ok, hg_cs)
                 .map(|_| ())
                 .right_future()
         }
     })
 }
 
-pub fn bonsai_checker_task(
+fn bonsai_checker_task(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_queue: mpsc::Sender<ChangesetId>,
+    hg_cs_queue: mpsc::Sender<HgChangesetId>,
     file_queue: mpsc::Sender<FileInformation>,
     input: mpsc::Receiver<ChangesetId>,
     error: mpsc::Sender<Error>,
@@ -100,6 +123,7 @@ pub fn bonsai_checker_task(
                         ctx.clone(),
                         repo.clone(),
                         cs_queue.clone(),
+                        hg_cs_queue.clone(),
                         file_queue.clone(),
                     ).or_else({
                         cloned!(error);
@@ -187,7 +211,7 @@ fn check_one_file(
     sha256_check.join(file_checks).map(|_| ())
 }
 
-pub fn content_checker_task(
+fn content_checker_task(
     ctx: CoreContext,
     repo: BlobRepo,
     input: mpsc::Receiver<FileInformation>,
@@ -217,4 +241,154 @@ pub fn content_checker_task(
         })
         .buffer_unordered(1000)
         .for_each(|id| Ok(id))
+}
+
+fn check_hg_cs(
+    cs: HgChangesetId,
+    ctx: CoreContext,
+    repo: BlobRepo,
+    cs_queue: mpsc::Sender<ChangesetId>,
+) -> impl Future<Item = (), Error = Error> {
+    // Fetch the changeset and check its hash
+    let changeset = repo.get_changeset_by_changesetid(ctx.clone(), cs)
+        .and_then(move |changeset| {
+            if changeset.get_changeset_id() == cs {
+                future::ok(changeset)
+            } else {
+                future::err(
+                    ErrorKind::HgChangesetIdMismatch(cs, changeset.get_changeset_id()).into(),
+                )
+            }
+        });
+    // And fetch its parents via the Bonsai route - this gets parents via Bonsai rules
+    let bcs_parents = repo.get_changeset_parents(ctx.clone(), cs);
+
+    changeset
+        .join(bcs_parents)
+        .and_then(move |(hg_cs, bcs_parents)| {
+            // Queue its Mercurial parents for checking, in Bonsai form.
+            // We do not need to do a symmetry check, as Bonsai <-> HG is 1:1, and the Bonsai
+            // mapping will do a symmetry check.
+            // While here, validate that we have the same parents in Bonsai form
+            let parents: Vec<_> = hg_cs
+                .p1()
+                .into_iter()
+                .chain(hg_cs.p2().into_iter())
+                .map(HgChangesetId::new)
+                .collect();
+
+            if parents != bcs_parents {
+                return future::err(ErrorKind::ParentsMismatch(cs).into()).left_future();
+            }
+
+            let queue_parents = stream::iter_ok(parents.into_iter())
+                .and_then({
+                    cloned!(repo, ctx);
+                    move |hg_cs| {
+                        repo.get_bonsai_from_hg(ctx.clone(), hg_cs)
+                            .map(move |opt_cs| (hg_cs, opt_cs))
+                    }
+                })
+                .and_then(move |(hg_cs, opt_cs)| {
+                    if let Some(cs_id) = opt_cs {
+                        future::ok(cs_id)
+                    } else {
+                        future::err(ErrorKind::HgDangling(hg_cs).into())
+                    }
+                })
+                .forward(cs_queue.clone())
+                .map(|_| ());
+
+            // Queue the Bonsai of this CS for rechecking, too. Also a 1:1 mapping, but will
+            // break if the mapping is bad and this CS is found via (e.g.) a linknode
+            // The skipping of already checked CSes will avoid an infinite loop
+            let queue_bonsai = repo.get_bonsai_from_hg(ctx, cs)
+                .and_then(move |opt_cs| {
+                    if let Some(cs_id) = opt_cs {
+                        future::ok(cs_id)
+                    } else {
+                        future::err(ErrorKind::HgDangling(cs).into())
+                    }
+                })
+                .and_then(move |cs| cs_queue.send(cs).map(|_| ()).from_err());
+            queue_parents.join(queue_bonsai).map(|_| ()).right_future()
+        })
+}
+
+fn hg_changeset_checker_task(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    cs_queue: mpsc::Sender<ChangesetId>,
+    input: mpsc::Receiver<HgChangesetId>,
+    error: mpsc::Sender<Error>,
+) -> impl Future<Item = (), Error = ()> {
+    let already_seen = Arc::new(Mutex::new(HashSet::new()));
+
+    input
+        .map({
+            cloned!(already_seen, ctx, repo, cs_queue, error);
+            move |cs| {
+                {
+                    let mut already_seen = already_seen.lock().expect("lock poisoned");
+                    if already_seen.contains(&cs) {
+                        return future::ok(()).left_future();
+                    }
+
+                    already_seen.insert(cs);
+                }
+
+                spawn_future(
+                    check_hg_cs(cs, ctx.clone(), repo.clone(), cs_queue.clone()).or_else({
+                        cloned!(error);
+                        move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
+                    }),
+                ).map_err(|e| panic!("Could not queue error: {:#?}", e))
+                    .right_future()
+            }
+        })
+        .buffer_unordered(1000)
+        .for_each(|id| future::ok(id))
+}
+
+pub fn spawn_checker_tasks(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    (bonsai_to_check_sender, bonsai_to_check_receiver): (
+        mpsc::Sender<ChangesetId>,
+        mpsc::Receiver<ChangesetId>,
+    ),
+    (content_to_check_sender, content_to_check_receiver): (
+        mpsc::Sender<FileInformation>,
+        mpsc::Receiver<FileInformation>,
+    ),
+    (hg_changeset_to_check_sender, hg_changeset_to_check_receiver): (
+        mpsc::Sender<HgChangesetId>,
+        mpsc::Receiver<HgChangesetId>,
+    ),
+    error_sender: mpsc::Sender<Error>,
+) {
+    tokio::spawn(bonsai_checker_task(
+        ctx.clone(),
+        repo.clone(),
+        bonsai_to_check_sender.clone(),
+        hg_changeset_to_check_sender.clone(),
+        content_to_check_sender,
+        bonsai_to_check_receiver,
+        error_sender.clone(),
+    ));
+
+    tokio::spawn(content_checker_task(
+        ctx.clone(),
+        repo.clone(),
+        content_to_check_receiver,
+        error_sender.clone(),
+    ));
+
+    tokio::spawn(hg_changeset_checker_task(
+        ctx,
+        repo,
+        bonsai_to_check_sender,
+        hg_changeset_to_check_receiver,
+        error_sender,
+    ));
 }
