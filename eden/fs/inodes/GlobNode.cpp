@@ -370,18 +370,17 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
 
   for (auto& item : recurse) {
     auto candidateName = rootPath + item.first;
-    futures.emplace_back(root.getOrLoadChildTree(item.first)
-                             .thenValue([store,
-                                         candidateName,
-                                         node = item.second,
-                                         fileBlobsToPrefetch](
-                                            TreeInodePtr dir) {
-                               return node->evaluateImpl(
-                                   store,
-                                   candidateName,
-                                   TreeInodePtrRoot(dir),
-                                   fileBlobsToPrefetch);
-                             }));
+    futures.emplace_back(
+        root.getOrLoadChildTree(item.first)
+            .thenValue(
+                [store, candidateName, node = item.second, fileBlobsToPrefetch](
+                    TreeInodePtr dir) {
+                  return node->evaluateImpl(
+                      store,
+                      candidateName,
+                      TreeInodePtrRoot(dir),
+                      fileBlobsToPrefetch);
+                }));
   }
   return folly::collect(futures).thenValue(
       [shadowResults = std::move(results)](

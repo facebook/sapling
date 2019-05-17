@@ -78,10 +78,8 @@ class EdenDispatcher : public Dispatcher {
       int flags) override;
 
   folly::Future<BufVec> read(InodeNumber ino, size_t size, off_t off) override;
-  folly::Future<size_t> write(
-      InodeNumber ino,
-      folly::StringPiece data,
-      off_t off) override;
+  folly::Future<size_t>
+  write(InodeNumber ino, folly::StringPiece data, off_t off) override;
 
   folly::Future<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
       override;

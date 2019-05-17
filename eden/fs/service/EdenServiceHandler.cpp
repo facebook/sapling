@@ -714,25 +714,25 @@ EdenServiceHandler::future_getFileInformation(
   // perform the final result transformation in an appropriate thread.
   auto threadMgr = getThreadManager();
 
-  return collectAllSemiFuture(
-             applyToInodes(
-                 rootInode,
-                 *paths,
-                 [](InodePtr inode) {
-                   return inode->getattr().thenValue([](Dispatcher::Attr attr) {
-                     FileInformation info;
-                     info.size = attr.st.st_size;
-                     auto& ts = stMtime(attr.st);
-                     info.mtime.seconds = ts.tv_sec;
-                     info.mtime.nanoSeconds = ts.tv_nsec;
-                     info.mode = attr.st.st_mode;
+  return collectAllSemiFuture(applyToInodes(
+                                  rootInode,
+                                  *paths,
+                                  [](InodePtr inode) {
+                                    return inode->getattr().thenValue(
+                                        [](Dispatcher::Attr attr) {
+                                          FileInformation info;
+                                          info.size = attr.st.st_size;
+                                          auto& ts = stMtime(attr.st);
+                                          info.mtime.seconds = ts.tv_sec;
+                                          info.mtime.nanoSeconds = ts.tv_nsec;
+                                          info.mode = attr.st.st_mode;
 
-                     FileInformationOrError result;
-                     result.set_info(info);
+                                          FileInformationOrError result;
+                                          result.set_info(info);
 
-                     return result;
-                   });
-                 }))
+                                          return result;
+                                        });
+                                  }))
       .via(threadMgr)
       .thenValue([](vector<Try<FileInformationOrError>>&& done) {
         auto out = std::make_unique<vector<FileInformationOrError>>();

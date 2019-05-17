@@ -202,22 +202,21 @@ class PrivHelperClientImpl : public PrivHelper,
     // already been destroyed.
     folly::Promise<UnixSocket::Message> promise;
     auto future = promise.getFuture();
-    eventBase->runInEventBaseThread(
-        [this,
-         xid,
-         msg = std::move(msg),
-         promise = std::move(promise)]() mutable {
-          // Double check that the connection is still open
-          if (!conn_) {
-            promise.setException(std::runtime_error(
-                "cannot send new requests on closed privhelper connection"));
-            return;
-          }
+    eventBase->runInEventBaseThread([this,
+                                     xid,
+                                     msg = std::move(msg),
+                                     promise = std::move(promise)]() mutable {
+      // Double check that the connection is still open
+      if (!conn_) {
+        promise.setException(std::runtime_error(
+            "cannot send new requests on closed privhelper connection"));
+        return;
+      }
 
-          pendingRequests_.emplace(xid, std::move(promise));
-          ++sendPending_;
-          conn_->send(std::move(msg), this);
-        });
+      pendingRequests_.emplace(xid, std::move(promise));
+      ++sendPending_;
+      conn_->send(std::move(msg), this);
+    });
     return future;
   }
 
