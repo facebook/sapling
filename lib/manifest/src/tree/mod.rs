@@ -150,18 +150,9 @@ impl Manifest for Tree {
         Ok(())
     }
 
-    // NOTE: incomplete implementation, currently using dummy values for parents in hash
-    // computation. Works fine for testing but hashes don't match other implementations.
     fn flush(&mut self) -> Fallible<Node> {
-        fn compute_node<C: AsRef<[u8]>>(p1: &Node, p2: &Node, content: C) -> Node {
+        fn compute_node<C: AsRef<[u8]>>(content: C) -> Node {
             let mut hasher = Sha1::new();
-            if p1 < p2 {
-                hasher.input(p1.as_ref());
-                hasher.input(p2.as_ref());
-            } else {
-                hasher.input(p2.as_ref());
-                hasher.input(p1.as_ref());
-            }
             hasher.input(content.as_ref());
             let mut buf = [0u8; Node::len()];
             hasher.result(&mut buf);
@@ -193,10 +184,7 @@ impl Manifest for Tree {
                             ))
                         });
                         let entry = store::Entry::from_elements(iter)?;
-                        // TODO: use actual parent node values
-                        let node = compute_node(Node::null_id(), Node::null_id(), &entry);
-
-                        // TODO: insert the linknode as part of the store.insert
+                        let node = compute_node(&entry);
                         store.insert_entry(&pathbuf, node, entry)?;
 
                         let cell = OnceCell::new();
