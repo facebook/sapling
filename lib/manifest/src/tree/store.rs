@@ -11,10 +11,10 @@ use types::{Node, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::FileType;
 
-/// The `Store` is an abstraction layer for the tree manifest that decouples how or where the data
-/// is stored. This allows more easy iteration on serialization format. It also simplifies writing
-/// storage migration.
-pub trait Store {
+/// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
+/// data is stored. This allows more easy iteration on serialization format. It also simplifies
+/// writing storage migration.
+pub trait TreeStore {
     fn get(&self, path: &RepoPath, node: &Node) -> Fallible<Entry>;
 
     fn insert(&mut self, path: RepoPathBuf, node: Node, data: Entry) -> Fallible<()>;
@@ -196,7 +196,7 @@ impl TestStore {
 }
 
 #[cfg(test)]
-impl Store for TestStore {
+impl TreeStore for TestStore {
     fn get(&self, path: &RepoPath, node: &Node) -> Fallible<Entry> {
         let result = self
             .0

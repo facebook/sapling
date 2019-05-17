@@ -21,20 +21,20 @@ use types::{Node, PathComponent, RepoPath, RepoPathBuf};
 
 use self::cursor::{Cursor, Step};
 use self::link::{Durable, DurableEntry, Ephemeral, Leaf, Link};
-use self::store::Store;
+pub use self::store::TreeStore;
 use crate::{FileMetadata, Manifest};
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
 pub struct Tree {
-    store: Box<Store>,
+    store: Box<TreeStore>,
     // TODO: root can't be a Leaf
     root: Link,
 }
 
 impl Tree {
     /// Instantiates a tree manifest that was stored with the specificed `Node`
-    pub fn durable(store: Box<Store>, node: Node) -> Self {
+    pub fn durable(store: Box<TreeStore>, node: Node) -> Self {
         Tree {
             store,
             root: Link::durable(node),
@@ -42,7 +42,7 @@ impl Tree {
     }
 
     /// Instantiates a new tree manifest with no history
-    pub fn ephemeral(store: Box<Store>) -> Self {
+    pub fn ephemeral(store: Box<TreeStore>) -> Self {
         Tree {
             store,
             root: Link::Ephemeral(BTreeMap::new()),
@@ -110,7 +110,11 @@ impl Manifest for Tree {
     fn remove(&mut self, path: &RepoPath) -> Fallible<()> {
         // The return value lets us know if there are no more files in the subtree and we should be
         // removing it.
-        fn do_remove<'a, I>(store: &dyn Store, cursor: &mut Link, iter: &mut I) -> Fallible<bool>
+        fn do_remove<'a, I>(
+            store: &dyn TreeStore,
+            cursor: &mut Link,
+            iter: &mut I,
+        ) -> Fallible<bool>
         where
             I: Iterator<Item = (&'a RepoPath, &'a PathComponent)>,
         {
@@ -166,7 +170,7 @@ impl Manifest for Tree {
             (&buf).into()
         }
         fn do_flush<'a, 'b, 'c>(
-            store: &'a mut dyn Store,
+            store: &'a mut dyn TreeStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
         ) -> Fallible<(&'c Node, store::Flag)> {

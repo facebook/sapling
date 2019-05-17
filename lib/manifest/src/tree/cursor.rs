@@ -9,8 +9,7 @@ use failure::Error;
 
 use types::{PathComponentBuf, RepoPath, RepoPathBuf};
 
-use crate::tree::link::Link;
-use crate::tree::store::Store;
+use crate::tree::{link::Link, store::TreeStore};
 
 /// The cursor is a utility for iterating over [`Link`]s. This structure is inteded to be an
 /// implementation detail of other iterating structures. That is why it has some rought edges
@@ -20,7 +19,7 @@ use crate::tree::store::Store;
 /// return the root of the subtree that is being iterated.
 pub struct Cursor<'a> {
     state: State,
-    store: &'a dyn Store,
+    store: &'a dyn TreeStore,
     path: RepoPathBuf,
     link: &'a Link,
     stack: Vec<btree_map::Iter<'a, PathComponentBuf, Link>>,
@@ -48,7 +47,7 @@ enum State {
 
 impl<'a> Cursor<'a> {
     /// Default constructor for Cursor.
-    pub fn new(store: &'a dyn Store, path: RepoPathBuf, link: &'a Link) -> Self {
+    pub fn new(store: &'a dyn TreeStore, path: RepoPathBuf, link: &'a Link) -> Self {
         Cursor {
             state: State::Init,
             store,
