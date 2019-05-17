@@ -11,9 +11,9 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm.hgext.extlib.pyrevisionstore import historypack as rusthistpack
 from edenscm.hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
 from edenscm.hgext.remotefilelog.historypack import historypack, mutablehistorypack
+from edenscm.hgext.remotefilelog.pyrevisionstore import historypack as rusthistpack
 from edenscm.mercurial import error, ui as uimod, util
 from edenscm.mercurial.node import nullid
 

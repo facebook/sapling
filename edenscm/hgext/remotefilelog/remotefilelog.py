@@ -15,7 +15,6 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
 from . import constants, fileserverclient, mutablestores, shallowutil
-from ..extlib.pyrevisionstore import indexedlogdatastore
 from .contentstore import (
     remotecontentstore,
     remotefilelogcontentstore,
@@ -28,6 +27,7 @@ from .metadatastore import (
     remotemetadatastore,
     unionmetadatastore,
 )
+from .pyrevisionstore import indexedlogdatastore
 
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte

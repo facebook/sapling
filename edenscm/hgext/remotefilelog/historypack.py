@@ -12,10 +12,7 @@ from edenscm.mercurial import error, util
 from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
-from ..extlib.pyrevisionstore import (
-    historypack as rusthistorypack,
-    repackincrementalhistpacks,
-)
+from .pyrevisionstore import historypack as rusthistorypack, repackincrementalhistpacks
 
 
 # (filename hash, offset, size)

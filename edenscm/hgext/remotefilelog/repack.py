@@ -26,13 +26,13 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
 
 from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
-from ..extlib.pyrevisionstore import (
+from ..extutil import flock, runshellcommand
+from .pyrevisionstore import (
     repackdatapacks,
     repackhistpacks,
     repackincrementaldatapacks,
     repackincrementalhistpacks,
 )
-from ..extutil import flock, runshellcommand
 
 
 osutil = policy.importmod(r"osutil")

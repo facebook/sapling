@@ -7,8 +7,8 @@ use std::{
 };
 
 use cpython::{
-    ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyObject, PyResult, PyTuple, Python,
-    PythonObject,
+    ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyModule, PyObject, PyResult, PyTuple,
+    Python, PythonObject,
 };
 
 use encoding;
@@ -24,45 +24,41 @@ use crate::pythondatastore::PythonDataStore;
 use crate::pythonutil::to_pyerr;
 use crate::repackablepyext::RepackablePyExt;
 
-py_module_initializer!(
-    pyrevisionstore,        // module name
-    initpyrevisionstore,    // py2 init name
-    PyInit_pyrevisionstore, // py3 init name
-    |py, m| {
-        // init function
-        m.add_class::<datastore>(py)?;
-        m.add_class::<datapack>(py)?;
-        m.add_class::<historypack>(py)?;
-        m.add_class::<indexedlogdatastore>(py)?;
-        m.add(
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "pyrevisionstore"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add_class::<datastore>(py)?;
+    m.add_class::<datapack>(py)?;
+    m.add_class::<historypack>(py)?;
+    m.add_class::<indexedlogdatastore>(py)?;
+    m.add(
+        py,
+        "repackdatapacks",
+        py_fn!(py, repackdata(packpath: PyBytes, outdir: PyBytes)),
+    )?;
+    m.add(
+        py,
+        "repackincrementaldatapacks",
+        py_fn!(
             py,
-            "repackdatapacks",
-            py_fn!(py, repackdata(packpath: PyBytes, outdir: PyBytes)),
-        )?;
-        m.add(
+            incremental_repackdata(packpath: PyBytes, outdir: PyBytes)
+        ),
+    )?;
+    m.add(
+        py,
+        "repackhistpacks",
+        py_fn!(py, repackhist(packpath: PyBytes, outdir: PyBytes)),
+    )?;
+    m.add(
+        py,
+        "repackincrementalhistpacks",
+        py_fn!(
             py,
-            "repackincrementaldatapacks",
-            py_fn!(
-                py,
-                incremental_repackdata(packpath: PyBytes, outdir: PyBytes)
-            ),
-        )?;
-        m.add(
-            py,
-            "repackhistpacks",
-            py_fn!(py, repackhist(packpath: PyBytes, outdir: PyBytes)),
-        )?;
-        m.add(
-            py,
-            "repackincrementalhistpacks",
-            py_fn!(
-                py,
-                incremental_repackhist(packpath: PyBytes, outdir: PyBytes)
-            ),
-        )?;
-        Ok(())
-    }
-);
+            incremental_repackhist(packpath: PyBytes, outdir: PyBytes)
+        ),
+    )?;
+    Ok(m)
+}
 
 /// Helper function to de-serialize and re-serialize from and to Python objects.
 fn repack_pywrapper(

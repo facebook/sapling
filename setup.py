@@ -2158,11 +2158,6 @@ rustextmodules = [
         manifest="edenscm/hgext/extlib/indexes/Cargo.toml",
     ),
     RustExtension(
-        "pyrevisionstore",
-        package="edenscm.hgext.extlib",
-        manifest="edenscm/hgext/extlib/pyrevisionstore/Cargo.toml",
-    ),
-    RustExtension(
         "threading",
         package="edenscm.mercurial.rust",
         manifest="edenscm/mercurial/rust/threading/Cargo.toml",

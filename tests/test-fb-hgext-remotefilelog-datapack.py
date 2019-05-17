@@ -13,7 +13,6 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from edenscm.hgext.extlib.pyrevisionstore import datapack as rustdatapack
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.basepack import (
     LARGEFANOUTPREFIX,
@@ -26,6 +25,7 @@ from edenscm.hgext.remotefilelog.datapack import (
     fastdatapack,
     mutabledatapack,
 )
+from edenscm.hgext.remotefilelog.pyrevisionstore import datapack as rustdatapack
 from edenscm.mercurial.node import nullid
 
 

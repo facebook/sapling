@@ -9,10 +9,14 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from edenscm.hgext.extlib.pyrevisionstore import datastore
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.contentstore import unioncontentstore
-from edenscm.hgext.remotefilelog.datapack import datapackstore, fastdatapack, mutabledatapack
+from edenscm.hgext.remotefilelog.datapack import (
+    datapackstore,
+    fastdatapack,
+    mutabledatapack,
+)
+from edenscm.hgext.remotefilelog.pyrevisionstore import datastore
 from edenscm.mercurial.node import nullid
 
 

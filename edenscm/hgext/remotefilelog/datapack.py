@@ -13,11 +13,8 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
-from ..extlib.pyrevisionstore import (
-    datapack as rustdatapack,
-    repackincrementaldatapacks,
-)
 from .lz4wrapper import lz4compress, lz4decompress
+from .pyrevisionstore import datapack as rustdatapack, repackincrementaldatapacks
 
 
 try:
