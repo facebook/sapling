@@ -4,14 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use crate::errors::ErrorKind;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
+use crate::errors::ErrorKind;
 use failure_ext::Error;
-use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
+use futures::{future, stream, Future, Sink, Stream, sync::mpsc};
 use futures_ext::{spawn_future, FutureExt};
-use mononoke_types::{blob::BlobstoreValue, ChangesetId, ContentId, FileChange, MPath};
+use mononoke_types::{ChangesetId, ContentId, FileChange, MPath, blob::BlobstoreValue};
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt;
@@ -25,9 +25,10 @@ fn check_bonsai_cs(
     file_queue: mpsc::Sender<FileInformation>,
 ) -> impl Future<Item = (), Error = Error> {
     let changeset = repo.get_bonsai_changeset(ctx.clone(), cs_id);
+    let repo_parents = repo.get_changeset_parents_by_bonsai(ctx.clone(), cs_id);
 
-    changeset.and_then({
-        move |bcs| {
+    changeset.join(repo_parents).and_then({
+        move |(bcs, repo_parents)| {
             // If hash verification fails, abort early
             let hash = *bcs.clone().into_blob().id();
             if hash != cs_id {
@@ -36,13 +37,17 @@ fn check_bonsai_cs(
 
             // Queue checks on parents
             let parents: Vec<_> = bcs.parents().collect();
+            let repo_parents_ok = if repo_parents == parents {
+                future::ok(())
+            } else {
+                future::err(ErrorKind::DbParentsMismatch(cs_id).into())
+            };
             let queue_parents = stream::iter_ok(parents.into_iter())
                 .forward(cs_queue)
                 .map(|_| ());
 
             // Queue checks on files
-            let file_changes: Vec<_> = bcs
-                .file_changes()
+            let file_changes: Vec<_> = bcs.file_changes()
                 .filter_map(|(mpath, opt_change)| {
                     FileInformation::maybe_from_change(cs_id, mpath, opt_change)
                 })
@@ -59,7 +64,7 @@ fn check_bonsai_cs(
             );
 
             queue_parents
-                .join3(bcs_verifier, queue_file_changes)
+                .join4(bcs_verifier, queue_file_changes, repo_parents_ok)
                 .map(|_| ())
                 .right_future()
         }
@@ -96,14 +101,12 @@ pub fn bonsai_checker_task(
                         repo.clone(),
                         cs_queue.clone(),
                         file_queue.clone(),
-                    )
-                    .or_else({
+                    ).or_else({
                         cloned!(error);
                         move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
                     }),
-                )
-                .map_err(|e| panic!("Could not queue error: {:#?}", e))
-                .right_future()
+                ).map_err(|e| panic!("Could not queue error: {:#?}", e))
+                    .right_future()
             }
         })
         .buffer_unordered(1000)
@@ -156,30 +159,29 @@ fn check_one_file(
         move |file| {
             let size = u64::try_from(file.size());
             if Ok(file_info.size) != size {
-                return future::err(ErrorKind::BadContentSize(file_info, file.size()).into());
+                return Err(ErrorKind::BadContentSize(file_info, file.size()).into());
             }
 
             let id = *file.into_blob().id();
             if id != file_info.id {
-                return future::err(ErrorKind::BadContentId(file_info, id).into());
+                return Err(ErrorKind::BadContentId(file_info, id).into());
             }
 
-            future::ok(())
+            Ok(())
         }
     });
 
-    let sha256_check = repo
-        .get_file_sha256(ctx.clone(), file_info.id)
+    let sha256_check = repo.get_file_sha256(ctx.clone(), file_info.id)
         .and_then(move |sha256| {
             repo.get_file_content_id_by_alias(ctx, sha256)
                 .map(move |id| (sha256, id))
         })
         .and_then(move |(sha256, new_id)| {
             if new_id != file_info.id {
-                return future::err(ErrorKind::Sha256Mismatch(file_info, sha256, new_id).into());
+                return Err(ErrorKind::Sha256Mismatch(file_info, sha256, new_id).into());
             }
 
-            future::ok(())
+            Ok(())
         });
 
     sha256_check.join(file_checks).map(|_| ())
@@ -209,9 +211,8 @@ pub fn content_checker_task(
                 spawn_future(check_one_file(file, ctx.clone(), repo.clone()).or_else({
                     cloned!(error);
                     move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
-                }))
-                .map_err(|e| panic!("Could not queue error: {:#?}", e))
-                .right_future()
+                })).map_err(|e| panic!("Could not queue error: {:#?}", e))
+                    .right_future()
             }
         })
         .buffer_unordered(1000)

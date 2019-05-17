@@ -18,6 +18,11 @@ pub enum ErrorKind {
     #[fail(display = "Changeset {} is semantically invalid: {}", _0, _1)]
     InvalidChangeset(ChangesetId, #[fail(cause)] Error),
     #[fail(
+        display = "Changeset {} has different parents in thrift and database",
+        _0
+    )]
+    DbParentsMismatch(ChangesetId),
+    #[fail(
         display = "File {} SHA256 alias does not round trip (SHA256 {} maps to ContentId {})",
         _0, _1, _2
     )]
