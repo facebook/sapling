@@ -68,7 +68,6 @@ pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &
             mpatch_lfree(patch);
             return Err("mpatch failed to apply patches");
         }
-        result.push(b'\0');
 
         mpatch_lfree(patch);
         return Ok(result);
@@ -96,12 +95,11 @@ mod tests {
     #[test]
     fn test_apply_delta() {
         let base_text = b"My data";
-        let deltas: Vec<&[u8]> = vec![
-            b"\x00\x00\x00\x03\x00\x00\x00\x03\x00\x00\x00\x0Adeltafied ",
-        ];
+        let deltas: Vec<&[u8]> =
+            vec![b"\x00\x00\x00\x03\x00\x00\x00\x03\x00\x00\x00\x0Adeltafied "];
 
         let full_text = get_full_text(&base_text[..], &deltas).unwrap();
-        assert_eq!(b"My deltafied data\0", full_text[..].as_ref());
+        assert_eq!(b"My deltafied data", full_text[..].as_ref());
     }
 
     #[test]
@@ -113,7 +111,7 @@ mod tests {
         ];
 
         let full_text = get_full_text(&base_text[..], &deltas).unwrap();
-        assert_eq!(b"My still deltafied data\0", full_text[..].as_ref());
+        assert_eq!(b"My still deltafied data", full_text[..].as_ref());
     }
 
     #[test]
@@ -136,9 +134,8 @@ mod tests {
         assert!(full_text.is_err());
 
         // Delta doesn't match base_text
-        let deltas: Vec<&[u8]> = vec![
-            b"\x00\x00\x00\xFF\x00\x00\x01\x00\x00\x00\x00\x0Adeltafied ",
-        ];
+        let deltas: Vec<&[u8]> =
+            vec![b"\x00\x00\x00\xFF\x00\x00\x01\x00\x00\x00\x00\x0Adeltafied "];
 
         let full_text = get_full_text(&base_text[..], &deltas);
         assert!(full_text.is_err());
