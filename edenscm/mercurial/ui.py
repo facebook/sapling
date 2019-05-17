@@ -259,7 +259,7 @@ class ui(object):
     def load(cls):
         """Create a ui and load global and user configs"""
         u = cls()
-        u._rcfg, errors = configparser.config.load(util.datapath)
+        u._rcfg, errors = configparser.config.load()
         if errors:
             raise error.ParseError("\n\n".join(errors))
         root = os.path.expanduser("~")

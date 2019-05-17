@@ -9,7 +9,6 @@ use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::hash::Hash;
-use std::path::Path;
 
 use bytes::Bytes;
 use dirs;
@@ -17,9 +16,9 @@ use dirs;
 use crate::config::{expand_path, ConfigSet, Options};
 use crate::error::Error;
 
-const HGPLAIN: &str = "HGPLAIN";
-const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
-const HGRCPATH: &str = "HGRCPATH";
+pub const HGPLAIN: &str = "HGPLAIN";
+pub const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
+pub const HGRCPATH: &str = "HGRCPATH";
 
 pub trait OptionsHgExt {
     /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
@@ -45,9 +44,8 @@ pub trait OptionsHgExt {
 
 pub trait ConfigSetHgExt {
     /// Load system config files if `$HGRCPATH` is not set.
-    /// `data_dir` is `mercurial.util.datapath`.
     /// Return errors parsing files.
-    fn load_system<P: AsRef<Path>>(&mut self, data_dir: P) -> Vec<Error>;
+    fn load_system(&mut self) -> Vec<Error>;
 
     /// Load user config files (and environment variables).  If `$HGRCPATH` is
     /// set, load files listed in that environment variable instead.
@@ -179,15 +177,13 @@ impl OptionsHgExt for Options {
 }
 
 impl ConfigSetHgExt for ConfigSet {
-    fn load_system<P: AsRef<Path>>(&mut self, data_dir: P) -> Vec<Error> {
+    fn load_system(&mut self) -> Vec<Error> {
         let opts = Options::new().source("system").process_hgplain();
-        let data_dir = data_dir.as_ref();
         let mut errors = Vec::new();
 
         if env::var(HGRCPATH).is_err() {
             #[cfg(unix)]
             {
-                errors.append(&mut self.load_path(data_dir.join("default.d/mergetools.rc"), &opts));
                 errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
                 // TODO(T40519286): Remove this after the tupperware overrides move out of hgrc.d
                 errors.append(
@@ -199,8 +195,8 @@ impl ConfigSetHgExt for ConfigSet {
 
             #[cfg(windows)]
             {
-                errors.append(&mut self.load_path(data_dir.join("default.d/mergetools.rc"), &opts));
                 if let Ok(program_data_path) = env::var("PROGRAMDATA") {
+                    use std::path::Path;
                     let hgrc_dir = Path::new(&program_data_path).join("Facebook\\Mercurial");
                     errors.append(&mut self.load_path(hgrc_dir.join("system.rc"), &opts));
                     // TODO(quark): Remove this after packages using system.rc are rolled out
@@ -591,7 +587,7 @@ mod tests {
 
         let mut cfg = ConfigSet::new();
 
-        cfg.load_system("");
+        cfg.load_system();
         assert!(cfg.sections().is_empty());
 
         cfg.load_user();

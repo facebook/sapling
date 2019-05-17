@@ -55,15 +55,6 @@ def envrcitems(env=None):
     return result
 
 
-def defaultrcpath():
-    """return rc paths in default.d"""
-    path = []
-    defaultpath = os.path.join(util.datapath, "default.d")
-    if os.path.isdir(defaultpath):
-        path = _expandrcpath(defaultpath)
-    return path
-
-
 def rccomponents():
     """return an ordered [(type, obj)] about where to load configs.
 
@@ -88,7 +79,7 @@ def rccomponents():
             _rccomponents.extend(("path", p) for p in _expandrcpath(p))
     else:
         normpaths = lambda paths: [("path", os.path.normpath(p)) for p in paths]
-        _rccomponents = normpaths(defaultrcpath() + systemrcpath())
+        _rccomponents = normpaths(systemrcpath())
         _rccomponents.append(envrc)
         _rccomponents.extend(normpaths(userrcpath()))
     return _rccomponents

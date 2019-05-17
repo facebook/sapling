@@ -312,12 +312,9 @@ ones.
 
   - ``<repo>/.hg/hgrc`` (per-repository)
   - ``$HOME/.hgrc`` (per-user)
-  - ``${XDG_CONFIG_HOME:-$HOME/.config}/hg/hgrc`` (per-user)
-  - ``<install-root>/etc/mercurial/hgrc`` (per-installation)
-  - ``<install-root>/etc/mercurial/hgrc.d/*.rc`` (per-installation)
-  - ``/etc/mercurial/hgrc`` (per-system)
-  - ``/etc/mercurial/hgrc.d/*.rc`` (per-system)
-  - ``<internal>/default.d/*.rc`` (defaults)
+  - ``$XDG_CONFIG_HOME/hg/hgrc`` (per-user)
+  - ``/etc/mercurial/system.rc`` (per-system)
+  - ``<builtin>`` (builtin)
 
 .. container:: verbose.windows
 
@@ -326,33 +323,8 @@ ones.
   - ``<repo>/.hg/hgrc`` (per-repository)
   - ``%USERPROFILE%\.hgrc`` (per-user)
   - ``%USERPROFILE%\Mercurial.ini`` (per-user)
-  - ``%HOME%\.hgrc`` (per-user)
-  - ``%HOME%\Mercurial.ini`` (per-user)
-  - ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial`` (per-installation)
-  - ``<install-dir>\hgrc.d\*.rc`` (per-installation)
-  - ``<install-dir>\Mercurial.ini`` (per-installation)
-  - ``<internal>/default.d/*.rc`` (defaults)
-
-  .. note::
-
-   The registry key ``HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Mercurial``
-   is used when running 32-bit Python on 64-bit Windows.
-
-.. container:: windows
-
-  On Windows 9x, ``%HOME%`` is replaced by ``%APPDATA%``.
-
-.. container:: verbose.plan9
-
-  On Plan9, the following files are consulted:
-
-  - ``<repo>/.hg/hgrc`` (per-repository)
-  - ``$home/lib/hgrc`` (per-user)
-  - ``<install-root>/lib/mercurial/hgrc`` (per-installation)
-  - ``<install-root>/lib/mercurial/hgrc.d/*.rc`` (per-installation)
-  - ``/lib/mercurial/hgrc`` (per-system)
-  - ``/lib/mercurial/hgrc.d/*.rc`` (per-system)
-  - ``<internal>/default.d/*.rc`` (defaults)
+  - ``%PROGRAMDATA%\Facebook\Mercurial`` (per-installation)
+  - ``<builtin>`` (builtin)
 
 Per-repository configuration options only apply in a
 particular repository. This file is not version-controlled, and

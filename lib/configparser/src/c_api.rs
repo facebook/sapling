@@ -86,7 +86,7 @@ pub extern "C" fn hgrc_configset_load_system(cfg: *mut ConfigSet) -> *mut Bytes 
     // Forces datapath to be the empty string as it doesn't
     // appear to play a useful role in simply resolving config
     // settings for Eden.
-    errors_to_bytes(cfg.load_system(""))
+    errors_to_bytes(cfg.load_system())
 }
 
 /// Load user config files
