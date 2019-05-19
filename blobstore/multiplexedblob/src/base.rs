@@ -4,7 +4,19 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use blobstore::Blobstore;
+use cloned::cloned;
+use context::CoreContext;
+use failure::err_msg;
+use failure_ext::{Error, Fail};
+use futures::future::{self, Future, Loop};
+use futures_ext::{BoxFuture, FutureExt};
+use futures_stats::Timed;
+use lazy_static::lazy_static;
+use metaconfig_types::BlobstoreId;
+use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
+use scuba::{ScubaClient, ScubaSample};
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
@@ -13,24 +25,10 @@ use std::sync::{
     Arc,
 };
 use std::time::Duration;
-
-use cloned::cloned;
-use failure::err_msg;
-use failure_ext::{Error, Fail};
-use futures::future::{self, Future, Loop};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_stats::Timed;
-use lazy_static::lazy_static;
-use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
 use tokio::executor::spawn;
 use tokio::prelude::FutureExt as TokioFutureExt;
 use tokio::timer::timeout::Error as TimeoutError;
-
-use blobstore::Blobstore;
-use context::CoreContext;
-use metaconfig_types::BlobstoreId;
-use mononoke_types::BlobstoreBytes;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
@@ -77,15 +75,15 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 }
 
 pub struct MultiplexedBlobstoreBase {
-    blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
-    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
+    blobstores: Arc<[(BlobstoreId, Arc<Blobstore>)]>,
+    handler: Arc<MultiplexedBlobstorePutHandler>,
     scuba_logger: Option<Arc<ScubaClient>>,
 }
 
 impl MultiplexedBlobstoreBase {
     pub fn new(
-        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
-        handler: Arc<dyn MultiplexedBlobstorePutHandler>,
+        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
+        handler: Arc<MultiplexedBlobstorePutHandler>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         Self {
@@ -217,9 +215,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
             blobstore
                 .put(ctx.clone(), key.clone(), value.clone())
                 .timeout(REQUEST_TIMEOUT)
-                .map_err({
-                    move |error| remap_timeout_error(error)
-                })
+                .map_err({ move |error| remap_timeout_error(error) })
                 .and_then({
                     cloned!(ctx, key, blobstore_id, self.handler);
                     move |_| handler.on_put(ctx, blobstore_id, key)
