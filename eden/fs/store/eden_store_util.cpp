@@ -12,6 +12,7 @@
 #include <optional>
 
 #include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/container/Array.h>
 #include <folly/container/Enumerate.h>
 #include <folly/init/Init.h>
@@ -197,8 +198,10 @@ class ShowSizesCommand : public Command {
 
     for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
       LOG(INFO) << "Column family \"" << iter->name << "\": "
-                << localStore->getApproximateSize(
-                       static_cast<LocalStore::KeySpace>(iter.index));
+                << folly::prettyPrint(
+                       localStore->getApproximateSize(
+                           static_cast<LocalStore::KeySpace>(iter.index)),
+                       folly::PRETTY_BYTES_METRIC);
     }
   }
 };
