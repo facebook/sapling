@@ -40,14 +40,15 @@
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 00422fad0026
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets 00422fad0026
   (run 'hg update' to get a working copy)
+  new changesets 00422fad0026
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp

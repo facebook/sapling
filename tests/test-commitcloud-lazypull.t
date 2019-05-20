@@ -94,14 +94,15 @@ Sync from the second client and `hg unamend` there
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling b68dd726c6c6
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets b68dd726c6c6
   (run 'hg update' to get a working copy)
+  new changesets b68dd726c6c6
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -184,6 +185,7 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling cb45bbd0ae75 74b668b6b779
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -194,8 +196,8 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
-  new changesets cb45bbd0ae75:74b668b6b779
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets cb45bbd0ae75:74b668b6b779
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions

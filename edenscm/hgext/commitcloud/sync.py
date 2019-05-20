@@ -17,6 +17,7 @@ from edenscm.mercurial import (
     hintutil,
     node as nodemod,
     obsolete,
+    progress,
     util,
     visibility,
 )
@@ -221,6 +222,11 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage):
             for head in newheads
             if head in cloudrefs.headdates and cloudrefs.headdates[head] < mindate
         ]
+        if omittedheads:
+            repo.ui.status(_("omitting heads that are older than %d days:\n") % maxage)
+            for head in omittedheads:
+                headdatestr = util.datestr(util.makedate(cloudrefs.headdates[head]))
+                repo.ui.status(_("  %s from %s\n") % (head[:12], headdatestr))
         newheads = [head for head in newheads if head not in omittedheads]
     else:
         omittedheads = []
@@ -248,58 +254,45 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage):
 
     backuplock.progresspulling(repo, [nodemod.bin(node) for node in newheads])
 
-    if newheads:
-        # Replace the exchange pullbookmarks function with one which updates the
-        # user's synced bookmarks.  This also means we don't partially update a
-        # subset of the remote bookmarks if they happen to be included in the
-        # pull.
-        def _pullbookmarks(orig, pullop):
-            if "bookmarks" in pullop.stepsdone:
-                return
-            pullop.stepsdone.add("bookmarks")
-            tr = pullop.gettransaction()
-            omittedbookmarks.extend(
-                _mergebookmarks(pullop.repo, tr, cloudrefs.bookmarks, lastsyncstate)
-            )
+    with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+        if newheads:
+            # Disable pulling of bookmarks.
+            def _pullbookmarks(orig, pullop):
+                pass
 
-        # Replace the exchange pullobsolete function with one which adds the
-        # cloud obsmarkers to the repo and updates visibility to match the
-        # cloud heads.
-        def _pullobsolete(orig, pullop):
-            if "obsmarkers" in pullop.stepsdone:
-                return
-            pullop.stepsdone.add("obsmarkers")
-            tr = pullop.gettransaction()
-            _mergeobsmarkers(pullop.repo, tr, cloudrefs.obsmarkers)
-            if newvisibleheads is not None:
-                visibility.setvisibleheads(
-                    pullop.repo, [nodemod.bin(n) for n in newvisibleheads]
-                )
+            # Disable pulling of obsmarkers.
+            def _pullobsolete(orig, pullop):
+                pass
 
-        # Disable pulling of remotenames.
-        def _pullremotenames(orig, repo, remote, bookmarks):
-            pass
+            # Disable pulling of remotenames.
+            def _pullremotenames(orig, repo, remote, bookmarks):
+                pass
 
-        pullopts["rev"] = newheads
-        with extensions.wrappedfunction(
-            exchange, "_pullobsolete", _pullobsolete
-        ), extensions.wrappedfunction(
-            exchange, "_pullbookmarks", _pullbookmarks
-        ), extensions.wrappedfunction(
-            remotenames, "pullremotenames", _pullremotenames
-        ) if remotenames else util.nullcontextmanager():
-            pullcmd(repo.ui, repo, remotepath, **pullopts)
+            # Partition the heads into groups we can pull together.
+            headgroups = _partitionheads(newheads, cloudrefs.headdates)
 
-    else:
-        with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
-            omittedbookmarks.extend(
-                _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
-            )
-            _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
-            if newvisibleheads is not None:
-                visibility.setvisibleheads(
-                    repo, [nodemod.bin(n) for n in newvisibleheads]
-                )
+            with extensions.wrappedfunction(
+                exchange, "_pullobsolete", _pullobsolete
+            ), extensions.wrappedfunction(
+                exchange, "_pullbookmarks", _pullbookmarks
+            ), extensions.wrappedfunction(
+                remotenames, "pullremotenames", _pullremotenames
+            ) if remotenames else util.nullcontextmanager():
+                with progress.bar(
+                    repo.ui, _("pulling from commit cloud"), total=len(headgroups)
+                ) as prog:
+                    for index, headgroup in enumerate(headgroups):
+                        headgroupstr = " ".join([head[:12] for head in headgroup])
+                        repo.ui.status(_("pulling %s\n") % headgroupstr)
+                        prog.value = (index, headgroupstr)
+                        pullopts["rev"] = headgroup
+                        pullcmd(repo.ui, repo, remotepath, **pullopts)
+        omittedbookmarks.extend(
+            _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
+        )
+        _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
+        if newvisibleheads is not None:
+            visibility.setvisibleheads(repo, [nodemod.bin(n) for n in newvisibleheads])
 
     # Obsmarker sharing is unreliable.  Some of the commits that should now
     # be visible might be hidden still, and some commits that should be
@@ -355,6 +348,54 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage):
     # otherwise the server wouldn't have told us about them.
     state = backupstate.BackupState(repo, remotepath)
     state.update([nodemod.bin(head) for head in newheads])
+
+
+def _partitionheads(heads, headdates, sizelimit=4, spanlimit=86400):
+    """partition a list of heads into groups limited by size and timespan
+
+    Partitions the list of heads into a list of head groups.  Each head group
+    contains at most sizelimit heads, and all the heads have a date within
+    spanlimit of each other in the headdates map.
+
+    The head ordering is preserved, as we want to pull commits in the same order
+    so that order-dependent views like smartlog match as closely as possible on
+    different synced machines.  This may mean potential groups get split up if a
+    head with a different date is in the middle.
+
+    >>> _partitionheads([1, 2, 3, 4], {1: 1, 2: 2, 3: 3, 4: 4}, sizelimit=2, spanlimit=10)
+    [[1, 2], [3, 4]]
+    >>> _partitionheads([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=10)
+    [[1, 2], [3, 4]]
+    >>> _partitionheads([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=30)
+    [[1, 2, 3, 4]]
+    >>> _partitionheads([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=5)
+    [[1], [2], [3], [4]]
+    >>> _partitionheads([1, 2, 3, 9, 4], {1: 10, 2: 20, 3: 30, 4: 40, 9: 90}, sizelimit=8, spanlimit=30)
+    [[1, 2, 3], [9], [4]]
+    """
+    headgroups = []
+    headsbydate = [(headdates.get(head, 0), head) for head in heads]
+    headgroup = None
+    groupstartdate = None
+    groupenddate = None
+    for date, head in headsbydate:
+        if (
+            headgroup is None
+            or len(headgroup) >= sizelimit
+            or date < groupstartdate
+            or date > groupenddate
+        ):
+            if headgroup:
+                headgroups.append(headgroup)
+            headgroup = []
+            groupstartdate = date - spanlimit
+            groupenddate = date + spanlimit
+        headgroup.append(head)
+        groupstartdate = max(groupstartdate, date - spanlimit)
+        groupenddate = min(groupenddate, date + spanlimit)
+    if headgroup:
+        headgroups.append(headgroup)
+    return headgroups
 
 
 def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):

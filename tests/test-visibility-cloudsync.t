@@ -70,6 +70,7 @@ Create another client and use it to modify the commits and create some new ones.
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 6ba5de8abe43 c70a9bd6bfd1
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -80,8 +81,8 @@ Create another client and use it to modify the commits and create some new ones.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files (+1 heads)
-  new changesets dae3b312bb78:c70a9bd6bfd1
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets dae3b312bb78:c70a9bd6bfd1
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -156,6 +157,7 @@ Now cloud sync.  The sets of commits should be merged.
   remote:     c70a9bd6bfd1  E
   remote:     ba83c5428cb2  F
   remote:     6caded0e9807  D
+  pulling d8fc5ae9b7ef dd114d9b2f9e
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -166,8 +168,8 @@ Now cloud sync.  The sets of commits should be merged.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files (+1 heads)
-  new changesets d8fc5ae9b7ef:dd114d9b2f9e
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  new changesets d8fc5ae9b7ef:dd114d9b2f9e
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -191,6 +193,7 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   $ cd $TESTTMP/client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling ba83c5428cb2 6caded0e9807
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -201,8 +204,8 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
-  new changesets ba83c5428cb2:6caded0e9807
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  new changesets ba83c5428cb2:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -256,6 +259,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling d8fc5ae9b7ef dd114d9b2f9e ba83c5428cb2 6caded0e9807
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -274,8 +278,8 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
-  new changesets dae3b312bb78:6caded0e9807
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets dae3b312bb78:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -328,15 +332,16 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ cd ../client3
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 1ef69cfd595b
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 3 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets 1ef69cfd595b
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * sec (glob)
 

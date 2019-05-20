@@ -141,14 +141,15 @@ Sync from the second client - the commit should appear
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling fa5d62c46fd7
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets fa5d62c46fd7
   (run 'hg update' to get a working copy)
+  new changesets fa5d62c46fd7
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -175,14 +176,15 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   $ hg bookmark -r 0 bookmark1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 02f6fc2b7154
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  new changesets 02f6fc2b7154
   (run 'hg update' to get a working copy)
+  new changesets 02f6fc2b7154
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -263,15 +265,16 @@ Sync the amended commit to the other client
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 48610b1a7ec0
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   new changesets a7bb357e7299:48610b1a7ec0
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
@@ -333,15 +336,16 @@ Expected result: the message telling that revision has been moved to another rev
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 41f3b9359864
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets 41f3b9359864
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
@@ -396,15 +400,16 @@ Expected result: client2 should be moved to the amended version
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 8134e74ecdc8
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets 8134e74ecdc8
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been moved remotely to 8134e74ecdc8
@@ -454,6 +459,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   $ hg up 41f3b9359864 -q
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling abd5311ab3c6 cebbb614447e
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -464,8 +470,8 @@ Expected result: move should not happen, expect a message that move is ambiguous
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
-  new changesets abd5311ab3c6:cebbb614447e
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  new changesets abd5311ab3c6:cebbb614447e
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been replaced remotely with multiple revisions
@@ -518,15 +524,16 @@ Expected result: client2 should be moved to fada67350ab0
   $ hg up abd5311ab3c6 -q
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling fada67350ab0
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets fada67350ab0
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision abd5311ab3c6 has been moved remotely to fada67350ab0
@@ -876,6 +883,7 @@ And the commits should now be availble in the other client.
   $ cd ../client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling a6b97eebbf74 9bd68ef10d6b
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -886,8 +894,8 @@ And the commits should now be availble in the other client.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
-  new changesets a6b97eebbf74:9bd68ef10d6b
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  new changesets a6b97eebbf74:9bd68ef10d6b
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -954,6 +962,7 @@ Commit still becomes available in the other repo
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 9a3e7907fd5c 799d22972c4e
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -964,8 +973,8 @@ Commit still becomes available in the other repo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  new changesets e58a6603d256:799d22972c4e
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  new changesets e58a6603d256:799d22972c4e
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -1024,6 +1033,7 @@ Sync this onto the second client, the remote bookmarks don't change.
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 2da6c73964b8
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -1034,9 +1044,9 @@ Sync this onto the second client, the remote bookmarks don't change.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 3 files
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   new changesets acd5b9e8c656:2da6c73964b8
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1085,6 +1095,7 @@ Rebase the commits again, and resync to the first client.
   $ cd ../client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling af621240884f
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -1095,9 +1106,9 @@ Rebase the commits again, and resync to the first client.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 3 files
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   new changesets 97250524560a:af621240884f
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1181,6 +1192,7 @@ Rejoin
   commitcloud: trying to reconnect to the 'user/test/default' workspace for the 'server' repo
   commitcloud: the repository is now reconnected
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 799d22972c4e af621240884f
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -1191,8 +1203,8 @@ Rejoin
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
-  new changesets 3597ff85ead0:af621240884f
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets 3597ff85ead0:af621240884f
   commitcloud: commits synchronized
   finished in * (glob)
 

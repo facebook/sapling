@@ -151,14 +151,15 @@ Connect to commit cloud
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 878302dcadc7
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 3 files (+1 heads)
-  new changesets 64b4d9634423:878302dcadc7
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets 64b4d9634423:878302dcadc7
   detected obsmarker inconsistency (fixing by obsoleting [] and reviving [449486ddff7a, 65299708466c, 27ad02806080])
   commitcloud: commits synchronized
   finished in * (glob)

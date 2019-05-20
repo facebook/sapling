@@ -148,14 +148,15 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 95847be64d6a
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  new changesets 95847be64d6a
   (run 'hg update' to get a working copy)
+  new changesets 95847be64d6a
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -187,14 +188,15 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 95847be64d6a
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  new changesets 95847be64d6a
   (run 'hg update' to get a working copy)
+  new changesets 95847be64d6a
   commitcloud: commits synchronized
   finished in * (glob)
 
