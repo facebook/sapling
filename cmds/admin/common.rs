@@ -4,9 +4,40 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use blobrepo::BlobRepo;
 use bookmarks::{Bookmark, BookmarkUpdateReason};
-use mononoke_types::{DateTime, Timestamp};
+use cloned::cloned;
+use context::CoreContext;
+use failure_ext::{err_msg, Error};
+use futures::future::Future;
+use mercurial_types::HgChangesetId;
+use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
+use std::str::FromStr;
+
+pub const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
+
+pub fn fetch_bonsai_changeset(
+    ctx: CoreContext,
+    rev: &str,
+    repo: &BlobRepo,
+) -> impl Future<Item = BonsaiChangeset, Error = Error> {
+    let hg_changeset_id = resolve_hg_rev(ctx.clone(), repo, rev);
+
+    hg_changeset_id
+        .and_then({
+            cloned!(ctx, repo);
+            move |hg_cs| repo.get_bonsai_from_hg(ctx, hg_cs)
+        })
+        .and_then({
+            let rev = rev.to_string();
+            move |maybe_bonsai| maybe_bonsai.ok_or(err_msg(format!("bonsai not found for {}", rev)))
+        })
+        .and_then({
+            cloned!(ctx, repo);
+            move |bonsai| repo.get_bonsai_changeset(ctx, bonsai)
+        })
+}
 
 pub fn format_bookmark_log_entry(
     json_flag: bool,
@@ -38,4 +69,20 @@ pub fn format_bookmark_log_entry(
             None => format!("({}) {} {} {}", bookmark, changeset_id, reason, dts),
         }
     }
+}
+
+pub fn resolve_hg_rev(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    rev: &str,
+) -> impl Future<Item = HgChangesetId, Error = Error> {
+    let book = Bookmark::new(&rev).unwrap();
+    let hash = HgChangesetId::from_str(rev);
+
+    repo.get_bookmark(ctx, &book).and_then({
+        move |r| match r {
+            Some(cs) => Ok(cs),
+            None => hash,
+        }
+    })
 }
