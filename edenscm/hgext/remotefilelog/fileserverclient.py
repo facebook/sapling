@@ -477,16 +477,7 @@ class fileserverclient(object):
         try:
             # receive cache misses from master
             if missedfiles > 0:
-                datapackpath, histpackpath = self._fetchpackfiles(
-                    misses, fetchdata, fetchhistory
-                )
-
-                if datapackpath:
-                    fileslog.contentstore.markforrefresh()
-                if histpackpath:
-                    fileslog.metadatastore.markforrefresh()
-
-                self.updatecache(datapackpath, histpackpath)
+                self._fetchpackfiles(misses, fetchdata, fetchhistory)
         finally:
             os.umask(oldumask)
 
@@ -700,7 +691,7 @@ class fileserverclient(object):
 
     def _fetchpackfiles(self, fileids, fetchdata, fetchhistory):
         """Requests the given file revisions from the server in a pack files
-        format. Returns pair of the data pack and history pack paths.
+        format.
 
         See `remotefilelogserver.getpack` for the file format.
         """
@@ -708,7 +699,7 @@ class fileserverclient(object):
         # Try fetching packs via HTTP first; fall back to SSH on error.
         if edenapi.enabled(self.ui):
             try:
-                return self._httpfetchpacks(fileids, fetchdata, fetchhistory)
+                self._httpfetchpacks(fileids, fetchdata, fetchhistory)
             except Exception as e:
                 self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
                 self.ui.develwarn(str(e))
@@ -741,7 +732,6 @@ class fileserverclient(object):
                 fetched_files=rcvd,
                 total_to_fetch=total,
             )
-            return None, None
         except Exception:
             self.ui.log(
                 "remotefilefetchlog",
@@ -782,10 +772,10 @@ class fileserverclient(object):
         fileids = [tuple(i) for i in fileids]
 
         dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
-        datapackpath = self._httpfetchdata(fileids, dpack) if fetchdata else None
-        histpackpath = self._httpfetchhistory(fileids, hpack) if fetchhistory else None
-
-        return datapackpath, histpackpath
+        if fetchdata:
+            self._httpfetchdata(fileids, dpack)
+        if fetchhistory:
+            self._httpfetchhistory(fileids, hpack)
 
     def _httpfetchdata(self, fileids, dpack):
         """Fetch file data over HTTP using the Eden API"""
@@ -803,7 +793,7 @@ class fileserverclient(object):
                     prog._total = dlt
                     prog.value = dl
 
-            return self.repo.edenapi.get_files(fileids, dpack, progcallback)
+            self.repo.edenapi.get_files(fileids, dpack, progcallback)
 
     def _httpfetchhistory(self, fileids, hpack, depth=None):
         """Fetch file history over HTTP using the Eden API"""
@@ -821,7 +811,7 @@ class fileserverclient(object):
                     prog._total = dlt
                     prog.value = dl
 
-            return self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
+            self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
 
     def connect(self):
         if self.cacheprocess:
