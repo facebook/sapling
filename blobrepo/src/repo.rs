@@ -33,7 +33,7 @@ use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
@@ -2326,66 +2326,69 @@ impl CreateChangeset {
 
         let complete_changesets = repo.changesets.clone();
         cloned!(repo, repo.repoid);
-        ChangesetHandle::new_pending(
-            can_be_parent.shared(),
-            changeset
-                .join(parents_complete)
-                .and_then({
-                    cloned!(ctx, repo.bonsai_hg_mapping);
-                    move |((hg_cs, bonsai_cs), _)| {
-                        let bcs_id = bonsai_cs.get_changeset_id();
-                        let bonsai_hg_entry = BonsaiHgMappingEntry {
-                            repo_id: repoid.clone(),
-                            hg_cs_id: hg_cs.get_changeset_id(),
-                            bcs_id,
-                        };
-
-                        bonsai_hg_mapping
-                            .add(ctx.clone(), bonsai_hg_entry)
-                            .map(move |_| (hg_cs, bonsai_cs))
-                            .context("While inserting mapping")
-                            .traced_with_id(
-                                &ctx.trace(),
-                                "uploading bonsai hg mapping",
-                                trace_args!(),
-                                event_id,
-                            )
-                    }
-                })
-                .and_then(move |(hg_cs, bonsai_cs)| {
-                    let completion_record = ChangesetInsert {
-                        repo_id: repo.repoid,
-                        cs_id: bonsai_cs.get_changeset_id(),
-                        parents: bonsai_cs.parents().into_iter().collect(),
+        let changeset_complete_fut = changeset
+            .join(parents_complete)
+            .and_then({
+                cloned!(ctx, repo.bonsai_hg_mapping);
+                move |((hg_cs, bonsai_cs), _)| {
+                    let bcs_id = bonsai_cs.get_changeset_id();
+                    let bonsai_hg_entry = BonsaiHgMappingEntry {
+                        repo_id: repoid.clone(),
+                        hg_cs_id: hg_cs.get_changeset_id(),
+                        bcs_id,
                     };
-                    complete_changesets
-                        .add(ctx.clone(), completion_record)
-                        .map(|_| (bonsai_cs, hg_cs))
-                        .context("While inserting into changeset table")
+
+                    bonsai_hg_mapping
+                        .add(ctx.clone(), bonsai_hg_entry)
+                        .map(move |_| (hg_cs, bonsai_cs))
+                        .context("While inserting mapping")
                         .traced_with_id(
                             &ctx.trace(),
-                            "uploading final changeset",
+                            "uploading bonsai hg mapping",
                             trace_args!(),
                             event_id,
                         )
-                })
-                .with_context(move |_| {
-                    format!(
-                        "While creating Changeset {:?}, uuid: {}",
-                        expected_nodeid, uuid
+                }
+            })
+            .and_then(move |(hg_cs, bonsai_cs)| {
+                let completion_record = ChangesetInsert {
+                    repo_id: repo.repoid,
+                    cs_id: bonsai_cs.get_changeset_id(),
+                    parents: bonsai_cs.parents().into_iter().collect(),
+                };
+                complete_changesets
+                    .add(ctx.clone(), completion_record)
+                    .map(|_| (bonsai_cs, hg_cs))
+                    .context("While inserting into changeset table")
+                    .traced_with_id(
+                        &ctx.trace(),
+                        "uploading final changeset",
+                        trace_args!(),
+                        event_id,
                     )
-                })
-                .map_err(|e| Error::from(e).compat())
-                .timed({
-                    move |stats, result| {
-                        if result.is_ok() {
-                            scuba_logger
-                                .add_future_stats(&stats)
-                                .log_with_msg("CreateChangeset Finished", None);
-                        }
-                        Ok(())
+            })
+            .with_context(move |_| {
+                format!(
+                    "While creating Changeset {:?}, uuid: {}",
+                    expected_nodeid, uuid
+                )
+            })
+            .map_err(Error::from)
+            .timed({
+                move |stats, result| {
+                    if result.is_ok() {
+                        scuba_logger
+                            .add_future_stats(&stats)
+                            .log_with_msg("CreateChangeset Finished", None);
                     }
-                })
+                    Ok(())
+                }
+            });
+
+        ChangesetHandle::new_pending(
+            can_be_parent.shared(),
+            spawn_future(changeset_complete_fut)
+                .map_err(|e| Error::from(e).compat())
                 .boxify()
                 .shared(),
         )
