@@ -104,6 +104,7 @@ Sync from the second client - the commits should appear
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
+  pulling 44641a2b1a42
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -111,8 +112,8 @@ Sync from the second client - the commits should appear
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files
-  new changesets 660cb078da57:44641a2b1a42
   (run 'hg update' to get a working copy)
+  new changesets 660cb078da57:44641a2b1a42
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -143,6 +144,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   $ hg bookmark -r 0 bookmark1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
+  pulling 58508421158d
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -150,8 +152,8 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files (+1 heads)
-  new changesets 15f040cf571c:58508421158d
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  new changesets 15f040cf571c:58508421158d
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -189,6 +191,7 @@ On the second client sync it
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
+  pulling 8e3f03f8d9db
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -196,9 +199,9 @@ On the second client sync it
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files
+  (run 'hg update' to get a working copy)
   obsoleted 3 changesets
   new changesets f0345b3976c9:8e3f03f8d9db
-  (run 'hg update' to get a working copy)
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
@@ -310,6 +313,7 @@ Commit still becomes available in the other repo
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
+  pulling ec61bf312a03 88d416aed919
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
@@ -317,8 +321,8 @@ Commit still becomes available in the other repo
   adding manifests
   adding file changes
   added 4 changesets with 0 changes to 0 files (+2 heads)
-  new changesets * (glob)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  new changesets * (glob)
   commitcloud: commits synchronized
   finished in * (glob)
 
