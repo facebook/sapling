@@ -25,6 +25,7 @@ from edenscm.mercurial.i18n import _
 
 from . import (
     backupbookmarks,
+    backuplock,
     backupstate,
     commitcloudcommon,
     commitcloudutil,
@@ -52,15 +53,6 @@ def _getbookmarks(repo):
     return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
 
 
-def _backingupsyncprogress(repo, backingup):
-    backingupmsg = (
-        "backing up %s" % backingup[0][:12]
-        if len(backingup) == 1
-        else "backing up %d commits" % len(backingup)
-    )
-    commitcloudutil.writesyncprogress(repo, backingupmsg, backingup=backingup)
-
-
 def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     start = time.time()
 
@@ -75,9 +67,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
         component="commitcloud",
     )
 
-    commitcloudutil.writesyncprogress(
-        repo, "starting synchronizing with '%s'" % workspacename
-    )
+    backuplock.progress(repo, "starting synchronizing with '%s'" % workspacename)
 
     lastsyncstate = syncstate.SyncState(repo, workspacename)
     remotepath = commitcloudutil.getremotepath(repo, dest)
@@ -123,9 +113,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
 
     # the remote backend for storing Commit Cloud commit have been changed
     if lastsyncstate.remotepath and remotepath != lastsyncstate.remotepath:
-        commitcloudutil.writesyncprogress(
-            repo, "verifying backed up heads at '%s'" % remotepath
-        )
+        backuplock.progress(repo, "verifying backed up heads at '%s'" % remotepath)
         # make sure cloudrefs.heads have been backed up at this remote path
         verifybackedupheads(
             repo, remotepath, lastsyncstate.remotepath, getconnection, cloudrefs.heads
@@ -215,7 +203,9 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
                     nodemod.hex(n)
                     for n in unfi.nodes("draft() & ::%ls - ::%ls", newheads, oldheads)
                 ]
-                _backingupsyncprogress(repo, backingup)
+                backuplock.progressbackingup(
+                    repo, [nodemod.bin(node) for node in backingup]
+                )
                 newheads, failedheads = dependencies.infinitepush.pushbackupbundlestacks(
                     ui, repo, getconnection, newheads
                 )
@@ -296,7 +286,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
                 )
 
             # Update the cloud heads, bookmarks and obsmarkers.
-            commitcloudutil.writesyncprogress(
+            backuplock.progress(
                 repo, "finishing synchronizing with '%s'" % workspacename
             )
             synced, cloudrefs = serv.updatereferences(
@@ -322,7 +312,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
                 if obsmarkers:
                     commitcloudutil.clearsyncingobsmarkers(repo)
 
-    commitcloudutil.writesyncprogress(repo)
+    backuplock.progresscomplete(repo)
     if pushfailures:
         raise commitcloudcommon.SynchronizationError(
             ui, _("%d heads could not be pushed") % len(pushfailures)
@@ -351,7 +341,7 @@ def maybeupdateworkingcopy(ui, repo, currentnode):
         )
         if ui.configbool("commitcloud", "updateonmove"):
             if repo[destination].mutable():
-                commitcloudutil.writesyncprogress(
+                backuplock.progress(
                     repo,
                     "updating %s from %s to %s"
                     % (
@@ -392,7 +382,7 @@ def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
 
     if notbackeduplocalheads:
         backingup = list(notbackeduplocalheads)
-        _backingupsyncprogress(repo, backingup)
+        backuplock.progressbackingup(repo, [nodemod.bin(node) for node in backingup])
         repo.ui.status(_("pushing to %s\n") % remotepath)
         dependencies.infinitepush.pushbackupbundlestacks(
             repo.ui, repo, getconnection, backingup
@@ -404,12 +394,12 @@ def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
         repo.ui.status(
             _("some heads are missing at %s\n") % remotepath, component="commitcloud"
         )
-        commitcloudutil.writesyncprogress(repo, "pulling %s" % missingheads[0][:12])
+        backuplock.progresspulling(repo, [nodemod.bin(node) for node in missingheads])
         pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
         pullopts["rev"] = missingheads
         pullcmd(repo.ui, repo.unfiltered(), oldremotepath, **pullopts)
         backingup = list(missingheads)
-        _backingupsyncprogress(repo, backingup)
+        backuplock.progressbackingup(repo, [nodemod.bin(node) for node in backingup])
         repo.ui.status(_("pushing to %s\n") % remotepath)
         dependencies.infinitepush.pushbackupbundlestacks(
             repo.ui, repo, getconnection, backingup
@@ -480,14 +470,7 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
             }
             newvisibleheads = [head for head in newvisibleheads if head not in toremove]
 
-    if len(newheads) > 1:
-        commitcloudutil.writesyncprogress(
-            repo, "pulling %d new heads" % len(newheads), newheads=newheads
-        )
-    elif len(newheads) == 1:
-        commitcloudutil.writesyncprogress(
-            repo, "pulling %s" % nodemod.short(newheads[0]), newheads=newheads
-        )
+    backuplock.progresspulling(repo, [nodemod.bin(node) for node in newheads])
 
     if newheads:
         # Replace the exchange pullbookmarks function with one which updates the

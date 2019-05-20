@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from edenscm.mercurial import node as nodemod, smartset
 from edenscm.mercurial.i18n import _, _n
 
-from . import backupstate, commitcloudutil, dependencies
+from . import backuplock, backupstate, commitcloudutil, dependencies
 
 
 def backup(repo, revs=None, dest=None, **opts):
@@ -95,6 +95,10 @@ def backup(repo, revs=None, dest=None, **opts):
             heads = sorted(heads, reverse=True)[:backuplimit]
 
     # Back up the new heads.
+    backuplock.progressbackingup(
+        repo,
+        list(unfi.nodes("(draft() & ::%ld) - (draft() & ::%ln)", heads, state.heads)),
+    )
     newheads, failedheads = dependencies.infinitepush.pushbackupbundlestacks(
         repo.ui, unfi, getconnection, [nodemod.hex(n) for n in unfi.nodes("%ld", heads)]
     )

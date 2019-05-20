@@ -6,9 +6,7 @@
 from __future__ import absolute_import
 
 # Standard Library
-import errno
 import hashlib
-import json
 import os
 import socket
 from subprocess import PIPE, Popen
@@ -473,103 +471,7 @@ def getremotepath(repo, dest):
     return path.pushloc or path.loc
 
 
-def getprocessetime(locker):
-    """return etime in seconds for the process that is
-     holding the lock
-    """
-    # TODO: support windows in another diff
-    if not pycompat.isposix:
-        return None
-    if not locker.pid or not locker.issamenamespace():
-        return None
-    try:
-        pid = locker.pid
-        p = Popen(
-            ["ps", "-o", "etime=", pid],
-            stdin=None,
-            close_fds=util.closefds,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
-        (stdoutdata, stderrdata) = p.communicate()
-        if p.returncode == 0 and stdoutdata:
-            etime = stdoutdata.strip()
-            # `ps` format for etime is [[dd-]hh:]mm:s
-            # examples:
-            #     '21-18:26:30',
-            #     '06-00:15:30',
-            #     '15:28:37',
-            #      '48:14',
-            #      '00:01'
-            splits = etime.replace("-", ":").split(":")
-            t = [int(i) for i in reversed(splits)] + [0] * (4 - len(splits))
-            etimesec = t[3] * 86400 + t[2] * 3600 + t[1] * 60 + t[0]
-            return etimesec
-    except Exception:
-        return None
-
-
-# Sync progress reporting
-# Progress reports for ongoing syncs are written to a file (protected by the
-# infinitepush backup lock). This file contains JSON format data of the form:
-# {
-#    "step": "description of the current step",
-#    "data": { ... }
-# }
-# The "data" dict may contain:
-#    "newheads", a list of commit hashes of the heads of new commits that are
-#    being pulled into the repo
-#    "backingup", a list of commit hashes of commits that are being backed up
-_syncprogress = "commitcloudsyncprogress"
-
-
-def writesyncprogress(repo, step=None, **kwargs):
-    if step is None:
-        repo.sharedvfs.tryunlink(_syncprogress)
-    else:
-        with repo.sharedvfs.open(_syncprogress, "w", atomictemp=True) as f:
-            data = {"step": str(step), "data": kwargs}
-            json.dump(data, f)
-
-
-def getsyncprogress(repo):
-    try:
-        data = json.load(repo.sharedvfs.open(_syncprogress))
-    except IOError as e:
-        if e.errno != errno.ENOENT:
-            raise
-    else:
-        return data.get("step")
-
-
 def getcommandandoptions(command):
     cmd = commands.table[command][0]
     opts = dict(opt[1:3] for opt in commands.table[command][1])
     return cmd, opts
-
-
-def backuplockcheck(ui, repo):
-    try:
-        with lockmod.trylock(
-            ui, repo.sharedvfs, commitcloudcommon.backuplockname, 0, 0
-        ):
-            pass
-    except error.LockHeld as e:
-        if e.lockinfo.isrunning():
-            lockinfo = e.lockinfo
-            etime = getprocessetime(lockinfo)
-            if etime:
-                minutes, seconds = divmod(etime, 60)
-                etimemsg = _("\n(pid %s on %s, running for %d min %d sec)") % (
-                    lockinfo.uniqueid,
-                    lockinfo.namespace,
-                    minutes,
-                    seconds,
-                )
-            else:
-                etimemsg = ""
-            bgstep = getsyncprogress(repo) or "synchronizing"
-            ui.status(
-                _("background cloud sync is in progress: %s%s\n") % (bgstep, etimemsg),
-                component="commitcloud",
-            )

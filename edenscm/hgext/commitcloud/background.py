@@ -146,7 +146,7 @@ def _transaction(orig, self, *args, **kwargs):
     return orig(self, *args, **kwargs)
 
 
-def backgroundbackupother(repo, command=None, dest=None, **opts):
+def backgroundbackupother(repo, dest=None, **opts):
     """start background backup for the other remote
 
     Commit cloud can be configured to back up to a secondary backup server by
@@ -161,7 +161,7 @@ def backgroundbackupother(repo, command=None, dest=None, **opts):
         remotepath = None
     if remotepath and remotepath.loc != commitcloudutil.getremotepath(repo, dest):
         repo.ui.debug("starting background backup to %s\n" % remotepath.loc)
-        backgroundbackup(repo, command, dest=other, **opts)
+        backgroundbackup(repo, ["hg", "cloud", "backup"], dest=other, **opts)
 
 
 def backgroundbackup(repo, command=None, dest=None, **opts):

@@ -28,6 +28,7 @@ from . import (
     background,
     backup,
     backupbookmarks,
+    backuplock,
     backupstate,
     commitcloudcommon,
     commitcloudutil,
@@ -348,11 +349,12 @@ def cloudbackup(ui, repo, *revs, **opts):
         background.backgroundbackup(repo, **opts)
         return 0
 
-    backedup, failed = backup.backup(repo, revs, **opts)
+    with backuplock.lock(repo):
+        backedup, failed = backup.backup(repo, revs, **opts)
 
-    if revs is None:
-        # For a full backup, also update the backup bookmarks.
-        backupbookmarks.pushbackupbookmarks(repo, **opts)
+        if revs is None:
+            # For a full backup, also update the backup bookmarks.
+            backupbookmarks.pushbackupbookmarks(repo, **opts)
 
     if backedup:
         repo.ui.status(
@@ -605,47 +607,12 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         if bgssh:
             ui.setconfig("ui", "ssh", bgssh)
 
-    lock = None
-    # check if the background sync is running and provide all the details
-    if ui.interactive():
-        try:
-            lock = lockmod.lock(repo.sharedvfs, commitcloudcommon.backuplockname, 0)
-        except error.LockHeld as e:
-            if e.errno == errno.ETIMEDOUT and e.lockinfo.isrunning():
-                etimemsg = ""
-                etime = commitcloudutil.getprocessetime(e.lockinfo)
-                if etime:
-                    etimemsg = _(", running for %d min %d sec") % divmod(etime, 60)
-                ui.status(
-                    _("background cloud sync is already in progress (pid %s on %s%s)\n")
-                    % (e.lockinfo.uniqueid, e.lockinfo.namespace, etimemsg),
-                    component="commitcloud",
-                )
-                ui.flush()
+    with backuplock.lock(repo):
+        currentnode = repo["."].node()
+        sync.docloudsync(ui, repo, cloudrefs, **opts)
+        ret = sync.maybeupdateworkingcopy(ui, repo, currentnode)
 
-    # run cloud sync with waiting for background process to complete
-    try:
-        # wait at most 120 seconds, because cloud sync can take a while
-        timeout = 120
-        with lock or lockmod.lock(
-            repo.sharedvfs,
-            commitcloudcommon.backuplockname,
-            timeout=timeout,
-            ui=ui,
-            showspinner=True,
-            spinnermsg=_("waiting for background process to complete"),
-        ):
-            currentnode = repo["."].node()
-            sync.docloudsync(ui, repo, cloudrefs, **opts)
-            ret = sync.maybeupdateworkingcopy(ui, repo, currentnode)
-    except error.LockHeld as e:
-        if e.errno == errno.ETIMEDOUT:
-            ui.warn(_("timeout waiting %d sec on backup lock expired\n") % timeout)
-            return 2
-        else:
-            raise
-
-    background.backgroundbackupother(repo, command=["hg", "cloud", "backup"], **opts)
+    background.backgroundbackupother(repo, **opts)
     return ret
 
 
@@ -760,9 +727,7 @@ def backupdisable(ui, repo, **opts):
     )
 
     try:
-        with lockmod.trylock(
-            ui, repo.sharedvfs, commitcloudcommon.backuplockname, 0, 0
-        ):
+        with backuplock.trylock(repo):
             pass
     except error.LockHeld as e:
         if e.lockinfo.isrunning():
@@ -789,9 +754,7 @@ def waitbackup(ui, repo, timeout):
         raise error.Abort("timeout should be integer")
 
     try:
-        with lockmod.lock(
-            repo.sharedvfs, commitcloudcommon.backuplockname, timeout=timeout
-        ):
+        with lockmod.lock(repo.sharedvfs, backuplock.lockfilename, timeout=timeout):
             pass
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:

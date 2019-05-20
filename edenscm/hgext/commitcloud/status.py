@@ -10,7 +10,14 @@ import time
 from edenscm.mercurial import hintutil, node as nodemod, util
 from edenscm.mercurial.i18n import _
 
-from . import background, commitcloudcommon, commitcloudutil, syncstate, workspace
+from . import (
+    background,
+    backuplock,
+    commitcloudcommon,
+    commitcloudutil,
+    syncstate,
+    workspace,
+)
 
 
 def summary(repo):
@@ -42,13 +49,13 @@ def summary(repo):
     workspacename = workspace.currentworkspace(repo)
     if workspacename:
         commitcloudutil.SubscriptionManager(repo).checksubscription()
-        commitcloudutil.backuplockcheck(ui, repo)
+        backuplock.status(repo)
         lastsyncstate = syncstate.SyncState(repo, workspacename)
         if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:
             hintutil.trigger("commitcloud-old-commits", repo)
 
     # Don't output the summary if a backup is currently in progress.
-    if util.islocked(repo.sharedvfs.join(commitcloudcommon.backuplockname)):
+    if backuplock.islocked(repo):
         return
 
     unbackeduprevs = repo.revs("notbackedup()")

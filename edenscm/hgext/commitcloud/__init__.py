@@ -146,6 +146,7 @@ from edenscm.mercurial.i18n import _
 from . import (
     background,
     backupbookmarks,
+    backuplock,
     backupstate,
     commitcloudcommands,
     commitcloudcommon,
@@ -183,7 +184,7 @@ def extsetup(ui):
     dependencies.extsetup(ui)
 
     localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._obsmarkerssyncing)
-    localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._syncprogress)
+    localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
     localrepo.localrepository._wlockfreeprefix.add(backupbookmarks._backupstateprefix)
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.prefix)
     localrepo.localrepository._wlockfreeprefix.add(background._autobackupstatefile)
@@ -326,5 +327,4 @@ def notbackedup(repo, subset, x):
 def backingup(repo, **args):
     """whether commit cloud is currently backing up commits."""
     # If the backup lock exists then a backup should be in progress.
-    path = repo.sharedvfs.join(commitcloudcommon.backuplockname)
-    return util.islocked(path)
+    return backuplock.islocked(repo)
