@@ -39,6 +39,7 @@ void RocksHandles::close() {
 
 RocksHandles::RocksHandles(
     StringPiece dbPath,
+    RocksDBOpenMode mode,
     const Options& options,
     const std::vector<ColumnFamilyDescriptor>& columnDescriptors) {
   auto dbPathStr = dbPath.str();
@@ -52,8 +53,14 @@ RocksHandles::RocksHandles(
   // and shout at us for not opening up the database with them defined.
   // We will need to do "something smarter" if we ever decide to perform
   // that kind of a migration.
-  auto status =
-      DB::Open(options, dbPathStr, columnDescriptors, &columnHandles, &dbRaw);
+  Status status;
+  if (mode == RocksDBOpenMode::ReadOnly) {
+    status = DB::OpenForReadOnly(
+        options, dbPathStr, columnDescriptors, &columnHandles, &dbRaw);
+  } else {
+    status =
+        DB::Open(options, dbPathStr, columnDescriptors, &columnHandles, &dbRaw);
+  }
   if (!status.ok()) {
     XLOG(ERR) << "Error opening RocksDB storage at " << dbPathStr << ": "
               << status.ToString();

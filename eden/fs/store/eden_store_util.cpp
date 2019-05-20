@@ -87,14 +87,17 @@ class Command {
     return edenDir_.getPath() + "storage/rocks-db"_relpath;
   }
 
-  std::unique_ptr<RocksDbLocalStore> openLocalStore() {
+  std::unique_ptr<RocksDbLocalStore> openLocalStore(RocksDBOpenMode mode) {
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = getLocalStorePath();
     ensureDirectoryExists(rocksPath);
     auto localStore =
-        make_unique<RocksDbLocalStore>(rocksPath, &faultInjector_);
+        make_unique<RocksDbLocalStore>(rocksPath, &faultInjector_, mode);
     XLOG(INFO) << "Opened RocksDB store in "
-               << (watch.elapsed().count() / 1000.0) << " seconds.";
+               << (mode == RocksDBOpenMode::ReadOnly ? "read-only"
+                                                     : "read-write")
+               << " mode in " << (watch.elapsed().count() / 1000.0)
+               << " seconds.";
     return localStore;
   }
 
@@ -133,7 +136,7 @@ class GcCommand : public Command {
 
   void run() override {
     auto keySpace = getKeySpace();
-    auto localStore = openLocalStore();
+    auto localStore = openLocalStore(RocksDBOpenMode::ReadWrite);
     if (keySpace) {
       localStore->clearKeySpace(*keySpace);
       localStore->compactKeySpace(*keySpace);
@@ -151,7 +154,7 @@ class ClearCommand : public Command {
 
   void run() override {
     auto keySpace = getKeySpace();
-    auto localStore = openLocalStore();
+    auto localStore = openLocalStore(RocksDBOpenMode::ReadWrite);
     if (keySpace) {
       localStore->clearKeySpace(*keySpace);
     } else {
@@ -167,7 +170,7 @@ class CompactCommand : public Command {
 
   void run() override {
     auto keySpace = getKeySpace();
-    auto localStore = openLocalStore();
+    auto localStore = openLocalStore(RocksDBOpenMode::ReadWrite);
     if (keySpace) {
       localStore->compactKeySpace(*keySpace);
     } else {
@@ -194,7 +197,7 @@ class ShowSizesCommand : public Command {
       StringPiece("Report approximate sizes of each key space.");
 
   void run() override {
-    auto localStore = openLocalStore();
+    auto localStore = openLocalStore(RocksDBOpenMode::ReadOnly);
 
     for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
       LOG(INFO) << "Column family \"" << iter->name << "\": "

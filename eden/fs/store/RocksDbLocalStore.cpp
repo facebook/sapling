@@ -221,20 +221,24 @@ rocksdb::Options getRocksdbOptions() {
   return options;
 }
 
-RocksHandles openDB(AbsolutePathPiece path) {
+RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
   auto options = getRocksdbOptions();
   try {
-    return RocksHandles(path.stringPiece(), options, columnFamilies());
+    return RocksHandles(path.stringPiece(), mode, options, columnFamilies());
   } catch (const RocksException& ex) {
     XLOG(ERR) << "Error opening RocksDB storage at " << path << ": "
               << ex.what();
+    if (mode == RocksDBOpenMode::ReadOnly) {
+      // In read-only mode fail rather than attempting to repair the DB.
+      throw;
+    }
     // Fall through and attempt to repair the DB
   }
 
   RocksDbLocalStore::repairDB(path);
 
   // Now try opening the DB again.
-  return RocksHandles(path.stringPiece(), options, columnFamilies());
+  return RocksHandles(path.stringPiece(), mode, options, columnFamilies());
 }
 
 } // namespace
@@ -244,9 +248,10 @@ namespace eden {
 
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
-    FaultInjector* faultInjector)
+    FaultInjector* faultInjector,
+    RocksDBOpenMode mode)
     : faultInjector_(*faultInjector),
-      dbHandles_(openDB(pathToRocksDb)),
+      dbHandles_(openDB(pathToRocksDb, mode)),
       ioPool_(12, "RocksLocalStore") {}
 
 RocksDbLocalStore::~RocksDbLocalStore() {

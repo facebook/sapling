@@ -17,6 +17,11 @@
 namespace facebook {
 namespace eden {
 
+enum class RocksDBOpenMode {
+  ReadOnly,
+  ReadWrite,
+};
+
 /**
  * This class is the holder of the database and column family handles
  * required to interact with our local rocksdb store.
@@ -48,6 +53,7 @@ struct RocksHandles {
    */
   RocksHandles(
       folly::StringPiece dbPath,
+      RocksDBOpenMode mode,
       const rocksdb::Options& options,
       const std::vector<rocksdb::ColumnFamilyDescriptor>& columnDescriptors);
 

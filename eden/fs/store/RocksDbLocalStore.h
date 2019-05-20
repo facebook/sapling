@@ -30,7 +30,8 @@ class RocksDbLocalStore : public LocalStore {
    */
   explicit RocksDbLocalStore(
       AbsolutePathPiece pathToRocksDb,
-      FaultInjector* FOLLY_NONNULL faultInjector);
+      FaultInjector* FOLLY_NONNULL faultInjector,
+      RocksDBOpenMode mode = RocksDBOpenMode::ReadWrite);
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
