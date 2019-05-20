@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use bytes::Bytes;
 use curl::{
     self,
     easy::{Easy2, Handler, HttpVersion, List, WriteError},
@@ -18,7 +19,7 @@ use serde_cbor;
 use url::Url;
 
 use driver::MultiDriver;
-use revisionstore::{MutableDeltaStore, MutableHistoryStore};
+use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse},
     Key,
@@ -26,7 +27,6 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::packs::{write_to_deltastore, write_to_historystore};
 use crate::progress::{ProgressFn, ProgressHandle, ProgressManager, ProgressStats};
 
 mod driver;
@@ -145,30 +145,28 @@ impl EdenApi for EdenApiCurlClient {
             keys: batch.into_iter().collect(),
         });
 
-        let mut responses = Vec::new();
-        self.multi_request(&url, requests, progress, |res: DataResponse| {
-            responses.push(res);
+        let mut num_responses = 0;
+        let mut num_entries = 0;
+        self.multi_request(&url, requests, progress, |response: DataResponse| {
+            num_responses += 1;
+            for entry in response {
+                num_entries += 1;
+                let key = entry.key().clone();
+                if self.validate_files {
+                    log::trace!("Validating file: {}", &key);
+                }
+                let data = entry.data(self.validate_files)?;
+                add_delta(store, key, data)?;
+            }
             Ok(())
         })?;
 
         log::debug!(
             "Received {} responses with {} total entries",
-            responses.len(),
-            responses
-                .iter()
-                .map(|response| response.entries.len())
-                .sum::<usize>(),
+            num_responses,
+            num_entries
         );
-
-        let mut files = Vec::new();
-        for entry in responses.into_iter().flatten() {
-            if self.validate_files {
-                log::trace!("Validating file: {}", entry.key());
-            }
-            files.push((entry.key().clone(), entry.data(self.validate_files)?));
-        }
-
-        write_to_deltastore(store, files)
+        Ok(())
     }
 
     fn get_history(
@@ -193,19 +191,23 @@ impl EdenApi for EdenApiCurlClient {
             depth: max_depth,
         });
 
-        let mut responses = Vec::new();
-        self.multi_request(&url, requests, progress, |res: HistoryResponse| {
-            responses.push(res);
+        let mut num_responses = 0;
+        let mut num_entries = 0;
+        self.multi_request(&url, requests, progress, |response: HistoryResponse| {
+            num_responses += 1;
+            for entry in response {
+                num_entries += 1;
+                store.add_entry(&entry)?;
+            }
             Ok(())
         })?;
 
         log::debug!(
             "Received {} responses with {} total entries",
-            responses.len(),
-            responses.iter().map(|res| res.entries.len()).sum::<usize>(),
+            num_responses,
+            num_entries
         );
-
-        write_to_historystore(store, responses.into_iter().flatten())
+        Ok(())
     }
 }
 
@@ -354,4 +356,18 @@ fn print_download_stats(total_bytes: u64, elapsed: Duration) {
         elapsed,
         rate
     );
+}
+
+fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> Fallible<()> {
+    let metadata = Metadata {
+        size: Some(data.len() as u64),
+        flags: None,
+    };
+    let delta = Delta {
+        data,
+        base: None,
+        key,
+    };
+    store.add(&delta, &metadata)?;
+    Ok(())
 }

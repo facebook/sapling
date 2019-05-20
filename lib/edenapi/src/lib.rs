@@ -3,7 +3,6 @@
 mod api;
 mod config;
 mod curl;
-mod packs;
 mod progress;
 
 pub use crate::api::EdenApi;
