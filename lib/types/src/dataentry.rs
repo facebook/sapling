@@ -25,15 +25,33 @@ use crate::{key::Key, node::Node, parents::Parents};
     Deserialize
 )]
 pub struct DataEntry {
-    pub key: Key,
-    pub data: Bytes,
-    pub parents: Parents,
+    key: Key,
+    data: Bytes,
+    parents: Parents,
 }
 
 impl DataEntry {
-    /// Compute the filenode hash of this `DataEntry` using the parents and
+    pub fn new(key: Key, data: Bytes, parents: Parents) -> Self {
+        Self { key, data, parents }
+    }
+
+    pub fn key(&self) -> &Key {
+        &self.key
+    }
+
+    /// Get this entry's data content. If validate is set to true, this method
+    /// will recompute the entry's node hash and verify that it matches the
+    /// expected node hash in the entry's key, returning an error otherwise.
+    pub fn data(&self, validate: bool) -> Fallible<Bytes> {
+        if validate {
+            self.validate()?;
+        }
+        Ok(self.data.clone())
+    }
+
+    /// Compute the filenode hash of this `DataEntry` using its parents and
     /// content, and compare it with the known node hash from the entry's `Key`.
-    pub fn validate(&self) -> Fallible<()> {
+    fn validate(&self) -> Fallible<()> {
         // Mercurial hashes the parent nodes in sorted order
         // when computing the node hash.
         let (p1, p2) = match self.parents.clone().into_nodes() {

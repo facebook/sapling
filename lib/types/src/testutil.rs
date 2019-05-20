@@ -62,9 +62,5 @@ pub fn null_key(path: &str) -> Key {
 }
 
 pub fn data_entry(key: Key, data: impl AsRef<[u8]>) -> DataEntry {
-    DataEntry {
-        key,
-        data: data.as_ref().into(),
-        parents: Parents::None,
-    }
+    DataEntry::new(key, data.as_ref().into(), Parents::None)
 }

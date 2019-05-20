@@ -163,10 +163,9 @@ impl EdenApi for EdenApiCurlClient {
         let mut files = Vec::new();
         for entry in responses.into_iter().flatten() {
             if self.validate_files {
-                log::trace!("Validating file: {}", &entry.key);
-                entry.validate()?;
+                log::trace!("Validating file: {}", entry.key());
             }
-            files.push((entry.key, entry.data));
+            files.push((entry.key().clone(), entry.data(self.validate_files)?));
         }
 
         write_to_deltastore(store, files)
