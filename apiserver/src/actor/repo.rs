@@ -439,10 +439,8 @@ impl MononokeRepo {
                 debug!(&logger, "fetching data for key: {}", &key);
 
                 get_parents.and_then(move |parents| {
-                    get_content.map(move |content| DataEntry {
-                        key,
-                        data: content.into_inner(),
-                        parents: parents.into(),
+                    get_content.map(move |content| {
+                        DataEntry::new(key, content.into_inner(), parents.into())
                     })
                 })
             });
@@ -518,10 +516,8 @@ impl MononokeRepo {
                 debug!(&logger, "fetching tree for key: {}", &key);
 
                 get_parents.and_then(move |parents| {
-                    get_content.map(move |content| DataEntry {
-                        key,
-                        data: content.into_inner(),
-                        parents: parents.into(),
+                    get_content.map(move |content| {
+                        DataEntry::new(key, content.into_inner(), parents.into())
                     })
                 })
             });
