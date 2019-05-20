@@ -35,7 +35,7 @@ setup common configuration
   > [extensions]
   > amend=
   > infinitepush=
-  > infinitepushbackup=
+  > commitcloud=
   > EOF
 
 Setup helpers
@@ -134,7 +134,7 @@ The same procedure, but with commit cloud commit
   $ hg up -q 0
   $ echo commitcloud > commitcloud && hg addremove -q
   $ hg ci -m commitcloud
-  $ hgmn pushbackup -q
+  $ hgmn cloud backup -q
 
 Move master again
   $ cd ../repo3

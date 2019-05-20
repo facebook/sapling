@@ -69,7 +69,7 @@ setup repo-push and repo-pull
   > [extensions]
   > loglinkrevfixup = $TESTTMP/loglinkrevfixup.py
   > infinitepush =
-  > infinitepushbackup =
+  > commitcloud =
   > remotenames =
   > [infinitepush]
   > branchpattern = re:scratch/.*
@@ -91,11 +91,10 @@ push an infinitepush commit with new content
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "content1" > file
   $ hg commit -q -m branch
-  $ hgmn pushbackup
-  starting backup * (glob)
+  $ hgmn cloud backup
   remote: * DEBG Session with Mononoke started * (glob)
   backing up stack rooted at 60ab8a6c8e65
-  finished in * seconds (glob)
+  commitcloud: backed up 1 commit
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
   |

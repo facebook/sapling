@@ -9,7 +9,7 @@ setup common configuration for these tests
   > [extensions]
   > amend=
   > infinitepush=
-  > infinitepushbackup=
+  > commitcloud=
   > EOF
 
 setup repo
@@ -127,8 +127,7 @@ Pushbackup also works
   $ cd ../repo-push
   $ echo aa > aa && hg addremove && hg ci -q -m newrepo
   adding aa
-  $ hgmn pushbackup ssh://user@dummy/repo --debug
-  starting backup* (glob)
+  $ hgmn cloud backup --dest ssh://user@dummy/repo --debug
   running * (glob)
   sending hello command
   sending between command
@@ -137,6 +136,7 @@ Pushbackup also works
   remote: capabilities: * (glob)
   remote: 1
   sending clienttelemetry command
+  sending knownnodes command
   sending knownnodes command
   backing up stack rooted at 47da8b81097c
   2 changesets found
@@ -154,10 +154,7 @@ Pushbackup also works
   bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
-  backup complete
-  heads added: 95cad53aab1b0b33eceee14473b3983312721529
-  heads removed:  (re)
-  finished in * seconds (glob)
+  commitcloud: backed up 1 commit
 
   $ tglogp
   @  2: 95cad53aab1b draft 'newrepo'
@@ -193,8 +190,7 @@ Pushbackup also works
 Pushbackup that pushes only bookmarks
   $ cd ../repo-push
   $ hg book newbook
-  $ hgmn pushbackup ssh://user@dummy/repo --debug
-  starting backup* (glob)
+  $ hgmn cloud backup --dest ssh://user@dummy/repo --debug
   running * (glob)
   sending hello command
   sending between command
@@ -208,10 +204,7 @@ Pushbackup that pushes only bookmarks
   bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
-  backup complete
-  heads added:  (re)
-  heads removed:  (re)
-  finished in * seconds (glob)
+  nothing to back up
 
   $ tglogp
   @  2: 95cad53aab1b draft 'newrepo' newbook
@@ -294,11 +287,10 @@ Check phases on another side (for pull command and pull -r)
   $ echo new > file2
   $ hg addremove -q
   $ hg ci -m "change on top of the release"
-  $ hgmn pushbackup ssh://user@dummy/repo
-  starting backup* (glob)
+  $ hgmn cloud backup --dest ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   backing up stack rooted at eca836c7c651
-  finished in * seconds (glob)
+  commitcloud: backed up 1 commit
 
   $ tglogp
   @  4: eca836c7c651 draft 'change on top of the release'
@@ -442,15 +434,15 @@ More sophisticated test for phases
   $ mkcommit zzzzz
   $ hgmn push -r . --to "release 4"  --create -q
 
-  $ hgmn pushbackup ssh://user@dummy/repo -q
+  $ hgmn cloud backup --dest ssh://user@dummy/repo -q
 
-  $ hgmn isbackedup ssh://user@dummy/repo -r e4ae5d869b06 --remote
+  $ hgmn cloud check --dest ssh://user@dummy/repo -r e4ae5d869b06 --remote
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   e4ae5d869b061c927cf739de04162653c9c4a9ab backed up
-  $ hgmn isbackedup ssh://user@dummy/repo -r 8336071380f0 --remote
+  $ hgmn cloud check --dest ssh://user@dummy/repo -r 8336071380f0 --remote
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   8336071380f0f7cf919e51f7f1818f2fed425fdb backed up
-  $ hgmn isbackedup ssh://user@dummy/repo -r 884e1b02454b --remote
+  $ hgmn cloud check --dest ssh://user@dummy/repo -r 884e1b02454b --remote
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   884e1b02454b186570b35d47eac3794b2f8d952f backed up
 
@@ -507,7 +499,7 @@ At the moment short hahses are not working, print the full hashes to use then in
 
   $ cd ../repo-pull
 
-  $ hgmn pullbackup
+  $ hgmn cloud restorebackup
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
   [255]

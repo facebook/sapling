@@ -13,7 +13,6 @@ mononoke + local commit cloud backend
   > directaccess=
   > commitcloud =
   > infinitepush =
-  > infinitepushbackup =
   > rebase =
   > remotenames =
   > share =
