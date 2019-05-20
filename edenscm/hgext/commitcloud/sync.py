@@ -17,17 +17,16 @@ from edenscm.mercurial import (
     hintutil,
     node as nodemod,
     obsolete,
-    templatefilters,
     util,
     visibility,
 )
 from edenscm.mercurial.i18n import _
 
 from . import (
+    backup,
     backupbookmarks,
     backuplock,
     backupstate,
-    dependencies,
     error as ccerror,
     obsmarkers as obsmarkersmod,
     service,
@@ -56,26 +55,45 @@ def _getbookmarks(repo):
     return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
 
 
-def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
+def sync(repo, cloudrefs=None, dest=None, **opts):
+    ui = repo.ui
     start = time.time()
 
-    tokenlocator = token.TokenLocator(ui)
+    startnode = repo["."].node()
+
+    if opts.get("full"):
+        maxage = None
+    else:
+        maxage = ui.configint("commitcloud", "max_sync_age", None)
+
+    # Work out which repo and workspace we are synchronizing with.
     reponame = ccutil.getreponame(repo)
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         raise ccerror.WorkspaceError(ui, _("undefined workspace"))
+
+    # Connect to the commit cloud service.
+    tokenlocator = token.TokenLocator(ui)
     serv = service.get(ui, tokenlocator.token)
+
     ui.status(
         _("synchronizing '%s' with '%s'\n") % (reponame, workspacename),
         component="commitcloud",
     )
-
     backuplock.progress(repo, "starting synchronizing with '%s'" % workspacename)
 
+    # Work out what version to fetch updates from.
     lastsyncstate = syncstate.SyncState(repo, workspacename)
+    fetchversion = lastsyncstate.version
+    if maxage != lastsyncstate.maxage:
+        # We are doing a full sync, or maxage has changed since the last sync,
+        # so get a fresh copy of the full state.
+        fetchversion = 0
+
     remotepath = ccutil.getremotepath(repo, dest)
 
-    # external services can run cloud sync and know the lasest version
+    # External services may already know the version number.  Check if we're
+    # already up-to-date.
     version = opts.get("workspace_version")
     if version and version.isdigit() and int(version) <= lastsyncstate.version:
         ui.status(
@@ -83,260 +101,76 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
         )
         return 0
 
-    if opts.get("full"):
-        maxage = None
-    else:
-        maxage = ui.configint("commitcloud", "max_sync_age", None)
-    fetchversion = lastsyncstate.version
+    # Back up all local commits that are not already backed up.
+    backedup, failed = backup.backup(repo, dest=dest, **opts)
 
-    # the remote backend for storing Commit Cloud commit have been changed
-    # switching between Mercurial <-> Mononoke
-    if lastsyncstate.remotepath and remotepath != lastsyncstate.remotepath:
-        ui.status(
-            _(
-                "commit storage has been switched\n"
-                "             from: %s\n"
-                "             to: %s\n"
-            )
-            % (lastsyncstate.remotepath, remotepath),
-            component="commitcloud",
-        )
-        fetchversion = 0
-
-    # cloudrefs are passed in cloud rejoin
+    # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
+    # fetch them from the commit cloud service.
     if cloudrefs is None:
-        # if we are doing a full sync, or maxage has changed since the last
-        # sync, use 0 as the last version to get a fresh copy of the full state.
-        if maxage != lastsyncstate.maxage:
-            fetchversion = 0
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
 
     def getconnection():
         return repo.connectionpool.get(remotepath, opts)
 
-    # the remote backend for storing Commit Cloud commit have been changed
-    if lastsyncstate.remotepath and remotepath != lastsyncstate.remotepath:
-        backuplock.progress(repo, "verifying backed up heads at '%s'" % remotepath)
-        # make sure cloudrefs.heads have been backed up at this remote path
-        verifybackedupheads(
-            repo, remotepath, lastsyncstate.remotepath, getconnection, cloudrefs.heads
-        )
-        # if verification succeeded, update remote path in the local state and go on
-        lastsyncstate.updateremotepath(remotepath)
-
     synced = False
-    pushfailures = set()
-    prevsyncversion = lastsyncstate.version
-    prevsyncheads = lastsyncstate.heads
-    prevsyncbookmarks = lastsyncstate.bookmarks
-    prevsynctime = lastsyncstate.lastupdatetime or 0
     while not synced:
+        # Apply any changes from the cloud to the local repo.
         if cloudrefs.version != fetchversion:
-            _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage)
+            _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage)
 
         # Check if any omissions are now included in the repo
-        _checkomissions(ui, repo, remotepath, lastsyncstate)
+        _checkomissions(repo, remotepath, lastsyncstate)
 
-        localheads = _getheads(repo)
-        localbookmarks = _getbookmarks(repo)
-        obsmarkers = obsmarkersmod.getsyncingobsmarkers(repo)
+        # Send updates to the cloud.  If this fails then we have lost the race
+        # to update the server and must start again.
+        synced, cloudrefs = _submitlocalchanges(
+            repo, reponame, workspacename, lastsyncstate, failed, serv
+        )
 
-        # Work out what we should have synced locally (and haven't deliberately
-        # omitted)
-        omittedheads = set(lastsyncstate.omittedheads)
-        omittedbookmarks = set(lastsyncstate.omittedbookmarks)
-        localsyncedheads = [
-            head for head in lastsyncstate.heads if head not in omittedheads
-        ]
-        localsyncedbookmarks = {
-            name: node
-            for name, node in lastsyncstate.bookmarks.items()
-            if name not in omittedbookmarks
-        }
-
-        if not obsmarkers:
-            # If the heads have changed, and we don't have any obsmakers to
-            # send, then it's possible we have some obsoleted versions of
-            # commits that are visible in the cloud workspace that need to
-            # be revived.
-            cloudvisibleonly = list(
-                repo.unfiltered().set("draft() & ::%ls & hidden()", localsyncedheads)
-            )
-            repo._commitcloudskippendingobsmarkers = True
-            obsolete.revive(cloudvisibleonly)
-            repo._commitcloudskippendingobsmarkers = False
-            localheads = _getheads(repo)
-
-        if (
-            set(localheads) == set(localsyncedheads)
-            and localbookmarks == localsyncedbookmarks
-            and lastsyncstate.version != 0
-            and not obsmarkers
-        ):
-            synced = True
-
-        if not synced:
-            # The local repo has changed.  We must send these changes to the
-            # cloud.
-
-            # Push commits that the server doesn't have.
-            newheads = list(set(localheads) - set(lastsyncstate.heads))
-
-            # If there are too many heads to backup,
-            # it is faster to check with the server first
-            backuplimitnocheck = ui.configint("commitcloud", "backuplimitnocheck")
-            if len(newheads) > backuplimitnocheck:
-                isbackedupremote = dependencies.infinitepush.isbackedupnodes(
-                    getconnection, newheads
-                )
-                newheads = [
-                    head for i, head in enumerate(newheads) if not isbackedupremote[i]
-                ]
-
-            # all pushed to the server except maybe obsmarkers
-            allpushed = (not newheads) and (localbookmarks == localsyncedbookmarks)
-
-            failedheads = []
-            unfi = repo.unfiltered()
-            if not allpushed:
-                oldheads = list(
-                    set(lastsyncstate.heads) - set(lastsyncstate.omittedheads)
-                )
-                backingup = [
-                    nodemod.hex(n)
-                    for n in unfi.nodes("draft() & ::%ls - ::%ls", newheads, oldheads)
-                ]
-                backuplock.progressbackingup(
-                    repo, [nodemod.bin(node) for node in backingup]
-                )
-                newheads, failedheads = dependencies.infinitepush.pushbackupbundlestacks(
-                    ui, repo, getconnection, newheads
-                )
-
-            if failedheads:
-                pushfailures |= set(failedheads)
-                # Some heads failed to be pushed.  Work out what is actually
-                # available on the server
-                localheads = [
-                    ctx.hex()
-                    for ctx in unfi.set(
-                        "heads((draft() & ::%ls) + (draft() & ::%ls & ::%ls))",
-                        newheads,
-                        localheads,
-                        localsyncedheads,
-                    )
-                ]
-                failedcommits = {
-                    ctx.hex()
-                    for ctx in unfi.set(
-                        "(draft() & ::%ls) - (draft() & ::%ls) - (draft() & ::%ls)",
-                        failedheads,
-                        newheads,
-                        localsyncedheads,
-                    )
-                }
-                # Revert any bookmark updates that refer to failed commits to
-                # the available commits.
-                for name, bookmarknode in localbookmarks.items():
-                    if bookmarknode in failedcommits:
-                        if name in lastsyncstate.bookmarks:
-                            localbookmarks[name] = lastsyncstate.bookmarks[name]
-                        else:
-                            del localbookmarks[name]
-
-            # Update the infinitepush backup bookmarks to point to the new
-            # local heads and bookmarks.  This must be done after all
-            # referenced commits have been pushed to the server.
-            if not allpushed:
-                backupbookmarks.pushbackupbookmarks(repo, dest, **opts)
-                state = backupstate.BackupState(repo, remotepath)
-                state.update([nodemod.bin(head) for head in newheads])
-
-            # Work out the new cloud heads and bookmarks by merging in the
-            # omitted items.  We need to preserve the ordering of the cloud
-            # heads so that smartlogs generally match.
-            newcloudheads = [
-                head
-                for head in lastsyncstate.heads
-                if head in set(localheads) | set(lastsyncstate.omittedheads)
-            ]
-            newcloudheads.extend(
-                [head for head in localheads if head not in set(newcloudheads)]
-            )
-            newcloudbookmarks = {
-                name: localbookmarks.get(name, lastsyncstate.bookmarks.get(name))
-                for name in set(localbookmarks.keys())
-                | set(lastsyncstate.omittedbookmarks)
-            }
-            newomittedheads = list(set(newcloudheads) - set(localheads))
-            newomittedbookmarks = list(
-                set(newcloudbookmarks.keys()) - set(localbookmarks.keys())
-            )
-
-            if (
-                prevsyncversion == lastsyncstate.version - 1
-                and prevsyncheads == newcloudheads
-                and prevsyncbookmarks == newcloudbookmarks
-                and prevsynctime > time.time() - 60
-            ):
-                raise ccerror.SynchronizationError(
-                    ui,
-                    _(
-                        "oscillating commit cloud workspace detected.\n"
-                        "check for commits that are visible in one repo but hidden in another,\n"
-                        "and hide or unhide those commits in all places."
-                    ),
-                )
-
-            # Update the cloud heads, bookmarks and obsmarkers.
-            backuplock.progress(
-                repo, "finishing synchronizing with '%s'" % workspacename
-            )
-            synced, cloudrefs = serv.updatereferences(
-                reponame,
-                workspacename,
-                lastsyncstate.version,
-                lastsyncstate.heads,
-                newcloudheads,
-                lastsyncstate.bookmarks.keys(),
-                newcloudbookmarks,
-                obsmarkers,
-            )
-            if synced:
-                lastsyncstate.update(
-                    cloudrefs.version,
-                    newcloudheads,
-                    newcloudbookmarks,
-                    newomittedheads,
-                    newomittedbookmarks,
-                    maxage,
-                    remotepath,
-                )
-                if obsmarkers:
-                    obsmarkersmod.clearsyncingobsmarkers(repo)
+    # Update the backup bookmarks with any changes we have made by syncing.
+    backupbookmarks.pushbackupbookmarks(repo, dest, **opts)
 
     backuplock.progresscomplete(repo)
-    if pushfailures:
-        raise ccerror.SynchronizationError(
-            ui, _("%d heads could not be pushed") % len(pushfailures)
-        )
-    ui.status(_("commits synchronized\n"), component="commitcloud")
-    # check that Scm Service is running and a subscription exists
-    subscription.SubscriptionManager(repo).checksubscription()
+
+    if failed:
+        failedset = set(repo.nodes("%ld::", failed))
+        if len(failedset) == 1:
+            repo.ui.warn(
+                _("failed to synchronize %s\n") % nodemod.short(failedset.pop()),
+                component="commitcloud",
+            )
+        else:
+            repo.ui.warn(
+                _("failed to synchronize %d commits\n") % len(failedset),
+                component="commitcloud",
+            )
+    else:
+        ui.status(_("commits synchronized\n"), component="commitcloud")
+
     elapsed = time.time() - start
     ui.status(_("finished in %0.2f sec\n") % elapsed)
 
+    # Check that Scm Service is running and a subscription exists
+    subscription.SubscriptionManager(repo).checksubscription()
 
-def maybeupdateworkingcopy(ui, repo, currentnode):
+    return _maybeupdateworkingcopy(repo, startnode)
+
+
+def _maybeupdateworkingcopy(repo, currentnode):
+    ui = repo.ui
+
     if repo["."].node() != currentnode:
         return 0
 
-    destination = finddestinationnode(repo, currentnode)
+    successors = list(repo.nodes("successors(%n) - obsolete()", currentnode))
 
-    if destination == currentnode:
+    if len(successors) == 0:
         return 0
 
-    if destination and destination in repo:
+    if len(successors) == 1:
+        destination = successors[0]
+        if destination not in repo or destination == currentnode:
+            return 0
         ui.status(
             _("current revision %s has been moved remotely to %s\n")
             % (nodemod.short(currentnode), nodemod.short(destination)),
@@ -353,7 +187,10 @@ def maybeupdateworkingcopy(ui, repo, currentnode):
                         nodemod.short(destination),
                     ),
                 )
-                return _update(ui, repo, destination)
+                ui.status(_("updating to %s\n") % nodemod.short(destination))
+                return hg.updatetotally(
+                    ui, repo, destination, destination, updatecheck="noconflict"
+                )
         else:
             hintutil.trigger("commitcloud-update-on-move")
     else:
@@ -368,67 +205,7 @@ def maybeupdateworkingcopy(ui, repo, currentnode):
     return 0
 
 
-def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
-    if not heads:
-        return
-
-    backedupheadsremote = {
-        head
-        for head, backedup in zip(
-            heads, dependencies.infinitepush.isbackedupnodes(getconnection, heads)
-        )
-        if backedup
-    }
-
-    notbackedupheads = set(heads) - backedupheadsremote
-    notbackeduplocalheads = {head for head in notbackedupheads if head in repo}
-
-    if notbackeduplocalheads:
-        backingup = list(notbackeduplocalheads)
-        backuplock.progressbackingup(repo, [nodemod.bin(node) for node in backingup])
-        repo.ui.status(_("pushing to %s\n") % remotepath)
-        dependencies.infinitepush.pushbackupbundlestacks(
-            repo.ui, repo, getconnection, backingup
-        )
-        recordbackup(repo.ui, repo, remotepath, backingup)
-
-    if len(notbackedupheads) != len(notbackeduplocalheads):
-        missingheads = list(notbackedupheads - notbackeduplocalheads)
-        repo.ui.status(
-            _("some heads are missing at %s\n") % remotepath, component="commitcloud"
-        )
-        backuplock.progresspulling(repo, [nodemod.bin(node) for node in missingheads])
-        pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
-        pullopts["rev"] = missingheads
-        pullcmd(repo.ui, repo.unfiltered(), oldremotepath, **pullopts)
-        backingup = list(missingheads)
-        backuplock.progressbackingup(repo, [nodemod.bin(node) for node in backingup])
-        repo.ui.status(_("pushing to %s\n") % remotepath)
-        dependencies.infinitepush.pushbackupbundlestacks(
-            repo.ui, repo, getconnection, backingup
-        )
-        recordbackup(repo.ui, repo, remotepath, backingup)
-
-    return 0
-
-
-def finddestinationnode(repo, startnode):
-    nodes = list(repo.nodes("successors(%n) - obsolete()", startnode))
-    if len(nodes) == 0:
-        return startnode
-    elif len(nodes) == 1:
-        return nodes[0]
-    else:
-        return None
-
-
-def recordbackup(ui, repo, remotepath, newheads):
-    """Record that the given heads are already backed up."""
-    state = backupstate.BackupState(repo, remotepath)
-    state.update([nodemod.bin(head) for head in newheads])
-
-
-def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=None):
+def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage):
     pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
 
     try:
@@ -515,7 +292,8 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
         ), extensions.wrappedfunction(
             remotenames, "pullremotenames", _pullremotenames
         ) if remotenames else util.nullcontextmanager():
-            pullcmd(ui, repo, remotepath, **pullopts)
+            pullcmd(repo.ui, repo, remotepath, **pullopts)
+
     else:
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
             omittedbookmarks.extend(
@@ -527,6 +305,46 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
                     repo, [nodemod.bin(n) for n in newvisibleheads]
                 )
 
+    # Obsmarker sharing is unreliable.  Some of the commits that should now
+    # be visible might be hidden still, and some commits that should be
+    # hidden might still be visible.  Create local obsmarkers to resolve
+    # this.
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        unfi = repo.unfiltered()
+        # Commits that are only visible in the cloud are commits that are
+        # ancestors of the cloud heads but are hidden locally.
+        cloudvisibleonly = list(
+            unfi.set(
+                "draft() & ::%ls & hidden()",
+                [head for head in cloudrefs.heads if head not in omittedheads],
+            )
+        )
+        # Commits that are only hidden in the cloud are commits that are
+        # ancestors of the previous cloud heads that are not ancestors of the
+        # current cloud heads, but have not been hidden or obsoleted locally.
+        cloudhiddenonly = list(
+            unfi.set(
+                "(draft() & ::%ls) - (draft() & ::%ls) - hidden() - obsolete()",
+                [head for head in lastsyncstate.heads if head not in omittedheads],
+                [head for head in cloudrefs.heads if head not in omittedheads],
+            )
+        )
+        if cloudvisibleonly or cloudhiddenonly:
+            repo.ui.warn(
+                _(
+                    "detected obsmarker inconsistency (fixing by obsoleting [%s] and reviving [%s])\n"
+                )
+                % (
+                    ", ".join([nodemod.short(ctx.node()) for ctx in cloudhiddenonly]),
+                    ", ".join([nodemod.short(ctx.node()) for ctx in cloudvisibleonly]),
+                )
+            )
+            repo._commitcloudskippendingobsmarkers = True
+            with repo.lock():
+                obsolete.createmarkers(repo, [(ctx, ()) for ctx in cloudhiddenonly])
+                obsolete.revive(cloudvisibleonly)
+            repo._commitcloudskippendingobsmarkers = False
+
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(
         cloudrefs.version,
@@ -535,82 +353,12 @@ def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=No
         omittedheads,
         omittedbookmarks,
         maxage,
-        remotepath,
     )
 
-    # Also update infinitepush state.  These new heads are already backed up,
+    # Also update backup state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
-    recordbackup(ui, repo, remotepath, newheads)
-
-
-def _checkomissions(ui, repo, remotepath, lastsyncstate):
-    """check omissions are still not available locally
-
-    Check that the commits that have been deliberately omitted are still not
-    available locally.  If they are now available (e.g. because the user pulled
-    them manually), then remove the tracking of those heads being omitted, and
-    restore any bookmarks that can now be restored.
-    """
-    unfi = repo.unfiltered()
-    lastomittedheads = set(lastsyncstate.omittedheads)
-    lastomittedbookmarks = set(lastsyncstate.omittedbookmarks)
-    omittedheads = set()
-    omittedbookmarks = set()
-    changes = []
-    for head in lastomittedheads:
-        if head not in repo:
-            omittedheads.add(head)
-    for name in lastomittedbookmarks:
-        # bookmark might be removed from cloud workspace by someone else
-        if name not in lastsyncstate.bookmarks:
-            continue
-        node = lastsyncstate.bookmarks[name]
-        if node in unfi:
-            changes.append((name, nodemod.bin(node)))
-        else:
-            omittedbookmarks.add(name)
-    if omittedheads != lastomittedheads or omittedbookmarks != lastomittedbookmarks:
-        lastsyncstate.update(
-            lastsyncstate.version,
-            lastsyncstate.heads,
-            lastsyncstate.bookmarks,
-            list(omittedheads),
-            list(omittedbookmarks),
-            lastsyncstate.maxage,
-            remotepath,
-        )
-    if changes:
-        with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
-            repo._bookmarks.applychanges(repo, tr, changes)
-
-
-def _update(ui, repo, destination):
-    # update to new head with merging local uncommited changes
-    ui.status(_("updating to %s\n") % nodemod.short(destination))
-    updatecheck = "noconflict"
-    return hg.updatetotally(ui, repo, destination, destination, updatecheck=updatecheck)
-
-
-def _filterpushside(ui, repo, pushheads, localheads, lastsyncstateheads):
-    """filter push side to include only the specified push heads to the delta"""
-
-    # local - allowed - synced
-    skipped = set(localheads) - set(pushheads) - set(lastsyncstateheads)
-    if skipped:
-
-        def firstline(hexnode):
-            return templatefilters.firstline(repo[hexnode].description())[:50]
-
-        skippedlist = "\n".join(
-            ["    %s    %s" % (hexnode[:16], firstline(hexnode)) for hexnode in skipped]
-        )
-        ui.status(
-            _("push filter: list of unsynced local heads that will be skipped\n%s\n")
-            % skippedlist,
-            component="commitcloud",
-        )
-
-    return list(set(localheads) & (set(lastsyncstateheads) | set(pushheads)))
+    state = backupstate.BackupState(repo, remotepath)
+    state.update([nodemod.bin(head) for head in newheads])
 
 
 def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
@@ -696,11 +444,6 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
     return list(omittedbookmarks)
 
 
-def _mergeobsmarkers(repo, tr, obsmarkers):
-    tr._commitcloudskippendingobsmarkers = True
-    repo.obsstore.add(tr, obsmarkers)
-
-
 def _forkname(ui, name, othernames):
     hostname = ui.config("commitcloud", "hostname", socket.gethostname())
 
@@ -715,3 +458,152 @@ def _forkname(ui, name, othernames):
         candidate = "%s-%s%s" % (name, hostname, "-%s" % n if n != 0 else "")
         if candidate not in othernames:
             return candidate
+
+
+def _mergeobsmarkers(repo, tr, obsmarkers):
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        tr._commitcloudskippendingobsmarkers = True
+        repo.obsstore.add(tr, obsmarkers)
+
+
+def _checkomissions(repo, remotepath, lastsyncstate):
+    """check omissions are still not available locally
+
+    Check that the commits that have been deliberately omitted are still not
+    available locally.  If they are now available (e.g. because the user pulled
+    them manually), then remove the tracking of those heads being omitted, and
+    restore any bookmarks that can now be restored.
+    """
+    unfi = repo.unfiltered()
+    lastomittedheads = set(lastsyncstate.omittedheads)
+    lastomittedbookmarks = set(lastsyncstate.omittedbookmarks)
+    omittedheads = set()
+    omittedbookmarks = set()
+    changes = []
+    for head in lastomittedheads:
+        if head not in repo:
+            omittedheads.add(head)
+    for name in lastomittedbookmarks:
+        # bookmark might be removed from cloud workspace by someone else
+        if name not in lastsyncstate.bookmarks:
+            continue
+        node = lastsyncstate.bookmarks[name]
+        if node in unfi:
+            changes.append((name, nodemod.bin(node)))
+        else:
+            omittedbookmarks.add(name)
+    if omittedheads != lastomittedheads or omittedbookmarks != lastomittedbookmarks:
+        lastsyncstate.update(
+            lastsyncstate.version,
+            lastsyncstate.heads,
+            lastsyncstate.bookmarks,
+            list(omittedheads),
+            list(omittedbookmarks),
+            lastsyncstate.maxage,
+        )
+    if changes:
+        with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+            repo._bookmarks.applychanges(repo, tr, changes)
+
+
+def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, serv):
+    localheads = _getheads(repo)
+    localbookmarks = _getbookmarks(repo)
+    obsmarkers = obsmarkersmod.getsyncingobsmarkers(repo)
+
+    # If any commits failed to back up, exclude them.  Revert any bookmark changes
+    # that point to failed commits.
+    if failed:
+        localheads = [
+            nodemod.hex(head)
+            for head in repo.nodes("heads(draft() & ::%ls - %ld::)", localheads, failed)
+        ]
+        failedset = set(repo.nodes("draft() & %ld::", failed))
+        for name, bookmarknode in localbookmarks.items():
+            if nodemod.bin(bookmarknode) in failedset:
+                if name in lastsyncstate.bookmarks:
+                    localbookmarks[name] = lastsyncstate.bookmarks[name]
+                else:
+                    del localbookmarks[name]
+
+    # Work out what we should have synced locally (and haven't deliberately
+    # omitted)
+    omittedheads = set(lastsyncstate.omittedheads)
+    omittedbookmarks = set(lastsyncstate.omittedbookmarks)
+    localsyncedheads = [
+        head for head in lastsyncstate.heads if head not in omittedheads
+    ]
+    localsyncedbookmarks = {
+        name: node
+        for name, node in lastsyncstate.bookmarks.items()
+        if name not in omittedbookmarks
+    }
+
+    if (
+        set(localheads) == set(localsyncedheads)
+        and localbookmarks == localsyncedbookmarks
+        and lastsyncstate.version != 0
+        and not obsmarkers
+    ):
+        # Nothing to send.
+        return True, None
+
+    # The local repo has changed.  We must send these changes to the
+    # cloud.
+
+    # Work out the new cloud heads and bookmarks by merging in the
+    # omitted items.  We need to preserve the ordering of the cloud
+    # heads so that smartlogs generally match.
+    localandomittedheads = set(localheads).union(lastsyncstate.omittedheads)
+    newcloudheads = util.removeduplicates(
+        [head for head in lastsyncstate.heads if head in localandomittedheads]
+        + localheads
+    )
+    newcloudbookmarks = {
+        name: localbookmarks.get(name, lastsyncstate.bookmarks.get(name))
+        for name in set(localbookmarks.keys()).union(lastsyncstate.omittedbookmarks)
+    }
+
+    # Work out what the new omitted heads and bookmarks are.
+    newomittedheads = list(set(newcloudheads).difference(localheads))
+    newomittedbookmarks = list(
+        set(newcloudbookmarks.keys()).difference(localbookmarks.keys())
+    )
+
+    # Check for workspace oscillation.  This is where we try to revert the
+    # workspace back to how it was immediately prior to applying the cloud
+    # changes at the start of the sync.  This is usually an error caused by
+    # inconsistent obsmarkers.
+    if lastsyncstate.oscillating(newcloudheads, newcloudbookmarks):
+        raise ccerror.SynchronizationError(
+            repo.ui,
+            _(
+                "oscillating commit cloud workspace detected.\n"
+                "check for commits that are visible in one repo but hidden in another,\n"
+                "and hide or unhide those commits in all places."
+            ),
+        )
+
+    backuplock.progress(repo, "finishing synchronizing with '%s'" % workspacename)
+    synced, cloudrefs = serv.updatereferences(
+        reponame,
+        workspacename,
+        lastsyncstate.version,
+        lastsyncstate.heads,
+        newcloudheads,
+        lastsyncstate.bookmarks.keys(),
+        newcloudbookmarks,
+        obsmarkers,
+    )
+    if synced:
+        lastsyncstate.update(
+            cloudrefs.version,
+            newcloudheads,
+            newcloudbookmarks,
+            newomittedheads,
+            newomittedbookmarks,
+            lastsyncstate.maxage,
+        )
+        obsmarkersmod.clearsyncingobsmarkers(repo)
+
+    return synced, cloudrefs

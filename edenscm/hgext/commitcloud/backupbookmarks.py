@@ -178,6 +178,9 @@ def pushbackupbookmarks(repo, dest=None, **opts):
             name = "/".join((prefix, "heads", hexhead))
             infinitepushbookmarks[name] = hexhead
 
+    if not infinitepushbookmarks:
+        return
+
     def getconnection():
         return repo.connectionpool.get(remotepath, opts)
 

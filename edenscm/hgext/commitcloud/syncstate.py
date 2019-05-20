@@ -40,6 +40,7 @@ class SyncState(object):
     def __init__(self, repo, workspacename):
         self.filename = self._filename(workspacename)
         self.repo = repo
+        self.prevstate = None
         if repo.svfs.exists(self.filename):
             with repo.svfs.open(self.filename, "r") as f:
                 try:
@@ -59,7 +60,6 @@ class SyncState(object):
                     n.encode("utf-8") for n in data.get("omittedbookmarks", ())
                 ]
                 self.maxage = data.get("maxage", None)
-                self.remotepath = data.get("remotepath", None)
                 self.lastupdatetime = data.get("lastupdatetime", None)
         else:
             self.version = 0
@@ -68,7 +68,6 @@ class SyncState(object):
             self.omittedheads = []
             self.omittedbookmarks = []
             self.maxage = None
-            self.remotepath = None
             self.lastupdatetime = None
 
     def update(
@@ -79,7 +78,6 @@ class SyncState(object):
         newomittedheads,
         newomittedbookmarks,
         newmaxage,
-        remotepath,
     ):
         data = {
             "version": newversion,
@@ -88,11 +86,11 @@ class SyncState(object):
             "omittedheads": newomittedheads,
             "omittedbookmarks": newomittedbookmarks,
             "maxage": newmaxage,
-            "remotepath": remotepath,
             "lastupdatetime": time.time(),
         }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
             json.dump(data, f)
+        self.prevstate = (self.version, self.heads, self.bookmarks)
         self.version = newversion
         self.heads = newheads
         self.bookmarks = newbookmarks
@@ -100,13 +98,19 @@ class SyncState(object):
         self.omittedbookmarks = newomittedbookmarks
         self.maxage = newmaxage
 
-    def updateremotepath(self, remotepath):
-        self.update(
-            self.version,
-            self.heads,
-            self.bookmarks,
-            self.omittedheads,
-            self.omittedbookmarks,
-            self.maxage,
-            remotepath,
-        )
+    def oscillating(self, newheads, newbookmarks):
+        """detect oscillating workspaces
+
+        Returns true if updating the cloud state to the new heads or bookmarks
+        would be equivalent to updating back to the immediate previous
+        version.
+        """
+        if self.prevstate is not None and self.lastupdatetime is not None:
+            prevversion, prevheads, prevbookmarks = self.prevstate
+            return (
+                prevversion == self.version - 1
+                and prevheads == newheads
+                and prevbookmarks == newbookmarks
+                and self.lastupdatetime > time.time() - 60
+            )
+        return False

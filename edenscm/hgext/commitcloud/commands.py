@@ -610,9 +610,7 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
             ui.setconfig("ui", "ssh", bgssh)
 
     with backuplock.lock(repo):
-        currentnode = repo["."].node()
-        sync.docloudsync(ui, repo, cloudrefs, **opts)
-        ret = sync.maybeupdateworkingcopy(ui, repo, currentnode)
+        ret = sync.sync(repo, cloudrefs, **opts)
 
     background.backgroundbackupother(repo, **opts)
     return ret

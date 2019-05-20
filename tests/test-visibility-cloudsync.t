@@ -150,6 +150,12 @@ Now cloud sync.  The sets of commits should be merged.
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at dae3b312bb78
+  remote: pushing 4 commits:
+  remote:     dae3b312bb78  Z
+  remote:     c70a9bd6bfd1  E
+  remote:     ba83c5428cb2  F
+  remote:     6caded0e9807  D
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -162,12 +168,6 @@ Now cloud sync.  The sets of commits should be merged.
   added 1 changesets with 1 changes to 2 files (+1 heads)
   new changesets d8fc5ae9b7ef:dd114d9b2f9e
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  backing up stack rooted at dae3b312bb78
-  remote: pushing 4 commits:
-  remote:     dae3b312bb78  Z
-  remote:     c70a9bd6bfd1  E
-  remote:     ba83c5428cb2  F
-  remote:     6caded0e9807  D
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm

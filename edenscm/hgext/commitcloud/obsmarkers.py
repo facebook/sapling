@@ -70,4 +70,4 @@ def getsyncingobsmarkers(repo):
 
 def clearsyncingobsmarkers(repo):
     """Clears all syncing obsmarkers.  The caller must hold the backup lock."""
-    repo.sharedvfs.unlink(_obsmarkerssyncing)
+    repo.sharedvfs.tryunlink(_obsmarkerssyncing)

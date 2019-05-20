@@ -105,17 +105,8 @@ Check that backup doesn't interfere with commit cloud
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'master' repo
   commitcloud: synchronizing 'master' with 'user/test/default'
-  backing up stack rooted at * (glob)
-  remote: pushing 3 commits:
-  remote:     *  A1 (glob)
-  remote:     *  A2 (glob)
-  remote:     *  A3 (glob)
-  backing up stack rooted at * (glob)
-  remote: pushing 2 commits:
-  remote:     *  B1 (glob)
-  remote:     *  B2 (glob)
   commitcloud: commits synchronized
-  finished in *.*sec (glob)
+  finished in * (glob)
 
   $ hg up $B2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -130,12 +121,18 @@ Check that backup doesn't interfere with commit cloud
 
   $ hg cloud sync
   commitcloud: synchronizing 'master' with 'user/test/default'
-  backing up stack rooted at * (glob)
-  remote: pushing 3 commits:
-  remote:     *  B1 (glob)
-  remote:     *  B2 (glob)
-  remote:     *  B3 (glob)
   commitcloud: commits synchronized
-  finished in *.* (glob)
+  finished in * (glob)
 
-
+  $ mkcommit B4
+  7b520430ff426d7f4a6c305bef4a90507afe1b32
+  $ hg cloud sync
+  commitcloud: synchronizing 'master' with 'user/test/default'
+  backing up stack rooted at 458a3fc7650d
+  remote: pushing 4 commits:
+  remote:     458a3fc7650d  B1
+  remote:     ecd738f5fb6c  B2
+  remote:     901656c16420  B3
+  remote:     7b520430ff42  B4
+  commitcloud: commits synchronized
+  finished in * (glob)

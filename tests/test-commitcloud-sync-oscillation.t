@@ -71,7 +71,7 @@ Connect the first client
   finished in * (glob)
 
 Make some commits
-  $ hg debugdrawdag <<EOS
+  $ drawdag <<EOS
   > C E G
   > | | |
   > B D F
@@ -117,7 +117,7 @@ Create a new client that isn't connected yet
   $ cat shared.rc >> client2/.hg/hgrc
 
 Share commits A B C D and E into the repo manually with a bundle
-  $ hg bundle -q -R client1 --base 0 -r 'A+B+C+D+E' ABCDE.hg
+  $ hg bundle -q -R client1 --base 0 -r "$A+$B+$C+$D+$E" ABCDE.hg
   $ hg unbundle -R client2 ABCDE.hg
   adding changesets
   adding manifests
@@ -159,11 +159,11 @@ Connect to commit cloud
   added 2 changesets with 2 changes to 3 files (+1 heads)
   new changesets 64b4d9634423:878302dcadc7
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  detected obsmarker inconsistency (fixing by obsoleting [] and reviving [449486ddff7a, 65299708466c, 27ad02806080])
   commitcloud: commits synchronized
   finished in * (glob)
 
-Syncing in the two repos causes the commits to be revived, and the cloud
-workspace does not oscillate between the two views.
+The commits have been revived, so syncing does not oscillate between the two views.
 
   $ cd ..
   $ hg -R client1 cloud sync
@@ -364,47 +364,47 @@ Ensure everything is synced
 
 Create a commit that was obsoleted without the commitcloud extension loaded, but is bookmarked.
 
-  $ hg hide 5 --config extensions.commitcloud=!
-  hiding commit 27ad02806080 "E"
+  $ hg hide $G --config extensions.commitcloud=!
+  hiding commit 878302dcadc7 "G"
   1 changesets hidden
-  $ hg book --hidden -r 5 hiddenbook
-  $ tglogp -r 3::
-  x  5: 27ad02806080 draft 'E' hiddenbook
+  $ hg book --hidden -r $G hiddenbook
+  $ tglogp -r $F::
+  x  7: 878302dcadc7 draft 'G' hiddenbook
   |
-  o  3: 449486ddff7a draft 'D'
+  o  6: 64b4d9634423 draft 'F'
   |
   ~
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
-  $ tglogp -r 3::
-  x  5: 27ad02806080 draft 'E' hiddenbook
+  $ tglogp -r $F::
+  x  7: 878302dcadc7 draft 'G' hiddenbook
   |
-  o  3: 449486ddff7a draft 'D'
+  o  6: 64b4d9634423 draft 'F'
   |
   ~
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 4
   bookmarks:
       foo => 5817a557f93f46ab290e8571c89624ff856130c0
-      hiddenbook => 27ad028060800678c2de95fea2e826bbd4bf2c21
+      hiddenbook => 878302dcadc7a800f326d8e06a5e9beec77e5a1c
   heads:
       65299708466caa8f13c05d82e76d611c183defee
       27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
-Clients are now in sync.
+Clients are now in sync, except for the obsoletion state of the commit.
 
   $ cd ../client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
-  $ tglogp -r 3::
-  o  6: 27ad02806080 draft 'E' hiddenbook
+  $ tglogp -r $F::
+  o  7: 878302dcadc7 draft 'G' hiddenbook
   |
-  o  3: 449486ddff7a draft 'D'
+  o  4: 64b4d9634423 draft 'F'
   |
   ~
 
@@ -413,10 +413,10 @@ Clients are now in sync.
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
-  $ tglogp -r 3::
-  x  5: 27ad02806080 draft 'E' hiddenbook
+  $ tglogp -r $F::
+  x  7: 878302dcadc7 draft 'G' hiddenbook
   |
-  o  3: 449486ddff7a draft 'D'
+  o  6: 64b4d9634423 draft 'F'
   |
   ~
 
@@ -425,10 +425,129 @@ Clients are now in sync.
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
-  $ tglogp -r 3::
-  o  6: 27ad02806080 draft 'E' hiddenbook
+  $ tglogp -r $F::
+  o  7: 878302dcadc7 draft 'G' hiddenbook
   |
-  o  3: 449486ddff7a draft 'D'
+  o  4: 64b4d9634423 draft 'F'
   |
   ~
 
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 4
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+      hiddenbook => 878302dcadc7a800f326d8e06a5e9beec77e5a1c
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c
+
+Delete the bookmark on client 1, and sync it.
+
+  $ hg book -d hiddenbook
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+On client 2, cloud sync will remove the bookmark.  Since the commit is obsolete
+it is also removed as a head.  (It remains visible in smartlog because of
+hiddenoverride, but commit cloud ignores it).
+
+  $ cd ../client2
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  $ tglogp -r $F::
+  x  7: 878302dcadc7 draft 'G'
+  |
+  o  6: 64b4d9634423 draft 'F'
+  |
+  ~
+
+In client 1 the obsmarker inconsistency is finally detected and fixed.
+
+  $ cd ../client1
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  detected obsmarker inconsistency (fixing by obsoleting [878302dcadc7] and reviving [])
+  commitcloud: commits synchronized
+  finished in * (glob)
+  $ tglogp -r $F::
+  o  4: 64b4d9634423 draft 'F'
+  |
+  ~
+
+Everything is stable now.
+
+  $ cd ../client2
+  $ hg cloud sync -q
+  $ cd ../client1
+  $ hg cloud sync -q
+  $ cd ../client2
+  $ hg cloud sync -q
+  $ tglogp -r $F::
+  x  7: 878302dcadc7 draft 'G'
+  |
+  o  6: 64b4d9634423 draft 'F'
+  |
+  ~
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 6
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      64b4d963442377cb7aa4b0997eeca249ac8643c9
+
+Make a new commit.  Copy it to the other client via a bundle, and then hide it
+with commit cloud inactive.
+
+  $ cd ../client1
+  $ hg up -q 0
+  $ echo x > X
+  $ hg commit -Aqm X
+  $ cd ..
+  $ hg bundle -q -R client1 --base 0 -r tip X.hg
+  $ hg unbundle -R client2 X.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 48be23e24839
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ cd client1
+  $ hg hide tip --config extensions.commitcloud=!
+  hiding commit 48be23e24839 "X"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at df4f53cec30a
+  1 changesets hidden
+
+Cloud sync should act as if it never saw the commit.
+
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+But client2 will push it as if it was a new commit.
+
+  $ cd ../client2
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  backing up stack rooted at 48be23e24839
+  remote: pushing 1 commit:
+  remote:     48be23e24839  X
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+Now client1 will revive the commit.
+
+  $ cd ../client1
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  detected obsmarker inconsistency (fixing by obsoleting [] and reviving [48be23e24839])
+  commitcloud: commits synchronized
+  finished in * (glob)

@@ -100,6 +100,8 @@ Fake land the commit
   @  0: df4f53cec30a public 'base'
   
 
+Rebasing the bookmark will make the draft commit disappear.
+
   $ cd ../client1
   $ hg rebase -b foo -d 4
   note: not rebasing 1:00422fad0026 "draft-commit" (foo), already in destination as 3:441f69264760 "landed-commit"
@@ -123,13 +125,8 @@ Fake land the commit
   |  Differential Revision: https://phabricator.fb.com/D1234'
   o  2: 031d760782fb public 'public-commit-1'
   |
-  | o  1: 00422fad0026 draft 'draft-commit
-  |/   Differential Revision: https://phabricator.fb.com/D1234'
   @  0: df4f53cec30a public 'base'
   
-
-BUG! Commit 1 shouldn't be visible anymore.
-
 Sync in client2.   This will fail because we don't have the landed commit, so
 we will need to pull.
 
@@ -160,6 +157,9 @@ we will need to pull.
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
+
+The draft commit is also gone from here, and the workspace is stable.
+
   $ tglogp
   o  4: 67d363c9001e public 'public-commit-2' foo
   |
@@ -167,12 +167,8 @@ we will need to pull.
   |  Differential Revision: https://phabricator.fb.com/D1234'
   o  2: 031d760782fb public 'public-commit-1'
   |
-  | o  1: 00422fad0026 draft 'draft-commit
-  |/   Differential Revision: https://phabricator.fb.com/D1234'
   @  0: df4f53cec30a public 'base'
   
-
-BUG!  Commit 1 shouldn't be visible here, either!
 
   $ cd ../client1
   $ hg cloud sync -q
@@ -183,7 +179,5 @@ BUG!  Commit 1 shouldn't be visible here, either!
   |  Differential Revision: https://phabricator.fb.com/D1234'
   o  2: 031d760782fb public 'public-commit-1'
   |
-  | o  1: 00422fad0026 draft 'draft-commit
-  |/   Differential Revision: https://phabricator.fb.com/D1234'
   @  0: df4f53cec30a public 'base'
   

@@ -137,9 +137,6 @@ Sync from the second client and `hg unamend` there
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 1cf4a5a0e8fc
-  remote: pushing 1 commit:
-  remote:     1cf4a5a0e8fc  feature1
   commitcloud: commits synchronized
   finished in * (glob)
 
