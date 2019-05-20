@@ -11,7 +11,7 @@ use cpython::{
 use revisionstore::datastore::DataStore;
 use types::{Key, Node};
 
-use crate::pythonutil::{
+use crate::revisionstore::pythonutil::{
     from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr,
 };
 

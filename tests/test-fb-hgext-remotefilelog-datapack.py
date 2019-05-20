@@ -25,8 +25,8 @@ from edenscm.hgext.remotefilelog.datapack import (
     fastdatapack,
     mutabledatapack,
 )
-from edenscm.hgext.remotefilelog.pyrevisionstore import datapack as rustdatapack
 from edenscm.mercurial.node import nullid
+from edenscm.mercurial.rust.bindings import revisionstore
 
 
 try:
@@ -558,7 +558,7 @@ class fastdatapacktests(datapacktestsbase, unittest.TestCase):
 
 class rustdatapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, rustdatapack, False, True)
+        datapacktestsbase.__init__(self, revisionstore.datapack, False, True)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 

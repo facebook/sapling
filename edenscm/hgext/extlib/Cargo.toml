@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "indexes",
-    "pyrevisionstore",
 ]
 
 [profile.release]

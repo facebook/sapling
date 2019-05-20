@@ -12,7 +12,7 @@ use encoding;
 use revisionstore::repack::{RepackOutputType, RepackResult, Repackable};
 use types::Key;
 
-use crate::pythonutil::{from_key, from_tuple_to_key, to_pyerr};
+use crate::revisionstore::pythonutil::{from_key, from_tuple_to_key, to_pyerr};
 
 pub trait RepackablePyExt {
     fn mark_ledger(&self, py: Python, py_store: &PyObject, ledger: &PyObject) -> PyResult<()>;
@@ -61,11 +61,10 @@ impl<T: Repackable> RepackablePyExt for T {
             .iter(py)?
             .map(|py_name| {
                 let py_name = py_name?;
-                Ok(PathBuf::from(encoding::local_bytes_to_path(
-                    py_name.cast_as::<PyBytes>(py)?.data(py),
-                ).map_err(|e| {
-                    to_pyerr(py, &e.into())
-                })?))
+                Ok(PathBuf::from(
+                    encoding::local_bytes_to_path(py_name.cast_as::<PyBytes>(py)?.data(py))
+                        .map_err(|e| to_pyerr(py, &e.into()))?,
+                ))
             })
             .collect::<Result<HashSet<PathBuf>, PyErr>>()?;
 

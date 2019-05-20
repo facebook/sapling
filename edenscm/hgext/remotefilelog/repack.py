@@ -24,15 +24,10 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
+from edenscm.mercurial.rust.bindings import revisionstore
 
 from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
 from ..extutil import flock, runshellcommand
-from .pyrevisionstore import (
-    repackdatapacks,
-    repackhistpacks,
-    repackincrementaldatapacks,
-    repackincrementalhistpacks,
-)
 
 
 osutil = policy.importmod(r"osutil")
@@ -100,9 +95,12 @@ def _runrustrepack(repo, options, packpath, incremental, pythonrepack):
     failed = False
 
     if incremental:
-        repacks = [repackincrementaldatapacks, repackincrementalhistpacks]
+        repacks = [
+            revisionstore.repackincrementaldatapacks,
+            revisionstore.repackincrementalhistpacks,
+        ]
     else:
-        repacks = [repackdatapacks, repackhistpacks]
+        repacks = [revisionstore.repackdatapacks, revisionstore.repackhistpacks]
 
     for dorepack in repacks:
         try:

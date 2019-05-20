@@ -13,9 +13,9 @@ import unittest
 import silenttestrunner
 from edenscm.hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
 from edenscm.hgext.remotefilelog.historypack import historypack, mutablehistorypack
-from edenscm.hgext.remotefilelog.pyrevisionstore import historypack as rusthistpack
 from edenscm.mercurial import error, ui as uimod, util
 from edenscm.mercurial.node import nullid
+from edenscm.mercurial.rust.bindings import revisionstore
 
 
 try:
@@ -408,7 +408,7 @@ class histpacktests(histpacktestsbase, unittest.TestCase):
 
 class rusthistpacktests(histpacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        histpacktestsbase.__init__(self, rusthistpack)
+        histpacktestsbase.__init__(self, revisionstore.historypack)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 

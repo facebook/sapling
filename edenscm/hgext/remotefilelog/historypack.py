@@ -10,9 +10,9 @@ import struct
 
 from edenscm.mercurial import error, util
 from edenscm.mercurial.node import hex, nullid
+from edenscm.mercurial.rust.bindings import revisionstore
 
 from . import basepack, constants, shallowutil
-from .pyrevisionstore import historypack as rusthistorypack, repackincrementalhistpacks
 
 
 # (filename hash, offset, size)
@@ -58,7 +58,7 @@ class historypackstore(basepack.basepackstore):
 
     def getpack(self, path):
         if self.userusthistorypack:
-            return rusthistorypack(path)
+            return revisionstore.historypack(path)
         else:
             return historypack(path)
 
@@ -87,7 +87,7 @@ class historypackstore(basepack.basepackstore):
 
     def repackstore(self):
         if self.fetchpacksenabled:
-            repackincrementalhistpacks(self.path, self.path)
+            revisionstore.repackincrementalhistpacks(self.path, self.path)
 
 
 class historypack(basepack.basepack):

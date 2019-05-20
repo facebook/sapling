@@ -15,8 +15,8 @@ use encoding::local_bytes_to_path;
 use revisionstore::{DataStore, Delta, LocalStore, Metadata, MutableDeltaStore};
 use types::Key;
 
-use crate::pyerror::pyerr_to_error;
-use crate::pythonutil::{
+use crate::revisionstore::pyerror::pyerr_to_error;
+use crate::revisionstore::pythonutil::{
     bytes_from_tuple, from_delta_to_tuple, from_key_to_tuple, from_tuple_to_delta,
     from_tuple_to_key, to_key, to_pyerr,
 };

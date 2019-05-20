@@ -473,9 +473,13 @@ def perfdatapack(ui, repo, packpath, **opts):
 
 def _packtestfn(ui, packpath, opts, func):
     from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
-    from edenscm.hgext.extlib.pyrevisionstore import datapack as rustdatapack
+    from edenscm.mercurial.rust.bindings import revisionstore
 
-    kinds = [("Python", datapack), ("C", fastdatapack), ("Rust", rustdatapack)]
+    kinds = [
+        ("Python", datapack),
+        ("C", fastdatapack),
+        ("Rust", revisionstore.datapack),
+    ]
 
     prepacks = [(name, f(packpath)) for name, f in kinds]
 

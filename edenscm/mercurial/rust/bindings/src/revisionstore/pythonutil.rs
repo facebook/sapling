@@ -10,11 +10,12 @@ use cpython::{
     ToPyObject,
 };
 use failure::{Error, Fallible};
+
 use revisionstore::datastore::Delta;
 use revisionstore::error::KeyError;
 use types::{Key, Node, RepoPath};
 
-use crate::pyerror::pyerr_to_error;
+use crate::revisionstore::pyerror::pyerr_to_error;
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     if let Some(io_error) = error.downcast_ref::<io::Error>() {

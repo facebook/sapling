@@ -15,6 +15,7 @@ pub mod lz4;
 pub mod mutationstore;
 pub mod nodemap;
 pub mod pathmatcher;
+pub mod revisionstore;
 pub mod treestate;
 pub mod zstd;
 
@@ -29,7 +30,7 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "mutationstore", mutationstore::init_module(py, &name)?)?;
     m.add(py, "nodemap", nodemap::init_module(py, &name)?)?;
     m.add(py, "pathmatcher", pathmatcher::init_module(py, &name)?)?;
-    m.add(py, "pyrevisionstore", pyrevisionstore::init_module(py, &name)?)?;
+    m.add(py, "revisionstore", revisionstore::init_module(py, &name)?)?;
     m.add(py, "treestate", treestate::init_module(py, &name)?)?;
     m.add(py, "zstd", zstd::init_module(py, &name)?)?;
     Ok(())

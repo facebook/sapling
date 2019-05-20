@@ -15,8 +15,8 @@ use encoding::local_bytes_to_path;
 use revisionstore::MutableHistoryStore;
 use types::{Key, NodeInfo};
 
-use crate::pyerror::pyerr_to_error;
-use crate::pythonutil::{from_key, to_pyerr};
+use crate::revisionstore::pyerror::pyerr_to_error;
+use crate::revisionstore::pythonutil::{from_key, to_pyerr};
 
 pub struct PythonMutableHistoryPack {
     py_historypack: PyObject,

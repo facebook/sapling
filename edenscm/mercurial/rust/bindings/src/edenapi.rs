@@ -6,12 +6,13 @@
 use std::str;
 
 use cpython::*;
-use cpython_failure::ResultPyErrExt;
-use encoding::local_bytes_to_path;
 
+use cpython_failure::ResultPyErrExt;
 use edenapi::{Config, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
-use pyrevisionstore::{PythonMutableDataPack, PythonMutableHistoryPack};
+use encoding::local_bytes_to_path;
 use types::{Key, Node, RepoPath};
+
+use crate::revisionstore::{PythonMutableDataPack, PythonMutableHistoryPack};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");

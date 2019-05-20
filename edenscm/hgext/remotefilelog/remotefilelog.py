@@ -13,6 +13,7 @@ import os
 from edenscm.mercurial import ancestor, error, filelog, mdiff, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
+from edenscm.mercurial.rust.bindings import revisionstore
 
 from . import constants, fileserverclient, mutablestores, shallowutil
 from .contentstore import (
@@ -27,7 +28,6 @@ from .metadatastore import (
     remotemetadatastore,
     unionmetadatastore,
 )
-from .pyrevisionstore import indexedlogdatastore
 
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
@@ -571,7 +571,7 @@ class remotefileslog(filelog.fileslog):
             if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
                 path = shallowutil.getexperimentalcachepath(repo)
                 path = os.path.join(path, "indexedlogdatastore")
-                sharedcontentstores += [indexedlogdatastore(path)]
+                sharedcontentstores += [revisionstore.indexedlogdatastore(path)]
 
             sunioncontentstore = unioncontentstore(*sharedcontentstores)
             sunionmetadatastore = unionmetadatastore(

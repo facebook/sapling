@@ -10,7 +10,7 @@ use cpython::{
 use revisionstore::historystore::HistoryStore;
 use types::{Key, NodeInfo};
 
-use crate::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
+use crate::revisionstore::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
 
 pub trait HistoryStorePyExt {
     fn get_ancestors(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;

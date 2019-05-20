@@ -11,10 +11,10 @@ import struct
 from edenscm.mercurial import error, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
+from edenscm.mercurial.rust.bindings import revisionstore
 
 from . import basepack, constants, shallowutil
 from .lz4wrapper import lz4compress, lz4decompress
-from .pyrevisionstore import datapack as rustdatapack, repackincrementaldatapacks
 
 
 try:
@@ -59,7 +59,7 @@ class datapackstore(basepack.basepackstore):
 
     def getpack(self, path):
         if self.userustdatapack:
-            return rustdatapack(path)
+            return revisionstore.datapack(path)
         elif self.usecdatapack:
             return fastdatapack(path)
         else:
@@ -100,7 +100,7 @@ class datapackstore(basepack.basepackstore):
 
     def repackstore(self, incremental=True):
         if self.fetchpacksenabled:
-            repackincrementaldatapacks(self.path, self.path)
+            revisionstore.repackincrementaldatapacks(self.path, self.path)
 
 
 class datapack(basepack.basepack):

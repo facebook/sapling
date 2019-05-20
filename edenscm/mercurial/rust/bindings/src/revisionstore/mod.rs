@@ -1,31 +1,40 @@
 // Copyright Facebook, Inc. 2018
-//! Python bindings for a Rust hg store
+//! revisionstore - Python interop layer for a Mercurial data and history store
 
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    path::PathBuf,
-};
+#![allow(non_camel_case_types)]
 
-use cpython::{
-    ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyModule, PyObject, PyResult, PyTuple,
-    Python, PythonObject,
-};
+use std::path::PathBuf;
+
+use cpython::*;
+use failure::Error;
 
 use encoding;
-use failure::{format_err, Error};
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     DataPack, HistoryPack, IndexedLogDataStore,
 };
 
-use crate::datastorepyext::DataStorePyExt;
-use crate::historystorepyext::HistoryStorePyExt;
-use crate::pythondatastore::PythonDataStore;
-use crate::pythonutil::to_pyerr;
-use crate::repackablepyext::RepackablePyExt;
+use crate::revisionstore::datastorepyext::DataStorePyExt;
+use crate::revisionstore::historystorepyext::HistoryStorePyExt;
+use crate::revisionstore::pyext::PyOptionalRefCell;
+use crate::revisionstore::pythondatastore::PythonDataStore;
+use crate::revisionstore::pythonutil::to_pyerr;
+use crate::revisionstore::repackablepyext::RepackablePyExt;
+
+mod datastorepyext;
+mod historystorepyext;
+mod pyerror;
+mod pyext;
+mod pythondatastore;
+mod pythonhistorystore;
+mod pythonutil;
+mod repackablepyext;
+
+pub use crate::revisionstore::pythondatastore::PythonMutableDataPack;
+pub use crate::revisionstore::pythonhistorystore::PythonMutableHistoryPack;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
-    let name = [package, "pyrevisionstore"].join(".");
+    let name = [package, "revisionstore"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<datastore>(py)?;
     m.add_class::<datapack>(py)?;
@@ -141,75 +150,6 @@ py_class!(class datastore |py| {
         self.store(py).get_missing(py, &mut keys.iter(py)?)
     }
 });
-
-/// The cpython crates forces us to use a `RefCell` for mutation, `OptionalRefCell` wraps all the logic
-/// of dealing with it.
-struct OptionalRefCell<T> {
-    inner: RefCell<Option<T>>,
-}
-
-impl<T> OptionalRefCell<T> {
-    pub fn new(value: T) -> OptionalRefCell<T> {
-        OptionalRefCell {
-            inner: RefCell::new(Some(value)),
-        }
-    }
-
-    /// Obtain a reference on the stored value. Will fail if the value was previously consumed.
-    pub fn get_value(&self) -> Result<Ref<T>, failure::Error> {
-        let b = self.inner.borrow();
-        if b.as_ref().is_none() {
-            Err(format_err!("OptionalRefCell is None."))
-        } else {
-            Ok(Ref::map(b, |o| o.as_ref().unwrap()))
-        }
-    }
-
-    /// Obtain a mutable reference on the stored value. Will fail if the value was previously
-    /// consumed.
-    pub fn get_mut_value(&self) -> Result<RefMut<T>, failure::Error> {
-        let borrow = self.inner.try_borrow_mut()?;
-        if borrow.as_ref().is_none() {
-            Err(format_err!("OptionalRefCell is None."))
-        } else {
-            Ok(RefMut::map(borrow, |o| o.as_mut().unwrap()))
-        }
-    }
-
-    /// Consume the stored value and returns it. Will fail if the value was previously consumed.
-    pub fn take_value(&self) -> Result<T, failure::Error> {
-        let opt = self.inner.try_borrow_mut()?.take();
-        opt.ok_or_else(|| format_err!("None"))
-    }
-}
-
-/// Wrapper around `OptionalRefCell<T>` to convert from `Result<T>` to `PyResult<T>`
-struct PyOptionalRefCell<T> {
-    inner: OptionalRefCell<T>,
-}
-
-impl<T> PyOptionalRefCell<T> {
-    pub fn new(value: T) -> PyOptionalRefCell<T> {
-        PyOptionalRefCell {
-            inner: OptionalRefCell::new(value),
-        }
-    }
-
-    pub fn get_value(&self, py: Python) -> PyResult<Ref<T>> {
-        self.inner.get_value().map_err(|e| to_pyerr(py, &e.into()))
-    }
-
-    pub fn get_mut_value(&self, py: Python) -> PyResult<RefMut<T>> {
-        self.inner
-            .get_mut_value()
-            .map_err(|e| to_pyerr(py, &e.into()))
-    }
-
-    pub fn take_value(&self, py: Python) -> PyResult<T> {
-        self.inner.take_value().map_err(|e| to_pyerr(py, &e.into()))
-    }
-}
-
 py_class!(class datapack |py| {
     data store: PyOptionalRefCell<Box<DataPack>>;
 

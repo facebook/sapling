@@ -16,8 +16,8 @@ from edenscm.hgext.remotefilelog.datapack import (
     fastdatapack,
     mutabledatapack,
 )
-from edenscm.hgext.remotefilelog.pyrevisionstore import datastore
 from edenscm.mercurial.node import nullid
+from edenscm.mercurial.rust.bindings import revisionstore
 
 
 class datastoretests(unittest.TestCase):
@@ -59,7 +59,7 @@ class datastoretests(unittest.TestCase):
 
         pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
-        ruststore = datastore(pystore)
+        ruststore = revisionstore.datastore(pystore)
 
         rustcontent = ruststore.get(revisions[0][0], revisions[0][1])
         pycontent = ruststore.get(revisions[0][0], revisions[0][1])
@@ -76,7 +76,7 @@ class datastoretests(unittest.TestCase):
 
         pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
-        ruststore = datastore(pystore)
+        ruststore = revisionstore.datastore(pystore)
 
         rustchain = ruststore.getdeltachain(revisions[1][0], revisions[1][1])
         pychain = pystore.getdeltachain(revisions[1][0], revisions[1][1])
@@ -94,7 +94,7 @@ class datastoretests(unittest.TestCase):
 
         pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
-        ruststore = datastore(pystore)
+        ruststore = revisionstore.datastore(pystore)
 
         rustmeta = ruststore.getmeta(revisions[0][0], revisions[0][1])
         pymeta = pystore.getmeta(revisions[0][0], revisions[0][1])
@@ -111,7 +111,7 @@ class datastoretests(unittest.TestCase):
 
         pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
-        ruststore = datastore(pystore)
+        ruststore = revisionstore.datastore(pystore)
 
         missing = [(revisions[0][0], revisions[0][1])]
         rustcontent = ruststore.getmissing(missing)
