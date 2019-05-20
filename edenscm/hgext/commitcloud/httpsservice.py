@@ -16,7 +16,7 @@ import time
 from edenscm.mercurial import error, util
 from edenscm.mercurial.i18n import _
 
-from . import baseservice, commitcloudcommon
+from . import baseservice, error as ccerror
 
 
 httplib = util.httplib
@@ -63,19 +63,17 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         # validation
         if not self.remote_host:
-            raise commitcloudcommon.ConfigurationError(
-                self.ui, _("'remote_host' is required")
-            )
+            raise ccerror.ConfigurationError(self.ui, _("'remote_host' is required"))
 
         if self.client_certs and not os.path.isfile(self.client_certs):
-            raise commitcloudcommon.ConfigurationError(
+            raise ccerror.ConfigurationError(
                 ui,
                 _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
                 % self.client_certs,
             )
 
         if self.ca_certs and not os.path.isfile(self.ca_certs):
-            raise commitcloudcommon.ConfigurationError(
+            raise ccerror.ConfigurationError(
                 ui,
                 _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
                 % self.ca_certs,
@@ -157,18 +155,18 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 details.append(
                     _("* certificate authority file used '%s'") % self.ca_certs
                 )
-            return commitcloudcommon.TLSAccessError(self.ui, str(e), details)
+            return ccerror.TLSAccessError(self.ui, str(e), details)
 
         for attempt in xrange(MAX_CONNECT_RETRIES):
             try:
                 self.connection.request("POST", path, rdata, self.headers)
                 resp = self.connection.getresponse()
                 if resp.status == httplib.UNAUTHORIZED:
-                    raise commitcloudcommon.RegistrationError(
+                    raise ccerror.RegistrationError(
                         self.ui, _("unauthorized client (token is invalid)")
                     )
                 if resp.status != httplib.OK:
-                    raise commitcloudcommon.ServiceError(
+                    raise ccerror.ServiceError(
                         self.ui, "%d %s" % (resp.status, resp.reason)
                     )
                 if resp.getheader("Content-Encoding") == "gzip":
@@ -188,13 +186,13 @@ class HttpsCommitCloudService(baseservice.BaseService):
             except socket.error as e:
                 if "SSL" in str(e):
                     raise _tlserror(e)
-                raise commitcloudcommon.ServiceError(self.ui, str(e))
+                raise ccerror.ServiceError(self.ui, str(e))
             except ssl.CertificateError as e:
                 raise _tlserror(e)
             time.sleep(sl)
             sl *= 2
         if e:
-            raise commitcloudcommon.ServiceError(self.ui, str(e))
+            raise ccerror.ServiceError(self.ui, str(e))
 
     def check(self):
         # send a check request.  Currently this is an empty 'get_references'
@@ -210,7 +208,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         path = "/commit_cloud/get_references"
         response = self._send(path, {})
         if "error" in response:
-            raise commitcloudcommon.ServiceError(self.ui, response["error"])
+            raise ccerror.ServiceError(self.ui, response["error"])
 
     def getreferences(self, reponame, workspace, baseversion):
         self.ui.debug("sending 'get_references' request\n", component="commitcloud")
@@ -230,7 +228,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
 
         if "error" in response:
-            raise commitcloudcommon.ServiceError(self.ui, response["error"])
+            raise ccerror.ServiceError(self.ui, response["error"])
 
         version = response["ref"]["version"]
 
@@ -299,7 +297,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
 
         if "error" in response:
-            raise commitcloudcommon.ServiceError(self.ui, response["error"])
+            raise ccerror.ServiceError(self.ui, response["error"])
 
         data = response["ref"]
         rc = response["rc"]
@@ -336,7 +334,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
 
         if "error" in response:
-            raise commitcloudcommon.ServiceError(self.ui, response["error"])
+            raise ccerror.ServiceError(self.ui, response["error"])
 
         # if 200 OK response format is:
         # {
@@ -354,4 +352,4 @@ class HttpsCommitCloudService(baseservice.BaseService):
         try:
             return self._makefakedag(nodes, repo)
         except Exception as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)

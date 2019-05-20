@@ -2,21 +2,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""commit cloud errors"""
 
 from __future__ import absolute_import
 
-# Standard Library
 import traceback
 
 from edenscm.mercurial import error
 from edenscm.mercurial.i18n import _
-
-
-def highlightmsg(ui, msg):
-    """
-    The tag is used to highlight important messages from Commit Cloud
-    """
-    return "%s %s" % (ui.label("commitcloud:", "commitcloud.tag"), msg)
 
 
 def getownerteam(ui):
@@ -24,11 +17,6 @@ def getownerteam(ui):
         ui.config("commitcloud", "owner_team", "the Source Control Team"),
         "commitcloud.team",
     )
-
-
-"""
-commit cloud error wrappers
-"""
 
 
 class UnexpectedError(error.Abort):

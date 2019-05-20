@@ -24,7 +24,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import commitcloudcommon, workspace
+from . import error as ccerror, workspace
 
 
 SERVICE = "commitcloud"
@@ -44,7 +44,7 @@ def _gethomevfs(ui, config_option_name):
     """
     path = ui.config("commitcloud", config_option_name)
     if path and not os.path.isdir(path):
-        raise commitcloudcommon.ConfigurationError(
+        raise ccerror.ConfigurationError(
             ui, _("invalid commitcloud.%s '%s'") % (config_option_name, path)
         )
     if path:
@@ -56,14 +56,12 @@ def _gethomevfs(ui, config_option_name):
         envvar = "HOME"
     homedir = encoding.environ.get(envvar)
     if not homedir:
-        raise commitcloudcommon.ConfigurationError(
+        raise ccerror.ConfigurationError(
             ui, _("$%s environment variable not found") % envvar
         )
 
     if not os.path.isdir(homedir):
-        raise commitcloudcommon.ConfigurationError(
-            ui, _("invalid homedir '%s'") % homedir
-        )
+        raise ccerror.ConfigurationError(ui, _("invalid homedir '%s'") % homedir)
 
     return vfsmod.vfs(homedir)
 
@@ -135,9 +133,9 @@ class TokenLocator(object):
             return text or None
 
         except OSError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
         except ValueError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
 
     def _settokeninsecretstool(self, token, update=False):
         """Token stored in keychain as individual secrets"""
@@ -164,7 +162,7 @@ class TokenLocator(object):
                     # Try updating token instead
                     self._settokeninsecretstool(token, update=True)
                 else:
-                    raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
+                    raise ccerror.SubprocessError(self.ui, rc, stderrdata)
 
             else:
                 self.ui.debug(
@@ -173,9 +171,9 @@ class TokenLocator(object):
                 )
 
         except OSError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
         except ValueError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
 
     def _gettokenosx(self):
         """On macOS tokens are stored in keychain
@@ -201,7 +199,7 @@ class TokenLocator(object):
                 # security command is unable to show a prompt
                 # from ssh sessions
                 if rc == 36:
-                    raise commitcloudcommon.KeychainAccessError(
+                    raise ccerror.KeychainAccessError(
                         self.ui,
                         "failed to access your keychain",
                         "please run `security unlock-keychain` "
@@ -211,7 +209,7 @@ class TokenLocator(object):
                 # if not found, not an error
                 if rc == 44:
                     return None
-                raise commitcloudcommon.SubprocessError(
+                raise ccerror.SubprocessError(
                     self.ui,
                     rc,
                     "command: `%s`\nstderr: %s" % (" ".join(args), stderrdata),
@@ -222,9 +220,9 @@ class TokenLocator(object):
             else:
                 return None
         except OSError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
         except ValueError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
 
     def _settokenosx(self, token):
         """On macOS tokens are stored in keychain
@@ -251,14 +249,14 @@ class TokenLocator(object):
                 # security command is unable to show a prompt
                 # from ssh sessions
                 if rc == 36:
-                    raise commitcloudcommon.KeychainAccessError(
+                    raise ccerror.KeychainAccessError(
                         self.ui,
                         "failed to access your keychain",
                         "please run `security unlock-keychain` "
                         "to prove your identity\n"
                         "the command `%s` exited with code %d" % (" ".join(args), rc),
                     )
-                raise commitcloudcommon.SubprocessError(
+                raise ccerror.SubprocessError(
                     self.ui,
                     rc,
                     "command: `%s`\nstderr: %s"
@@ -266,9 +264,9 @@ class TokenLocator(object):
                 )
             self.ui.debug("new token is stored in keychain\n")
         except OSError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
         except ValueError as e:
-            raise commitcloudcommon.UnexpectedError(self.ui, e)
+            raise ccerror.UnexpectedError(self.ui, e)
 
     @property
     def token(self):
@@ -361,7 +359,7 @@ class SubscriptionManager(object):
                 "(run 'hg cloud sync' manually if your workspace is not synchronized)\n"
                 "(please contact %s if this warning persists)\n"
             )
-            % commitcloudcommon.getownerteam(self.ui),
+            % ccerror.getownerteam(self.ui),
             component="commitcloud",
         )
 
@@ -391,7 +389,7 @@ def getreponame(repo):
         os.path.basename(repo.ui.config("paths", "default")),
     )
     if not reponame:
-        raise commitcloudcommon.ConfigurationError(repo.ui, _("unknown repo"))
+        raise ccerror.ConfigurationError(repo.ui, _("unknown repo"))
     return reponame
 
 

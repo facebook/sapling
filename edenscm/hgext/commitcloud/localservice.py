@@ -11,7 +11,7 @@ import os
 
 from edenscm.mercurial import error
 
-from . import baseservice, commitcloudcommon
+from . import baseservice, error as ccerror
 
 
 class LocalService(baseservice.BaseService):
@@ -129,4 +129,4 @@ class LocalService(baseservice.BaseService):
         try:
             return self._makefakedag(nodes, repo)
         except Exception as e:
-            raise commitcloudcommon.UnexpectedError(self._ui, e)
+            raise ccerror.UnexpectedError(self._ui, e)

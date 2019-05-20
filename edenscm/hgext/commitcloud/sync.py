@@ -27,9 +27,9 @@ from . import (
     backupbookmarks,
     backuplock,
     backupstate,
-    commitcloudcommon,
     commitcloudutil,
     dependencies,
+    error as ccerror,
     service,
     syncstate,
     workspace,
@@ -60,7 +60,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     reponame = commitcloudutil.getreponame(repo)
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
-        raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
+        raise ccerror.WorkspaceError(ui, _("undefined workspace"))
     serv = service.get(ui, tokenlocator.token)
     ui.status(
         _("synchronizing '%s' with '%s'\n") % (reponame, workspacename),
@@ -276,7 +276,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
                 and prevsyncbookmarks == newcloudbookmarks
                 and prevsynctime > time.time() - 60
             ):
-                raise commitcloudcommon.SynchronizationError(
+                raise ccerror.SynchronizationError(
                     ui,
                     _(
                         "oscillating commit cloud workspace detected.\n"
@@ -314,7 +314,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
 
     backuplock.progresscomplete(repo)
     if pushfailures:
-        raise commitcloudcommon.SynchronizationError(
+        raise ccerror.SynchronizationError(
             ui, _("%d heads could not be pushed") % len(pushfailures)
         )
     ui.status(_("commits synchronized\n"), component="commitcloud")

@@ -11,7 +11,7 @@ import time
 
 from edenscm.mercurial.i18n import _
 
-from . import commitcloudcommon
+from . import error as ccerror
 
 
 class SyncState(object):
@@ -45,7 +45,7 @@ class SyncState(object):
                 try:
                     data = json.load(f)
                 except Exception:
-                    raise commitcloudcommon.InvalidWorkspaceDataError(
+                    raise ccerror.InvalidWorkspaceDataError(
                         repo.ui, _("failed to parse %s") % self.filename
                     )
 

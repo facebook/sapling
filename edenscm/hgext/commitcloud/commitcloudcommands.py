@@ -30,9 +30,9 @@ from . import (
     backupbookmarks,
     backuplock,
     backupstate,
-    commitcloudcommon,
     commitcloudutil,
     dependencies,
+    error as ccerror,
     service,
     sync,
     syncstate,
@@ -167,7 +167,7 @@ def cloudrejoin(ui, repo, **opts):
                 )
                 cloudsync(ui, repo, cloudrefs=cloudrefs, **opts)
             return
-        except commitcloudcommon.RegistrationError:
+        except ccerror.RegistrationError:
             pass
 
     ui.status(
@@ -222,7 +222,7 @@ def cloudauth(ui, repo, **opts):
         if token:
             try:
                 service.get(ui, token).check()
-            except commitcloudcommon.RegistrationError:
+            except ccerror.RegistrationError:
                 token = None
             else:
                 ui.status(_("using existing authentication token\n"))
@@ -290,7 +290,7 @@ def authenticate(ui, repo, tokenlocator):
     if not ui.interactive():
         msg = _("authentication with commit cloud required")
         hint = _("use 'hg cloud auth --token TOKEN' to set a token")
-        raise commitcloudcommon.RegistrationError(ui, msg, hint=hint)
+        raise ccerror.RegistrationError(ui, msg, hint=hint)
 
     authhelp = ui.config("commitcloud", "auth_help")
     if authhelp:
@@ -313,7 +313,7 @@ def checkauthenticated(ui, repo, tokenlocator):
     if token:
         try:
             service.get(ui, token).check()
-        except commitcloudcommon.RegistrationError:
+        except ccerror.RegistrationError:
             pass
         else:
             return
@@ -626,7 +626,7 @@ def cloudrecover(ui, repo, **opts):
     ui.status(_("clearing local commit cloud cache\n"), component="commitcloud")
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
-        raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
+        raise ccerror.WorkspaceError(ui, _("undefined workspace"))
     syncstate.SyncState.erasestate(repo, workspacename)
     cloudsync(ui, repo, **opts)
 
