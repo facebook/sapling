@@ -32,8 +32,10 @@ function sslcurl {
 }
 
 function mononoke {
+  # Ignore specific Python warnings to make tests predictable.
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
+  PYTHONWARNINGS="ignore:::requests" \
   "$MONONOKE_SERVER" "$@" --ca-pem "$TESTDIR/certs/root-ca.crt" \
   --private-key "$TESTDIR/certs/localhost.key" \
   --cert "$TESTDIR/certs/localhost.crt" \
