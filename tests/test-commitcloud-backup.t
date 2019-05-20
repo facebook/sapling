@@ -510,6 +510,8 @@ Create logs directory and set correct permissions
 
 Check the logs, make sure just one process was started
   $ cat $TESTTMP/logs/test/*
+  
+  * starting: hg cloud backup --config 'ui.ssh=python "*/dummyssh" -bgssh' (glob)
   backing up stack rooted at 426bada5c675
   remote: pushing 4 commits:
   remote:     426bada5c675  A
