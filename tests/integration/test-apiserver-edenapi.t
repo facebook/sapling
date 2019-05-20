@@ -17,6 +17,7 @@ Populate test repo
   $ hg cp test.txt copy.txt
   $ hg commit -Aqm "copy test.txt to test2.txt"
   $ COPY_FILENODE=$(hg manifest --debug | grep copy.txt | awk '{print $1}')
+  $ TEST_ROOT_MANIFEST_NODE=$(hg log -r . -T '{manifest}')
   $ echo "line 2" >> test.txt
   $ echo "line 2" >> copy.txt
   $ hg commit -qm "add line 2 to test files"
@@ -137,4 +138,21 @@ Test fetching only most recent history entry
   Node          P1 Node       P2 Node       Link Node     Copy From
   596c909aab72  b6fe30270546  000000000000  4af0b091e704  
 
+Test fetching a single tree
+  $ DATAPACK_PATH=$(hg debuggettrees <<EOF | awk '{print $3}'
+  > $TEST_ROOT_MANIFEST_NODE
+  > EOF
+  > )
 
+Verify that datapack has entry with expected content
+  $ hg debugdatapack $DATAPACK_PATH
+  $TESTTMP/cachepath/repo/packs/manifests/86dd528d5618ed64aae3c301efc771a09575b7e5:
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  c8743b14e078  000000000000  100           100
+  
+  Total:                      100           100       (0.0% bigger)
+  $ hg debugdatapack $DATAPACK_PATH --node c8743b14e0789cc546125213c18a18d813862db5
+  $TESTTMP/cachepath/repo/packs/manifests/86dd528d5618ed64aae3c301efc771a09575b7e5:
+  copy.txt\x0017b8d4e3bafd4ec4812ad7c930aace9bf07ab033 (esc)
+  test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
