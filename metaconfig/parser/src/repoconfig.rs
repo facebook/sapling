@@ -19,7 +19,7 @@ use std::{
 };
 
 use crate::errors::*;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
@@ -333,7 +333,8 @@ impl RepoConfigs {
         let scuba_table = this.scuba_table;
         let wireproto_scribe_category = this.wireproto_scribe_category;
         let cache_warmup = this.cache_warmup.map(|cache_warmup| CacheWarmupParams {
-            bookmark: Bookmark::new(cache_warmup.bookmark).expect("bookmark name must be ascii"),
+            bookmark: BookmarkName::new(cache_warmup.bookmark)
+                .expect("bookmark name must be ascii"),
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
         });
         let hook_manager_params = this.hook_manager_params.map(|params| HookManagerParams {
@@ -345,7 +346,9 @@ impl RepoConfigs {
             let mut bookmark_params = Vec::new();
             for bookmark in this.bookmarks.iter().cloned() {
                 let bookmark_or_regex = match (bookmark.regex, bookmark.name) {
-                    (None, Some(name)) => BookmarkOrRegex::Bookmark(Bookmark::new(name).unwrap()),
+                    (None, Some(name)) => {
+                        BookmarkOrRegex::Bookmark(BookmarkName::new(name).unwrap())
+                    }
                     (Some(regex), None) => BookmarkOrRegex::Regex(regex.0),
                     _ => {
                         return Err(ErrorKind::InvalidConfig(
@@ -947,7 +950,7 @@ mod test {
                 repoid: 0,
                 scuba_table: Some("scuba_table".to_string()),
                 cache_warmup: Some(CacheWarmupParams {
-                    bookmark: Bookmark::new("master").unwrap(),
+                    bookmark: BookmarkName::new("master").unwrap(),
                     commit_limit: 100,
                 }),
                 hook_manager_params: Some(HookManagerParams {
@@ -958,7 +961,7 @@ mod test {
                 bookmarks_cache_ttl: Some(Duration::from_millis(5000)),
                 bookmarks: vec![
                     BookmarkParams {
-                        bookmark: Bookmark::new("master").unwrap().into(),
+                        bookmark: BookmarkName::new("master").unwrap().into(),
                         hooks: vec![
                             "hook1".to_string(),
                             "hook2".to_string(),

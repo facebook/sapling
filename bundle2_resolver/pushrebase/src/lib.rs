@@ -44,7 +44,7 @@
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
-use bookmarks::{Bookmark, BookmarkUpdateReason, BundleReplayData};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{Error, Fail};
@@ -72,14 +72,14 @@ pub enum ErrorKind {
     #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
     #[fail(display = "Pushrebase onto bookmark not found: {:?}", _0)]
-    PushrebaseBookmarkNotFound(Bookmark),
+    PushrebaseBookmarkNotFound(BookmarkName),
     #[fail(display = "Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
     #[fail(
         display = "Error while uploading data for changesets, hashes: {:?}",
         _0
     )]
-    PushrebaseNoCommonRoot(Bookmark, HashSet<ChangesetId>),
+    PushrebaseNoCommonRoot(BookmarkName, HashSet<ChangesetId>),
     #[fail(display = "Internal error: root changeset {} not found", _0)]
     RootNotFound(ChangesetId),
     #[fail(display = "No pushrebase roots found")]
@@ -90,7 +90,7 @@ pub enum ErrorKind {
         display = "Forbid pushrebase because root ({}) is not a p1 of {} bookmark",
         _0, _1
     )]
-    P2RootRebaseForbidden(HgChangesetId, Bookmark),
+    P2RootRebaseForbidden(HgChangesetId, BookmarkName),
 }
 
 #[derive(Debug)]
@@ -150,7 +150,7 @@ pub struct PushrebaseSuccessResult {
 
 #[derive(Clone)]
 pub struct OntoBookmarkParams {
-    pub bookmark: Bookmark,
+    pub bookmark: BookmarkName,
 }
 
 /// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
@@ -306,7 +306,7 @@ fn do_rebase(
     root: ChangesetId,
     head: ChangesetId,
     bookmark_val: Option<ChangesetId>,
-    onto_bookmark: Bookmark,
+    onto_bookmark: BookmarkName,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
 ) -> impl Future<Item = Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, Error = PushrebaseError>
 {
@@ -441,7 +441,7 @@ fn find_closest_ancestor_root(
     ctx: CoreContext,
     repo: BlobRepo,
     config: PushrebaseParams,
-    bookmark: Bookmark,
+    bookmark: BookmarkName,
     roots: HashMap<ChangesetId, ChildIndex>,
     onto_bookmark_cs_id: ChangesetId,
 ) -> BoxFuture<ChangesetId, PushrebaseError> {
@@ -719,7 +719,7 @@ fn get_onto_bookmark_value(
 fn get_bookmark_value(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark_name: &Bookmark,
+    bookmark_name: &BookmarkName,
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
     repo.get_bonsai_bookmark(ctx, bookmark_name).from_err()
 }
@@ -857,7 +857,7 @@ fn find_rebased_set(
 fn try_update_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark_name: &Bookmark,
+    bookmark_name: &BookmarkName,
     old_value: ChangesetId,
     new_value: ChangesetId,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
@@ -894,7 +894,7 @@ fn try_update_bookmark(
 fn try_create_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark_name: &Bookmark,
+    bookmark_name: &BookmarkName,
     new_value: ChangesetId,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     rebased_changesets: RebasedChangesets,
@@ -977,7 +977,7 @@ mod tests {
     use std::str::FromStr;
     use tests_utils::{create_commit, create_commit_with_date, store_files, store_rename};
 
-    fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
+    fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
         let head = repo
             .get_bonsai_from_hg(ctx.clone(), head)
@@ -1002,7 +1002,7 @@ mod tests {
     }
 
     fn master_bookmark() -> OntoBookmarkParams {
-        let book = Bookmark::new("master").unwrap();
+        let book = BookmarkName::new("master").unwrap();
         let book = OntoBookmarkParams { bookmark: book };
         book
     }
@@ -1925,7 +1925,7 @@ mod tests {
         ctx: CoreContext,
         repo: BlobRepo,
         ancestor: HgChangesetId,
-        descendant: Bookmark,
+        descendant: BookmarkName,
     ) -> impl Future<Item = usize, Error = Error> {
         let ancestor = repo
             .get_bonsai_from_hg(ctx.clone(), ancestor)
@@ -2065,7 +2065,7 @@ mod tests {
         )
         .unwrap();
 
-        let book = Bookmark::new("newbook").unwrap();
+        let book = BookmarkName::new("newbook").unwrap();
         let book = OntoBookmarkParams { bookmark: book };
         assert!(run_future(
             &mut runtime,
@@ -2088,7 +2088,7 @@ mod tests {
                 .unwrap();
             let parents = vec![p];
 
-            let book = Bookmark::new("newbook").unwrap();
+            let book = BookmarkName::new("newbook").unwrap();
             let book = OntoBookmarkParams { bookmark: book };
 
             let num_pushes = 10;

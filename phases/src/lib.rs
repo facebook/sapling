@@ -350,7 +350,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bookmarks::{Bookmark, BookmarkUpdateReason};
+    use bookmarks::{BookmarkName, BookmarkUpdateReason};
     use fixtures::linear;
     use futures::Stream;
     use maplit::hashset;
@@ -389,7 +389,7 @@ mod tests {
         Ok(())
     }
 
-    fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark) {
+    fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName) {
         let mut txn = repo.update_bookmark_transaction(ctx);
         txn.force_delete(
             &book,
@@ -401,7 +401,7 @@ mod tests {
         txn.commit().wait().unwrap();
     }
 
-    fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
+    fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName, cs_id: &str) {
         let head = repo
             .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap())
             .wait()
@@ -461,7 +461,7 @@ mod tests {
         set_bookmark(
             ctx.clone(),
             repo.clone(),
-            &Bookmark::new("master").unwrap(),
+            &BookmarkName::new("master").unwrap(),
             "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
         );
 

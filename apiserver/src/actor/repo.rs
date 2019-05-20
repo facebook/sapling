@@ -13,7 +13,7 @@ use std::{
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cachelib::LruCachePool;
 use cloned::cloned;
@@ -133,7 +133,7 @@ impl MononokeRepo {
                 .into_future()
                 .from_err()
                 .left_future(),
-            Revision::Bookmark(bookmark) => Bookmark::new(bookmark)
+            Revision::Bookmark(bookmark) => BookmarkName::new(bookmark)
                 .into_future()
                 .from_err()
                 .and_then(move |bookmark| {

@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
-use bookmarks::{Bookmark, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{err_msg, Error};
@@ -45,7 +45,7 @@ pub fn format_bookmark_log_entry(
     reason: BookmarkUpdateReason,
     timestamp: Timestamp,
     changeset_type: &str,
-    bookmark: Bookmark,
+    bookmark: BookmarkName,
     bundle_id: Option<i64>,
 ) -> String {
     let reason_str = reason.to_string();
@@ -76,7 +76,7 @@ pub fn resolve_hg_rev(
     repo: &BlobRepo,
     rev: &str,
 ) -> impl Future<Item = HgChangesetId, Error = Error> {
-    let book = Bookmark::new(&rev).unwrap();
+    let book = BookmarkName::new(&rev).unwrap();
     let hash = HgChangesetId::from_str(rev);
 
     repo.get_bookmark(ctx, &book).and_then({

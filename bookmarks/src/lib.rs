@@ -28,17 +28,17 @@ pub use cache::CachedBookmarks;
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
-pub struct Bookmark {
+pub struct BookmarkName {
     bookmark: AsciiString,
 }
 
-impl fmt::Display for Bookmark {
+impl fmt::Display for BookmarkName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.bookmark)
     }
 }
 
-impl Bookmark {
+impl BookmarkName {
     pub fn new<B: AsRef<str>>(bookmark: B) -> Result<Self> {
         Ok(Self {
             bookmark: AsciiString::from_ascii(bookmark.as_ref())
@@ -59,7 +59,7 @@ impl Bookmark {
     }
 }
 
-impl Weight for Bookmark {
+impl Weight for BookmarkName {
     #[inline]
     fn get_weight(&self) -> usize {
         mem::size_of::<Self>() + self.bookmark.len()
@@ -107,12 +107,12 @@ impl BookmarkPrefix {
         self.bookmark_prefix.is_empty()
     }
 
-    pub fn to_range(&self) -> Range<Bookmark> {
+    pub fn to_range(&self) -> Range<BookmarkName> {
         let mut end_ascii = self.bookmark_prefix.clone();
         end_ascii.push(AsciiChar::DEL); // DEL is the maximum ascii character
         Range {
-            start: Bookmark::new_ascii(self.bookmark_prefix.clone()),
-            end: Bookmark::new_ascii(end_ascii),
+            start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
+            end: BookmarkName::new_ascii(end_ascii),
         }
     }
 }
@@ -126,7 +126,7 @@ pub struct BookmarkUpdateLogEntry {
     /// Id of a repo
     pub repo_id: RepositoryId,
     /// Name of the bookmark
-    pub bookmark_name: Bookmark,
+    pub bookmark_name: BookmarkName,
     /// Previous position of bookmark if it's known. It might not be known if a bookmark was
     /// force set or if a bookmark didn't exist
     pub to_changeset_id: Option<ChangesetId>,
@@ -143,7 +143,7 @@ pub trait Bookmarks: Send + Sync + 'static {
     fn get(
         &self,
         ctx: CoreContext,
-        name: &Bookmark,
+        name: &BookmarkName,
         repoid: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error>;
 
@@ -156,7 +156,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error>;
 
     /// Lists the bookmarks that match the prefix with bookmark's values but the bookmarks may not
     /// be the most up-to-date i.e. they may be read from a replica that's behind master.
@@ -169,7 +169,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error>;
 
     /// Creates a transaction that will be used for write operations.
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction>;
@@ -199,7 +199,7 @@ pub trait Bookmarks: Send + Sync + 'static {
     fn list_bookmark_log_entries(
         &self,
         _ctx: CoreContext,
-        name: Bookmark,
+        name: BookmarkName,
         repo_id: RepositoryId,
         max_rec: u32,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>;
@@ -374,18 +374,18 @@ pub trait Transaction: Send + Sync + 'static {
     /// committing the transaction will fail.
     fn update(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
 
     /// Adds create() operation to the transaction set.
-    /// Creates a bookmark. Bookmark should not already exist, otherwise committing the
+    /// Creates a bookmark. BookmarkName should not already exist, otherwise committing the
     /// transaction will fail.
     fn create(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
@@ -395,7 +395,7 @@ pub trait Transaction: Send + Sync + 'static {
     /// exists or not.
     fn force_set(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
@@ -404,14 +404,14 @@ pub trait Transaction: Send + Sync + 'static {
     /// Deletes bookmark only if it currently points to `old_cs`.
     fn delete(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
 
     /// Adds force_delete operation to the transaction set.
     /// Deletes bookmark unconditionally.
-    fn force_delete(&mut self, key: &Bookmark, reason: BookmarkUpdateReason) -> Result<()>;
+    fn force_delete(&mut self, key: &BookmarkName, reason: BookmarkUpdateReason) -> Result<()>;
 
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by
@@ -419,23 +419,23 @@ pub trait Transaction: Send + Sync + 'static {
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error>;
 }
 
-impl From<Bookmark> for Value {
-    fn from(bookmark: Bookmark) -> Self {
+impl From<BookmarkName> for Value {
+    fn from(bookmark: BookmarkName) -> Self {
         Value::Bytes(bookmark.bookmark.into())
     }
 }
 
-impl ConvIr<Bookmark> for Bookmark {
+impl ConvIr<BookmarkName> for BookmarkName {
     fn new(v: Value) -> FromValueResult<Self> {
         match v {
             Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
                 .map_err(|err| FromValueError(Value::Bytes(err.into_source())))
-                .map(Bookmark::new_ascii),
+                .map(BookmarkName::new_ascii),
             v => Err(FromValueError(v)),
         }
     }
 
-    fn commit(self) -> Bookmark {
+    fn commit(self) -> BookmarkName {
         self
     }
 
@@ -444,8 +444,8 @@ impl ConvIr<Bookmark> for Bookmark {
     }
 }
 
-impl FromValue for Bookmark {
-    type Intermediate = Bookmark;
+impl FromValue for BookmarkName {
+    type Intermediate = BookmarkName;
 }
 
 impl From<BookmarkPrefix> for Value {

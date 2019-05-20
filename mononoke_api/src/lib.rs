@@ -12,7 +12,7 @@ use failure::Error;
 use futures::Future;
 
 use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use mercurial_types::manifest::Content;
@@ -34,17 +34,19 @@ pub fn get_content_by_path(
             move |changeset| repo.find_path_in_manifest(ctx, path, changeset.manifestid())
         })
         .and_then(|content| {
-            content.ok_or_else(move || {
-                ErrorKind::NotFound(path.map(|p| p.to_string()).unwrap_or("/".to_string())).into()
-            })
-            .map(|(content, _)| content)
+            content
+                .ok_or_else(move || {
+                    ErrorKind::NotFound(path.map(|p| p.to_string()).unwrap_or("/".to_string()))
+                        .into()
+                })
+                .map(|(content, _)| content)
         })
 }
 
 pub fn get_changeset_by_bookmark(
     ctx: CoreContext,
     repo: BlobRepo,
-    bookmark: Bookmark,
+    bookmark: BookmarkName,
 ) -> impl Future<Item = HgChangesetId, Error = Error> {
     repo.get_bookmark(ctx, &bookmark)
         .map_err({

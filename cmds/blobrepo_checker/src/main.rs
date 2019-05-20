@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
@@ -60,7 +60,7 @@ fn main() {
     let bookmarks: Vec<_> = matches
         .values_of("BOOKMARK")
         .expect("No bookmarks to verify")
-        .map(|bookmark| Bookmark::new(bookmark).expect("Bad bookmark to verify"))
+        .map(|bookmark| BookmarkName::new(bookmark).expect("Bad bookmark to verify"))
         .collect();
 
     let checkers = Checker::new();

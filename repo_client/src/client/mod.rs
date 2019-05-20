@@ -8,7 +8,7 @@ use crate::errors::*;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use blobrepo::BlobRepo;
 use blobrepo::HgBlobChangeset;
-use bookmarks::{Bookmark, BookmarkPrefix};
+use bookmarks::{BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
@@ -395,9 +395,9 @@ impl RepoClient {
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
             let items = blobrepo
                 .get_bookmarks_maybe_stale(self.ctx.clone())
-                .map(|(name, cs)| {
+                .map(|(book, cs)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (name.to_string(), hash)
+                    (book.to_string(), hash)
                 });
             bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
         }
@@ -680,7 +680,7 @@ impl HgCommands for RepoClient {
         fn check_bookmark_exists(
             ctx: CoreContext,
             repo: BlobRepo,
-            bookmark: Bookmark,
+            bookmark: BookmarkName,
         ) -> HgCommandRes<Bytes> {
             repo.get_bookmark(ctx, &bookmark)
                 .map(move |csid| match csid {
@@ -691,7 +691,7 @@ impl HgCommands for RepoClient {
         }
 
         let node = HgChangesetId::from_str(&key).ok();
-        let bookmark = Bookmark::new(&key).ok();
+        let bookmark = BookmarkName::new(&key).ok();
 
         let lookup_fut = match (node, bookmark) {
             (Some(node), Some(bookmark)) => {
@@ -898,13 +898,12 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
             let mut scuba_logger = self.prepared_ctx(ops::LISTKEYS, None).scuba().clone();
-
             self.repo
                 .blobrepo()
                 .get_bookmarks_maybe_stale(self.ctx.clone())
-                .map(|(name, cs)| {
+                .map(|(book, cs)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (name, hash)
+                    (book.to_string(), hash)
                 })
                 .collect()
                 .map(|bookmarks| {
@@ -945,10 +944,10 @@ impl HgCommands for RepoClient {
         if namespace != "bookmarks" {
             info!(
                 self.ctx.logger(),
-                "unsupported listkyespatterns namespace: {}", namespace,
+                "unsupported listkeyspatterns namespace: {}", namespace,
             );
             return future::err(format_err!(
-                "unsupported listkyespatterns namespace: {}",
+                "unsupported listkeyspatterns namespace: {}",
                 namespace
             ))
             .boxify();
@@ -972,7 +971,7 @@ impl HgCommands for RepoClient {
                         .boxify()
                 } else {
                     // literal match
-                    let bookmark = try_boxfuture!(Bookmark::new(&pattern));
+                    let bookmark = try_boxfuture!(BookmarkName::new(&pattern));
                     repo.get_bookmark(ctx.clone(), &bookmark)
                         .map(move |cs_id| match cs_id {
                             Some(cs_id) => vec![(pattern, cs_id)],

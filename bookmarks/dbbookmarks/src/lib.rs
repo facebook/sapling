@@ -7,7 +7,7 @@
 #![deny(warnings)]
 
 use bookmarks::{
-    Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
+    BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
     BundleReplayData, Transaction,
 };
 use context::CoreContext;
@@ -40,14 +40,14 @@ pub struct SqlBookmarks {
 
 queries! {
     write ReplaceBookmarks(
-        values: (repo_id: RepositoryId, name: Bookmark, changeset_id: ChangesetId)
+        values: (repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId)
     ) {
         none,
         "REPLACE INTO bookmarks (repo_id, name, changeset_id) VALUES {values}"
     }
 
     write InsertBookmarks(
-        values: (repo_id: RepositoryId, name: Bookmark, changeset_id: ChangesetId)
+        values: (repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId)
     ) {
         insert_or_ignore,
         "{insert_or_ignore} INTO bookmarks (repo_id, name, changeset_id) VALUES {values}"
@@ -55,7 +55,7 @@ queries! {
 
     write UpdateBookmark(
         repo_id: RepositoryId,
-        name: Bookmark,
+        name: BookmarkName,
         old_id: ChangesetId,
         new_id: ChangesetId,
     ) {
@@ -67,14 +67,14 @@ queries! {
            AND changeset_id = {old_id}"
     }
 
-    write DeleteBookmark(repo_id: RepositoryId, name: Bookmark) {
+    write DeleteBookmark(repo_id: RepositoryId, name: BookmarkName) {
         none,
         "DELETE FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name = {name}"
     }
 
-    write DeleteBookmarkIf(repo_id: RepositoryId, name: Bookmark, changeset_id: ChangesetId) {
+    write DeleteBookmarkIf(repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId) {
         none,
         "DELETE FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -85,7 +85,7 @@ queries! {
     write AddBookmarkLog(
         values: (
             repo_id: RepositoryId,
-            name: Bookmark,
+            name: BookmarkName,
             from_changeset_id: Option<ChangesetId>,
             to_changeset_id: Option<ChangesetId>,
             reason: BookmarkUpdateReason,
@@ -99,7 +99,7 @@ queries! {
     }
 
     read ReadNextBookmarkLogEntries(min_id: u64, repo_id: RepositoryId, limit: u64) -> (
-        i64, RepositoryId, Bookmark, Option<ChangesetId>, Option<ChangesetId>,
+        i64, RepositoryId, BookmarkName, Option<ChangesetId>, Option<ChangesetId>,
         BookmarkUpdateReason, Timestamp, Option<String>, Option<String>
     ) {
         "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp,
@@ -163,7 +163,7 @@ queries! {
          VALUES {values}"
     }
 
-    read SelectBookmark(repo_id: RepositoryId, name: Bookmark) -> (ChangesetId) {
+    read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId) {
         "SELECT changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -171,7 +171,7 @@ queries! {
          LIMIT 1"
     }
 
-    read SelectBookmarkLogs(repo_id: RepositoryId, name: Bookmark, max_records: u32) -> (
+    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, max_records: u32) -> (
         Option<ChangesetId>, BookmarkUpdateReason, Timestamp
     ) {
         "SELECT to_changeset_id, reason, timestamp
@@ -182,13 +182,13 @@ queries! {
          LIMIT {max_records}"
       }
 
-    read SelectAll(repo_id: RepositoryId) -> (Bookmark, ChangesetId) {
+    read SelectAll(repo_id: RepositoryId) -> (BookmarkName, ChangesetId) {
         "SELECT name, changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}"
     }
 
-    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix) -> (Bookmark, ChangesetId) {
+    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix) -> (BookmarkName, ChangesetId) {
         mysql(
             "SELECT name, changeset_id
              FROM bookmarks
@@ -230,7 +230,7 @@ impl SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         conn: &Connection,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         if prefix.is_empty() {
             SelectAll::query(&conn, &repo_id)
                 .map(|rows| stream::iter_ok(rows))
@@ -249,7 +249,7 @@ impl Bookmarks for SqlBookmarks {
     fn get(
         &self,
         _ctx: CoreContext,
-        name: &Bookmark,
+        name: &BookmarkName,
         repo_id: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
@@ -261,7 +261,7 @@ impl Bookmarks for SqlBookmarks {
     fn list_bookmark_log_entries(
         &self,
         _ctx: CoreContext,
-        name: Bookmark,
+        name: BookmarkName,
         repo_id: RepositoryId,
         max_rec: u32,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
@@ -276,7 +276,7 @@ impl Bookmarks for SqlBookmarks {
         _ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         STATS::list_by_prefix.add_value(1);
         self.list_by_prefix_impl(prefix, repo_id, &self.read_master_connection)
     }
@@ -286,7 +286,7 @@ impl Bookmarks for SqlBookmarks {
         _ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         STATS::list_by_prefix_maybe_stale.add_value(1);
         self.list_by_prefix_impl(prefix, repo_id, &self.read_connection)
     }
@@ -373,12 +373,12 @@ impl Bookmarks for SqlBookmarks {
                         // Note: types are explicit here to protect us from query behavior change
                         //       when tuple items 2 or 5 become something else, and we still succeed
                         //       compiling everything because of the type inference
-                        let first_name: &Bookmark = &first_entry.2;
+                        let first_name: &BookmarkName = &first_entry.2;
                         let first_reason: &BookmarkUpdateReason = &first_entry.5;
                         entries
                             .into_iter()
                             .take_while(|entry| {
-                                let name: &Bookmark = &entry.2;
+                                let name: &BookmarkName = &entry.2;
                                 let reason: &BookmarkUpdateReason = &entry.5;
                                 name == first_name && reason == first_reason
                             })
@@ -461,11 +461,11 @@ impl Bookmarks for SqlBookmarks {
 struct SqlBookmarksTransaction {
     write_connection: Connection,
     repo_id: RepositoryId,
-    force_sets: HashMap<Bookmark, (ChangesetId, BookmarkUpdateReason)>,
-    creates: HashMap<Bookmark, (ChangesetId, BookmarkUpdateReason)>,
-    sets: HashMap<Bookmark, (BookmarkSetData, BookmarkUpdateReason)>,
-    force_deletes: HashMap<Bookmark, BookmarkUpdateReason>,
-    deletes: HashMap<Bookmark, (ChangesetId, BookmarkUpdateReason)>,
+    force_sets: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
+    creates: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
+    sets: HashMap<BookmarkName, (BookmarkSetData, BookmarkUpdateReason)>,
+    force_deletes: HashMap<BookmarkName, BookmarkUpdateReason>,
+    deletes: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
 }
 
 impl SqlBookmarksTransaction {
@@ -481,7 +481,7 @@ impl SqlBookmarksTransaction {
         }
     }
 
-    fn check_if_bookmark_already_used(&self, key: &Bookmark) -> Result<()> {
+    fn check_if_bookmark_already_used(&self, key: &BookmarkName) -> Result<()> {
         if self.creates.contains_key(key)
             || self.force_sets.contains_key(key)
             || self.sets.contains_key(key)
@@ -530,7 +530,7 @@ impl SqlBookmarksTransaction {
         repo_id: RepositoryId,
         timestamp: Timestamp,
         moves: HashMap<
-            Bookmark,
+            BookmarkName,
             (
                 Option<ChangesetId>,
                 Option<ChangesetId>,
@@ -575,7 +575,7 @@ impl SqlBookmarksTransaction {
 impl Transaction for SqlBookmarksTransaction {
     fn update(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
@@ -588,7 +588,7 @@ impl Transaction for SqlBookmarksTransaction {
 
     fn create(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -599,7 +599,7 @@ impl Transaction for SqlBookmarksTransaction {
 
     fn force_set(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -610,7 +610,7 @@ impl Transaction for SqlBookmarksTransaction {
 
     fn delete(
         &mut self,
-        key: &Bookmark,
+        key: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -619,7 +619,7 @@ impl Transaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn force_delete(&mut self, key: &Bookmark, reason: BookmarkUpdateReason) -> Result<()> {
+    fn force_delete(&mut self, key: &BookmarkName, reason: BookmarkUpdateReason) -> Result<()> {
         self.check_if_bookmark_already_used(key)?;
         self.force_deletes.insert(key.clone(), reason);
         Ok(())

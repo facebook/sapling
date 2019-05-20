@@ -12,7 +12,7 @@
 
 use std::{collections::HashMap, num::NonZeroUsize, path::PathBuf, str, sync::Arc, time::Duration};
 
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -112,7 +112,7 @@ impl Default for RepoReadOnly {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CacheWarmupParams {
     /// Bookmark to warmup cache for at the startup. If not set then the cache will be cold.
-    pub bookmark: Bookmark,
+    pub bookmark: BookmarkName,
     /// Max number to fetch during commit warmup. If not set in the config, then set to a default
     /// value.
     pub commit_limit: usize,
@@ -145,14 +145,14 @@ impl Default for HookManagerParams {
 #[derive(Debug, Clone)]
 pub enum BookmarkOrRegex {
     /// Matches a single bookmark
-    Bookmark(Bookmark),
+    Bookmark(BookmarkName),
     /// Matches bookmarks with a regex
     Regex(Regex),
 }
 
 impl BookmarkOrRegex {
     /// Checks whether a given Bookmark matches this bookmark or regex
-    pub fn matches(&self, bookmark: &Bookmark) -> bool {
+    pub fn matches(&self, bookmark: &BookmarkName) -> bool {
         match self {
             BookmarkOrRegex::Bookmark(ref bm) => bm.eq(bookmark),
             BookmarkOrRegex::Regex(ref re) => re.is_match(&bookmark.to_string()),
@@ -173,8 +173,8 @@ impl PartialEq for BookmarkOrRegex {
 }
 impl Eq for BookmarkOrRegex {}
 
-impl From<Bookmark> for BookmarkOrRegex {
-    fn from(b: Bookmark) -> Self {
+impl From<BookmarkName> for BookmarkOrRegex {
+    fn from(b: BookmarkName) -> Self {
         BookmarkOrRegex::Bookmark(b)
     }
 }
@@ -202,7 +202,7 @@ impl BookmarkAttrs {
     /// select bookmark params matching provided bookmark
     pub fn select<'a>(
         &'a self,
-        bookmark: &'a Bookmark,
+        bookmark: &'a BookmarkName,
     ) -> impl Iterator<Item = &'a BookmarkParams> {
         self.bookmark_params
             .iter()
@@ -210,13 +210,13 @@ impl BookmarkAttrs {
     }
 
     /// check if provided bookmark is fast-forward only
-    pub fn is_fast_forward_only(&self, bookmark: &Bookmark) -> bool {
+    pub fn is_fast_forward_only(&self, bookmark: &BookmarkName) -> bool {
         self.select(bookmark).any(|params| params.only_fast_forward)
     }
 
     /// Check if a bookmark config overrides whether date should be rewritten during pushrebase.
     /// Return None if there are no bookmark config overriding rewrite_dates.
-    pub fn should_rewrite_dates(&self, bookmark: &Bookmark) -> Option<bool> {
+    pub fn should_rewrite_dates(&self, bookmark: &BookmarkName) -> Option<bool> {
         for params in self.select(bookmark) {
             // NOTE: If there are multiple patterns matching the bookmark, the first match
             // overrides others. It might not be the most desired behavior, though.
@@ -228,7 +228,7 @@ impl BookmarkAttrs {
     }
 
     /// check if provided unix name is allowed to move specified bookmark
-    pub fn is_allowed_user(&self, user: &Option<String>, bookmark: &Bookmark) -> bool {
+    pub fn is_allowed_user(&self, user: &Option<String>, bookmark: &BookmarkName) -> bool {
         match user {
             None => true,
             Some(user) => {

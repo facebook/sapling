@@ -13,7 +13,7 @@ extern crate failure_ext as failure;
 pub mod tailer;
 
 use blobrepo_factory::open_blobrepo;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use context::CoreContext;
@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     info!(logger, "Hook tailer is starting");
     let configs = get_config(&matches)?;
     let bookmark_name = matches.value_of("bookmark").unwrap();
-    let bookmark = Bookmark::new(bookmark_name).unwrap();
+    let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let err: Error = ErrorKind::NoSuchRepo(repo_name.clone()).into();
     let config = configs.repos.get(&repo_name).ok_or(err)?;
     let init_revision = matches.value_of("init_revision").map(String::from);

@@ -6,7 +6,7 @@
 
 #![deny(warnings)]
 
-use bookmarks::{Bookmark, BookmarkUpdateReason, Bookmarks};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
@@ -72,7 +72,7 @@ fn main() -> Result<()> {
         },
     };
 
-    let bookmark = Bookmark::new(name).unwrap();
+    let bookmark = BookmarkName::new(name).unwrap();
 
     let mut txn = bookmarks.create_transaction(ctx, repo_id);
 

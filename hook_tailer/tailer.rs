@@ -8,7 +8,7 @@
 
 use super::HookResults;
 use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use failure::{err_msg, Error, Result};
@@ -29,7 +29,7 @@ pub struct Tailer {
     ctx: CoreContext,
     repo: BlobRepo,
     hook_manager: Arc<HookManager>,
-    bookmark: Bookmark,
+    bookmark: BookmarkName,
     last_rev_key: String,
     manifold_client: ManifoldHttpClient,
     logger: Logger,
@@ -41,7 +41,7 @@ impl Tailer {
         ctx: CoreContext,
         repo: BlobRepo,
         config: RepoConfig,
-        bookmark: Bookmark,
+        bookmark: BookmarkName,
         manifold_client: ManifoldHttpClient,
         logger: Logger,
         excludes: HashSet<ChangesetId>,
@@ -84,7 +84,7 @@ impl Tailer {
         hm: Arc<HookManager>,
         last_rev: HgChangesetId,
         end_rev: HgChangesetId,
-        bm: Bookmark,
+        bm: BookmarkName,
         logger: Logger,
         excludes: HashSet<ChangesetId>,
     ) -> BoxFuture<Vec<HookResults>, Error> {
@@ -289,7 +289,7 @@ fn run_hooks_for_changeset(
     ctx: CoreContext,
     repo: BlobRepo,
     hm: Arc<HookManager>,
-    bm: Bookmark,
+    bm: BookmarkName,
     cs: ChangesetId,
     logger: Logger,
 ) -> impl Future<Item = (HgChangesetId, HookResults), Error = Error> {
@@ -316,7 +316,7 @@ fn run_hooks_for_changeset(
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "No such bookmark '{}'", _0)]
-    NoSuchBookmark(Bookmark),
+    NoSuchBookmark(BookmarkName),
     #[fail(display = "Cannot find last revision in blobstore")]
     NoLastRevision,
     #[fail(display = "Cannot find bonsai for {}", _0)]

@@ -15,7 +15,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
-use bookmarks::{Bookmark, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use mercurial::RevlogRepo;
 use mercurial_types::HgChangesetId;
@@ -46,7 +46,7 @@ pub fn upload_bookmarks(
     revlogrepo: RevlogRepo,
     blobrepo: Arc<BlobRepo>,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
-    mononoke_bookmarks: Vec<(Bookmark, ChangesetId)>,
+    mononoke_bookmarks: Vec<(BookmarkName, ChangesetId)>,
 ) -> BoxFuture<(), Error> {
     let logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
@@ -116,7 +116,7 @@ pub fn upload_bookmarks(
 
                 let mut count = 0;
                 for (key, value) in vec {
-                    let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
+                    let key = BookmarkName::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
                     if mononoke_bookmarks.get(&key) != Some(&value) {
                         count += 1;
                         try_boxfuture!(transaction.force_set(&key, value, BookmarkUpdateReason::Blobimport))

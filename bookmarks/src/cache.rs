@@ -5,7 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::{
-    Bookmark, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Transaction,
+    BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
+    Transaction,
 };
 use context::CoreContext;
 use failure::{err_msg, Error};
@@ -23,7 +24,7 @@ use std::{
 struct Cache {
     expires: Instant,
     maybe_stale: bool,
-    current: future::Shared<BoxFuture<BTreeMap<Bookmark, ChangesetId>, Error>>,
+    current: future::Shared<BoxFuture<BTreeMap<BookmarkName, ChangesetId>, Error>>,
 }
 
 impl Cache {
@@ -168,7 +169,7 @@ impl Bookmarks for CachedBookmarks {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         let range = prefix.to_range();
         let cache = self.get_cache(ctx, repoid);
         cache
@@ -197,7 +198,7 @@ impl Bookmarks for CachedBookmarks {
     fn get(
         &self,
         ctx: CoreContext,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         repoid: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         self.bookmarks.get(ctx, bookmark, repoid)
@@ -208,7 +209,7 @@ impl Bookmarks for CachedBookmarks {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         self.bookmarks.list_by_prefix(ctx, prefix, repoid)
     }
 
@@ -237,7 +238,7 @@ impl Bookmarks for CachedBookmarks {
     fn list_bookmark_log_entries(
         &self,
         ctx: CoreContext,
-        name: Bookmark,
+        name: BookmarkName,
         repoid: RepositoryId,
         max_rec: u32,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
@@ -281,7 +282,7 @@ impl Bookmarks for CachedBookmarks {
 impl Transaction for CachedBookmarksTransaction {
     fn update(
         &mut self,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
@@ -291,7 +292,7 @@ impl Transaction for CachedBookmarksTransaction {
 
     fn create(
         &mut self,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -300,7 +301,7 @@ impl Transaction for CachedBookmarksTransaction {
 
     fn force_set(
         &mut self,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -309,14 +310,18 @@ impl Transaction for CachedBookmarksTransaction {
 
     fn delete(
         &mut self,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
         self.transaction.delete(bookmark, old_cs, reason)
     }
 
-    fn force_delete(&mut self, bookmark: &Bookmark, reason: BookmarkUpdateReason) -> Result<()> {
+    fn force_delete(
+        &mut self,
+        bookmark: &BookmarkName,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()> {
         self.transaction.force_delete(bookmark, reason)
     }
 
@@ -373,8 +378,8 @@ mod tests {
     }
 
     enum Request {
-        ListReplica(Sender<Result<HashMap<Bookmark, ChangesetId>>>),
-        ListMaster(Sender<Result<HashMap<Bookmark, ChangesetId>>>),
+        ListReplica(Sender<Result<HashMap<BookmarkName, ChangesetId>>>),
+        ListMaster(Sender<Result<HashMap<BookmarkName, ChangesetId>>>),
     }
 
     #[derive(Clone)]
@@ -394,7 +399,7 @@ mod tests {
         fn get(
             &self,
             _ctx: CoreContext,
-            _name: &Bookmark,
+            _name: &BookmarkName,
             _repoid: RepositoryId,
         ) -> BoxFuture<Option<ChangesetId>, Error> {
             unimplemented!()
@@ -405,7 +410,7 @@ mod tests {
             _ctx: CoreContext,
             _prefix: &BookmarkPrefix,
             _repoid: RepositoryId,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
             let (send, recv) = channel();
             self.requests.with(|rs| rs.push(Request::ListMaster(send)));
             recv.map_err(Error::from)
@@ -420,7 +425,7 @@ mod tests {
             _ctx: CoreContext,
             _prefix: &BookmarkPrefix,
             _repoid: RepositoryId,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
             let (send, recv) = channel();
             self.requests.with(|rs| rs.push(Request::ListReplica(send)));
             recv.map_err(Error::from)
@@ -461,7 +466,7 @@ mod tests {
         fn list_bookmark_log_entries(
             &self,
             _ctx: CoreContext,
-            _name: Bookmark,
+            _name: BookmarkName,
             _repo_id: RepositoryId,
             _max_rec: u32,
         ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
@@ -503,7 +508,7 @@ mod tests {
     impl Transaction for MockTransaction {
         fn update(
             &mut self,
-            _key: &Bookmark,
+            _key: &BookmarkName,
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
@@ -513,7 +518,7 @@ mod tests {
 
         fn create(
             &mut self,
-            _key: &Bookmark,
+            _key: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
@@ -522,7 +527,7 @@ mod tests {
 
         fn force_set(
             &mut self,
-            _key: &Bookmark,
+            _key: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
@@ -531,14 +536,18 @@ mod tests {
 
         fn delete(
             &mut self,
-            _key: &Bookmark,
+            _key: &BookmarkName,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
             Ok(())
         }
 
-        fn force_delete(&mut self, _key: &Bookmark, _reason: BookmarkUpdateReason) -> Result<()> {
+        fn force_delete(
+            &mut self,
+            _key: &BookmarkName,
+            _reason: BookmarkUpdateReason,
+        ) -> Result<()> {
             Ok(())
         }
 
@@ -588,9 +597,9 @@ mod tests {
         };
         sender
             .send(Ok(hashmap! {
-                Bookmark::new("a0").unwrap() => ONES_CSID,
-                Bookmark::new("b0").unwrap() => TWOS_CSID,
-                Bookmark::new("b1").unwrap() => THREES_CSID,
+                BookmarkName::new("a0").unwrap() => ONES_CSID,
+                BookmarkName::new("b0").unwrap() => TWOS_CSID,
+                BookmarkName::new("b1").unwrap() => THREES_CSID,
             }))
             .unwrap();
         sleep();
@@ -598,10 +607,10 @@ mod tests {
         assert_eq!(
             log.with(|log| log.drain().collect::<HashMap<_, _>>()),
             hashmap! {
-                0 => vec![(Bookmark::new("a0").unwrap(), ONES_CSID)],
+                0 => vec![(BookmarkName::new("a0").unwrap(), ONES_CSID)],
                 1 => vec![
-                    (Bookmark::new("b0").unwrap(), TWOS_CSID),
-                    (Bookmark::new("b1").unwrap(), THREES_CSID),
+                    (BookmarkName::new("b0").unwrap(), TWOS_CSID),
+                    (BookmarkName::new("b1").unwrap(), THREES_CSID),
                 ],
             },
         );
@@ -634,8 +643,8 @@ mod tests {
         };
         sender
             .send(Ok(hashmap! {
-                Bookmark::new("a").unwrap() => ONES_CSID,
-                Bookmark::new("b").unwrap() => TWOS_CSID,
+                BookmarkName::new("a").unwrap() => ONES_CSID,
+                BookmarkName::new("b").unwrap() => TWOS_CSID,
             }))
             .unwrap();
         sleep();
@@ -643,7 +652,7 @@ mod tests {
         assert_eq!(
             log.with(|log| log.drain().collect::<HashMap<_, _>>()),
             hashmap! {
-                0 => vec![(Bookmark::new("a").unwrap(), ONES_CSID)],
+                0 => vec![(BookmarkName::new("a").unwrap(), ONES_CSID)],
             },
         );
         assert_eq!(mock.requests.with(|rs| rs.len()), 0);
@@ -655,7 +664,7 @@ mod tests {
         assert_eq!(
             log.with(|log| log.drain().collect::<HashMap<_, _>>()),
             hashmap! {
-                1 => vec![(Bookmark::new("b").unwrap(), TWOS_CSID)],
+                1 => vec![(BookmarkName::new("b").unwrap(), TWOS_CSID)],
             },
         );
         assert_eq!(mock.requests.with(|rs| rs.len()), 0);
@@ -671,7 +680,7 @@ mod tests {
         };
         sender
             .send(Ok(hashmap! {
-                Bookmark::new("b").unwrap() => THREES_CSID,
+                BookmarkName::new("b").unwrap() => THREES_CSID,
             }))
             .unwrap();
         sleep();
@@ -679,7 +688,7 @@ mod tests {
         assert_eq!(
             log.with(|log| log.drain().collect::<HashMap<_, _>>()),
             hashmap! {
-                1 => vec![(Bookmark::new("b").unwrap(), THREES_CSID)],
+                1 => vec![(BookmarkName::new("b").unwrap(), THREES_CSID)],
             },
         );
         assert_eq!(mock.requests.with(|rs| rs.len()), 0);

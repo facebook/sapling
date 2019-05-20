@@ -16,7 +16,7 @@ use serde_json::{json, to_string_pretty};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
-use bookmarks::{Bookmark, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 
 use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
 
@@ -120,7 +120,7 @@ fn handle_get<'a>(
     repo: BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
-    let bookmark = Bookmark::new(bookmark_name).unwrap();
+    let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
     let json_flag: bool = args.is_present("json");
 
@@ -155,7 +155,7 @@ fn handle_get<'a>(
 fn list_hg_bookmark_log_entries(
     repo: BlobRepo,
     ctx: CoreContext,
-    name: Bookmark,
+    name: BookmarkName,
     max_rec: u32,
 ) -> impl Stream<
     Item = BoxFuture<(Option<HgChangesetId>, BookmarkUpdateReason, Timestamp), Error>,
@@ -180,7 +180,7 @@ fn handle_log<'a>(
     repo: BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
-    let bookmark = Bookmark::new(bookmark_name).unwrap();
+    let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
     let json_flag = args.is_present("json");
     let output_limit_as_string = args.value_of("limit").unwrap_or("25");
@@ -252,7 +252,7 @@ fn handle_set<'a>(
 ) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let rev = args.value_of("HG_CHANGESET_ID").unwrap().to_string();
-    let bookmark = Bookmark::new(bookmark_name).unwrap();
+    let bookmark = BookmarkName::new(bookmark_name).unwrap();
 
     repo.and_then(move |repo| {
         fetch_bonsai_changeset(ctx.clone(), &rev, &repo).and_then(move |bonsai_cs| {

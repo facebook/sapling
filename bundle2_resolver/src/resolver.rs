@@ -15,7 +15,7 @@ use ascii::AsciiString;
 use blobrepo::{
     BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset, HgBlobEntry,
 };
-use bookmarks::{Bookmark, BookmarkUpdateReason, BundleReplayData, Transaction};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
@@ -300,7 +300,7 @@ fn resolve_pushrebase(
                 Some(onto_bookmark) => {
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
-                    let onto_bookmark = Bookmark::new(onto_bookmark)?;
+                    let onto_bookmark = BookmarkName::new(onto_bookmark)?;
                     let onto_bookmark = pushrebase::OntoBookmarkParams {
                         bookmark: onto_bookmark,
                     };
@@ -536,13 +536,13 @@ enum Pushkey {
 #[derive(Debug)]
 struct BookmarkPush {
     part_id: PartId,
-    name: Bookmark,
+    name: BookmarkName,
     old: Option<HgChangesetId>,
     new: Option<HgChangesetId>,
 }
 
 struct BonsaiBookmarkPush {
-    name: Bookmark,
+    name: BookmarkName,
     old: Option<ChangesetId>,
     new: Option<ChangesetId>,
 }
@@ -868,7 +868,7 @@ impl Bundle2Resolver {
                             let part_id = header.part_id();
                             let mparams = header.mparams();
                             let name = try_boxfuture!(get_ascii_param(mparams, "key"));
-                            let name = Bookmark::new_ascii(name);
+                            let name = BookmarkName::new_ascii(name);
                             let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
                             let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
 
@@ -1180,7 +1180,7 @@ impl Bundle2Resolver {
         commonheads: CommonHeads,
         pushrebased_rev: ChangesetId,
         pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
-        onto: Bookmark,
+        onto: BookmarkName,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         phases: Arc<dyn Phases>,
         bookmark_push_part_id: Option<PartId>,
@@ -1403,7 +1403,7 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         changesets: Changesets,
         pushvars: Option<HashMap<String, Bytes>>,
-        onto_bookmark: &Bookmark,
+        onto_bookmark: &BookmarkName,
     ) -> BoxFuture<(), RunHooksError> {
         // TODO: should we also accept the Option<BookmarkPush> and run hooks on that?
         let mut futs = stream::FuturesUnordered::new();

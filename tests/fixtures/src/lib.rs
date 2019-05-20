@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use bookmarks::{Bookmark, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::{join_all, Future};
@@ -117,7 +117,7 @@ fn create_bonsai_changeset_from_test_data(
     );
 }
 
-fn set_bookmark(blobrepo: BlobRepo, hg_cs_id: &str, bookmark: Bookmark) {
+fn set_bookmark(blobrepo: BlobRepo, hg_cs_id: &str, bookmark: BookmarkName) {
     let ctx = CoreContext::test_mock();
     let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
     let bcs_id = blobrepo
@@ -287,7 +287,7 @@ pub mod linear {
         set_bookmark(
             blobrepo.clone(),
             "79a13814c5ce7330173ec04d279bf95ab3f652fb",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -387,7 +387,7 @@ pub mod branch_even {
         set_bookmark(
             blobrepo.clone(),
             "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -547,7 +547,7 @@ pub mod branch_uneven {
         set_bookmark(
             blobrepo.clone(),
             "264f01429683b3dd8042cb3979e8bf37007118bc",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -647,7 +647,7 @@ pub mod branch_wide {
         set_bookmark(
             blobrepo.clone(),
             "49f53ab171171b3180e125b918bd1cf0af7e5449",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -762,7 +762,7 @@ pub mod merge_even {
         set_bookmark(
             blobrepo.clone(),
             "6120679e1fedb0b2f3717bbf042e5fd718763042",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -832,7 +832,7 @@ pub mod many_files_dirs {
         set_bookmark(
             blobrepo.clone(),
             "051946ed218061e925fb120dac02634f9ad40ae2",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         let files = btreemap! {
@@ -849,7 +849,7 @@ pub mod many_files_dirs {
         set_bookmark(
             blobrepo.clone(),
             "5a28e25f924a5d209b82ce0713d8d83e68982bc8",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -1028,7 +1028,7 @@ pub mod merge_uneven {
         set_bookmark(
             blobrepo.clone(),
             "d0b4845e349f338361208f170ec13120080da37f",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -1211,7 +1211,7 @@ pub mod unshared_merge_even {
         set_bookmark(
             blobrepo.clone(),
             "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo
@@ -1459,7 +1459,7 @@ pub mod unshared_merge_uneven {
         set_bookmark(
             blobrepo.clone(),
             "dd993aab2bed7276e17c88470286ba8459ba6d94",
-            Bookmark::new("master").unwrap(),
+            BookmarkName::new("master").unwrap(),
         );
 
         blobrepo

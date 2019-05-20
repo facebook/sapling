@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 pub use failure_ext::{prelude::*, Fail};
 
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
@@ -19,7 +19,7 @@ pub enum ErrorKind {
     #[fail(display = "Malformed treemanifest part: {}", _0)]
     MalformedTreemanifestPart(String),
     #[fail(display = "Pushrebase onto bookmark not found: {:?}", _0)]
-    PushrebaseBookmarkNotFound(Bookmark),
+    PushrebaseBookmarkNotFound(BookmarkName),
     #[fail(display = "Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
     #[fail(
@@ -31,7 +31,7 @@ pub enum ErrorKind {
         display = "No common root found between: bookmark:{:?} roots:{:?}",
         _0, _1
     )]
-    PushrebaseNoCommonRoot(Bookmark, HashSet<ChangesetId>),
+    PushrebaseNoCommonRoot(BookmarkName, HashSet<ChangesetId>),
     #[fail(display = "Repo is marked as read-only: {}", _0)]
     RepoReadOnly(String),
 }

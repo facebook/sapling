@@ -20,7 +20,7 @@ use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
-use bookmarks::{self, Bookmark, BookmarkPrefix, BookmarkUpdateReason, Bookmarks};
+use bookmarks::{self, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks};
 use bytes::Bytes;
 use cacheblob::{LeaseOps, MemWritesBlobstore};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
@@ -626,7 +626,7 @@ impl BlobRepo {
     pub fn get_bookmark(
         &self,
         ctx: CoreContext,
-        name: &Bookmark,
+        name: &BookmarkName,
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks
@@ -647,7 +647,7 @@ impl BlobRepo {
     pub fn get_bonsai_bookmark(
         &self,
         ctx: CoreContext,
-        name: &Bookmark,
+        name: &BookmarkName,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks.get(ctx, name, self.repoid)
@@ -656,7 +656,7 @@ impl BlobRepo {
     pub fn list_bookmark_log_entries(
         &self,
         ctx: CoreContext,
-        name: Bookmark,
+        name: BookmarkName,
         max_rec: u32,
     ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
@@ -669,7 +669,7 @@ impl BlobRepo {
     pub fn get_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
+    ) -> impl Stream<Item = (BookmarkName, HgChangesetId), Error = Error> {
         self.get_bookmarks_by_prefix_maybe_stale(ctx, &BookmarkPrefix::empty())
     }
 
@@ -677,7 +677,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
-    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
+    ) -> impl Stream<Item = (BookmarkName, HgChangesetId), Error = Error> {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
             .list_by_prefix_maybe_stale(ctx.clone(), prefix, self.repoid)
@@ -694,7 +694,7 @@ impl BlobRepo {
     pub fn get_bonsai_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
             .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
@@ -704,7 +704,7 @@ impl BlobRepo {
     pub fn get_bonsai_bookmarks(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
         STATS::get_bookmarks.add_value(1);
         self.bookmarks
             .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
@@ -719,7 +719,7 @@ impl BlobRepo {
     pub fn get_bonsai_heads(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
+    ) -> impl Stream<Item = (BookmarkName, ChangesetId), Error = Error> {
         self.get_bonsai_bookmarks(ctx)
     }
 

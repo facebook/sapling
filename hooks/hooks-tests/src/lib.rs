@@ -6,7 +6,7 @@
 
 #![deny(warnings)]
 
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use failure_ext::Error;
 use fixtures::many_files_dirs;
@@ -532,7 +532,7 @@ fn test_changeset_hook_context() {
             hook_name: "hook1".into(),
             config: Default::default(),
             data,
-            bookmark: Bookmark::new("bm1").unwrap(),
+            bookmark: BookmarkName::new("bm1").unwrap(),
         };
         let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => context_matching_changeset_hook(expected_context)
@@ -1041,7 +1041,7 @@ fn run_changeset_hooks_with_mgr(
     let fut = hook_manager.run_changeset_hooks_for_bookmark(
         ctx,
         default_changeset_id(),
-        &Bookmark::new(bookmark_name).unwrap(),
+        &BookmarkName::new(bookmark_name).unwrap(),
         None,
     );
     let res = fut.wait().unwrap();
@@ -1088,7 +1088,7 @@ fn run_file_hooks_with_mgr(
         .run_file_hooks_for_bookmark(
             ctx,
             default_changeset_id(),
-            &Bookmark::new(bookmark_name).unwrap(),
+            &BookmarkName::new(bookmark_name).unwrap(),
             None,
         );
     let res = fut.wait().unwrap();
@@ -1116,7 +1116,7 @@ fn setup_hook_manager(
     };
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
-            .set_hooks_for_bookmark(Bookmark::new(bookmark_name).unwrap().into(), hook_names);
+            .set_hooks_for_bookmark(BookmarkName::new(bookmark_name).unwrap().into(), hook_names);
     }
     for (regx, hook_names) in regexes {
         hook_manager.set_hooks_for_bookmark(Regex::new(&regx).unwrap().into(), hook_names);
@@ -1220,7 +1220,7 @@ fn test_load_hooks() {
         let mut config = default_repo_config();
         config.bookmarks = vec![
             BookmarkParams {
-                bookmark: Bookmark::new("bm1").unwrap().into(),
+                bookmark: BookmarkName::new("bm1").unwrap().into(),
                 hooks: vec!["hook1".into(), "hook2".into()],
                 only_fast_forward: false,
                 allowed_users: None,
@@ -1300,7 +1300,7 @@ fn test_verify_integrity_fast_failure() {
 #[test]
 fn test_load_hooks_no_such_hook() {
     async_unit::tokio_unit_test(|| {
-        let book_or_rex = BookmarkOrRegex::Bookmark(Bookmark::new("bm1").unwrap());
+        let book_or_rex = BookmarkOrRegex::Bookmark(BookmarkName::new("bm1").unwrap());
         let mut config = default_repo_config();
         config.bookmarks = vec![BookmarkParams {
             bookmark: book_or_rex.clone(),
@@ -1336,7 +1336,7 @@ fn test_load_hooks_bad_rust_hook() {
     async_unit::tokio_unit_test(|| {
         let mut config = default_repo_config();
         config.bookmarks = vec![BookmarkParams {
-            bookmark: Bookmark::new("bm1").unwrap().into(),
+            bookmark: BookmarkName::new("bm1").unwrap().into(),
             hooks: vec!["rust:hook1".into()],
             only_fast_forward: false,
             allowed_users: None,

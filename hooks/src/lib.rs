@@ -23,7 +23,7 @@ pub mod rust_hook;
 use aclchecker::{AclChecker, Identity};
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blob_changeset::HgBlobChangeset;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -54,7 +54,7 @@ pub struct HookManager {
     cache: Cache,
     changeset_hooks: ChangesetHooks,
     file_hooks: FileHooks,
-    bookmark_hooks: HashMap<Bookmark, Vec<String>>,
+    bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
     changeset_store: Box<ChangesetStore>,
     content_store: Arc<FileContentStore>,
@@ -161,7 +161,7 @@ impl HookManager {
             .collect()
     }
 
-    fn hooks_for_bookmark(&self, bookmark: &Bookmark) -> HashSet<String> {
+    fn hooks_for_bookmark(&self, bookmark: &BookmarkName) -> HashSet<String> {
         let mut hooks: HashSet<_> = match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => hooks.clone().into_iter().collect(),
             None => HashSet::new(),
@@ -183,7 +183,7 @@ impl HookManager {
         &self,
         ctx: CoreContext,
         changeset_id: HgChangesetId,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         let hooks: Vec<_> = self
@@ -211,7 +211,7 @@ impl HookManager {
         changeset_id: HgChangesetId,
         hooks: Vec<String>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         let hooks: Result<Vec<(String, (Arc<Hook<HookChangeset>>, _))>, Error> = hooks
             .iter()
@@ -262,7 +262,7 @@ impl HookManager {
         ctx: CoreContext,
         changeset: HookChangeset,
         hooks: Vec<(String, Arc<Hook<HookChangeset>>, HookConfig)>,
-        bookmark: Bookmark,
+        bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
             HookManager::run_changeset_hook(
@@ -296,7 +296,7 @@ impl HookManager {
         &self,
         ctx: CoreContext,
         changeset_id: HgChangesetId,
-        bookmark: &Bookmark,
+        bookmark: &BookmarkName,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
@@ -333,7 +333,7 @@ impl HookManager {
         hooks: Vec<(String, (Arc<Hook<HookFile>>, HookConfig))>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
         logger: Logger,
-        bookmark: Bookmark,
+        bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
             self.logger,
@@ -367,7 +367,7 @@ impl HookManager {
         hooks: Vec<String>,
         cache: Cache,
         logger: Logger,
-        bookmark: Bookmark,
+        bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
             .files
@@ -400,7 +400,7 @@ impl HookManager {
         hooks: Vec<String>,
         cache: Cache,
         logger: Logger,
-        bookmark: Bookmark,
+        bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         let v: Vec<BoxFuture<(FileHookExecutionID, HookExecution), _>> = hooks
             .iter()
@@ -931,7 +931,7 @@ pub struct FileHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
     pub file: HookFile,
-    pub bookmark: Bookmark,
+    pub bookmark: BookmarkName,
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
@@ -976,14 +976,19 @@ where
     pub hook_name: String,
     pub config: HookConfig,
     pub data: T,
-    pub bookmark: Bookmark,
+    pub bookmark: BookmarkName,
 }
 
 impl<T> HookContext<T>
 where
     T: Clone,
 {
-    fn new(hook_name: String, config: HookConfig, data: T, bookmark: Bookmark) -> HookContext<T> {
+    fn new(
+        hook_name: String,
+        config: HookConfig,
+        data: T,
+        bookmark: BookmarkName,
+    ) -> HookContext<T> {
         HookContext {
             hook_name,
             config,

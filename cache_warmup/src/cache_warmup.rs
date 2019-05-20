@@ -19,7 +19,7 @@ extern crate metaconfig_types;
 extern crate revset;
 
 use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
@@ -31,13 +31,13 @@ use revset::AncestorsNodeStream;
 use slog::Logger;
 
 mod errors {
-    use bookmarks::Bookmark;
+    use bookmarks::BookmarkName;
     use mercurial_types::HgChangesetId;
 
     #[derive(Debug, Fail)]
     pub enum ErrorKind {
         #[fail(display = "Bookmark {} does not exist", _0)]
-        BookmarkNotFound(Bookmark),
+        BookmarkNotFound(BookmarkName),
         #[fail(display = "Bookmark value {} not found", _0)]
         BookmarkValueNotFound(HgChangesetId),
     }
@@ -125,7 +125,7 @@ fn changesets_warmup(
 fn do_cache_warmup(
     ctx: CoreContext,
     repo: BlobRepo,
-    bookmark: Bookmark,
+    bookmark: BookmarkName,
     commit_limit: usize,
     logger: Logger,
 ) -> BoxFuture<(), Error> {

@@ -609,7 +609,7 @@ mod test {
 
     use async_unit;
     use blobrepo::BlobRepo;
-    use bookmarks::Bookmark;
+    use bookmarks::BookmarkName;
     use chashmap::CHashMap;
     use context::CoreContext;
     use futures::stream::iter_ok;
@@ -2146,7 +2146,7 @@ mod test {
         sli: SkiplistIndex,
     ) {
         let f = repo
-            .get_bonsai_bookmark(ctx.clone(), &Bookmark::new("master").unwrap())
+            .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
             .and_then({
                 cloned!(ctx, repo);
                 move |maybe_cs_id| {

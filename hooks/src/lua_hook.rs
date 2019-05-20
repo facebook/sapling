@@ -440,7 +440,7 @@ mod test {
     use aclchecker::AclChecker;
     use assert_matches::assert_matches;
     use async_unit;
-    use bookmarks::Bookmark;
+    use bookmarks::BookmarkName;
     use bytes::Bytes;
     use failure_ext::err_downcast;
     use futures::Future;
@@ -1615,7 +1615,7 @@ end"#;
                     "testhook".into(),
                     conf,
                     default_changeset(),
-                    Bookmark::new("book").unwrap(),
+                    BookmarkName::new("book").unwrap(),
                 )
             });
         });
@@ -1631,7 +1631,7 @@ end"#;
                     "testhook".into(),
                     conf,
                     default_hook_added_file(),
-                    Bookmark::new("book").unwrap(),
+                    BookmarkName::new("book").unwrap(),
                 )
             });
         });
@@ -1647,7 +1647,7 @@ end"#;
             hook.name.clone(),
             Default::default(),
             changeset,
-            Bookmark::new("book").unwrap(),
+            BookmarkName::new("book").unwrap(),
         );
         hook.run(ctx, context).wait()
     }
@@ -1662,7 +1662,7 @@ end"#;
             hook.name.clone(),
             Default::default(),
             hook_file,
-            Bookmark::new("book").unwrap(),
+            BookmarkName::new("book").unwrap(),
         );
         hook.run(ctx, context).wait()
     }
