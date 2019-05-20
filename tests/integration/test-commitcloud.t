@@ -85,8 +85,8 @@ Make commits in the first client, and sync it
   $ mkcommit "commit3"
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at 660cb078da57
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  backing up stack rooted at 660cb078da57
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -132,8 +132,8 @@ Make commits from the second client and sync it
   $ mkcommit "commit6"
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  backing up stack rooted at 15f040cf571c
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  backing up stack rooted at 15f040cf571c
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -179,8 +179,8 @@ On the first client rebase the stack
   rebasing 6:58508421158d "commit6" (tip)
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at 660cb078da57
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  backing up stack rooted at 660cb078da57
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -234,6 +234,7 @@ On the second client hide all draft commits
   6 changesets hidden
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -246,6 +247,7 @@ On the first client check that all commits were hidden
   $ cd ../client1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -276,8 +278,8 @@ Make one of the commits public when it shouldn't be.
   $ hgmn phase -p 8d621fa11677
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at ec61bf312a03
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  backing up stack rooted at ec61bf312a03
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
@@ -340,9 +342,9 @@ Fix up that public commit, set it back to draft
 
 Clean up
   $ hgmn hide -r 'draft()' -q
-  $ hg cloud sync -q
+  $ hgmn cloud sync -q
   $ cd ../client2
-  $ hg cloud sync -q
+  $ hgmn cloud sync -q
 
   $ tglogp
   @  0: 8b2dca0c8a72 public 'base_commit' bookmark1
