@@ -145,7 +145,11 @@ impl EdenApi for EdenApiCurlClient {
             keys: batch.into_iter().collect(),
         });
 
-        let responses: Vec<DataResponse> = self.multi_request(&url, requests, progress)?;
+        let mut responses = Vec::new();
+        self.multi_request(&url, requests, progress, |res: DataResponse| {
+            responses.push(res);
+            Ok(())
+        })?;
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -190,15 +194,16 @@ impl EdenApi for EdenApiCurlClient {
             depth: max_depth,
         });
 
-        let responses: Vec<HistoryResponse> = self.multi_request(&url, requests, progress)?;
+        let mut responses = Vec::new();
+        self.multi_request(&url, requests, progress, |res: HistoryResponse| {
+            responses.push(res);
+            Ok(())
+        })?;
 
         log::debug!(
             "Received {} responses with {} total entries",
             responses.len(),
-            responses
-                .iter()
-                .map(|entry| entry.entries.len())
-                .sum::<usize>(),
+            responses.iter().map(|res| res.entries.len()).sum::<usize>(),
         );
 
         write_to_historystore(store, responses.into_iter().flatten())
@@ -228,18 +233,21 @@ impl EdenApiCurlClient {
     }
 
     /// Send multiple concurrent POST requests using the given requests as the
-    /// JSON payload of each respective request. Assumes that the responses are
-    /// CBOR encoded, and automatically deserializes and returns them.
-    fn multi_request<I, T, R>(
+    /// CBOR payload of each respective request. Assumes that the responses are
+    /// CBOR encoded, and automatically deserializes them before passing
+    /// them to the given callback.
+    fn multi_request<R, I, T, F>(
         &self,
         url: &Url,
         requests: I,
         progress_cb: Option<ProgressFn>,
-    ) -> Fallible<Vec<T>>
+        mut response_cb: F,
+    ) -> Fallible<()>
     where
         R: Serialize,
-        T: DeserializeOwned,
         I: IntoIterator<Item = R>,
+        T: DeserializeOwned,
+        F: FnMut(T) -> Fallible<()>,
     {
         let requests = requests.into_iter().collect::<Vec<_>>();
         let num_requests = requests.len();
@@ -259,8 +267,6 @@ impl EdenApiCurlClient {
         progress.set_callback(progress_cb);
         driver.set_progress_manager(progress);
 
-        let mut responses = Vec::with_capacity(num_requests);
-
         log::debug!("Performing {} requests", num_requests);
         let start = Instant::now();
 
@@ -268,15 +274,14 @@ impl EdenApiCurlClient {
             let easy = res?;
             let data = easy.get_ref().data();
             let response = serde_cbor::from_slice::<T>(data)?;
-            responses.push(response);
-            Ok(())
+            response_cb(response)
         })?;
 
         let elapsed = start.elapsed();
         let total_bytes = driver.progress().unwrap().stats().downloaded;
         print_download_stats(total_bytes, elapsed);
 
-        Ok(responses)
+        Ok(())
     }
 }
 
