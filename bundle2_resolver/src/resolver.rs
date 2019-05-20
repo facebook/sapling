@@ -1182,7 +1182,7 @@ impl Bundle2Resolver {
         pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
         onto: Bookmark,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        phases_hint: Arc<dyn Phases>,
+        phases: Arc<dyn Phases>,
         bookmark_push_part_id: Option<PartId>,
     ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
@@ -1193,16 +1193,12 @@ impl Bundle2Resolver {
         let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
 
         // write phase as public for this commit
-        let pushrebased_rev = phases::mark_reachable_as_public(
-            ctx.clone(),
-            repo.clone(),
-            phases_hint.clone(),
-            &[pushrebased_rev.clone()],
-        )
-        .and_then({
-            cloned!(ctx, repo);
-            move |_| repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
-        });
+        let pushrebased_rev = phases
+            .add_reachable_as_public(ctx.clone(), repo.clone(), vec![pushrebased_rev.clone()])
+            .and_then({
+                cloned!(ctx, repo);
+                move |_| repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
+            });
 
         let bookmark_reply_part = match bookmark_push_part_id {
             Some(part_id) => Some(try_boxfuture!(parts::replypushkey_part(true, part_id))),
@@ -1234,7 +1230,7 @@ impl Bundle2Resolver {
                     common,
                     heads,
                     lca_hint,
-                    Some(phases_hint),
+                    Some(phases),
                 )
             })
             .and_then(move |mut cg_part_builder| {

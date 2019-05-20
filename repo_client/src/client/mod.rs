@@ -37,7 +37,7 @@ use mercurial_types::{
 };
 use metaconfig_types::RepoReadOnly;
 use percent_encoding;
-use phases::{Phase, Phases};
+use phases::Phases;
 use rand::{self, Rng};
 use reachabilityindex::LeastCommonAncestorsHint;
 use remotefilelog::{create_remotefilelog_blob, get_unordered_file_history_for_multiple_nodes};
@@ -116,7 +116,6 @@ fn clone_timeout_duration() -> Duration {
     // clone requests can be rather long. Let's bump the timeout
     Duration::from_secs(30 * 60)
 }
-
 
 fn getfiles_timeout_duration() -> Duration {
     // getfiles requests can be rather long. Let's bump the timeout
@@ -766,21 +765,13 @@ impl HgCommands for RepoClient {
             })
             .and_then(move |(bcs_ids, bcs_hg_mapping)| {
                 phases_hint
-                    .get_all(ctx, blobrepo, bcs_ids)
-                    .map(move |phases| (phases, bcs_hg_mapping))
-            })
-            .map(|(phases, bcs_hg_mapping)| {
-                phases
-                    .calculated
-                    .into_iter()
-                    .filter_map(|(cs, phase)| {
-                        if phase == Phase::Public {
-                            bcs_hg_mapping.get(&cs).cloned()
-                        } else {
-                            None
-                        }
+                    .get_public(ctx, blobrepo, bcs_ids)
+                    .map(move |public_csids| {
+                        public_csids
+                            .into_iter()
+                            .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
+                            .collect::<HashSet<_>>()
                     })
-                    .collect::<HashSet<_>>()
             })
             .map(move |found_hg_changesets| {
                 nodes

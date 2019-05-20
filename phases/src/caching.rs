@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::*;
-use crate::{fill_unkown_phases, Phase, Phases, PhasesMapping};
+use crate::{Phase, Phases};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
@@ -14,9 +14,11 @@ use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 use stats::{define_stats, Timeseries};
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use std::time::Duration;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Duration,
+};
 use try_from::TryInto;
 
 // Memcache constants, should be changed when we want to invalidate memcache
@@ -38,13 +40,13 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)
 }
 
-pub struct CachingHintPhases {
+pub struct CachingPhases {
     phases_store: Arc<dyn Phases>, // phases_store is the underlying persistent storage (db)
     memcache: MemcacheClient,      // Memcache Client for temporary caching
     keygen: KeyGen,
 }
 
-impl CachingHintPhases {
+impl CachingPhases {
     pub fn new(phases_store: Arc<dyn Phases>) -> Self {
         let key_prefix = "scm.mononoke.phases";
         Self {
@@ -55,158 +57,73 @@ impl CachingHintPhases {
     }
 }
 
-impl Phases for CachingHintPhases {
-    /// Add a new entry to the phases.
-    /// Memcache + underlying storage
-    /// Returns true if a new changeset was added or the phase has been changed,
-    /// returns false if the phase hasn't been changed for the changeset.
-    fn add(
+impl Phases for CachingPhases {
+    fn get_public(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
-        cs_id: ChangesetId,
-        phase: Phase,
-    ) -> BoxFuture<bool, Error> {
+        cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
         cloned!(self.keygen, self.memcache, self.phases_store);
         let repo_id = repo.get_repoid();
-        get_phase_from_memcache(&memcache, &keygen, repo_id, cs_id)
-            .and_then(move |maybe_phase| {
-                match maybe_phase {
-                    // The phase is already the same in memcache, nothing is needed.
-                    Some(ref current_phase) if current_phase == &phase => {
-                        future::ok(false).left_future()
-                    }
-                    _ => {
-                        // The phase is missing or different in memcache. Refresh memcache.
-                        set_phase_to_memcache(&memcache, &keygen, repo_id, cs_id, &phase)
-                        // Refresh the underlying persistent storage (currently for public commits only).
-                        .and_then(move |_| {
-                            if phase == Phase::Public {
-                                phases_store.add(ctx, repo, cs_id, phase)
+        get_phases_from_memcache(&memcache, &keygen, repo_id, cs_ids.clone())
+            .and_then(move |phases_memcache| {
+                let unknown: Vec<_> = cs_ids
+                    .into_iter()
+                    .filter(|csid| !phases_memcache.contains_key(csid))
+                    .collect();
+                let public_memcache = phases_memcache
+                    .into_iter()
+                    .filter_map(
+                        |(csid, p)| {
+                            if p == Phase::Public {
+                                Some(csid)
                             } else {
-                                future::ok(true).boxify()
+                                None
                             }
-                        })
-                        .right_future()
-                    }
+                        },
+                    )
+                    .collect();
+                if unknown.is_empty() {
+                    return future::ok(public_memcache).left_future();
                 }
+                phases_store
+                    .get_public(ctx, repo, unknown)
+                    .and_then(move |public_store| {
+                        set_phases_to_memcache(
+                            &memcache,
+                            &keygen,
+                            repo_id,
+                            public_store
+                                .iter()
+                                .map(|csid| (*csid, Phase::Public))
+                                .collect(),
+                        )
+                        .map(move |_| public_store.into_iter().chain(public_memcache).collect())
+                    })
+                    .right_future()
             })
             .boxify()
     }
 
-    /// Add several new entries of phases to the underlying storage if they are not already the same
-    /// in memcache. Update memcache if changes.
-    fn add_all(
+    fn add_reachable_as_public(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
-        phases: Vec<(ChangesetId, Phase)>,
-    ) -> BoxFuture<(), Error> {
-        cloned!(self.keygen, self.memcache, self.phases_store);
-        let repo_id = repo.get_repoid();
-        get_phases_from_memcache(
-            &memcache,
-            &keygen,
-            repo_id,
-            phases.iter().map(|(cs_id, _)| cs_id.clone()).collect(),
-        )
-        .and_then(move |phases_mapping| {
-            // Calculate the difference.
-
-            // Some phases are missing or different in the memcache. They should be updated in memcache.
-            let add_to_memcache: HashMap<_, _> = phases
-                .into_iter()
-                .filter_map(|(cs_id, phase)| {
-                    if let Some(current_phase) = phases_mapping.calculated.get(&cs_id) {
-                        if current_phase == &phase {
-                            return None;
-                        }
-                    }
-                    Some((cs_id, phase))
-                })
-                .collect();
-
-            // Refresh the underlying persistent storage.
-            // Same set of phases but for public commits only.
-            let add_to_db = add_to_memcache
-                .iter()
-                .filter_map(|(cs_id, phase)| {
-                    if phase == &Phase::Public {
-                        Some((cs_id.clone(), phase.clone()))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            set_phases_to_memcache(&memcache, &keygen, repo_id, &add_to_memcache)
-                .and_then(move |_| phases_store.add_all(ctx, repo, add_to_db))
-        })
-        .boxify()
-    }
-
-    /// Retrieve the phase specified by this commit, if available.
-    /// If phases are not available for some of the commits, they will be recalculated.
-    /// If recalculation failed error will be returned.
-    fn get(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Phase>, Error> {
-        self.get_all(ctx, repo, vec![cs_id])
-            .map(move |mut phases_mapping| phases_mapping.calculated.remove(&cs_id))
-            .boxify()
-    }
-
-    /// Retrieve the phase specified by this commit, if available.
-    /// If phases are not available for some of the commits, they will be recalculated.
-    /// If recalculation failed error will be returned.
-    fn get_all(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<PhasesMapping, Error> {
-        self.get_all_with_bookmarks(ctx, repo, cs_ids, None)
-    }
-
-    /// Get phases for the list of commits.
-    /// Accept optional bookmarks heads. Use this API if bookmarks are known.
-    /// If phases are not available for some of the commits, they will be recalculated.
-    /// If recalculation failed an error will be returned.
-    /// Returns:
-    /// phases_mapping::calculated           - phases hash map
-    /// phases_mapping::unknown              - always empty
-    /// phases_mapping::maybe_public_heads   - if bookmarks heads were fetched during calculation
-    ///                                         or passed to this function they will be filled in.
-    fn get_all_with_bookmarks(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-    ) -> BoxFuture<PhasesMapping, Error> {
-        cloned!(self.keygen, self.memcache, self.phases_store);
-        let repo_id = repo.get_repoid();
-        get_phases_from_memcache(&memcache, &keygen, repo_id, cs_ids)
-            .and_then(move |phases_memcache| {
-                fill_unkown_phases(
-                    ctx,
-                    repo,
-                    phases_store,
-                    maybe_public_heads,
-                    phases_memcache.clone(),
+        heads: Vec<ChangesetId>,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        cloned!(self.keygen, self.memcache);
+        let repoid = repo.get_repoid();
+        self.phases_store
+            .add_reachable_as_public(ctx, repo, heads)
+            .and_then(move |marked| {
+                set_phases_to_memcache(
+                    &memcache,
+                    &keygen,
+                    repoid,
+                    marked.iter().map(|csid| (*csid, Phase::Public)).collect(),
                 )
-                .and_then(move |phases| {
-                    let calculated = phases_memcache
-                        .unknown
-                        .into_iter()
-                        .flat_map(|k| phases.calculated.get(&k).map(move |v| (k, *v)))
-                        .collect();
-                    set_phases_to_memcache(&memcache, &keygen, repo_id, &calculated)
-                        .map(move |_| phases)
-                })
+                .map(move |_| marked)
             })
             .boxify()
     }
@@ -247,30 +164,14 @@ fn get_phases_from_memcache(
     keygen: &KeyGen,
     repo_id: RepositoryId,
     cs_ids: Vec<ChangesetId>,
-) -> impl Future<Item = PhasesMapping, Error = Error> {
+) -> impl Future<Item = HashMap<ChangesetId, Phase>, Error = Error> {
     stream::futures_unordered(cs_ids.into_iter().map(move |cs_id| {
         cloned!(memcache, keygen, repo_id);
         get_phase_from_memcache(&memcache, &keygen, repo_id, cs_id)
-            .map(move |maybe_phase| (cs_id, maybe_phase))
+            .map(move |maybe_phase| maybe_phase.map(move |phase| (cs_id, phase)))
     }))
     .collect()
-    .map(|vec| {
-        // split to unknown and calculated
-        let (unknown, calculated): (Vec<_>, Vec<_>) = vec
-            .into_iter()
-            .partition(|(_, maybephase)| maybephase.is_none());
-
-        PhasesMapping {
-            calculated: calculated
-                .into_iter()
-                .filter_map(|(cs_id, somephase)| somephase.map(|phase| (cs_id, phase)))
-                .collect(),
-
-            unknown: unknown.into_iter().map(|(cs_id, _)| cs_id).collect(),
-
-            ..Default::default()
-        }
-    })
+    .map(|vec| vec.into_iter().flatten().collect())
 }
 
 // Memcache setter (with TTL)
@@ -308,12 +209,12 @@ fn set_phases_to_memcache(
     memcache: &MemcacheClient,
     keygen: &KeyGen,
     repo_id: RepositoryId,
-    phases: &HashMap<ChangesetId, Phase>,
-) -> impl Future<Item = (), Error = Error> {
+    phases: Vec<(ChangesetId, Phase)>,
+) -> impl Future<Item = (), Error = Error> + 'static {
     cloned!(memcache, keygen, repo_id);
     stream::futures_unordered(
-        phases.iter().map(|(cs_id, phase)| {
-            set_phase_to_memcache(&memcache, &keygen, repo_id, *cs_id, &phase)
+        phases.into_iter().map(|(cs_id, phase)| {
+            set_phase_to_memcache(&memcache, &keygen, repo_id, cs_id, &phase)
         }),
     )
     .collect()

@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 mod caching;
-pub use caching::CachingHintPhases;
+pub use caching::CachingPhases;
 mod errors;
 pub use errors::*;
 
@@ -26,12 +26,11 @@ use sql::mysql_async::{
 };
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use std::{fmt, str};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 use try_from::TryFrom;
-
-type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
@@ -62,7 +61,7 @@ impl TryFrom<iobuf::IOBuf> for Phase {
 
     fn try_from(buf: iobuf::IOBuf) -> ::std::result::Result<Self, Self::Err> {
         let v: Vec<u8> = buf.into();
-        match str::from_utf8(&v) {
+        match std::str::from_utf8(&v) {
             Ok("Draft") => Ok(Phase::Draft),
             Ok("Public") => Ok(Phase::Public),
             Ok(s) => Err(ErrorKind::PhasesError(
@@ -90,7 +89,7 @@ impl FromValue for Phase {
 }
 
 impl ConvIr<Phase> for Phase {
-    fn new(v: Value) -> FromValueResult<Self> {
+    fn new(v: Value) -> ::std::result::Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
                 .map_err(|err| FromValueError(Value::Bytes(err.into_source())))
@@ -112,67 +111,32 @@ impl ConvIr<Phase> for Phase {
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
-pub struct PhasesMapping {
-    pub calculated: HashMap<ChangesetId, Phase>,
-    pub unknown: Vec<ChangesetId>,
-    // filled if bookmarks are known or were fetched during calculation
-    pub maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-}
-
-/// Interface to storage of phases in Mononoke
 pub trait Phases: Send + Sync {
-    /// Add a new entry to the phases.
-    /// Returns true if a new changeset was added or the phase has been changed,
-    /// returns false if the phase hasn't been changed for the changeset.
-    fn add(
+    /// mark all commits reachable from heads as public
+    fn add_reachable_as_public(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
-        cs_id: ChangesetId,
-        phase: Phase,
-    ) -> BoxFuture<bool, Error>;
+        heads: Vec<ChangesetId>,
+    ) -> BoxFuture<Vec<ChangesetId>, Error>;
 
-    /// Add new several entries to the phases.
-    fn add_all(
+    fn get_public(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
-        phases: Vec<(ChangesetId, Phase)>,
-    ) -> BoxFuture<(), Error>;
+        csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashSet<ChangesetId>, Error>;
 
-    /// Retrieve the phase specified by this commit, if available.
-    fn get(
+    fn is_public(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Phase>, Error>;
-
-    /// Retrieve the phase for list of commits, if available.
-    fn get_all(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<PhasesMapping, Error>;
-
-    /// Retrieve the phase for list of commits, if available.
-    /// Accept optional bookmarks. Use this API if bookmarks are known.
-    fn get_all_with_bookmarks(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-    ) -> BoxFuture<PhasesMapping, Error>;
-}
-
-#[derive(Clone)]
-pub struct SqlPhases {
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+        csid: ChangesetId,
+    ) -> BoxFuture<bool, Error> {
+        self.get_public(ctx, repo, vec![csid])
+            .map(move |public| public.contains(&csid))
+            .boxify()
+    }
 }
 
 queries! {
@@ -200,6 +164,61 @@ queries! {
     }
 }
 
+#[derive(Clone)]
+pub struct SqlPhases {
+    write_connection: Connection,
+    read_connection: Connection,
+    read_master_connection: Connection,
+}
+
+impl SqlPhases {
+    fn get_single_raw(
+        &self,
+        repo_id: RepositoryId,
+        cs_id: ChangesetId,
+    ) -> impl Future<Item = Option<Phase>, Error = Error> {
+        SelectPhase::query(&self.read_connection, &repo_id, &cs_id)
+            .map(move |rows| rows.into_iter().next().map(|row| row.0))
+    }
+
+    fn get_public_raw(
+        &self,
+        repo_id: RepositoryId,
+        cs_ids: &Vec<ChangesetId>,
+    ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
+        SelectPhases::query(
+            &self.read_connection,
+            &repo_id,
+            &cs_ids.iter().collect::<Vec<_>>(),
+        )
+        .map(move |rows| {
+            rows.into_iter()
+                .filter(|row| row.1 == Phase::Public)
+                .map(|row| row.0)
+                .collect()
+        })
+    }
+
+    pub fn add_public(
+        &self,
+        _ctx: CoreContext,
+        repo: BlobRepo,
+        csids: Vec<ChangesetId>,
+    ) -> impl Future<Item = (), Error = Error> {
+        if csids.is_empty() {
+            return future::ok(()).left_future();
+        }
+        let repoid = &repo.get_repoid();
+        let phases: Vec<_> = csids
+            .iter()
+            .map(|csid| (repoid, csid, &Phase::Public))
+            .collect();
+        InsertPhase::query(&self.write_connection, &phases)
+            .map(|_| ())
+            .right_future()
+    }
+}
+
 impl SqlConstructors for SqlPhases {
     const LABEL: &'static str = "phases";
 
@@ -221,288 +240,71 @@ impl SqlConstructors for SqlPhases {
 }
 
 impl Phases for SqlPhases {
-    /// Add a new entry to the phases sql table. Returns true if a new changeset was inserted or the phase has been changed,
-    /// returns false if the phase hasn't been changed for the changeset.
-    fn add(
+    fn get_public(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         repo: BlobRepo,
-        cs_id: ChangesetId,
-        phase: Phase,
-    ) -> BoxFuture<bool, Error> {
-        InsertPhase::query(
-            &self.write_connection,
-            &[(&repo.get_repoid(), &cs_id, &phase)],
-        )
-        .map(move |result| result.affected_rows() >= 1)
-        .boxify()
-    }
-
-    /// Add new several entries to the phases.
-    fn add_all(
-        &self,
-        _ctx: CoreContext,
-        repo: BlobRepo,
-        phases: Vec<(ChangesetId, Phase)>,
-    ) -> BoxFuture<(), Error> {
-        if phases.is_empty() {
-            return future::ok(()).boxify();
-        }
-        let repo_id = &repo.get_repoid();
-        InsertPhase::query(
-            &self.write_connection,
-            &phases
-                .iter()
-                .map(|(cs_id, phase)| (repo_id, cs_id, phase))
-                .collect::<Vec<_>>(),
-        )
-        .map(|_| ())
-        .boxify()
-    }
-
-    /// Retrieve the phase specified by this commit from the table, if available.
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        repo: BlobRepo,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Phase>, Error> {
-        SelectPhase::query(&self.read_connection, &repo.get_repoid(), &cs_id)
-            .map(move |rows| rows.into_iter().next().map(|row| row.0))
-            .boxify()
-    }
-
-    /// Retrieve the phase for list of commits, if available.
-    fn get_all(
-        &self,
-        _ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<PhasesMapping, Error> {
-        if cs_ids.is_empty() {
+        csids: Vec<ChangesetId>,
+    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
+        if csids.is_empty() {
             return future::ok(Default::default()).boxify();
         }
-        SelectPhases::query(
-            &self.read_connection,
-            &repo.get_repoid(),
-            &cs_ids.iter().collect::<Vec<_>>(),
-        )
-        .map(move |rows| {
-            let calculated = rows
-                .into_iter()
-                .map(|row| (row.0, row.1))
-                .collect::<HashMap<_, _>>();
-            let unknown = cs_ids
-                .into_iter()
-                .filter(|cs_id| !calculated.contains_key(cs_id))
-                .collect();
-            PhasesMapping {
-                calculated,
-                unknown,
-                ..Default::default()
-            }
-        })
-        .boxify()
-    }
-
-    /// Retrieve the phase for list of commits, if available.
-    /// Accept optional bookmarks. Use this API if bookmarks are known.
-    /// Bookmarks are not used, pass them as is.
-    fn get_all_with_bookmarks(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-    ) -> BoxFuture<PhasesMapping, Error> {
-        self.get_all(ctx, repo, cs_ids)
-            .map(|mut phases_mapping| {
-                phases_mapping.maybe_public_heads = maybe_public_heads;
-                phases_mapping
+        let repoid = repo.get_repoid();
+        let this = self.clone();
+        self.get_public_raw(repoid, &csids)
+            .and_then(move |public_cold| {
+                let unknown: Vec<_> = csids
+                    .into_iter()
+                    .filter(|csid| !public_cold.contains(csid))
+                    .collect();
+                if unknown.is_empty() {
+                    return future::ok(public_cold).left_future();
+                }
+                repo.get_bonsai_heads_maybe_stale(ctx.clone())
+                    .collect()
+                    .and_then({
+                        cloned!(this);
+                        move |heads| mark_reachable_as_public(ctx, repo, this, &heads)
+                    })
+                    .and_then(move |_| {
+                        this.get_public_raw(repoid, &unknown)
+                            .map(move |public_hot| {
+                                public_cold.into_iter().chain(public_hot).collect()
+                            })
+                    })
+                    .right_future()
             })
             .boxify()
     }
-}
 
-pub struct HintPhases {
-    phases_store: Arc<dyn Phases>, // phases_store is the underlying persistent storage (db)
-}
-
-impl HintPhases {
-    pub fn new(phases_store: Arc<dyn Phases>) -> Self {
-        Self { phases_store }
-    }
-}
-
-impl Phases for HintPhases {
-    /// Add a new phases entry to the underlying storage.
-    /// Returns true if a new changeset was added or the phase has been changed,
-    /// returns false if the phase hasn't been changed for the changeset.
-    fn add(
+    fn add_reachable_as_public(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
-        cs_id: ChangesetId,
-        phase: Phase,
-    ) -> BoxFuture<bool, Error> {
-        // Refresh the underlying persistent storage (currently for public commits only).
-        if phase == Phase::Public {
-            self.phases_store.add(ctx, repo, cs_id, phase)
-        } else {
-            future::ok(false).boxify()
-        }
+        heads: Vec<ChangesetId>,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        mark_reachable_as_public(ctx, repo, self.clone(), &heads).boxify()
     }
-
-    /// Add several new entries to the underlying storage.
-    fn add_all(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        phases: Vec<(ChangesetId, Phase)>,
-    ) -> BoxFuture<(), Error> {
-        // Refresh the underlying persistent storage (currently for public commits only).
-        self.phases_store.add_all(
-            ctx,
-            repo,
-            phases
-                .into_iter()
-                .filter(|(_, phase)| phase == &Phase::Public)
-                .collect(),
-        )
-    }
-
-    /// Retrieve the phase specified by this commit, if available.
-    /// If phases are not available for some of the commits, they will be recalculated.
-    /// If recalculation failed error will be returned.
-    fn get(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Phase>, Error> {
-        self.get_all(ctx, repo, vec![cs_id])
-            .map(move |mut phases_mapping| phases_mapping.calculated.remove(&cs_id))
-            .boxify()
-    }
-
-    /// Get phases for the list of commits.
-    /// If phases are not available for some of the commits, they will be recalculated.
-    /// If recalculation failed error will be returned.
-    /// Uknown is always returned empty.
-    fn get_all(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<PhasesMapping, Error> {
-        self.get_all_with_bookmarks(ctx, repo, cs_ids, None)
-    }
-
-    /// Get phases for the list of commits.
-    /// Accept optional bookmarks heads. Use this API if bookmarks are known.
-    /// If phases are not available for some of the commits, they will be recalculated.
-    /// If recalculation failed an error will be returned.
-    /// Returns:
-    /// phases_mapping::calculated          - phases hash map
-    /// phases_mapping::unknown             - always empty
-    /// phases_mapping::maybe_public_heads  - if bookmarks heads were fetched during calculation
-    ///                                   or passed to this function they will be filled in.
-    fn get_all_with_bookmarks(
-        &self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        cs_ids: Vec<ChangesetId>,
-        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-    ) -> BoxFuture<PhasesMapping, Error> {
-        cloned!(self.phases_store);
-        phases_store
-            .get_all_with_bookmarks(
-                ctx.clone(),
-                repo.clone(),
-                cs_ids,
-                maybe_public_heads.clone(),
-            )
-            .and_then(move |phases| {
-                fill_unkown_phases(ctx, repo, phases_store, maybe_public_heads, phases)
-            })
-            .boxify()
-    }
-}
-
-// resolve unknown phases and return update result
-fn fill_unkown_phases(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    phases_store: Arc<dyn Phases>,
-    maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-    phases: PhasesMapping,
-) -> impl Future<Item = PhasesMapping, Error = Error> {
-    if phases.unknown.is_empty() {
-        return future::ok(PhasesMapping {
-            maybe_public_heads,
-            ..phases
-        })
-        .left_future();
-    }
-
-    let PhasesMapping {
-        calculated: calculated_input,
-        unknown,
-        ..
-    } = phases;
-    match maybe_public_heads {
-        Some(public_heads) => future::ok(public_heads).left_future(),
-        None => repo
-            .get_bonsai_heads(ctx.clone())
-            .map(|(_, cs_id)| cs_id)
-            .collect()
-            .map(move |bookmarks| Arc::new(bookmarks.into_iter().collect()))
-            .right_future(),
-    }
-    .and_then(move |public_heads| {
-        mark_reachable_as_public(
-            ctx.clone(),
-            repo.clone(),
-            phases_store.clone(),
-            &*public_heads,
-        )
-        .and_then(move |_| phases_store.get_all(ctx, repo, unknown))
-        .map(move |phases| {
-            let PhasesMapping {
-                mut calculated,
-                unknown,
-                ..
-            } = phases;
-            calculated.extend(calculated_input);
-            calculated.extend(unknown.into_iter().map(|cs| (cs, Phase::Draft)));
-            PhasesMapping {
-                calculated,
-                unknown: Vec::new(),
-                maybe_public_heads: Some(public_heads),
-            }
-        })
-    })
-    .right_future()
 }
 
 /// Mark all commits reachable from `public_heads` as public
-pub fn mark_reachable_as_public<'a, Heads>(
+fn mark_reachable_as_public<'a, Heads>(
     ctx: CoreContext,
     repo: BlobRepo,
-    phases_store: Arc<dyn Phases>,
+    phases: SqlPhases,
     public_heads: &'a Heads,
-) -> impl Future<Item = (), Error = Error>
+) -> impl Future<Item = Vec<ChangesetId>, Error = Error>
 where
     &'a Heads: IntoIterator<Item = &'a ChangesetId>,
 {
     let changeset_fetcher = repo.get_changeset_fetcher();
     let input: Vec<_> = public_heads.into_iter().cloned().collect();
     future::loop_fn((HashMap::new(), input), {
-        cloned!(ctx, repo, phases_store);
+        cloned!(ctx, repo, phases);
         move |(mut output, mut input)| match input.pop() {
             None => future::ok(Loop::Break(output)).left_future(),
-            Some(cs) => phases_store
-                .get(ctx.clone(), repo.clone(), cs)
+            Some(cs) => phases
+                .get_single_raw(repo.get_repoid(), cs)
                 .and_then({
                     cloned!(changeset_fetcher, ctx);
                     move |phase| match phase {
@@ -535,16 +337,12 @@ where
             //       already been marked as public.
             let mut unmarked: Vec<_> = unmarked.into_iter().map(|(k, v)| (v, k)).collect();
             unmarked.sort_by(|l, r| l.0.cmp(&r.0));
-            stream::iter_ok(unmarked)
+            let mark: Vec<_> = unmarked.into_iter().map(|(_gen, cs)| cs).collect();
+            stream::iter_ok(mark.clone())
                 .chunks(100)
-                .and_then(move |chunk| {
-                    phases_store.add_all(
-                        ctx.clone(),
-                        repo.clone(),
-                        chunk.iter().map(|(_, cs)| (*cs, Phase::Public)).collect(),
-                    )
-                })
+                .and_then(move |chunk| phases.add_public(ctx.clone(), repo.clone(), chunk))
                 .for_each(|()| future::ok(()))
+                .map(move |_| mark)
         }
     })
 }
@@ -555,71 +353,40 @@ mod tests {
     use bookmarks::{Bookmark, BookmarkUpdateReason};
     use fixtures::linear;
     use futures::Stream;
-    use maplit::{hashmap, hashset};
+    use maplit::hashset;
     use mercurial_types::nodehash::HgChangesetId;
     use mononoke_types_mocks::changesetid::*;
     use std::str::FromStr;
     use tokio::runtime::Runtime;
 
-    fn add_get_sql_phase<P: Phases>(phases: P) {
+    #[test]
+    fn add_get_phase_sql_test() -> Result<()> {
+        let mut rt = Runtime::new()?;
         let ctx = CoreContext::test_mock();
-        let repo = blobrepo_factory::new_memblob_empty(None, None).unwrap();
+        let repo = blobrepo_factory::new_memblob_empty(None, None)?;
+        let phases = SqlPhases::with_sqlite_in_memory()?;
+
+        rt.block_on(phases.add_public(ctx.clone(), repo.clone(), vec![ONES_CSID]))?;
 
         assert_eq!(
-            phases
-                .add(ctx.clone(), repo.clone(), ONES_CSID, Phase::Public)
-                .wait()
-                .expect("Adding new phase entry failed"),
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), ONES_CSID))?,
             true,
-            "sql: try to add phase Public for a new changeset"
-        );
-
-        assert_eq!(
-            phases
-                .add(ctx.clone(), repo.clone(), ONES_CSID, Phase::Public)
-                .wait()
-                .expect("Adding new phase entry failed"),
-            false,
-            "sql: try to add the same changeset with the same phase"
-        );
-
-        assert_eq!(
-            phases
-                .get(ctx.clone(), repo.clone(), ONES_CSID)
-                .wait()
-                .expect("Get phase failed"),
-            Some(Phase::Public),
             "sql: get phase for the existing changeset"
         );
 
         assert_eq!(
-            phases
-                .get(ctx.clone(), repo.clone(), TWOS_CSID)
-                .wait()
-                .expect("Get phase failed"),
-            None,
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), TWOS_CSID))?,
+            false,
             "sql: get phase for non existing changeset"
         );
 
         assert_eq!(
-            phases
-                .get_all(ctx.clone(), repo.clone(), vec![ONES_CSID, TWOS_CSID])
-                .wait()
-                .expect("Get phase failed"),
-            PhasesMapping {
-                calculated: hashmap! {ONES_CSID => Phase::Public},
-                unknown: vec![TWOS_CSID],
-                ..Default::default()
-            },
+            rt.block_on(phases.get_public(ctx.clone(), repo.clone(), vec![ONES_CSID, TWOS_CSID]))?,
+            hashset! {ONES_CSID},
             "sql: get phase for non existing changeset and existing changeset"
         );
-    }
 
-    #[test]
-    fn add_get_phase_sql_test() {
-        async_unit::tokio_unit_test(|| {
-            add_get_sql_phase(SqlPhases::with_sqlite_in_memory().unwrap());
-        });
+        Ok(())
     }
 
     fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark) {
@@ -743,57 +510,56 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let phases_store = Arc::new(SqlPhases::with_sqlite_in_memory().unwrap());
-        let hint_phases = HintPhases::new(phases_store.clone());
+        let phases = SqlPhases::with_sqlite_in_memory().unwrap();
 
         assert_eq!(
-            hint_phases
-                .get(ctx.clone(), repo.clone(), public_bookmark_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), public_bookmark_commit)
                 .wait()
                 .unwrap(),
-            Some(Phase::Public),
+            true,
             "slow path: get phase for a Public commit which is also a public bookmark"
         );
 
         assert_eq!(
-            hint_phases
-                .get(ctx.clone(), repo.clone(), public_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), public_commit)
                 .wait()
                 .unwrap(),
-            Some(Phase::Public),
+            true,
             "slow path: get phase for a Public commit"
         );
 
         assert_eq!(
-            hint_phases
-                .get(ctx.clone(), repo.clone(), other_public_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), other_public_commit)
                 .wait()
                 .unwrap(),
-            Some(Phase::Public),
+            true,
             "slow path: get phase for other Public commit"
         );
 
         assert_eq!(
-            hint_phases
-                .get(ctx.clone(), repo.clone(), draft_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), draft_commit)
                 .wait()
                 .unwrap(),
-            Some(Phase::Draft),
+            false,
             "slow path: get phase for a Draft commit"
         );
 
         assert_eq!(
-            hint_phases
-                .get(ctx.clone(), repo.clone(), other_draft_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), other_draft_commit)
                 .wait()
                 .unwrap(),
-            Some(Phase::Draft),
+            false,
             "slow path: get phase for other Draft commit"
         );
 
         assert_eq!(
-            hint_phases
-                .get_all(
+            phases
+                .get_public(
                     ctx.clone(),
                     repo.clone(),
                     vec![
@@ -805,36 +571,28 @@ mod tests {
                 )
                 .wait()
                 .unwrap(),
-            PhasesMapping {
-                calculated: hashmap! {
-                    public_commit => Phase::Public,
-                    other_public_commit => Phase::Public,
-                    draft_commit => Phase::Draft,
-                    other_draft_commit => Phase::Draft
-                },
-                unknown: vec![],
-                maybe_public_heads: Some(Arc::new(hashset! {
-                    public_bookmark_commit
-                }))
+            hashset! {
+                public_commit,
+                other_public_commit,
             },
             "slow path: get phases for set of commits"
         );
 
         assert_eq!(
-            phases_store
-                .get(ctx.clone(), repo.clone(), public_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), public_commit)
                 .wait()
                 .expect("Get phase failed"),
-            Some(Phase::Public),
+            true,
             "sql: make sure that phase was written to the db for public commit"
         );
 
         assert_eq!(
-            phases_store
-                .get(ctx.clone(), repo.clone(), draft_commit)
+            phases
+                .is_public(ctx.clone(), repo.clone(), draft_commit)
                 .wait()
                 .expect("Get phase failed"),
-            None,
+            false,
             "sql: make sure that phase was not written to the db for draft commit"
         );
     }
@@ -847,8 +605,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mark_reachable_as_public() {
-        let mut rt = Runtime::new().unwrap();
+    fn test_mark_reachable_as_public() -> Result<()> {
+        let mut rt = Runtime::new()?;
 
         let repo = fixtures::branch_even::getrepo(None);
         // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
@@ -877,21 +635,17 @@ mod tests {
         let ctx = CoreContext::test_mock();
 
         // delete all existing bookmarks
-        let bookmarks = rt
-            .block_on(repo.get_bonsai_bookmarks(ctx.clone()).collect())
-            .unwrap();
+        let bookmarks = rt.block_on(repo.get_bonsai_bookmarks(ctx.clone()).collect())?;
         let mut transaction = repo.update_bookmark_transaction(ctx.clone());
         for bookmark in bookmarks {
-            transaction
-                .force_delete(
-                    &bookmark.0,
-                    BookmarkUpdateReason::TestMove {
-                        bundle_replay_data: None,
-                    },
-                )
-                .unwrap();
+            transaction.force_delete(
+                &bookmark.0,
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                },
+            )?;
         }
-        assert!(rt.block_on(transaction.commit()).unwrap());
+        assert!(rt.block_on(transaction.commit())?);
 
         // resolve bonsai
         let bcss = rt
@@ -906,38 +660,32 @@ mod tests {
             ))
             .unwrap();
 
-        let phases: Arc<dyn Phases> = Arc::new(SqlPhases::with_sqlite_in_memory().unwrap());
+        let phases = SqlPhases::with_sqlite_in_memory()?;
         // get phases mapping for all `bcss` in the same order
         let get_phases_map = || {
             phases
-                .get_all(ctx.clone(), repo.clone(), bcss.clone())
+                .get_public(ctx.clone(), repo.clone(), bcss.clone())
                 .map({
                     cloned!(bcss);
-                    move |mapping| {
+                    move |public| {
                         bcss.iter()
-                            .map(|bcs| {
-                                mapping
-                                    .calculated
-                                    .get(bcs)
-                                    .map_or(false, |phase| phase == &Phase::Public)
-                            })
+                            .map(|bcs| public.contains(bcs))
                             .collect::<Vec<_>>()
                     }
                 })
         };
 
         // all phases are draft
-        assert_eq!(rt.block_on(get_phases_map()).unwrap(), [false; 7]);
+        assert_eq!(rt.block_on(get_phases_map())?, [false; 7]);
 
         rt.block_on(mark_reachable_as_public(
             ctx.clone(),
             repo.clone(),
             phases.clone(),
             &[bcss[1]],
-        ))
-        .unwrap();
+        ))?;
         assert_eq!(
-            rt.block_on(get_phases_map()).unwrap(),
+            rt.block_on(get_phases_map())?,
             [true, true, false, false, false, false, false],
         );
 
@@ -946,11 +694,12 @@ mod tests {
             repo.clone(),
             phases.clone(),
             &[bcss[2], bcss[5]],
-        ))
-        .unwrap();
+        ))?;
         assert_eq!(
-            rt.block_on(get_phases_map()).unwrap(),
+            rt.block_on(get_phases_map())?,
             [true, true, true, false, true, true, false],
         );
+
+        Ok(())
     }
 }

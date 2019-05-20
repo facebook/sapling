@@ -492,7 +492,7 @@ impl BlobRepo {
     ) -> impl Stream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix(ctx, &BookmarkPrefix::empty(), self.repoid)
+            .list_by_prefix_maybe_stale(ctx, &BookmarkPrefix::empty(), self.repoid)
             .map(|(_, cs_id)| cs_id)
     }
 

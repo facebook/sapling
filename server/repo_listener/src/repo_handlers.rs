@@ -24,7 +24,7 @@ use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
-use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
+use phases::{CachingPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
@@ -195,14 +195,11 @@ pub fn repo_handlers(
                             info!(root_log, "Repo warmup for {} complete", reponame);
 
                             // initialize phases hint from the skip index
-                            let phases_hint: Arc<Phases> = match dbconfig {
-                                MetadataDBConfig::LocalDB { path } => {
-                                    let storage = Arc::new(
-                                        SqlPhases::with_sqlite_path(path.join("phases"))
-                                            .expect("unable to initialize sqlite db for phases"),
-                                    );
-                                    Arc::new(HintPhases::new(storage))
-                                }
+                            let phases_hint: Arc<dyn Phases> = match dbconfig {
+                                MetadataDBConfig::LocalDB { path } => Arc::new(
+                                    SqlPhases::with_sqlite_path(path.join("phases"))
+                                        .expect("unable to initialize sqlite db for phases"),
+                                ),
                                 MetadataDBConfig::Mysql { db_address, .. } => {
                                     let storage = Arc::new(SqlPhases::with_myrouter(
                                         &db_address,
@@ -210,7 +207,7 @@ pub fn repo_handlers(
                                             "myrouter_port not provided for BlobRemote repo",
                                         ),
                                     ));
-                                    Arc::new(CachingHintPhases::new(storage))
+                                    Arc::new(CachingPhases::new(storage))
                                 }
                             };
 

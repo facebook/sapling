@@ -11,17 +11,19 @@ use cloned::cloned;
 use context::CoreContext;
 use failure::err_msg;
 use futures::{future, stream, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
 use mononoke_types::ChangesetId;
-use phases::{Phase, Phases};
+use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    iter::FromIterator,
+    sync::Arc,
+};
 
 pub fn create_getbundle_response(
     ctx: CoreContext,
@@ -178,74 +180,57 @@ fn prepare_phases_stream(
     ctx: CoreContext,
     repo: BlobRepo,
     heads: Vec<HgChangesetId>,
-    phases_hint: Arc<Phases>,
+    phases: Arc<Phases>,
 ) -> impl Stream<Item = (HgChangesetId, HgPhase), Error = Error> {
     // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
     // heads that are not known by the server will be skipped
-    let mapping_fut =
-        repo.get_hg_bonsai_mapping(ctx.clone(), heads)
-            .map(move |hg_bonsai_mapping| {
-                hg_bonsai_mapping
-                    .into_iter()
-                    .map(|(hg_cs_id, bonsai)| (bonsai, hg_cs_id))
-                    .collect::<HashMap<ChangesetId, HgChangesetId>>()
-            });
-
-    // calculate phases for the heads
-    let heads_phases_fut = mapping_fut.and_then({
-        cloned!(ctx, repo, phases_hint);
-        move |bonsai_node_mapping| {
-            phases_hint
-                .get_all(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
-                .map(move |phases_mapping| (phases_mapping, bonsai_node_mapping))
-        }
-    });
-
-    // calculate public roots if client is pulling non-public changesets
-    // and join the result together
-    heads_phases_fut
-        .and_then(move |(phases_mapping, bonsai_node_mapping)| {
-            let heads_phases = phases_mapping.calculated;
-            let maybe_public_heads = phases_mapping.maybe_public_heads;
-
+    repo.get_hg_bonsai_mapping(ctx.clone(), heads)
+        .map(move |hg_bonsai_mapping| {
+            hg_bonsai_mapping
+                .into_iter()
+                .map(|(hg_cs_id, bonsai)| (bonsai, hg_cs_id))
+                .collect::<HashMap<ChangesetId, HgChangesetId>>()
+        })
+        .and_then({
+            // calculate phases for the heads
+            cloned!(ctx, repo, phases);
+            move |bonsai_node_mapping| {
+                phases
+                    .get_public(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
+                    .map(move |public| (public, bonsai_node_mapping))
+            }
+        })
+        .and_then(move |(public, bonsai_node_mapping)| {
             // select draft heads
-            let drafts = heads_phases
-                .iter()
-                .filter_map(|(cs_id, phase)| {
-                    if phase == &Phase::Draft {
-                        Some(cs_id.clone())
-                    } else {
-                        None
-                    }
-                })
+            let drafts = bonsai_node_mapping
+                .keys()
+                .filter(|csid| !public.contains(csid))
+                .cloned()
                 .collect();
 
             // find the public roots for the draft heads
-            let pub_roots_future = calculate_public_roots(
-                ctx.clone(),
-                repo.clone(),
-                drafts,
-                phases_hint,
-                maybe_public_heads,
-            )
-            .and_then(move |bonsais| {
-                repo.get_hg_bonsai_mapping(ctx, bonsais.into_iter().collect::<Vec<_>>())
-            });
-
-            // merge the phases for heads and public roots together and transform the result in a format used by the encoding function
-            pub_roots_future.map(move |public_roots| {
-                let phases = heads_phases
-                    .into_iter()
-                    .map(|(bonsai, phase)| (bonsai_node_mapping[&bonsai], HgPhase::from(phase)))
-                    .chain(
-                        public_roots
-                            .into_iter()
-                            .map(|(hg_cs_id, _)| (hg_cs_id, HgPhase::Public)),
-                    )
-                    .collect::<Vec<_>>();
-
-                stream::iter_ok(phases.into_iter())
-            })
+            calculate_public_roots(ctx.clone(), repo.clone(), drafts, phases)
+                .and_then(move |bonsais| {
+                    repo.get_hg_bonsai_mapping(ctx, bonsais.into_iter().collect::<Vec<_>>())
+                })
+                .map(move |public_roots| {
+                    let phases = bonsai_node_mapping
+                        .into_iter()
+                        .map(move |(csid, hg_csid)| {
+                            let phase = if public.contains(&csid) {
+                                HgPhase::Public
+                            } else {
+                                HgPhase::Draft
+                            };
+                            (hg_csid, phase)
+                        })
+                        .chain(
+                            public_roots
+                                .into_iter()
+                                .map(|(hg_csid, _)| (hg_csid, HgPhase::Public)),
+                        );
+                    stream::iter_ok(phases)
+                })
         })
         .flatten_stream()
 }
@@ -255,79 +240,50 @@ fn calculate_public_roots(
     ctx: CoreContext,
     repo: BlobRepo,
     drafts: HashSet<ChangesetId>,
-    phases_hint: Arc<Phases>,
-    maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
-) -> BoxFuture<HashSet<ChangesetId>, Error> {
+    phases: Arc<Phases>,
+) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
     future::loop_fn(
-        (maybe_public_heads, drafts, HashSet::new(), HashSet::new()),
-        move |(maybe_public_heads, drafts, mut public, mut visited)| {
-            // just precaution: if there are no public heads in the repo at all
-            let no_public_heads = if let Some(ref public_heads) = maybe_public_heads {
-                public_heads.is_empty()
-            } else {
-                false
-            };
-            // nothing more to calculate
-            if drafts.is_empty() || no_public_heads {
+        (drafts, HashSet::new(), HashSet::new()),
+        move |(drafts, mut public, mut visited)| {
+            if drafts.is_empty() {
                 return future::ok(future::Loop::Break(public)).left_future();
             }
 
-            // calculate parents
-            let vecf: Vec<_> = drafts
-                .into_iter()
-                .map(|bonsai| repo.get_changeset_parents_by_bonsai(ctx.clone(), bonsai))
-                .collect();
-
-            // join them together and filter already processed
-            let parents_fut = stream::futures_unordered(vecf)
+            stream::iter_ok(drafts)
+                .map({
+                    cloned!(repo, ctx);
+                    move |csid| repo.get_changeset_parents_by_bonsai(ctx.clone(), csid)
+                })
+                .buffered(100)
                 .collect()
                 .map(move |parents| {
-                    let parents = parents
+                    let parents: HashSet<_> = parents
                         .into_iter()
-                        .flat_map(|array| array.into_iter())
-                        .filter(|bonsai| !visited.contains(bonsai))
-                        .collect::<HashSet<_>>();
-                    // update visited hashset
+                        .flatten()
+                        .filter(|csid| !visited.contains(csid))
+                        .collect();
                     visited.extend(parents.iter().cloned());
                     (parents, visited)
-                });
-
-            // calculated phases
-            let phases_fut = parents_fut.and_then({
-                cloned!(ctx, repo, phases_hint);
-                move |(parents, visited)| {
-                    phases_hint
-                        .get_all_with_bookmarks(
-                            ctx,
-                            repo,
-                            parents.into_iter().collect(),
-                            maybe_public_heads,
-                        )
-                        .map(move |phases_mapping| (phases_mapping, visited))
-                }
-            });
-
-            // return public roots and continue calculation for the remaining drafts
-            phases_fut
-                .and_then(|(phases_mapping, visited)| {
-                    let calculated = phases_mapping.calculated;
-                    let maybe_public_heads = phases_mapping.maybe_public_heads;
+                })
+                .and_then({
+                    cloned!(ctx, repo, phases);
+                    move |(parents, visited)| {
+                        phases
+                            .get_public(ctx, repo, parents.iter().cloned().collect())
+                            .map(move |public_phases| (public_phases, parents, visited))
+                    }
+                })
+                .and_then(|(public_phases, parents, visited)| {
                     // split by phase
-                    let (new_public, new_drafts): (Vec<_>, Vec<_>) = calculated
+                    let (new_public, new_drafts) = parents
                         .into_iter()
-                        .partition(|(_, phase)| phase == &Phase::Public);
+                        .partition(|csid| public_phases.contains(csid));
                     // update found public changests
-                    public.extend(new_public.into_iter().map(|(cs_id, _)| cs_id));
+                    public.extend(new_public);
                     // continue for the new drafts
-                    future::ok(future::Loop::Continue((
-                        maybe_public_heads,
-                        new_drafts.into_iter().map(|(cs_id, _)| cs_id).collect(),
-                        public,
-                        visited,
-                    )))
+                    future::ok(future::Loop::Continue((new_drafts, public, visited)))
                 })
                 .right_future()
         },
     )
-    .boxify()
 }

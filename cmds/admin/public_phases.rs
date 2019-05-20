@@ -7,24 +7,24 @@
 use clap::ArgMatches;
 use cloned::cloned;
 use failure_ext::Error;
-use futures::future::ok;
-use futures::prelude::*;
-use futures::stream::iter_ok;
+use futures::{stream, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
-use std::str::FromStr;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Write},
+    str::FromStr,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
-use std::time::Duration;
 
 use blobrepo::BlobRepo;
 use cmdlib::args;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
-use phases::{Phase, Phases, SqlPhases};
+use phases::SqlPhases;
 use slog::{info, Logger};
 
 fn add_public_phases(
@@ -34,7 +34,7 @@ fn add_public_phases(
     logger: Logger,
     path: impl AsRef<str>,
     chunk_size: usize,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     let file = try_boxfuture!(File::open(path.as_ref()).map_err(Error::from));
     let hg_changesets = BufReader::new(file).lines().filter_map(|id_str| {
         id_str
@@ -44,20 +44,20 @@ fn add_public_phases(
     });
     let entries_processed = Arc::new(AtomicUsize::new(0));
     info!(logger, "start processing hashes");
-    iter_ok(hg_changesets)
+    stream::iter_ok(hg_changesets)
         .chunks(chunk_size)
         .and_then(move |chunk| {
             let count = chunk.len();
             repo.get_hg_bonsai_mapping(ctx.clone(), chunk)
-                .map(|changesets| {
-                    changesets
-                        .into_iter()
-                        .map(|(_, cs)| (cs, Phase::Public))
-                        .collect()
-                })
                 .and_then({
                     cloned!(ctx, repo, phases);
-                    move |phases_mapping| phases.add_all(ctx, repo, phases_mapping)
+                    move |changesets| {
+                        phases.add_public(
+                            ctx,
+                            repo,
+                            changesets.into_iter().map(|(_, cs)| cs).collect(),
+                        )
+                    }
                 })
                 .and_then({
                     cloned!(entries_processed);
@@ -71,7 +71,7 @@ fn add_public_phases(
                     }
                 })
         })
-        .for_each(|_| ok(()))
+        .for_each(|_| Ok(()))
         .boxify()
 }
 

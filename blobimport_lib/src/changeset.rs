@@ -29,7 +29,7 @@ use mercurial_types::{
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
 };
 use mononoke_types::BonsaiChangeset;
-use phases::{Phase, Phases};
+use phases::Phases;
 
 const CONCURRENT_CHANGESETS: usize = 100;
 const CONCURRENT_BLOB_UPLOADS_PER_CHANGESET: usize = 100;
@@ -359,7 +359,7 @@ impl UploadChangesets {
                     .get_completed_changeset()
                     .with_context(move |_| format!("While uploading changeset: {}", csid))
                     .from_err(), &DefaultExecutor::current())
-                    .and_then(move |shared| phases_store.add(ctx, blobrepo, shared.0.get_changeset_id(), Phase::Public).map(move |_| shared))
+                    .and_then(move |shared| phases_store.add_reachable_as_public(ctx, blobrepo, vec![shared.0.get_changeset_id()]).map(move |_| shared))
                     .boxify()
             })
             // This is the number of changesets to upload in parallel. Keep it small to keep the database
