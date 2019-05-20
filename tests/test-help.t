@@ -287,7 +287,7 @@ Test extension help:
        clienttelemetry
                      provide information about the client in server telemetry
        clonebundles  advertise pre-generated bundles to seed clones
-       commitcloud   sync changesets via the cloud
+       commitcloud   back up and sync changesets via the cloud
        convert       import revisions from foreign VCS repositories into
                      Mercurial
        copytrace     extension that does copytracing fast

@@ -49,12 +49,11 @@ We will also run few checks with `hg hide` / `hg up` commands.
   summary:     someothercommit
   
 Backup commit
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at c1b6fe8fce73
   remote: pushing 1 commit:
   remote:     c1b6fe8fce73  someothercommit
-  finished in * seconds (glob)
+  commitcloud: backed up 1 commit
 
 Quick test `hg hide` / `hg up`
 Check update now accesses hidden commits rather than trying to pull
@@ -185,8 +184,7 @@ With no configuration it should abort
   $ my_new_commit5=`hg parent --template '{node}'`
   $ my_new_commit5_hashlen10=`echo $my_new_commit5 | fold -w 10 | head -n 1`
 
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at * (glob)
   remote: pushing 5 commits:
   remote:     *  someothercommit1 (glob)
@@ -194,7 +192,7 @@ With no configuration it should abort
   remote:     *  someothercommit3 (glob)
   remote:     *  someothercommit4 (glob)
   remote:     *  someothercommit5 (glob)
-  finished in * seconds (glob)
+  commitcloud: backed up 5 commits
   $ cd ../
 
 case 1: recent commit, length of prefix = 6 characters

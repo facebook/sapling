@@ -5,7 +5,6 @@
   > arcdiff=
   > commitcloud =
   > infinitepush =
-  > infinitepushbackup =
   > rebase =
   > remotenames =
   > share =

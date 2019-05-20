@@ -11,6 +11,7 @@
   > phabstatus=
   > [infinitepushbackup]
   > createlandedasmarkers=True
+  > hostname=testhost
   > logdir=$TESTTMP/logs
   > [experimental]
   > evolution= createmarkers
@@ -89,13 +90,12 @@ Push all pulled commit to backup
   new changesets 948715751816
   (run 'hg update' to get a working copy)
   obsoleted 1 changesets
-  $ hg pushbackup --config extensions.lockfail=$TESTDIR/lockfail.py
-  starting backup .* (re)
+  $ hg cloud backup --config extensions.lockfail=$TESTDIR/lockfail.py
   backing up stack rooted at 9b3ead1d8005
   remote: pushing 2 commits:
   remote:     9b3ead1d8005  add b
   remote:     3969cd9723d1  add c
-  finished in \d+\.(\d+)? seconds (re)
+  commitcloud: backed up 2 commits
 
   $ cd ..
 
@@ -110,6 +110,7 @@ Clone fresh repo and try to restore from backup
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add b
    (re)
+  note: background backup is currently disabled so your commits are not being backed up.
 
   $ NOW=`date +%s`
   $ cat > $TESTTMP/mockduit << EOF
@@ -121,7 +122,8 @@ Clone fresh repo and try to restore from backup
   >   "updated_time": ${NOW}
   > }]}}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pullbackup
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg cloud restorebackup
+  restoring backup for test from $TESTTMP/otherclient on testhost
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
@@ -157,6 +159,7 @@ Clone fresh repo and try to restore from backup
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add initial
    (re)
+  note: background backup is currently disabled so your commits are not being backed up.
   $ hg debugobsolete
   9b3ead1d8005d305582e9d72eb8a4c8959873249 0 {c255e4a1ae9dd17d77787816cff012162a122798} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
@@ -178,7 +181,8 @@ Test createlandedasmarkers option disabled
   >   "updated_time": ${NOW}
   > }]}}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pullbackup
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg cloud restorebackup
+  restoring backup for test from $TESTTMP/otherclient on testhost
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
@@ -211,4 +215,5 @@ Test createlandedasmarkers option disabled
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add initial
    (re)
+  note: background backup is currently disabled so your commits are not being backed up.
   $ hg debugobsolete

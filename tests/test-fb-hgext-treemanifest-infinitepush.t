@@ -290,7 +290,7 @@ server has treemanifest enabled.
   added 0 changesets with 1 changes to 1 files
   $ cd ..
 
-Verify pushbackup in a treeonly client will convert old flat manifests into
+Verify hg cloud backup in a treeonly client will convert old flat manifests into
 trees
   $ hgcloneshallow ssh://user@dummy/master ondemandconvertclient -q
   $ cd ondemandconvertclient
@@ -308,13 +308,12 @@ trees
   > treeonly=True
   > sendtrees=True
   > EOF
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at 7e75be1136c3
   fetching tree '' 2d6cb11e074d743e23a163127648257bb4f8fe42, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 7e75be1136c3
   remote: pushing 1 commit:
   remote:     7e75be1136c3  add foo
-  finished in * seconds (glob)
+  commitcloud: backed up 1 commit
   $ cd ..
 
 Verify its not on the server
@@ -398,13 +397,12 @@ treemanifest data for the public commits.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -qm "merge"
-  $ hg pushbackup
-  starting backup to 'ssh://user@dummy/master' at * (glob)
+  $ hg cloud backup
   backing up stack rooted at d32fd17cb041
   remote: pushing 2 commits:
   remote:     d32fd17cb041  add z
   remote:     5850638a7ae9  merge
-  finished in * seconds (glob)
+  commitcloud: backed up 2 commits
 
 # Check the bundle.  It should only have 2 trees (one from z and one for the merged
 # root directory)

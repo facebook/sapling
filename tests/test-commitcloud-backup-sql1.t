@@ -91,42 +91,42 @@ sleeps should be used to get predictable order
   $ cd client1 && setupsqlclienthgrc
   $ mkcommit 'Commit in repo client1'
   $ sleep 1
-  $ hg pushb -q --config infinitepushbackup.hostname=mydevhost
+  $ hg cloud backup -q --config infinitepushbackup.hostname=mydevhost
   $ cd ..
   $ hg clone -q ssh://user@dummy/server 'client2\dev'
   $ cd 'client2\dev' && setupsqlclienthgrc
   $ mkcommit 'Commit in repo client2\dev'
   $ sleep 1
-  $ hg pushb -q --config infinitepushbackup.hostname=devhost
+  $ hg cloud backup -q --config infinitepushbackup.hostname=devhost
   $ cd ..
   $ hg clone -q ssh://user@dummy/server client3
   $ cd client3 && setupsqlclienthgrc
   $ mkcommit 'Commit in repo client3'
   $ sleep 1
-  $ hg pushb -q --config infinitepushbackup.hostname=devhost
+  $ hg cloud backup -q --config infinitepushbackup.hostname=devhost
   $ cd ..
   $ hg clone -q ssh://user@dummy/server client4
   $ cd client4 && setupsqlclienthgrc
   $ mkcommit 'Commit in repo client4'
   $ sleep 1
-  $ hg pushb -q --config infinitepushbackup.hostname=ourdevhost
+  $ hg cloud backup -q --config infinitepushbackup.hostname=ourdevhost
   $ cd ..
   $ hg clone -q ssh://user@dummy/server client5
   $ cd client5 && setupsqlclienthgrc
   $ mkcommit 'Commit in repo client5'
   $ sleep 1
-  $ hg pushb -q --config infinitepushbackup.hostname=mydevhost
-  $ hg pullbackup --config infinitepushbackup.backuplistlimit=3
+  $ hg cloud backup -q --config infinitepushbackup.hostname=mydevhost
+  $ hg cloud restorebackup --config infinitepushbackup.backuplistlimit=3
   user test has 5 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
   $TESTTMP/client4 on ourdevhost
   $TESTTMP/client3 on devhost
-  (older backups have been hidden, run 'hg getavailablebackups --all' to see them all)
+  (older backups have been hidden, run 'hg cloud listbackups --all' to see them all)
   abort: multiple backups found
   (set --hostname and --reporoot to pick a backup)
   [255]
-  $ hg pullbackup --hostname mydevhost
+  $ hg cloud restorebackup --hostname mydevhost
   user test has 2 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
@@ -134,10 +134,10 @@ sleeps should be used to get predictable order
   abort: multiple backups found
   (set --hostname and --reporoot to pick a backup)
   [255]
-  $ hg pullbackup --reporoot $TESTTMP/client1 --hostname mydevhost -q       # pullbackup should work with reporoot/hostname pair
-  $ hg pullbackup --reporoot $TESTTMP/'client2\dev' --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
-  $ hg pullbackup --reporoot $TESTTMP/client3 -q                            # pullbackup should work with reporoot only if it is unambiguous
-  $ hg pullbackup --hostname ourdevhost -q                                  # pullbackup should work with hostname only if it is unambiguous
+  $ hg cloud restorebackup --reporoot $TESTTMP/client1 --hostname mydevhost -q       # pullbackup should work with reporoot/hostname pair
+  $ hg cloud restorebackup --reporoot $TESTTMP/'client2\dev' --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
+  $ hg cloud restorebackup --reporoot $TESTTMP/client3 -q                            # pullbackup should work with reporoot only if it is unambiguous
+  $ hg cloud restorebackup --hostname ourdevhost -q                                  # pullbackup should work with hostname only if it is unambiguous
   $ hg log -G --template "{node|short} '{desc}'\n"
   o  3309f3c00117 'Commit in repo client4'
   
@@ -150,8 +150,8 @@ sleeps should be used to get predictable order
   @  ec33790d6769 'Commit in repo client5'
   
 
-Getavailablebackups should also go in MRU order
-  $ hg getavailablebackups --json
+hg cloud listbackups should also go in MRU order
+  $ hg cloud listbackups --json
   {
       "mydevhost": [
           "$TESTTMP/client5", 
@@ -165,7 +165,7 @@ Getavailablebackups should also go in MRU order
           "$TESTTMP/client2\\dev"
       ]
   }
-  $ hg getavailablebackups
+  $ hg cloud listbackups
   user test has 5 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
@@ -199,11 +199,11 @@ safely will be restored on the client2
   |
   @  bf45ce9ee037 * 'Test commit1'
   
-  $ hg pushb -q --config infinitepushbackup.hostname=testhost
+  $ hg cloud backup -q --config infinitepushbackup.hostname=testhost
   $ hg bookmark '*' --delete
-  $ hg pushb -q --config infinitepushbackup.hostname=testhost
+  $ hg cloud backup -q --config infinitepushbackup.hostname=testhost
   $ cd ../client2
-  $ hg pullbackup --hostname testhost -q
+  $ hg cloud restorebackup --hostname testhost -q
   $ hg log -G --template "{node|short} {bookmarks} '{desc}'\n"
   o  679ff862f673 feature1 'Test commit2'
   |

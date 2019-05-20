@@ -4,7 +4,6 @@
   > directaccess=
   > commitcloud =
   > infinitepush =
-  > infinitepushbackup =
   > rebase =
   > remotenames =
   > [ui]

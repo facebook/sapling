@@ -1,3 +1,4 @@
+  $ enable amend
 
 Setup common infinitepush
   $ . "$TESTDIR/library.sh"
@@ -5,15 +6,9 @@ Setup common infinitepush
   $ setupcommon
 
 Setup lfs
-  $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > changegroup3=True
-  > [extensions]
-  > lfs=
-  > [lfs]
-  > threshold=10B
-  > url=file:$TESTTMP/dummy-remote/
-  > EOF
+  $ enable lfs
+  $ setconfig experimental.changegroup3=true
+  $ setconfig lfs.threshold=10B lfs.url="file:$TESTTMP/dummy-remote/"
 
 Setup server repo
   $ hg init repo
@@ -68,29 +63,27 @@ Make pushbackup that contains bundle with 2 heads
   $ cd ../client
   $ hg up -q tip
   $ mkcommit newcommit
-  $ hg up -q 0
+  $ hg prev -q
+  [0da81a] commit
   $ mkcommit newcommit2
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at 0da81a72db1a
-  remote: pushing 2 commits:
+  remote: pushing 3 commits:
   remote:     0da81a72db1a  commit
   remote:     5f9d85f9e1c6  newcommit
-  backing up stack rooted at eca66fbd9785
-  remote: pushing 1 commit:
-  remote:     eca66fbd9785  newcommit2
-  finished in * seconds (glob)
-  $ hg isbackedup -r .
-  eca66fbd9785d8e82fb4043a2ed9beed8bdbce5b backed up
+  remote:     c800524c1b76  newcommit2
+  commitcloud: backed up 2 commits
+  $ hg cloud check -r .
+  c800524c1b7637c6f3f997d1459237d01fe1ea10 backed up
 
 Pull just one head to trigger rebundle
   $ cd ../client2
-  $ hg pull -r eca66fbd9785d8e82fb4043a2ed9beed8bdbce5b
+  $ hg pull -r c800524c1b7637c6f3f997d1459237d01fe1ea10
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
-  new changesets eca66fbd9785
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  added 1 changesets with 1 changes to 2 files
+  new changesets c800524c1b76
+  (run 'hg update' to get a working copy)

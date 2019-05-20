@@ -6,7 +6,6 @@
   > amend =
   > commitcloud =
   > infinitepush =
-  > infinitepushbackup =
   > rebase =
   > remotenames =
   > share =
@@ -478,9 +477,9 @@ Connect to commit cloud
   @  0: df4f53cec30a base
   
   hint[commitcloud-old-commits]: some older commits or bookmarks have not been synced to this repo
-  (run `hg cloud sl` to see all of the commits in your workspace)
-  (run `hg pull -r HASH` to fetch commits by hash)
-  (run `hg cloud sync --full` to fetch everything - this may be slow)
+  (run 'hg cloud sl' to see all of the commits in your workspace)
+  (run 'hg pull -r HASH' to fetch commits by hash)
+  (run 'hg cloud sync --full' to fetch everything - this may be slow)
   hint[hint-ack]: use 'hg hint --ack commitcloud-old-commits' to silence these hints
 
 Move one of these bookmarks in the first client.

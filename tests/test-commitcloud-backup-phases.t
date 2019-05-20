@@ -34,8 +34,7 @@ the history but is stored on disk
   |/
   o  966a initial commit public
   
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at bc62325caa65
   remote: pushing 2 commits:
   remote:     bc62325caa65  stack 1 - commit 1
@@ -44,7 +43,7 @@ the history but is stored on disk
   remote: pushing 2 commits:
   remote:     f13337e62e40  stack 2 - commit 1
   remote:     ccd5ee66f08a  stack 2 - commit 2
-  finished in * seconds (glob)
+  commitcloud: backed up 4 commits
   $ hg pull -r bc62
   pulling from ssh://user@dummy/master
   no changes found

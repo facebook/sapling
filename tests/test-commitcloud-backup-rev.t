@@ -1,6 +1,7 @@
-
+u
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
+  $ setconfig extensions.commitcloud=
 
   $ mkcommit() {
   >   echo "$1" > "$1"
@@ -29,7 +30,7 @@
   > amend=
   > EOF
 
-Make branches
+Test pushing of specific sets of commits
   $ drawdag <<'EOS'
   > B2 # B1/foo=commit b-2\n
   > |
@@ -47,12 +48,11 @@ Make branches
   $ hg up $B2 -q
 
 Check backing up top stack commit and mid commit
-  $ hg isbackedup -r $A2+$B2
+  $ hg cloud check -r $A2+$B2
   * not backed up (glob)
   * not backed up (glob)
 
   $ hg cloud backup $A1 $A2 $B2
-  pushing to ssh://user@dummy/server
   backing up stack rooted at * (glob)
   remote: pushing 2 commits:
   remote:     *  A1 (glob)
@@ -61,22 +61,23 @@ Check backing up top stack commit and mid commit
   remote: pushing 2 commits:
   remote:     *  B1 (glob)
   remote:     *  B2 (glob)
+  commitcloud: backed up 4 commits
 
-  $ hg isbackedup -r $A1+$A2+$A3+$B1+$B2
+  $ hg cloud check -r $A1+$A2+$A3+$B1+$B2
   * backed up (glob)
   * backed up (glob)
   * not backed up (glob)
   * backed up (glob)
   * backed up (glob)
 
-Check baking up new top commit
+Check backing up new top commit
   $ hg cloud backup $A3
-  pushing to ssh://user@dummy/server
   backing up stack rooted at * (glob)
   remote: pushing 3 commits:
   remote:     *  A1 (glob)
   remote:     *  A2 (glob)
   remote:     *  A3 (glob)
+  commitcloud: backed up 1 commit
 
   $ hg cloud backup $A2
   nothing to back up
@@ -120,12 +121,12 @@ Check that backup doesn't interfere with commit cloud
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ B3=$(mkcommit B3)
   $ hg cloud backup $B3
-  pushing to ssh://user@dummy/server
   backing up stack rooted at * (glob)
   remote: pushing 3 commits:
   remote:     *  B1 (glob)
   remote:     *  B2 (glob)
   remote:     *  B3 (glob)
+  commitcloud: backed up 1 commit
 
   $ hg cloud sync
   commitcloud: synchronizing 'master' with 'user/test/default'
@@ -136,3 +137,5 @@ Check that backup doesn't interfere with commit cloud
   remote:     *  B3 (glob)
   commitcloud: commits synchronized
   finished in *.* (glob)
+
+

@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-""" sync changesets via the cloud
+"""back up and sync changesets via the cloud
 
 Configs::
 
@@ -98,16 +98,42 @@ Configs::
     # Maximum age (in days) of commits to pull when syncing
     max_sync_age = 14
 
-    # Migrate repository from older pushbackup system to Commit Cloud Sync
-    autocloudjoin = True
+    [infinitepushbackup]
+    # Whether to enable automatic backups. If this option is True then a backup
+    # process will be started after every mercurial command that modifies the
+    # repo, for example, commit, amend, histedit, rebase etc.
+    autobackup = False
+
+    # path to the directory where background backup logs should be stored
+    logdir = path/to/dir
+
+    # Backup at most maxheadstobackup heads, other heads are ignored.
+    # Negative number means backup everything.
+    maxheadstobackup = -1
+
+    # Nodes that should not be backed up.  Descendants of these nodes won't be
+    # backed up either
+    dontbackupnodes = badbadbad1 badbadbad2
+
+    # Hostname value to use. If not specified then socket.gethostname() will
+    # be used
+    hostname = myhost
+
+    # Enable reporting of background backup status as a summary at the end
+    # of smartlog.
+    enablestatus = False
+
+    # Enable creating obsolete markers when backup is restored.
+    createlandedasmarkers = False
+
+    # Number of backups to list by default in getavailablebackups
+    backuplistlimit = 10
 """
 
 from __future__ import absolute_import
 
 from edenscm.mercurial import (
-    error,
     extensions,
-    hintutil,
     localrepo,
     node as nodemod,
     registrar,
@@ -118,10 +144,14 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 from . import (
+    background,
+    backupbookmarks,
+    backupstate,
     commitcloudcommands,
     commitcloudcommon,
     commitcloudutil,
     dependencies,
+    status,
     syncstate,
     workspace,
 )
@@ -133,6 +163,7 @@ colortable = {"commitcloud.tag": "yellow", "commitcloud.team": "bold"}
 
 hint = registrar.hint()
 revsetpredicate = registrar.revsetpredicate()
+templatekeyword = registrar.templatekeyword()
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -142,28 +173,29 @@ configitem("commitcloud", "remote_port", default=443)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "backuplimitnocheck", default=4)
-configitem("commitcloud", "autocloudjoin", default=False)
-
-
-@hint("commitcloud-old-commits")
-def _smartlogomittedcommitsmsg(repo):
-    workspacename = workspace.currentworkspace(repo)
-    lastsyncstate = syncstate.SyncState(repo, workspacename)
-    if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:
-        return _(
-            "some older commits or bookmarks have not been synced to this repo\n"
-            "(run `hg cloud sl` to see all of the commits in your workspace)\n"
-            "(run `hg pull -r HASH` to fetch commits by hash)\n"
-            "(run `hg cloud sync --full` to fetch everything - this may be slow)\n"
-        )
+configitem("infinitepushbackup", "backuplistlimit", default=5)
+configitem("infinitepushbackup", "enablestatus", default=True)
+configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 
 
 def extsetup(ui):
+    background.extsetup(ui)
     dependencies.extsetup(ui)
 
     localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._obsmarkerssyncing)
     localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._syncprogress)
+    localrepo.localrepository._wlockfreeprefix.add(backupbookmarks._backupstateprefix)
+    localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.prefix)
+    localrepo.localrepository._wlockfreeprefix.add(background._autobackupstatefile)
     localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.prefix)
+
+    def wrapsmartlog(loaded):
+        if not loaded:
+            return
+        smartlogmod = extensions.find("smartlog")
+        extensions.wrapcommand(smartlogmod.cmdtable, "smartlog", _smartlog)
+
+    extensions.afterloaded("smartlog", wrapsmartlog)
 
 
 def reposetup(ui, repo):
@@ -186,6 +218,22 @@ def reposetup(ui, repo):
             return tr
 
     repo.__class__ = commitcloudrepo
+
+
+def _smartlog(orig, ui, repo, **opts):
+    res = orig(ui, repo, **opts)
+    status.summary(repo)
+    return res
+
+
+@hint("commitcloud-old-commits")
+def _smartlogomittedcommitsmsg(repo):
+    return _(
+        "some older commits or bookmarks have not been synced to this repo\n"
+        "(run 'hg cloud sl' to see all of the commits in your workspace)\n"
+        "(run 'hg pull -r HASH' to fetch commits by hash)\n"
+        "(run 'hg cloud sync --full' to fetch everything - this may be slow)\n"
+    )
 
 
 @hint("commitcloud-update-on-move")
@@ -252,3 +300,31 @@ def missingcloudrevspull(repo, nodes):
         pullcmd(repo.ui, unfi, **pullopts)
 
     return nodes
+
+
+@revsetpredicate("backedup")
+def backedup(repo, subset, x):
+    """draft changesets that have been backed up to Commit Cloud"""
+    unfi = repo.unfiltered()
+    state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+    backedup = unfi.revs("draft() and ::%ln", state.heads)
+    return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
+
+
+@revsetpredicate("notbackedup")
+def notbackedup(repo, subset, x):
+    """changesets that have not yet been backed up to Commit Cloud"""
+    unfi = repo.unfiltered()
+    state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+    backedup = unfi.revs("draft() and ::%ln", state.heads)
+    return smartset.filteredset(
+        subset & repo.revs("draft() - hidden()"), lambda r: r not in backedup
+    )
+
+
+@templatekeyword("backingup")
+def backingup(repo, **args):
+    """whether commit cloud is currently backing up commits."""
+    # If the backup lock exists then a backup should be in progress.
+    path = repo.sharedvfs.join(commitcloudcommon.backuplockname)
+    return util.islocked(path)

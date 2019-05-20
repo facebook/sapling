@@ -6,20 +6,29 @@
 from __future__ import absolute_import
 
 import errno
+import json
+import re
+import time
 
 from edenscm.mercurial import (
     cmdutil,
     error,
+    extensions,
     graphmod,
     lock as lockmod,
     node as nodemod,
     progress,
     registrar,
     scmutil,
+    util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _n
 
 from . import (
+    background,
+    backup,
+    backupbookmarks,
+    backupstate,
     commitcloudcommon,
     commitcloudutil,
     dependencies,
@@ -44,7 +53,7 @@ pullopts = [
     )
 ]
 
-pushopts = []
+remoteopts = [("", "dest", "", _("remote that is used for backups"))]
 
 
 @command("cloud", [], "SUBCOMMAND ...", subonly=True)
@@ -69,14 +78,19 @@ def cloud(ui, repo, **opts):
 
 subcmd = cloud.subcommand(
     categories=[
-        ("Connect to a cloud workspace", ["authenticate", "join"]),
+        ("Connect to a cloud workspace", ["authenticate", "join", "leave", "rejoin"]),
         ("Synchronize with the cloud workspace", ["sync"]),
         ("View other cloud workspaces", ["sl", "ssl"]),
+        (
+            "Back up commits",
+            ["backup", "check", "listbackups", "restorebackup", "deletebackup"],
+        ),
+        ("Manage automatic backup or sync", ["disable", "enable"]),
     ]
 )
 
 
-@subcmd("join|connect", [] + workspace.workspaceopts + pullopts + pushopts)
+@subcmd("join|connect", [] + workspace.workspaceopts + pullopts + remoteopts)
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to commit cloud
 
@@ -104,7 +118,7 @@ def cloudjoin(ui, repo, **opts):
     cloudsync(ui, repo, **opts)
 
 
-@subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts + pushopts)
+@subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts + remoteopts)
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
 
@@ -305,42 +319,238 @@ def checkauthenticated(ui, repo, tokenlocator):
     authenticate(ui, repo, tokenlocator)
 
 
-@subcmd("backup", [("r", "rev", [], _("revisions to back up"))], _("[-r] REV..."))
+@subcmd(
+    "backup",
+    [
+        ("r", "rev", [], _("revisions to back up")),
+        ("", "background", None, "run backup in background"),
+    ]
+    + remoteopts,
+    _("[-r REV...]"),
+)
 def cloudbackup(ui, repo, *revs, **opts):
-    """backs up given commits if they are not already backed up
+    """back up commits to commit cloud
 
-    Backs up working copy parent if no revision is provided.
+    Commits that have already been backed up will be skipped.
+
+    If no revision is specified, backs up all visible commits.
     """
-    if not revs:
-        revs = ["."]
-
-    nodes = [repo[r].hex() for r in scmutil.revrange(repo, revs)]
-
-    remotepath = commitcloudutil.getremotepath(repo, ui, None)
-
-    def getconnection():
-        return repo.connectionpool.get(remotepath, opts)
-
-    notbackedup = {
-        node
-        for node, backedup in zip(
-            nodes, dependencies.infinitepush.isbackedupnodes(getconnection, nodes)
-        )
-        if not backedup
-    }
-
-    if notbackedup:
-        backingup = list(notbackedup)
-        sync._backingupsyncprogress(repo, backingup)
-        repo.ui.status(_("pushing to %s\n") % remotepath)
-        dependencies.infinitepush.pushbackupbundlestacks(
-            repo.ui, repo, getconnection, backingup
-        )
-        sync.recordbackup(repo.ui, repo, remotepath, backingup)
-
-        commitcloudutil.writesyncprogress(repo)
+    inbackground = opts.get("background")
+    revs = revs + tuple(opts.get("rev", ()))
+    if revs:
+        if inbackground:
+            raise error.Abort("'--background' cannot be used with specific revisions")
+        revs = scmutil.revrange(repo, revs)
     else:
-        repo.ui.write(_("nothing to back up\n"))
+        revs = None
+
+    if inbackground:
+        background.backgroundbackup(repo, **opts)
+        return 0
+
+    backedup, failed = backup.backup(repo, revs, **opts)
+
+    if revs is None:
+        # For a full backup, also update the backup bookmarks.
+        backupbookmarks.pushbackupbookmarks(repo, **opts)
+
+    if backedup:
+        repo.ui.status(
+            _n("backed up %d commit\n", "backed up %d commits\n", len(backedup))
+            % len(backedup),
+            component="commitcloud",
+        )
+    if failed:
+        repo.ui.warn(
+            _n(
+                "failed to back up %d commit\n",
+                "failed to back up %d commits\n",
+                len(failed),
+            )
+            % len(failed),
+            component="commitcloud",
+        )
+    if not backedup and not failed:
+        repo.ui.status(_("nothing to back up\n"))
+    return 0 if not failed else 2
+
+
+@subcmd(
+    "listbackups",
+    [
+        ("a", "all", None, _("list all backups, not just the most recent")),
+        ("", "user", "", _("username, defaults to current user")),
+        ("", "json", None, _("print available backups in json format")),
+    ],
+)
+def cloudlistbackups(ui, repo, dest=None, **opts):
+    """list backups that are available on the server"""
+    sourceusername = opts.get("user")
+    if not sourceusername:
+        sourceusername = util.shortuser(repo.ui.username())
+    backupinfo = backupbookmarks.downloadbackupbookmarks(repo, sourceusername, **opts)
+
+    if opts.get("json"):
+        jsondict = util.sortdict()
+        for hostname, reporoot in backupinfo.keys():
+            jsondict.setdefault(hostname, []).append(reporoot)
+        ui.write("%s\n" % json.dumps(jsondict, indent=4))
+    elif not backupinfo:
+        ui.write(_("no backups available for %s\n") % sourceusername)
+    else:
+        backupbookmarks.printbackupbookmarks(
+            ui, sourceusername, backupinfo, all=bool(opts.get("all"))
+        )
+
+
+@subcmd(
+    "restorebackup",
+    [
+        ("", "reporoot", "", "root of the repo to restore"),
+        ("", "user", "", "user who ran the backup"),
+        ("", "hostname", "", "hostname of the repo to restore"),
+    ]
+    + remoteopts,
+)
+def cloudrestorebackup(ui, repo, **opts):
+    """restore commits that were previously backed up with 'hg cloud backup'
+
+    If you have only one backup for the repo on the backup server then it will be restored.
+
+    If you have backed up multiple clones of the same repo, then the
+    '--reporoot', '--hostname' and '--user' options may be used to disambiguate
+    which backup to restore.
+
+    Use 'hg cloud listbackups' to list available backups.
+    """
+
+    dest = opts.get("dest")
+    sourceusername = opts.get("user")
+    if not sourceusername:
+        sourceusername = util.shortuser(repo.ui.username())
+    sourcereporoot = opts.get("reporoot")
+    sourcehostname = opts.get("hostname")
+    backupinfo = backupbookmarks.downloadbackupbookmarks(
+        repo, sourceusername, sourcehostname, sourcereporoot, **opts
+    )
+
+    if not backupinfo:
+        ui.warn(_("no backups found!"))
+        return 1
+    if len(backupinfo) > 1:
+        backupbookmarks.printbackupbookmarks(ui, sourceusername, backupinfo)
+        raise error.Abort(
+            _("multiple backups found"),
+            hint=_("set --hostname and --reporoot to pick a backup"),
+        )
+
+    (restorehostname, restorereporoot), restorestate = backupinfo.popitem()
+    repo.ui.status(
+        _("restoring backup for %s from %s on %s\n")
+        % (sourceusername, restorereporoot, restorehostname)
+    )
+
+    pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
+    # Pull the heads and the nodes that were pointed to by the bookmarks.
+    # Note that we are avoiding the use of set() because we want to pull
+    # revisions in the same order
+    heads = restorestate.get("heads", [])
+    bookmarks = restorestate.get("bookmarks", {})
+    bookmarknodes = [hexnode for hexnode in bookmarks.values() if hexnode not in heads]
+    pullopts["rev"] = heads + bookmarknodes
+    if dest:
+        pullopts["source"] = dest
+
+    maxrevbeforepull = len(repo.changelog)
+    result = pullcmd(ui, repo, **pullopts)
+    maxrevafterpull = len(repo.changelog)
+
+    if ui.config("infinitepushbackup", "createlandedasmarkers", False):
+        pullcreatemarkers = extensions.find("pullcreatemarkers")
+        pullcreatemarkers.createmarkers(
+            result, repo, maxrevbeforepull, maxrevafterpull, fromdrafts=False
+        )
+
+    with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
+        changes = []
+        for name, hexnode in bookmarks.iteritems():
+            if hexnode in repo:
+                changes.append((name, nodemod.bin(hexnode)))
+            else:
+                ui.warn(_("%s not found, not creating %s bookmark") % (hexnode, name))
+        repo._bookmarks.applychanges(repo, tr, changes)
+
+    # Update local backup state and flag to not autobackup just after we
+    # restored, which would be pointless.
+    state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+    state.update([nodemod.bin(hexnode) for hexnode in heads + bookmarknodes])
+    backupbookmarks._writelocalbackupstate(
+        repo, commitcloudutil.getremotepath(repo, dest), heads, bookmarks
+    )
+    repo.ignoreautobackup = True
+
+    return result
+
+
+@subcmd(
+    "deletebackup",
+    [
+        ("", "reporoot", "", "root of the repo to delete the backup for"),
+        ("", "hostname", "", "hostname of the repo to delete the backup for"),
+    ]
+    + remoteopts,
+)
+def clouddeletebackup(ui, repo, **opts):
+    """delete a backup from the server
+
+    Removes all heads and bookmarks associated with a backup from the server.
+    The commits themselves are not removed, so you can still update to them
+    using 'hg update HASH'.
+    """
+    sourceusername = util.shortuser(repo.ui.username())
+    sourcereporoot = opts.get("reporoot")
+    sourcehostname = opts.get("hostname")
+    if not sourcereporoot or not sourcehostname:
+        msg = _("you must specify a reporoot and hostname to delete a backup")
+        hint = _("use 'hg cloud listbackups' to find which backups exist")
+        raise error.Abort(msg, hint=hint)
+
+    # Do some sanity checking on the names
+    if not re.match(r"^[-a-zA-Z0-9._/]+$", sourcereporoot):
+        msg = _("repo root contains unexpected characters")
+        raise error.Abort(msg)
+    if not re.match(r"^[-a-zA-Z0-9.]+$", sourcehostname):
+        msg = _("hostname contains unexpected characters")
+        raise error.Abort(msg)
+    if (
+        sourcereporoot == repo.sharedroot
+        and sourcehostname == backupbookmarks.backuphostname(repo)
+    ):
+        ui.warn(_("this backup matches the current repo\n"), notice=_("warning"))
+
+    backupinfo = backupbookmarks.downloadbackupbookmarks(repo, sourceusername, **opts)
+    deletestate = backupinfo.get((sourcehostname, sourcereporoot))
+    if deletestate is None:
+        raise error.Abort(
+            _("no backup found for %s on %s") % (sourcereporoot, sourcehostname)
+        )
+    ui.write(_("%s on %s:\n") % (sourcereporoot, sourcehostname))
+    ui.write(_("    heads:\n"))
+    for head in deletestate.get("heads", []):
+        ui.write(("        %s\n") % head)
+    ui.write(_("    bookmarks:\n"))
+    for bookname, booknode in sorted(deletestate.get("bookmarks", {}).items()):
+        ui.write(("        %-20s %s\n") % (bookname + ":", booknode))
+    if ui.promptchoice(_("delete this backup (yn)? $$ &Yes $$ &No"), 1) == 0:
+        ui.status(
+            _("deleting backup for %s on %s\n") % (sourcereporoot, sourcehostname)
+        )
+        backupbookmarks.deletebackupbookmarks(
+            repo, sourceusername, sourcehostname, sourcereporoot, **opts
+        )
+        ui.status(_("backup deleted\n"))
+        ui.status(_("(you can still access the commits directly using their hashes)\n"))
+    return 0
 
 
 @subcmd(
@@ -369,23 +579,20 @@ def cloudbackup(ui, repo, *revs, **opts):
             "use-bgssh",
             None,
             _(
-                "try to use the password-less login for ssh if defined in the cconfig "
+                "try to use the password-less login for ssh if defined in the config "
                 "(option requires infinitepush.bgssh config) (EXPERIMENTAL)"
             ),
         ),
     ]
     + pullopts
-    + pushopts,
+    + remoteopts,
 )
 def cloudsync(ui, repo, cloudrefs=None, **opts):
     """synchronize commits with the commit cloud service
     """
     # external services can run cloud sync and require to check if
     # auto sync is enabled
-    if opts.get("check_autosync_enabled") and (
-        dependencies.infinitepushbackup is None
-        or not dependencies.infinitepushbackup.autobackupenabled(ui)
-    ):
+    if opts.get("check_autosync_enabled") and not background.autobackupenabled(repo):
         ui.status(
             _("automatic backup and synchronization is currently disabled\n"),
             component="commitcloud",
@@ -438,14 +645,11 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         else:
             raise
 
-    if dependencies.infinitepushbackup:
-        dependencies.infinitepushbackup._dobackgroundbackupother(
-            ui, repo, command=["hg", "pushbackup"], **opts
-        )
+    background.backgroundbackupother(repo, command=["hg", "cloud", "backup"], **opts)
     return ret
 
 
-@subcmd("recover", [] + pullopts + pushopts)
+@subcmd("recover", [] + pullopts + remoteopts)
 def cloudrecover(ui, repo, **opts):
     """perform recovery for commit cloud
 
@@ -458,3 +662,138 @@ def cloudrecover(ui, repo, **opts):
         raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
     syncstate.SyncState.erasestate(repo, workspacename)
     cloudsync(ui, repo, **opts)
+
+
+@subcmd(
+    "check|isbackedup",
+    [
+        ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
+        ("", "remote", None, _("check on the remote server")),
+    ]
+    + remoteopts,
+)
+def isbackedup(ui, repo, dest=None, **opts):
+    """check if commits have been backed up
+
+    If no revision are specified then it checks working copy parent
+    """
+
+    revs = opts.get("rev")
+    remote = opts.get("remote")
+    if not revs:
+        revs = ["."]
+
+    path = commitcloudutil.getremotepath(repo, dest)
+    unfi = repo.unfiltered()
+    revs = scmutil.revrange(repo, revs)
+    nodestocheck = [repo[r].hex() for r in revs]
+
+    if remote:
+
+        def getconnection():
+            return repo.connectionpool.get(path, opts)
+
+        isbackedup = {
+            nodestocheck[i]: res
+            for i, res in enumerate(
+                dependencies.infinitepush.isbackedupnodes(getconnection, nodestocheck)
+            )
+        }
+    else:
+        state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+        backeduprevs = unfi.revs("not public() and ::%ln", state.heads)
+        isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
+
+    for n in nodestocheck:
+        ui.write((n + " "))
+        ui.write(_("backed up") if isbackedup[n] else _("not backed up"))
+        ui.write(_("\n"))
+
+
+@subcmd("enable")
+def cloudenable(ui, repo, **opts):
+    """enable automatic backup or sync
+
+    Enables backup or sync that has previously been disabled by ``hg cloud disable``.
+    """
+
+    if background.autobackupenabled(repo):
+        ui.write(_("background backup is already enabled\n"))
+        return 0
+
+    background.disableautobackup(repo, None)
+
+    if background.autobackupenabled(repo):
+        ui.write(_("background backup is enabled\n"))
+    else:
+        ui.write(_("background backup is disabled by configuration\n"))
+    return 0
+
+
+@subcmd("disable", [("", "hours", "1", "duration to disable backup or sync for")])
+def backupdisable(ui, repo, **opts):
+    """temporarily disable automatic backup or sync
+
+    Disables automatic background backup or sync for the specified duration.
+    """
+
+    if not background.autobackupenabled(repo):
+        ui.write(_("background backup was already disabled\n"), notice=_("note"))
+
+    try:
+        duration = int(opts.get("hours", 1)) * 60 * 60
+    except ValueError:
+        raise error.Abort(
+            _(
+                "error: argument 'hours': invalid int value: '{value}'\n".format(
+                    value=opts.get("hours")
+                )
+            )
+        )
+
+    timestamp = int(time.time()) + duration
+    background.disableautobackup(repo, timestamp)
+    ui.write(
+        _("background backup is now disabled until %s\n")
+        % util.datestr(util.makedate(timestamp)),
+        component="commitcloud",
+    )
+
+    try:
+        with lockmod.trylock(
+            ui, repo.sharedvfs, commitcloudcommon.backuplockname, 0, 0
+        ):
+            pass
+    except error.LockHeld as e:
+        if e.lockinfo.isrunning():
+            ui.warn(
+                _(
+                    "'@PROG@ cloud disable' does not affect running backup processes\n"
+                    "(kill the background process - pid %s on %s - gracefully if needed)\n",
+                    notice=_("warning"),
+                )
+                % (e.lockinfo.uniqueid, e.lockinfo.namespace)
+            )
+    return 0
+
+
+@command("debugwaitbackup", [("", "timeout", "", "timeout value")])
+def waitbackup(ui, repo, timeout):
+    """wait for backup operations to complete"""
+    try:
+        if timeout:
+            timeout = int(timeout)
+        else:
+            timeout = -1
+    except ValueError:
+        raise error.Abort("timeout should be integer")
+
+    try:
+        with lockmod.lock(
+            repo.sharedvfs, commitcloudcommon.backuplockname, timeout=timeout
+        ):
+            pass
+    except error.LockHeld as e:
+        if e.errno == errno.ETIMEDOUT:
+            raise error.Abort(_("timeout while waiting for backup"))
+        raise

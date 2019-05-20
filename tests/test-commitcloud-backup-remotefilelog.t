@@ -7,10 +7,7 @@ Setup infinitepush and remotefilelog server
   $ hg init repo
   $ cd repo
   $ setupserver
-  $ cat >> .hg/hgrc << EOF
-  > [remotefilelog]
-  > server=True
-  > EOF
+  $ setconfig remotefilelog.server=true
   $ cd ..
 
 Make client shallow clone
@@ -86,7 +83,7 @@ Strip commit server-side
   > EOF
 
 Now do a backup, it should not fail
-  $ hg pushbackup > /dev/null
+  $ hg cloud backup > /dev/null
   not backing up commits marked as bad: 07e73d09a07862bc2b8beb13b72d2347f83e4981
 
 Now try to restore it from different client. Make sure bookmark
@@ -101,7 +98,8 @@ Now try to restore it from different client. Make sure bookmark
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd secondclient
-  $ hg pullbackup --traceback
+  $ hg cloud restore
+  restoring backup for test from $TESTTMP/client on * (glob)
   pulling from ssh://user@dummy/repo
   no changes found
   $ hg book
@@ -115,7 +113,7 @@ Create a commit which deletes a file. Make sure it is backed up correctly
   $ hg ci -m 'deleted'
   $ hg log -r . -T '{node}\n'
   507709f4da22941c0471885d8377c48d6dadce21
-  $ hg pushbackup > /dev/null 2>err
+  $ hg cloud backup > /dev/null 2>err
   $ grep 'not backing up' err
   not backing up commits marked as bad: 07e73d09a07862bc2b8beb13b72d2347f83e4981
   $ scratchbookmarks
@@ -131,15 +129,15 @@ the client doesn't receive the public commit file data during the pull.
   $ hg up -q tip
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ mkcommit draftcommit
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at 1c8212bf302f
   remote: pushing 1 commit:
   remote:     1c8212bf302f  draftcommit
-  finished in * seconds (glob)
+  commitcloud: backed up 1 commit
   $ cd ../client
   $ clearcache
-  $ hg pullbackup --reporoot $TESTTMP/secondclient
+  $ hg cloud restore --reporoot $TESTTMP/secondclient
+  restoring backup for test from $TESTTMP/secondclient on * (glob)
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets

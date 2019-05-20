@@ -1,7 +1,9 @@
-# Copyright 2018-2019 Facebook, Inc.
+# Copyright 2018-present Facebook, Inc.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+from __future__ import absolute_import
 
 import itertools
 import re
@@ -22,6 +24,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 from . import (
+    backupbookmarks,
+    backupstate,
     commitcloudcommon,
     commitcloudutil,
     dependencies,
@@ -35,6 +39,9 @@ def _getheads(repo):
     if visibility.enabled(repo):
         return [nodemod.hex(n) for n in visibility.heads(repo)]
     else:
+        # Select the commits to sync.  To match previous behaviour, this is
+        # all draft but not obsolete commits, plus any bookmarked commits,
+        # and all of their ancestors.
         headsrevset = repo.set(
             "heads(draft() & ::((draft() & not obsolete()) + bookmark()))"
         )
@@ -54,7 +61,7 @@ def _backingupsyncprogress(repo, backingup):
     commitcloudutil.writesyncprogress(repo, backingupmsg, backingup=backingup)
 
 
-def docloudsync(ui, repo, cloudrefs=None, **opts):
+def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     start = time.time()
 
     tokenlocator = commitcloudutil.TokenLocator(ui)
@@ -73,7 +80,7 @@ def docloudsync(ui, repo, cloudrefs=None, **opts):
     )
 
     lastsyncstate = syncstate.SyncState(repo, workspacename)
-    remotepath = commitcloudutil.getremotepath(repo, ui, None)
+    remotepath = commitcloudutil.getremotepath(repo, dest)
 
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
@@ -248,15 +255,9 @@ def docloudsync(ui, repo, cloudrefs=None, **opts):
             # local heads and bookmarks.  This must be done after all
             # referenced commits have been pushed to the server.
             if not allpushed:
-                pushbackupbookmarks(
-                    ui,
-                    repo,
-                    remotepath,
-                    getconnection,
-                    localheads,
-                    localbookmarks,
-                    **opts
-                )
+                backupbookmarks.pushbackupbookmarks(repo, dest, **opts)
+                state = backupstate.BackupState(repo, remotepath)
+                state.update([nodemod.bin(head) for head in newheads])
 
             # Work out the new cloud heads and bookmarks by merging in the
             # omitted items.  We need to preserve the ordering of the cloud
@@ -428,56 +429,10 @@ def finddestinationnode(repo, startnode):
         return None
 
 
-def pushbackupbookmarks(
-    ui, repo, remotepath, getconnection, localheads, localbookmarks, **opts
-):
-    """
-    Push a backup bundle to the server that updates the infinitepush backup
-    bookmarks.
-
-    This keeps the old infinitepush backup bookmarks in sync, which means
-    pullbackup still works for users using commit cloud sync.
-    """
-    # Build a dictionary of infinitepush bookmarks.  We delete
-    # all bookmarks and replace them with the full set each time.
-    if dependencies.infinitepushbackup is not None:
-        infinitepushbookmarks = {}
-        namingmgr = dependencies.infinitepushbackup.BackupBookmarkNamingManager(
-            ui, repo, opts.get("user")
-        )
-        infinitepushbookmarks[namingmgr.getbackupheadprefix()] = ""
-        infinitepushbookmarks[namingmgr.getbackupbookmarkprefix()] = ""
-        for bookmark, hexnode in localbookmarks.items():
-            name = namingmgr.getbackupbookmarkname(bookmark)
-            infinitepushbookmarks[name] = hexnode
-        for hexhead in localheads:
-            name = namingmgr.getbackupheadname(hexhead)
-            infinitepushbookmarks[name] = hexhead
-
-        # Push a bundle containing the new bookmarks to the server.
-        with getconnection() as conn:
-            dependencies.infinitepush.pushbackupbundle(
-                ui, repo, conn.peer, None, infinitepushbookmarks
-            )
-
-        # Update the infinitepush local state.
-        dependencies.infinitepushbackup._writelocalbackupstate(
-            repo.sharedvfs, remotepath, list(localheads), localbookmarks
-        )
-
-
 def recordbackup(ui, repo, remotepath, newheads):
     """Record that the given heads are already backed up."""
-    if dependencies.infinitepushbackup is None:
-        return
-
-    backupstate = dependencies.infinitepushbackup._readlocalbackupstate(
-        ui, repo, remotepath
-    )
-    backupheads = set(backupstate.heads) | set(newheads)
-    dependencies.infinitepushbackup._writelocalbackupstate(
-        repo.sharedvfs, remotepath, list(backupheads), backupstate.localbookmarks
-    )
+    state = backupstate.BackupState(repo, remotepath)
+    state.update([nodemod.bin(head) for head in newheads])
 
 
 def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=None):

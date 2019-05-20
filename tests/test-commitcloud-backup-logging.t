@@ -42,12 +42,10 @@
 
 Check that logging works for b2x:infinitepushscratchbookmarks part
   $ cd client
-  $ hg pushbackup
-  starting backup .* (re)
-  all commits are found remotely
+  $ hg cloud backup
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  finished in \d+\.(\d+)? seconds (re)
+  nothing to back up
   $ cd ..
 
 Make upload to bundlestore fail

@@ -2950,6 +2950,17 @@ def parsebool(s):
     return _booleans.get(s.lower(), None)
 
 
+def parseint(s):
+    """Parse s into an integer.
+
+    If s is not a valid integer, returns None.
+    """
+    try:
+        return int(s)
+    except (TypeError, ValueError):
+        return None
+
+
 _hextochr = dict(
     (a + b, chr(int(a + b, 16))) for a in string.hexdigits for b in string.hexdigits
 )

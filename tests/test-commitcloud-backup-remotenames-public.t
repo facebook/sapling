@@ -4,15 +4,9 @@ test covers the issue.
 
   $ . $TESTDIR/library.sh
   $ . $TESTDIR/infinitepush/library.sh
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > infinitepush=
-  > infinitepushbackup=
-  > [infinitepush]
-  > branchpattern=re:scratch/.+
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > EOF
+
+  $ setupcommon
+
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -27,9 +21,6 @@ test covers the issue.
   >    for bookmark in `find ../repo/.hg/scratchbranches/index/bookmarkmap/* -type f | sort`; do
   >        echo "${bookmark##*/bookmarkmap/} `cat $bookmark`"
   >    done
-  > }
-  $ enableremotenames() {
-  >    printf '[extensions]\nremotenames=\n' >> .hg/hgrc
   > }
 
 Setup server with a few commits and one remote bookmark. This remotebookmark
@@ -48,7 +39,7 @@ may be used by remotenames extension in fastheaddiscovery heuristic
 Create new client
   $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client -q
   $ cd client
-  $ enableremotenames
+  $ enable remotenames
 
 Create scratch commit and back it up.
   $ hg up -q -r 'desc(third)'
@@ -66,18 +57,17 @@ Create scratch commit and back it up.
   |
   o  first
   
-  $ hg pushbackup
-  starting backup * (glob)
+  $ hg cloud backup
   backing up stack rooted at ce87a066ebc2
   remote: pushing 1 commit:
   remote:     ce87a066ebc2  scratch
-  finished in * (glob)
+  commitcloud: backed up 1 commit
   $ cd ..
 
 Create second client
   $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client2 -q
   $ cd client2
-  $ enableremotenames
+  $ enable remotenames
 
 Pull to get remote names
   $ hg pull
@@ -110,8 +100,13 @@ Download scratch commit. It also downloads a few public commits
   $ hg book --remote
      default/remotebook        0:b75a450e74d5
 
-Run pushbackup and make sure only scratch commit is backed up.
-  $ hg pushbackup
-  starting backup * (glob)
-  all commits are found remotely
-  finished in * (glob)
+Run cloud backup and make sure only scratch commits are backed up.
+  $ hg cloud backup
+  nothing to back up
+  $ mkcommit scratch2
+  $ hg cloud backup
+  backing up stack rooted at ce87a066ebc2
+  remote: pushing 2 commits:
+  remote:     ce87a066ebc2  scratch
+  remote:     4dbf2c8dd7d9  scratch2
+  commitcloud: backed up 1 commit

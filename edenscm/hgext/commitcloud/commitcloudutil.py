@@ -462,15 +462,15 @@ def clearsyncingobsmarkers(repo):
     repo.sharedvfs.unlink(_obsmarkerssyncing)
 
 
-def getremotepath(repo, ui, dest):
-    path = ui.paths.getpath(dest, default=("infinitepush", "default"))
+def getremotepath(repo, dest):
+    # If dest is empty, pass in None to get the default path.
+    path = repo.ui.paths.getpath(dest or None, default=("infinitepush", "default"))
     if not path:
         raise error.Abort(
             _("default repository not configured!"),
             hint=_("see 'hg help config.paths'"),
         )
-    dest = path.pushloc or path.loc
-    return dest
+    return path.pushloc or path.loc
 
 
 def getprocessetime(locker):

@@ -1,10 +1,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
-  $ cat << EOF >> $HGRCPATH
-  > [infinitepush]
-  > bundlecompression = GZ
-  > EOF
+  $ setconfig infinitepush.bundlecompression=GZ
 
 Setup server
   $ hg init repo
@@ -16,12 +13,11 @@ Backup a commit
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
   $ mkcommit commit
-  $ hg pushbackup
-  starting backup .* (re)
+  $ hg cloud backup
   backing up stack rooted at 7e6a6fd9c7c8
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  finished in \d+\.(\d+)? seconds (re)
+  commitcloud: backed up 1 commit
 
 Check the commit is compressed
   $ f=`cat ../repo/.hg/scratchbranches/index/nodemap/7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455`

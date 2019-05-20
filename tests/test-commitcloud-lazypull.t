@@ -3,7 +3,6 @@
   > amend =
   > commitcloud =
   > infinitepush =
-  > infinitepushbackup =
   > rebase =
   > remotenames =
   > share =

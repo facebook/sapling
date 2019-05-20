@@ -86,7 +86,7 @@ Fine extension: commitcloud
 
   $ newrepo
   __del__ called
-  $ setconfig extensions.infinitepush= extensions.infinitepushbackup= extensions.commitcloud=
+  $ setconfig extensions.infinitepush= extensions.commitcloud=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
   __del__ called
@@ -144,7 +144,6 @@ Somehow problematic: With many extensions
   > hiddenerror=
   > histedit=
   > infinitepush=
-  > infinitepushbackup=
   > journal=
   > logginghelper=
   > lz4revlog=

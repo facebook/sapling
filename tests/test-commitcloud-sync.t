@@ -4,7 +4,6 @@
   > directaccess=
   > commitcloud =
   > infinitepush =
-  > infinitepushbackup =
   > rebase =
   > remotenames =
   > share =
@@ -706,10 +705,10 @@ Make a new commit to be shared
   
 Check cloud sync backs up the commit
 
-  $ hg isbackedup
+  $ hg cloud check
   2c0ce859e76ae60f6f832279c75fae4d61da6be2 not backed up
   $ hg cloud sync -q
-  $ hg isbackedup
+  $ hg cloud check
   2c0ce859e76ae60f6f832279c75fae4d61da6be2 backed up
 
 Check cloud sync in the source repo doesn't need to do anything
@@ -747,17 +746,10 @@ Check '--workspace_version' option
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: this version has been already synchronized
 
-Check '--check_autosync_enabled' option
+Check '--check-autosync-enabled' option
   $ hg cloud sync --check-autosync-enabled
   commitcloud: automatic backup and synchronization is currently disabled
-  $ hg backupdisable
-  note: background backup was already disabled
-  background backup is now disabled until * (glob)
-  $ hg cloud sync --check-autosync-enabled
-  commitcloud: automatic backup and synchronization is currently disabled
-  $ hg backupenable
-  background backup is enabled
-  $ hg cloud sync
+  $ hg cloud sync --check-autosync-enabled --config infinitepushbackup.autobackup=true
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
@@ -834,7 +826,7 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   (please contact The Test Team @ FB if this error persists)
   [255]
 
-  $ hg isbackedup -r .
+  $ hg cloud check -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 not backed up
 
 Set the limit back high.  Sync in the other repo and check it still looks ok
@@ -867,7 +859,7 @@ Now sync in the repo we failed in.  This time it should work.
   remote:     9bd68ef10d6b  toobig
   commitcloud: commits synchronized
   finished in * (glob)
-  $ hg isbackedup -r .
+  $ hg cloud check -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 backed up
   $ tglog
   @  17: 9bd68ef10d6b 'toobig' testbookmark toobig

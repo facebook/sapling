@@ -34,14 +34,14 @@ Setup the second client
   $ hg log -r . -T '{node}\n'
   7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455
   $ mkcommit commit2
-  $ hg pushbackup -q
+  $ hg cloud backup -q
   $ mkcommit commitwithbook
   $ hg push -r . --to scratch/commit --create -q
   $ hg up -q null
   $ mkcommit onemorecommit
   $ hg log -r . -T '{node}\n'
   94f1e8b68592fbdd8e8606b6426bbd075a59c94c
-  $ hg pushbackup -q
+  $ hg cloud backup -q
   $ cd ..
 
 Change the paths: 'default' path should be incorrect, but 'infinitepush' path should be correct

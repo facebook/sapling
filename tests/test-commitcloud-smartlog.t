@@ -1,47 +1,20 @@
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > infinitepush =
-  > infinitepushbackup =
-  > commitcloud =
-  > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
-  > [infinitepush]
-  > branchpattern = re:scratch/.*
-  > [commitcloud]
-  > hostname = testhost
-  > [experimental]
-  > evolution = createmarkers, allowunstable
-  > graphstyle.grandparent = 2.
-  > [templatealias]
-  > sl_cloud = "{truncatelonglines(node, 6)} {ifeq(phase, 'public', '(public)', '')} {ifeq(phase, 'draft', author, '')} {date|isodate} {bookmarks}\n{desc|firstline}\n "
-  > EOF
+  $ enable infinitepush commitcloud
+  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+  $ setconfig infinitepush.branchpattern="re:scratch/.*"
+  $ setconfig commitcloud.hostname=testhost
+  $ setconfig experimental.graphstyle.grandparent=2.
+  $ setconfig templatealias.sl_cloud="\"{truncatelonglines(node, 6)} {ifeq(phase, 'public', '(public)', '')} {ifeq(phase, 'draft', author, '')} {date|isodate} {bookmarks}\\n{desc|firstline}\\n \""
 
   $ setconfig remotefilelog.reponame=server
 
   $ hg init server
   $ cd server
-  $ cat >> .hg/hgrc << EOF
-  > [infinitepush]
-  > server = yes
-  > indextype = disk
-  > storetype = disk
-  > reponame = testrepo
-  > EOF
-
-
-Make shared part of config
-  $ cat >> shared.rc << EOF
-  > [commitcloud]
-  > servicetype = local
-  > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
-  > EOF
-
+  $ setconfig infinitepush.server=yes infinitepush.indextype=disk infinitepush.storetype=disk infinitepush.reponame=testrepo
 
 Make the clone of the server
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
-  $ cat ../shared.rc >> .hg/hgrc
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation="$TESTTMP" commitcloud.user_token_path="$TESTTMP"
 
 
 Registration
