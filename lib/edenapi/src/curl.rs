@@ -36,6 +36,7 @@ mod paths {
     pub const HOSTNAME: &str = "/hostname";
     pub const DATA: &str = "eden/data";
     pub const HISTORY: &str = "eden/history";
+    pub const TREES: &str = "eden/trees";
 }
 
 pub struct EdenApiCurlClient {
@@ -45,7 +46,7 @@ pub struct EdenApiCurlClient {
     creds: Option<ClientCreds>,
     data_batch_size: Option<usize>,
     history_batch_size: Option<usize>,
-    validate_files: bool,
+    validate: bool,
 }
 
 // Public API.
@@ -78,7 +79,7 @@ impl EdenApiCurlClient {
             creds: config.creds,
             data_batch_size: config.data_batch_size,
             history_batch_size: config.history_batch_size,
-            validate_files: config.validate_files,
+            validate: config.validate,
         };
 
         // Create repo/packs directory in cache if it doesn't already exist.
@@ -131,42 +132,7 @@ impl EdenApi for EdenApiCurlClient {
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> Fallible<()> {
-        log::debug!("Fetching {} files", keys.len());
-
-        let url = self.repo_base_url()?.join(paths::DATA)?;
-        let batch_size = self.data_batch_size.unwrap_or(cmp::max(keys.len(), 1));
-        let num_requests = (keys.len() + batch_size - 1) / batch_size;
-
-        log::debug!("Using batch size: {}", batch_size);
-        log::debug!("Preparing {} requests", num_requests);
-
-        let chunks = keys.into_iter().chunks(batch_size);
-        let requests = (&chunks).into_iter().map(|batch| DataRequest {
-            keys: batch.into_iter().collect(),
-        });
-
-        let mut num_responses = 0;
-        let mut num_entries = 0;
-        self.multi_request(&url, requests, progress, |response: DataResponse| {
-            num_responses += 1;
-            for entry in response {
-                num_entries += 1;
-                let key = entry.key().clone();
-                if self.validate_files {
-                    log::trace!("Validating file: {}", &key);
-                }
-                let data = entry.data(self.validate_files)?;
-                add_delta(store, key, data)?;
-            }
-            Ok(())
-        })?;
-
-        log::debug!(
-            "Received {} responses with {} total entries",
-            num_responses,
-            num_entries
-        );
-        Ok(())
+        self.get_data(paths::DATA, keys, store, progress)
     }
 
     fn get_history(
@@ -208,6 +174,15 @@ impl EdenApi for EdenApiCurlClient {
             num_entries
         );
         Ok(())
+    }
+
+    fn get_trees(
+        &self,
+        keys: Vec<Key>,
+        store: &mut MutableDeltaStore,
+        progress: Option<ProgressFn>,
+    ) -> Fallible<()> {
+        self.get_data(paths::TREES, keys, store, progress)
     }
 }
 
@@ -282,6 +257,51 @@ impl EdenApiCurlClient {
         let total_bytes = driver.progress().unwrap().stats().downloaded;
         print_download_stats(total_bytes, elapsed);
 
+        Ok(())
+    }
+
+    fn get_data(
+        &self,
+        path: &str,
+        keys: Vec<Key>,
+        store: &mut MutableDeltaStore,
+        progress: Option<ProgressFn>,
+    ) -> Fallible<()> {
+        log::debug!("Fetching data for {} keys", keys.len());
+
+        let url = self.repo_base_url()?.join(path)?;
+        let batch_size = self.data_batch_size.unwrap_or(cmp::max(keys.len(), 1));
+        let num_requests = (keys.len() + batch_size - 1) / batch_size;
+
+        log::debug!("Using batch size: {}", batch_size);
+        log::debug!("Preparing {} requests", num_requests);
+
+        let chunks = keys.into_iter().chunks(batch_size);
+        let requests = (&chunks).into_iter().map(|batch| DataRequest {
+            keys: batch.into_iter().collect(),
+        });
+
+        let mut num_responses = 0;
+        let mut num_entries = 0;
+        self.multi_request(&url, requests, progress, |response: DataResponse| {
+            num_responses += 1;
+            for entry in response {
+                num_entries += 1;
+                let key = entry.key().clone();
+                if self.validate {
+                    log::trace!("Validating received data for: {}", &key);
+                }
+                let data = entry.data(self.validate)?;
+                add_delta(store, key, data)?;
+            }
+            Ok(())
+        })?;
+
+        log::debug!(
+            "Received {} responses with {} total entries",
+            num_responses,
+            num_entries
+        );
         Ok(())
     }
 }

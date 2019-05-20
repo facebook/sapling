@@ -32,7 +32,7 @@ py_class!(class client |py| {
         creds: Option<(&PyBytes, &PyBytes)> = None,
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
-        validatefiles: bool = true
+        validate: bool = true
     ) -> PyResult<client> {
         let url = str::from_utf8(url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let cachepath = local_bytes_to_path(&cachepath.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -45,7 +45,7 @@ py_class!(class client |py| {
             .repo(repo)
             .data_batch_size(databatchsize)
             .history_batch_size(historybatchsize)
-            .validate_files(validatefiles);
+            .validate(validate);
 
         if let Some((cert, key)) = creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -81,7 +81,6 @@ py_class!(class client |py| {
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
         Ok(Python::None(py))
-
     }
 
     def get_history(
@@ -101,6 +100,22 @@ py_class!(class client |py| {
         let progress_cb = progress_cb.map(wrap_callback);
         py.allow_threads(move || {
             client.get_history(keys, &mut store, depth, progress_cb)
+        }).map_pyerr::<exc::RuntimeError>(py)?;
+
+        Ok(Python::None(py))
+    }
+
+    def get_trees(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<PyObject> {
+        let keys = keys.into_iter()
+            .map(|(path, node)| make_key(py, &path, &node))
+            .collect::<PyResult<Vec<Key>>>()?;
+
+        let mut store = PythonMutableDataPack::new(store)?;
+
+        let client = self.inner(py);
+        let progress_fn = progress_fn.map(wrap_callback);
+        py.allow_threads(move || {
+            client.get_trees(keys, &mut store, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
         Ok(Python::None(py))

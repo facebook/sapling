@@ -523,3 +523,16 @@ def debuggethistory(ui, repo, **opts):
     repo.edenapi.get_history(keys, hpack, depth)
     __, packpath = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote historypack: %s\n") % packpath)
+
+
+def debuggettrees(ui, repo, **opts):
+    edenapi.bailifdisabled(ui)
+    keys = []
+    for line in sys.stdin.readlines():
+        parts = line.split()
+        (node, path) = parts if len(parts) > 1 else (parts[0], "")
+        keys.append((path, node))
+    dpack, __ = repo.manifestlog.getmutablesharedpacks()
+    repo.edenapi.get_trees(keys, dpack)
+    packpath, __ = repo.manifestlog._mutablesharedpacks.commit()
+    ui.write(_("wrote datapack: %s\n") % packpath)

@@ -146,8 +146,8 @@ Configs for Eden API (HTTP data fetching):
     ``edenapi.historybatchsize`` specifies the batch size for history requests
     for backends that support batching.
 
-    ``edenapi.validatefiles`` specifies that the client should recompute and
-    compare the filenode hash for the received file content.
+    ``edenapi.validate`` specifies that the client should recompute and
+    validate the node hash for data fetched over HTTP.
 
 Eden API TLS credentials are configured using the auth section:
 
@@ -246,7 +246,7 @@ configitem("edenapi", "debug", default=False)
 configitem("edenapi", "url", default=None)
 configitem("edenapi", "databatchsize", default=None)
 configitem("edenapi", "historybatchsize", default=None)
-configitem("edenapi", "validatefiles", default=True)
+configitem("edenapi", "validate", default=True)
 
 testedwith = "ships-with-fb-hgext"
 
@@ -1299,6 +1299,15 @@ def debuggethistory(ui, repo, **opts):
     from the API server, and write the results to a historypack.
     """
     return debugcommands.debuggethistory(ui, repo, **opts)
+
+
+@command("debuggettrees", [], _("hg debuggettrees"))
+def debuggettrees(ui, repo, **opts):
+    """download tree content from the API server
+    Read manifestnode/path pairs from stdin, fetch the content of each tree
+    from the API server, and write the results to a datapack.
+    """
+    return debugcommands.debuggettrees(ui, repo, **opts)
 
 
 def resolveprefetchopts(ui, opts):

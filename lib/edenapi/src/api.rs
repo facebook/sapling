@@ -40,6 +40,18 @@ pub trait EdenApi: Send + Sync {
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
     ) -> Fallible<()>;
+
+    /// Fetch the specified trees from the API server and write them to the store.
+    /// Optionally takes a callback to report progress.
+    ///
+    /// Note that the keys are passed in as a `Vec` rather than using `IntoIterator`
+    /// in order to keep this trait object-safe.
+    fn get_trees(
+        &self,
+        keys: Vec<Key>,
+        store: &mut MutableDeltaStore,
+        progress: Option<ProgressFn>,
+    ) -> Fallible<()>;
 }
 
 // Statically ensure that the EdenApi trait is object safe using
