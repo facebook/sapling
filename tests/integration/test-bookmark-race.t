@@ -91,7 +91,6 @@ configure an extension so that a push happens right after pulldiscovery
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   new changesets e2750f699c89
-  (run 'hg update' to get a working copy)
 
   $ hg bookmarks
      master_bookmark           1:e2750f699c89
@@ -108,6 +107,5 @@ pull again to ensure the new version makes it into repo-pull
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   new changesets e5c8b04bf9a0
-  (run 'hg update' to get a working copy)
   $ hg bookmarks
      master_bookmark           2:e5c8b04bf9a0

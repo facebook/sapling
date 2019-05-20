@@ -67,7 +67,6 @@ pull them
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   new changesets 4b747ca852a4
-  (run 'hg update' to get a working copy)
   $ hg log -T '{node}\n'
   4b747ca852a40a105b9bb71cd4d07248ea80f704
   0cd96de13884b090099512d4794ae87ad067ea8e
@@ -100,7 +99,6 @@ pull them
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   new changesets 8b374fd7e2ef
-  (run 'hg update' to get a working copy)
   $ hg log -T '{node}\n'
   8b374fd7e2ef1cc418b9c68f484ebd2cb6c6c6a1
   4b747ca852a40a105b9bb71cd4d07248ea80f704

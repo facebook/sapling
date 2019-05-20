@@ -70,7 +70,6 @@ pull on repo2
   added 1 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   new changesets b8119d283b73
-  (run 'hg update' to get a working copy)
   $ hgmn log
   changeset:   0:b8119d283b73
   bookmark:    master_bookmark
@@ -131,7 +130,6 @@ pull on repo3
   added 2 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   new changesets b8119d283b73:8fffbbe6af55
-  (run 'hg update' to get a working copy)
   $ hgmn log
   changeset:   1:8fffbbe6af55
   bookmark:    master_bookmark

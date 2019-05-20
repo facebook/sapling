@@ -112,7 +112,6 @@ Sync from the second client - the commits should appear
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files
-  (run 'hg update' to get a working copy)
   new changesets 660cb078da57:44641a2b1a42
   commitcloud: commits synchronized
   finished in * (glob)
@@ -152,7 +151,6 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   new changesets 15f040cf571c:58508421158d
   commitcloud: commits synchronized
   finished in * (glob)
@@ -199,7 +197,6 @@ On the second client sync it
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files
-  (run 'hg update' to get a working copy)
   obsoleted 3 changesets
   new changesets f0345b3976c9:8e3f03f8d9db
   commitcloud: commits synchronized
@@ -321,7 +318,6 @@ Commit still becomes available in the other repo
   adding manifests
   adding file changes
   added 4 changesets with 0 changes to 0 files (+2 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   new changesets * (glob)
   commitcloud: commits synchronized
   finished in * (glob)

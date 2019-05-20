@@ -175,7 +175,6 @@
   adding file changes
   added 2 changesets with 0 changes to 0 files
   new changesets cbf96639d87c:5ff46b53dca4
-  (run 'hg update' to get a working copy)
 
   $ hgmn update -r master_bookmark -v
   remote: * DEBG Session with Mononoke started with uuid: * (glob)

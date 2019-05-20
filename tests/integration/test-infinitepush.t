@@ -112,7 +112,6 @@ Do infinitepush (aka commit cloud) push
   added 1 changesets with 0 changes to 0 files
   new changesets 47da8b81097c
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  (run 'hg update' to get a working copy)
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
@@ -174,7 +173,6 @@ Pushbackup also works
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 95cad53aab1b
-  (run 'hg update' to get a working copy)
   $ hgmn up -q 95cad53aab1b0b33ecee
   $ cat aa
   aa
@@ -319,7 +317,6 @@ Check phases on another side (for pull command and pull -r)
   adding remote bookmark test_release_1.0.0
   new changesets 500658c138a4:eca836c7c651
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ tglogp
   o  4: eca836c7c651 draft 'change on top of the release'

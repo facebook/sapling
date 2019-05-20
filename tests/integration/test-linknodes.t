@@ -113,7 +113,6 @@ pull the infinitepush commit
   added 1 changesets with 0 changes to 0 files
   new changesets 60ab8a6c8e65
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  (run 'hg update' to get a working copy)
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621 --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
   remote: * DEBG Session with Mononoke started * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -193,7 +192,6 @@ pull only the master branch into another repo
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 6dbc3093b595
-  (run 'hg update' to get a working copy)
   $ hgmn up master_bookmark --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
   remote: * DEBG Session with Mononoke started * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -245,7 +243,6 @@ pull the infinitepush commit again in a new repo
   added 1 changesets with 0 changes to 0 files
   new changesets 60ab8a6c8e65
   remote: * DEBG Session with Mononoke started * (glob)
-  (run 'hg update' to get a working copy)
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   remote: * DEBG Session with Mononoke started * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
