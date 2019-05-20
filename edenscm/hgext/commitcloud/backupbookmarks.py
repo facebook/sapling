@@ -108,12 +108,11 @@ def _writelocalbackupstate(repo, remotepath, heads, bookmarks):
         json.dump(state, f)
 
 
-def pushbackupbookmarks(repo, dest=None, **opts):
+def pushbackupbookmarks(repo, remotepath, getconnection):
     """
     Push a backup bundle to the server that updates the infinitepush backup
     bookmarks.
     """
-    remotepath = ccutil.getremotepath(repo, dest)
     state = backupstate.BackupState(repo, remotepath)
     unfi = repo.unfiltered()
 
@@ -181,9 +180,6 @@ def pushbackupbookmarks(repo, dest=None, **opts):
     if not infinitepushbookmarks:
         return
 
-    def getconnection():
-        return repo.connectionpool.get(remotepath, opts)
-
     # Push a bundle containing the new bookmarks to the server.
     with getconnection() as conn:
         dependencies.infinitepush.pushbackupbundle(
@@ -200,7 +196,12 @@ _backupbookmarkre = re.compile(
 
 
 def downloadbackupbookmarks(
-    repo, sourceusername, sourcehostname=None, sourcereporoot=None, **opts
+    repo,
+    remotepath,
+    getconnection,
+    sourceusername,
+    sourcehostname=None,
+    sourcereporoot=None,
 ):
     """download backup bookmarks from the server
 
@@ -214,14 +215,6 @@ def downloadbackupbookmarks(
     Fileindex returns backups in lexicographic order, since the fileindex
     doesn't support maintaining the order of insertion.
     """
-    path = ccutil.getremotepath(repo, opts.get("dest"))
-    other = hg.peer(repo, opts, path)
-
-    if "listkeyspatterns" not in other.capabilities():
-        raise error.Abort(
-            "'listkeyspatterns' command is not supported for the server %s"
-            % other.url()
-        )
 
     pattern = "infinitepush/backups/%s" % sourceusername
     if sourcehostname:
@@ -230,7 +223,14 @@ def downloadbackupbookmarks(
             pattern += sourcereporoot
     pattern += "/*"
 
-    bookmarks = other.listkeyspatterns("bookmarks", patterns=[pattern])
+    with getconnection() as conn:
+        if "listkeyspatterns" not in conn.peer.capabilities():
+            raise error.Abort(
+                "'listkeyspatterns' command is not supported for the server %s"
+                % conn.peer.url()
+            )
+        bookmarks = conn.peer.listkeyspatterns("bookmarks", patterns=[pattern])
+
     backupinfo = util.sortdict()
     for name, hexnode in bookmarks.iteritems():
 
@@ -282,17 +282,15 @@ def printbackupbookmarks(ui, username, backupbookmarks, all=False):
         ui.write(_("%s on %s\n") % (reporoot, hostname))
 
 
-def deletebackupbookmarks(repo, targetusername, targethostname, targetreporoot, **opts):
-    remotepath = ccutil.getremotepath(repo, opts.get("dest"))
+def deletebackupbookmarks(
+    repo, remotepath, getconnection, targetusername, targethostname, targetreporoot
+):
     prefix = _backupbookmarkprefix(repo, targetusername, targethostname, targetreporoot)
 
     # If we're deleting the bookmarks for the local repo, also delete its
     # state.
     if prefix == _backupbookmarkprefix(repo):
         _deletebackupstate(repo, remotepath)
-
-    def getconnection():
-        return repo.connectionpool.get(remotepath, opts)
 
     # Push a bundle containing the new bookmarks to the server.
     infinitepushbookmarks = {}

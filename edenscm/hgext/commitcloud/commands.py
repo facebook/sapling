@@ -106,7 +106,7 @@ def cloudjoin(ui, repo, **opts):
     tokenlocator = tokenmod.TokenLocator(ui)
     checkauthenticated(ui, repo, tokenlocator)
 
-    workspacename = workspace.parseworkspace(ui, repo, **opts)
+    workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
     if workspace.currentworkspace(repo):
@@ -140,7 +140,7 @@ def cloudrejoin(ui, repo, **opts):
             serv = service.get(ui, token)
             serv.check()
             reponame = ccutil.getreponame(repo)
-            workspacename = workspace.parseworkspace(ui, repo, **opts)
+            workspacename = workspace.parseworkspace(ui, opts)
             if workspacename is None:
                 workspacename = workspace.currentworkspace(repo)
             if workspacename is None:
@@ -244,7 +244,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     """
 
     reponame = ccutil.getreponame(repo)
-    workspacename = workspace.parseworkspace(ui, repo, **opts)
+    workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
         workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
@@ -347,16 +347,21 @@ def cloudbackup(ui, repo, *revs, **opts):
     else:
         revs = None
 
+    dest = opts.get("dest")
+
     if inbackground:
-        background.backgroundbackup(repo, **opts)
+        background.backgroundbackup(repo, dest=dest)
         return 0
 
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
+
     with backuplock.lock(repo):
-        backedup, failed = backup.backup(repo, revs, **opts)
+        backedup, failed = backup.backup(repo, remotepath, getconnection, revs)
 
         if revs is None:
             # For a full backup, also update the backup bookmarks.
-            backupbookmarks.pushbackupbookmarks(repo, **opts)
+            backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection)
 
     if backedup:
         repo.ui.status(
@@ -389,10 +394,16 @@ def cloudbackup(ui, repo, *revs, **opts):
 )
 def cloudlistbackups(ui, repo, dest=None, **opts):
     """list backups that are available on the server"""
+
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
+
     sourceusername = opts.get("user")
     if not sourceusername:
         sourceusername = util.shortuser(repo.ui.username())
-    backupinfo = backupbookmarks.downloadbackupbookmarks(repo, sourceusername, **opts)
+    backupinfo = backupbookmarks.downloadbackupbookmarks(
+        repo, remotepath, getconnection, sourceusername
+    )
 
     if opts.get("json"):
         jsondict = util.sortdict()
@@ -416,7 +427,7 @@ def cloudlistbackups(ui, repo, dest=None, **opts):
     ]
     + remoteopts,
 )
-def cloudrestorebackup(ui, repo, **opts):
+def cloudrestorebackup(ui, repo, dest=None, **opts):
     """restore commits that were previously backed up with 'hg cloud backup'
 
     If you have only one backup for the repo on the backup server then it will be restored.
@@ -428,14 +439,16 @@ def cloudrestorebackup(ui, repo, **opts):
     Use 'hg cloud listbackups' to list available backups.
     """
 
-    dest = opts.get("dest")
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
+
     sourceusername = opts.get("user")
     if not sourceusername:
         sourceusername = util.shortuser(repo.ui.username())
     sourcereporoot = opts.get("reporoot")
     sourcehostname = opts.get("hostname")
     backupinfo = backupbookmarks.downloadbackupbookmarks(
-        repo, sourceusername, sourcehostname, sourcereporoot, **opts
+        repo, remotepath, getconnection, sourceusername, sourcehostname, sourcereporoot
     )
 
     if not backupinfo:
@@ -486,7 +499,7 @@ def cloudrestorebackup(ui, repo, **opts):
 
     # Update local backup state and flag to not autobackup just after we
     # restored, which would be pointless.
-    state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
+    state = backupstate.BackupState(repo, remotepath)
     state.update([nodemod.bin(hexnode) for hexnode in heads + bookmarknodes])
     backupbookmarks._writelocalbackupstate(
         repo, ccutil.getremotepath(repo, dest), heads, bookmarks
@@ -504,13 +517,17 @@ def cloudrestorebackup(ui, repo, **opts):
     ]
     + remoteopts,
 )
-def clouddeletebackup(ui, repo, **opts):
+def clouddeletebackup(ui, repo, dest=None, **opts):
     """delete a backup from the server
 
     Removes all heads and bookmarks associated with a backup from the server.
     The commits themselves are not removed, so you can still update to them
     using 'hg update HASH'.
     """
+
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
+
     sourceusername = util.shortuser(repo.ui.username())
     sourcereporoot = opts.get("reporoot")
     sourcehostname = opts.get("hostname")
@@ -532,7 +549,9 @@ def clouddeletebackup(ui, repo, **opts):
     ):
         ui.warn(_("this backup matches the current repo\n"), notice=_("warning"))
 
-    backupinfo = backupbookmarks.downloadbackupbookmarks(repo, sourceusername, **opts)
+    backupinfo = backupbookmarks.downloadbackupbookmarks(
+        repo, remotepath, getconnection, sourceusername
+    )
     deletestate = backupinfo.get((sourcehostname, sourcereporoot))
     if deletestate is None:
         raise error.Abort(
@@ -550,7 +569,12 @@ def clouddeletebackup(ui, repo, **opts):
             _("deleting backup for %s on %s\n") % (sourcereporoot, sourcehostname)
         )
         backupbookmarks.deletebackupbookmarks(
-            repo, sourceusername, sourcehostname, sourcereporoot, **opts
+            repo,
+            remotepath,
+            getconnection,
+            sourceusername,
+            sourcehostname,
+            sourcereporoot,
         )
         ui.status(_("backup deleted\n"))
         ui.status(_("(you can still access the commits directly using their hashes)\n"))
@@ -563,7 +587,7 @@ def clouddeletebackup(ui, repo, **opts):
         (
             "",
             "workspace-version",
-            "",
+            int,
             _(
                 "target workspace version to sync to "
                 "(skip `cloud sync` if the current version is greater or equal than the given one) (EXPERIMENTAL)"
@@ -591,7 +615,7 @@ def clouddeletebackup(ui, repo, **opts):
     + pullopts
     + remoteopts,
 )
-def cloudsync(ui, repo, cloudrefs=None, **opts):
+def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     """synchronize commits with the commit cloud service
     """
     # external services can run cloud sync and require to check if
@@ -609,10 +633,17 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         if bgssh:
             ui.setconfig("ui", "ssh", bgssh)
 
-    with backuplock.lock(repo):
-        ret = sync.sync(repo, cloudrefs, **opts)
+    full = opts.get("full")
 
-    background.backgroundbackupother(repo, **opts)
+    version = opts.get("workspace_version")
+
+    remotepath = ccutil.getremotepath(repo, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, opts)
+
+    with backuplock.lock(repo):
+        ret = sync.sync(repo, remotepath, getconnection, cloudrefs, full, version)
+
+    background.backgroundbackupother(repo, dest=dest)
     return ret
 
 
@@ -650,16 +681,13 @@ def isbackedup(ui, repo, dest=None, **opts):
     if not revs:
         revs = ["."]
 
-    path = ccutil.getremotepath(repo, dest)
+    remotepath = ccutil.getremotepath(repo, dest)
     unfi = repo.unfiltered()
     revs = scmutil.revrange(repo, revs)
     nodestocheck = [repo[r].hex() for r in revs]
 
     if remote:
-
-        def getconnection():
-            return repo.connectionpool.get(path, opts)
-
+        getconnection = lambda: repo.connectionpool.get(remotepath, opts)
         isbackedup = {
             nodestocheck[i]: res
             for i, res in enumerate(
@@ -667,7 +695,7 @@ def isbackedup(ui, repo, dest=None, **opts):
             )
         }
     else:
-        state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
+        state = backupstate.BackupState(repo, remotepath)
         backeduprevs = unfi.revs("not public() and ::%ln", state.heads)
         isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
 

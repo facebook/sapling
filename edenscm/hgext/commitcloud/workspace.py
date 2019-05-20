@@ -27,8 +27,8 @@ workspaceopts = [
 ]
 
 
-def parseworkspace(ui, repo, **opts):
-    """Parse the command line options to get a workspace name.
+def parseworkspace(ui, opts):
+    """Parse command line options to get a workspace name.
 
     Returns None if the user specifies no workspace command line arguments.
 

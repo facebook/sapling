@@ -55,13 +55,15 @@ def _getbookmarks(repo):
     return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
 
 
-def sync(repo, cloudrefs=None, dest=None, **opts):
+def sync(
+    repo, remotepath, getconnection, cloudrefs=None, full=False, cloudversion=None
+):
     ui = repo.ui
     start = time.time()
 
     startnode = repo["."].node()
 
-    if opts.get("full"):
+    if full:
         maxage = None
     else:
         maxage = ui.configint("commitcloud", "max_sync_age", None)
@@ -90,27 +92,21 @@ def sync(repo, cloudrefs=None, dest=None, **opts):
         # so get a fresh copy of the full state.
         fetchversion = 0
 
-    remotepath = ccutil.getremotepath(repo, dest)
-
     # External services may already know the version number.  Check if we're
     # already up-to-date.
-    version = opts.get("workspace_version")
-    if version and version.isdigit() and int(version) <= lastsyncstate.version:
+    if cloudversion is not None and cloudversion <= lastsyncstate.version:
         ui.status(
             _("this version has been already synchronized\n"), component="commitcloud"
         )
         return 0
 
     # Back up all local commits that are not already backed up.
-    backedup, failed = backup.backup(repo, dest=dest, **opts)
+    backedup, failed = backup.backup(repo, remotepath, getconnection)
 
     # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
     # fetch them from the commit cloud service.
     if cloudrefs is None:
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
-
-    def getconnection():
-        return repo.connectionpool.get(remotepath, opts)
 
     synced = False
     while not synced:
@@ -128,7 +124,7 @@ def sync(repo, cloudrefs=None, dest=None, **opts):
         )
 
     # Update the backup bookmarks with any changes we have made by syncing.
-    backupbookmarks.pushbackupbookmarks(repo, dest, **opts)
+    backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection)
 
     backuplock.progresscomplete(repo)
 

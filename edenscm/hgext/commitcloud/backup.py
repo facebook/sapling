@@ -8,18 +8,17 @@ from __future__ import absolute_import
 from edenscm.mercurial import node as nodemod, smartset
 from edenscm.mercurial.i18n import _, _n
 
-from . import backuplock, backupstate, dependencies, util as ccutil
+from . import backuplock, backupstate, dependencies
 
 
-def backup(repo, revs=None, dest=None, **opts):
+def backup(repo, remotepath, getconnection, revs=None):
     """backs up the given revisions to commit cloud
 
     Returns (backedup, failed), where "backedup" is a revset of the commits that
     were backed up, and "failed" is a revset of the commits that could not be
     backed up.
     """
-    path = ccutil.getremotepath(repo, dest)
-    state = backupstate.BackupState(repo, path)
+    state = backupstate.BackupState(repo, remotepath)
     unfi = repo.unfiltered()
 
     if revs is None:
@@ -35,9 +34,6 @@ def backup(repo, revs=None, dest=None, **opts):
 
     if not heads:
         return (smartset.baseset(), smartset.baseset())
-
-    def getconnection():
-        return repo.connectionpool.get(path, opts)
 
     # Check if any of the heads are already available on the server.
     headnodes = list(repo.nodes("%ld", heads))
