@@ -41,7 +41,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import commitcloudutil, workspace
+from . import util as ccutil, workspace
 
 
 osutil = policy.importmod(r"osutil")
@@ -159,7 +159,7 @@ def backgroundbackupother(repo, dest=None, **opts):
         remotepath = repo.ui.paths.getpath(other)
     except error.RepoError:
         remotepath = None
-    if remotepath and remotepath.loc != commitcloudutil.getremotepath(repo, dest):
+    if remotepath and remotepath.loc != ccutil.getremotepath(repo, dest):
         repo.ui.debug("starting background backup to %s\n" % remotepath.loc)
         backgroundbackup(repo, ["hg", "cloud", "backup"], dest=other, **opts)
 

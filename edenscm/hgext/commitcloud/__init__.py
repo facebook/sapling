@@ -139,7 +139,7 @@ from edenscm.mercurial import (
     registrar,
     revset,
     smartset,
-    util,
+    util as hgutil,
 )
 from edenscm.mercurial.i18n import _
 
@@ -149,10 +149,11 @@ from . import (
     backuplock,
     backupstate,
     commands as cccommands,
-    commitcloudutil,
     dependencies,
+    obsmarkers,
     status,
     syncstate,
+    util as ccutil,
 )
 
 
@@ -181,7 +182,7 @@ def extsetup(ui):
     background.extsetup(ui)
     dependencies.extsetup(ui)
 
-    localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._obsmarkerssyncing)
+    localrepo.localrepository._wlockfreeprefix.add(obsmarkers._obsmarkerssyncing)
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
     localrepo.localrepository._wlockfreeprefix.add(backupbookmarks._backupstateprefix)
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.prefix)
@@ -203,14 +204,14 @@ def reposetup(ui, repo):
             def finalize(tr):
                 for obj in tr, self:
                     if (
-                        util.safehasattr(obj, "_commitcloudskippendingobsmarkers")
+                        hgutil.safehasattr(obj, "_commitcloudskippendingobsmarkers")
                         and obj._commitcloudskippendingobsmarkers
                     ):
                         return
 
                 markers = tr.changes["obsmarkers"]
                 if markers:
-                    commitcloudutil.addpendingobsmarkers(self, markers)
+                    obsmarkers.addpendingobsmarkers(self, markers)
 
             tr = super(commitcloudrepo, self).transaction(*args, **kwargs)
             tr.addfinalize("commitcloudobsmarkers", finalize)
@@ -294,7 +295,7 @@ def missingcloudrevspull(repo, nodes):
 
     nodes = [node for node in nodes if node not in unfi and obscontains(node)]
     if nodes:
-        pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
+        pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
         pullopts["rev"] = [nodemod.hex(node) for node in nodes]
         pullcmd(repo.ui, unfi, **pullopts)
 
@@ -305,7 +306,7 @@ def missingcloudrevspull(repo, nodes):
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo.unfiltered()
-    state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+    state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
     backedup = unfi.revs("draft() and ::%ln", state.heads)
     return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
 
@@ -314,7 +315,7 @@ def backedup(repo, subset, x):
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo.unfiltered()
-    state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+    state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
     backedup = unfi.revs("draft() and ::%ln", state.heads)
     return smartset.filteredset(
         subset & repo.revs("draft() - hidden()"), lambda r: r not in backedup

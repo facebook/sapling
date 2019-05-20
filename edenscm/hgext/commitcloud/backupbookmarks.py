@@ -14,7 +14,7 @@ import socket
 from edenscm.mercurial import encoding, error, hg, node as nodemod, phases, util
 from edenscm.mercurial.i18n import _
 
-from . import backupstate, commitcloudutil, dependencies
+from . import backupstate, dependencies, util as ccutil
 
 
 prefix = "infinitepushbackups/infinitepushbackupstate"
@@ -113,7 +113,7 @@ def pushbackupbookmarks(repo, dest=None, **opts):
     Push a backup bundle to the server that updates the infinitepush backup
     bookmarks.
     """
-    remotepath = commitcloudutil.getremotepath(repo, dest)
+    remotepath = ccutil.getremotepath(repo, dest)
     state = backupstate.BackupState(repo, remotepath)
     unfi = repo.unfiltered()
 
@@ -211,7 +211,7 @@ def downloadbackupbookmarks(
     Fileindex returns backups in lexicographic order, since the fileindex
     doesn't support maintaining the order of insertion.
     """
-    path = commitcloudutil.getremotepath(repo, opts.get("dest"))
+    path = ccutil.getremotepath(repo, opts.get("dest"))
     other = hg.peer(repo, opts, path)
 
     if "listkeyspatterns" not in other.capabilities():
@@ -280,7 +280,7 @@ def printbackupbookmarks(ui, username, backupbookmarks, all=False):
 
 
 def deletebackupbookmarks(repo, targetusername, targethostname, targetreporoot, **opts):
-    remotepath = commitcloudutil.getremotepath(repo, opts.get("dest"))
+    remotepath = ccutil.getremotepath(repo, opts.get("dest"))
     prefix = _backupbookmarkprefix(repo, targetusername, targethostname, targetreporoot)
 
     # If we're deleting the bookmarks for the local repo, also delete its

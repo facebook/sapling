@@ -30,12 +30,14 @@ from . import (
     backupbookmarks,
     backuplock,
     backupstate,
-    commitcloudutil,
     dependencies,
     error as ccerror,
     service,
+    subscription,
     sync,
     syncstate,
+    token as tokenmod,
+    util as ccutil,
     workspace,
 )
 
@@ -101,19 +103,19 @@ def cloudjoin(ui, repo, **opts):
     Use `hg cloud sync` to trigger a new synchronization.
     """
 
-    tokenlocator = commitcloudutil.TokenLocator(ui)
+    tokenlocator = tokenmod.TokenLocator(ui)
     checkauthenticated(ui, repo, tokenlocator)
 
     workspacename = workspace.parseworkspace(ui, repo, **opts)
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
     if workspace.currentworkspace(repo):
-        commitcloudutil.SubscriptionManager(repo).removesubscription()
+        subscription.SubscriptionManager(repo).removesubscription()
     workspace.setworkspace(repo, workspacename)
 
     ui.status(
         _("this repository is now connected to the '%s' workspace for the '%s' repo\n")
-        % (workspacename, commitcloudutil.getreponame(repo)),
+        % (workspacename, ccutil.getreponame(repo)),
         component="commitcloud",
     )
     cloudsync(ui, repo, **opts)
@@ -132,12 +134,12 @@ def cloudrejoin(ui, repo, **opts):
     """
 
     educationpage = ui.config("commitcloud", "education_page")
-    token = commitcloudutil.TokenLocator(ui).token
+    token = tokenmod.TokenLocator(ui).token
     if token:
         try:
             serv = service.get(ui, token)
             serv.check()
-            reponame = commitcloudutil.getreponame(repo)
+            reponame = ccutil.getreponame(repo)
             workspacename = workspace.parseworkspace(ui, repo, **opts)
             if workspacename is None:
                 workspacename = workspace.currentworkspace(repo)
@@ -192,7 +194,7 @@ def cloudleave(ui, repo, **opts):
             component="commitcloud",
         )
         return
-    commitcloudutil.SubscriptionManager(repo).removesubscription()
+    subscription.SubscriptionManager(repo).removesubscription()
     workspace.clearworkspace(repo)
     ui.status(
         _("this repository is now disconnected from commit cloud\n"),
@@ -204,7 +206,7 @@ def cloudleave(ui, repo, **opts):
 def cloudauth(ui, repo, **opts):
     """authenticate this host with the commit cloud service
     """
-    tokenlocator = commitcloudutil.TokenLocator(ui)
+    tokenlocator = tokenmod.TokenLocator(ui)
 
     token = opts.get("token")
     if token:
@@ -241,7 +243,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     the command provides a simple view as a list of draft commits.
     """
 
-    reponame = commitcloudutil.getreponame(repo)
+    reponame = ccutil.getreponame(repo)
     workspacename = workspace.parseworkspace(ui, repo, **opts)
     if workspacename is None:
         workspacename = workspace.currentworkspace(repo)
@@ -254,7 +256,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         component="commitcloud",
     )
 
-    serv = service.get(ui, commitcloudutil.TokenLocator(ui).token)
+    serv = service.get(ui, tokenmod.TokenLocator(ui).token)
 
     with progress.spinner(ui, _("fetching")):
         revdag = serv.getsmartlog(reponame, workspacename, repo)
@@ -452,7 +454,7 @@ def cloudrestorebackup(ui, repo, **opts):
         % (sourceusername, restorereporoot, restorehostname)
     )
 
-    pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
+    pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
     # Pull the heads and the nodes that were pointed to by the bookmarks.
     # Note that we are avoiding the use of set() because we want to pull
     # revisions in the same order
@@ -484,10 +486,10 @@ def cloudrestorebackup(ui, repo, **opts):
 
     # Update local backup state and flag to not autobackup just after we
     # restored, which would be pointless.
-    state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+    state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
     state.update([nodemod.bin(hexnode) for hexnode in heads + bookmarknodes])
     backupbookmarks._writelocalbackupstate(
-        repo, commitcloudutil.getremotepath(repo, dest), heads, bookmarks
+        repo, ccutil.getremotepath(repo, dest), heads, bookmarks
     )
     repo.ignoreautobackup = True
 
@@ -650,7 +652,7 @@ def isbackedup(ui, repo, dest=None, **opts):
     if not revs:
         revs = ["."]
 
-    path = commitcloudutil.getremotepath(repo, dest)
+    path = ccutil.getremotepath(repo, dest)
     unfi = repo.unfiltered()
     revs = scmutil.revrange(repo, revs)
     nodestocheck = [repo[r].hex() for r in revs]
@@ -667,7 +669,7 @@ def isbackedup(ui, repo, dest=None, **opts):
             )
         }
     else:
-        state = backupstate.BackupState(repo, commitcloudutil.getremotepath(repo, None))
+        state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
         backeduprevs = unfi.revs("not public() and ::%ln", state.heads)
         isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
 

@@ -13,8 +13,8 @@ from edenscm.mercurial.i18n import _
 from . import (
     background,
     backuplock,
-    commitcloudutil,
     error as ccerror,
+    subscription,
     syncstate,
     workspace,
 )
@@ -48,7 +48,7 @@ def summary(repo):
 
     workspacename = workspace.currentworkspace(repo)
     if workspacename:
-        commitcloudutil.SubscriptionManager(repo).checksubscription()
+        subscription.SubscriptionManager(repo).checksubscription()
         backuplock.status(repo)
         lastsyncstate = syncstate.SyncState(repo, workspacename)
         if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:

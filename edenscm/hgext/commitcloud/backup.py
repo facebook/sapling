@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from edenscm.mercurial import node as nodemod, smartset
 from edenscm.mercurial.i18n import _, _n
 
-from . import backuplock, backupstate, commitcloudutil, dependencies
+from . import backuplock, backupstate, dependencies, util as ccutil
 
 
 def backup(repo, revs=None, dest=None, **opts):
@@ -18,7 +18,7 @@ def backup(repo, revs=None, dest=None, **opts):
     were backed up, and "failed" is a revset of the commits that could not be
     backed up.
     """
-    path = commitcloudutil.getremotepath(repo, dest)
+    path = ccutil.getremotepath(repo, dest)
     state = backupstate.BackupState(repo, path)
     unfi = repo.unfiltered()
 

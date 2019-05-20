@@ -27,11 +27,14 @@ from . import (
     backupbookmarks,
     backuplock,
     backupstate,
-    commitcloudutil,
     dependencies,
     error as ccerror,
+    obsmarkers as obsmarkersmod,
     service,
+    subscription,
     syncstate,
+    token,
+    util as ccutil,
     workspace,
 )
 
@@ -56,8 +59,8 @@ def _getbookmarks(repo):
 def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     start = time.time()
 
-    tokenlocator = commitcloudutil.TokenLocator(ui)
-    reponame = commitcloudutil.getreponame(repo)
+    tokenlocator = token.TokenLocator(ui)
+    reponame = ccutil.getreponame(repo)
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         raise ccerror.WorkspaceError(ui, _("undefined workspace"))
@@ -70,7 +73,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     backuplock.progress(repo, "starting synchronizing with '%s'" % workspacename)
 
     lastsyncstate = syncstate.SyncState(repo, workspacename)
-    remotepath = commitcloudutil.getremotepath(repo, dest)
+    remotepath = ccutil.getremotepath(repo, dest)
 
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
@@ -136,7 +139,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
 
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
-        obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
+        obsmarkers = obsmarkersmod.getsyncingobsmarkers(repo)
 
         # Work out what we should have synced locally (and haven't deliberately
         # omitted)
@@ -310,7 +313,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
                     remotepath,
                 )
                 if obsmarkers:
-                    commitcloudutil.clearsyncingobsmarkers(repo)
+                    obsmarkersmod.clearsyncingobsmarkers(repo)
 
     backuplock.progresscomplete(repo)
     if pushfailures:
@@ -319,7 +322,7 @@ def docloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
         )
     ui.status(_("commits synchronized\n"), component="commitcloud")
     # check that Scm Service is running and a subscription exists
-    commitcloudutil.SubscriptionManager(repo).checksubscription()
+    subscription.SubscriptionManager(repo).checksubscription()
     elapsed = time.time() - start
     ui.status(_("finished in %0.2f sec\n") % elapsed)
 
@@ -395,7 +398,7 @@ def verifybackedupheads(repo, remotepath, oldremotepath, getconnection, heads):
             _("some heads are missing at %s\n") % remotepath, component="commitcloud"
         )
         backuplock.progresspulling(repo, [nodemod.bin(node) for node in missingheads])
-        pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
+        pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
         pullopts["rev"] = missingheads
         pullcmd(repo.ui, repo.unfiltered(), oldremotepath, **pullopts)
         backingup = list(missingheads)
@@ -426,7 +429,7 @@ def recordbackup(ui, repo, remotepath, newheads):
 
 
 def _applycloudchanges(ui, repo, remotepath, lastsyncstate, cloudrefs, maxage=None):
-    pullcmd, pullopts = commitcloudutil.getcommandandoptions("^pull")
+    pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
 
     try:
         remotenames = extensions.find("remotenames")
