@@ -405,7 +405,7 @@ class UnixSocket : public folly::DelayedDestruction,
   // of an allocation given bogus data.
   uint32_t maxDataLength_ = 512 * 1024 * 1024;
   uint32_t maxFiles_ = 100000;
-  std::chrono::milliseconds sendTimeout_{100};
+  std::chrono::milliseconds sendTimeout_{250};
 
   ReceiveCallback* receiveCallback_{nullptr};
   HeaderBuffer recvHeaderBuffer_;

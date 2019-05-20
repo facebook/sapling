@@ -80,6 +80,12 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
   auto socket1 = make_unique<FutureUnixSocket>(&evb, std::move(sockets.first));
   auto socket2 = make_unique<FutureUnixSocket>(&evb, std::move(sockets.second));
 
+  // Set a fairly large send and receive timeout for this test.
+  // On Mac OS X the send can take a fairly long-ish time when sending
+  // more than 1MB or so.
+  constexpr auto timeout = 10s;
+  socket1->setSendTimeout(timeout);
+
   auto tmpFile = makeTempFile();
   struct stat tmpFileStat;
   if (fstat(tmpFile.fd(), &tmpFileStat) != 0) {
@@ -137,7 +143,7 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
       });
 
   std::optional<UnixSocket::Message> receivedMessage;
-  socket2->receive(2s)
+  socket2->receive(timeout)
       .thenValue([&receivedMessage](UnixSocket::Message&& msg) {
         receivedMessage = std::move(msg);
       })
