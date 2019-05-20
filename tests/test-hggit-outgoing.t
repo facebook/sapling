@@ -97,7 +97,6 @@ let's pull and try again
   $ hg pull 2>&1 | grep -v 'divergent bookmark'
   pulling from */gitrepo (glob)
   importing git objects into hg
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg outgoing | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:574e2d660a7d

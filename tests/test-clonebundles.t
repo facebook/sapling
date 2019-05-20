@@ -157,7 +157,6 @@ Incremental pull doesn't fetch bundle
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets aaff8d2ffbbf
-  (run 'hg update' to get a working copy)
   $ cd ..
 
 Bundle with full content works

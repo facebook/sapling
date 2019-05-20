@@ -96,7 +96,6 @@ Pull the new commits in the clone
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 1
-  (run 'hg update' to get a working copy)
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
@@ -170,7 +169,6 @@ pullop.cgresult
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=1d14c3ce6ac0582d2809220d33e8cd7a696e0156 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 3
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -G
   o  7:5cd59d311f65 public test  H
   |
@@ -241,7 +239,6 @@ pullop.cgresult
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   pullop.cgresult is -2
-  (run 'hg update' to get a working copy)
   $ hg log -G
   o  9:9d18e5bd9ab0 public test  H
   |

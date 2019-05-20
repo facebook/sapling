@@ -84,7 +84,6 @@
   new changesets 54acac6f23ab:b555f63b6063
   test-debug-phase: new rev 3:  x -> 0
   test-debug-phase: new rev 4:  x -> 0
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
   o  4 public a-D - b555f63b6063
   |
@@ -152,7 +151,6 @@ update must update phase of common changeset too
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets f54f1bb90ff3
   test-debug-phase: new rev 4:  x -> 0
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ cd ../beta
   $ hgph # not updated by remote pull
@@ -211,7 +209,6 @@ changegroup are added without phase movement
   test-debug-phase: new rev 2:  x -> 1
   test-debug-phase: new rev 3:  x -> 1
   test-debug-phase: new rev 4:  x -> 1
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
   o  4 draft a-D - b555f63b6063
   |
@@ -243,7 +240,6 @@ Pulling from publish=False to publish=False does not move boundary.
   test-debug-phase: new rev 0:  x -> 1
   test-debug-phase: new rev 1:  x -> 1
   test-debug-phase: new rev 2:  x -> 1
-  (run 'hg update' to get a working copy)
   $ hgph
   o  2 draft a-C - 54acac6f23ab
   |
@@ -263,7 +259,6 @@ Even for common
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets f54f1bb90ff3
   test-debug-phase: new rev 3:  x -> 1
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
   o  3 draft b-A - f54f1bb90ff3
   |
@@ -290,7 +285,6 @@ we are in nu
   test-debug-phase: move rev 1: 1 -> 0
   test-debug-phase: move rev 2: 1 -> 0
   test-debug-phase: new rev 4:  x -> 0
-  (run 'hg update' to get a working copy)
   $ hgph # f54f1bb90ff3 stay draft, not ancestor of -r
   o  4 public a-D - b555f63b6063
   |
@@ -340,7 +334,6 @@ pulling from Publish=False to publish=False with some public
   test-debug-phase: move rev 4: 1 -> 0
   test-debug-phase: new rev 5:  x -> 1
   test-debug-phase: new rev 6:  x -> 1
-  (run 'hg update' to get a working copy)
   $ hgph
   o  6 draft n-B - 145e75495359
   |
@@ -382,7 +375,6 @@ pulling into publish=True
   new changesets d6bcb4f74035:145e75495359
   test-debug-phase: new rev 5:  x -> 1
   test-debug-phase: new rev 6:  x -> 1
-  (run 'hg update' to get a working copy)
   $ hgph
   o  6 draft n-B - 145e75495359
   |
@@ -940,7 +932,6 @@ Discovery locally secret changeset on a remote repository:
   added 1 changesets with 1 changes to 1 files
   new changesets 435b5d83910c
   test-debug-phase: new rev 10:  x -> 1
-  (run 'hg update' to get a working copy)
   $ hgph -R ../mu
   o  10 draft A-secret - 435b5d83910c
   |
@@ -1063,7 +1054,6 @@ pull new changeset with common draft locally
   added 1 changesets with 1 changes to 1 files
   new changesets 5237fb433fc8
   test-debug-phase: new rev 13:  x -> 1
-  (run 'hg update' to get a working copy)
   $ hgph
   o  13 draft mu-more - 5237fb433fc8
   |
@@ -1126,7 +1116,6 @@ Test that test are properly ignored on remote event when existing locally
   new changesets e9f537e46dea:b740e3e5c05d
   test-debug-phase: new rev 5:  x -> 0
   test-debug-phase: new rev 6:  x -> 0
-  (run 'hg update' to get a working copy)
   $ hg phase f54f1bb90ff3
   2: draft
 

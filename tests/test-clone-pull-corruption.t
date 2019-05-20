@@ -38,7 +38,6 @@ start a commit...
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 52998019f625
-  (run 'hg update' to get a working copy)
 
 see what happened
 

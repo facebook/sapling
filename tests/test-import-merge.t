@@ -45,7 +45,6 @@ Test import and merge diffs
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 102a90ea7b4a
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
 Test without --exact and diff.p1 == workingdir.p1
 

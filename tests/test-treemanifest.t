@@ -350,7 +350,6 @@ Stripping and recovering changes should work
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 51cfd7b1e13b
-  (run 'hg update' to get a working copy)
   $ hg debugstrip tip
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/*-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
@@ -872,7 +871,6 @@ other branch
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 73699489fb7c
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
 Committing a empty commit does not duplicate root treemanifest
   $ echo z >> z

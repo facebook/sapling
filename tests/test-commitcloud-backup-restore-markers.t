@@ -88,7 +88,6 @@ Push all pulled commit to backup
   added 1 changesets with 0 changes to 1 files
   updating bookmark master
   new changesets 948715751816
-  (run 'hg update' to get a working copy)
   obsoleted 1 changesets
   $ hg cloud backup --config extensions.lockfail=$TESTDIR/lockfail.py
   backing up stack rooted at 9b3ead1d8005
@@ -131,7 +130,6 @@ Clone fresh repo and try to restore from backup
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
   new changesets 9b3ead1d8005:3969cd9723d1
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   $ hg sl --all
   @  changeset:   2:948715751816
@@ -190,7 +188,6 @@ Test createlandedasmarkers option disabled
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
   new changesets 9b3ead1d8005:3969cd9723d1
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg sl --all
   @  changeset:   2:948715751816
   :  bookmark:    master

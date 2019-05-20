@@ -84,7 +84,6 @@ From another client we can get the scratchbranch if we ask for it explicitely
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 20759b6926ce
-  (run 'hg update' to get a working copy)
   $ hg log -G
   o  changeset:   1:20759b6926ce
   |  bookmark:    scratch/mybranch
@@ -176,7 +175,6 @@ Pull scratch and non-scratch bookmark at the same time
   added 1 changesets with 1 changes to 2 files
   adding remote bookmark newbook
   new changesets 1de1d7d92f89
-  (run 'hg update' to get a working copy)
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  new scratch commit draft scratch/mybranch
   |
@@ -596,7 +594,6 @@ Pull two bookmarks from the second client
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets * (glob)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -r scratch/secondpart -T '{node}'
   8db3891c220e216f6da214e8254bd4371f55efca (no-eol)
   $ hg log -r scratch/firstpart -T '{node}'
@@ -620,7 +617,6 @@ Make sure testpullbycommithash2 has not fetched
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 33910bfe6ffe
-  (run 'hg update' to get a working copy)
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  testpullbycommithash1 draft
   |
@@ -640,7 +636,6 @@ Make sure phase on the client is public.
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets a79b6597f322
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
   o  publiccommit public  a79b6597f322
   |
@@ -669,7 +664,6 @@ Make sure phase on the client is public.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets a79b6597f322:c70aee6da07d
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg log -r scratch/scratchontopofpublic -T '{phase}'
   draft (no-eol)
 Strip scratchontopofpublic commit and do hg update
@@ -685,7 +679,6 @@ Strip scratchontopofpublic commit and do hg update
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets c70aee6da07d
-  (run 'hg update' to get a working copy)
   'c70aee6da07d7cdb9897375473690df3a8563339' found remotely
   pull finished in * sec (glob)
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -710,7 +703,6 @@ Strip commit and pull it using hg update with bookmark name
   adding file changes
   added 1 changesets with 1 changes to 2 files
   new changesets d8fde0ddfc96
-  (run 'hg update' to get a working copy)
   'scratch/mybranch' found remotely
   pull finished in * sec (glob)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -740,7 +732,6 @@ Test debugfillinfinitepushmetadata
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
   new changesets 33910bfe6ffe:d8fde0ddfc96
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   'd8fde0ddfc962183977f92d2bc52d303b8840f9d' found remotely
   pull finished in * sec (glob)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved

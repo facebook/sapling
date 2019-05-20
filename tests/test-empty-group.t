@@ -116,7 +116,6 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 1ec3c74fc0e0
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg -R c pull a
   pulling from a
@@ -126,4 +125,3 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets d15a0c284984
-  (run 'hg heads' to see heads, 'hg merge' to merge)

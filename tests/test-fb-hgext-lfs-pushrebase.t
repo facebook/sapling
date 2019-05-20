@@ -265,7 +265,6 @@ TODO: Make this test compatibile with obsstore enabled.
   added 2 changesets with 2 changes to 2 files
   updating bookmark master
   new changesets * (glob)
-  (run 'hg update' to get a working copy)
 
   $ hg update tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved

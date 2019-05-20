@@ -64,4 +64,3 @@ location (so the generaldelta bit isn't stripped before the comparison)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets ef1c83e819f1
-  (run 'hg update' to get a working copy)

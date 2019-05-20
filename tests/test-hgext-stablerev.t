@@ -92,7 +92,6 @@ The revset can be configured to automatically pull in this case:
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 9bc730a19041
-  (run 'hg update' to get a working copy)
   [9bc730a19041]: E
 
 But it might not exist even after pulling:

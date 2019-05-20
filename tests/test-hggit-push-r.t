@@ -161,7 +161,6 @@ Load commonly used test logic
   adding file changes
   added 4 changesets with 2 changes to 3 files (+1 heads)
   new changesets 095197eb4973:a6a34bfa0076 (?)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
   checking manifests

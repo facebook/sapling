@@ -218,7 +218,6 @@ Test that rebasing and pushing works as expected
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 1846eede8b68
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   o  2 b  default/@
   |

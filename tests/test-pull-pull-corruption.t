@@ -51,7 +51,6 @@ start a pull...
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets ca3c05af513e
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ cat pull.out
   pulling from ../source1
   requesting all changes
@@ -60,7 +59,6 @@ start a pull...
   adding file changes
   added 10 changesets with 10 changes to 1 files
   new changesets 495a0ec48aaf:1e7b6c812ca8
-  (run 'hg update' to get a working copy)
 
 see the result
 

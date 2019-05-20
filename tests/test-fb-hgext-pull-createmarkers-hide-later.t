@@ -101,7 +101,6 @@ hide them since there is a non-hidden successor.
   adding file changes
   added 2 changesets with 0 changes to 2 files (+1 heads)
   new changesets e0672eeeb97c:cc68f5e5f8d6
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 3 changesets
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}' -r 'all()'
   o  7 "add c
@@ -163,7 +162,6 @@ until now had non-hidden successors.
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
   new changesets 296f9d37d5c1
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}' -r 'all()'
   o  9 "add d

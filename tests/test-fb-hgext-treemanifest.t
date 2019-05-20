@@ -49,7 +49,6 @@ Test autocreatetrees
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets e4d61696a942
-  (run 'hg update' to get a working copy)
   $ ls_l $CACHEDIR/master/packs/manifests
   -r--r--r--    1154 5477a48a1f99b7c300cca583ac3ab845096424c3.dataidx
   -r--r--r--     327 5477a48a1f99b7c300cca583ac3ab845096424c3.datapack

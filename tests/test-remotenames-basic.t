@@ -48,7 +48,6 @@ Continue testing
   adding file changes
   added 3 changesets with 3 changes to 3 files
   new changesets 1f0dee641bb7:4538525df7e2
-  (run 'hg update' to get a working copy)
   $ hg pull beta | $FILTERPWD
   pulling from beta
   searching for changes
@@ -57,7 +56,6 @@ Continue testing
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 47d2a3944de8
-  (run 'hg update' to get a working copy)
   $ hg co -C default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit e

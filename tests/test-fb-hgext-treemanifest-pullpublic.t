@@ -77,7 +77,6 @@ Pull exactly up to d into the client
   adding file changes
   added 2 changesets with 0 changes to 0 files
   new changesets 177f92b77385:055a42cdd887
-  (run 'hg update' to get a working copy)
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 1170},
                         write : { bytes : 708}}}}

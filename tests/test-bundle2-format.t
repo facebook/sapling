@@ -824,7 +824,6 @@ Support for changegroup
   adding file changes
   added 8 changesets with 7 changes to 7 files (+3 heads)
   new changesets cd010b8cd998:02de42196ebe
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg log -G
   o  8:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
@@ -1017,7 +1016,6 @@ Support for changegroup
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
-  (run 'hg update' to get a working copy)
 
 with reply
 
@@ -1150,7 +1148,6 @@ Simple case where it just work: GZ
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
-  (run 'hg update' to get a working copy)
 Simple case where it just work: BZ
 ----------------------------------
 
@@ -1243,7 +1240,6 @@ Simple case where it just work: BZ
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
-  (run 'hg update' to get a working copy)
 
 unknown compression while unbundling
 -----------------------------

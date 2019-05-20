@@ -34,4 +34,3 @@
   adding file changes
   added 1 changesets with 2 changes to 2 files
   new changesets a8dee6dcff44
-  (run 'hg update' to get a working copy)

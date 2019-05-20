@@ -27,5 +27,4 @@ Pull from git
   $ hg pull $TESTTMP/a-git
   pulling from $TESTTMP/a-git
   importing git objects into hg
-  (run 'hg update' to get a working copy)
 

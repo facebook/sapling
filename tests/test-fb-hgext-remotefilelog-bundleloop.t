@@ -22,5 +22,4 @@
   adding file changes
   added 4 changesets with 8 changes to 6 files
   new changesets 52f22a21f8db:bf8514b268e7
-  (run 'hg update' to get a working copy)
 

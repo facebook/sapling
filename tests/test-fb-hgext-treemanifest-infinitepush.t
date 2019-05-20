@@ -108,7 +108,6 @@ Pull a non-tree scratch branch into a normal client
   adding file changes
   added 2 changesets with 2 changes to 1 files
   new changesets 42ec76eb772a:6a9819ced061
-  (run 'hg update' to get a working copy)
   $ hg log -r tip -vp
   changeset:   2:6a9819ced061
   bookmark:    scratch/nontree
@@ -141,7 +140,6 @@ Pull a treeonly scratch branch into a normal client
   adding file changes
   added 2 changesets with 2 changes to 1 files (+1 heads)
   new changesets 02c12aef64ff:5a7a7de8a420
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 - Verify no new manifest revlog entry was written
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
@@ -181,7 +179,6 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 02c12aef64ff
-  (run 'hg update' to get a working copy)
   $ hg log -r 02c12aef64ff  --stat
   changeset:   1:02c12aef64ff
   tag:         tip
@@ -203,7 +200,6 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   adding file changes
   added 1 changesets with 2 changes to 1 files
   new changesets 5a7a7de8a420
-  (run 'hg update' to get a working copy)
   $ hg log -G
   o  changeset:   2:5a7a7de8a420
   |  bookmark:    scratch/foo
@@ -246,7 +242,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 42ec76eb772a
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -r 42ec76eb772a --stat
   changeset:   3:42ec76eb772a
   tag:         tip
@@ -267,7 +262,6 @@ Pull a normal scratch branch into a treeonly client
   adding file changes
   added 1 changesets with 2 changes to 1 files
   new changesets 6a9819ced061
-  (run 'hg update' to get a working copy)
   $ hg log -r 42ec76eb772a -T ' ' --stat
     bar/car |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -356,7 +350,6 @@ treemanifest data for the public commits.
   added 1 changesets with 1 changes to 1 files
   new changesets 085784c01c08:02c12aef64ff
   1 trees fetched over * (glob)
-  (run 'hg update' to get a working copy)
 
   $ hg log -G -T '{node|short} {phase} {desc}'
   o  02c12aef64ff draft add subdir/a

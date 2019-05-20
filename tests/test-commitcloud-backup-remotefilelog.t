@@ -149,7 +149,6 @@ the client doesn't receive the public commit file data during the pull.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 7644808a0e88:1c8212bf302f
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg log -r 7644808a0e88 --stat
   changeset:   6:7644808a0e88
   parent:      0:22ea264ff89d

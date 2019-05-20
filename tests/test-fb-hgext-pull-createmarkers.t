@@ -129,7 +129,6 @@ the remote
   adding file changes
   added 3 changesets with 0 changes to 3 files
   new changesets d446b1b2be43:461a5b25b3dc
-  (run 'hg update' to get a working copy)
   obsoleted 3 changesets
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   o  8 "add e
@@ -174,7 +173,6 @@ changesets
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
   new changesets a4884e89c0d5
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
 
 (Note: pullcreatemarkers created two markers, however only one of them was

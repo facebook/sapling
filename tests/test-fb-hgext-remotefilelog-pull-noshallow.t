@@ -57,7 +57,6 @@ is not shallow.)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets d34c38483be9
-  (run 'hg update' to get a working copy)
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

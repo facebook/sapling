@@ -81,7 +81,6 @@ Create another client and use it to modify the commits and create some new ones.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   new changesets dae3b312bb78:c70a9bd6bfd1
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -168,7 +167,6 @@ Now cloud sync.  The sets of commits should be merged.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   new changesets d8fc5ae9b7ef:dd114d9b2f9e
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -204,7 +202,6 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   new changesets ba83c5428cb2:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -278,7 +275,6 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   new changesets dae3b312bb78:6caded0e9807
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -339,7 +335,6 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 3 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets 1ef69cfd595b
   commitcloud: commits synchronized

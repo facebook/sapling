@@ -49,7 +49,6 @@ don't show "(+1 heads)" message when pulling closed head
   adding file changes
   added 2 changesets with 1 changes to 1 files (+1 heads)
   new changesets 8c900227dd5d:1a1aa123db21
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg heads -q --closed
   4:1a1aa123db21
   2:effea6de0384

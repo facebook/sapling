@@ -148,7 +148,6 @@ Sync from the second client - the commit should appear
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  (run 'hg update' to get a working copy)
   new changesets fa5d62c46fd7
   commitcloud: commits synchronized
   finished in * (glob)
@@ -183,7 +182,6 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  (run 'hg update' to get a working copy)
   new changesets 02f6fc2b7154
   commitcloud: commits synchronized
   finished in * (glob)
@@ -272,7 +270,6 @@ Sync the amended commit to the other client
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   new changesets a7bb357e7299:48610b1a7ec0
   commitcloud: commits synchronized
@@ -343,7 +340,6 @@ Expected result: the message telling that revision has been moved to another rev
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets 41f3b9359864
   commitcloud: commits synchronized
@@ -407,7 +403,6 @@ Expected result: client2 should be moved to the amended version
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets 8134e74ecdc8
   commitcloud: commits synchronized
@@ -470,7 +465,6 @@ Expected result: move should not happen, expect a message that move is ambiguous
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   new changesets abd5311ab3c6:cebbb614447e
   commitcloud: commits synchronized
   finished in * (glob)
@@ -531,7 +525,6 @@ Expected result: client2 should be moved to fada67350ab0
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   new changesets fada67350ab0
   commitcloud: commits synchronized
@@ -894,7 +887,6 @@ And the commits should now be availble in the other client.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   new changesets a6b97eebbf74:9bd68ef10d6b
   commitcloud: commits synchronized
   finished in * (glob)
@@ -973,7 +965,6 @@ Commit still becomes available in the other repo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   new changesets e58a6603d256:799d22972c4e
   commitcloud: commits synchronized
   finished in * (glob)
@@ -1044,7 +1035,6 @@ Sync this onto the second client, the remote bookmarks don't change.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 3 files
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   new changesets acd5b9e8c656:2da6c73964b8
   commitcloud: commits synchronized
@@ -1071,7 +1061,6 @@ Do a pull on this client.  The remote bookmarks now get updated.
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 97250524560a
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg trglog
   o  97250524560a 'public 2'  default/publicbookmark2
   |
@@ -1106,7 +1095,6 @@ Rebase the commits again, and resync to the first client.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 3 files
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   obsoleted 2 changesets
   new changesets 97250524560a:af621240884f
   commitcloud: commits synchronized
@@ -1203,7 +1191,6 @@ Rejoin
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   new changesets 3597ff85ead0:af621240884f
   commitcloud: commits synchronized
   finished in * (glob)

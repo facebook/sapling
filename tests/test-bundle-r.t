@@ -6,7 +6,6 @@
   adding file changes
   added 9 changesets with 7 changes to 4 files (+1 heads)
   new changesets bfaf4b5cbf01:916f1afdef90
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
@@ -28,7 +27,6 @@
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets bfaf4b5cbf01
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -42,7 +40,6 @@
   adding file changes
   added 2 changesets with 2 changes to 1 files
   new changesets bfaf4b5cbf01:21f32785131f
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -56,7 +53,6 @@
   adding file changes
   added 3 changesets with 3 changes to 1 files
   new changesets bfaf4b5cbf01:4ce51a113780
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -70,7 +66,6 @@
   adding file changes
   added 4 changesets with 4 changes to 1 files
   new changesets bfaf4b5cbf01:93ee6ab32777
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -84,7 +79,6 @@
   adding file changes
   added 2 changesets with 2 changes to 1 files
   new changesets bfaf4b5cbf01:c70afb1ee985
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -98,7 +92,6 @@
   adding file changes
   added 3 changesets with 3 changes to 1 files
   new changesets bfaf4b5cbf01:f03ae5a9b979
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -112,7 +105,6 @@
   adding file changes
   added 4 changesets with 5 changes to 2 files
   new changesets bfaf4b5cbf01:095cb14b1b4d
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -126,7 +118,6 @@
   adding file changes
   added 5 changesets with 6 changes to 3 files
   new changesets bfaf4b5cbf01:faa2e4234c7a
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -140,7 +131,6 @@
   adding file changes
   added 5 changesets with 5 changes to 2 files
   new changesets bfaf4b5cbf01:916f1afdef90
-  (run 'hg update' to get a working copy)
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
@@ -156,7 +146,6 @@
   adding file changes
   added 4 changesets with 2 changes to 3 files (+1 heads)
   new changesets c70afb1ee985:faa2e4234c7a
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
   checking manifests
@@ -235,7 +224,6 @@ revision 2
   adding file changes
   added 6 changesets with 4 changes to 4 files (+1 heads)
   new changesets 93ee6ab32777:916f1afdef90
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
 revision 8
 
@@ -260,7 +248,6 @@ revision 2
   adding file changes
   added 2 changesets with 2 changes to 2 files
   new changesets 93ee6ab32777:916f1afdef90
-  (run 'hg update' to get a working copy)
 
 revision 4
 
@@ -280,7 +267,6 @@ revision 4
   adding file changes
   added 4 changesets with 3 changes to 3 files (+1 heads)
   new changesets c70afb1ee985:faa2e4234c7a
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
 revision 6
 
@@ -300,7 +286,6 @@ revision 6
   adding file changes
   added 2 changesets with 2 changes to 2 files
   new changesets 93ee6ab32777:916f1afdef90
-  (run 'hg update' to get a working copy)
 
 revision 4
 
@@ -334,7 +319,6 @@ revision 4
   adding file changes
   added 7 changesets with 4 changes to 4 files
   new changesets 93ee6ab32777:03fc0b0e347c
-  (run 'hg update' to get a working copy)
 
 revision 9
 

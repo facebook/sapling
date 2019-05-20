@@ -302,7 +302,6 @@ Test force pushes
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 86cf3bb05fcf
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -G -T '{rev} {desc} {remotebookmarks}'
   o  2 aa
   |

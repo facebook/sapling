@@ -154,7 +154,6 @@ The first client can now successfully sync using the new server.
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 3 files (+1 heads)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   new changesets 02f6fc2b7154:c701070be855
   commitcloud: commits synchronized
   finished in * (glob)

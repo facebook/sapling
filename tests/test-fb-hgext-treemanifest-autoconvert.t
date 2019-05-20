@@ -58,7 +58,6 @@ Test auto creating trees for merge commit
   adding file changes
   added 2 changesets with 0 changes to 0 files
   new changesets d32fd17cb041:92f4ca0e667c
-  (run 'hg update' to get a working copy)
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 1435},
                         write : { bytes : 655}}}}

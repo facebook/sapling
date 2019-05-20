@@ -54,7 +54,6 @@ Merging:
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   new changesets bdd988058d16
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg merge -v
   resolving manifests

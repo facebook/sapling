@@ -217,7 +217,6 @@ Second scenario with two repos:
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 7d51ed18da25
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg merge
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved

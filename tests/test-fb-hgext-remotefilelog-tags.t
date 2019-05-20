@@ -54,7 +54,6 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 6a22dfa4fd34
-  (run 'hg update' to get a working copy)
   $ hg tags
   tip                                2:6a22dfa4fd34
   tag2                               1:6ce44dcfda68

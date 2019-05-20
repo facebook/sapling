@@ -58,4 +58,3 @@ Restore the repo
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets b75a450e74d5:edb281c9cc7e
-  (run 'hg heads' to see heads, 'hg merge' to merge)

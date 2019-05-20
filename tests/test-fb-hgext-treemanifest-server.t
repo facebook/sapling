@@ -418,7 +418,6 @@ Try pulling while treemanifest.blocksendflat is True
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets a30b520ebf7a
-  (run 'hg update' to get a working copy)
   $ hg status --change a30b520ebf7a
   A subdir2/z
 
@@ -451,7 +450,6 @@ Try pulling while treemanifest.blocksendflat is True
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets a30b520ebf7a
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
 Attempt to push from a treeonly repo without sending trees
   $ cd ../client2

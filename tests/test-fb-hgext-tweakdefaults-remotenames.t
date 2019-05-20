@@ -115,7 +115,6 @@ Test that hg pull --rebase also works with a --tool argument
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets e8aa3bc9f3f0
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   rebasing 4:ba0f83735c95 "d"
   merging d
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/ba0f83735c95-ba455273-rebase.hg (glob)

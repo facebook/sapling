@@ -45,5 +45,4 @@ remotenames
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets d2ae7f538514
-  (run 'hg update' to get a working copy)
   nothing to rebase - working directory parent is also destination

@@ -100,7 +100,6 @@ trees for the infinitepush commits.
   adding file changes
   added 3 changesets with 3 changes to 1 files
   new changesets f570e0648bfb:916baec915e2
-  (run 'hg update' to get a working copy)
 
 Make sure we can check out the commit we pulled
 

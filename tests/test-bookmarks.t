@@ -646,7 +646,6 @@ create bundle with two heads
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
   new changesets 125c9a1d6df6:9c404beeabc2
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
 update to active bookmark if it's not the parent
 
@@ -691,7 +690,6 @@ pull --update works the same as pull && update
   updating bookmark Y
   updating bookmark Z
   new changesets 125c9a1d6df6:9c404beeabc2
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
 (# tests strange but with --date crashing when bookmark have to move)
 
@@ -742,7 +740,6 @@ We warn about divergent during bare update to the active bookmark
   updating bookmark Y
   updating bookmark Z
   new changesets 125c9a1d6df6:9c404beeabc2
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence update
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

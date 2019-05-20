@@ -27,7 +27,6 @@ Run with incorrect local revlogs
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 7c3bad9141dc
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg log -r tip --forcesync -T '{desc}\n'
   add b

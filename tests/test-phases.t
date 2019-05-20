@@ -251,7 +251,6 @@ Test secret changeset are not pull
   test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:   -> public
   test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:   -> public
   test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> public
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hglog
   4 0 B'
   3 0 D

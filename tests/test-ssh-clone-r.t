@@ -10,7 +10,6 @@ creating 'remote' repo
   adding file changes
   added 9 changesets with 7 changes to 4 files (+1 heads)
   new changesets bfaf4b5cbf01:916f1afdef90
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
@@ -141,7 +140,6 @@ clone remote via stream
   adding file changes
   added 4 changesets with 2 changes to 3 files (+1 heads)
   new changesets c70afb1ee985:faa2e4234c7a
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
   checking manifests
@@ -158,7 +156,6 @@ clone remote via stream
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets c70afb1ee985
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
   checking manifests
@@ -173,7 +170,6 @@ clone remote via stream
   adding file changes
   added 6 changesets with 5 changes to 4 files
   new changesets 4ce51a113780:916f1afdef90
-  (run 'hg update' to get a working copy)
   $ cd ..
   $ cd test-2
   $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" -r 5 ssh://user@dummy/remote
@@ -184,7 +180,6 @@ clone remote via stream
   adding file changes
   added 2 changesets with 0 changes to 0 files (+1 heads)
   new changesets c70afb1ee985:f03ae5a9b979
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
   checking manifests
@@ -199,7 +194,6 @@ clone remote via stream
   adding file changes
   added 4 changesets with 4 changes to 4 files
   new changesets 93ee6ab32777:916f1afdef90
-  (run 'hg update' to get a working copy)
   $ hg verify
   checking changesets
   checking manifests

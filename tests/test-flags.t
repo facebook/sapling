@@ -23,7 +23,6 @@
   adding file changes
   added 1 changesets with 2 changes to 2 files
   new changesets 22a449e20da5
-  (run 'hg update' to get a working copy)
   $ hg co
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ chmod +x a
@@ -46,7 +45,6 @@ the changelog should mention file a:
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 7f4313b42a34
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg heads
   changeset:   2:7f4313b42a34
   tag:         tip
@@ -99,7 +97,6 @@ the changelog should mention file a:
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 7f4313b42a34
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg heads
   changeset:   2:7f4313b42a34
   tag:         tip

@@ -27,7 +27,6 @@
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 9a79c33a9db3
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg heads
   changeset:   1:9a79c33a9db3

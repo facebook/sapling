@@ -132,6 +132,5 @@ nothing incoming after pull
   $ hg pull | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg incoming | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo

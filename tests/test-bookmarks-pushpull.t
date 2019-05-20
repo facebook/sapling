@@ -61,7 +61,6 @@ import bookmark by name
   test-hook-bookmark: X:   -> 4e3505fd95835d721066b76e75dbb8cc554d7f77
   test-hook-bookmark: Y:  0000000000000000000000000000000000000000 -> 4e3505fd95835d721066b76e75dbb8cc554d7f77
   test-hook-bookmark: Z:   -> 4e3505fd95835d721066b76e75dbb8cc554d7f77
-  (run 'hg update' to get a working copy)
   $ hg bookmarks
      X                         0:4e3505fd9583
    * Y                         0:4e3505fd9583
@@ -394,7 +393,6 @@ divergent bookmarks
   test-hook-bookmark: @foo:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
   test-hook-bookmark: X@foo:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
   test-hook-bookmark: Z:  4e3505fd95835d721066b76e75dbb8cc554d7f77 -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
      @                         1:9b140be10808
      @foo                      2:0d2164f0ce0d
@@ -556,7 +554,6 @@ race conditions
   added 1 changesets with 1 changes to 1 files
   updating bookmark Y
   new changesets b0a5eff05604
-  (run 'hg update' to get a working copy)
   $ hg book
    * @                         1:0d2164f0ce0d
      X                         1:0d2164f0ce0d
@@ -607,7 +604,6 @@ Update a bookmark right after the initial lookup -B (issue4689)
   added 1 changesets with 1 changes to 1 files
   updating bookmark Y
   new changesets 35d1ef0a8d1b
-  (run 'hg update' to get a working copy)
   $ hg book
      @                         1:0d2164f0ce0d
      X                         1:0d2164f0ce0d

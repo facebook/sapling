@@ -54,7 +54,6 @@ The extension requires a repo (currently unused)
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_TXNNAME=unbundle
   bundle:*/tests/bundles/rebase.hg HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ cd ..
 
@@ -118,7 +117,6 @@ pull
   postclose-tip:24b6387c8c8c draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
   file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -290,7 +288,6 @@ pull over ssh
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
   ssh://user@dummy/main HG_URL=ssh://user@dummy/main
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   2222222222222222222222222222222222222222 24b6387c8c8cae37178880f3fa95ded3cb1cf785 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -317,7 +314,6 @@ pull over http
   postclose-tip:42ccdea3bb16 draft book_42cc
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
   http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/ (glob)
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}

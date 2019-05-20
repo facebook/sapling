@@ -60,7 +60,6 @@ Repo1: 2 commits. Sync them to the database.
   adding file changes
   added 2 changesets with 2 changes to 2 files
   new changesets 426bada5c675:112478962961
-  (run 'hg update' to get a working copy)
   [hgsql] held lock for * seconds (read 5 rows; write 8 rows) (glob)
 
 Repo2: Emulate client push. Hold the lock for long.
@@ -96,7 +95,6 @@ Explaination:
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 9bc730a19041
-  (run 'hg update' to get a working copy)
   [hgsql] held lock for * seconds (read * rows; write 7 rows) (glob)
 
 Make sure repo2 and repo3 log looks sane.
@@ -111,7 +109,6 @@ Make sure repo2 and repo3 log looks sane.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 26805aba1e60
-  (run 'hg update' to get a working copy)
   [hgsql] held lock for * seconds (read 7 rows; write 7 rows) (glob)
 
   $ cat $TESTTMP/repo3/out
@@ -125,5 +122,4 @@ Make sure repo2 and repo3 log looks sane.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets f585351a92f8
-  (run 'hg update' to get a working copy)
   [hgsql] held lock for * seconds (read 7 rows; write 7 rows) (glob)

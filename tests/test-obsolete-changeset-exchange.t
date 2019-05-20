@@ -71,7 +71,6 @@ marker to obsolete him)
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
   new changesets f89bcc95eba5
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
 check that bundle is not affected
 
@@ -83,7 +82,6 @@ check that bundle is not affected
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
-  (run 'hg heads' to see heads)
 
 check-that bundle can contain markers:
 
@@ -170,4 +168,3 @@ client only pulls down 1 changeset
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
   new changesets bec0734cd68e
-  (run 'hg heads' to see heads, 'hg merge' to merge)

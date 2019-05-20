@@ -354,7 +354,6 @@ Try to pull markers
   added 4 changesets with 4 changes to 4 files (+1 heads)
   5 new obsolescence markers
   new changesets 1f0dee641bb7:6f9641995072
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
@@ -460,7 +459,6 @@ On pull
   added 4 changesets with 4 changes to 4 files (+1 heads)
   5 new obsolescence markers
   new changesets 1f0dee641bb7:6f9641995072
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -774,7 +772,6 @@ check hgweb does not explode
   adding file changes
   added 62 changesets with 63 changes to 9 files (+60 heads)
   new changesets 50c51b361e60:c15e9edfca13
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ for node in `hg log -r 'desc(babar_)' --template '{node}\n'`;
   > do
   >    hg debugobsolete $node
@@ -1406,7 +1403,6 @@ Testing that strip remove markers:
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
   new changesets e016b03fd86f:b0551702f918
-  (run 'hg update' to get a working copy)
   $ hg debugobsolete | sort
   e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg log -G
@@ -1494,7 +1490,6 @@ Test adding changeset after obsmarkers affecting it
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  (run 'hg update' to get a working copy)
   $ hg log -G
   @  7:7ae79c5d60f0 (draft) [tip ] dd
   |

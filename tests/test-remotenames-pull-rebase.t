@@ -117,7 +117,6 @@ Tests the behavior of a pull followed by a pull --rebase
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 550352cd8c78
-  (run 'hg update' to get a working copy)
   $ hg pull --rebase
   pulling from $TESTTMP/remoterepo (glob)
   searching for changes
@@ -191,7 +190,6 @@ Test pull with --rebase and --tool
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   new changesets b1a3b9086dc9
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   rebasing 6:1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth
   saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/*.hg (glob)

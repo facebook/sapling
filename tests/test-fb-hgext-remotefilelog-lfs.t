@@ -210,7 +210,6 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 515a4dfd2e0c
-  (run 'hg update' to get a working copy)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg update tip
@@ -327,7 +326,6 @@
   adding file changes
   added 2 changesets with 2 changes to 1 files
   new changesets * (glob)
-  (run 'hg update' to get a working copy)
 
   $ hg update tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

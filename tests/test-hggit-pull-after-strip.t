@@ -74,7 +74,6 @@ pull works after 'hg git-cleanup'
   $ hg pull -r beta | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
   $ hg log --graph
   o  changeset:   2:3db9bf9073b5
   |  bookmark:    beta

@@ -21,7 +21,6 @@ pull a branch with the old mapfile
   $ hg pull -r master
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
   $ ls -d .hg/git-mapfile*
   .hg/git-mapfile
   $ hg log -r tip -T '{gitnode}\n'
@@ -32,7 +31,6 @@ pull more commits with the new nodemap
   $ hg pull -r beta
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
   $ ls -d .hg/git-mapfile*
   .hg/git-mapfile
   .hg/git-mapfile-log

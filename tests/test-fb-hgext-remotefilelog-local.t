@@ -102,7 +102,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets fed61014d323
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg rebase -d tip
   rebasing 1:9abfe7bca547 "a"
@@ -134,7 +133,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 19edf50f4de7
-  (run 'hg update' to get a working copy)
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -166,7 +164,6 @@ TODO: Make this test compatibile with obsstore enabled.
   adding file changes
   added 1 changesets with 3 changes to 3 files
   new changesets 19edf50f4de7
-  (run 'hg update' to get a working copy)
 
   $ hg log -r 2 --stat
   changeset:   2:19edf50f4de7

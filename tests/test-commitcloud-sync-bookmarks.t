@@ -47,7 +47,6 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  (run 'hg update' to get a working copy)
   new changesets 00422fad0026
   commitcloud: commits synchronized
   finished in * (glob)
@@ -79,7 +78,6 @@ Fake land the commit
   adding file changes
   added 3 changesets with 2 changes to 2 files (+1 heads)
   new changesets 031d760782fb:67d363c9001e
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   obsoleted 1 changesets
   $ tglogp
   o  4: 67d363c9001e public 'public-commit-2'
@@ -153,7 +151,6 @@ we will need to pull.
   adding file changes
   added 3 changesets with 2 changes to 2 files (+1 heads)
   new changesets 031d760782fb:67d363c9001e
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized

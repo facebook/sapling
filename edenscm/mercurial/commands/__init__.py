@@ -4694,16 +4694,6 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
             msg = _("not updating: %s") % str(inst)
             hint = inst.hint
             raise error.UpdateAbort(msg, hint=hint)
-    if modheads > 1:
-        currentbranchheads = len(repo.branchheads())
-        if currentbranchheads == modheads:
-            ui.status(_("(run 'hg heads' to see heads, 'hg merge' to merge)\n"))
-        elif currentbranchheads > 1:
-            ui.status(_("(run 'hg heads .' to see heads, 'hg merge' to " "merge)\n"))
-        else:
-            ui.status(_("(run 'hg heads' to see heads)\n"))
-    elif not ui.configbool("commands", "update.requiredest"):
-        ui.status(_("(run 'hg update' to get a working copy)\n"))
 
 
 @command(

@@ -1428,7 +1428,6 @@ Test setup
   2 new obsolescence markers
   obsoleted 1 changesets
   new changesets 7a230b46bf61
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log --hidden -G
   o  changeset:   2:7a230b46bf61
   |  tag:         tip

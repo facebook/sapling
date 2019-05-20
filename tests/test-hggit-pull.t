@@ -25,7 +25,6 @@ pull a tag
   $ hg -R hgrepo pull -r t_alpha
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
   $ hg -R hgrepo update t_alpha
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo log --graph
@@ -55,7 +54,6 @@ pull a branch
   $ hg -R hgrepo pull -r beta
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
   $ hg -R hgrepo log --graph
   o  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
@@ -89,7 +87,6 @@ pull everything else
   $ hg -R hgrepo pull
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo log --graph
   o  changeset:   3:78f47553e70d
   |  bookmark:    master
@@ -137,7 +134,6 @@ pull the merge
   $ hg -R hgrepo pull
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
   $ hg -R hgrepo log --graph
   o    changeset:   4:10c1db28cc89
   |\   bookmark:    master
@@ -199,7 +195,6 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   $ hg -R hgrepo pull -r 'releases/*'
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo log --graph
   o  changeset:   6:47d709856ce8
   |  bookmark:    releases/v2
@@ -308,7 +303,6 @@ also add an annotated tag
   $ hg -R hgrepo pull
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo heads
   changeset:   9:497a89953f7c
   bookmark:    master

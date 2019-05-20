@@ -68,7 +68,6 @@ clone, commit, pull
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets d02f48003e62
-  (run 'hg update' to get a working copy)
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> perftweaks updated served branch cache
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> clone . ../blackboxtest2 exited 0 after 0.00 seconds
@@ -112,7 +111,6 @@ we must not cause a failure if we cannot write to the log
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets d02f48003e62
-  (run 'hg update' to get a working copy)
 
 a failure reading from the log is fatal
 

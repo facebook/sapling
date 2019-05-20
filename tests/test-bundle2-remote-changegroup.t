@@ -95,7 +95,6 @@ Start a simple HTTP server to serve bundles
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
   new changesets cd010b8cd998:02de42196ebe
-  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg -R repo log -G
   o  7:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
@@ -149,7 +148,6 @@ Test a pull with an remote-changegroup
   adding file changes
   added 3 changesets with 2 changes to 2 files (+1 heads)
   new changesets 24b6387c8c8c:02de42196ebe
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -201,7 +199,6 @@ Test a pull with an remote-changegroup and a following changegroup
   adding file changes
   added 3 changesets with 2 changes to 2 files (+1 heads)
   new changesets 32af7686d403:02de42196ebe
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -253,7 +250,6 @@ Test a pull with a changegroup followed by an remote-changegroup
   adding file changes
   added 3 changesets with 2 changes to 2 files (+1 heads)
   new changesets 32af7686d403:02de42196ebe
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
@@ -315,7 +311,6 @@ Test a pull with two remote-changegroups and a changegroup
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 32af7686d403:02de42196ebe
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R clone log -G
   o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |

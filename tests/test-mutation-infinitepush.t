@@ -49,7 +49,6 @@ Pull the branch back into the original repo.
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
   new changesets f1f3b31bcda8
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up -q tip
 
 We have the predecessor chain that links all versions of the commits.

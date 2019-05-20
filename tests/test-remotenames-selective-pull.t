@@ -25,7 +25,6 @@ Pull master bookmark
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 1449e7934ec1
-  (run 'hg update' to get a working copy)
   $ hg bookmarks --remote
      default/master            0:1449e7934ec1
 
@@ -79,7 +78,6 @@ Move master bookmark
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 0238718db2b1
-  (run 'hg update' to get a working copy)
   $ hg bookmarks --remote
      default/master            1:0238718db2b1
 
@@ -92,7 +90,6 @@ Specify bookmark to pull
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets ed7a9fd254d1
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg bookmarks --remote
      default/master            1:0238718db2b1
      default/secondbook        2:ed7a9fd254d1
@@ -143,7 +140,6 @@ Move bookmark in first remote, pull and make sure it moves in local repo
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets c47dca9795c9
-  (run 'hg update' to get a working copy)
   $ hg bookmarks --remote
      default/master            1:0238718db2b1
      default/secondbook        3:c47dca9795c9
@@ -192,7 +188,6 @@ Update to the remote bookmark from secondremote
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 0022441e80e5
-  (run 'hg update' to get a working copy)
   `secondremote/secondbook` found remotely
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book --remote

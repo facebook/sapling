@@ -91,7 +91,6 @@
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
   new changesets 730e2b7b175c
-  (run 'hg update' to get a working copy)
   prefetching file contents
   4 files fetched over * fetches - (4 misses, 0.00% hit ratio) over *s (glob)
 

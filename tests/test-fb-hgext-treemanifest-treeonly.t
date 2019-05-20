@@ -186,7 +186,6 @@ Test unbundling the original commit
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 779a137458d0
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 # Verify the packs were brought back and the data is accessible
   $ ls_l .hg/store/packs/manifests | wc -l
   \s*12 (re)
@@ -217,7 +216,6 @@ Test pulling new commits from a hybrid server
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 2937cde31c19
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
   $ hg debugindex -m --config treemanifest.treeonly=False
      rev    offset  length  delta linkrev nodeid       p1           p2
@@ -371,7 +369,6 @@ Test bundling
   adding file changes
   added 3 changesets with 3 changes to 2 files
   new changesets 7ec3c5c54734:2f8e443c6ba8
-  (run 'hg update' to get a working copy)
   $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
   o  modify y
   |   y |  1 +
@@ -513,7 +510,6 @@ Switch back to hybrid mode
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 4f84204095e0
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
   $ cp .hg/store/00manifest.i.bak .hg/store/00manifest.i
   $ cp .hg/store/00changelog.i.bak .hg/store/00changelog.i
@@ -534,7 +530,6 @@ Switch back to hybrid mode
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 4f84204095e0
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cd ..
 
 Test converting server to treeonly
@@ -599,7 +594,6 @@ Test pulling to a treeonly client from a treeonly server
   adding file changes
   added 2 changesets with 0 changes to 0 files (+1 heads)
   new changesets 4f84204095e0:5b1ec8639460
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -r tip -T '{desc}\n' --stat
   fetching tree '' 83b03df1c9d62b8a2dedf46629e3262423af655c, based on d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 4f84204095e0
   1 trees fetched over * (glob)
@@ -806,7 +800,6 @@ with pullprefetchrevs configured.
   adding file changes
   added 3 changesets with 3 changes to 2 files
   new changesets 2278cc8c6ce6:4f84204095e0
-  (run 'hg update' to get a working copy)
   prefetching tree for 4f84204095e0
   2 trees fetched over * (glob)
   $ cd ..

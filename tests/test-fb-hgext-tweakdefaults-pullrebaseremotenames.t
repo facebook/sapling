@@ -28,7 +28,6 @@ Pull --rebase with no local changes
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets d2ae7f538514
-  (run 'hg update' to get a working copy)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   nothing to rebase - fast-forwarded to master
   $ hg log -G -T "{rev} {desc}: {bookmarks}"
@@ -49,7 +48,6 @@ Make a local commit and check pull --rebase still works.
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 177f92b77385
-  (run 'hg heads' to see heads, 'hg merge' to merge)
   rebasing 2:86d71924e1d0 "x" (localbookmark)
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/86d71924e1d0-48875604-rebase.hg
   $ hg log -G -T "{rev} {desc}: {bookmarks}"
