@@ -155,8 +155,15 @@ Backup with bookmark
   infinitepush/backups/test/testhost$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc
   infinitepush/backups/test/testhost$TESTTMP/client/heads/f79c5017def3b9af9928edbb52cc620c74b4b291 f79c5017def3b9af9928edbb52cc620c74b4b291
 
-Backup only bookmarks
+Backup only bookmarks. First, set a low limit to prevent the backup.
   $ hg book newbook
+  $ hg cloud backup --config infinitepushbackup.backupbookmarklimit=0
+  warning: commitcloud: not pushing backup bookmarks for infinitepush/backups/test/testhost$TESTTMP/client as there are too many (1 > 0)
+  nothing to back up
+  $ scratchbookmarks | grep newbook
+  [1]
+
+New remove the limit and check the backup works.
   $ hg cloud backup
   nothing to back up
   $ scratchbookmarks

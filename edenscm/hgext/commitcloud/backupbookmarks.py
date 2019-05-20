@@ -180,6 +180,19 @@ def pushbackupbookmarks(repo, remotepath, getconnection):
     if not infinitepushbookmarks:
         return
 
+    # developer config: infinitepushbackup.backupbookmarklimit
+    backupbookmarklimit = repo.ui.configint(
+        "infinitepushbackup", "backupbookmarklimit", 1000
+    )
+    if len(infinitepushbookmarks) > backupbookmarklimit:
+        repo.ui.warn(
+            _("not pushing backup bookmarks for %s as there are too many (%s > %s)\n")
+            % (prefix, len(infinitepushbookmarks), backupbookmarklimit),
+            notice=_("warning"),
+            component="commitcloud",
+        )
+        return
+
     # Push a bundle containing the new bookmarks to the server.
     with getconnection() as conn:
         dependencies.infinitepush.pushbackupbundle(
