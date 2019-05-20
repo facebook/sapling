@@ -148,16 +148,15 @@ from . import (
     backupbookmarks,
     backuplock,
     backupstate,
-    commitcloudcommands,
+    commands as cccommands,
     commitcloudutil,
     dependencies,
     status,
     syncstate,
-    workspace,
 )
 
 
-cmdtable = commitcloudcommands.cmdtable
+cmdtable = cccommands.cmdtable
 
 colortable = {"commitcloud.tag": "yellow", "commitcloud.team": "bold"}
 
