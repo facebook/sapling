@@ -84,6 +84,18 @@ impl MutableHistoryStore for PythonMutableHistoryPack {
         Ok(())
     }
 
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let py_path = self
+            .py_historypack
+            .call_method(py, "flush", NoArgs, None)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        let py_path = PyBytes::extract(py, &py_path).map_err(|e| pyerr_to_error(py, e))?;
+        Ok(Some(local_bytes_to_path(py_path.data(py))?.into_owned()))
+    }
+
     fn close(self) -> Fallible<Option<PathBuf>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
