@@ -27,18 +27,22 @@ use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
-pub struct MutableDataPack {
+struct MutableDataPackInner {
     dir: PathBuf,
     data_file: PackWriter<NamedTempFile>,
     mem_index: HashMap<Node, DeltaLocation>,
     hasher: Sha1,
 }
 
+pub struct MutableDataPack {
+    inner: MutableDataPackInner,
+}
+
 #[derive(Debug, Fail)]
 #[fail(display = "Mutable Data Pack Error: {:?}", _0)]
 struct MutableDataPackError(String);
 
-impl MutableDataPack {
+impl MutableDataPackInner {
     /// Creates a new MutableDataPack for producing datapack files.
     ///
     /// The data is written to a temporary file, and renamed to the final location
@@ -64,7 +68,7 @@ impl MutableDataPack {
         data_file.write_u8(version_u8)?;
         hasher.input(&[version_u8]);
 
-        Ok(MutableDataPack {
+        Ok(Self {
             dir: dir.to_path_buf(),
             data_file,
             mem_index: HashMap::new(),
@@ -102,10 +106,7 @@ impl MutableDataPack {
             entry.metadata().clone(),
         ))
     }
-}
 
-impl MutableDeltaStore for MutableDataPack {
-    /// Adds the given entry to the mutable datapack.
     fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         let path_slice = delta.key.path.as_byte_slice();
         if path_slice.len() >= u16::MAX as usize {
@@ -147,6 +148,21 @@ impl MutableDeltaStore for MutableDataPack {
             .insert(delta.key.node.clone(), delta_location);
         Ok(())
     }
+}
+
+impl MutableDataPack {
+    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Fallible<Self> {
+        Ok(Self {
+            inner: MutableDataPackInner::new(dir, version)?,
+        })
+    }
+}
+
+impl MutableDeltaStore for MutableDataPack {
+    /// Adds the given entry to the mutable datapack.
+    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+        self.inner.add(delta, metadata)
+    }
 
     fn close(self) -> Fallible<Option<PathBuf>> {
         self.close_pack().map(|path| Some(path))
@@ -155,17 +171,17 @@ impl MutableDeltaStore for MutableDataPack {
 
 impl MutablePack for MutableDataPack {
     fn build_files(mut self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
-        if self.mem_index.is_empty() {
+        if self.inner.mem_index.is_empty() {
             return Err(EmptyMutablePack().into());
         }
 
-        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
-        DataIndex::write(&mut index_file, &self.mem_index)?;
+        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.inner.dir)?);
+        DataIndex::write(&mut index_file, &self.inner.mem_index)?;
 
         Ok((
-            self.data_file.into_inner()?,
+            self.inner.data_file.into_inner()?,
             index_file.into_inner()?,
-            self.dir.join(&self.hasher.result_str()),
+            self.inner.dir.join(&self.inner.hasher.result_str()),
         ))
     }
 
@@ -183,7 +199,7 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_delta(&self, key: &Key) -> Fallible<Delta> {
-        let (delta, _metadata) = self.read_entry(&key)?;
+        let (delta, _metadata) = self.inner.read_entry(&key)?;
         Ok(delta)
     }
 
@@ -191,7 +207,7 @@ impl DataStore for MutableDataPack {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
         while let Some(key) = next_key {
-            let (delta, _metadata) = self.read_entry(&key)?;
+            let (delta, _metadata) = self.inner.read_entry(&key)?;
             next_key = delta.base.clone();
             chain.push(delta);
         }
@@ -200,7 +216,7 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
-        let (_, metadata) = self.read_entry(&key)?;
+        let (_, metadata) = self.inner.read_entry(&key)?;
         Ok(metadata)
     }
 }
@@ -209,7 +225,7 @@ impl LocalStore for MutableDataPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| self.mem_index.get(&k.node).is_none())
+            .filter(|k| self.inner.mem_index.get(&k.node).is_none())
             .map(|k| k.clone())
             .collect())
     }
