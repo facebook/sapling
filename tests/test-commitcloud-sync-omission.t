@@ -759,3 +759,99 @@ Attempt to sync.  The midbook bookmark should make it visible again.
   |/
   o  0: df4f53cec30a 'base'
   
+Sync in client2.  It should match.
+  $ cd ../client2
+  $ hg cloud sync -q
+  $ tglog
+  o  10: 2ace67ee4791 'oldstack-mar4 amended'
+  |
+  | x  9: 2b8dce7bd745 'oldstack-mar4' midbook
+  |/
+  o  8: d16408588b2d 'oldstack-feb4'
+  |
+  o  7: 1f9ebd6d1390 'oldstack-feb1'
+  |
+  | o  6: 46f8775ee5d4 'newstack-feb28'
+  | |
+  +---@  5: ff52de2f760c 'client2-feb28'
+  | |
+  | o  4: 7f958333fe84 'newstack-feb15'
+  | |
+  | o  3: 56a352317b67 'newstack-feb13'
+  |/
+  | o  2: d133b886da68 'midstack-feb9'
+  | |
+  | o  1: 1c1b7955142c 'midstack-feb7'
+  |/
+  o  0: df4f53cec30a 'base'
+  
+Hide some uninteresting commits and sync everywhere
+  $ hg hide -r 1:: -r 3:: -r 5::
+  hiding commit 1c1b7955142c "midstack-feb7"
+  hiding commit d133b886da68 "midstack-feb9"
+  hiding commit 56a352317b67 "newstack-feb13"
+  hiding commit 7f958333fe84 "newstack-feb15"
+  hiding commit ff52de2f760c "client2-feb28"
+  hiding commit 46f8775ee5d4 "newstack-feb28"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at df4f53cec30a
+  6 changesets hidden
+  $ hg cloud sync -q
+  $ cd ../client1
+  $ hg cloud sync -q
+
+Make a new public commit
+  $ cd ../server
+  $ echo public1 > public1
+  $ hg commit -Aqm public1
+  $ hg phase -p .
+
+Pull this into client1
+  $ cd ../client1
+  $ hg pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets f770b7f72fa5
+
+Move midbook to the public commit.
+  $ hg book -fr 11 midbook
+  $ hg cloud sync -q
+
+Sync in client 2.  It doesn't have the new destination of midbook, so should omit it.
+
+  $ cd ../client2
+  $ hg cloud sync -q
+  f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
+  $ tglogp
+  o  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
+  |
+  | x  9: 2b8dce7bd745 draft 'oldstack-mar4' midbook
+  |/
+  o  8: d16408588b2d draft 'oldstack-feb4'
+  |
+  o  7: 1f9ebd6d1390 draft 'oldstack-feb1'
+  |
+  @  0: df4f53cec30a public 'base'
+  
+BUG! It didn't omit it, but rather left it where it was.
+
+  $ cd ../client1
+  $ hg cloud sync -q
+  $ tglogp
+  o  11: f770b7f72fa5 public 'public1'
+  |
+  | @  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
+  | |
+  | | x  9: 2b8dce7bd745 draft 'oldstack-mar4' midbook
+  | |/
+  | o  2: d16408588b2d draft 'oldstack-feb4'
+  | |
+  | o  1: 1f9ebd6d1390 draft 'oldstack-feb1'
+  |/
+  o  0: df4f53cec30a public 'base'
+  
+BUG!  The bookmark moved back.
