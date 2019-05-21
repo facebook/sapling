@@ -4,16 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashSet;
+#![deny(warnings)]
 
 use failure_ext::Error;
 use futures_ext::BoxFuture;
+use std::sync::Arc;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
 
 // A wrapper for any blobstore, which provides a verification layer for the blacklisted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
+#[derive(Debug)]
 pub struct Censoredblob {
     blobstore: Arc<dyn Blobstore>,
 }
@@ -21,12 +23,6 @@ pub struct Censoredblob {
 impl Censoredblob {
     pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
         Self { blobstore }
-    }
-
-    //the function checks if the respective key is included in the blacklisted list of keys
-    // TODO: the concrete functionality is to be implemented in the future
-    fn is_blacklisted(&self, key: String) -> bool {
-        result = true
     }
 }
 
@@ -39,7 +35,7 @@ impl Blobstore for Censoredblob {
         self.blobstore.put(ctx, key, value)
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
         self.blobstore.is_present(ctx, key)
     }
 
