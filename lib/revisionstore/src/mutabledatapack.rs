@@ -6,6 +6,7 @@
 use std::{
     collections::HashMap,
     io::{Read, Seek, SeekFrom, Write},
+    mem::replace,
     path::{Path, PathBuf},
     u16,
 };
@@ -167,26 +168,44 @@ impl MutableDeltaStore for MutableDataPack {
     fn close(self) -> Fallible<Option<PathBuf>> {
         self.close_pack().map(|path| Some(path))
     }
+
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        let new_inner = MutableDataPackInner::new(&self.inner.dir, DataPackVersion::One)?;
+        let old_inner = replace(&mut self.inner, new_inner);
+
+        let path = old_inner.close_pack()?;
+        Ok(Some(path))
+    }
 }
 
-impl MutablePack for MutableDataPack {
+impl MutablePack for MutableDataPackInner {
     fn build_files(mut self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
-        if self.inner.mem_index.is_empty() {
+        if self.mem_index.is_empty() {
             return Err(EmptyMutablePack().into());
         }
 
-        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.inner.dir)?);
-        DataIndex::write(&mut index_file, &self.inner.mem_index)?;
+        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
+        DataIndex::write(&mut index_file, &self.mem_index)?;
 
         Ok((
-            self.inner.data_file.into_inner()?,
+            self.data_file.into_inner()?,
             index_file.into_inner()?,
-            self.inner.dir.join(&self.inner.hasher.result_str()),
+            self.dir.join(&self.hasher.result_str()),
         ))
     }
 
     fn extension(&self) -> &'static str {
         "data"
+    }
+}
+
+impl MutablePack for MutableDataPack {
+    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+        self.inner.build_files()
+    }
+
+    fn extension(&self) -> &'static str {
+        self.inner.extension()
     }
 }
 
