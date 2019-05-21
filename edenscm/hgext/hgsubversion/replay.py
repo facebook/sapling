@@ -1,10 +1,11 @@
+from __future__ import absolute_import
+
 import errno
 import traceback
 
-import compathacks
-import svnexternals
-import util
 from edenscm.mercurial import context, node, revlog, util as hgutil
+
+from . import compathacks, svnexternals, util
 
 
 class MissingPlainTextError(Exception):

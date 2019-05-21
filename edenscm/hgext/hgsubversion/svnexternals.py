@@ -1,5 +1,7 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import cStringIO
 import os
 import re
@@ -7,9 +9,10 @@ import shutil
 import stat
 import subprocess
 
-import util
 from edenscm.mercurial import util as hgutil
 from edenscm.mercurial.i18n import _
+
+from . import util
 
 
 try:

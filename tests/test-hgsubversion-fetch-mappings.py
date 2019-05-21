@@ -1,12 +1,16 @@
 # no-check-code -- see T24862348
 
-"""Tests for author maps and file maps.
-"""
+from __future__ import absolute_import
+
 import os
 
 import test_hgsubversion_util
 from edenscm.hgext.hgsubversion import maps, svncommands, verify
 from edenscm.mercurial import commands, node
+
+
+"""Tests for author maps and file maps.
+"""
 
 
 class MapTests(test_hgsubversion_util.TestBase):

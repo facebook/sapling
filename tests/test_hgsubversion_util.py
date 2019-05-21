@@ -1,6 +1,8 @@
 # no-check-code -- see T24862348
 # flake8: noqa
 
+from __future__ import absolute_import
+
 import difflib
 import errno
 import gettext

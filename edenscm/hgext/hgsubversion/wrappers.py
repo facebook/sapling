@@ -1,6 +1,7 @@
 # no-check-code -- see T24862348
 # isort:skip_file
 
+from __future__ import absolute_import
 import inspect
 import os
 
@@ -25,11 +26,11 @@ from edenscm.mercurial import i18n
 from edenscm.mercurial import extensions
 from edenscm.mercurial import scmutil
 
-import replay
-import pushmod
-import stupid as stupidmod
-import svnwrap
-import util
+from . import replay
+from . import pushmod
+from . import stupid as stupidmod
+from . import svnwrap
+from . import util
 
 try:
     from edenscm.mercurial import obsolete

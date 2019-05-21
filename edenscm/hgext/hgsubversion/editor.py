@@ -1,16 +1,16 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import errno
 import os
 import shutil
 import sys
 import tempfile
 
-import svnexternals
-import svnwrap
-import util
 from edenscm.mercurial import match as matchmod, node, revlog, util as hgutil
 
+from . import svnexternals, svnwrap, util
 from ..extlib import cstore
 
 

@@ -8,11 +8,11 @@ other path translation necessary.
 NB: this has a long way to go before it does everything it claims to
 
 """
+from __future__ import absolute_import
 
-import custom
-import single
-import standard
 from edenscm.mercurial import util as hgutil
+
+from . import custom, single, standard
 
 
 __all__ = ["layout_from_name"]

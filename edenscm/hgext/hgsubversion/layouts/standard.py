@@ -1,6 +1,8 @@
 # no-check-code -- see T24862348
 
-import base
+from __future__ import absolute_import
+
+from . import base
 
 
 class StandardLayout(base.BaseLayout):

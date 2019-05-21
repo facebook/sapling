@@ -1,13 +1,16 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import gc
 import json
 import os
 import re
 import urllib
 
-import compathacks
 from edenscm.mercurial import error, hg, node, repair, util as hgutil
+
+from . import compathacks
 
 
 try:

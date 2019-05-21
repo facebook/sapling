@@ -8,8 +8,11 @@ want a couple of branches.
 
 """
 
-import base
+from __future__ import absolute_import
+
 from edenscm.mercurial import util as hgutil
+
+from . import base
 
 
 class CustomLayout(base.BaseLayout):

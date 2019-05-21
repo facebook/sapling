@@ -1,5 +1,7 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import collections
 import cStringIO
 import errno
@@ -7,7 +9,7 @@ import os
 import urllib
 import warnings
 
-import common
+from . import common
 
 
 warnings.filterwarnings("ignore", module="svn.core", category=DeprecationWarning)

@@ -2,6 +2,8 @@
 
 """ Module for self-contained maps. """
 
+from __future__ import absolute_import
+
 import collections
 import contextlib
 import errno
@@ -11,9 +13,10 @@ import sqlite3
 import subprocess
 import sys
 
-import util
 from edenscm.mercurial import error, util as hgutil
 from edenscm.mercurial.node import bin, hex, nullid
+
+from . import util
 
 
 class BaseMap(dict):

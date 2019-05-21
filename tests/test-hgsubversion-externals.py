@@ -1,5 +1,7 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import os
 
 import test_hgsubversion_util
@@ -121,9 +123,9 @@ class TestFetchExternals(test_hgsubversion_util.TestBase):
         ref1 = """\
 [.]
  # A comment, then an empty line, then a blank line
- 
+
  ^/externals/project1 deps/project1
-     
+
  -r2 ^/externals/project2@2 deps/project2
 """
         self.assertMultiLineEqual(ref1, repo[1][".hgsvnexternals"].data())

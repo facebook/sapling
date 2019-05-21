@@ -1,12 +1,13 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import difflib
 import posixpath
 
-import svnrepo
-import svnwrap
-import util
 from edenscm.mercurial import error, progress, util as hgutil, worker
+
+from . import svnrepo, svnwrap, util
 
 
 def verify(ui, repo, args=None, **opts):

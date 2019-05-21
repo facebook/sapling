@@ -1,11 +1,12 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import re as remod
 
-import svnexternals
-import svnwrap
-import util
 from edenscm.mercurial import util as hgutil
+
+from . import svnexternals, svnwrap, util
 
 
 class NoFilesException(Exception):

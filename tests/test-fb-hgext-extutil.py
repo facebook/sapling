@@ -1,5 +1,7 @@
 # Copyright 2004-present Facebook. All Rights Reserved.
 
+from __future__ import absolute_import
+
 import errno
 import os
 import time

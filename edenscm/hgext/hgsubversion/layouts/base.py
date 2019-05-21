@@ -6,6 +6,7 @@ This module should not contain any implementation, just a definition
 of the API concrete layouts are expected to implement.
 
 """
+from __future__ import absolute_import
 
 
 class BaseLayout(object):

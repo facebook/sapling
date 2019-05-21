@@ -1,5 +1,7 @@
 # @nolint
 
+from __future__ import absolute_import
+
 import os
 
 import test_hgsubversion_util

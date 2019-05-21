@@ -16,14 +16,14 @@ subclass: pull() is called on the instance pull *to*, but not the one pulled
   are used to distinguish and filter these operations from others.
 """
 
+from __future__ import absolute_import
+
 import errno
 
-import svnmeta
-import svnwrap
-import util
-import wrappers
 from edenscm.mercurial import error, httppeer, localrepo, phases, util as hgutil
 from edenscm.mercurial.repository import peer as peerrepository
+
+from . import svnmeta, svnwrap, util, wrappers
 
 
 peerapi = 1

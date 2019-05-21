@@ -17,17 +17,11 @@ details.
 For more information and instructions, see :hg:`help subversion`.
 """
 
-testedwith = "3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4"
+from __future__ import absolute_import
 
 import os
 import zlib
 
-import compathacks
-import svncommands
-import svnexternals
-import svnrepo
-import util
-import wrappers
 from edenscm.mercurial import (
     commands,
     demandimport,
@@ -41,6 +35,11 @@ from edenscm.mercurial import (
     revset,
     util as hgutil,
 )
+
+from . import compathacks, svncommands, svnexternals, svnrepo, util, wrappers
+
+
+testedwith = "3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4"
 
 
 try:

@@ -1,15 +1,13 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import os
 import posixpath
 
-import compathacks
-import editor
-import layouts
-import maps
-import svnwrap
-import util
 from edenscm.mercurial import context, node, revlog, util as hgutil
+
+from . import compathacks, editor, layouts, maps, svnwrap, util
 
 
 class SVNMeta(object):

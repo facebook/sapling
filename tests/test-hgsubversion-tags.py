@@ -1,6 +1,8 @@
 # no-check-code -- see T24862348
 # @nolint
 
+from __future__ import absolute_import
+
 import cStringIO
 import difflib
 import os

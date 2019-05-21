@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import shutil
 import sys
 import tempfile

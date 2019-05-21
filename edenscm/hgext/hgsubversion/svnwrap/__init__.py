@@ -8,17 +8,19 @@ available implementation without the user having to configure what is actually
 present.
 """
 
+from __future__ import absolute_import
+
 import os
 
-from common import *
+from .common import *
 
 
 choice = os.environ.get("HGSUBVERSION_BINDINGS", "").lower()
 
 if choice == "subvertpy":
-    from subvertpy_wrapper import *
+    from .subvertpy_wrapper import *
 elif choice == "swig":
-    from svn_swig_wrapper import *
+    from .svn_swig_wrapper import *
 elif choice == "none":
     # useful for verifying that demandimport works properly
     raise ImportError(
@@ -26,10 +28,10 @@ elif choice == "none":
     )
 else:
     try:
-        from subvertpy_wrapper import *
+        from .subvertpy_wrapper import *
     except ImportError as e1:
         try:
-            from svn_swig_wrapper import *
+            from .svn_swig_wrapper import *
         except ImportError as e2:
             raise ImportError(
                 "no compatible bindings available:\n\n"

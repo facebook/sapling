@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import edenscm.mercurial as mercurial
 import test_hgsubversion_util
 from edenscm.hgext.hgsubversion import stupid

@@ -7,6 +7,8 @@
 
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import edenscm.hgext.hgsubversion
 import edenscm.hgext.hgsubversion.svncommands
 import edenscm.hgext.hgsubversion.util

@@ -1,17 +1,15 @@
 # no-check-code -- see T24862348
 
+from __future__ import absolute_import
+
 import errno
 import os
 import sys
 import traceback
 
-import svnexternals
-import svnmeta
-import svnrepo
-import svnwrap
-import util
-import verify
 from edenscm.mercurial import commands, error, hg, node, progress, util as hgutil
+
+from . import svnexternals, svnmeta, svnrepo, svnwrap, util, verify
 
 
 def updatemeta(ui, repo, args, **opts):
