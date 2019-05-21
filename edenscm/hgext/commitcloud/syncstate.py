@@ -38,6 +38,7 @@ class SyncState(object):
         repo.svfs.tryunlink(filename)
 
     def __init__(self, repo, workspacename):
+        self.workspacename = workspacename
         self.filename = self._filename(workspacename)
         self.repo = repo
         self.prevstate = None
@@ -97,6 +98,16 @@ class SyncState(object):
         self.omittedheads = newomittedheads
         self.omittedbookmarks = newomittedbookmarks
         self.maxage = newmaxage
+        self.repo.ui.log(
+            "commitcloud_sync",
+            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted)\n",
+            self.workspacename,
+            newversion,
+            len(newheads),
+            len(newomittedheads),
+            len(newbookmarks),
+            len(newomittedbookmarks),
+        )
 
     def oscillating(self, newheads, newbookmarks):
         """detect oscillating workspaces
