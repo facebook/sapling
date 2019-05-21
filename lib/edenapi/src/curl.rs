@@ -247,8 +247,19 @@ impl EdenApiCurlClient {
         let start = Instant::now();
 
         driver.perform(|res| {
-            let easy = res?;
+            let mut easy = res?;
+            let code = easy.response_code()?;
             let data = easy.get_ref().data();
+
+            if code >= 400 {
+                let msg = String::from_utf8_lossy(data);
+                bail!(
+                    "Received HTTP status code {} with response: {:?}",
+                    code,
+                    msg
+                );
+            }
+
             let response = serde_cbor::from_slice::<T>(data)?;
             response_cb(response)
         })?;
