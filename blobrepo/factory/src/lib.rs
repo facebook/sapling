@@ -22,7 +22,9 @@ use blobstore::{Blobstore, DisabledBlob};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
-use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, new_memcache_blobstore, MemcacheOps};
+use cacheblob::{
+    dummy::DummyLease, new_cachelib_blobstore_no_lease, new_memcache_blobstore, MemcacheOps,
+};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
@@ -158,21 +160,25 @@ fn make_blobstore(
             blobstores,
         } => {
             let queue = if dbconfig.is_local() {
-                dbconfig.get_local_address()
+                dbconfig
+                    .get_local_address()
                     .ok_or_else(|| err_msg("Local db path is not specified"))
-                    .and_then(|path| Ok(Arc::new(SqlBlobstoreSyncQueue::with_sqlite_path(path.join("blobstore_sync_queue"))?)))
+                    .and_then(|path| {
+                        Ok(Arc::new(SqlBlobstoreSyncQueue::with_sqlite_path(
+                            path.join("blobstore_sync_queue"),
+                        )?))
+                    })
                     .into_future()
             } else {
-                dbconfig.get_db_address()
+                dbconfig
+                    .get_db_address()
                     .ok_or_else(|| err_msg("remote db address is not specified"))
                     .and_then(move |dbaddr| {
                         let sync_queue = match myrouter_port {
                             Some(port) => {
                                 Arc::new(SqlBlobstoreSyncQueue::with_myrouter(dbaddr, port))
                             }
-                            None => {
-                                Arc::new(SqlBlobstoreSyncQueue::with_raw_xdb_tier(dbaddr)?)
-                            }
+                            None => Arc::new(SqlBlobstoreSyncQueue::with_raw_xdb_tier(dbaddr)?),
                         };
                         Ok(sync_queue)
                     })
@@ -343,7 +349,11 @@ fn new_remote(
     let presence_pool = Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
         ErrorKind::MissingCachePool("blobstore-presence".to_string()),
     ))?);
-    let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
+    let blobstore = Arc::new(new_cachelib_blobstore_no_lease(
+        blobstore,
+        blob_pool,
+        presence_pool,
+    ));
 
     let filenodes = new_filenodes(&db_address, sharded_filenodes, myrouter_port)?;
 
