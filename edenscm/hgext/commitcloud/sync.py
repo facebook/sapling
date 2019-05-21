@@ -465,6 +465,8 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
                             % (cloudnode, name)
                         )
                         omittedbookmarks.add(name)
+                        if name in localbookmarks:
+                            changes.append((name, None))
                 else:
                     # The bookmarks has been deleted in the cloud.
                     if localnode is not None and localnode != lastcloudnode:

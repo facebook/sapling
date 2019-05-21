@@ -518,7 +518,7 @@ Do a sync in the new client - the bookmark is left where it was
   |
   o  6: d16408588b2d draft 'oldstack-feb4'
   |
-  o  5: 1f9ebd6d1390 draft 'oldstack-feb1' oldbook
+  o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
   |
   | o  4: 46f8775ee5d4 draft 'newstack-feb28'
   | |
@@ -829,7 +829,7 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   $ tglogp
   o  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
   |
-  | x  9: 2b8dce7bd745 draft 'oldstack-mar4' midbook
+  | x  9: 2b8dce7bd745 draft 'oldstack-mar4'
   |/
   o  8: d16408588b2d draft 'oldstack-feb4'
   |
@@ -837,16 +837,14 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   |
   @  0: df4f53cec30a public 'base'
   
-BUG! It didn't omit it, but rather left it where it was.
-
   $ cd ../client1
   $ hg cloud sync -q
   $ tglogp
-  o  11: f770b7f72fa5 public 'public1'
+  o  11: f770b7f72fa5 public 'public1' midbook
   |
   | @  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
   | |
-  | | x  9: 2b8dce7bd745 draft 'oldstack-mar4' midbook
+  | | x  9: 2b8dce7bd745 draft 'oldstack-mar4'
   | |/
   | o  2: d16408588b2d draft 'oldstack-feb4'
   | |
@@ -854,4 +852,3 @@ BUG! It didn't omit it, but rather left it where it was.
   |/
   o  0: df4f53cec30a public 'base'
   
-BUG!  The bookmark moved back.

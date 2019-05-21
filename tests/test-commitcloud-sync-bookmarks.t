@@ -126,23 +126,16 @@ Rebasing the bookmark will make the draft commit disappear.
   |
   @  0: df4f53cec30a public 'base'
   
-Sync in client2.   This will fail because we don't have the landed commit, so
-we will need to pull.
+Sync in client2.   This will omit the bookmark because we don't have the landed commit.
 
   $ cd ../client2
   $ hg cloud sync -q
   67d363c9001e1d7227625f0fa5004aca4572d214 not found, omitting foo bookmark
-  abort: commitcloud: failed to synchronize commits: 'oscillating commit cloud workspace detected.
-  check for commits that are visible in one repo but hidden in another,
-  and hide or unhide those commits in all places.'
-  (please retry 'hg cloud sync')
-  (please contact the Source Control Team if this error persists)
-  [255]
   $ tglogp
-  x  1: 00422fad0026 draft 'draft-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  0: df4f53cec30a public 'base'
   
+Pull so that we have the public commit and sync again.
+
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes
