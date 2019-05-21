@@ -159,10 +159,6 @@ impl MutableDeltaStore for IndexedLogDataStore {
         self.log.flush()?;
         Ok(None)
     }
-
-    fn close(mut self) -> Fallible<Option<PathBuf>> {
-        self.flush()
-    }
 }
 
 impl LocalStore for IndexedLogDataStore {
@@ -216,8 +212,8 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogDataStore::new(&tempdir).unwrap();
-        log.close().unwrap();
+        let mut log = IndexedLogDataStore::new(&tempdir).unwrap();
+        log.flush().unwrap();
     }
 
     #[test]
@@ -233,7 +229,7 @@ mod tests {
         let metadata = Default::default();
 
         log.add(&delta, &metadata).unwrap();
-        log.close().unwrap();
+        log.flush().unwrap();
     }
 
     #[test]
@@ -249,7 +245,7 @@ mod tests {
         let metadata = Default::default();
 
         log.add(&delta, &metadata).unwrap();
-        log.close().unwrap();
+        log.flush().unwrap();
 
         let log = IndexedLogDataStore::new(&tempdir).unwrap();
         let read_delta = log.get_delta(&delta.key).unwrap();

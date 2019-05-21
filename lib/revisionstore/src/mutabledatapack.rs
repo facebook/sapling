@@ -47,8 +47,8 @@ impl MutableDataPackInner {
     /// Creates a new MutableDataPack for producing datapack files.
     ///
     /// The data is written to a temporary file, and renamed to the final location
-    /// when close() is called, at which point the MutableDataPack is consumed. If
-    /// close() is not called, the temporary file is cleaned up when the object is
+    /// when flush() is called, at which point the MutableDataPack is consumed. If
+    /// flush() is not called, the temporary file is cleaned up when the object is
     /// release.
     pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Fallible<Self> {
         let dir = dir.as_ref();
@@ -165,10 +165,6 @@ impl MutableDeltaStore for MutableDataPack {
         self.inner.add(delta, metadata)
     }
 
-    fn close(self) -> Fallible<Option<PathBuf>> {
-        self.close_pack().map(|path| Some(path))
-    }
-
     fn flush(&mut self) -> Fallible<Option<PathBuf>> {
         let new_inner = MutableDataPackInner::new(&self.inner.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut self.inner, new_inner);
@@ -274,7 +270,7 @@ mod tests {
             key: Key::new(RepoPathBuf::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).expect("add");
-        let datapackbase = mutdatapack.close().expect("close").unwrap();
+        let datapackbase = mutdatapack.flush().expect("flush").unwrap();
         let datapackpath = datapackbase.with_extension("datapack");
         let dataindexpath = datapackbase.with_extension("dataidx");
 
@@ -397,8 +393,9 @@ mod tests {
     fn test_empty() {
         let tempdir = tempdir().unwrap();
 
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
-        mutdatapack.close().unwrap();
+        let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        mutdatapack.flush().unwrap();
+        drop(mutdatapack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }
 }

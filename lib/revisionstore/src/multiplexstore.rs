@@ -58,13 +58,6 @@ impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
 
         Ok(None)
     }
-
-    fn close(self) -> Fallible<Option<PathBuf>> {
-        // close() cannot be implemented as the concrete types of the stores aren't known
-        // statically. For now, the user of this MultiplexDeltaStore would have to manually close
-        // all of the stores.
-        unimplemented!()
-    }
 }
 
 impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
@@ -127,7 +120,7 @@ mod tests {
         drop(multiplex);
         let read_delta = log.get_delta(&delta.key)?;
         assert_eq!(delta, read_delta);
-        log.close()?;
+        log.flush()?;
         Ok(())
     }
 
@@ -156,8 +149,8 @@ mod tests {
         let read_delta = pack.get_delta(&delta.key)?;
         assert_eq!(delta, read_delta);
 
-        log.close()?;
-        pack.close()?;
+        log.flush()?;
+        pack.flush()?;
         Ok(())
     }
 
@@ -180,7 +173,7 @@ mod tests {
         let read_node = pack.get_node_info(&k)?;
         assert_eq!(nodeinfo, read_node);
 
-        pack.close()?;
+        pack.flush()?;
         Ok(())
     }
 
@@ -208,8 +201,8 @@ mod tests {
         let read_node = pack2.get_node_info(&k)?;
         assert_eq!(nodeinfo, read_node);
 
-        pack1.close()?;
-        pack2.close()?;
+        pack1.flush()?;
+        pack2.flush()?;
         Ok(())
     }
 }
