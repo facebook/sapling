@@ -3,7 +3,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{collections::HashMap, ops::Deref, path::PathBuf};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+    path::PathBuf,
+};
 
 use failure::Fallible;
 
@@ -21,6 +25,9 @@ pub trait HistoryStore: LocalStore {
 pub trait MutableHistoryStore {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()>;
     fn close(self) -> Fallible<Option<PathBuf>>;
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        unimplemented!()
+    }
 
     fn add_entry(&mut self, entry: &HistoryEntry) -> Fallible<()> {
         self.add(&entry.key, &entry.nodeinfo)
@@ -34,5 +41,19 @@ impl<T: HistoryStore, U: Deref<Target = T>> HistoryStore for U {
     }
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         T::get_node_info(self, key)
+    }
+}
+
+impl<T: MutableHistoryStore + ?Sized, U: DerefMut<Target = T>> MutableHistoryStore for U {
+    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        T::add(self, key, info)
+    }
+
+    fn close(self) -> Fallible<Option<PathBuf>> {
+        unimplemented!()
+    }
+
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        T::flush(self)
     }
 }
