@@ -135,10 +135,6 @@ impl MutableHistoryStore for MutableHistoryPack {
         Ok(())
     }
 
-    fn close(self) -> Fallible<Option<PathBuf>> {
-        self.close_pack().map(|path| Some(path))
-    }
-
     fn flush(&mut self) -> Fallible<Option<PathBuf>> {
         let new_inner = MutableHistoryPackInner::new(&self.inner.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut self.inner, new_inner);
@@ -392,7 +388,7 @@ mod tests {
         for (key, info) in entries.iter() {
             muthistorypack.add(&key, &info).unwrap();
         }
-        let path = muthistorypack.close().unwrap().unwrap();
+        let path = muthistorypack.flush().unwrap().unwrap();
         let pack = HistoryPack::new(&path).unwrap();
 
         let actual_order = pack.iter().map(|x| x.unwrap()).collect::<Vec<Key>>();
@@ -414,9 +410,10 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = tempdir().unwrap();
-        let muthistorypack =
+        let mut muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-        muthistorypack.close().unwrap();
+        muthistorypack.flush().unwrap();
+        drop(muthistorypack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }
 

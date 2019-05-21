@@ -24,7 +24,6 @@ pub trait HistoryStore: LocalStore {
 
 pub trait MutableHistoryStore {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()>;
-    fn close(self) -> Fallible<Option<PathBuf>>;
     fn flush(&mut self) -> Fallible<Option<PathBuf>>;
 
     fn add_entry(&mut self, entry: &HistoryEntry) -> Fallible<()> {
@@ -45,10 +44,6 @@ impl<T: HistoryStore, U: Deref<Target = T>> HistoryStore for U {
 impl<T: MutableHistoryStore + ?Sized, U: DerefMut<Target = T>> MutableHistoryStore for U {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         T::add(self, key, info)
-    }
-
-    fn close(self) -> Fallible<Option<PathBuf>> {
-        unimplemented!()
     }
 
     fn flush(&mut self) -> Fallible<Option<PathBuf>> {

@@ -76,13 +76,6 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
 
         Ok(None)
     }
-
-    fn close(self) -> Fallible<Option<PathBuf>> {
-        // close() cannot be implemented as the concrete types of the stores aren't known
-        // statically. For now, the user of this MultiplexHistoryStore would have to manually close
-        // all of the stores.
-        unimplemented!()
-    }
 }
 
 #[cfg(test)]

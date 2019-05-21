@@ -47,7 +47,7 @@ mod tests {
             mutpack.add(key.clone(), info.clone()).unwrap();
         }
 
-        let path = mutpack.close().unwrap().unwrap();
+        let path = mutpack.flush().unwrap().unwrap();
         AsyncHistoryPack::new(path)
     }
 
