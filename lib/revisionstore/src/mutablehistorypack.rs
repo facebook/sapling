@@ -7,6 +7,7 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
     io::Write,
     iter::FromIterator,
+    mem::replace,
     path::{Path, PathBuf},
 };
 
@@ -31,13 +32,17 @@ use crate::packwriter::PackWriter;
 #[fail(display = "Mutable History Pack Error: {:?}", _0)]
 struct MutableHistoryPackError(String);
 
-pub struct MutableHistoryPack {
+struct MutableHistoryPackInner {
     version: HistoryPackVersion,
     dir: PathBuf,
     mem_index: HashMap<RepoPathBuf, HashMap<Key, NodeInfo>>,
 }
 
-impl MutableHistoryPack {
+pub struct MutableHistoryPack {
+    inner: MutableHistoryPackInner,
+}
+
+impl MutableHistoryPackInner {
     pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Fallible<Self> {
         let dir = dir.as_ref();
         if !dir.is_dir() {
@@ -48,7 +53,7 @@ impl MutableHistoryPack {
             .into());
         }
 
-        Ok(MutableHistoryPack {
+        Ok(Self {
             version,
             dir: dir.to_path_buf(),
             mem_index: HashMap::new(),
@@ -107,6 +112,14 @@ impl MutableHistoryPack {
     }
 }
 
+impl MutableHistoryPack {
+    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Fallible<Self> {
+        Ok(Self {
+            inner: MutableHistoryPackInner::new(dir, version)?,
+        })
+    }
+}
+
 impl MutableHistoryStore for MutableHistoryPack {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         // Ideally we could use something like:
@@ -114,6 +127,7 @@ impl MutableHistoryStore for MutableHistoryPack {
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
         // key.name().clone() though. So we have to do it the long way to avoid the allocation.
         let entries = self
+            .inner
             .mem_index
             .entry(key.path.clone())
             .or_insert_with(|| HashMap::new());
@@ -124,9 +138,17 @@ impl MutableHistoryStore for MutableHistoryPack {
     fn close(self) -> Fallible<Option<PathBuf>> {
         self.close_pack().map(|path| Some(path))
     }
+
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        let new_inner = MutableHistoryPackInner::new(&self.inner.dir, HistoryPackVersion::One)?;
+        let old_inner = replace(&mut self.inner, new_inner);
+
+        let path = old_inner.close_pack()?;
+        Ok(Some(path))
+    }
 }
 
-impl MutablePack for MutableHistoryPack {
+impl MutablePack for MutableHistoryPackInner {
     fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
         if self.mem_index.is_empty() {
             return Err(EmptyMutablePack().into());
@@ -185,6 +207,16 @@ impl MutablePack for MutableHistoryPack {
 
     fn extension(&self) -> &'static str {
         "hist"
+    }
+}
+
+impl MutablePack for MutableHistoryPack {
+    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+        self.inner.build_files()
+    }
+
+    fn extension(&self) -> &'static str {
+        self.inner.extension()
     }
 }
 
@@ -265,6 +297,7 @@ impl HistoryStore for MutableHistoryPack {
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         Ok(self
+            .inner
             .mem_index
             .get(&key.path)
             .ok_or(MutableHistoryPackError(format!(
@@ -284,7 +317,7 @@ impl LocalStore for MutableHistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
-            .filter(|k| match self.mem_index.get(&k.path) {
+            .filter(|k| match self.inner.mem_index.get(&k.path) {
                 Some(e) => e.get(k).is_none(),
                 None => true,
             })
