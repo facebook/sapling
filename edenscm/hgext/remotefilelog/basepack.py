@@ -524,6 +524,9 @@ class mutablebasepack(versionmixin):
         opener.createmode = 0o444
         self.opener = opener
 
+        self._ui = ui
+        self._packdir = packdir
+
         self.entries = {}
 
         shallowutil.mkstickygroupdir(ui, packdir)
@@ -548,6 +551,11 @@ class mutablebasepack(versionmixin):
         # a flexible key/value header, delta algorithm, fanout size, etc)
         versionbuf = struct.pack("!B", self.VERSION)  # unsigned 1 byte int
         self.writeraw(versionbuf)
+
+    def flush(self):
+        path = self.close()
+        self.__init__(self._ui, self._packdir)
+        return path
 
     def __enter__(self):
         return self
