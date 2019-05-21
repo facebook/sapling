@@ -82,8 +82,8 @@ impl AsyncMutableHistoryPack {
             move || {
                 blocking(|| {
                     let inner = self.inner.take();
-                    let inner = inner.expect("The datapack is closed");
-                    inner.data.close()
+                    let mut inner = inner.expect("The historypack is closed");
+                    inner.data.flush()
                 })
             }
         })
