@@ -11,7 +11,7 @@ use failure::Error;
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    DataPack, HistoryPack, IndexedLogDataStore,
+    DataPack, HistoryPack, IndexedLogDataStore, MutableDeltaStore,
 };
 
 use crate::revisionstore::datastorepyext::DataStorePyExt;

@@ -145,11 +145,6 @@ impl IndexedLogDataStore {
             .open(path)?;
         Ok(IndexedLogDataStore { log })
     }
-
-    pub fn flush(&mut self) -> Fallible<()> {
-        self.log.flush()?;
-        Ok(())
-    }
 }
 
 impl MutableDeltaStore for IndexedLogDataStore {
@@ -160,8 +155,13 @@ impl MutableDeltaStore for IndexedLogDataStore {
         entry.write_to_log(&mut self.log)
     }
 
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        self.log.flush()?;
+        Ok(None)
+    }
+
     fn close(mut self) -> Fallible<Option<PathBuf>> {
-        self.flush().map(|()| None)
+        self.flush()
     }
 }
 
