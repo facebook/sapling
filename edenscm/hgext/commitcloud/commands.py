@@ -670,10 +670,10 @@ def cloudrecover(ui, repo, **opts):
     ]
     + remoteopts,
 )
-def isbackedup(ui, repo, dest=None, **opts):
+def cloudcheck(ui, repo, dest=None, **opts):
     """check if commits have been backed up
 
-    If no revision are specified then it checks working copy parent
+    If no revision are specified then it checks working copy parent.
     """
 
     revs = opts.get("rev")
@@ -788,3 +788,42 @@ def waitbackup(ui, repo, timeout):
         if e.errno == errno.ETIMEDOUT:
             raise error.Abort(_("timeout while waiting for backup"))
         raise
+
+
+@command(
+    "pushbackup",
+    [
+        ("r", "rev", [], _("revisions to back up")),
+        ("", "background", None, "run backup in background"),
+    ]
+    + remoteopts,
+    _("[-r REV...]"),
+)
+def pushbackup(ui, repo, *revs, **opts):
+    """back up commits to commit cloud (DEPRECATED)
+
+    Commits that have already been backed up will be skipped.
+
+    If no revision is specified, backs up all visible commits.
+
+    'hg pushbackup' is deprecated in favour of 'hg cloud backup'.
+    """
+    return cloudbackup(ui, repo, *revs, **opts)
+
+
+@command(
+    "isbackedup",
+    [
+        ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
+        ("", "remote", None, _("check on the remote server")),
+    ]
+    + remoteopts,
+)
+def isbackedup(ui, repo, dest=None, **opts):
+    """check if commits have been backed up (DEPRECATED)
+
+    If no revision are specified then it checks working copy parent.
+
+    'hg isbackedup' is deprecated in favour of 'hg cloud check'.
+    """
+    return cloudcheck(ui, repo, dest, **opts)
