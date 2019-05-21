@@ -14,7 +14,7 @@ use failure::{bail, ensure, format_err, Fallible};
 
 use indexedlog::{
     log::IndexOutput,
-    rotate::{LogRotate, OpenOptions},
+    rotate::{OpenOptions, RotateLog},
 };
 use lz4_pyframe::{compress, decompress};
 use types::{Key, Node};
@@ -27,7 +27,7 @@ use crate::{
 };
 
 pub struct IndexedLogDataStore {
-    log: LogRotate,
+    log: RotateLog,
 }
 
 struct Entry {
@@ -62,7 +62,7 @@ impl Entry {
     /// - Flag: 1 byte,
     /// - Len: 2 unsigned bytes, big-endian
     /// - Value: <Len> bytes, big-endian
-    pub fn from_log(key: &Key, log: &LogRotate) -> Fallible<Self> {
+    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Self> {
         let mut log_entry = log.lookup(0, key.node.as_ref())?;
         let buf = log_entry
             .nth(0)
@@ -90,7 +90,7 @@ impl Entry {
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
-    pub fn write_to_log(self, log: &mut LogRotate) -> Fallible<()> {
+    pub fn write_to_log(self, log: &mut RotateLog) -> Fallible<()> {
         let mut buf = Vec::new();
         buf.write_all(self.key.node.as_ref())?;
         let path_slice = self.key.path.as_byte_slice();

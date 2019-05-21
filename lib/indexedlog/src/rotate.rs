@@ -18,20 +18,20 @@ use std::path::{Path, PathBuf};
 /// exceed size or count limits.
 ///
 /// Writes go to the active [`Log`]. Reads scan through all [`Log`]s.
-pub struct LogRotate {
+pub struct RotateLog {
     dir: PathBuf,
     open_options: OpenOptions,
     logs: Vec<Log>,
     latest: u8,
 }
 
-// On disk, a LogRotate is a directory containing:
+// On disk, a RotateLog is a directory containing:
 // - 0/, 1/, 2/, 3/, ...: one Log per directory.
 // - latest: a file, the name of the directory that is considered "active".
 
 const LATEST_FILE: &str = "latest";
 
-/// Options used to configure how a [`LogRotate`] is opened.
+/// Options used to configure how a [`RotateLog`] is opened.
 #[derive(Clone)]
 pub struct OpenOptions {
     max_bytes_per_log: u64,
@@ -82,7 +82,7 @@ impl OpenOptions {
         self
     }
 
-    /// Set whether create the [`LogRotate`] structure if it does not exist.
+    /// Set whether create the [`RotateLog`] structure if it does not exist.
     pub fn create(mut self, create: bool) -> Self {
         self.log_open_options = self.log_open_options.create(create);
         self
@@ -104,7 +104,7 @@ impl OpenOptions {
 
     /// Sets the flush filter function.
     ///
-    /// The function will be called at [`LogRotate::sync`] time, if there are
+    /// The function will be called at [`RotateLog::sync`] time, if there are
     /// changes since `open` (or last `sync`) time.
     ///
     /// The filter function can be used to avoid writing content that already
@@ -114,8 +114,8 @@ impl OpenOptions {
         self
     }
 
-    /// Open [`LogRotate`] at given location.
-    pub fn open(self, dir: impl AsRef<Path>) -> Fallible<LogRotate> {
+    /// Open [`RotateLog`] at given location.
+    pub fn open(self, dir: impl AsRef<Path>) -> Fallible<RotateLog> {
         let dir = dir.as_ref();
 
         let latest_path = dir.join(LATEST_FILE);
@@ -135,7 +135,7 @@ impl OpenOptions {
             }
         };
 
-        Ok(LogRotate {
+        Ok(RotateLog {
             dir: dir.into(),
             open_options: self,
             logs,
@@ -144,7 +144,7 @@ impl OpenOptions {
     }
 }
 
-impl LogRotate {
+impl RotateLog {
     /// Append data to the writable [`Log`].
     pub fn append(&mut self, data: impl AsRef<[u8]>) -> Fallible<()> {
         self.writable_log().append(data)
@@ -152,9 +152,9 @@ impl LogRotate {
 
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` stored in [`OpenOptions`].
-    pub fn lookup(&self, index_id: usize, key: impl Into<Bytes>) -> Fallible<LogRotateLookupIter> {
+    pub fn lookup(&self, index_id: usize, key: impl Into<Bytes>) -> Fallible<RotateLogLookupIter> {
         let key = key.into();
-        Ok(LogRotateLookupIter {
+        Ok(RotateLogLookupIter {
             inner_iter: self.logs[0].lookup(index_id, &key)?,
             end: false,
             log_rotate: self,
@@ -167,7 +167,7 @@ impl LogRotate {
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` stored in [`OpenOptions`].
     ///
-    /// Unlike [`LogRotate::lookup`], this function only checks the "latest"
+    /// Unlike [`RotateLog::lookup`], this function only checks the "latest"
     /// (i.e. "writable") [`Log`] without checking others. It is useful to make
     /// sure certain contents depending on other entries are inserted into
     /// the same [`Log`].
@@ -204,8 +204,8 @@ impl LogRotate {
         if latest != self.latest {
             // Latest changed. Re-load and write to the real latest Log.
             //
-            // This is needed because LogRotate assumes non-latest logs
-            // are read-only. Other processes using LogRotate won't reload
+            // This is needed because RotateLog assumes non-latest logs
+            // are read-only. Other processes using RotateLog won't reload
             // non-latest logs automatically.
 
             // PERF(minor): This can be smarter by avoiding reloading some logs.
@@ -249,7 +249,7 @@ impl LogRotate {
         Ok(self.latest)
     }
 
-    /// Renamed. Use [`LogRotate::sync`] instead.
+    /// Renamed. Use [`RotateLog::sync`] instead.
     pub fn flush(&mut self) -> Fallible<u8> {
         self.sync()
     }
@@ -268,7 +268,7 @@ impl LogRotate {
                             {
                                 // Errors are not fatal. On Windows, this can fail if
                                 // other processes have files in entry.path() mmap-ed.
-                                // Newly opened or flushed LogRotate will unmap files.
+                                // Newly opened or flushed RotateLog will unmap files.
                                 // New rotation would trigger remove_dir_all to try
                                 // remove old logs again.
                                 let _ = fs::remove_dir_all(entry.path());
@@ -286,17 +286,17 @@ impl LogRotate {
     }
 }
 
-/// Iterator over [`LogRotate`] entries selected by an index lookup.
-pub struct LogRotateLookupIter<'a> {
+/// Iterator over [`RotateLog`] entries selected by an index lookup.
+pub struct RotateLogLookupIter<'a> {
     inner_iter: log::LogLookupIter<'a>,
     end: bool,
-    log_rotate: &'a LogRotate,
+    log_rotate: &'a RotateLog,
     log_index: usize,
     index_id: usize,
     key: Bytes,
 }
 
-impl<'a> Iterator for LogRotateLookupIter<'a> {
+impl<'a> Iterator for RotateLogLookupIter<'a> {
     type Item = Fallible<&'a [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -398,7 +398,7 @@ mod tests {
     }
 
     // lookup via index 0
-    fn lookup<'a>(rotate: &'a LogRotate, key: &[u8]) -> Vec<&'a [u8]> {
+    fn lookup<'a>(rotate: &'a RotateLog, key: &[u8]) -> Vec<&'a [u8]> {
         rotate
             .lookup(0, key)
             .unwrap()
@@ -595,7 +595,7 @@ mod tests {
         rotate2.append(vec![b'a'; 100]).unwrap(); // rotate
         assert_eq!(rotate2.sync().unwrap(), 1);
 
-        assert_eq!(rotate1.sync().unwrap(), 1); // trigger flush filter by LogRotate
+        assert_eq!(rotate1.sync().unwrap(), 1); // trigger flush filter by RotateLog
         assert_eq!(read_log("1"), vec![b"xx", b"aa"]);
     }
 
