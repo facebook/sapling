@@ -25,9 +25,7 @@ pub trait HistoryStore: LocalStore {
 pub trait MutableHistoryStore {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()>;
     fn close(self) -> Fallible<Option<PathBuf>>;
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        unimplemented!()
-    }
+    fn flush(&mut self) -> Fallible<Option<PathBuf>>;
 
     fn add_entry(&mut self, entry: &HistoryEntry) -> Fallible<()> {
         self.add(&entry.key, &entry.nodeinfo)
