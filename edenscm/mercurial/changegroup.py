@@ -446,12 +446,6 @@ class cg1unpacker(object):
 
                     repo.hook("changegroup", **pycompat.strkwargs(hookargs))
 
-                    for n in added:
-                        args = hookargs.copy()
-                        args["node"] = hex(n)
-                        del args["node_last"]
-                        repo.hook("incoming", **pycompat.strkwargs(args))
-
                     newheads = [h for h in repo.heads() if h not in oldheads]
                     repo.ui.log(
                         "incoming",

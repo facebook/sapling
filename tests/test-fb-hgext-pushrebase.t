@@ -595,7 +595,6 @@ Test that hooks are fired with the correct variables
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
   > changegroup = python "$RUNTESTDIR/printenv.py" changegroup
-  > incoming = python "$RUNTESTDIR/printenv.py" incoming
   > outgoing = python "$RUNTESTDIR/printenv.py" outgoing
   > prechangegroup = python "$RUNTESTDIR/printenv.py" prechangegroup
   > preoutgoing = python "$RUNTESTDIR/printenv.py" preoutgoing
@@ -645,9 +644,6 @@ Test that hooks are fired with the correct variables
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)
   changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
-  incoming hook: HG_BUNDLE2=1 HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/hookserver
-  incoming hook: HG_BUNDLE2=1 HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=11be4ca7f3f4a4e66fe9158d0d2b8defc7c32c7c HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/hookserver
-  incoming hook: HG_BUNDLE2=1 HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/hookserver
   updating bookmark master
 
 

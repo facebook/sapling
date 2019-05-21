@@ -1472,10 +1472,6 @@ def addfinalhooks(op, tr, hookargs, added):
         args = hookargs.copy()
         op.repo.hook("changegroup", **hookargs)
         args.pop("node_last")
-        for n in added:
-            args = hookargs.copy()
-            args["node"] = hex(n)
-            op.repo.hook("incoming", **args)
 
     tr.addpostclose("serverrebase-cg-hooks", lambda tr: op.repo._afterlock(runhooks))
 
