@@ -41,9 +41,7 @@ pub trait DataStore: LocalStore {
 pub trait MutableDeltaStore {
     fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
     fn close(self) -> Fallible<Option<PathBuf>>;
-    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
-        unimplemented!()
-    }
+    fn flush(&mut self) -> Fallible<Option<PathBuf>>;
 }
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
