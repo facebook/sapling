@@ -9,6 +9,7 @@
 
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import List, Set
@@ -75,13 +76,19 @@ def check_shared_path(tracker: ProblemTracker, mount_path: Path) -> None:
         tracker.add_problem(problem)
 
 
+def fstype_for_path(path: str) -> str:
+    if sys.platform == "linux2":
+        try:
+            args = ["stat", "-fc", "%T", "--", path]
+            return subprocess.check_output(args).decode("ascii").strip()
+        except subprocess.CalledProcessError:
+            return "unknown"
+
+    return "unknown"
+
+
 def is_nfs_mounted(path: str) -> bool:
-    args = ["stat", "-fc", "%T", "--", path]
-    try:
-        out = subprocess.check_output(args)
-        return out == b"nfs\n"
-    except subprocess.CalledProcessError:
-        return False
+    return fstype_for_path(path) == "nfs"
 
 
 def get_mountpt(path) -> str:

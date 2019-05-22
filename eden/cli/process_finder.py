@@ -10,6 +10,7 @@ import abc
 import logging
 import os
 import subprocess
+import sys
 import typing
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
@@ -33,6 +34,11 @@ class ProcessFinder(abc.ABC):
     @abc.abstractmethod
     def find_rogue_pids(self) -> List[ProcessID]:
         """Returns a list of rogue pids for edenfs processes"""
+
+
+class NopProcessFinder(ProcessFinder):
+    def find_rogue_pids(self) -> List[ProcessID]:
+        return []
 
 
 class LinuxProcessFinder(ProcessFinder):
@@ -155,3 +161,9 @@ class LinuxProcessFinder(ProcessFinder):
             for info in info_list:
                 if info.pid != lock_pid:
                     yield info
+
+
+def new():
+    if sys.platform == "linux2":
+        return LinuxProcessFinder()
+    return NopProcessFinder()

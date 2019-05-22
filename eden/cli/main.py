@@ -515,9 +515,9 @@ class DoctorCmd(Subcmd):
         return doctor_mod.cure_what_ails_you(
             instance,
             args.dry_run,
-            mount_table=mtab.LinuxMountTable(),
+            mount_table=mtab.new(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=process_finder.new(),
         )
 
 

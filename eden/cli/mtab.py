@@ -12,6 +12,7 @@ import logging
 import os
 import random
 import subprocess
+import sys
 from typing import List, NamedTuple, Union
 
 
@@ -39,16 +40,27 @@ class MountTable(abc.ABC):
     def unmount_force(self, mount_point: bytes) -> bool:
         "Corresponds to `umount -f` on Linux."
 
-    @abc.abstractmethod
     def lstat(self, path: Union[bytes, str]) -> MTStat:
         "Returns a subset of the results of os.lstat."
+        st = os.lstat(path)
+        return MTStat(st_uid=st.st_uid, st_dev=st.st_dev, st_mode=st.st_mode)
 
-    @abc.abstractmethod
     def check_path_access(self, path: bytes) -> None:
         """\
         Attempts to stat the given directory, bypassing the kernel's caches.
         Raises OSError upon failure.
         """
+        # Even if the FUSE process is shut down, the lstat call will succeed if
+        # the stat result is cached. Append a random string to avoid that. In a
+        # better world, this code would bypass the cache by opening a handle
+        # with O_DIRECT, but Eden does not support O_DIRECT.
+
+        try:
+            os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                return
+            raise
 
     @abc.abstractmethod
     def create_bind_mount(self, source_path, dest_path) -> bool:
@@ -87,24 +99,27 @@ class LinuxMountTable(MountTable):
         # MNT_FORCE
         return 0 == subprocess.call(["sudo", "umount", "-f", mount_point])
 
-    def lstat(self, path: Union[bytes, str]) -> MTStat:
-        st = os.lstat(path)
-        return MTStat(st_uid=st.st_uid, st_dev=st.st_dev, st_mode=st.st_mode)
-
-    def check_path_access(self, path: bytes) -> None:
-        # Even if the FUSE process is shut down, the lstat call will succeed if
-        # the stat result is cached. Append a random string to avoid that. In a
-        # better world, this code would bypass the cache by opening a handle
-        # with O_DIRECT, but Eden does not support O_DIRECT.
-
-        try:
-            os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                return
-            raise
-
     def create_bind_mount(self, source_path, dest_path) -> bool:
         return 0 == subprocess.check_call(
             ["sudo", "mount", "-o", "bind", source_path, dest_path]
         )
+
+
+class NopMountTable(MountTable):
+    def read(self) -> List[MountInfo]:
+        return []
+
+    def unmount_lazy(self, mount_point: bytes) -> bool:
+        return False
+
+    def unmount_force(self, mount_point: bytes) -> bool:
+        return False
+
+    def create_bind_mount(self, source_path, dest_path) -> bool:
+        return False
+
+
+def new() -> MountTable:
+    if sys.platform == "linux2":
+        return LinuxMountTable()
+    return NopMountTable()

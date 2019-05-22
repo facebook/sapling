@@ -781,7 +781,11 @@ Do you want to run `eden mount %s` instead?"""
 
     def get_server_build_info(self) -> Dict[str, str]:
         with self.get_thrift_client() as client:
-            return client.getRegexExportedValues("^build_.*")
+            try:
+                return client.getRegexExportedValues("^build_.*")
+            except AttributeError:
+                # on macOS currently, we don't know about getRegexExportedValues
+                return {}
 
     def get_uptime(self) -> datetime.timedelta:
         now = datetime.datetime.now()

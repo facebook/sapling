@@ -78,9 +78,9 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
         doctor_rc = doctor_mod.cure_what_ails_you(
             instance=instance,
             dry_run=dry_run,
-            mount_table=mtab.LinuxMountTable(),
+            mount_table=mtab.new(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=process_finder.new(),
             out=ui_mod.PlainOutput(doctor_output),
         )
         out.write(
