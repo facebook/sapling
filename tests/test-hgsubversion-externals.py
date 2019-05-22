@@ -18,14 +18,15 @@ class TestFetchExternals(test_hgsubversion_util.TestBase):
         f["t 2"] = "dir2 -r10 svn://foobar"
         f["t3"] = ["dir31 -r10 svn://foobar", "dir32 -r10 svn://foobar"]
 
-        refext = """[t 2]
- dir2 -r10 svn://foobar
-[t1]
- dir1 -r10 svn://foobar
-[t3]
- dir31 -r10 svn://foobar
- dir32 -r10 svn://foobar
-"""
+        refext = (
+            """[t 2]\n"""
+            """ dir2 -r10 svn://foobar\n"""
+            """[t1]\n"""
+            """ dir1 -r10 svn://foobar\n"""
+            """[t3]\n"""
+            """ dir31 -r10 svn://foobar\n"""
+            """ dir32 -r10 svn://foobar\n"""
+        )
         value = f.write()
         self.assertEqual(refext, value)
 
@@ -120,48 +121,47 @@ class TestFetchExternals(test_hgsubversion_util.TestBase):
  ^/externals/project1 deps/project1
 """
         self.assertMultiLineEqual(ref0, repo[0][".hgsvnexternals"].data())
-        ref1 = """\
-[.]
- # A comment, then an empty line, then a blank line
-
- ^/externals/project1 deps/project1
-
- -r2 ^/externals/project2@2 deps/project2
-"""
+        ref1 = (
+            """[.]\n"""
+            """ # A comment, then an empty line, then a blank line\n"""
+            """ \n"""
+            """ ^/externals/project1 deps/project1\n"""
+            """     \n"""
+            """ -r2 ^/externals/project2@2 deps/project2\n"""
+        )
         self.assertMultiLineEqual(ref1, repo[1][".hgsvnexternals"].data())
 
-        ref2 = """[.]
- -r2 ^/externals/project2@2 deps/project2
-[subdir]
- ^/externals/project1 deps/project1
-[subdir2]
- ^/externals/project1 deps/project1
-"""
+        ref2 = (
+            """[.]\n"""
+            """ -r2 ^/externals/project2@2 deps/project2\n"""
+            """[subdir]\n"""
+            """ ^/externals/project1 deps/project1\n"""
+            """[subdir2]\n"""
+            """ ^/externals/project1 deps/project1\n"""
+        )
         actual = repo[2][".hgsvnexternals"].data()
         self.assertEqual(ref2, actual)
 
-        ref3 = """[.]
- -r2 ^/externals/project2@2 deps/project2
-[subdir]
- ^/externals/project1 deps/project1
-"""
+        ref3 = (
+            """[.]\n"""
+            """ -r2 ^/externals/project2@2 deps/project2\n"""
+            """[subdir]\n"""
+            """ ^/externals/project1 deps/project1\n"""
+        )
         self.assertEqual(ref3, repo[3][".hgsvnexternals"].data())
 
-        ref4 = """[subdir]
- ^/externals/project1 deps/project1
-"""
+        ref4 = """[subdir]\n""" """ ^/externals/project1 deps/project1\n"""
         self.assertEqual(ref4, repo[4][".hgsvnexternals"].data())
 
-        ref5 = """[.]
- -r2 ^/externals/project2@2 deps/project2
-[subdir2]
- ^/externals/project1 deps/project1
-"""
+        ref5 = (
+            """[.]\n"""
+            """ -r2 ^/externals/project2@2 deps/project2\n"""
+            """[subdir2]\n"""
+            """ ^/externals/project1 deps/project1\n"""
+        )
         self.assertEqual(ref5, repo[5][".hgsvnexternals"].data())
 
-        ref6 = """[.]
- -r2 ^/externals/project2@2 deps/project2
-"""
+        ref6 = """[.]\n""" """ -r2 ^/externals/project2@2 deps/project2\n"""
         self.assertEqual(ref6, repo[6][".hgsvnexternals"].data())
 
     def test_updateexternals(self):
@@ -213,13 +213,12 @@ class TestPushExternals(test_hgsubversion_util.TestBase):
             (
                 ".hgsvnexternals",
                 ".hgsvnexternals",
-                """[dir]
- ../externals/project2 deps/project2
-[subdir1]
- ../externals/project1 deps/project1
-[subdir2]
- ../externals/project2 deps/project2
-""",
+                """[dir]\n"""
+                """ ../externals/project2 deps/project2\n"""
+                """[subdir1]\n"""
+                """ ../externals/project1 deps/project1\n"""
+                """[subdir2]\n"""
+                """ ../externals/project2 deps/project2\n""",
             ),
             ("subdir1/a", "subdir1/a", "a"),
             ("subdir2/a", "subdir2/a", "a"),
@@ -234,10 +233,9 @@ class TestPushExternals(test_hgsubversion_util.TestBase):
             (
                 ".hgsvnexternals",
                 ".hgsvnexternals",
-                """[subdir1]
- ../externals/project1 deps/project1
- ../externals/project2 deps/project2
-""",
+                """[subdir1]\n"""
+                """ ../externals/project1 deps/project1\n"""
+                """ ../externals/project2 deps/project2\n""",
             ),
             # This removal used to trigger the parent directory removal
             ("subdir1/a", None, None),
