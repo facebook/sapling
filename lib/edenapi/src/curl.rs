@@ -1,10 +1,6 @@
 // Copyright Facebook, Inc. 2019
 
-use std::{
-    cmp, fs,
-    path::PathBuf,
-    time::{Duration, Instant},
-};
+use std::{cmp, fs, path::PathBuf, time::Instant};
 
 use bytes::Bytes;
 use curl::{
@@ -267,14 +263,16 @@ impl EdenApiCurlClient {
 
         let elapsed = start.elapsed();
         let progress = driver.progress().unwrap().stats();
-        print_download_stats(progress.downloaded, elapsed);
-
-        Ok(DownloadStats {
+        let stats = DownloadStats {
             downloaded: progress.downloaded,
             uploaded: progress.uploaded,
             requests: num_requests,
             time: elapsed,
-        })
+        };
+
+        log::info!("{}", &stats);
+
+        Ok(stats)
     }
 
     fn get_data(
@@ -383,17 +381,6 @@ fn prepare_cbor_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &
     easy.http_headers(headers)?;
 
     Ok(())
-}
-
-fn print_download_stats(total_bytes: usize, elapsed: Duration) {
-    let seconds = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
-    let rate = total_bytes as f64 / 1_000_000.0 / seconds;
-    log::info!(
-        "Downloaded {} bytes in {:?} ({:.1} MB/s)",
-        total_bytes,
-        elapsed,
-        rate
-    );
 }
 
 fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> Fallible<()> {
