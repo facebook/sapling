@@ -1,8 +1,3 @@
-  $ cat >> $HGRCPATH << EOF
-  > [verify]
-  > skipmanifests=true
-  > EOF
-
 Turn manifest verification on and off:
   $ hg init repo1
   $ cd repo1

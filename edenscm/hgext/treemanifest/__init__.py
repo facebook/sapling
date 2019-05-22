@@ -397,6 +397,8 @@ def clientreposetup(repo):
         except KeyError:
             raise error.Abort(_("cannot use treemanifest without fastmanifest"))
 
+    repo.ui.setconfig("verify", "skipmanifests", "True")
+
 
 def wraprepo(repo):
     class treerepository(repo.__class__):
