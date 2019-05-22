@@ -1007,7 +1007,7 @@ convert will not retain custom metadata keys by default
   phase:       draft
   parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
   extra:       branch=default
@@ -1042,7 +1042,7 @@ Converting a specific extra works
   phase:       draft
   parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
   extra:       branch=default
@@ -1071,7 +1071,7 @@ Converting multiple extras works
   phase:       draft
   parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
   extra:       branch=default
@@ -1101,7 +1101,7 @@ convert.git.saverev can be disabled to prevent convert_revision from being writt
   phase:       draft
   parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
   extra:       branch=default
@@ -1129,7 +1129,7 @@ convert_revision from source
   phase:       draft
   parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
+  manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
   extra:       branch=default

@@ -11,7 +11,7 @@ Load commonly used test logic
      tag:         tip
      parent:      -1:0000000000000000000000000000000000000000
      parent:      -1:0000000000000000000000000000000000000000
-     manifest:    0:8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
+     manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
      files+:      alpha
@@ -52,7 +52,7 @@ get things back to hg
   |  tag:         tip
   |  parent:      0:0221c246a56712c6aa64e5ee382244d8a471b1e2
   |  parent:      -1:0000000000000000000000000000000000000000
-  |  manifest:    1:f0bd6fbafbaebe4bb59c35108428f6fce152431d
+  |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  files+:      beta
@@ -66,7 +66,7 @@ get things back to hg
   o  changeset:   0:0221c246a56712c6aa64e5ee382244d8a471b1e2
      parent:      -1:0000000000000000000000000000000000000000
      parent:      -1:0000000000000000000000000000000000000000
-     manifest:    0:8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
+     manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
      files+:      alpha

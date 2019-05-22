@@ -240,7 +240,7 @@ More complex case where part of the rebase set were already rebased
   phase:       draft
   parent:      7:02de42196ebee42ef284b6780a87cdc96e8eaab6
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    11:a91006e3a02f1edf631f7018e6e5684cf27dd905
+  manifest:    a91006e3a02f1edf631f7018e6e5684cf27dd905
   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
   date:        Sat Apr 30 15:24:48 2011 +0200
   files+:      D
@@ -263,7 +263,7 @@ More complex case where part of the rebase set were already rebased
   phase:       draft
   parent:      4:9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    15:648e8ede73ae3e497d093d3a4c8fcc2daa864f42
+  manifest:    648e8ede73ae3e497d093d3a4c8fcc2daa864f42
   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
   date:        Sat Apr 30 15:24:48 2011 +0200
   files+:      D

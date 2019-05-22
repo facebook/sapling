@@ -184,7 +184,7 @@ check histedit_source
   phase:       draft
   parent:      4:1a60820cd1f6004a362aa622ebc47d59bc48eb34
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    5:5ad3be8791f39117565557781f5464363b918a45
+  manifest:    5ad3be8791f39117565557781f5464363b918a45
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       e

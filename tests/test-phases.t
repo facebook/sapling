@@ -323,7 +323,7 @@ test that phase are displayed in log at debug level
   phase:       secret
   parent:      6:cf9fe039dfd67e829edf6522a45de057b5c86519
   parent:      4:a603bfb5a83e312131cebcd05353c217d4d21dde
-  manifest:    7:5e724ffacba267b2ab726c91fc8b650710deaaa8
+  manifest:    5e724ffacba267b2ab726c91fc8b650710deaaa8
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      C D E
@@ -336,7 +336,7 @@ test that phase are displayed in log at debug level
   phase:       draft
   parent:      1:27547f69f25460a52fff66ad004e58da7ad3fb56
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    6:ab8bfef2392903058bf4ebb9e7746e8d7026b27a
+  manifest:    ab8bfef2392903058bf4ebb9e7746e8d7026b27a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      B'
@@ -349,7 +349,7 @@ test that phase are displayed in log at debug level
   phase:       secret
   parent:      4:a603bfb5a83e312131cebcd05353c217d4d21dde
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    5:5c710aa854874fe3d5fa7192e77bdb314cc08b5a
+  manifest:    5c710aa854874fe3d5fa7192e77bdb314cc08b5a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      H
@@ -362,7 +362,7 @@ test that phase are displayed in log at debug level
   phase:       secret
   parent:      3:b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    4:7173fd1c27119750b959e3a0f47ed78abe75d6dc
+  manifest:    7173fd1c27119750b959e3a0f47ed78abe75d6dc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      E
@@ -375,7 +375,7 @@ test that phase are displayed in log at debug level
   phase:       draft
   parent:      2:f838bfaca5c7226600ebcfd84f3c3c13a28d3757
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c
+  manifest:    6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      D
@@ -388,7 +388,7 @@ test that phase are displayed in log at debug level
   phase:       draft
   parent:      1:27547f69f25460a52fff66ad004e58da7ad3fb56
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    2:66a5a01817fdf5239c273802b5b7618d051c89e4
+  manifest:    66a5a01817fdf5239c273802b5b7618d051c89e4
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      C
@@ -401,7 +401,7 @@ test that phase are displayed in log at debug level
   phase:       public
   parent:      0:4a2df7238c3b48766b5e22fafbb8a2f506ec8256
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    1:cb5cbbc1bfbf24cc34b9e8c16914e9caa2d2a7fd
+  manifest:    cb5cbbc1bfbf24cc34b9e8c16914e9caa2d2a7fd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      B
@@ -414,7 +414,7 @@ test that phase are displayed in log at debug level
   phase:       public
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:007d8c9d88841325f5c6b06371b35b4e8a2b1a83
+  manifest:    007d8c9d88841325f5c6b06371b35b4e8a2b1a83
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      A

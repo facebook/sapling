@@ -96,7 +96,7 @@ Rebased revision does not contain information about b (issue3739)
   phase:       draft
   parent:      2:220d0626d185f372d9d8f69d9c73b0811d7725f7
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:035d66b27a1b06b2d12b46d41a39adb7a200c370
+  manifest:    035d66b27a1b06b2d12b46d41a39adb7a200c370
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      a-renamed d-renamed/x
@@ -180,7 +180,7 @@ Rebased revision does not contain information about b (issue3739)
   phase:       draft
   parent:      2:39e588434882ff77d01229d169cdc77f29e8855e
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:2232f329d66fffe3930d43479ae624f66322b04d
+  manifest:    2232f329d66fffe3930d43479ae624f66322b04d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      a-copied

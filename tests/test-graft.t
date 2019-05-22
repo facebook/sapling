@@ -144,7 +144,7 @@ Look for extra:source
   phase:       draft
   parent:      0:68795b066622ca79a25816a662041d8f78f3cd9e
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    6:e59b6b228f9cbf9903d5e9abf996e083a1f533eb
+  manifest:    e59b6b228f9cbf9903d5e9abf996e083a1f533eb
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      b
@@ -386,7 +386,7 @@ Graft again onto another branch should preserve the original source
   phase:       draft
   parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    12:dc313617b8c32457c0d589e0dbbedfe71f3cd637
+  manifest:    dc313617b8c32457c0d589e0dbbedfe71f3cd637
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      b

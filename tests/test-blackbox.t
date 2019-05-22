@@ -94,7 +94,7 @@ we must not cause a failure if we cannot write to the log
   phase:       draft
   parent:      1:6563da9dcf87b1949716e38ff3e3dfaa3198eb06
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    2:ab9d46b053ebf45b7996f2922b9893ff4b63d892
+  manifest:    ab9d46b053ebf45b7996f2922b9893ff4b63d892
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      c

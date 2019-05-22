@@ -153,7 +153,7 @@ check histedit_source
   phase:       draft
   parent:      3:055a42cdd88768532f9cf79daa407fc8d138de9b
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    6:b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
+  manifest:    b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      added e

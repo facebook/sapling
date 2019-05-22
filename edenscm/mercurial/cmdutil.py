@@ -1866,10 +1866,8 @@ class changeset_printer(object):
 
         if self.ui.debugflag and rev is not None:
             mnode = ctx.manifestnode()
-            mrev = self.repo.manifestlog._revlog.rev(mnode)
             self.ui.write(
-                columns["manifest"] % scmutil.formatrevnode(self.ui, mrev, mnode),
-                label="ui.debug log.manifest",
+                columns["manifest"] % hex(mnode), label="ui.debug log.manifest"
             )
         self.ui.write(columns["user"] % ctx.user(), label="log.user")
         self.ui.write(columns["date"] % util.datestr(ctx.date()), label="log.date")

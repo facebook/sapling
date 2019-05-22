@@ -99,7 +99,7 @@ Check histedit_source
   phase:       draft
   parent:      3:a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    4:d3d4f51c157ff242c32ff745d4799aaa26ccda44
+  manifest:    d3d4f51c157ff242c32ff745d4799aaa26ccda44
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      d

@@ -330,7 +330,7 @@ description is taken from rollup target commit
   phase:       draft
   parent:      3:092e4ce14829f4974399ce4316d59f64ef0b6725
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    4:b068a323d969f22af1296ec6a5ea9384cef437ac
+  manifest:    b068a323d969f22af1296ec6a5ea9384cef437ac
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   files:       d e

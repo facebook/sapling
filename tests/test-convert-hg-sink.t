@@ -256,7 +256,7 @@ Verify meta data converted correctly:
   phase:       draft
   parent:      0:a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    1:040c72ed9b101773c24ac314776bfc846943781f
+  manifest:    040c72ed9b101773c24ac314776bfc846943781f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      b e
@@ -314,7 +314,7 @@ Verify the conversion back:
   phase:       draft
   parent:      6:0613c8e59a3ddb9789072ef52f1ed13496489bb4
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    7:aa3e9542f3b76d4f1f1b2e9c7ce9dbb48b6a95ec
+  manifest:    aa3e9542f3b76d4f1f1b2e9c7ce9dbb48b6a95ec
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      dest

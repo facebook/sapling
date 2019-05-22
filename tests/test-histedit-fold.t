@@ -95,7 +95,7 @@ check histedit_source, including that it uses the later date, from the first cha
   phase:       draft
   parent:      2:505a591af19eed18f560af827b9e03d2076773dc
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:81eede616954057198ead0b2c73b41d1f392829a
+  manifest:    81eede616954057198ead0b2c73b41d1f392829a
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   files+:      c f
@@ -139,7 +139,7 @@ description is taken from rollup target commit
   phase:       draft
   parent:      0:8580ff50825a50c8f716709acdf8de0deddcd6ab
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    1:b5e112a3a8354e269b1524729f0918662d847c38
+  manifest:    b5e112a3a8354e269b1524729f0918662d847c38
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   files+:      b e

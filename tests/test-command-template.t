@@ -2319,7 +2319,7 @@ Check the status template
   phase:       secret
   parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    8:89dd546f2de0a9d6d664f58d86097eb97baba567
+  manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   extra:       branch=default
@@ -2385,7 +2385,7 @@ Check the status template
   [log.phase|phase:       secret]
   [log.parent changeset.secret|parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
-  [ui.debug log.manifest|manifest:    8:89dd546f2de0a9d6d664f58d86097eb97baba567]
+  [ui.debug log.manifest|manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [ui.debug log.extra|extra:       branch=default]
@@ -2446,7 +2446,7 @@ Check the bisect template
   phase:       public
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   user:        User Name <user@hostname>
   date:        Mon Jan 12 13:46:40 1970 +0000
   files+:      a
@@ -2461,7 +2461,7 @@ Check the bisect template
   phase:       public
   parent:      0:1e4e1b8f71e05681d422154f5421e385fec3454f
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
+  manifest:    4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
   user:        A. N. Other <other@place>
   date:        Tue Jan 13 17:33:20 1970 +0000
   files+:      b
@@ -2478,7 +2478,7 @@ Check the bisect template
   phase:       public
   parent:      1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
+  manifest:    6e0e82995c35d0d57a52aca8da4e56139e06b4b1
   user:        other@place
   date:        Wed Jan 14 21:20:00 1970 +0000
   files+:      c
@@ -2492,7 +2492,7 @@ Check the bisect template
   phase:       public
   parent:      2:97054abb4ab824450e9164180baf491ae0078465
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc
+  manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc
   user:        person
   date:        Fri Jan 16 01:06:40 1970 +0000
   files:       c
@@ -2507,7 +2507,7 @@ Check the bisect template
   phase:       draft
   parent:      3:10e46f2dcbf4823578cf180f33ecf0b957964c47
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc
+  manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc
   user:        person
   date:        Sat Jan 17 04:53:20 1970 +0000
   extra:       branch=default
@@ -2603,7 +2603,7 @@ Check the bisect template
   [log.phase|phase:       public]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
-  [ui.debug log.manifest|manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0]
+  [ui.debug log.manifest|manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0]
   [log.user|user:        User Name <user@hostname>]
   [log.date|date:        Mon Jan 12 13:46:40 1970 +0000]
   [ui.debug log.files|files+:      a]
@@ -2618,7 +2618,7 @@ Check the bisect template
   [log.phase|phase:       public]
   [log.parent changeset.public|parent:      0:1e4e1b8f71e05681d422154f5421e385fec3454f]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
-  [ui.debug log.manifest|manifest:    1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55]
+  [ui.debug log.manifest|manifest:    4e8d705b1e53e3f9375e0e60dc7b525d8211fe55]
   [log.user|user:        A. N. Other <other@place>]
   [log.date|date:        Tue Jan 13 17:33:20 1970 +0000]
   [ui.debug log.files|files+:      b]
@@ -2635,7 +2635,7 @@ Check the bisect template
   [log.phase|phase:       public]
   [log.parent changeset.public|parent:      1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
-  [ui.debug log.manifest|manifest:    2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1]
+  [ui.debug log.manifest|manifest:    6e0e82995c35d0d57a52aca8da4e56139e06b4b1]
   [log.user|user:        other@place]
   [log.date|date:        Wed Jan 14 21:20:00 1970 +0000]
   [ui.debug log.files|files+:      c]
@@ -2649,7 +2649,7 @@ Check the bisect template
   [log.phase|phase:       public]
   [log.parent changeset.public|parent:      2:97054abb4ab824450e9164180baf491ae0078465]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
-  [ui.debug log.manifest|manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc]
+  [ui.debug log.manifest|manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc]
   [log.user|user:        person]
   [log.date|date:        Fri Jan 16 01:06:40 1970 +0000]
   [ui.debug log.files|files:       c]
@@ -2664,7 +2664,7 @@ Check the bisect template
   [log.phase|phase:       draft]
   [log.parent changeset.public|parent:      3:10e46f2dcbf4823578cf180f33ecf0b957964c47]
   [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
-  [ui.debug log.manifest|manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc]
+  [ui.debug log.manifest|manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc]
   [log.user|user:        person]
   [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
   [ui.debug log.extra|extra:       branch=default]

@@ -38,7 +38,7 @@ The warning message changed in Git 1.8.0
   |  tag:         tip
   |  parent:      2:727e37c486803fce561d97a80721324febade37e
   |  parent:      -1:0000000000000000000000000000000000000000
-  |  manifest:    3:ea49f93388380ead5601c8fcbfa187516e7c2ed8
+  |  manifest:    ea49f93388380ead5601c8fcbfa187516e7c2ed8
   |  user:        tést èncödîng <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  files+:      delta
@@ -54,7 +54,7 @@ The warning message changed in Git 1.8.0
   o  changeset:   2:727e37c486803fce561d97a80721324febade37e
   |  parent:      1:5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
   |  parent:      -1:0000000000000000000000000000000000000000
-  |  manifest:    2:f580e7da3673c137370da2b931a1dee83590d7b4
+  |  manifest:    f580e7da3673c137370da2b931a1dee83590d7b4
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  files+:      gamma
@@ -69,7 +69,7 @@ The warning message changed in Git 1.8.0
   o  changeset:   1:5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
   |  parent:      0:b1884a2b1964e4881e235f33485aebc34ee61b90
   |  parent:      -1:0000000000000000000000000000000000000000
-  |  manifest:    1:f0bd6fbafbaebe4bb59c35108428f6fce152431d
+  |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  files+:      beta
@@ -84,7 +84,7 @@ The warning message changed in Git 1.8.0
   o  changeset:   0:b1884a2b1964e4881e235f33485aebc34ee61b90
      parent:      -1:0000000000000000000000000000000000000000
      parent:      -1:0000000000000000000000000000000000000000
-     manifest:    0:8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
+     manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      files+:      alpha

@@ -238,7 +238,7 @@ Testing --debug:
   phase:       public
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    1:23226e7a252cacdc2d99e4fbdc3653441056de49
+  manifest:    23226e7a252cacdc2d99e4fbdc3653441056de49
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files+:      b
@@ -251,7 +251,7 @@ Testing --debug:
   phase:       public
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files+:      a
