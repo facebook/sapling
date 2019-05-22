@@ -32,8 +32,6 @@
 //! TODO: entry invalidation interface
 #![deny(warnings)]
 
-#[cfg(test)]
-extern crate async_unit;
 extern crate bytes;
 extern crate futures;
 extern crate futures_ext;
@@ -42,10 +40,6 @@ extern crate linked_hash_map;
 extern crate parking_lot;
 #[macro_use]
 extern crate stats;
-#[cfg(test)]
-extern crate tokio;
-#[cfg(test)]
-extern crate tokio_timer;
 
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{self, Debug};
@@ -54,8 +48,8 @@ use std::sync::Arc;
 use std::thread;
 use std::usize;
 
-use futures::{Async, Future, Poll};
 use futures::future::{IntoFuture, Shared, SharedError, SharedItem};
+use futures::{Async, Future, Poll};
 use parking_lot::Mutex;
 use stats::prelude::*;
 
@@ -67,8 +61,8 @@ mod test;
 mod boundedhash;
 mod weight;
 
-use boundedhash::BoundedHash;
-pub use weight::Weight;
+use crate::boundedhash::BoundedHash;
+pub use crate::weight::Weight;
 
 define_stats! {
     prefix = "asyncmemo";
@@ -103,7 +97,7 @@ where
     <<F as Filler>::Value as IntoFuture>::Item: Debug,
     <<F as Filler>::Value as IntoFuture>::Error: Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Asyncmemo")
             .field("stats_tag", &self.stats_tag)
             .field("inner", &self.inner)
@@ -149,7 +143,7 @@ where
     <<F as Filler>::Value as IntoFuture>::Error: Debug,
     <<F as Filler>::Value as IntoFuture>::Item: Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut fmt_struct = fmt.debug_struct("AsyncmemoInner");
         for (idx, hash) in self.hash_vec.iter().enumerate() {
             let hash = hash.lock();
@@ -240,7 +234,7 @@ enum Slot<Item, Error> {
 }
 
 impl<Item, Error> Debug for Slot<Item, Error> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             &Slot::Waiting(..) => fmt.write_str("Waiting"),
             &Slot::Complete(..) => fmt.write_str("Complete"),
@@ -284,7 +278,7 @@ where
     <<F as Filler>::Value as IntoFuture>::Item: Debug,
     <<F as Filler>::Value as IntoFuture>::Error: Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("MemoFuture")
             .field("cache", &self.cache)
             .field("key", &self.key)
@@ -417,7 +411,8 @@ where
         // Slot was not present, but we have a placeholder now. Construct the Future and
         // start running it.
 
-        let filler = self.cache
+        let filler = self
+            .cache
             .inner
             .filler
             .fill(&self.cache, &self.key)

@@ -6,8 +6,8 @@
 
 use std::hash::Hash;
 
+use crate::weight::Weight;
 use linked_hash_map::LinkedHashMap;
-use weight::Weight;
 
 #[derive(Debug, Clone)]
 pub struct BoundedHash<K, V>
