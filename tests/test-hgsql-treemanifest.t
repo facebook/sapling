@@ -240,3 +240,52 @@ Refill trees in the other master
   $ hg sqlreplay 2
   $ hg status --change 4 --config treemanifest.treeonly=True
   M dir2/d
+  $ cd ..
+
+Test that trees are written in linkrev order
+  $ initserver ordermaster ordermaster
+  $ cat >> ordermaster/.hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > [treemanifest]
+  > server=True
+  > treeonly=True
+  > EOF
+
+  $ initclient order-client
+  $ cd order-client
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > [treemanifest]
+  > treeonly=True
+  > sendtrees=True
+  > [extensions]
+  > remotenames=
+  > EOF
+
+  $ echo a >> a
+  $ hg commit -Aqm A
+  $ hg up null -q
+  $ echo b >> b
+  $ hg commit -Aqm B
+  $ hg up null -q
+  $ echo c >> c
+  $ hg commit -Aqm C
+  $ hg up -q 0
+  $ hg merge -q 2
+  $ hg commit -Aqm Merge1
+  $ hg merge -q 1
+  $ hg commit -Aqm Merge2
+
+  $ hg push --config extensions.pushrebase=! --to master -q ssh://user@dummy/ordermaster --create
+
+  $ cd ../ordermaster
+# BUGBUG: These should be in linkrev order after pushing to hgsql
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       1 23226e7a252c 000000000000 000000000000
+       1        44      44     -1       2 86d7088ee657 000000000000 000000000000
+       2        88      44     -1       0 a0c8bcbbb45c 000000000000 000000000000
+       3       132      55      2       3 6c51dc0bfc37 a0c8bcbbb45c 86d7088ee657
+       4       187      55      3       4 d2c02f8cb06c 6c51dc0bfc37 23226e7a252c
