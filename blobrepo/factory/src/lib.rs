@@ -25,6 +25,7 @@ use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
     dummy::DummyLease, new_cachelib_blobstore_no_lease, new_memcache_blobstore, MemcacheOps,
 };
+use censoredblob::CensoredBlob;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
@@ -342,6 +343,7 @@ fn new_remote(
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
+    let blobstore = CensoredBlob::new(blobstore);
     let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
     let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
         ErrorKind::MissingCachePool("blobstore-blobs".to_string()),

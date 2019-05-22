@@ -15,18 +15,18 @@ use context::CoreContext;
 
 // A wrapper for any blobstore, which provides a verification layer for the blacklisted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
-#[derive(Debug)]
-pub struct Censoredblob {
+#[derive(Debug, Clone)]
+pub struct CensoredBlob {
     blobstore: Arc<dyn Blobstore>,
 }
 
-impl Censoredblob {
+impl CensoredBlob {
     pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
         Self { blobstore }
     }
 }
 
-impl Blobstore for Censoredblob {
+impl Blobstore for CensoredBlob {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.blobstore.get(ctx, key)
     }
