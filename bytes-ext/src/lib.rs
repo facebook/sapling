@@ -12,4 +12,4 @@ extern crate bytes;
 
 mod sized;
 
-pub use sized::SizeCounter;
+pub use crate::sized::SizeCounter;
