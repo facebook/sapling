@@ -28,6 +28,7 @@ use types::{
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
 use crate::progress::{ProgressFn, ProgressHandle, ProgressManager, ProgressStats};
+use crate::stats::DownloadStats;
 
 mod driver;
 
@@ -131,7 +132,7 @@ impl EdenApi for EdenApiCurlClient {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()> {
+    ) -> Fallible<DownloadStats> {
         self.get_data(paths::DATA, keys, store, progress)
     }
 
@@ -141,7 +142,7 @@ impl EdenApi for EdenApiCurlClient {
         store: &mut MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()> {
+    ) -> Fallible<DownloadStats> {
         log::debug!("Fetching {} files", keys.len());
 
         let url = self.repo_base_url()?.join(paths::HISTORY)?;
@@ -159,7 +160,7 @@ impl EdenApi for EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        self.multi_request(&url, requests, progress, |response: HistoryResponse| {
+        let stats = self.multi_request(&url, requests, progress, |response: HistoryResponse| {
             num_responses += 1;
             for entry in response {
                 num_entries += 1;
@@ -173,7 +174,7 @@ impl EdenApi for EdenApiCurlClient {
             num_responses,
             num_entries
         );
-        Ok(())
+        Ok(stats)
     }
 
     fn get_trees(
@@ -181,7 +182,7 @@ impl EdenApi for EdenApiCurlClient {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()> {
+    ) -> Fallible<DownloadStats> {
         self.get_data(paths::TREES, keys, store, progress)
     }
 }
@@ -218,7 +219,7 @@ impl EdenApiCurlClient {
         requests: I,
         progress_cb: Option<ProgressFn>,
         mut response_cb: F,
-    ) -> Fallible<()>
+    ) -> Fallible<DownloadStats>
     where
         R: Serialize,
         I: IntoIterator<Item = R>,
@@ -265,10 +266,15 @@ impl EdenApiCurlClient {
         })?;
 
         let elapsed = start.elapsed();
-        let total_bytes = driver.progress().unwrap().stats().downloaded;
-        print_download_stats(total_bytes, elapsed);
+        let progress = driver.progress().unwrap().stats();
+        print_download_stats(progress.downloaded, elapsed);
 
-        Ok(())
+        Ok(DownloadStats {
+            downloaded: progress.downloaded,
+            uploaded: progress.uploaded,
+            requests: num_requests,
+            time: elapsed,
+        })
     }
 
     fn get_data(
@@ -277,7 +283,7 @@ impl EdenApiCurlClient {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()> {
+    ) -> Fallible<DownloadStats> {
         log::debug!("Fetching data for {} keys", keys.len());
 
         let url = self.repo_base_url()?.join(path)?;
@@ -294,7 +300,7 @@ impl EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        self.multi_request(&url, requests, progress, |response: DataResponse| {
+        let stats = self.multi_request(&url, requests, progress, |response: DataResponse| {
             num_responses += 1;
             for entry in response {
                 num_entries += 1;
@@ -313,7 +319,8 @@ impl EdenApiCurlClient {
             num_responses,
             num_entries
         );
-        Ok(())
+
+        Ok(stats)
     }
 }
 
@@ -351,10 +358,10 @@ impl Handler for Collector {
 
     fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
         if let Some(ref progress) = self.progress {
-            let dltotal = dltotal as u64;
-            let dlnow = dlnow as u64;
-            let ultotal = ultotal as u64;
-            let ulnow = ulnow as u64;
+            let dltotal = dltotal as usize;
+            let dlnow = dlnow as usize;
+            let ultotal = ultotal as usize;
+            let ulnow = ulnow as usize;
             let stats = ProgressStats::new(dlnow, ulnow, dltotal, ultotal);
             progress.update(stats);
         }
@@ -378,11 +385,11 @@ fn prepare_cbor_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &
     Ok(())
 }
 
-fn print_download_stats(total_bytes: u64, elapsed: Duration) {
+fn print_download_stats(total_bytes: usize, elapsed: Duration) {
     let seconds = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
-    let rate = total_bytes as f64 * 8.0 / 1_000_000.0 / seconds;
+    let rate = total_bytes as f64 / 1_000_000.0 / seconds;
     log::info!(
-        "Downloaded {} bytes in {:?} ({:.6} Mb/s)",
+        "Downloaded {} bytes in {:?} ({:.1} MB/s)",
         total_bytes,
         elapsed,
         rate

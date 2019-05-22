@@ -6,6 +6,7 @@ use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::Key;
 
 use crate::progress::ProgressFn;
+use crate::stats::DownloadStats;
 
 pub trait EdenApi: Send + Sync {
     /// Hit the API server's /health_check endpoint.
@@ -26,7 +27,7 @@ pub trait EdenApi: Send + Sync {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()>;
+    ) -> Fallible<DownloadStats>;
 
     /// Fetch the history of the specified files from the API server and write
     /// them to the store.  Optionally takes a callback to report progress.
@@ -39,7 +40,7 @@ pub trait EdenApi: Send + Sync {
         store: &mut MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()>;
+    ) -> Fallible<DownloadStats>;
 
     /// Fetch the specified trees from the API server and write them to the store.
     /// Optionally takes a callback to report progress.
@@ -51,7 +52,7 @@ pub trait EdenApi: Send + Sync {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<()>;
+    ) -> Fallible<DownloadStats>;
 }
 
 // Statically ensure that the EdenApi trait is object safe using

@@ -506,33 +506,54 @@ def debughttp(ui, repo, **opts):
 
 def debuggetfiles(ui, repo, **opts):
     edenapi.bailifdisabled(ui)
+
     input = (line.split() for line in sys.stdin.readlines())
     keys = [(path, node) for node, path in input]
+
     dpack, __ = repo.fileslog.getmutablesharedpacks()
-    repo.edenapi.get_files(keys, dpack)
+    stats = repo.edenapi.get_files(keys, dpack)
+    ui.write(
+        _("downloaded %d bytes in %d ms over %d requests\n")
+        % (stats.downloaded(), stats.time_millis(), stats.requests())
+    )
+
     packpath, __ = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote datapack: %s\n") % packpath)
 
 
 def debuggethistory(ui, repo, **opts):
     edenapi.bailifdisabled(ui)
+
     input = (line.split() for line in sys.stdin.readlines())
     keys = [(path, node) for node, path in input]
     depth = opts.get("depth") or None
+
     __, hpack = repo.fileslog.getmutablesharedpacks()
-    repo.edenapi.get_history(keys, hpack, depth)
+    stats = repo.edenapi.get_history(keys, hpack, depth)
+    ui.write(
+        _("downloaded %d bytes in %d ms over %d requests\n")
+        % (stats.downloaded(), stats.time_millis(), stats.requests())
+    )
+
     __, packpath = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote historypack: %s\n") % packpath)
 
 
 def debuggettrees(ui, repo, **opts):
     edenapi.bailifdisabled(ui)
+
     keys = []
     for line in sys.stdin.readlines():
         parts = line.split()
         (node, path) = parts if len(parts) > 1 else (parts[0], "")
         keys.append((path, node))
+
     dpack, __ = repo.manifestlog.getmutablesharedpacks()
-    repo.edenapi.get_trees(keys, dpack)
+    stats = repo.edenapi.get_trees(keys, dpack)
+    ui.write(
+        _("downloaded %d bytes in %d ms over %d requests\n")
+        % (stats.downloaded(), stats.time_millis(), stats.requests())
+    )
+
     packpath, __ = repo.manifestlog._mutablesharedpacks.commit()
     ui.write(_("wrote datapack: %s\n") % packpath)

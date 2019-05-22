@@ -8,7 +8,7 @@ use std::str;
 use cpython::*;
 
 use cpython_failure::ResultPyErrExt;
-use edenapi::{Config, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
+use edenapi::{Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
 use encoding::local_bytes_to_path;
 use types::{Key, Node, RepoPath};
 
@@ -67,7 +67,7 @@ py_class!(class client |py| {
         self.inner(py).hostname().map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<PyObject> {
+    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<downloadstats> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
@@ -76,11 +76,11 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        py.allow_threads(move || {
+        let stats = py.allow_threads(move || {
             client.get_files(keys, &mut store, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
-        Ok(Python::None(py))
+        downloadstats::create_instance(py, stats)
     }
 
     def get_history(
@@ -89,7 +89,7 @@ py_class!(class client |py| {
         store: PyObject,
         depth: Option<u32> = None,
         progress_cb: Option<PyObject> = None
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<downloadstats> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
@@ -98,14 +98,14 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_cb = progress_cb.map(wrap_callback);
-        py.allow_threads(move || {
+        let stats = py.allow_threads(move || {
             client.get_history(keys, &mut store, depth, progress_cb)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
-        Ok(Python::None(py))
+        downloadstats::create_instance(py, stats)
     }
 
-    def get_trees(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<PyObject> {
+    def get_trees(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<downloadstats> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
@@ -114,11 +114,31 @@ py_class!(class client |py| {
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
-        py.allow_threads(move || {
+        let stats = py.allow_threads(move || {
             client.get_trees(keys, &mut store, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
-        Ok(Python::None(py))
+        downloadstats::create_instance(py, stats)
+    }
+});
+
+py_class!(class downloadstats |py| {
+    data stats: DownloadStats;
+
+    def downloaded(&self) -> PyResult<usize> {
+        Ok(self.stats(py).downloaded)
+    }
+
+    def uploaded(&self) -> PyResult<usize> {
+        Ok(self.stats(py).uploaded)
+    }
+
+    def requests(&self) -> PyResult<usize> {
+        Ok(self.stats(py).requests)
+    }
+
+    def time_millis(&self) -> PyResult<usize> {
+        Ok(self.stats(py).time.as_millis() as usize)
     }
 });
 

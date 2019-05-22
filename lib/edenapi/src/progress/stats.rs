@@ -8,14 +8,14 @@ use std::{
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct ProgressStats {
-    pub downloaded: u64,
-    pub uploaded: u64,
-    pub dltotal: u64,
-    pub ultotal: u64,
+    pub downloaded: usize,
+    pub uploaded: usize,
+    pub dltotal: usize,
+    pub ultotal: usize,
 }
 
 impl ProgressStats {
-    pub fn new(downloaded: u64, uploaded: u64, dltotal: u64, ultotal: u64) -> Self {
+    pub fn new(downloaded: usize, uploaded: usize, dltotal: usize, ultotal: usize) -> Self {
         Self {
             downloaded,
             uploaded,
@@ -24,7 +24,7 @@ impl ProgressStats {
         }
     }
 
-    pub fn as_tuple(&self) -> (u64, u64, u64, u64) {
+    pub fn as_tuple(&self) -> (usize, usize, usize, usize) {
         (self.downloaded, self.dltotal, self.uploaded, self.ultotal)
     }
 }
