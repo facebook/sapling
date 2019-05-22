@@ -52,7 +52,7 @@ Check that the API server is alive
   $ diff output - <<< "successfully connected to: $HOSTNAME"
 
 Test fetching single file
-  $ DATAPACK_PATH=$(hg debuggetfile <<EOF | awk '{print $3}'
+  $ DATAPACK_PATH=$(hg debuggetfile <<EOF | tail -n 1 | awk '{print $3}'
   > $TEST_FILENODE test.txt
   > EOF
   > )
@@ -67,7 +67,7 @@ Verify that datapack has entry with expected metadata
   Total:                      13            13        (0.0% bigger)
 
 Test fetching multiple files
-  $ DATAPACK_PATH=$(hg debuggetfile <<EOF | awk '{print $3}'
+  $ DATAPACK_PATH=$(hg debuggetfile <<EOF | tail -n 1 | awk '{print $3}'
   > $TEST_FILENODE test.txt
   > $COPY_FILENODE copy.txt
   > EOF
@@ -87,7 +87,7 @@ Verify file contents
   test content
 
 Test fetching history for single file
-  $ HISTPACK_PATH=$(hg debuggethistory <<EOF | awk '{print $3}'
+  $ HISTPACK_PATH=$(hg debuggethistory <<EOF | tail -n 1 | awk '{print $3}'
   > $TEST_FILENODE2 test.txt
   > EOF
   > )
@@ -102,7 +102,7 @@ Verify that historypack has expected content
   186cafa3319c  000000000000  000000000000  f91e155a86e1  
 
 Test fetching history for multiple files
-  $ HISTPACK_PATH=$(hg debuggethistory <<EOF | awk '{print $3}'
+  $ HISTPACK_PATH=$(hg debuggethistory <<EOF | tail -n 1 | awk '{print $3}'
   > $TEST_FILENODE2 test.txt
   > $COPY_FILENODE2 copy.txt
   > EOF
@@ -123,7 +123,7 @@ Verify that historypack has expected content
   186cafa3319c  000000000000  000000000000  f91e155a86e1  
 
 Test fetching only most recent history entry
-  $ HISTPACK_PATH=$(hg debuggethistory --depth 1 <<EOF | awk '{print $3}'
+  $ HISTPACK_PATH=$(hg debuggethistory --depth 1 <<EOF | tail -n 1 | awk '{print $3}'
   > $TEST_FILENODE2 test.txt
   > $COPY_FILENODE2 copy.txt
   > EOF
@@ -139,7 +139,7 @@ Test fetching only most recent history entry
   596c909aab72  b6fe30270546  000000000000  4af0b091e704  
 
 Test fetching a single tree
-  $ DATAPACK_PATH=$(hg debuggettrees <<EOF | awk '{print $3}'
+  $ DATAPACK_PATH=$(hg debuggettrees <<EOF | tail -n 1 | awk '{print $3}'
   > $TEST_ROOT_MANIFEST_NODE
   > EOF
   > )
