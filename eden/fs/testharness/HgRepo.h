@@ -86,6 +86,11 @@ class HgRepo {
   void hgInit(std::vector<std::string> extraArgs = {});
 
   /**
+   * Configure the repository's hgrc to enable treemanifest.
+   */
+  void enableTreeManifest(AbsolutePathPiece cacheDirectory);
+
+  /**
    * Call "hg clone" to create the repository.
    */
   void cloneFrom(

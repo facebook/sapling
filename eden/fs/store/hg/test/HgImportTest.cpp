@@ -39,6 +39,7 @@ class HgImportTest : public ::testing::Test {
   HgImportTest() {
     // Create the test repository
     repo_.hgInit();
+    repo_.enableTreeManifest(testPath_ + "cache"_pc);
   }
 
  protected:

@@ -111,6 +111,19 @@ void HgRepo::hgInit(std::vector<std::string> extraArgs) {
   p.waitChecked();
 }
 
+void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
+  appendToHgrc(
+      "[extensions]\n"
+      "remotefilelog =\n"
+      "treemanifest =\n"
+      "[treemanifest]\n"
+      "treeonly = true\n"
+      "[remotefilelog]\n"
+      "reponame = test\n"
+      "cachepath = " +
+      cacheDirectory.value().str() + "\n");
+}
+
 void HgRepo::cloneFrom(
     StringPiece serverRepoUrl,
     std::vector<std::string> extraArgs) {

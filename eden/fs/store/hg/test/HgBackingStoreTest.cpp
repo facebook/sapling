@@ -31,6 +31,7 @@ struct TestRepo {
 
   TestRepo() {
     repo.hgInit();
+    repo.enableTreeManifest(testPath + "cache"_pc);
 
     repo.mkdir("foo");
     repo.writeFile("foo/bar.txt", "bar\n");
