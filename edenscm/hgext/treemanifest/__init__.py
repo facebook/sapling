@@ -1838,6 +1838,7 @@ def _registerbundle2parts():
         if category != PACK_CATEGORY:
             raise error.Abort(_("invalid treegroup pack category: %s") % category)
 
+        cl = repo.changelog
         mfl = repo.manifestlog
         if isinstance(mfl, hybridmanifestlog):
             mfl = repo.manifestlog.treemanifestlog
@@ -1857,13 +1858,13 @@ def _registerbundle2parts():
             datastore = unioncontentstore(wirepackstore, mfl.datastore)
             tr = op.gettransaction()
 
-            # Sort the trees so they are added in topological
-            def parents(node):
-                p1, p2 = wirepackstore.getnodeinfo("", node)[:2]
-                return p1, p2
-
+            # Sort the trees so they are added in the same order as the commits.
+            # This requires that the changegroup be processed first so we can
+            # compare the linkrevs.
             rootnodes = (node for name, node in wirepackstore if name == "")
-            rootnodes = shallowutil.sortnodes(rootnodes, parents)
+            rootnodes = sorted(
+                rootnodes, key=lambda n: cl.rev(wirepackstore.getnodeinfo("", n)[2])
+            )
 
             for node in rootnodes:
                 p1, p2, linknode, copyfrom = wirepackstore.getnodeinfo("", node)
