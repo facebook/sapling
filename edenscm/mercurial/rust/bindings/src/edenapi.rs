@@ -137,8 +137,20 @@ py_class!(class downloadstats |py| {
         Ok(self.stats(py).requests)
     }
 
-    def time_millis(&self) -> PyResult<usize> {
+    def time_in_seconds(&self) -> PyResult<f64> {
+        Ok(self.stats(py).time_in_seconds())
+    }
+
+    def time_in_millis(&self) -> PyResult<usize> {
         Ok(self.stats(py).time.as_millis() as usize)
+    }
+
+    def bytes_per_second(&self) -> PyResult<f64> {
+        Ok(self.stats(py).bytes_per_second())
+    }
+
+    def to_str(&self) -> PyResult<String> {
+        Ok(format!("{}", &self.stats(py)))
     }
 });
 

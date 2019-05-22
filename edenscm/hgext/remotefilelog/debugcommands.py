@@ -512,10 +512,7 @@ def debuggetfiles(ui, repo, **opts):
 
     dpack, __ = repo.fileslog.getmutablesharedpacks()
     stats = repo.edenapi.get_files(keys, dpack)
-    ui.write(
-        _("downloaded %d bytes in %d ms over %d requests\n")
-        % (stats.downloaded(), stats.time_millis(), stats.requests())
-    )
+    ui.write(stats.to_str() + "\n")
 
     packpath, __ = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote datapack: %s\n") % packpath)
@@ -530,10 +527,7 @@ def debuggethistory(ui, repo, **opts):
 
     __, hpack = repo.fileslog.getmutablesharedpacks()
     stats = repo.edenapi.get_history(keys, hpack, depth)
-    ui.write(
-        _("downloaded %d bytes in %d ms over %d requests\n")
-        % (stats.downloaded(), stats.time_millis(), stats.requests())
-    )
+    ui.write(stats.to_str() + "\n")
 
     __, packpath = repo.fileslog._mutablesharedpacks.commit()
     ui.write(_("wrote historypack: %s\n") % packpath)
@@ -550,10 +544,7 @@ def debuggettrees(ui, repo, **opts):
 
     dpack, __ = repo.manifestlog.getmutablesharedpacks()
     stats = repo.edenapi.get_trees(keys, dpack)
-    ui.write(
-        _("downloaded %d bytes in %d ms over %d requests\n")
-        % (stats.downloaded(), stats.time_millis(), stats.requests())
-    )
+    ui.write(stats.to_str() + "\n")
 
     packpath, __ = repo.manifestlog._mutablesharedpacks.commit()
     ui.write(_("wrote datapack: %s\n") % packpath)
