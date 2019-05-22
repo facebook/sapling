@@ -6,7 +6,11 @@ use slog;
 pub struct SlogKVError(pub Error);
 
 impl slog::KV for SlogKVError {
-    fn serialize(&self, _record: &slog::Record, serializer: &mut slog::Serializer) -> slog::Result {
+    fn serialize(
+        &self,
+        _record: &slog::Record<'_>,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
         let err = &self.0;
 
         serializer.emit_str(Error.to_str(), &format!("{}", err))?;
@@ -28,7 +32,7 @@ pub enum SlogKVErrorKey {
     Backtrace,
     Cause,
 }
-use SlogKVErrorKey::*;
+use crate::SlogKVErrorKey::*;
 
 impl SlogKVErrorKey {
     pub fn to_str(self) -> &'static str {

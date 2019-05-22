@@ -4,9 +4,9 @@ use std::fmt::{self, Debug, Display};
 
 use super::{Backtrace, Error, Fail};
 
+mod exttraits;
 #[cfg(test)]
 mod test;
-mod exttraits;
 
 pub use self::exttraits::*;
 
@@ -91,7 +91,7 @@ impl<ERR> From<ERR> for Chain<ERR> {
 #[derive(Debug)]
 enum CauseKind {
     None,
-    Fail(Box<Fail>),
+    Fail(Box<dyn Fail>),
     Error(Error),
 }
 
@@ -105,7 +105,7 @@ impl<ERR> Display for Chain<ERR>
 where
     ERR: ToString + Debug + Send + Sync + 'static,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}", self.err.to_string())?;
         if fmt.alternate() {
             for c in Fail::iter_causes(self) {
@@ -120,7 +120,7 @@ impl<ERR> Fail for Chain<ERR>
 where
     ERR: ToString + Debug + Send + Sync + 'static,
 {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         match &self.cause {
             CauseKind::None => None,
             CauseKind::Fail(f) => Some(&*f),

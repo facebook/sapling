@@ -13,7 +13,7 @@ pub trait StreamFailureExt: Stream + Sized {
     fn with_context<D, F>(self, f: F) -> WithContextStream<Self, F>
     where
         D: Display + Clone + Send + Sync + 'static,
-        F: FnMut(&Fail) -> D;
+        F: FnMut(&dyn Fail) -> D;
 }
 
 impl<S> StreamFailureExt for S
@@ -31,7 +31,7 @@ where
     fn with_context<D, F>(self, f: F) -> WithContextStream<Self, F>
     where
         D: Display + Clone + Send + Sync + 'static,
-        F: FnMut(&Fail) -> D,
+        F: FnMut(&dyn Fail) -> D,
     {
         WithContextStream::new(self, f)
     }
@@ -87,7 +87,7 @@ where
     A: Stream,
     A::Error: Fail,
     D: Display + Clone + Send + Sync + 'static,
-    F: FnMut(&Fail) -> D,
+    F: FnMut(&dyn Fail) -> D,
 {
     type Item = A::Item;
     type Error = Context<D>;

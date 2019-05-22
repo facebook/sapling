@@ -4,7 +4,7 @@ use boxfnonce::SendBoxFnOnce;
 use futures::{Future, Poll, Stream};
 
 use super::Chain;
-use {Error, Fail};
+use crate::{Error, Fail};
 
 // Dummy types to distinguish different trait implementations, since we can't do
 // a blanket implementation for all `F: Fail` without getting conherence rule failures
@@ -83,7 +83,8 @@ where
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.future.poll() {
-            Err(err) => Err(self.chain
+            Err(err) => Err(self
+                .chain
                 .take()
                 .expect("ChainFuture called after error completion")
                 .call(err)),
@@ -144,7 +145,8 @@ where
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.stream.poll() {
-            Err(err) => Err(self.chain
+            Err(err) => Err(self
+                .chain
                 .take()
                 .expect("ChainStream called after error completion")
                 .call(err)),

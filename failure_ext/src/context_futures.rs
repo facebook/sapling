@@ -67,7 +67,8 @@ where
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.inner.poll() {
             Err(err) => {
-                let f = self.displayable
+                let f = self
+                    .displayable
                     .take()
                     .expect("poll called after future completion");
 
@@ -126,7 +127,7 @@ pub trait FutureFailureExt: Future + Sized {
     fn with_context<D, F>(self, f: F) -> WithContextFut<Self, F>
     where
         D: Display + Send + Sync + 'static,
-        F: FnOnce(&Fail) -> D;
+        F: FnOnce(&dyn Fail) -> D;
 }
 
 impl<F> FutureFailureExt for F
@@ -144,7 +145,7 @@ where
     fn with_context<D, O>(self, f: O) -> WithContextFut<Self, O>
     where
         D: Display + Send + Sync + 'static,
-        O: FnOnce(&Fail) -> D,
+        O: FnOnce(&dyn Fail) -> D,
     {
         WithContextFut::new(self, f)
     }
@@ -200,7 +201,7 @@ where
     A: Future,
     A::Error: Fail,
     D: Display + Send + Sync + 'static,
-    F: FnOnce(&Fail) -> D,
+    F: FnOnce(&dyn Fail) -> D,
 {
     pub fn new(future: A, displayable: F) -> Self {
         Self {
@@ -215,7 +216,7 @@ where
     A: Future,
     A::Error: Fail,
     D: Display + Send + Sync + 'static,
-    F: FnOnce(&Fail) -> D,
+    F: FnOnce(&dyn Fail) -> D,
 {
     type Item = A::Item;
     type Error = Context<D>;
@@ -223,7 +224,8 @@ where
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.inner.poll() {
             Err(err) => {
-                let f = self.displayable
+                let f = self
+                    .displayable
                     .take()
                     .expect("poll called after future completion");
 

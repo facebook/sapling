@@ -12,28 +12,31 @@ extern crate futures;
 extern crate slog;
 
 mod slogkv;
-pub use slogkv::{SlogKVError, SlogKVErrorKey};
+pub use crate::slogkv::{SlogKVError, SlogKVErrorKey};
 
 pub mod chain;
 
 pub mod prelude {
-    pub use chain::{self, Chain, ChainExt};
+    pub use crate::chain::{self, Chain, ChainExt};
     pub use failure::{Error, Fail, ResultExt};
 
-    pub use super::{AsFail, FutureFailureErrorExt, FutureFailureExt, Result,
-                    StreamFailureErrorExt, StreamFailureExt};
+    pub use super::{
+        AsFail, FutureFailureErrorExt, FutureFailureExt, Result, StreamFailureErrorExt,
+        StreamFailureExt,
+    };
 }
 
-pub use failure::{_core, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail,
-                  ResultExt, SyncFailure};
+pub use failure::{
+    _core, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt, SyncFailure,
+};
 pub use failure_derive::*;
 
 #[macro_use]
 mod macros;
 mod context_futures;
 mod context_streams;
-pub use context_futures::{FutureFailureErrorExt, FutureFailureExt};
-pub use context_streams::{StreamFailureErrorExt, StreamFailureExt};
+pub use crate::context_futures::{FutureFailureErrorExt, FutureFailureExt};
+pub use crate::context_streams::{StreamFailureErrorExt, StreamFailureExt};
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -46,7 +49,7 @@ impl<'a> From<&'a Error> for DisplayChain<'a> {
 }
 
 impl<'a> fmt::Display for DisplayChain<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let e = self.0;
         writeln!(fmt, "Error: {}", e)?;
         for c in e.iter_chain().skip(1) {

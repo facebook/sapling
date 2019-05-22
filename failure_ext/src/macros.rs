@@ -156,7 +156,7 @@ macro_rules! err_downcast {
 
 #[cfg(test)]
 mod test {
-    use prelude::*;
+    use crate::prelude::*;
 
     #[derive(Fail, Debug)]
     #[fail(display = "Foo badness")]
