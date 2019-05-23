@@ -10,7 +10,7 @@
 extern crate async_unit;
 extern crate blobrepo;
 extern crate blobrepo_factory;
-extern crate blobstore;
+
 extern crate bookmarks;
 extern crate bytes;
 extern crate context;
