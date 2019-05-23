@@ -480,9 +480,9 @@ def pickversion():
 if not os.path.isdir(builddir):
     # Create the "build" directory
     try:
-        # Prefer a symlink to a "scratch path" path if the "scratch" tool exists
+        # Prefer a symlink to a "scratch path" path if the "mkscratch" tool exists
         scratchpath = subprocess.check_output(
-            ["scratch", "path", "--subdir", "hgbuild"]
+            ["mkscratch", "path", "--subdir", "hgbuild"]
         ).strip()
         assert os.path.isdir(scratchpath)
         os.symlink(scratchpath, builddir)
