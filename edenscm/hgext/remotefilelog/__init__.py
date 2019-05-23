@@ -456,7 +456,12 @@ def setupclient(ui, repo):
     repo.store = shallowstore.wrapstore(repo.store)
 
     if edenapi.enabled(ui):
-        repo.edenapi = edenapi.initclient(ui, repo)
+        try:
+            repo.edenapi = edenapi.initclient(ui, repo)
+        except RuntimeError as e:
+            ui.warn(_("failed to initialize HTTP data fetching\n"))
+            ui.develwarn(_("exception: %s\n") % str(e))
+            edenapi._disabled = True
 
 
 clientonetime = False

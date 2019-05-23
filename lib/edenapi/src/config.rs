@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use failure::Fallible;
+use failure::{ensure, Fallible};
 use url::Url;
 
 #[derive(Default)]
@@ -37,9 +37,9 @@ impl Config {
     /// Set client credentials by providing paths to a PEM encoded X.509 client certificate
     /// and a PEM encoded private key. These credentials are used for TLS mutual authentication;
     /// if not set, mutual authentication will not be used.
-    pub fn client_creds(mut self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Self {
-        self.creds = Some(ClientCreds::new(cert, key));
-        self
+    pub fn client_creds(mut self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
+        self.creds = Some(ClientCreds::new(cert, key)?);
+        Ok(self)
     }
 
     /// Set the name of the current repo.
@@ -86,10 +86,21 @@ pub struct ClientCreds {
 }
 
 impl ClientCreds {
-    pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> Self {
-        Self {
-            certs: certs.as_ref().to_path_buf(),
-            key: key.as_ref().to_path_buf(),
-        }
+    pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
+        let certs = certs.as_ref().to_path_buf();
+        ensure!(
+            certs.is_file(),
+            "Client certificate does not exist: {:?}",
+            &certs
+        );
+
+        let key = key.as_ref().to_path_buf();
+        ensure!(
+            key.is_file(),
+            "Client private key does not exist: {:?}",
+            &key
+        );
+
+        Ok(Self { certs, key })
     }
 }

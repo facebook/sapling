@@ -12,9 +12,13 @@ from edenscm.mercurial.rust.bindings import edenapi
 from . import shallowutil
 
 
+# Set to True to manually disable HTTP fetching.
+_disabled = False
+
+
 def enabled(ui):
     """Check whether HTTP data fetching is enabled."""
-    return ui.configbool("edenapi", "enabled")
+    return not _disabled and ui.configbool("edenapi", "enabled")
 
 
 def debug(ui):

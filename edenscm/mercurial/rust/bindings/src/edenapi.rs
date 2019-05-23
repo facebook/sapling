@@ -50,7 +50,7 @@ py_class!(class client |py| {
         if let Some((cert, key)) = creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
             let key = local_bytes_to_path(key.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-            config = config.client_creds(cert, key);
+            config = config.client_creds(cert, key).map_pyerr::<exc::RuntimeError>(py)?;
         }
 
         let inner = EdenApiCurlClient::new(config).map_pyerr::<exc::RuntimeError>(py)?;
