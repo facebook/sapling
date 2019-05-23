@@ -18,7 +18,7 @@ use types::Key;
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pythonutil::{
     bytes_from_tuple, from_delta_to_tuple, from_key_to_tuple, from_tuple_to_delta,
-    from_tuple_to_key, to_key, to_pyerr,
+    from_tuple_to_key, to_key, to_metadata, to_pyerr,
 };
 
 pub struct PythonDataStore {
@@ -115,17 +115,7 @@ impl DataStore for PythonDataStore {
             .call_method(py, "getmeta", (py_name, py_node), None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_dict = PyDict::extract(py, &py_meta).map_err(|e| pyerr_to_error(py, e))?;
-
-        Ok(Metadata {
-            flags: match py_dict.get_item(py, "f") {
-                Some(x) => Some(u64::extract(py, &x).map_err(|e| pyerr_to_error(py, e))?),
-                None => None,
-            },
-            size: match py_dict.get_item(py, "s") {
-                Some(x) => Some(u64::extract(py, &x).map_err(|e| pyerr_to_error(py, e))?),
-                None => None,
-            },
-        })
+        to_metadata(py, &py_dict).map_err(|e| pyerr_to_error(py, e))
     }
 }
 

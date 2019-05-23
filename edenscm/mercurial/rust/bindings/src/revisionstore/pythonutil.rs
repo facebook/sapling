@@ -6,12 +6,12 @@
 use std::io;
 
 use cpython::{
-    exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
+    exc, FromPyObject, PyBytes, PyDict, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
 use failure::{Error, Fallible};
 
-use revisionstore::datastore::Delta;
+use revisionstore::datastore::{Delta, Metadata};
 use revisionstore::error::KeyError;
 use types::{Key, Node, RepoPath};
 
@@ -42,6 +42,26 @@ pub fn from_key(py: Python, key: &Key) -> (PyBytes, PyBytes) {
         PyBytes::new(py, key.path.as_byte_slice()),
         PyBytes::new(py, key.node.as_ref()),
     )
+}
+
+pub fn to_delta(
+    py: Python,
+    name: &PyBytes,
+    node: &PyBytes,
+    deltabasenode: &PyBytes,
+    data: &PyBytes,
+) -> PyResult<Delta> {
+    let key = to_key(py, name, node)?;
+    let base_key = to_key(py, name, deltabasenode)?;
+    Ok(Delta {
+        data: data.data(py).to_vec().into(),
+        base: if base_key.node.is_null() {
+            None
+        } else {
+            Some(base_key)
+        },
+        key,
+    })
 }
 
 pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delta> {
@@ -102,4 +122,17 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
 
 pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Fallible<PyBytes> {
     PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| pyerr_to_error(py, e))
+}
+
+pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
+    Ok(Metadata {
+        flags: match meta.get_item(py, "f") {
+            Some(x) => Some(u64::extract(py, &x)?),
+            None => None,
+        },
+        size: match meta.get_item(py, "s") {
+            Some(x) => Some(u64::extract(py, &x)?),
+            None => None,
+        },
+    })
 }

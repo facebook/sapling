@@ -8,11 +8,12 @@ use cpython::{
     ToPyObject,
 };
 
-use revisionstore::datastore::DataStore;
+use revisionstore::datastore::{DataStore, MutableDeltaStore};
 use types::{Key, Node};
 
 use crate::revisionstore::pythonutil::{
-    from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr,
+    from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_delta, to_key,
+    to_metadata, to_pyerr,
 };
 
 pub trait DataStorePyExt {
@@ -21,6 +22,19 @@ pub trait DataStorePyExt {
     fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
     fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
+}
+
+pub trait MutableDeltaStorePyExt: DataStorePyExt {
+    fn add_py(
+        &mut self,
+        py: Python,
+        name: &PyBytes,
+        node: &PyBytes,
+        deltabasenode: &PyBytes,
+        delta: &PyBytes,
+        metadata: Option<PyDict>,
+    ) -> PyResult<PyObject>;
+    fn flush_py(&mut self, py: Python) -> PyResult<PyObject>;
 }
 
 impl<T: DataStore + ?Sized> DataStorePyExt for T {
@@ -98,5 +112,38 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         }
 
         Ok(results)
+    }
+}
+
+impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
+    fn add_py(
+        &mut self,
+        py: Python,
+        name: &PyBytes,
+        node: &PyBytes,
+        deltabasenode: &PyBytes,
+        delta: &PyBytes,
+        py_metadata: Option<PyDict>,
+    ) -> PyResult<PyObject> {
+        let delta = to_delta(py, name, node, deltabasenode, delta)?;
+
+        let mut metadata = Default::default();
+        if let Some(meta) = py_metadata {
+            metadata = to_metadata(py, &meta)?;
+        }
+
+        self.add(&delta, &metadata).map_err(|e| to_pyerr(py, &e))?;
+        Ok(Python::None(py))
+    }
+
+    fn flush_py(&mut self, py: Python) -> PyResult<PyObject> {
+        let opt = self.flush().map_err(|e| to_pyerr(py, &e))?;
+        let opt = opt
+            .as_ref()
+            .map(|path| encoding::path_to_local_bytes(path))
+            .transpose()
+            .map_err(|e| to_pyerr(py, &e.into()))?;
+        let opt = opt.map(|path| PyBytes::new(py, &path));
+        Ok(opt.into_py_object(py))
     }
 }
