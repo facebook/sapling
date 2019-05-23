@@ -31,8 +31,8 @@ mod retry;
 #[cfg(test)]
 mod test;
 
-pub use compressor::{Compressor, CompressorType};
-pub use decompressor::{Decompressor, DecompressorType};
+pub use crate::compressor::{Compressor, CompressorType};
+pub use crate::decompressor::{Decompressor, DecompressorType};
 
 pub use bzip2::Compression as Bzip2Compression;
 pub use flate2::Compression as FlateCompression;

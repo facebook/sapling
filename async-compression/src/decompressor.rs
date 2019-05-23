@@ -14,14 +14,14 @@ use flate2::bufread::GzDecoder;
 use tokio_io::AsyncRead;
 use zstd::Decoder as ZstdDecoder;
 
-use raw::RawDecoder;
+use crate::raw::RawDecoder;
 
 pub struct Decompressor<'a, R>
 where
     R: AsyncRead + BufRead + 'a + Send,
 {
     d_type: DecompressorType,
-    inner: Box<RawDecoder<R> + 'a + Send>,
+    inner: Box<dyn RawDecoder<R> + 'a + Send>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -82,7 +82,7 @@ impl<'a, R: AsyncRead + BufRead + 'a + Send> Read for Decompressor<'a, R> {
 impl<'a, R: AsyncRead + BufRead + 'a + Send> AsyncRead for Decompressor<'a, R> {}
 
 impl<'a, R: AsyncRead + BufRead + 'a + Send> Debug for Decompressor<'a, R> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Decompressor")
             .field("decoder_type", &self.d_type)
             .finish()

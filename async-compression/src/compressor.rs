@@ -17,9 +17,9 @@ use flate2::write::GzEncoder;
 use futures::Poll;
 use tokio_io::AsyncWrite;
 
-use decompressor::DecompressorType;
-use raw::{AsyncZstdEncoder, RawEncoder};
-use retry::retry_write;
+use crate::decompressor::DecompressorType;
+use crate::raw::{AsyncZstdEncoder, RawEncoder};
+use crate::retry::retry_write;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CompressorType {
@@ -43,7 +43,7 @@ where
     W: AsyncWrite + 'static,
 {
     c_type: CompressorType,
-    inner: Box<RawEncoder<W> + Send>,
+    inner: Box<dyn RawEncoder<W> + Send>,
 }
 
 impl<W> Compressor<W>
@@ -101,7 +101,7 @@ where
 }
 
 impl<W: AsyncWrite> Debug for Compressor<W> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Compressor")
             .field("c_type", &self.c_type)
             .finish()

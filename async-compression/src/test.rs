@@ -11,15 +11,15 @@ use flate2;
 use futures::{Async, Poll};
 use quickcheck::{Arbitrary, Gen, TestResult};
 use tokio;
-use tokio_io::AsyncWrite;
 use tokio_io::io::read_to_end;
+use tokio_io::AsyncWrite;
 
-use retry::retry_write;
+use crate::retry::retry_write;
 
-use compressor::{Compressor, CompressorType};
-use decompressor::Decompressor;
-use membuf::MemBuf;
-use metered::{MeteredRead, MeteredWrite};
+use crate::compressor::{Compressor, CompressorType};
+use crate::decompressor::Decompressor;
+use crate::membuf::MemBuf;
+use crate::metered::{MeteredRead, MeteredWrite};
 
 quickcheck! {
     fn test_bzip2_roundtrip(cmprs: BzipCompression, input: Vec<u8>) -> TestResult {
@@ -68,8 +68,9 @@ impl Arbitrary for BzipCompression {
                 bzip2::Compression::Fastest,
                 bzip2::Compression::Best,
                 bzip2::Compression::Default,
-            ]).unwrap()
-                .clone(),
+            ])
+            .unwrap()
+            .clone(),
         )
     }
 }
@@ -83,8 +84,9 @@ impl Arbitrary for GzipCompression {
                 flate2::Compression::none(),
                 flate2::Compression::fast(),
                 flate2::Compression::best(),
-            ]).unwrap()
-                .clone(),
+            ])
+            .unwrap()
+            .clone(),
         )
     }
 }

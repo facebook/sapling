@@ -80,7 +80,8 @@ pub trait RawEncoder<W>: AsyncWrite
 where
     W: AsyncWrite + Send,
 {
-    fn try_finish(self: Box<Self>) -> result::Result<W, (Box<RawEncoder<W> + Send>, io::Error)>;
+    fn try_finish(self: Box<Self>)
+        -> result::Result<W, (Box<dyn RawEncoder<W> + Send>, io::Error)>;
 }
 
 impl<W> RawEncoder<W> for BzEncoder<W>
@@ -90,7 +91,7 @@ where
     #[inline]
     fn try_finish(
         mut self: Box<Self>,
-    ) -> result::Result<W, (Box<RawEncoder<W> + Send>, io::Error)> {
+    ) -> result::Result<W, (Box<dyn RawEncoder<W> + Send>, io::Error)> {
         match BzEncoder::try_finish(&mut self) {
             Ok(()) => Ok(BzEncoder::finish(*self).unwrap()),
             Err(e) => Err((self, e)),
@@ -105,7 +106,7 @@ where
     #[inline]
     fn try_finish(
         mut self: Box<Self>,
-    ) -> result::Result<W, (Box<RawEncoder<W> + Send>, io::Error)> {
+    ) -> result::Result<W, (Box<dyn RawEncoder<W> + Send>, io::Error)> {
         match GzEncoder::try_finish(&mut self) {
             Ok(()) => Ok(GzEncoder::finish(*self).unwrap()),
             Err(e) => Err((self, e)),
@@ -133,7 +134,9 @@ impl<W> RawEncoder<W> for AsyncZstdEncoder<W>
 where
     W: AsyncWrite + Send + 'static,
 {
-    fn try_finish(self: Box<Self>) -> result::Result<W, (Box<RawEncoder<W> + Send>, io::Error)> {
+    fn try_finish(
+        self: Box<Self>,
+    ) -> result::Result<W, (Box<dyn RawEncoder<W> + Send>, io::Error)> {
         match ZstdEncoder::try_finish(self.0) {
             Ok(inner) => Ok(inner),
             Err((encoder, e)) => Err((Box::new(AsyncZstdEncoder(encoder)), e)),
