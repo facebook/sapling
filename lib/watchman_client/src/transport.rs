@@ -3,10 +3,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error::*;
+use crate::error::*;
+use crate::protocol::{JsonProtocol, Protocol};
+use crate::queries::*;
 use failure::Fallible;
-use protocol::{JsonProtocol, Protocol};
-use queries::*;
 use serde;
 use std::io::BufReader;
 use std::marker::PhantomData;
@@ -42,9 +42,9 @@ pub trait Transport {
 pub mod unix_socket_transport {
     /// local unix domain socket transport */
     use self::command_line_transport::CommandLineTransport;
+    use crate::transport::*;
     use std::env;
     use std::os::unix::net::UnixStream;
-    use transport::*;
 
     pub struct UnixSocketTransport<SP, RP>
     where
@@ -171,10 +171,10 @@ pub mod unix_socket_transport {
 
 #[cfg(unix)]
 pub mod command_line_transport {
+    use crate::transport::*;
     /// command line transport, required installed watchman client
     use std::process::{Command, Stdio};
     use timeout_readwrite::TimeoutReader;
-    use transport::*;
 
     /// This transport only supports json protocol as send protocol
     /// Receive protocol can be customized
@@ -284,9 +284,9 @@ pub mod command_line_transport {
 }
 
 pub mod windows_named_pipe_transport {
-    use protocol::Protocol;
+    use crate::protocol::Protocol;
+    use crate::transport::*;
     use std::marker::PhantomData;
-    use transport::*;
 
     pub struct WindowsNamedPipeTransport<SP, RP>
     where

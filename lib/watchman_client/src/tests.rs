@@ -6,7 +6,7 @@
 extern crate bytes;
 
 use self::bytes::Buf;
-use queries::*;
+use crate::queries::*;
 use serde_bser;
 use serde_json;
 use std::io::Cursor;
@@ -21,7 +21,8 @@ fn test_get_sockname_response() {
         "version": "4.9.1",
         "sockname": "/opt/facebook/watchman/var/run/watchman/liubovd-state/sock",
     }
-    )).unwrap();
+    ))
+    .unwrap();
     let (reader1, reader2) = (
         Cursor::new(bser_v2.to_vec()).reader(),
         Cursor::new(json_str.into_bytes()).reader(),
@@ -40,7 +41,8 @@ fn test_watch_project_response() {
         "watch": "/Users/liubovd/fbsource",
         "watcher": "fsevents"
     }
-    )).unwrap();
+    ))
+    .unwrap();
     let (reader1, reader2) = (
         Cursor::new(bser_v2.to_vec()).reader(),
         Cursor::new(json_str.into_bytes()).reader(),
@@ -75,7 +77,8 @@ fn test_query_response_with_multiple_fields() {
             "clock": "c:1525428959:45796:2:86773",
             "is_fresh_instance": false
         }
-    )).unwrap();
+    ))
+    .unwrap();
     let (reader1, reader2) = (
         Cursor::new(bser_v2.to_vec()).reader(),
         Cursor::new(json_str.into_bytes()).reader(),
@@ -121,7 +124,8 @@ fn test_state_enter_response() {
             "root": "/Users/liubovd/fbsource",
             "state-enter": "hg.filemerge"
         }
-    )).unwrap();
+    ))
+    .unwrap();
     let (reader1, reader2) = (
         Cursor::new(bser_v2.to_vec()).reader(),
         Cursor::new(json_str.into_bytes()).reader(),
@@ -140,7 +144,8 @@ fn test_state_leave_response() {
         "root": "/Users/liubovd/fbsource",
         "state-leave": "hg.filemerge"
     }
-    )).unwrap();
+    ))
+    .unwrap();
     let (reader1, reader2) = (
         Cursor::new(bser_v2.to_vec()).reader(),
         Cursor::new(json_str.into_bytes()).reader(),

@@ -30,7 +30,7 @@ where
     impl<'de> de::Visitor<'de> for PathBufVisitor {
         type Value = PathBuf;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             formatter.write_str("byte array or string or str")
         }
 

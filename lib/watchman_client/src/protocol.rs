@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error::*;
+use crate::error::*;
 use failure::Fallible;
 use serde;
 use serde_bser;
@@ -66,7 +66,7 @@ impl Protocol for BserProtocol {
         for<'de> T: serde::Deserialize<'de>,
         R: BufRead,
     {
-        let resp: T = serde_bser::from_reader(r as &mut Read)
+        let resp: T = serde_bser::from_reader(r as &mut dyn Read)
             .map_err(|e| ErrorKind::WatchmanBserParsingError(format!("{}", e)))?;
         Ok(resp)
     }

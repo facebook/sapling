@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use path::decode_path_fallible;
+use crate::path::decode_path_fallible;
 use serde_json;
 use std::path::PathBuf;
 
