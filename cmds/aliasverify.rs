@@ -27,8 +27,8 @@ use std::sync::{
     Arc,
 };
 
+use crate::failure::{Error, Result};
 use clap::{App, Arg};
-use failure::{Error, Result};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;

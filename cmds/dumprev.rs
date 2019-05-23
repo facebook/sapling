@@ -18,7 +18,7 @@ use std::str::FromStr;
 use clap::App;
 
 // Get `Revlog` from the mercurial revlog module
-use failure::{Error, Result, ResultExt};
+use crate::failure::{Error, Result, ResultExt};
 use mercurial::revlog::Revlog;
 
 fn run() -> Result<()> {

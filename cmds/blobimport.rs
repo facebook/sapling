@@ -22,9 +22,9 @@ extern crate tracing;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::failure::{Result, SlogKVError};
 use clap::{App, Arg};
 use cloned::cloned;
-use failure::{Result, SlogKVError};
 use futures::Future;
 use phases::SqlPhases;
 use tracing::{trace_args, Traced};

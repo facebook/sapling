@@ -36,8 +36,8 @@ use std::sync::{
     Arc,
 };
 
+use crate::failure::DisplayChain;
 use clap::{App, Arg, ArgMatches};
-use failure::DisplayChain;
 use futures::future::{self, Either};
 use futures::prelude::*;
 use slog::Logger;

@@ -7,8 +7,8 @@
 use std::fs::File;
 use std::io::Read;
 
+use crate::failure::{Result, ResultExt};
 use clap::ArgMatches;
-use failure::{Result, ResultExt};
 use toml::{self, value};
 
 use mercurial_types::HgChangesetId;

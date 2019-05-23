@@ -16,8 +16,8 @@ extern crate mercurial;
 use std::str::FromStr;
 
 // Just need `App` from clap
+use crate::failure::Result;
 use clap::App;
-use failure::Result;
 
 // Get `Revlog` and `RevIdx` from revlog module.
 use mercurial::revlog::{RevIdx, Revlog};
