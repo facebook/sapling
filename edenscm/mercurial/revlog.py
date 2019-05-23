@@ -1685,7 +1685,10 @@ class revlog(object):
                 % (self.indexfile, len(rawtext))
             )
 
+        # Only validate the hash if it was provided to us
+        validatehash &= bool(node)
         node = node or self.hash(rawtext, p1, p2)
+
         if node in self.nodemap:
             return node
 
