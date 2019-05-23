@@ -4640,11 +4640,7 @@ def phase(ui, repo, *revs, **opts):
             if not revs:
                 raise error.Abort(_("empty revision set"))
             nodes = [repo[r].node() for r in revs]
-            # moving revision from public to draft may hide them
-            # We have to check result on an unfiltered repository
-            unfi = repo.unfiltered()
-            getphase = unfi._phasecache.phase
-            olddata = [getphase(unfi, r) for r in unfi]
+
             phases.advanceboundary(repo, tr, targetphase, nodes)
             if opts["force"]:
                 phases.retractboundary(repo, tr, targetphase, nodes)
@@ -4653,25 +4649,19 @@ def phase(ui, repo, *revs, **opts):
             if tr is not None:
                 tr.release()
             lock.release()
-        getphase = unfi._phasecache.phase
-        newdata = [getphase(unfi, r) for r in unfi]
-        changes = sum(newdata[r] != olddata[r] for r in unfi)
+
+        # moving revision from public to draft may hide them
+        # We have to check result on an unfiltered repository
+        unfi = repo.unfiltered()
         cl = unfi.changelog
-        rejected = [n for n in nodes if newdata[cl.rev(n)] < targetphase]
+        getphase = unfi._phasecache.phase
+        rejected = [n for n in nodes if getphase(unfi, cl.rev(n)) < targetphase]
         if rejected:
             ui.warn(
                 _("cannot move %i changesets to a higher " "phase, use --force\n")
                 % len(rejected)
             )
             ret = 1
-        if changes:
-            msg = _("phase changed for %i changesets\n") % changes
-            if ret:
-                ui.status(msg)
-            else:
-                ui.note(msg)
-        else:
-            ui.warn(_("no phases changed\n"))
     return ret
 
 

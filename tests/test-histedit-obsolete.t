@@ -289,7 +289,6 @@ Check that histedit respect immutability
   > EOF
 
   $ hg ph -pv '.^'
-  phase changed for 2 changesets
   $ hg log -G
   @  13:b449568bf7fc (draft) f
   |

@@ -561,7 +561,6 @@ test partial failure
   test-debug-phase: move rev 5: 2 -> 1
   test-hook-close-phase: a030c6be5127abc010fcbff1851536552e6951a8:  secret -> draft
   cannot move 1 changesets to a higher phase, use --force
-  phase changed for 1 changesets
   [1]
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 public merge B' and E
@@ -585,7 +584,6 @@ test complete failure
 
   $ hg phase --draft 7
   cannot move 1 changesets to a higher phase, use --force
-  no phases changed
   [1]
 
   $ cd ..
