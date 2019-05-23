@@ -11,12 +11,14 @@ use failure::{format_err, Error, Fallible};
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    DataPack, DataPackVersion, HistoryPack, IndexedLogDataStore, MutableDataPack,
-    MutableDeltaStore,
+    DataPack, DataPackVersion, DataStore, Delta, HistoryPack, IndexedLogDataStore, LocalStore,
+    Metadata, MutableDataPack, MutableDeltaStore,
 };
+use types::Key;
 
 use crate::revisionstore::datastorepyext::{DataStorePyExt, MutableDeltaStorePyExt};
 use crate::revisionstore::historystorepyext::HistoryStorePyExt;
+use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pyext::PyOptionalRefCell;
 use crate::revisionstore::pythondatastore::PythonDataStore;
 use crate::revisionstore::pythonutil::to_pyerr;
@@ -399,3 +401,86 @@ py_class!(class mutabledeltastore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 });
+
+impl DataStore for mutabledeltastore {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get(key)
+    }
+
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_delta(key)
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_delta_chain(key)
+    }
+
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_meta(key)
+    }
+}
+
+impl LocalStore for mutabledeltastore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_missing(keys)
+    }
+}
+
+impl MutableDeltaStore for mutabledeltastore {
+    fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut store = self
+            .store(py)
+            .get_mut_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.add(delta, metadata)
+    }
+
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut store = self
+            .store(py)
+            .get_mut_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.flush()
+    }
+}
