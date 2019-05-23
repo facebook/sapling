@@ -702,7 +702,8 @@ class fileserverclient(object):
             try:
                 self._httpfetchpacks(fileids, fetchdata, fetchhistory)
             except Exception as e:
-                self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
+                self.ui.warn(_("encountered error during HTTPS fetching;"))
+                self.ui.warn(_(" falling back to SSH\n"))
                 self.ui.develwarn(_("%s\n") % str(e))
                 self.ui.log(
                     "edenapi_error", msg=str(e), traceback=traceback.format_exc()
@@ -768,7 +769,7 @@ class fileserverclient(object):
         pipeo.flush()
 
     def _httpfetchpacks(self, fileids, fetchdata, fetchhistory):
-        """Fetch packs via HTTP using the Eden API"""
+        """Fetch packs via HTTPS using the Eden API"""
         perftrace.traceflag("http")
 
         # The Eden API Rust bindings require that fileids
@@ -783,15 +784,15 @@ class fileserverclient(object):
             self._httpfetchhistory(fileids, hpack)
 
     def _httpfetchdata(self, fileids, dpack):
-        """Fetch file data over HTTP using the Eden API"""
+        """Fetch file data over HTTPS using the Eden API"""
         if edenapi.debug(self.ui):
-            self.ui.warn(_("fetching data for %d files over HTTP\n") % len(fileids))
+            self.ui.warn(_("fetching data for %d files over HTTPS\n") % len(fileids))
 
         self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
         self.ui.metrics.gauge("http_getfiles_calls", 1)
 
         with progress.bar(
-            self.ui, _("Fetching file content over HTTP"), start=None, unit="bytes"
+            self.ui, _("Fetching file content over HTTPS"), start=None, unit="bytes"
         ) as prog:
 
             def progcallback(dl, dlt, ul, ult):
@@ -807,15 +808,15 @@ class fileserverclient(object):
         self.ui.metrics.gauge("http_getfiles_requests", stats.requests())
 
     def _httpfetchhistory(self, fileids, hpack, depth=None):
-        """Fetch file history over HTTP using the Eden API"""
+        """Fetch file history over HTTPS using the Eden API"""
         if edenapi.debug(self.ui):
-            self.ui.warn(_("fetching history for %d files over HTTP\n") % len(fileids))
+            self.ui.warn(_("fetching history for %d files over HTTPS\n") % len(fileids))
 
         self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
         self.ui.metrics.gauge("http_gethistory_calls", 1)
 
         with progress.bar(
-            self.ui, _("Fetching file history over HTTP"), start=None, unit="bytes"
+            self.ui, _("Fetching file history over HTTPS"), start=None, unit="bytes"
         ) as prog:
 
             def progcallback(dl, dlt, ul, ult):

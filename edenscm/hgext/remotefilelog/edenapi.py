@@ -12,24 +12,24 @@ from edenscm.mercurial.rust.bindings import edenapi
 from . import shallowutil
 
 
-# Set to True to manually disable HTTP fetching.
+# Set to True to manually disable HTTPS fetching.
 _disabled = False
 
 
 def enabled(ui):
-    """Check whether HTTP data fetching is enabled."""
+    """Check whether HTTPS data fetching is enabled."""
     return not _disabled and ui.configbool("edenapi", "enabled")
 
 
 def debug(ui):
-    """Check whether HTTP data fetching is in debug mode."""
+    """Check whether HTTPS data fetching is in debug mode."""
     return ui.configbool("edenapi", "debug")
 
 
 def bailifdisabled(ui):
-    """Abort if HTTP data fetching is disabled."""
+    """Abort if HTTPS data fetching is disabled."""
     if not enabled(ui):
-        raise error.Abort(_("HTTP data fetching is disabled"))
+        raise error.Abort(_("HTTPS data fetching is disabled"))
 
 
 def getbaseurl(ui):
@@ -52,7 +52,7 @@ def getcreds(ui, url):
 
 
 def logconfig(ui):
-    """Log various HTTP fetching config values for debugging."""
+    """Log various HTTPS fetching config values for debugging."""
     ui.log(
         "edenapi",
         "",
