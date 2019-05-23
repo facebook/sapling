@@ -38,7 +38,7 @@ pub trait DataStore: LocalStore {
     fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
 }
 
-pub trait MutableDeltaStore {
+pub trait MutableDeltaStore: DataStore {
     fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()>;
     fn flush(&mut self) -> Fallible<Option<PathBuf>>;
 }
@@ -60,7 +60,7 @@ impl<T: DataStore, U: Deref<Target = T>> DataStore for U {
     }
 }
 
-impl<T: MutableDeltaStore + ?Sized, U: DerefMut<Target = T>> MutableDeltaStore for U {
+impl<T: MutableDeltaStore, U: DerefMut<Target = T>> MutableDeltaStore for U {
     fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         T::add(self, delta, metadata)
     }

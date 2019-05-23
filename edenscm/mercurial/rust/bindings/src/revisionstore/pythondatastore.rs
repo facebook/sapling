@@ -26,7 +26,7 @@ pub struct PythonDataStore {
 }
 
 pub struct PythonMutableDataPack {
-    py_datapack: PyObject,
+    py_datapack: PythonDataStore,
 }
 
 impl PythonDataStore {
@@ -169,7 +169,9 @@ impl PythonMutableDataPack {
                 ),
             ))
         } else {
-            Ok(PythonMutableDataPack { py_datapack })
+            Ok(PythonMutableDataPack {
+                py_datapack: PythonDataStore::new(py_datapack),
+            })
         }
     }
 
@@ -211,6 +213,7 @@ impl MutableDeltaStore for PythonMutableDataPack {
             .map_err(|e| pyerr_to_error(py, e))?;
 
         self.py_datapack
+            .py_store
             .call_method(py, "add", py_tuple, None)
             .map_err(|e| pyerr_to_error(py, e))?;
         Ok(())
@@ -222,9 +225,34 @@ impl MutableDeltaStore for PythonMutableDataPack {
 
         let py_path = self
             .py_datapack
+            .py_store
             .call_method(py, "flush", NoArgs, None)
             .map_err(|e| pyerr_to_error(py, e))?;
         let py_path = PyBytes::extract(py, &py_path).map_err(|e| pyerr_to_error(py, e))?;
         Ok(Some(local_bytes_to_path(py_path.data(py))?.into_owned()))
+    }
+}
+
+impl DataStore for PythonMutableDataPack {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+        self.py_datapack.get(key)
+    }
+
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        self.py_datapack.get_delta(key)
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        self.py_datapack.get_delta_chain(key)
+    }
+
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        self.py_datapack.get_meta(key)
+    }
+}
+
+impl LocalStore for PythonMutableDataPack {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        self.py_datapack.get_missing(keys)
     }
 }

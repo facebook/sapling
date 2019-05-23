@@ -2,12 +2,14 @@
 
 use std::path::PathBuf;
 
-use failure::Fallible;
+use failure::{format_err, Fallible};
 
 use types::{Key, NodeInfo};
 
-use crate::datastore::{Delta, Metadata, MutableDeltaStore};
+use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
+use crate::error::KeyError;
 use crate::historystore::MutableHistoryStore;
+use crate::localstore::LocalStore;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
 /// delta stores that it is made of.
@@ -57,6 +59,57 @@ impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
         }
 
         Ok(None)
+    }
+}
+
+impl<'a> DataStore for MultiplexDeltaStore<'a> {
+    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
+        Err(format_err!("MultiplexDeltaStore doesn't support raw get()"))
+    }
+
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        for store in self.stores.iter() {
+            let result = store.get_delta(key);
+            if let Ok(delta) = result {
+                return Ok(delta);
+            }
+        }
+
+        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexDeltaStore", key)).into())
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        for store in self.stores.iter() {
+            let result = store.get_delta_chain(key);
+            if let Ok(delta_chain) = result {
+                return Ok(delta_chain);
+            }
+        }
+
+        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexDeltaStore", key)).into())
+    }
+
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        for store in self.stores.iter() {
+            let result = store.get_meta(key);
+            if let Ok(meta) = result {
+                return Ok(meta);
+            }
+        }
+
+        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexDeltaStore", key)).into())
+    }
+}
+
+impl<'a> LocalStore for MultiplexDeltaStore<'a> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let initial_keys = Ok(keys.iter().cloned().collect());
+        self.stores
+            .iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => store.get_missing(&missing_keys),
+                Err(e) => Err(e),
+            })
     }
 }
 
