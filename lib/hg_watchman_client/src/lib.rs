@@ -10,5 +10,5 @@ extern crate serde_json;
 extern crate watchman_client;
 
 mod hgclient;
-pub use hgclient::HgWatchmanClient;
+pub use crate::hgclient::HgWatchmanClient;
 pub use watchman_client::queries::*;
