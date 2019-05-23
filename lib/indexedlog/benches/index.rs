@@ -9,7 +9,7 @@ extern crate rand;
 extern crate tempfile;
 
 use indexedlog::index::{InsertKey, OpenOptions};
-use minibench::{bench, bench_once, elapsed};
+use minibench::{bench, elapsed, measure, Measure};
 use rand::{ChaChaRng, Rng};
 use std::sync::Arc;
 use tempfile::tempdir;
@@ -159,7 +159,7 @@ fn main() {
         })
     });
 
-    bench_once("index size (5M owned keys)", || {
+    bench("index size (5M owned keys)", || {
         const N: usize = 5000000;
         let dir = tempdir().unwrap();
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
@@ -168,10 +168,10 @@ fn main() {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                 .expect("insert");
         }
-        idx.flush().unwrap()
+        measure::Bytes::measure(|| idx.flush().unwrap())
     });
 
-    bench_once("index size (5M referred keys)", || {
+    bench("index size (5M referred keys)", || {
         const N: usize = 5000000;
         let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
@@ -184,6 +184,6 @@ fn main() {
             idx.insert_advanced(ext_key, i as u64, None)
                 .expect("insert");
         }
-        idx.flush().unwrap()
+        measure::Bytes::measure(|| idx.flush().unwrap())
     });
 }

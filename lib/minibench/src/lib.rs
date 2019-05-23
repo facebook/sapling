@@ -10,36 +10,26 @@
 //! - Do not run only the benchmark part repetitively. For example, a benchmark needs some complex
 //!   setup that cannot be reused across runs. That setup cost needs to be excluded from benchmark
 //!   result cleanly.
-//! - Use "min" instead of "average". "average" often makes less sense for wall time.
 //! - Minimalism. Without fancy features.
 
 use std::env::args;
-use std::fmt::Display;
-use std::time::SystemTime;
 
-/// Return the wall time (in seconds) executing the given function.
-pub fn elapsed<F: FnMut()>(mut func: F) -> f64 {
-    let now = SystemTime::now();
-    func();
-    let elapsed = now.elapsed().expect("elapsed");
-    elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 * 1e-9
+pub mod measure;
+pub use measure::Measure;
+
+/// Measure the best wall clock time.
+pub fn elapsed(func: impl FnMut()) -> Result<self::measure::WallClock, String> {
+    self::measure::WallClock::measure(func)
 }
 
-/// Execute a function that returns `f64` for `n` times. Return the min value among those `n`
-/// returned values.
-pub fn min_run<F: Fn() -> f64>(func: F, n: usize) -> f64 {
-    let mut best = ::std::f64::NAN;
-    assert!(n > 0);
-    for _ in 0..n {
-        let v = func();
-        if best.is_nan() || v < best {
-            best = v
-        };
-    }
-    best
-}
-
-/// Run a function for 40 times. Print the best wall time.
+/// Run a function repeatably. Print the measurement result.
+///
+/// The actual measurement is dependent on the return value of the function.
+/// For example,
+/// - [`WallClock::measure`] (or [`elapsed`]) measures the wall clock time,
+///   and the function being measured does not need to provide an output.
+/// - [`Bytes::measure`] might expect the function to return a [`usize`]
+///   in bytes. The function will be only run once.
 ///
 /// If `std::env::args` (excluding the first item and flags) is not empty, and none of them is a
 /// substring of `name`, skip running and return directly.
@@ -55,23 +45,21 @@ pub fn min_run<F: Fn() -> f64>(func: F, n: usize) -> f64 {
 ///     })
 /// })
 /// ```
-pub fn bench<F: Fn() -> f64>(name: &str, func: F) {
+pub fn bench<T: Measure, F: Fn() -> Result<T, String>>(name: &str, func: F) {
     // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
     let args: Vec<String> = args().skip(1).filter(|a| !a.starts_with('-')).collect();
     if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
-        let best = min_run(func, 40);
-        println!("{:30}{:7.3} ms", name, best * 1e3);
-    }
-}
-
-/// Run a function once. Print its result.
-///
-/// If `std::env::args` (excluding the first item and flags) is not empty, and none of them is a
-/// substring of `name`, skip running and return directly.
-pub fn bench_once<D: Display, F: Fn() -> D>(name: &str, func: F) {
-    // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
-    let args: Vec<String> = args().skip(1).filter(|a| !a.starts_with('-')).collect();
-    if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
-        println!("{:30}{:10}", name, func());
+        let try_func = || -> Result<T, String> {
+            let mut measured = func()?;
+            while measured.need_more() {
+                measured = measured.merge(func()?);
+            }
+            Ok(measured)
+        };
+        let text = match try_func() {
+            Ok(measured) => measured.to_string(),
+            Err(text) => text,
+        };
+        println!("{:50}{}", name, text);
     }
 }
