@@ -10,7 +10,7 @@ extern crate futures_ext;
 #[macro_use]
 extern crate maplit;
 extern crate netstring;
-extern crate serde;
+
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
@@ -274,8 +274,8 @@ mod test {
     use bytes::{BufMut, BytesMut};
     use tokio_io::codec::{Decoder, Encoder};
 
-    use super::*;
     use super::SshStream::*;
+    use super::*;
 
     trait ToBytes: AsRef<[u8]> {
         fn bytes(&self) -> Bytes {
@@ -283,11 +283,7 @@ mod test {
         }
     }
 
-    impl<T> ToBytes for T
-    where
-        T: AsRef<[u8]>,
-    {
-    }
+    impl<T> ToBytes for T where T: AsRef<[u8]> {}
 
     #[test]
     fn encode_simple() {
