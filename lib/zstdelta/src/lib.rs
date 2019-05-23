@@ -14,4 +14,4 @@ extern crate zstd_sys;
 
 mod zstdelta;
 
-pub use zstdelta::{apply, diff};
+pub use crate::zstdelta::{apply, diff};
