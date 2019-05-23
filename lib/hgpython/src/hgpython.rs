@@ -1,9 +1,11 @@
 // Copyright Facebook, Inc. 2018
-use buildenv::BuildEnv;
+use crate::buildenv::BuildEnv;
+use crate::python::{
+    py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
+    py_set_program_name, py_set_python_home,
+};
 use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
 use encoding::{osstring_to_local_cstring, path_to_local_bytes, path_to_local_cstring};
-use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
-             py_set_program_name, py_set_python_home};
 use std;
 use std::ffi::{CString, OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -92,7 +94,8 @@ impl HgPython {
             // of all the packages in advance.
             py_set_no_site_flag();
         } else if cfg!(target_os = "windows") {
-            let hgpython: OsString = env.var_os("HGPYTHONHOME")
+            let hgpython: OsString = env
+                .var_os("HGPYTHONHOME")
                 .unwrap_or(installation_root.join("hg-python").into());
             py_set_python_home(&hgpython);
         }
@@ -151,10 +154,11 @@ impl HgPython {
     /// Either the candidate itself should exist, or its zip base should
     fn is_suitable_candidate<P: AsRef<Path>>(candidate: P) -> bool {
         let candidate = candidate.as_ref();
-        candidate.exists() || match Self::get_zip_base(candidate) {
-            None => false,
-            Some(zip) => zip.exists(),
-        }
+        candidate.exists()
+            || match Self::get_zip_base(candidate) {
+                None => false,
+                Some(zip) => zip.exists(),
+            }
     }
 
     /// Detect the entry point Python script for current Mercurial run
@@ -184,8 +188,9 @@ impl HgPython {
         vec![
             &PathBuf::from("/usr/lib64/python2.7/site-packages/"),
             &PathBuf::from("/usr/lib/python2.7/site-packages/"),
-        ].iter()
-            .for_each(|pb| candidates.push(Self::entry_point_in_installation(pb)));
+        ]
+        .iter()
+        .for_each(|pb| candidates.push(Self::entry_point_in_installation(pb)));
 
         for candidate in candidates.iter() {
             if Self::is_suitable_candidate(&candidate) {
@@ -207,7 +212,7 @@ impl HgPython {
     /// Given a `sys.path` Python list, add a `path` component there
     fn add_to_sys_path<P: AsRef<Path>>(
         &self,
-        py: Python,
+        py: Python<'_>,
         sys_path: &PyObject,
         path: P,
         index: u32,
@@ -218,7 +223,7 @@ impl HgPython {
     }
 
     /// Prepare Python `sys.path` to run Mercurial
-    fn adjust_path(&self, py: Python) -> PyResult<()> {
+    fn adjust_path(&self, py: Python<'_>) -> PyResult<()> {
         let sys_mod = py.import("sys").unwrap();
         let sys_path = sys_mod.get(py, "path").unwrap();
         self.add_to_sys_path(py, &sys_path, &self.entry_point.parent().unwrap(), 0)?;
@@ -238,7 +243,7 @@ impl HgPython {
         Ok(())
     }
 
-    pub fn run_py(&self, py: Python) -> PyResult<()> {
+    pub fn run_py(&self, py: Python<'_>) -> PyResult<()> {
         self.adjust_path(py)?;
         let entry_point_mod = py.import(HGPYENTRYPOINT_MOD)?;
         entry_point_mod.call(py, "run", (py.True(),), None)?;

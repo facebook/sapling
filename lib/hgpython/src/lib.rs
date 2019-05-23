@@ -8,5 +8,5 @@ mod buildenv;
 mod hgpython;
 mod python;
 
-pub use buildenv::BuildEnv;
-pub use hgpython::HgPython;
+pub use crate::buildenv::BuildEnv;
+pub use crate::hgpython::HgPython;
