@@ -32,7 +32,7 @@
 // LittleEndian encoding.
 
 use crate::errors::{data_error, parameter_error};
-use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter};
+use crate::index::{self, Index, InsertKey, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedFileLock;
 use crate::utils::{atomic_write, mmap_readonly, open_dir, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
@@ -698,7 +698,7 @@ impl Log {
         dir: &Path,
         name: &str,
         len: u64,
-        buf: Arc<AsRef<[u8]> + Send + Sync>,
+        buf: Arc<ReadonlyBuffer + Send + Sync>,
     ) -> Fallible<Index> {
         // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
         const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;

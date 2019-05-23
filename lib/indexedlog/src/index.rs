@@ -876,8 +876,8 @@ impl ExtKeyOffset {
                 .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len1)?;
             (start, len, Some(TYPE_BYTES + vlq_len1 + vlq_len2))
         };
-        let key_buf = index.key_buf.as_ref().as_ref();
-        Ok((&key_buf[start as usize..(start + len) as usize], entry_size))
+        let key_buf = index.key_buf.as_ref();
+        Ok((key_buf.slice(start, len), entry_size))
     }
 
     /// Create a new in-memory external key entry. The key cannot be empty.
@@ -1443,7 +1443,23 @@ pub struct Index {
     checksum_chunk_size: u64,
 
     // Additional buffer for external keys.
-    key_buf: Arc<AsRef<[u8]> + Send + Sync>,
+    key_buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
+}
+
+/// Abstraction of the "external key buffer".
+///
+/// This makes it possible to use non-contiguous memory for a buffer,
+/// and expose them as if it's contiguous.
+pub trait ReadonlyBuffer {
+    /// Get a slice using the given offset.
+    fn slice(&self, start: u64, len: u64) -> &[u8];
+}
+
+impl<T: AsRef<[u8]>> ReadonlyBuffer for T {
+    #[inline]
+    fn slice(&self, start: u64, len: u64) -> &[u8] {
+        &self.as_ref()[start as usize..(start + len) as usize]
+    }
 }
 
 /// Key to insert. Used by [Index::insert_advanced].
@@ -1465,7 +1481,7 @@ pub struct OpenOptions {
     checksum_chunk_size: u64,
     len: Option<u64>,
     write: Option<bool>,
-    key_buf: Option<Arc<AsRef<[u8]> + Send + Sync>>,
+    key_buf: Option<Arc<dyn ReadonlyBuffer + Send + Sync>>,
 }
 
 impl OpenOptions {
@@ -1526,7 +1542,7 @@ impl OpenOptions {
     ///
     /// With an external key buffer, keys could be stored as references using
     /// `index.insert_advanced` to save space.
-    pub fn key_buf(&mut self, buf: Option<Arc<AsRef<[u8]> + Send + Sync>>) -> &mut Self {
+    pub fn key_buf(&mut self, buf: Option<Arc<dyn ReadonlyBuffer + Send + Sync>>) -> &mut Self {
         self.key_buf = buf;
         self
     }
@@ -1611,7 +1627,7 @@ impl OpenOptions {
             dirty_ext_keys: vec![],
             checksum,
             checksum_chunk_size,
-            key_buf: key_buf.unwrap_or(Arc::new(b"")),
+            key_buf: key_buf.unwrap_or(Arc::new(&b""[..])),
             len,
         })
     }
@@ -1960,7 +1976,7 @@ impl Index {
         let (key, key_buf_offset) = match key {
             InsertKey::Embed(k) => (k, None),
             InsertKey::Reference((start, len)) => {
-                let key = &self.key_buf.as_ref().as_ref()[start as usize..(start + len) as usize];
+                let key = self.key_buf.as_ref().slice(start, len);
                 // UNSAFE NOTICE: `key` is valid as long as `self.key_buf` is valid. `self.key_buf`
                 // won't be changed. So `self` can still be mutable without a read-only
                 // relationship with `key`.
