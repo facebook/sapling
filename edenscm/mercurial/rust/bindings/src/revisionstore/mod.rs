@@ -363,7 +363,7 @@ fn make_mutabledeltastore(
     Ok(store)
 }
 
-py_class!(class mutabledeltastore |py| {
+py_class!(pub class mutabledeltastore |py| {
     data store: PyOptionalRefCell<Box<dyn MutableDeltaStore + Send>>;
 
     def __new__(_cls, packfilepath: Option<PyBytes> = None, indexedlogpath: Option<PyBytes> = None) -> PyResult<mutabledeltastore> {

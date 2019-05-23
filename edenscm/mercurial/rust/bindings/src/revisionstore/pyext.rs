@@ -50,7 +50,7 @@ impl<T> OptionalRefCell<T> {
 }
 
 /// Wrapper around `OptionalRefCell<T>` to convert from `Result<T>` to `PyResult<T>`
-pub(crate) struct PyOptionalRefCell<T> {
+pub struct PyOptionalRefCell<T> {
     inner: OptionalRefCell<T>,
 }
 
