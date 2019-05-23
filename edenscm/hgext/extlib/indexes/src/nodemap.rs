@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use errors::ErrorKind;
+use crate::errors::ErrorKind;
 use failure::Fallible;
 use radixbuf::errors as rerrors;
 use radixbuf::key::KeyId;
@@ -246,9 +246,9 @@ fn hex_to_bin_base16<T: AsRef<[u8]>>(base16: T) -> Option<Vec<u8>> {
     let mut result = vec![0u8; len];
     for (i, &ch) in base16.iter().enumerate() {
         result[i] = match ch {
-            b'a'...b'f' => ch - b'a' + 10,
-            b'A'...b'F' => ch - b'A' + 10,
-            b'0'...b'9' => ch - b'0',
+            b'a'..=b'f' => ch - b'a' + 10,
+            b'A'..=b'F' => ch - b'A' + 10,
+            b'0'..=b'9' => ch - b'0',
             _ => return None,
         }
     }

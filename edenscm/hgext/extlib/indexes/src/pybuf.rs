@@ -32,11 +32,11 @@
 // - Memory alignment is up to the actual implementation of "Python object".
 //   For a mmap buffer, the libc mmap function guarantees that.
 
+use cpython::{PyObject, Python};
+use python27_sys as cpy;
 use std::marker::PhantomData;
 use std::mem;
 use std::slice;
-use cpython::{Python, PyObject};
-use python27_sys as cpy;
 
 pub struct SimplePyBuf<T>(cpy::Py_buffer, PhantomData<T>);
 
@@ -47,7 +47,7 @@ unsafe impl<T> Send for SimplePyBuf<T> {}
 unsafe impl<T> Sync for SimplePyBuf<T> {}
 
 impl<T: Copy> SimplePyBuf<T> {
-    pub fn new(_py: Python, obj: &PyObject) -> Self {
+    pub fn new(_py: Python<'_>, obj: &PyObject) -> Self {
         // Note about GC on obj:
         //
         // Practically, obj here is some low-level, non-container ones like

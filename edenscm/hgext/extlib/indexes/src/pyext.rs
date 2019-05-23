@@ -3,9 +3,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::nodemap::NodeRevMap;
+use crate::pybuf::SimplePyBuf;
 use cpython::{exc, PyBytes, PyObject, PyResult};
-use nodemap::NodeRevMap;
-use pybuf::SimplePyBuf;
 use std::slice;
 
 use cpython_failure::ResultPyErrExt;
