@@ -117,7 +117,7 @@ impl MutationEntryOrigin {
 }
 
 impl MutationEntry {
-    pub fn serialize(&self, w: &mut Write) -> Fallible<()> {
+    pub fn serialize(&self, w: &mut dyn Write) -> Fallible<()> {
         w.write_u8(self.origin.get_id())?;
         w.write_node(&self.succ)?;
         w.write_vlq(self.preds.len())?;
@@ -144,7 +144,7 @@ impl MutationEntry {
         Ok(())
     }
 
-    pub fn deserialize(r: &mut Read) -> Fallible<Self> {
+    pub fn deserialize(r: &mut dyn Read) -> Fallible<Self> {
         let origin = MutationEntryOrigin::from_id(r.read_u8()?)?;
         let succ = r.read_node()?;
         let pred_count = r.read_vlq()?;
