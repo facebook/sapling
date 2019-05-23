@@ -10,6 +10,6 @@ mod bytearrayobject;
 mod bytesobject;
 mod pybuf;
 
-pub use bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
-pub use bytesobject::allocate_pybytes;
-pub use pybuf::SimplePyBuf;
+pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
+pub use crate::bytesobject::allocate_pybytes;
+pub use crate::pybuf::SimplePyBuf;

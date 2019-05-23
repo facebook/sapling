@@ -47,7 +47,7 @@ unsafe impl<T> Send for SimplePyBuf<T> {}
 unsafe impl<T> Sync for SimplePyBuf<T> {}
 
 impl<T: Copy> SimplePyBuf<T> {
-    pub fn new(_py: Python, obj: &PyObject) -> Self {
+    pub fn new(_py: Python<'_>, obj: &PyObject) -> Self {
         // Note about GC on obj:
         //
         // Practically, obj here is some low-level, non-container ones like
@@ -70,7 +70,8 @@ impl<T: Copy> SimplePyBuf<T> {
         // whitelist those two types. Beware that `PyBuffer_Check` won't guarnatee
         // its inner object is also immutable.
         unsafe {
-            if cpy::PyByteArray_Check(obj.as_ptr()) == 0 && cpy::PyBytes_Check(obj.as_ptr()) == 0
+            if cpy::PyByteArray_Check(obj.as_ptr()) == 0
+                && cpy::PyBytes_Check(obj.as_ptr()) == 0
                 && cpy::PyBuffer_Check(obj.as_ptr()) == 0
             {
                 panic!("potentially unsafe type");

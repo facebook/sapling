@@ -27,7 +27,7 @@ struct PyByteArrayObject {
 
 /// Consume a `Vec<u8>`. Create a Python `bytearray` object.
 /// Bytes stored are not copied.
-pub fn vec_to_pyobj(py: RustPythonGILGuard, mut value: Vec<u8>) -> RustPyObject {
+pub fn vec_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Vec<u8>) -> RustPyObject {
     unsafe {
         let ptr: *mut PyObject = _PyObject_New(&mut PyByteArray_Type as *mut PyTypeObject);
         let typed: *mut PyByteArrayObject = mem::transmute(ptr);
@@ -47,7 +47,7 @@ pub fn vec_to_pyobj(py: RustPythonGILGuard, mut value: Vec<u8>) -> RustPyObject 
 
 /// Consume a `Box<[u8]>`. Create a Python `bytearray` object.
 /// Bytes stored are not copied.
-pub fn boxed_slice_to_pyobj(py: RustPythonGILGuard, mut value: Box<[u8]>) -> RustPyObject {
+pub fn boxed_slice_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Box<[u8]>) -> RustPyObject {
     unsafe {
         let ptr: *mut PyObject = _PyObject_New(&mut PyByteArray_Type as *mut PyTypeObject);
         let typed: *mut PyByteArrayObject = mem::transmute(ptr);

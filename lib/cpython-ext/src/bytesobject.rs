@@ -4,15 +4,16 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
-use python27_sys::{PyBytesObject, PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t,
-                   _PyObject_NewVar};
+use python27_sys::{
+    PyBytesObject, PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t, _PyObject_NewVar,
+};
 use std::mem;
 use std::slice;
 
 /// Create a `PyBytes` object that have `size` bytes. Return the object and
 /// its internal buffer to be written. This is useful to bypass the memcpy
 /// cost creating a large `PyBytesObject`.
-pub fn allocate_pybytes(py: RustPythonGILGuard, size: usize) -> (RustPyObject, &mut [u8]) {
+pub fn allocate_pybytes(py: RustPythonGILGuard<'_>, size: usize) -> (RustPyObject, &mut [u8]) {
     unsafe {
         let ptr: *mut PyVarObject = _PyObject_NewVar(
             &mut PyBytes_Type as *mut PyTypeObject,
