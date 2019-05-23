@@ -16,22 +16,22 @@ use crate::revisionstore::pythonutil::{
 };
 
 pub trait DataStorePyExt {
-    fn get(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes>;
-    fn get_delta_chain(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList>;
-    fn get_delta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
-    fn get_meta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
-    fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
+    fn get_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes>;
+    fn get_delta_chain_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList>;
+    fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
+    fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
+    fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
 impl<T: DataStore> DataStorePyExt for T {
-    fn get(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
+    fn get_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
-        let result = <DataStore>::get(self, &key).map_err(|e| to_pyerr(py, &e))?;
+        let result = self.get(&key).map_err(|e| to_pyerr(py, &e))?;
 
         Ok(PyBytes::new(py, &result[..]))
     }
 
-    fn get_delta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+    fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let delta = self.get_delta(&key).map_err(|e| to_pyerr(py, &e))?;
 
@@ -45,7 +45,7 @@ impl<T: DataStore> DataStorePyExt for T {
         };
 
         let bytes = PyBytes::new(py, &delta.data);
-        let meta = <DataStorePyExt>::get_meta(self, py.clone(), &name, &node)?;
+        let meta = self.get_meta_py(py.clone(), &name, &node)?;
         Ok((
             bytes.into_object(),
             base_name.into_object(),
@@ -56,7 +56,7 @@ impl<T: DataStore> DataStorePyExt for T {
             .into_object())
     }
 
-    fn get_delta_chain(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+    fn get_delta_chain_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
         let deltachain = self.get_delta_chain(&key).map_err(|e| to_pyerr(py, &e))?;
         let pychain = deltachain
@@ -66,7 +66,7 @@ impl<T: DataStore> DataStorePyExt for T {
         Ok(PyList::new(py, &pychain[..]))
     }
 
-    fn get_meta(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
         let metadata = self.get_meta(&key).map_err(|e| to_pyerr(py, &e))?;
         let metadict = PyDict::new(py);
@@ -80,7 +80,7 @@ impl<T: DataStore> DataStorePyExt for T {
         Ok(metadict)
     }
 
-    fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
+    fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
         let keys = keys

@@ -135,19 +135,19 @@ py_class!(class datastore |py| {
     }
 
     def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
-        self.store(py).get(py, name, node)
+        self.store(py).get_py(py, name, node)
     }
 
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
-        self.store(py).get_delta_chain(py, name, node)
+        self.store(py).get_delta_chain_py(py, name, node)
     }
 
     def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
-        self.store(py).get_meta(py, name, node)
+        self.store(py).get_meta_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        self.store(py).get_missing(py, &mut keys.iter(py)?)
+        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
     }
 });
 py_class!(class datapack |py| {
@@ -188,27 +188,27 @@ py_class!(class datapack |py| {
 
     def get(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
         let store = self.store(py).get_value(py)?;
-        store.get(py, name, node)
+        store.get_py(py, name, node)
     }
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py).get_value(py)?;
-        store.get_delta(py, name, node)
+        store.get_delta_py(py, name, node)
     }
 
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py).get_value(py)?;
-        store.get_delta_chain(py, name, node)
+        store.get_delta_chain_py(py, name, node)
     }
 
     def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py).get_value(py)?;
-        store.get_meta(py, name, node)
+        store.get_meta_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py).get_value(py)?;
-        store.get_missing(py, &mut keys.iter(py)?)
+        store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
     def markledger(&self, ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
@@ -263,17 +263,17 @@ py_class!(class historypack |py| {
     def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
         let _known = known;
         let store = self.store(py).get_value(py)?;
-        store.get_ancestors(py, name, node)
+        store.get_ancestors_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py).get_value(py)?;
-        store.get_missing(py, &mut keys.iter(py)?)
+        store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
     def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
         let store = self.store(py).get_value(py)?;
-        store.get_node_info(py, name, node)
+        store.get_node_info_py(py, name, node)
     }
 
     def markledger(&self, ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
@@ -306,22 +306,22 @@ py_class!(class indexedlogdatastore |py| {
 
     def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py).get_value(py)?;
-        store.get_delta(py, name, node)
+        store.get_delta_py(py, name, node)
     }
 
     def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py).get_value(py)?;
-        store.get_delta_chain(py, name, node)
+        store.get_delta_chain_py(py, name, node)
     }
 
     def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py).get_value(py)?;
-        store.get_meta(py, name, node)
+        store.get_meta_py(py, name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py).get_value(py)?;
-        store.get_missing(py, &mut keys.iter(py)?)
+        store.get_missing_py(py, &mut keys.iter(py)?)
     }
 
     def markledger(&self, _ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {

@@ -13,13 +13,13 @@ use types::{Key, NodeInfo};
 use crate::revisionstore::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_key, to_pyerr};
 
 pub trait HistoryStorePyExt {
-    fn get_ancestors(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
-    fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
-    fn get_node_info(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple>;
+    fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
+    fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
+    fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple>;
 }
 
 impl<T: HistoryStore> HistoryStorePyExt for T {
-    fn get_ancestors(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
         let ancestors = self.get_ancestors(&key).map_err(|e| to_pyerr(py, &e))?;
         let ancestors = ancestors
@@ -32,7 +32,7 @@ impl<T: HistoryStore> HistoryStorePyExt for T {
         Ok(pyancestors)
     }
 
-    fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
+    fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
         let keys = keys
@@ -49,7 +49,7 @@ impl<T: HistoryStore> HistoryStorePyExt for T {
         Ok(results)
     }
 
-    fn get_node_info(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+    fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
         let key = to_key(py, name, node)?;
         let info = self.get_node_info(&key).map_err(|e| to_pyerr(py, &e))?;
         Ok(from_node_info(py, &key, &info))
