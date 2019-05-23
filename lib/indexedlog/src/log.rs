@@ -45,6 +45,7 @@ use std::fs::{self, File};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::{Range, RangeBounds};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
@@ -78,7 +79,7 @@ const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 pub struct Log {
     pub dir: PathBuf,
     disk_buf: Arc<Mmap>,
-    mem_buf: Vec<u8>,
+    mem_buf: Pin<Box<Vec<u8>>>,
     meta: LogMetadata,
     indexes: Vec<Index>,
     // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
@@ -996,11 +997,12 @@ impl OpenOptions {
             }
         })?;
 
+        let mem_buf = Box::pin(Vec::new());
         let (disk_buf, indexes) = Log::load_log_and_indexes(dir, &meta, &self.index_defs)?;
         let mut log = Log {
             dir: dir.to_path_buf(),
             disk_buf,
-            mem_buf: Vec::new(),
+            mem_buf,
             meta,
             indexes,
             index_corrupted: false,
