@@ -6,8 +6,8 @@
 
 #![deny(warnings)]
 
-use failure_ext::Error;
-use futures::future::ok;
+use failure_ext::{err_msg, Error};
+use futures::future::{err, ok};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::{queries, Connection};
@@ -70,11 +70,19 @@ queries! {
         "SELECT state, reason FROM repo_lock
         WHERE repo = {repo_name}"
     }
+    write SetReadWriteStatus(values: (repo_name: String, state: HgMononokeReadWrite, reason: str)) {
+        none,
+        mysql("INSERT INTO repo_lock (repo, state, reason) VALUES {values} ON DUPLICATE KEY UPDATE state = VALUES(state), reason = VALUES(reason)")
+        // sqlite query currently doesn't support changing the value
+        sqlite("INSERT INTO repo_lock (repo, state, reason) VALUES {values}")
+
+    }
 }
 
 #[derive(Clone)]
 pub struct RepoReadWriteFetcher {
     read_connection: Option<Connection>,
+    write_connection: Option<Connection>,
     readonly_config: RepoReadOnly,
     repo_name: String,
 }
@@ -91,6 +99,7 @@ impl RepoReadWriteFetcher {
 
         Self {
             read_connection: Some(builder.build_read_only()),
+            write_connection: Some(builder.build_read_write()),
             readonly_config,
             repo_name,
         }
@@ -101,6 +110,7 @@ impl RepoReadWriteFetcher {
             readonly_config,
             repo_name,
             read_connection: None,
+            write_connection: None,
         }
     }
 
@@ -133,6 +143,28 @@ impl RepoReadWriteFetcher {
             ok(self.readonly_config.clone()).boxify()
         }
     }
+
+    fn set_state(
+        &self,
+        state: HgMononokeReadWrite,
+        reason: String,
+    ) -> impl Future<Item = bool, Error = Error> {
+        match &self.write_connection {
+            Some(connection) => {
+                SetReadWriteStatus::query(&connection, &[(&self.repo_name, &state, &reason)])
+                    .map(|res| res.affected_rows() > 0)
+                    .left_future()
+            }
+            None => err(err_msg("db name is not specified")).right_future(),
+        }
+    }
+
+    pub fn set_mononoke_read_write(
+        &self,
+        reason: String,
+    ) -> impl Future<Item = bool, Error = Error> {
+        self.set_state(HgMononokeReadWrite::MononokeWrite, reason)
+    }
 }
 
 #[cfg(test)]
@@ -163,13 +195,14 @@ mod test {
         pub fn with_sqlite(readonly_config: RepoReadOnly, repo_name: String) -> Result<Self> {
             let sqlite_con = SqliteConnection::open_in_memory()?;
             sqlite_con.execute_batch(include_str!("../../schemas/sqlite-repo-lock.sql"))?;
-
-            let con = Connection::with_sqlite(sqlite_con);
+            let read_con = Connection::with_sqlite(sqlite_con);
+            let write_con = read_con.clone();
 
             Ok(Self {
                 readonly_config,
                 repo_name,
-                read_connection: Some(con),
+                read_connection: Some(read_con),
+                write_connection: Some(write_con),
             })
         }
 
@@ -281,6 +314,22 @@ mod test {
         .wait()
         .unwrap();
 
+        assert_eq!(fetcher.readonly().wait().unwrap(), ReadWrite);
+    }
+
+    #[test]
+    fn test_write() {
+        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
+        // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
+        assert_eq!(
+            fetcher.readonly().wait().unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
+
+        fetcher
+            .set_mononoke_read_write("repo is locked".to_string())
+            .wait()
+            .unwrap();
         assert_eq!(fetcher.readonly().wait().unwrap(), ReadWrite);
     }
 }
