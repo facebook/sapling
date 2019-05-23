@@ -787,14 +787,13 @@ class fileserverclient(object):
     def _httpfetchdata(self, fileids, dpack):
         """Fetch file data over HTTPS using the Eden API"""
         if edenapi.debug(self.ui):
-            self.ui.warn(_("fetching data for %d files over HTTPS\n") % len(fileids))
+            self.ui.warn(_("fetching %d files over HTTPS\n") % len(fileids))
 
         self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
         self.ui.metrics.gauge("http_getfiles_calls", 1)
 
-        with progress.bar(
-            self.ui, _("Fetching file content over HTTPS"), start=None, unit="bytes"
-        ) as prog:
+        msg = _("fetching %d files over HTTPS") % len(fileids)
+        with progress.bar(self.ui, msg, start=None, unit="bytes") as prog:
 
             def progcallback(dl, dlt, ul, ult):
                 if dl > 0:
@@ -819,9 +818,8 @@ class fileserverclient(object):
         self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
         self.ui.metrics.gauge("http_gethistory_calls", 1)
 
-        with progress.bar(
-            self.ui, _("Fetching file history over HTTPS"), start=None, unit="bytes"
-        ) as prog:
+        msg = _("fetching history for %d files over HTTPS") % len(fileids)
+        with progress.bar(self.ui, msg, start=None, unit="bytes") as prog:
 
             def progcallback(dl, dlt, ul, ult):
                 if dl > 0:
