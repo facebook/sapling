@@ -4,12 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use failure_ext::bail_msg;
 use std::collections::BTreeMap;
 use std::io::{self, Write};
 use std::str::{self, FromStr};
 
+use crate::errors::*;
 use bytes::Bytes;
-use errors::*;
 use mercurial_types::{
     HgBlob, HgBlobNode, HgChangesetEnvelope, HgChangesetId, HgManifestId, HgNodeHash, HgParents,
     MPath, NULL_HASH,
@@ -398,6 +399,7 @@ pub fn serialize_extras<W: Write>(extras: &Extra, out: &mut W) -> io::Result<()>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn escape_roundtrip(input: Vec<u8>) -> bool {

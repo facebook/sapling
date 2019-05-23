@@ -10,7 +10,7 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
-use failure::{chain::*, Error, Result};
+use failure_ext::{bail_err, chain::*, Error, Fail, Result};
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
@@ -90,7 +90,7 @@ impl StockBookmarks {
         Ok(StockBookmarks { bookmarks })
     }
 
-    pub fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<HgChangesetId>, Error> {
+    pub fn get(&self, name: &dyn AsRef<[u8]>) -> BoxFuture<Option<HgChangesetId>, Error> {
         let value = match self.bookmarks.get(name.as_ref()) {
             Some(hash) => Some(*hash),
             None => None,
@@ -115,6 +115,8 @@ impl StockBookmarks {
 mod tests {
     use std::io::Cursor;
 
+    use assert_matches::assert_matches;
+    use failure_ext::{err_downcast, err_downcast_ref};
     use futures::Future;
 
     use mercurial_types_mocks::nodehash::*;
@@ -123,7 +125,7 @@ mod tests {
 
     fn assert_bookmark_get(
         bookmarks: &StockBookmarks,
-        key: &AsRef<[u8]>,
+        key: &dyn AsRef<[u8]>,
         expected: Option<HgChangesetId>,
     ) {
         let expected = match expected {

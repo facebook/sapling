@@ -14,15 +14,15 @@ use futures::stream::{self, Stream};
 use futures::{Async, Poll};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use errors::*;
-use file;
+use crate::errors::*;
+use crate::file;
 use mercurial_types::manifest::Type;
 use mercurial_types::{
     FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath,
 };
 use mononoke_types::FileContents;
 
-use RevlogRepo;
+use crate::RevlogRepo;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {

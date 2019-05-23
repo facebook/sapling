@@ -17,7 +17,7 @@ use mercurial_types::{MPath, MPathElement, Type};
 use super::revlog::EntryContent;
 use super::{RevlogEntry, RevlogManifest};
 
-use errors::*;
+use crate::errors::*;
 
 // Note that:
 // * this isn't "left" and "right" because an explicit direction makes the API clearer

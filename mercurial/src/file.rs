@@ -15,7 +15,7 @@ use itertools::Itertools;
 use mercurial_types::{HgBlob, HgBlobNode, HgFileNodeId, MPath};
 use mononoke_types::{hash::Sha256, FileContents};
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
@@ -318,6 +318,7 @@ impl LFSContent {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     use mercurial_types_mocks::nodehash::*;
 

@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bytes;
-
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::fs::File;
@@ -14,9 +12,9 @@ use std::path::Path;
 use std::result;
 use std::sync::Arc;
 
+use crate::errors::*;
 use bytes::Bytes;
-use errors::*;
-use failure;
+use failure_ext as failure;
 use memmap::Mmap;
 use nom::IResult;
 

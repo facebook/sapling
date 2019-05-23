@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bytes;
-
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::HashSet;
 use std::fmt::{self, Display};
@@ -18,18 +16,18 @@ use std::sync::{Arc, RwLock};
 use futures::future;
 use futures::stream;
 use futures::{Async, IntoFuture, Poll, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 
+use crate::stockbookmarks::StockBookmarks;
 use mercurial_types::{
     fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId, HgNodeHash, MPath,
     MPathElement, RepoPath,
 };
-use stockbookmarks::StockBookmarks;
 
-pub use changeset::RevlogChangeset;
-use errors::*;
-pub use manifest::RevlogManifest;
-use revlog::{Revlog, RevlogIter};
+pub use crate::changeset::RevlogChangeset;
+use crate::errors::*;
+pub use crate::manifest::RevlogManifest;
+use crate::revlog::{Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 
@@ -54,7 +52,7 @@ pub enum Required {
 }
 
 impl Display for Required {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::Required::*;
 
         let s = match self {
@@ -111,7 +109,7 @@ impl FromStr for Required {
 pub enum StoreRequired {}
 
 impl Display for StoreRequired {
-    fn fmt(&self, _fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, _fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         // This library currently dooesn't support any store requirements.
         unimplemented!()
     }
@@ -231,7 +229,10 @@ impl RevlogRepo {
         Ok(StockBookmarks::read(self.basepath.clone())?)
     }
 
-    pub fn get_bookmark_value(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<HgChangesetId>, Error> {
+    pub fn get_bookmark_value(
+        &self,
+        key: &dyn AsRef<[u8]>,
+    ) -> BoxFuture<Option<HgChangesetId>, Error> {
         match self.get_bookmarks() {
             Ok(b) => b.get(key).boxify(),
             Err(e) => future::err(e).boxify(),

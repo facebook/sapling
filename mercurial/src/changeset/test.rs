@@ -6,12 +6,12 @@
 
 use std::collections::BTreeMap;
 
-use quickcheck::{QuickCheck, TestResult};
+use quickcheck::{quickcheck, QuickCheck, TestResult};
 
 use mercurial_types::{HgBlob, HgBlobNode, HgManifestId, HgNodeHash, MPath};
 use mononoke_types::DateTime;
 
-use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
+use crate::changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
 
 use bytes::Bytes;
 

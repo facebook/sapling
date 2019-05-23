@@ -9,12 +9,13 @@
 use std::fmt::Debug;
 use std::io::Read;
 
+use bitflags::bitflags;
 use flate2::read::ZlibDecoder;
-use nom::{be_u16, be_u32, Err, ErrorKind, IResult, Needed};
+use nom::{be_u16, be_u32, Err, ErrorKind, IResult, Needed, *};
 
 use mercurial_types::{bdiff::Delta, HgNodeHash};
 
-use revlog::revidx::RevIdx;
+use crate::revlog::revidx::RevIdx;
 
 use super::lz4;
 
