@@ -10,15 +10,24 @@ use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use edenapi::{Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
 use encoding::local_bytes_to_path;
+use revisionstore::MutableDeltaStore;
 use types::{Key, Node, RepoPath};
 
-use crate::revisionstore::{PythonMutableDataPack, PythonMutableHistoryPack};
+use crate::revisionstore::{mutabledeltastore, PythonMutableDataPack, PythonMutableHistoryPack};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<client>(py)?;
     Ok(m)
+}
+
+fn get_deltastore(py: Python, store: PyObject) -> PyResult<Box<dyn MutableDeltaStore + Send>> {
+    if let Ok(store) = store.extract::<mutabledeltastore>(py) {
+        Ok(Box::new(store))
+    } else {
+        Ok(Box::new(PythonMutableDataPack::new(store)?))
+    }
 }
 
 py_class!(class client |py| {
@@ -72,7 +81,7 @@ py_class!(class client |py| {
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
-        let mut store = PythonMutableDataPack::new(store)?;
+        let mut store = get_deltastore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
@@ -110,7 +119,7 @@ py_class!(class client |py| {
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
-        let mut store = PythonMutableDataPack::new(store)?;
+        let mut store = get_deltastore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
