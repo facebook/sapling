@@ -4,7 +4,9 @@
 # GNU General Public License version 2 or any later version.
 
 from edenscm.mercurial.node import hex
+from edenscm.mercurial.rust.bindings import revisionstore
 
+from . import shallowutil
 from .datapack import mutabledatapack
 from .historypack import mutablehistorypack
 
@@ -20,7 +22,11 @@ class pendingmutablepack(object):
     def getmutabledpack(self, read=False):
         if self._mutabledpack is None and not read:
             path = self._pathcb()
-            self._mutabledpack = mutabledatapack(self._repo.ui, path)
+            if self._repo.ui.configbool("format", "userustmutablestore"):
+                shallowutil.mkstickygroupdir(self._repo.ui, path)
+                self._mutabledpack = revisionstore.mutabledeltastore(packfilepath=path)
+            else:
+                self._mutabledpack = mutabledatapack(self._repo.ui, path)
 
         return self._mutabledpack
 

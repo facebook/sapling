@@ -118,6 +118,8 @@ Configs:
     ``format.userusthistorypack`` switches to using the rust history pack
     implementation.
 
+    ``format.userustmutablestore`` switches to using the rust mutable stores.
+
     ``treemanifest.blocksendflat`` causes an exception to be thrown if the
     current repository attempts to add flat manifests to a changegroup.
 
