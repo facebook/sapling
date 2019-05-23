@@ -52,11 +52,7 @@ Make sure that cache is empty
   [1]
 
   $ hgmn prefetch -r 0 -r1
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   $ hgmn prefetch -r 2
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 Make sure that new entries were downloaded
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
@@ -98,7 +94,6 @@ because everything has been already downloaded.
   > EOF
 
   $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: Command failed
   remote:   Error:
   remote:     Manifest id 1111111111111111111111111111111111111111 is missing

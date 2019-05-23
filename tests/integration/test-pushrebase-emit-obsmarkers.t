@@ -64,7 +64,6 @@ Push commits that will be obsoleted
   |/
   o  A [public;rev=0;426bada5c675]
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 0c67ec8c24b9 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -74,7 +73,6 @@ Push commits that will be obsoleted
   2 new obsolescence markers
   updating bookmark master_bookmark
   obsoleted 2 changesets
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log -r ":"
   @  2 [public;rev=6;dc31470c8386] default/master_bookmark
@@ -103,7 +101,6 @@ Push commits that will not be obsoleted
   |
   o  A [public;rev=0;426bada5c675]
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 6398085ceb9d to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets

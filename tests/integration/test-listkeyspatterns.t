@@ -48,24 +48,19 @@ switch to client and enable inifitepush extension
 
 match with glob pattern
   $ hgmn book --list-remote test/*
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
      test/one                  26805aba1e600a82e93661149f2313866a221a7b
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
      test/two                  4b61ff5c62e28cff36152201967390a6e7375604
 
 match with literal pattern
   $ hgmn book --list-remote test
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   $ hgmn book --list-remote test/three
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
   $ hgmn book --list-remote test/t*
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
      test/two                  4b61ff5c62e28cff36152201967390a6e7375604
 
 match multiple patterns
   $ hgmn book --list-remote test/one --list-remote test/th*
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
      test/one                  26805aba1e600a82e93661149f2313866a221a7b
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6

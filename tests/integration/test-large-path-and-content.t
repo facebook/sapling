@@ -60,7 +60,6 @@ pull on repo2
   $ cd $TESTTMP/repo2
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   warning: stream clone requested but client is missing requirements: lz4revlog
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
@@ -79,7 +78,6 @@ pull on repo2
   summary:     long
    (re)
   $ hgmn update -r master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
   $ du ${LONG_PATH}/${LONG_FILENAME}
@@ -111,7 +109,6 @@ push one more long path from repo2
    (re)
   $ hgmn push
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
 
@@ -120,7 +117,6 @@ pull on repo3
   $ cd $TESTTMP/repo3
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   warning: stream clone requested but client is missing requirements: lz4revlog
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
@@ -144,7 +140,6 @@ pull on repo3
   summary:     long
    (re)
   $ hgmn update -r master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
   $ du ${LONG_PATH}/${LONG_FILENAME}

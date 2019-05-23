@@ -103,7 +103,6 @@ Delete a file, make sure that file_size_hook is not called on deleted files
   $ hg rm 1
   $ hg ci -m 'delete a file'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 8ecfb5e6aa64 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -118,7 +117,6 @@ Add OWNERS file, then delete it. Make sure deletion is not allowed
   $ hg rm OWNERS
   $ hg ci -m 'remove OWNERS'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 2d1a0bcf73ee to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
@@ -139,7 +137,6 @@ Bypass owners check
   > CONFIG
   $ hg amend -m 'remove OWNERS\n@allow_delete_owners'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 67730b0d6122 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -154,7 +151,6 @@ Add OWNERS2 file. This time bypass it with pushvars
   $ hg rm OWNERS2
   $ hg ci -m 'remove OWNERS2'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
@@ -168,7 +164,6 @@ Add OWNERS2 file. This time bypass it with pushvars
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push -r . --to master_bookmark --pushvars "ALLOW_DELETE_OWNERS=true"
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -182,7 +177,6 @@ Send large file
   $ echo 'aaaaaaaaaaa' > largefile
   $ hg ci -Aqm 'largefile'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 3e0db158edcc to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
@@ -199,7 +193,6 @@ Send large file
 Bypass large file hook
   $ hg amend -m '@allow_large_files'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 51fea0e7527d to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -214,7 +207,6 @@ Send large file inside a directory
   $ echo 'aaaaaaaaaaa' > dir/largefile
   $ hg ci -Aqm 'dir/largefile'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev cbc62a724366 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed

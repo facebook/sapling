@@ -72,7 +72,6 @@ Create a new commit in repo2
 
 Do a push, while bundle preservation is enabled
   $ hgmn push -r . --to master_bookmark
-  remote: .* DEBG Session with Mononoke started with uuid: .* (re)
   pushing rev dc31470c8386 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
@@ -83,7 +82,6 @@ Do a push, while bundle preservation is enabled
 Do a pushrebase, while preservation is enabled
   $ hg up -q 2 && echo 3 > 3 && hg add 3 && hg ci -qm 3
   $ hgmn push -r . --to master_bookmark --config extensions.pushrebase=
-  remote: .* DEBG Session with Mononoke started with uuid: .* (re)
   pushing rev 1c1c6e358bc0 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets

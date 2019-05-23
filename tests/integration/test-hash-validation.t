@@ -51,7 +51,6 @@ Prefetch should fail with corruption error
   $ cd $TESTTMP/repo-client
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   warning: stream clone requested but client is missing requirements: lz4revlog
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
@@ -62,8 +61,6 @@ Prefetch should fail with corruption error
   adding remote bookmark master_bookmark
   new changesets 426bada5c675:26805aba1e60
   $ hgmn prefetch -r ":"
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: Command failed
   remote:   Error:
   remote:     Data corruption for file 'A': expected a2e456504a5e61f763f1a0b36a6c247c7541b2b3, actual 005d992c5dcf32993668f7cede29d296c494a5d9!
@@ -89,8 +86,6 @@ Prefetch should fail with corruption error
 
 Same for getpackv1
   $ hgmn prefetch -r ":" --config remotefilelog.fetchpacks=True
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: Command failed
   remote:   Error:
   remote:     Corrupt hg filenode returned: 005d992c5dcf32993668f7cede29d296c494a5d9 != a2e456504a5e61f763f1a0b36a6c247c7541b2b3

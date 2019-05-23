@@ -65,7 +65,6 @@ Create a copy on a client and push it
   $ hg cp A D
   $ hg ci -m 'make a copy'
   $ hgmn push -r . --to master_bookmark 
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 726a45528732 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed

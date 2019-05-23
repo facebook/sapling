@@ -473,7 +473,6 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   $ chmod +x pushcommit
   $ hg ci -m 'exec mode'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 15776eb106e6 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -487,7 +486,6 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   adding symlink_to_pushcommit
   $ hg ci -m 'symlink'
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 6f060fabc8e7 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets

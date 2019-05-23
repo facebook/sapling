@@ -55,7 +55,6 @@ start mononoke
   $ cd repo2
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -64,7 +63,6 @@ start mononoke
   adding remote bookmark master_bookmark
   new changesets 38674c683e74
   $ hgmn up 2
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C
   A 2

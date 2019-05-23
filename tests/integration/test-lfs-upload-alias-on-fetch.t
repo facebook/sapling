@@ -58,7 +58,6 @@
   $ echo $LONG > lfs-largefile
   $ hg commit -Aqm "add lfs-large file"
   $ hgmn push -r . --to master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 0db8825b9792 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   lfs: uploading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
@@ -93,7 +92,6 @@
 
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -105,7 +103,6 @@
   0
 
   $ hgmn update -r master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   resolving manifests
   lfs: downloading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
   lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b

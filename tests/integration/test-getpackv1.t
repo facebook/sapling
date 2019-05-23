@@ -54,7 +54,7 @@ Make sure that cache is empty
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
   [1]
 
-  $ hgmn prefetch -r 0 -r1 --debug 2>&1 | grep packv1
+  $ hgmn prefetch -r 0 -r1 --debug 2>&1 | grep "getpackv1 command"
   sending getpackv1 command
 
 Make sure that `hg update`
@@ -73,7 +73,7 @@ Then make sure update succeeds
   $ hgmn pull -q
   warning: stream clone requested but client is missing requirements: lz4revlog
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
-  $ hgmn prefetch -r 0 -r 3 --debug 2>&1 | grep packv1
+  $ hgmn prefetch -r 0 -r 3 --debug 2>&1 | grep "getpackv1 command"
   sending getpackv1 command
   $ hg up --config paths.default=badpath 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -109,7 +109,6 @@ Rename a file and then prefetch it
   $ hg ci -m 'rename A to AA'
   $ hgmn push -r . --to master_bookmark
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -117,7 +116,7 @@ Rename a file and then prefetch it
   added 0 changesets with 0 changes to 0 files
   $ cd $TESTTMP/repo3
   $ hgmn pull -q
-  $ hgmn prefetch -r 4 --debug 2>&1 | grep packv1
+  $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv1 command"
   sending getpackv1 command
   $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
   $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
@@ -137,7 +136,6 @@ generated because copy metadata wasn't added
   $ echo B > AA
   $ hg ci -m 'commit on top of a rename'
   $ hgmn push -r . --to master_bookmark --config extensions.remotenames=
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 0ce8239858c4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark

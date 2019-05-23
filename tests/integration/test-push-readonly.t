@@ -50,10 +50,9 @@ create new commit in repo2 and check that push fails
 
   $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
   pushing to ssh://user@dummy/repo
-  running *scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
+  running *dummyssh.par 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
@@ -90,5 +89,4 @@ create new commit in repo2 and check that push fails
 Try to bypass the check
   $ hgmn push --force --config treemanifest.treeonly=True ssh://user@dummy/repo --pushvars "BYPASS_READONLY=true"
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes

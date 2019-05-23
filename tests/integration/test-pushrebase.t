@@ -54,7 +54,6 @@ Clone the repo
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -66,7 +65,6 @@ Clone the repo
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
 
   $ hgmn up master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log -r ":"
   @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
@@ -86,7 +84,6 @@ Push rebase fails with conflict in the bottom of the stack
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hgmn push -r . --to master_bookmark
-  remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
   remote: Command failed
@@ -106,7 +103,6 @@ Push rebase fails with conflict in the top of the stack
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
   remote: Command failed
@@ -126,7 +122,6 @@ Push stack
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ echo 4 > 4 && hg add 4 && hg ci -m 4
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 7a68f123d810 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -155,7 +150,6 @@ Push fast-forward
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 5 > 5 && hg add 5 && hg ci -m 5
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 59e5396444cf to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -181,7 +175,6 @@ Push fast-forward
 
 Push with no new commits
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 59e5396444cf to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   no changes found
@@ -220,7 +213,6 @@ Push a merge commit with both parents not ancestors of destination bookmark
   o  A [public;rev=0;426bada5c675]
   
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev fad460d85200 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -255,7 +247,6 @@ Push-Rebase over merge is not allowed
   $ hgmn up 11 -q
   $ echo 8 > 8 && hg add 8 && hg ci -m 8
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev e0f0824ca6a6 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
@@ -290,7 +281,6 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
 
 - Actually test the push
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev e3db177db1d1 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -303,7 +293,6 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   eb388b759fde98ed5b1e05fd2da5309f3762c2fd
 Test creating a bookmark on a public commit
   $ hgmn push --rev 25 --to master_bookmark_2 --create
-  remote: .* DEBG Session with Mononoke started with uuid: .* (re)
   pushing rev eb388b759fde to destination ssh://user@dummy/repo bookmark master_bookmark_2
   searching for changes
   no changes found
@@ -337,7 +326,6 @@ Test a non-forward push
   |
   ~
   $ hgmn push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 589551466f25 to destination ssh://user@dummy/repo bookmark master_bookmark_2
   searching for changes
   no changes found
@@ -359,7 +347,6 @@ Test a non-forward push
 Test deleting a bookmark
   $ hgmn push --delete master_bookmark_2
   pushing to ssh://user@dummy/repo
-  remote: .* DEBG Session with Mononoke started with uuid: .* (re)
   searching for changes
   no changes found
   deleting remote bookmark master_bookmark_2
@@ -380,7 +367,6 @@ Test deleting a bookmark
 Test creating a bookmark and new head
   $ echo draft > draft && hg add draft && hg ci -m draft
   $ hgmn push -r . --to newbook --create
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 7a037594e202 to destination ssh://user@dummy/repo bookmark newbook
   searching for changes
   adding changesets

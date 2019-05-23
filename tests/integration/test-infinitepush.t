@@ -58,7 +58,6 @@ Do infinitepush (aka commit cloud) push
   running * (glob)
   sending hello command
   sending between command
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
@@ -104,14 +103,12 @@ Do infinitepush (aka commit cloud) push
   $ cd ../repo-pull
   $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 47da8b81097c
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
@@ -130,7 +127,6 @@ Pushbackup also works
   running * (glob)
   sending hello command
   sending between command
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
@@ -166,7 +162,6 @@ Pushbackup also works
   $ cd ../repo-pull
   $ hgmn pull -r 95cad53aab1b0b33eceee14473b3983312721529
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -192,7 +187,6 @@ Pushbackup that pushes only bookmarks
   running * (glob)
   sending hello command
   sending between command
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
@@ -214,7 +208,6 @@ Pushbackup that pushes only bookmarks
 
 Finally, try to push existing commit to a public bookmark
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 95cad53aab1b to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
@@ -232,7 +225,6 @@ Check phases on another side (for pull command and pull -r)
   $ cd ../repo-pull
   $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   no changes found
   adding changesets
   devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
@@ -251,7 +243,6 @@ Check phases on another side (for pull command and pull -r)
 
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   no changes found
   adding changesets
@@ -278,7 +269,6 @@ Check phases on another side (for pull command and pull -r)
   $ hg ci -m "feature release"
 
   $ hgmn push -r . --to "test_release_1.0.0"  --create # push this release (creating new remote bookmark)
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 500658c138a4 to destination ssh://user@dummy/repo bookmark test_release_1.0.0
   searching for changes
   exporting bookmark test_release_1.0.0
@@ -286,7 +276,6 @@ Check phases on another side (for pull command and pull -r)
   $ hg addremove -q
   $ hg ci -m "change on top of the release"
   $ hgmn cloud backup --dest ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   backing up stack rooted at eca836c7c651
   commitcloud: backed up 1 commit
 
@@ -308,7 +297,6 @@ Check phases on another side (for pull command and pull -r)
   $ cd ../repo-pull
   $ hgmn pull -r eca836c7c6519b769367cc438ce09d83b4a4e8e1 # draft revision based on different public bookmark
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -316,7 +304,6 @@ Check phases on another side (for pull command and pull -r)
   added 2 changesets with 0 changes to 0 files (+1 heads)
   adding remote bookmark test_release_1.0.0
   new changesets 500658c138a4:eca836c7c651
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
   $ tglogp
   o  4: eca836c7c651 draft 'change on top of the release'
@@ -332,7 +319,6 @@ Check phases on another side (for pull command and pull -r)
 
   $ hgmn pull -r test_release_1.0.0
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   no changes found
   adding changesets
   devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
@@ -364,7 +350,6 @@ Test phases with pushrebase
   $ hg addremove -q
   $ hg ci -m "new feature on top of master"
   $ hgmn push -r . --to master_bookmark # push-rebase
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev f9e4cd522499 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -434,13 +419,10 @@ More sophisticated test for phases
   $ hgmn cloud backup --dest ssh://user@dummy/repo -q
 
   $ hgmn cloud check --dest ssh://user@dummy/repo -r e4ae5d869b06 --remote
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   e4ae5d869b061c927cf739de04162653c9c4a9ab backed up
   $ hgmn cloud check --dest ssh://user@dummy/repo -r 8336071380f0 --remote
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   8336071380f0f7cf919e51f7f1818f2fed425fdb backed up
   $ hgmn cloud check --dest ssh://user@dummy/repo -r 884e1b02454b --remote
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   884e1b02454b186570b35d47eac3794b2f8d952f backed up
 
   $ tglogp
@@ -497,7 +479,6 @@ At the moment short hahses are not working, print the full hashes to use then in
   $ cd ../repo-pull
 
   $ hgmn cloud restorebackup
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
   [255]
 

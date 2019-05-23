@@ -38,7 +38,6 @@ create a commit with mutation extras
 
 pushrebase it directly onto master - it will be rewritten without the mutation extras
   $ hgmn push -r . --to master
-  remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev 6ad95cdc8ab9 to destination ssh://user@dummy/repo bookmark master
   searching for changes
   adding changesets
@@ -68,7 +67,6 @@ create another commit on the base commit with mutation extras
 
 pushrebase it onto master - it will be rebased and rewritten without the mutation extras
   $ hgmn push -r . --to master
-  remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev fd935a5d42c4 to destination ssh://user@dummy/repo bookmark master
   searching for changes
   adding changesets

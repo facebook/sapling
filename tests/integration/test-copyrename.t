@@ -45,7 +45,6 @@ push some files with copy/move files
   recording removal of b as rename to b_move (100% similar)
   $ hgmn push ssh://user@dummy/repo
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
 
@@ -59,7 +58,6 @@ pull them
   0cd96de13884b090099512d4794ae87ad067ea8e
   $ hgmn pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -79,7 +77,6 @@ push files that modify copied and moved files
   $ hg addremove && hg ci -q -mc
   $ hgmn push ssh://user@dummy/repo
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
 
@@ -91,7 +88,6 @@ pull them
   0cd96de13884b090099512d4794ae87ad067ea8e
   $ hgmn pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -104,7 +100,6 @@ pull them
   4b747ca852a40a105b9bb71cd4d07248ea80f704
   0cd96de13884b090099512d4794ae87ad067ea8e
   $ hgmn up master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat a_copy
   a

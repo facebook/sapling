@@ -119,12 +119,10 @@ start mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
   $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   remote: * ERRO Requested repo "disabled_repo" does not exist or disabled (glob)
   abort: no suitable response from remote hg!
   [255]
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   one two three None None
 
   $ cd repo2
@@ -199,7 +197,6 @@ to create a fileblob bookmark
 
 Do a streaming clone of the repo
   $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true --config extensions.lz4revlog=
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   streaming all changes
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)
@@ -210,5 +207,4 @@ Do a streaming clone of the repo
   added 10 changesets with 0 changes to 0 files (+1 heads)
   new changesets * (glob)
   updating to branch default
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved

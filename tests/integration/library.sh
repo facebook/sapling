@@ -232,6 +232,14 @@ function setup_mononoke_config {
     REPOTYPE="$1"
   fi
 
+  if [[ ! -e "$TESTTMP/mononoke_hgcli" ]]; then
+    cat >> "$TESTTMP/mononoke_hgcli" <<EOF
+"$MONONOKE_HGCLI" --no-session-output "\$@"
+EOF
+    chmod a+x "$TESTTMP/mononoke_hgcli"
+    MONONOKE_HGCLI="$TESTTMP/mononoke_hgcli"
+  fi
+
   ALLOWED_USERNAME="${ALLOWED_USERNAME:-myusername0}"
 
   cd mononoke-config

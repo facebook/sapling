@@ -55,7 +55,6 @@ Push
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets

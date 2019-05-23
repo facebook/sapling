@@ -40,7 +40,6 @@ Push with bookmark
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
   $ hgmn push --to withbook --create
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 11f53bbd855a to destination ssh://user@dummy/repo bookmark withbook
   searching for changes
   exporting bookmark withbook
@@ -59,7 +58,6 @@ Update the bookmark
   $ echo update > update && hg addremove && hg ci -m update
   adding update
   $ hgmn push --to withbook
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark withbook
   searching for changes
   updating bookmark withbook
@@ -75,11 +73,9 @@ Try non fastforward moves (backwards and across branches)
   $ echo other_commit > other_commit && hg -q addremove && hg ci -m other_commit
   $ hgmn push
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   no changes found
@@ -97,7 +93,6 @@ Try non fastforward moves (backwards and across branches)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   no changes found
@@ -115,7 +110,6 @@ Try non fastforward moves (backwards and across branches)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark withbook
   searching for changes
   no changes found
@@ -131,7 +125,6 @@ Try non fastfoward moves on regex bookmark
   $ hgmn push -r a075b5221b92 --to ffonly_bookmark --create -q
   [1]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark ffonly_bookmark
   searching for changes
   no changes found
@@ -153,7 +146,6 @@ Try to delete master
   $ cd ../repo-push
   $ hgmn push --delete master_bookmark
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   no changes found
   remote: Command failed
@@ -173,7 +165,6 @@ Try to delete master
 Delete the bookmark
   $ hgmn push --delete withbook
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   no changes found
   deleting remote bookmark withbook

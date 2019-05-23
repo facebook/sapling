@@ -45,7 +45,6 @@ update master_bookmark concurrently.
   $ hg ci -mb
   $ hgmn push ssh://user@dummy/repo -r .
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
   $ echo "c file content" > c
@@ -76,12 +75,10 @@ configure an extension so that a push happens right after pulldiscovery
 
   $ hgmn pull --config extensions.pulldiscovery_push=$TESTTMP/pulldiscovery_push.py
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   *** starting discovery
   searching for changes
   *** running push
   pushing to ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
   *** push complete
@@ -99,7 +96,6 @@ pull again to ensure the new version makes it into repo-pull
 
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests

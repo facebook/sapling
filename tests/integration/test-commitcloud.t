@@ -85,7 +85,6 @@ Make commits in the first client, and sync it
   $ mkcommit "commit3"
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   backing up stack rooted at 660cb078da57
   commitcloud: commits synchronized
   finished in * (glob)
@@ -106,7 +105,6 @@ Sync from the second client - the commits should appear
   commitcloud: synchronizing 'client2' with 'user/test/default'
   pulling 44641a2b1a42
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -132,7 +130,6 @@ Make commits from the second client and sync it
   $ mkcommit "commit6"
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   backing up stack rooted at 15f040cf571c
   commitcloud: commits synchronized
   finished in * (glob)
@@ -145,7 +142,6 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   commitcloud: synchronizing 'client1' with 'user/test/default'
   pulling 58508421158d
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -174,12 +170,10 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
 On the first client rebase the stack
   $ hgmn rebase -s 15f040cf571c -d 44641a2b1a42
   rebasing 4:15f040cf571c "commit4"
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   rebasing 5:a1806767adaa "commit5"
   rebasing 6:58508421158d "commit6" (tip)
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   backing up stack rooted at 660cb078da57
   commitcloud: commits synchronized
   finished in * (glob)
@@ -191,7 +185,6 @@ On the second client sync it
   commitcloud: synchronizing 'client2' with 'user/test/default'
   pulling 8e3f03f8d9db
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -234,7 +227,6 @@ On the second client hide all draft commits
   6 changesets hidden
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -247,7 +239,6 @@ On the first client check that all commits were hidden
   $ cd ../client1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -278,7 +269,6 @@ Make one of the commits public when it shouldn't be.
   $ hgmn phase -p 8d621fa11677
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   backing up stack rooted at ec61bf312a03
   remote: Command failed
   remote:   Error:
@@ -299,7 +289,6 @@ Make one of the commits public when it shouldn't be.
   remote:     While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
   push failed: stream ended unexpectedly (got 0 bytes, expected 4)
   retrying push with discovery
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   backing up stack rooted at 77a917e6c3a5
   commitcloud: commits synchronized
@@ -312,7 +301,6 @@ Commit still becomes available in the other repo
   commitcloud: synchronizing 'client2' with 'user/test/default'
   pulling ec61bf312a03 88d416aed919
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   adding changesets
   adding manifests

@@ -69,7 +69,6 @@ Try to push merge commit
   o  A [public;rev=0;426bada5c675]
   
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 3e1c4ca1f9be to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed

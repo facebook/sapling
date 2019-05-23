@@ -60,6 +60,9 @@ fn main() {
         .arg(Arg::from_usage(
             "--scuba-table [SCUBA_TABLE] 'name of scuba table to log to'",
         ))
+        .arg(Arg::from_usage(
+            "--no-session-output 'disables the session uuid output'",
+        ))
         .subcommand(
             SubCommand::with_name("serve")
                 .about("start server")

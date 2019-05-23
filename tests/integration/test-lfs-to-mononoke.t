@@ -77,7 +77,6 @@
   $ echo $LONG"for-rename" > lfs-largefile-for-rename
   $ hg commit -Aqm "add lfs-large files"
   $ hgmn push -r . --to master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev cbf96639d87c to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   lfs: need to transfer 2 objects (2.94 KB)
@@ -101,7 +100,6 @@
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
   $ hg commit -Aqm "rename"
   $ hgmn push -r . --to master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 5ff46b53dca4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   lfs: uploading 8e861bc81e64491883d375bf97e9b5dbe4626f8651483cfa9c95db0e32da4a00 (1.48 KB)
@@ -128,7 +126,6 @@
   $ echo $LONG"ANOTHER-LFS" > f
   $ hg commit -m f -A f
   $ hgmn push -r . --to master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
   validated revset for rebase
@@ -167,7 +164,6 @@
 
   $ hgmn pull -v
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   all local heads known remotely
   adding changesets
@@ -177,7 +173,6 @@
   new changesets cbf96639d87c:5ff46b53dca4
 
   $ hgmn update -r master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   resolving manifests
   lfs: need to transfer 2 objects (2.94 KB)
   lfs: downloading 8e861bc81e64491883d375bf97e9b5dbe4626f8651483cfa9c95db0e32da4a00 (1.48 KB)
@@ -197,7 +192,6 @@
   AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCfor-rename
 
   $ hgmn st --change . -C
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   A lfs-largefile-renamed
     lfs-largefile-for-rename
   R lfs-largefile-for-rename
@@ -212,7 +206,6 @@
   $ sed -i s/sha256:b3b32a0272a17de060bd061eba7617bcd0816da95b2d9d796535cf626bc26ef9/sha256:f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b/ $FILENODE_TO_CORRUPT
 
   $ hgmn push -r . --to master_bookmark -v
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev df4af074ec72 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   lfs: uploading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.48 KB)

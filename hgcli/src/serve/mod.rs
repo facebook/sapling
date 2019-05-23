@@ -50,6 +50,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
         if let Some(repo) = main.value_of("repository") {
             let query_string = main.value_of("query-string").unwrap_or("");
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
+            let show_session_output = !main.is_present("no-session-output");
 
             let cert = sub
                 .value_of("cert")
@@ -80,6 +81,7 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
                 is_remote_proxy,
                 scuba_table,
                 mock_username,
+                show_session_output,
             }
             .run();
         }
@@ -100,6 +102,7 @@ struct StdioRelay<'a> {
     is_remote_proxy: bool,
     scuba_table: Option<&'a str>,
     mock_username: Option<&'a str>,
+    show_session_output: bool,
 }
 
 impl<'a> StdioRelay<'a> {
@@ -158,19 +161,21 @@ impl<'a> StdioRelay<'a> {
             Logger::root(drain.fuse(), o!())
         };
 
-        // This message is parsed on various places by Sandcastle to determine it was served by
-        // Mononoke. This message should remain exactly like this, therefor we serve Sandcastle
-        // and use the fallback scenario for when query string is empty to show this message. Once
-        // hg-ssh-wrapper everywhere is updated to always pass along the query string, we can make
-        // this a non-optional parameter and show the user friendly message on empty query string.
-        if self.query_string.is_empty() || self.query_string.contains("sandcastle") {
-            debug!(
-                client_logger,
-                "Session with Mononoke started with uuid: {}", session_uuid
-            );
-        } else {
-            eprintln!("server: https://fburl.com/mononoke");
-            eprintln!("session: {}", session_uuid);
+        if self.show_session_output {
+            // This message is parsed on various places by Sandcastle to determine it was served by
+            // Mononoke. This message should remain exactly like this, therefor we serve Sandcastle
+            // and use the fallback scenario for when query string is empty to show this message. Once
+            // hg-ssh-wrapper everywhere is updated to always pass along the query string, we can make
+            // this a non-optional parameter and show the user friendly message on empty query string.
+            if self.query_string.is_empty() || self.query_string.contains("sandcastle") {
+                debug!(
+                    client_logger,
+                    "Session with Mononoke started with uuid: {}", session_uuid
+                );
+            } else {
+                eprintln!("server: https://fburl.com/mononoke");
+                eprintln!("session: {}", session_uuid);
+            }
         }
 
         scuba_logger.log_with_msg("Hgcli proxy - Connected", None);

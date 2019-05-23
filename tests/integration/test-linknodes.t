@@ -92,7 +92,6 @@ push an infinitepush commit with new content
   $ echo "content1" > file
   $ hg commit -q -m branch
   $ hgmn cloud backup
-  remote: * DEBG Session with Mononoke started * (glob)
   backing up stack rooted at 60ab8a6c8e65
   commitcloud: backed up 1 commit
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
@@ -105,16 +104,13 @@ pull the infinitepush commit
   $ cd $TESTTMP/repo-pull1
   $ hgmn pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started * (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 60ab8a6c8e65
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621 --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
-  remote: * DEBG Session with Mononoke started * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 the blob didn't get uploaded to the cache
@@ -174,7 +170,6 @@ push a master commit with the same content
   $ echo "content1" > file
   $ hg commit -q -m master
   $ hgmn push ssh://user@dummy/repo --to master_bookmark
-  remote: * DEBG Session with Mononoke started * (glob)
   pushing rev 6dbc3093b595 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
@@ -185,7 +180,6 @@ pull only the master branch into another repo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn pull ssh://user@dummy/repo -B master_bookmark
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started * (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -193,7 +187,6 @@ pull only the master branch into another repo
   added 1 changesets with 0 changes to 0 files
   new changesets 6dbc3093b595
   $ hgmn up master_bookmark --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
-  remote: * DEBG Session with Mononoke started * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 the blob was uploaded to the cache
@@ -235,16 +228,13 @@ pull the infinitepush commit again in a new repo
   $ cd $TESTTMP/repo-pull3
   $ hgmn pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   pulling from ssh://user@dummy/repo
-  remote: * DEBG Session with Mononoke started * (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 60ab8a6c8e65
-  remote: * DEBG Session with Mononoke started * (glob)
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
-  remote: * DEBG Session with Mononoke started * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugremotefilelog ../cachepath/repo-pull3/97/1c419dd609331343dee105fffd0f4608dc0bf2/b4aa7b980f00bcd3ea58510798c1425dcdc511f3
   size: 9 bytes

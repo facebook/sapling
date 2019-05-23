@@ -36,7 +36,6 @@ set up the local repo
   $ cd local
   $ hgmn pull
   pulling from ssh://user@dummy/repo
-  remote: * Session with Mononoke started with uuid: * (glob)
   connected to * (glob)
   searching for changes
   no changes found
@@ -49,7 +48,6 @@ set up the local repo
   devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   $ hgmn pull --config clienttelemetry.announceremotehostname=False
   pulling from ssh://user@dummy/repo
-  remote: * Session with Mononoke started with uuid: * (glob)
   searching for changes
   no changes found
   adding changesets

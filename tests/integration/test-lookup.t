@@ -61,28 +61,22 @@ Helper script to test the lookup function
 
 Lookup non-existent hash
   $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup fffffffffffff6c66edf28380101a92122cbea50
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   abort: fffffffffffff6c66edf28380101a92122cbea50 not found!
   [255]
 
 Lookup existing hash
   $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup f9ae6ef0865e00431f2af076be6b680f75dd2777
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 Lookup non-existent bookmark
   $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup fake_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   abort: fake_bookmark not found!
   [255]
 
 Lookup existing bookmark
   $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 Lookup bookmark with hash name that exists as a hash (returns hash)
   $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup 3903775176ed42b1458a6281db4a0ccf4d9f287a
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 Lookup bookmark with hash name that doesn't exist as a hash (returns bookmark -> hash)
   $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup ffff775176ed42b1458a6281db4a0ccf4d9f287a
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)

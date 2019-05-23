@@ -83,7 +83,6 @@ Clone the repo
 
 Unsuccessful push creates a draft commit on the server
   $ hgmn push -r . --to master_bookmark
-  remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev 812eca0823f9 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: Command failed

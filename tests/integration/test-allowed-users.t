@@ -53,7 +53,6 @@ push new bookmark
   (activating bookmark G)
   $ touch 1 && hg add 1 && hg ci -m 1
   $ MOCK_USERNAME="aslpavel" hgmn push -r . --create --to D
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 3dd539927db6 to destination ssh://user@dummy/repo bookmark D
   searching for changes
   remote: Command failed
@@ -70,7 +69,6 @@ push new bookmark
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ MOCK_USERNAME="b" hgmn push -r . --create --to D
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 3dd539927db6 to destination ssh://user@dummy/repo bookmark D
   searching for changes
   exporting bookmark D
@@ -81,7 +79,6 @@ push updates existing bookmark
   (activating bookmark A)
   $ touch 2 && hg add 2 && hg ci -m 2
   $ MOCK_USERNAME="aslapvel" hgmn push -r . --to A
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev fa8d8af14ee8 to destination ssh://user@dummy/repo bookmark A
   searching for changes
   remote: Command failed
@@ -98,7 +95,6 @@ push updates existing bookmark
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ MOCK_USERNAME="a" hgmn push -r . --to A
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev fa8d8af14ee8 to destination ssh://user@dummy/repo bookmark A
   searching for changes
   updating bookmark A
@@ -114,7 +110,6 @@ pushrebase
   (activating bookmark C)
   $ touch 3 && hg add 3 && hg ci -m 3
   $ MOCK_USERNAME="a" hgmn push -r . --to C
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 8f950fe5040c to destination ssh://user@dummy/repo bookmark C
   searching for changes
   remote: Command failed
@@ -127,7 +122,6 @@ pushrebase
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ MOCK_USERNAME="c" hgmn push -r . --to C
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 8f950fe5040c to destination ssh://user@dummy/repo bookmark C
   searching for changes
   adding changesets

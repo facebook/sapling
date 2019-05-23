@@ -61,7 +61,6 @@ Push single empty commit
   
   
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 4d5799789652 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -77,7 +76,6 @@ Push empty and non-empty commit in a stack
   $ hg revert -r .^ 2
   $ hg commit --amend
   $ hgmn push -r . --to master_bookmark
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 22c3c2036561 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -95,10 +93,8 @@ Push stack of empty commits
   $ hg revert -r .^ 111
   $ hg commit --amend
   $ hgmn push -r . --to master_bookmark
-  remote: * Session with Mononoke started with uuid: * (glob)
   pushing rev aeb4783bffb3 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   adding changesets
   adding manifests
   adding file changes
