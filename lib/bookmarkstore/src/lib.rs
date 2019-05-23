@@ -6,7 +6,6 @@
 //!
 //! Bookmarks can be loaded from an existing hg bookmarks file.
 
-extern crate atomicwrites;
 #[macro_use]
 extern crate failure;
 extern crate indexedlog;
@@ -154,7 +153,7 @@ enum BookmarkEntry<'a> {
 }
 
 impl<'a> BookmarkEntry<'a> {
-    fn pack(bookmark_entry: &BookmarkEntry) -> Vec<u8> {
+    fn pack(bookmark_entry: &BookmarkEntry<'_>) -> Vec<u8> {
         let mut result = Vec::new();
         match bookmark_entry {
             BookmarkEntry::Remove { bookmark } => {
@@ -170,7 +169,7 @@ impl<'a> BookmarkEntry<'a> {
         result
     }
 
-    fn unpack(data: &[u8]) -> BookmarkEntry {
+    fn unpack(data: &[u8]) -> BookmarkEntry<'_> {
         match data[0] {
             b'R' => {
                 let bookmark = str::from_utf8(&data[1..]).unwrap();
