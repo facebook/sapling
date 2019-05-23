@@ -1716,6 +1716,89 @@ mod tests {
         log1.sync().unwrap_err();
     }
 
+    /// Get a `Log` with index defined on first 8 bytes.
+    fn log_with_index(path: &Path, lag: u64) -> Log {
+        let index_func = |_data: &[u8]| vec![IndexOutput::Reference(0..8)];
+        let index_def = IndexDef::new("i", index_func).lag_threshold(lag);
+        Log::open(path, vec![index_def]).unwrap()
+    }
+
+    /// Insert entries to a log
+    fn insert_entries(log: &mut Log, start: u64, n: u64) {
+        for i in start..(start + n) {
+            let buf: [u8; 8] = unsafe { std::mem::transmute(i as u64) };
+            log.append(&buf[..]).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_sync_fast_paths() {
+        // Make sure various "sync" code paths do not lose data.
+        //
+        // Include these paths:
+        //
+        // - log1 and log2 are created.
+        // - log1 writes (choice1)
+        //   - 1: with index lag = 0
+        //   - 2: with index lag = large value
+        //   - 3: skip this step
+        // - log1 sync()
+        // - log2 writes (choice2)
+        //   - 4: with index lag = 0
+        //   - 5: with index lag = large value
+        //   - 6: skip this step
+        // - log2 sync()
+        // - log1 sync()
+        //
+        // Examine log2 and log1 indexes by counting the entries in the log
+        // and the index.
+
+        const N: u64 = 1003;
+
+        for choice1 in vec![1, 2, 3] {
+            for choice2 in vec![4, 5, 6] {
+                let dir = tempdir().unwrap();
+                // Write a single entry to make the log non-empty.
+                // So it's slightly more interesting.
+                let mut log0 = log_with_index(dir.path(), 0);
+                log0.sync().unwrap();
+
+                let mut log1 = log_with_index(dir.path(), (choice1 - 1) << 29);
+                let mut log2 = log_with_index(dir.path(), (choice2 - 4) << 29);
+                let mut count = 0usize;
+
+                if choice1 < 3 {
+                    count += N as usize;
+                    insert_entries(&mut log1, 0, N);
+                }
+                log1.sync().unwrap();
+
+                if choice2 < 6 {
+                    count += (N as usize) * 2;
+                    insert_entries(&mut log2, N, N * 2);
+                }
+                log2.sync().unwrap();
+                log1.sync().unwrap();
+
+                let s = format!("(choices = {} {})", choice1, choice2);
+                assert_eq!(
+                    log1.lookup_range(0, ..).unwrap().count(),
+                    count,
+                    "log1 index is incomplete {}",
+                    s
+                );
+                assert_eq!(
+                    log2.lookup_range(0, ..).unwrap().count(),
+                    count,
+                    "log2 index is incomplete {}",
+                    s
+                );
+                assert_eq!(log1.iter().count(), count, "log1 log is incomplete {}", s);
+                assert_eq!(log2.iter().count(), count, "log2 log is incomplete {}", s);
+            }
+        }
+    }
+
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>) -> bool {
             let mut buf = Vec::new();
