@@ -17,21 +17,23 @@ extern crate local_encoding;
 #[cfg(windows)]
 extern crate winapi;
 
-#[cfg(windows)]
-mod windows;
 #[cfg(unix)]
 mod unix;
+#[cfg(windows)]
+mod windows;
 
 use std::ffi::{CString, OsStr};
 use std::path::Path;
 
 #[cfg(unix)]
-pub use unix::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes,
-               path_to_local_bytes};
+pub use crate::unix::{
+    local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes, path_to_local_bytes,
+};
 
 #[cfg(windows)]
-pub use windows::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes,
-                  path_to_local_bytes};
+pub use windows::{
+    local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes, path_to_local_bytes,
+};
 
 /// Convert a `Path` to a `CString` of local bytes
 /// This function panics on failure.

@@ -19,7 +19,7 @@ use std::path::Path;
 /// this function does not intermediately convert to a Unicode `String`, therefore it is
 /// "more native" from Windows' perspective and is more performant.
 #[inline]
-pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<OsStr>> {
+pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<'_, OsStr>> {
     Ok(Cow::Borrowed(OsStr::from_bytes(bytes)))
 }
 
@@ -34,7 +34,7 @@ pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<OsStr>> {
 /// by the "Language for non-Unicode programs" Windows setting at commit time.
 /// New programs should normalize paths to UTF-8 before storing them.
 #[inline]
-pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<Cow<Path>> {
+pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<Cow<'_, Path>> {
     Ok(Cow::Borrowed(Path::new(OsStr::from_bytes(bytes))))
 }
 
@@ -48,7 +48,7 @@ pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<Cow<Path>> {
 /// does not intermediately convert to a Unicode `String`, therefore it is "more native"
 /// from Windows' perspective and is more performant.
 #[inline]
-pub fn osstring_to_local_bytes(s: &OsStr) -> io::Result<Cow<[u8]>> {
+pub fn osstring_to_local_bytes(s: &OsStr) -> io::Result<Cow<'_, [u8]>> {
     Ok(Cow::Borrowed(s.as_bytes()))
 }
 
@@ -64,6 +64,6 @@ pub fn osstring_to_local_bytes(s: &OsStr) -> io::Result<Cow<[u8]>> {
 /// by the "Language for non-Unicode programs" Windows setting at commit time.
 /// New programs should normalize paths to UTF-8 before storing them.
 #[inline]
-pub fn path_to_local_bytes(path: &Path) -> io::Result<Cow<[u8]>> {
+pub fn path_to_local_bytes(path: &Path) -> io::Result<Cow<'_, [u8]>> {
     Ok(Cow::Borrowed(path.as_os_str().as_bytes()))
 }
