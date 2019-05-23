@@ -89,7 +89,7 @@ impl EdenApiCurlClient {
 impl EdenApi for EdenApiCurlClient {
     fn health_check(&self) -> Fallible<()> {
         let handler = Collector::new();
-        let mut handle = self.easy(handler)?;
+        let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         let url = self.base_url.join(paths::HEALTH_CHECK)?;
         handle.url(url.as_str())?;
         handle.get(true)?;
@@ -110,7 +110,7 @@ impl EdenApi for EdenApiCurlClient {
 
     fn hostname(&self) -> Fallible<String> {
         let handler = Collector::new();
-        let mut handle = self.easy(handler)?;
+        let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         let url = self.base_url.join(paths::HOSTNAME)?;
         handle.url(url.as_str())?;
         handle.get(true)?;
@@ -156,14 +156,20 @@ impl EdenApi for EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        let stats = self.multi_request(&url, requests, progress, |response: HistoryResponse| {
-            num_responses += 1;
-            for entry in response {
-                num_entries += 1;
-                store.add_entry(&entry)?;
-            }
-            Ok(())
-        })?;
+        let stats = multi_request(
+            &url,
+            self.creds.as_ref(),
+            requests,
+            progress,
+            |response: HistoryResponse| {
+                num_responses += 1;
+                for entry in response {
+                    num_entries += 1;
+                    store.add_entry(&entry)?;
+                }
+                Ok(())
+            },
+        )?;
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -193,88 +199,6 @@ impl EdenApiCurlClient {
         self.cache_path.join(&self.repo).join("packs")
     }
 
-    /// Configure a new curl::Easy2 handle using this client's settings.
-    fn easy<H: Handler>(&self, handler: H) -> Fallible<Easy2<H>> {
-        let mut handle = Easy2::new(handler);
-        if let Some(ClientCreds { ref certs, ref key }) = &self.creds {
-            handle.ssl_cert(certs)?;
-            handle.ssl_key(key)?;
-        }
-        handle.http_version(HttpVersion::V2)?;
-        handle.progress(true)?;
-        Ok(handle)
-    }
-
-    /// Send multiple concurrent POST requests using the given requests as the
-    /// CBOR payload of each respective request. Assumes that the responses are
-    /// CBOR encoded, and automatically deserializes them before passing
-    /// them to the given callback.
-    fn multi_request<R, I, T, F>(
-        &self,
-        url: &Url,
-        requests: I,
-        progress_cb: Option<ProgressFn>,
-        mut response_cb: F,
-    ) -> Fallible<DownloadStats>
-    where
-        R: Serialize,
-        I: IntoIterator<Item = R>,
-        T: DeserializeOwned,
-        F: FnMut(T) -> Fallible<()>,
-    {
-        let requests = requests.into_iter().collect::<Vec<_>>();
-        let num_requests = requests.len();
-
-        let mut progress = ProgressManager::with_capacity(num_requests);
-        let mut driver = MultiDriver::with_capacity(num_requests);
-        driver.fail_early(true);
-
-        for request in requests {
-            let handle = progress.register();
-            let handler = Collector::with_progress(handle);
-            let mut easy = self.easy(handler)?;
-            prepare_cbor_post(&mut easy, &url, &request)?;
-            driver.add(easy)?;
-        }
-
-        progress.set_callback(progress_cb);
-        driver.set_progress_manager(progress);
-
-        log::debug!("Performing {} requests", num_requests);
-        let start = Instant::now();
-
-        driver.perform(|res| {
-            let mut easy = res?;
-            let code = easy.response_code()?;
-            let data = easy.get_ref().data();
-
-            if code >= 400 {
-                let msg = String::from_utf8_lossy(data);
-                bail!(
-                    "Received HTTP status code {} with response: {:?}",
-                    code,
-                    msg
-                );
-            }
-
-            let response = serde_cbor::from_slice::<T>(data)?;
-            response_cb(response)
-        })?;
-
-        let elapsed = start.elapsed();
-        let progress = driver.progress().unwrap().stats();
-        let stats = DownloadStats {
-            downloaded: progress.downloaded,
-            uploaded: progress.uploaded,
-            requests: num_requests,
-            time: elapsed,
-        };
-
-        log::info!("{}", &stats);
-
-        Ok(stats)
-    }
-
     fn get_data(
         &self,
         path: &str,
@@ -298,19 +222,25 @@ impl EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        let stats = self.multi_request(&url, requests, progress, |response: DataResponse| {
-            num_responses += 1;
-            for entry in response {
-                num_entries += 1;
-                let key = entry.key().clone();
-                if self.validate {
-                    log::trace!("Validating received data for: {}", &key);
+        let stats = multi_request(
+            &url,
+            self.creds.as_ref(),
+            requests,
+            progress,
+            |response: DataResponse| {
+                num_responses += 1;
+                for entry in response {
+                    num_entries += 1;
+                    let key = entry.key().clone();
+                    if self.validate {
+                        log::trace!("Validating received data for: {}", &key);
+                    }
+                    let data = entry.data(self.validate)?;
+                    add_delta(store, key, data)?;
                 }
-                let data = entry.data(self.validate)?;
-                add_delta(store, key, data)?;
-            }
-            Ok(())
-        })?;
+                Ok(())
+            },
+        )?;
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -365,6 +295,88 @@ impl Handler for Collector {
         }
         true
     }
+}
+
+/// Send multiple concurrent POST requests using the given requests as the
+/// CBOR payload of each respective request. Assumes that the responses are
+/// CBOR encoded, and automatically deserializes them before passing
+/// them to the given callback.
+fn multi_request<R, I, T, F>(
+    url: &Url,
+    creds: Option<&ClientCreds>,
+    requests: I,
+    progress_cb: Option<ProgressFn>,
+    mut response_cb: F,
+) -> Fallible<DownloadStats>
+where
+    R: Serialize,
+    I: IntoIterator<Item = R>,
+    T: DeserializeOwned,
+    F: FnMut(T) -> Fallible<()>,
+{
+    let requests = requests.into_iter().collect::<Vec<_>>();
+    let num_requests = requests.len();
+
+    let mut progress = ProgressManager::with_capacity(num_requests);
+    let mut driver = MultiDriver::with_capacity(num_requests);
+    driver.fail_early(true);
+
+    for request in requests {
+        let handle = progress.register();
+        let handler = Collector::with_progress(handle);
+        let mut easy = new_easy_handle(creds, handler)?;
+        prepare_cbor_post(&mut easy, &url, &request)?;
+        driver.add(easy)?;
+    }
+
+    progress.set_callback(progress_cb);
+    driver.set_progress_manager(progress);
+
+    log::debug!("Performing {} requests", num_requests);
+    let start = Instant::now();
+
+    driver.perform(|res| {
+        let mut easy = res?;
+        let code = easy.response_code()?;
+        let data = easy.get_ref().data();
+
+        if code >= 400 {
+            let msg = String::from_utf8_lossy(data);
+            bail!(
+                "Received HTTP status code {} with response: {:?}",
+                code,
+                msg
+            );
+        }
+
+        let response = serde_cbor::from_slice::<T>(data)?;
+        response_cb(response)
+    })?;
+
+    let elapsed = start.elapsed();
+    let progress = driver.progress().unwrap().stats();
+    let stats = DownloadStats {
+        downloaded: progress.downloaded,
+        uploaded: progress.uploaded,
+        requests: num_requests,
+        time: elapsed,
+    };
+
+    log::info!("{}", &stats);
+
+    Ok(stats)
+}
+
+/// Configure a new curl::Easy2 handle with appropriate default settings.
+fn new_easy_handle<H: Handler>(creds: Option<&ClientCreds>, handler: H) -> Fallible<Easy2<H>> {
+    let mut handle = Easy2::new(handler);
+    if let Some(ClientCreds { ref certs, ref key }) = creds {
+        handle.ssl_cert(certs)?;
+        handle.ssl_key(key)?;
+    }
+    handle.http_version(HttpVersion::V2)?;
+    handle.progress(true)?;
+    Ok(handle)
 }
 
 /// Configure the given Easy2 handle to perform a POST request.
