@@ -23,7 +23,7 @@ pub trait DataStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
-impl<T: DataStore> DataStorePyExt for T {
+impl<T: DataStore + ?Sized> DataStorePyExt for T {
     fn get_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
         let result = self.get(&key).map_err(|e| to_pyerr(py, &e))?;
