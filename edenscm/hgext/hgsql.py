@@ -1579,7 +1579,7 @@ def wraprepo(repo):
                     elif path == "00manifest.i":
                         rl = self.manifestlog._revlog
                     else:
-                        rl = revlog.revlog(self.svfs, path)
+                        rl = revlog.revlog(self.svfs, path, mmaplargeindex=True)
                     localnode = hex(rl.node(rev))
                     if localnode != node:
                         raise CorruptionException(
