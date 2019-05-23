@@ -6,15 +6,16 @@
 use std::path::PathBuf;
 
 use cpython::*;
-use failure::Error;
+use failure::{format_err, Error, Fallible};
 
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    DataPack, HistoryPack, IndexedLogDataStore, MutableDeltaStore,
+    DataPack, DataPackVersion, HistoryPack, IndexedLogDataStore, MutableDataPack,
+    MutableDeltaStore,
 };
 
-use crate::revisionstore::datastorepyext::DataStorePyExt;
+use crate::revisionstore::datastorepyext::{DataStorePyExt, MutableDeltaStorePyExt};
 use crate::revisionstore::historystorepyext::HistoryStorePyExt;
 use crate::revisionstore::pyext::PyOptionalRefCell;
 use crate::revisionstore::pythondatastore::PythonDataStore;
@@ -40,6 +41,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<datapack>(py)?;
     m.add_class::<historypack>(py)?;
     m.add_class::<indexedlogdatastore>(py)?;
+    m.add_class::<mutabledeltastore>(py)?;
     m.add(
         py,
         "repackdatapacks",
@@ -330,7 +332,70 @@ py_class!(class indexedlogdatastore |py| {
 
     def markforrefresh(&self) -> PyResult<PyObject> {
         let mut store = self.store(py).get_mut_value(py)?;
-        store.flush().map_err(|e| to_pyerr(py, &e.into()))?;
+        store.flush_py(py)?;
         Ok(Python::None(py))
+    }
+});
+
+fn make_mutabledeltastore(
+    py: Python,
+    packfilepath: Option<PyBytes>,
+    indexedlogpath: Option<PyBytes>,
+) -> Fallible<Box<dyn MutableDeltaStore + Send>> {
+    let packfilepath = packfilepath
+        .as_ref()
+        .map(|path| encoding::local_bytes_to_path(path.data(py)))
+        .transpose()?;
+    let indexedlogpath = indexedlogpath
+        .as_ref()
+        .map(|path| encoding::local_bytes_to_path(path.data(py)))
+        .transpose()?;
+
+    let store: Box<dyn MutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
+        Box::new(MutableDataPack::new(packfilepath, DataPackVersion::One)?)
+    } else if let Some(indexedlogpath) = indexedlogpath {
+        Box::new(IndexedLogDataStore::new(indexedlogpath)?)
+    } else {
+        return Err(format_err!("Foo"));
+    };
+    Ok(store)
+}
+
+py_class!(class mutabledeltastore |py| {
+    data store: PyOptionalRefCell<Box<dyn MutableDeltaStore + Send>>;
+
+    def __new__(_cls, packfilepath: Option<PyBytes> = None, indexedlogpath: Option<PyBytes> = None) -> PyResult<mutabledeltastore> {
+        let store = make_mutabledeltastore(py, packfilepath, indexedlogpath).map_err(|e| to_pyerr(py, &e.into()))?;
+        mutabledeltastore::create_instance(py, PyOptionalRefCell::new(store))
+    }
+
+    def add(&self, name: &PyBytes, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+        let mut store = self.store(py).get_mut_value(py)?;
+        store.add_py(py, name, node, deltabasenode, delta, metadata)
+    }
+
+    def flush(&self) -> PyResult<PyObject> {
+        let mut store = self.store(py).get_mut_value(py)?;
+        store.flush_py(py)
+    }
+
+    def getdelta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject> {
+        let store = self.store(py).get_value(py)?;
+        store.get_delta_py(py, name, node)
+    }
+
+    def getdeltachain(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyList> {
+        let store = self.store(py).get_value(py)?;
+        store.get_delta_chain_py(py, name, node)
+    }
+
+    def getmeta(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py).get_value(py)?;
+        store.get_meta_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py).get_value(py)?;
+        store.get_missing_py(py, &mut keys.iter(py)?)
     }
 });
