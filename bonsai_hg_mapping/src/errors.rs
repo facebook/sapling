@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use super::BonsaiHgMappingEntry;
-pub use failure::{Error, Result};
+pub use failure_ext::{Error, Fail, Result};
 
 #[derive(Debug, Eq, Fail, PartialEq)]
 pub enum ErrorKind {

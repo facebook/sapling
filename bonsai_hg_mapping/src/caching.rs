@@ -4,25 +4,25 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use super::{
-    bonsai_hg_mapping_entry_thrift as thrift, BonsaiHgMapping, BonsaiHgMappingEntry,
-    BonsaiOrHgChangesetIds,
-};
+use super::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
+use crate::errors::Error;
+use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
 use cachelib::LruCachePool;
 use caching_ext::{
     CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult, MemcacheHandler,
 };
+use cloned::cloned;
 use context::CoreContext;
-use errors::Error;
 use futures::{future::ok, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use heapsize_derive::HeapSizeOf;
 use iobuf::IOBuf;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
 use rust_thrift::compact_protocol;
-use stats::Timeseries;
+use stats::{define_stats, Timeseries};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -54,14 +54,14 @@ impl From<HgChangesetId> for BonsaiOrHgChangesetId {
 }
 
 pub struct CachingBonsaiHgMapping {
-    mapping: Arc<BonsaiHgMapping>,
+    mapping: Arc<dyn BonsaiHgMapping>,
     cache_pool: CachelibHandler<BonsaiHgMappingEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
 }
 
 impl CachingBonsaiHgMapping {
-    pub fn new(mapping: Arc<BonsaiHgMapping>, cache_pool: LruCachePool) -> Self {
+    pub fn new(mapping: Arc<dyn BonsaiHgMapping>, cache_pool: LruCachePool) -> Self {
         Self {
             mapping,
             cache_pool: cache_pool.into(),
@@ -70,7 +70,7 @@ impl CachingBonsaiHgMapping {
         }
     }
 
-    pub fn new_test(mapping: Arc<BonsaiHgMapping>) -> Self {
+    pub fn new_test(mapping: Arc<dyn BonsaiHgMapping>) -> Self {
         Self {
             mapping,
             cache_pool: CachelibHandler::create_mock(),

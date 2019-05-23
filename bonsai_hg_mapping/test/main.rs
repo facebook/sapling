@@ -8,23 +8,10 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate assert_matches;
-extern crate async_unit;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-
-extern crate bonsai_hg_mapping;
-extern crate context;
-extern crate mercurial_types;
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-extern crate mononoke_types_mocks;
-
-use failure::Error;
+use failure_ext::Error;
 use futures::Future;
 
+use assert_matches::assert_matches;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
     ErrorKind, MemWritesBonsaiHgMapping, SqlBonsaiHgMapping, SqlConstructors,
@@ -195,13 +182,17 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
 }
 
 struct CountedBonsaiHgMapping {
-    mapping: Arc<BonsaiHgMapping>,
+    mapping: Arc<dyn BonsaiHgMapping>,
     gets: Arc<AtomicUsize>,
     adds: Arc<AtomicUsize>,
 }
 
 impl CountedBonsaiHgMapping {
-    fn new(mapping: Arc<BonsaiHgMapping>, gets: Arc<AtomicUsize>, adds: Arc<AtomicUsize>) -> Self {
+    fn new(
+        mapping: Arc<dyn BonsaiHgMapping>,
+        gets: Arc<AtomicUsize>,
+        adds: Arc<AtomicUsize>,
+    ) -> Self {
         Self {
             mapping,
             gets,

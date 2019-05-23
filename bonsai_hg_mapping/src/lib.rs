@@ -6,56 +6,31 @@
 
 #![deny(warnings)]
 
-extern crate abomonation;
-#[macro_use]
-extern crate abomonation_derive;
-extern crate bonsai_hg_mapping_entry_thrift;
-extern crate bytes;
-extern crate cachelib;
-extern crate caching_ext;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate heapsize;
-#[macro_use]
-extern crate heapsize_derive;
-extern crate iobuf;
-extern crate memcache;
-extern crate tokio;
-
-#[macro_use]
-extern crate cloned;
-extern crate context;
-extern crate futures_ext;
-extern crate mercurial_types;
-extern crate mononoke_types;
-extern crate rust_thrift;
-#[macro_use]
-extern crate sql;
-extern crate sql_ext;
-#[macro_use]
-extern crate stats;
-
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use sql::Connection;
 pub use sql_ext::SqlConstructors;
 
+use abomonation_derive::Abomonation;
+use cloned::cloned;
 use context::CoreContext;
+use failure_ext as failure;
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use heapsize_derive::HeapSizeOf;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{ChangesetId, RepositoryId};
-use stats::Timeseries;
+use sql::queries;
+use stats::{define_stats, Timeseries};
 
 mod caching;
 mod errors;
 mod mem_writes;
 
-pub use caching::CachingBonsaiHgMapping;
-pub use errors::*;
-pub use mem_writes::MemWritesBonsaiHgMapping;
+pub use crate::caching::CachingBonsaiHgMapping;
+pub use crate::errors::*;
+pub use crate::mem_writes::MemWritesBonsaiHgMapping;
 
 define_stats! {
     prefix = "mononoke.bonsai-hg-mapping";
@@ -169,7 +144,7 @@ pub trait BonsaiHgMapping: Send + Sync {
     }
 }
 
-impl BonsaiHgMapping for Arc<BonsaiHgMapping> {
+impl BonsaiHgMapping for Arc<dyn BonsaiHgMapping> {
     fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         (**self).add(ctx, entry)
     }

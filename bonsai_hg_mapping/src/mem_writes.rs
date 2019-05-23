@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use cloned::cloned;
 use context::CoreContext;
 use futures::{future::ok, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -24,7 +25,7 @@ use super::{
 pub struct MemWritesBonsaiHgMapping {
     mappings: Arc<Mutex<InMemoryMappings>>,
 
-    inner: Arc<BonsaiHgMapping>,
+    inner: Arc<dyn BonsaiHgMapping>,
 }
 
 struct InMemoryMappings {
@@ -44,7 +45,7 @@ impl InMemoryMappings {
 }
 
 impl MemWritesBonsaiHgMapping {
-    pub fn new(inner: Arc<BonsaiHgMapping>) -> Self {
+    pub fn new(inner: Arc<dyn BonsaiHgMapping>) -> Self {
         Self {
             mappings: Arc::new(Mutex::new(InMemoryMappings::new())),
             inner,
@@ -57,7 +58,7 @@ impl MemWritesBonsaiHgMapping {
         mappings.ordered_inserts.clone()
     }
 
-    pub fn get_inner(&self) -> Arc<BonsaiHgMapping> {
+    pub fn get_inner(&self) -> Arc<dyn BonsaiHgMapping> {
         self.inner.clone()
     }
 }
