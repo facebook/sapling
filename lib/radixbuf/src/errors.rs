@@ -5,7 +5,7 @@
 
 use failure::Fail;
 
-use key::KeyId;
+use crate::key::KeyId;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {

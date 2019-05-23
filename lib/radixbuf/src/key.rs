@@ -23,10 +23,10 @@
 //! of variant-length binary key, some escaping is needed to avoid the prefix conflict. The
 //! escaping logic might be implemented as key read/write functions.
 
-use errors::ErrorKind;
+use crate::errors::ErrorKind;
+use crate::traits::Resize;
 use failure::Fallible;
 use std::io::{Cursor, Seek, SeekFrom, Write};
-use traits::Resize;
 use vlqencoding::{VLQDecode, VLQEncode};
 
 /// Integer that maps to a key (`[u8]`).
@@ -36,22 +36,22 @@ pub struct KeyId(u32);
 macro_rules! impl_convert {
     ($T: ty) => {
         impl From<$T> for KeyId {
-                            #[allow(unused_comparisons)]
-                            #[inline]
-                            fn from(v: $T) -> Self {
-                                if v > 0xffff_ffff || v < 0 {
-                                    panic!("KeyId out of range")
-                                }
-                                KeyId(v as u32)
-                            }
-                        }
+            #[allow(unused_comparisons)]
+            #[inline]
+            fn from(v: $T) -> Self {
+                if v > 0xffff_ffff || v < 0 {
+                    panic!("KeyId out of range")
+                }
+                KeyId(v as u32)
+            }
+        }
 
         impl Into<$T> for KeyId {
-                            #[inline]
-                            fn into(self) -> $T {
-                                self.0 as $T
-                            }
-                        }
+            #[inline]
+            fn into(self) -> $T {
+                self.0 as $T
+            }
+        }
     };
 }
 

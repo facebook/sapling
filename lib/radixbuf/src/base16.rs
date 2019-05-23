@@ -9,7 +9,7 @@
 //! make the space usage more efficient.
 
 #[derive(Debug, Copy, Clone)]
-pub struct Base16Iter<'a, T: 'a>(&'a T, usize, usize);
+pub struct Base16Iter<'a, T>(&'a T, usize, usize);
 
 impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
     /// Convert base256 binary sequence to a base16 iterator.

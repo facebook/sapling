@@ -71,11 +71,11 @@
 //! "20-byte key + 4-byte offset + ..." so those key entries could contain
 //! additional data.
 
-use base16::Base16Iter;
-use errors::ErrorKind;
+use crate::base16::Base16Iter;
+use crate::errors::ErrorKind;
+use crate::key::KeyId;
+use crate::traits::Resize;
 use failure::Fallible;
-use key::KeyId;
-use traits::Resize;
 
 /// Number of children ("pointer"s) a radix node has
 pub const RADIX_NCHILDREN: usize = 16;
@@ -395,8 +395,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::key::{FixedKey, VariantKey};
     use failure::AsFail;
-    use key::{FixedKey, VariantKey};
     use std::collections::HashSet;
     use std::mem::transmute;
 
