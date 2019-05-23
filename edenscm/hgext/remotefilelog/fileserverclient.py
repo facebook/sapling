@@ -16,6 +16,7 @@ import struct
 import subprocess
 import threading
 import time
+import traceback
 
 from edenscm.mercurial import (
     encoding,
@@ -702,7 +703,11 @@ class fileserverclient(object):
                 self._httpfetchpacks(fileids, fetchdata, fetchhistory)
             except Exception as e:
                 self.ui.warn(_("Encountered HTTP error; falling back to SSH\n"))
-                self.ui.develwarn(str(e))
+                self.ui.develwarn(_("%s\n") % str(e))
+                self.ui.log(
+                    "edenapi_error", msg=str(e), traceback=traceback.format_exc()
+                )
+                self.ui.metrics.gauge("edenapi_fallbacks", 1)
 
         rcvd = 0
         total = len(fileids)
@@ -782,36 +787,48 @@ class fileserverclient(object):
         if edenapi.debug(self.ui):
             self.ui.warn(_("fetching data for %d files over HTTP\n") % len(fileids))
 
+        self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+        self.ui.metrics.gauge("http_getfiles_calls", 1)
+
         with progress.bar(
             self.ui, _("Fetching file content over HTTP"), start=None, unit="bytes"
         ) as prog:
-            self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
-            self.ui.metrics.gauge("http_getfiles_calls", 1)
 
             def progcallback(dl, dlt, ul, ult):
                 if dl > 0:
                     prog._total = dlt
                     prog.value = dl
 
-            self.repo.edenapi.get_files(fileids, dpack, progcallback)
+            stats = self.repo.edenapi.get_files(fileids, dpack, progcallback)
+
+        self.ui.metrics.gauge("http_getfiles_time_ms", stats.time_in_millis())
+        self.ui.metrics.gauge("http_getfiles_bytes_downloaded", stats.downloaded())
+        self.ui.metrics.gauge("http_getfiles_bytes_uploaded", stats.uploaded())
+        self.ui.metrics.gauge("http_getfiles_requests", stats.requests())
 
     def _httpfetchhistory(self, fileids, hpack, depth=None):
         """Fetch file history over HTTP using the Eden API"""
         if edenapi.debug(self.ui):
             self.ui.warn(_("fetching history for %d files over HTTP\n") % len(fileids))
 
+        self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+        self.ui.metrics.gauge("http_gethistory_calls", 1)
+
         with progress.bar(
             self.ui, _("Fetching file history over HTTP"), start=None, unit="bytes"
         ) as prog:
-            self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
-            self.ui.metrics.gauge("http_gethistory_calls", 1)
 
             def progcallback(dl, dlt, ul, ult):
                 if dl > 0:
                     prog._total = dlt
                     prog.value = dl
 
-            self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
+            stats = self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
+
+        self.ui.metrics.gauge("http_gethistory_time_ms", stats.time_in_millis())
+        self.ui.metrics.gauge("http_gethistory_bytes_downloaded", stats.downloaded())
+        self.ui.metrics.gauge("http_gethistory_bytes_uploaded", stats.uploaded())
+        self.ui.metrics.gauge("http_gethistory_requests", stats.requests())
 
     def connect(self):
         if self.cacheprocess:

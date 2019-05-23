@@ -51,16 +51,28 @@ def getcreds(ui, url):
     return (auth["cert"], auth["key"])
 
 
+def logconfig(ui):
+    """Log various HTTP fetching config values for debugging."""
+    ui.log(
+        "edenapi",
+        "",
+        http_data_batch_size=ui.configint("edenapi", "databatchsize"),
+        http_history_batch_size=ui.configint("edenapi", "historybatchsize"),
+        http_enabled=ui.configbool("edenapi", "enabled"),
+    )
+
+
 def initclient(ui, repo):
     """Initialize a new Eden API client using the user's config."""
+    logconfig(ui)
     url = getbaseurl(ui)
     kwargs = {
         "url": url,
         "cachepath": shallowutil.getcachepath(ui),
         "repo": repo.name,
         "creds": getcreds(ui, url),
-        "databatchsize": ui.config("edenapi", "databatchsize"),
-        "historybatchsize": ui.config("edenapi", "historybatchsize"),
+        "databatchsize": ui.configint("edenapi", "databatchsize"),
+        "historybatchsize": ui.configint("edenapi", "historybatchsize"),
         "validate": ui.configbool("edenapi", "validate"),
     }
     return edenapi.client(**kwargs)

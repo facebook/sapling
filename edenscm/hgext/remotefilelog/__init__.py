@@ -460,7 +460,8 @@ def setupclient(ui, repo):
             repo.edenapi = edenapi.initclient(ui, repo)
         except RuntimeError as e:
             ui.warn(_("failed to initialize HTTP data fetching\n"))
-            ui.develwarn(_("exception: %s\n") % str(e))
+            ui.develwarn(_("%s\n") % str(e))
+            ui.log("edenapi_error", msg=str(e), traceback=traceback.format_exc())
             edenapi._disabled = True
 
 
