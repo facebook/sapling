@@ -1,5 +1,4 @@
 file(GLOB STORE_HG_SRCS "*.cpp")
-list(REMOVE_ITEM STORE_HG_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tester.cpp)
 add_library(
   eden_store_hg STATIC
     ${STORE_HG_SRCS}
@@ -21,13 +20,5 @@ target_link_libraries(
 )
 
 if (NOT WIN32)
-  add_executable(
-    hg_store_tester
-      tester.cpp
-  )
-  target_link_libraries(
-    hg_store_tester
-      eden_store_hg
-  )
   add_subdirectory(test)
 endif()
