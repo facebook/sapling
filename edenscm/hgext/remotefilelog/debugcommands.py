@@ -11,7 +11,7 @@ import os
 import sys
 
 from edenscm.hgext import extutil
-from edenscm.mercurial import error, filelog, revlog
+from edenscm.mercurial import error, filelog, progress, revlog
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 
@@ -511,7 +511,17 @@ def debuggetfiles(ui, repo, **opts):
     keys = [(path, node) for node, path in input]
 
     dpack, __ = repo.fileslog.getmutablesharedpacks()
-    stats = repo.edenapi.get_files(keys, dpack)
+
+    msg = _("fetching %d files") % len(keys)
+    with progress.bar(ui, msg, start=None, unit="bytes") as prog:
+
+        def progcb(dl, dlt, ul, ult):
+            if dl > 0:
+                prog._total = dlt
+                prog.value = dl
+
+        stats = repo.edenapi.get_files(keys, dpack, progcb)
+
     ui.write(stats.to_str() + "\n")
 
     packpath, __ = repo.fileslog._mutablesharedpacks.commit()
@@ -526,7 +536,17 @@ def debuggethistory(ui, repo, **opts):
     depth = opts.get("depth") or None
 
     __, hpack = repo.fileslog.getmutablesharedpacks()
-    stats = repo.edenapi.get_history(keys, hpack, depth)
+
+    msg = _("fetching history for %d files") % len(keys)
+    with progress.bar(ui, msg, start=None, unit="bytes") as prog:
+
+        def progcb(dl, dlt, ul, ult):
+            if dl > 0:
+                prog._total = dlt
+                prog.value = dl
+
+        stats = repo.edenapi.get_history(keys, hpack, depth, progcb)
+
     ui.write(stats.to_str() + "\n")
 
     __, packpath = repo.fileslog._mutablesharedpacks.commit()
@@ -543,7 +563,17 @@ def debuggettrees(ui, repo, **opts):
         keys.append((path, node))
 
     dpack, __ = repo.manifestlog.getmutablesharedpacks()
-    stats = repo.edenapi.get_trees(keys, dpack)
+
+    msg = _("fetching %d trees") % len(keys)
+    with progress.bar(ui, msg, start=None, unit="bytes") as prog:
+
+        def progcb(dl, dlt, ul, ult):
+            if dl > 0:
+                prog._total = dlt
+                prog.value = dl
+
+        stats = repo.edenapi.get_trees(keys, dpack, progcb)
+
     ui.write(stats.to_str() + "\n")
 
     packpath, __ = repo.manifestlog._mutablesharedpacks.commit()
