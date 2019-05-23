@@ -37,11 +37,11 @@ use failure::AsFail;
 /// }
 /// ```
 pub trait ResultPyErrExt<T> {
-    fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python) -> PyResult<T>;
+    fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T>;
 }
 
 impl<T, E: AsFail> ResultPyErrExt<T> for Result<T, E> {
-    fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python) -> PyResult<T> {
+    fn map_pyerr<PE: PythonObjectWithTypeObject>(self, py: Python<'_>) -> PyResult<T> {
         self.map_err(|e| PyErr::new::<PE, _>(py, e.as_fail().to_string()))
     }
 }
