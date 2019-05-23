@@ -80,6 +80,7 @@ impl Config {
 
 /// Client credentials for TLS mutual authentication, including an X.509 client
 /// certificate chain and an RSA or ECDSA private key.
+#[derive(Clone, Debug)]
 pub struct ClientCreds {
     pub(crate) certs: PathBuf,
     pub(crate) key: PathBuf,
