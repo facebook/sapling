@@ -238,6 +238,13 @@ pub enum FlushFilterOutput {
     Replace(Vec<u8>),
 }
 
+/// Satisfy [`index::ReadonlyBuffer`] trait so [`Log`] can use external
+/// keys on [`Index`] for in-memory-only entries.
+struct ExternalKeyBuffer {
+    disk_buf: Arc<Mmap>,
+    disk_len: u64,
+}
+
 // Some design notes:
 // - Public APIs do not expose internal offsets of entries. This avoids issues when an in-memory
 //   entry gets moved after `flush`.
@@ -679,7 +686,10 @@ impl Log {
             .open(dir.join(PRIMARY_FILE))?;
 
         let primary_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
-        let key_buf = primary_buf.clone();
+        let key_buf = Arc::new(ExternalKeyBuffer {
+            disk_buf: primary_buf.clone(),
+            disk_len: meta.primary_len,
+        });
         let mut indexes = Vec::with_capacity(index_defs.len());
         for def in index_defs.iter() {
             let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
@@ -1228,6 +1238,14 @@ impl Debug for Log {
             }
         }
         Ok(())
+    }
+}
+
+impl ReadonlyBuffer for ExternalKeyBuffer {
+    #[inline]
+    fn slice(&self, start: u64, len: u64) -> &[u8] {
+        assert!(start < self.disk_len);
+        &self.disk_buf[(start as usize)..(start + len) as usize]
     }
 }
 
