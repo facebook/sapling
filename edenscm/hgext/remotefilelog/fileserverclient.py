@@ -803,6 +803,9 @@ class fileserverclient(object):
 
             stats = self.repo.edenapi.get_files(fileids, dpack, progcallback)
 
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("%s\n") % stats.to_str())
+
         self.ui.metrics.gauge("http_getfiles_time_ms", stats.time_in_millis())
         self.ui.metrics.gauge("http_getfiles_bytes_downloaded", stats.downloaded())
         self.ui.metrics.gauge("http_getfiles_bytes_uploaded", stats.uploaded())
@@ -826,6 +829,9 @@ class fileserverclient(object):
                     prog.value = dl
 
             stats = self.repo.edenapi.get_history(fileids, hpack, depth, progcallback)
+
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("%s\n") % stats.to_str())
 
         self.ui.metrics.gauge("http_gethistory_time_ms", stats.time_in_millis())
         self.ui.metrics.gauge("http_gethistory_bytes_downloaded", stats.downloaded())

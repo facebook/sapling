@@ -23,13 +23,31 @@ impl DownloadStats {
 impl fmt::Display for DownloadStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let rate = self.bytes_per_second() / 1_000_000.0; // Convert to MB/s.
+        let time = self.time_in_seconds();
+        let (time, prec, unit) = if time > 1.0 {
+            (time, 2, "s")
+        } else {
+            (time * 1000.0, 0, "ms")
+        };
         write!(
             f,
-            "Downloaded {} bytes in {:.3} seconds over {} request(s) ({:.2} MB/s)",
-            self.downloaded,
-            self.time_in_seconds(),
+            "{} downloaded in {:.*} {} over {} request{} ({:.2} MB/s)",
+            fmt_num_bytes(self.downloaded),
+            prec,
+            time,
+            unit,
             self.requests,
+            if self.requests == 1 { "" } else { "s" },
             rate
         )
     }
+}
+
+fn fmt_num_bytes(n: usize) -> String {
+    let mut n = n as f64;
+    let i = (n.log10() / 3.0).floor() as usize;
+    n /= 1000f64.powi(i as i32);
+    let units = ["B", "kB", "MB", "GB"];
+    let prec = if i > 0 { 2 } else { 0 };
+    format!("{:.*} {}", prec, n, units[i])
 }
