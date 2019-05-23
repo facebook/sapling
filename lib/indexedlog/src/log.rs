@@ -77,7 +77,7 @@ const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 /// disk requires taking a flock on the directory.
 pub struct Log {
     pub dir: PathBuf,
-    disk_buf: Mmap,
+    disk_buf: Arc<Mmap>,
     mem_buf: Vec<u8>,
     meta: LogMetadata,
     indexes: Vec<Index>,
@@ -673,13 +673,13 @@ impl Log {
         dir: &Path,
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
-    ) -> Fallible<(Mmap, Vec<Index>)> {
+    ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
         let primary_file = fs::OpenOptions::new()
             .read(true)
             .open(dir.join(PRIMARY_FILE))?;
 
-        let primary_buf = mmap_readonly(&primary_file, meta.primary_len.into())?.0;
-        let key_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
+        let primary_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
+        let key_buf = primary_buf.clone();
         let mut indexes = Vec::with_capacity(index_defs.len());
         for def in index_defs.iter() {
             let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
