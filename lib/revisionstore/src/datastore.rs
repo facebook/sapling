@@ -45,7 +45,7 @@ pub trait MutableDeltaStore: DataStore {
 
 /// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
 /// the smart pointers like `Box`, `Rc`, `Arc`.
-impl<T: DataStore, U: Deref<Target = T>> DataStore for U {
+impl<T: DataStore + ?Sized, U: Deref<Target = T>> DataStore for U {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         T::get(self, key)
     }
@@ -60,7 +60,7 @@ impl<T: DataStore, U: Deref<Target = T>> DataStore for U {
     }
 }
 
-impl<T: MutableDeltaStore, U: DerefMut<Target = T>> MutableDeltaStore for U {
+impl<T: MutableDeltaStore + ?Sized, U: DerefMut<Target = T>> MutableDeltaStore for U {
     fn add(&mut self, delta: &Delta, metadata: &Metadata) -> Fallible<()> {
         T::add(self, delta, metadata)
     }

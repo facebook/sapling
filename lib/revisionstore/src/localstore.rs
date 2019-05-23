@@ -26,7 +26,7 @@ pub trait LocalStore {
 }
 
 /// All the types that can `Deref` into a `Store` implements `Store`.
-impl<T: LocalStore, U: Deref<Target = T>> LocalStore for U {
+impl<T: LocalStore + ?Sized, U: Deref<Target = T>> LocalStore for U {
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         T::get_missing(self, keys)
     }
