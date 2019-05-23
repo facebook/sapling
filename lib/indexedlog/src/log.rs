@@ -362,9 +362,10 @@ impl Log {
             }
             ChecksumType::Auto => unreachable!(),
         };
+        let data_offset = self.meta.primary_len + self.mem_buf.len() as u64;
 
         self.mem_buf.write_all(data)?;
-        self.update_indexes_for_in_memory_entry(data, offset)?;
+        self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
         Ok(())
     }
 
@@ -439,6 +440,7 @@ impl Log {
         // Actually write the primary log. Once it's written, we can remove the in-memory buffer.
         primary_file.write_all(&self.mem_buf)?;
         meta.primary_len += self.mem_buf.len() as u64;
+        self.mem_buf.clear();
 
         // Step 3: Reload primary log and indexes to get the latest view.
         let (disk_buf, indexes) = Self::load_log_and_indexes(
@@ -451,7 +453,6 @@ impl Log {
         self.meta = meta;
         self.disk_buf = disk_buf;
         self.indexes = indexes;
-        self.mem_buf.clear();
 
         // Step 4: Update the indexes. Optionally flush them.
         let indexes_to_flush: Vec<usize> = self
@@ -603,8 +604,17 @@ impl Log {
     }
 
     /// Build in-memory index for the newly added entry.
-    fn update_indexes_for_in_memory_entry(&mut self, data: &[u8], offset: u64) -> Fallible<()> {
-        let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset);
+    ///
+    /// `offset` is the logical start offset of the entry.
+    /// `data_offset` is the logical start offset of the real data (skips
+    /// length, and checksum header in the entry).
+    fn update_indexes_for_in_memory_entry(
+        &mut self,
+        data: &[u8],
+        offset: u64,
+        data_offset: u64,
+    ) -> Fallible<()> {
+        let result = self.update_indexes_for_in_memory_entry_unchecked(data, offset, data_offset);
         self.maybe_set_index_error(result)
     }
 
@@ -612,15 +622,16 @@ impl Log {
         &mut self,
         data: &[u8],
         offset: u64,
+        data_offset: u64,
     ) -> Fallible<()> {
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             for index_output in (def.func)(data) {
                 match index_output {
                     IndexOutput::Reference(range) => {
                         assert!(range.start <= range.end && range.end <= data.len() as u64);
-                        // Cannot use InsertKey::Reference here since the index only has
-                        // "log.disk_buf" without "log.mem_buf".
-                        let key = InsertKey::Embed(&data[range.start as usize..range.end as usize]);
+                        let start = range.start + data_offset;
+                        let end = range.end + data_offset;
+                        let key = InsertKey::Reference((start, end - start));
                         index.insert_advanced(key, offset, None)?;
                     }
                     IndexOutput::Owned(key) => {
