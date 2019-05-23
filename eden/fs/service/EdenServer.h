@@ -43,9 +43,6 @@
 #endif
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
-constexpr folly::StringPiece kPrivateBytes{"memory_private_bytes"};
-constexpr folly::StringPiece kRssBytes{"memory_vm_rss_bytes"};
-constexpr std::chrono::seconds kMemoryPollSeconds{30};
 
 namespace apache {
 namespace thrift {
@@ -304,10 +301,9 @@ class EdenServer : private TakeoverHandler {
   void flushStatsNow();
 
   /**
-   * Report Linux specific statistics.  They are computed by parsing
-   * files in the proc file system (eg. /proc/self/smaps).
+   * Report memory usage statistics to ServiceData.
    */
-  void reportProcStats();
+  void reportMemoryStats();
 
   /**
    * Get the main thread's EventBase.

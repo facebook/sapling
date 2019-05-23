@@ -316,7 +316,7 @@ void EdenServer::scheduleFlushStats() {
   mainEventBase_->timer().scheduleTimeoutFn(
       [this] {
         flushStatsNow();
-        reportProcStats();
+        reportMemoryStats();
         scheduleFlushStats();
       },
       std::chrono::seconds(1));
@@ -1171,18 +1171,15 @@ void EdenServer::flushStatsNow() {
   serverState_->getStats().aggregate();
 }
 
-void EdenServer::reportProcStats() {
+void EdenServer::reportMemoryStats() {
 #ifndef _WIN32
+  constexpr folly::StringPiece kRssBytes{"memory_vm_rss_bytes"};
+  constexpr std::chrono::seconds kMemoryPollSeconds{30};
+
   auto now = std::chrono::system_clock::now().time_since_epoch();
   // Throttle stats collection to every kMemoryPollSeconds
   if (std::chrono::duration_cast<std::chrono::seconds>(
           now - lastProcStatsRun_.load()) > kMemoryPollSeconds) {
-    auto privateBytes = facebook::eden::proc_util::calculatePrivateBytes();
-    if (privateBytes) {
-      stats::ServiceData::get()->addStatValue(
-          kPrivateBytes, privateBytes.value(), stats::AVG);
-    }
-
     auto rssKBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
         proc_util::loadProcStatus(), kVmRSSKey.data(), kKBytes.data());
     if (rssKBytes) {
