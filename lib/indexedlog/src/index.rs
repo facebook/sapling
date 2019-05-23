@@ -1635,7 +1635,7 @@ impl OpenOptions {
 
 impl Index {
     /// Return a cloned [`Index`].
-    pub fn clone(&self) -> Fallible<Index> {
+    pub(crate) fn clone(&self) -> Fallible<Index> {
         let file = self.file.duplicate()?;
         let mmap = mmap_readonly(&file, Some(self.len))?.0;
         let checksum = match self.checksum {

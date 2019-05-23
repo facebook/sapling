@@ -244,6 +244,36 @@ pub enum FlushFilterOutput {
 struct ExternalKeyBuffer {
     disk_buf: Arc<Mmap>,
     disk_len: u64,
+
+    // Prove the reference is valid:
+    // 1. If ExternalKeyBuffer is alive, then the Index owning it is alive.
+    //    This is because ExternalKeyBuffer is private to Index, and there
+    //    is no way to get a clone of ExternalKeyBuffer without also
+    //    cloning its owner (Index).
+    // 2. If the Index owning ExternalKeyBuffer is alive, then the Log
+    //    owning the Index is alive. Similarily, Index is private to Log,
+    //    and there is no way to just clone the Index without cloning
+    //    its owner (Log).
+    // 3. If Log is alive, then Log.mem_buf is alive.
+    // 4. Log.mem_buf is pinned, so this pointer is valid.
+    //
+    // Here is why `Arc<Mutex<Vec<u8>>>` is not fesiable:
+    //
+    // - Bad performance: The Mutex overhead is visible.
+    //   "log insertion (no checksum)" takes 2x time.
+    //   "log insertion" and "log iteration (memory)" take 1.5x time.
+    // - Unsafe Rust is still necessary.
+    //   In [`Log::read_entry`], reading the in-memory entry case,
+    //   the borrow relationship changes from `&Log -> &[u8]` to
+    //   `&Log -> &MutexGuard -> &[u8]`, which means unsafe Rust is
+    //   needed, or it has to take the mutex lock. Neither desirable.
+    //
+    // Here is why normal liftime is not fesiable:
+    // - A normal lifetime will enforce the `mem_buf` to be read-only.
+    //   But Log needs to write to it.
+    //
+    // (UNSAFE NOTICE)
+    mem_buf: &'static Vec<u8>,
 }
 
 // Some design notes:
@@ -411,8 +441,12 @@ impl Log {
         meta.primary_len += self.mem_buf.len() as u64;
 
         // Step 3: Reload primary log and indexes to get the latest view.
-        let (disk_buf, indexes) =
-            Self::load_log_and_indexes(&self.dir, &meta, &self.open_options.index_defs)?;
+        let (disk_buf, indexes) = Self::load_log_and_indexes(
+            &self.dir,
+            &meta,
+            &self.open_options.index_defs,
+            &self.mem_buf,
+        )?;
 
         self.meta = meta;
         self.disk_buf = disk_buf;
@@ -681,15 +715,22 @@ impl Log {
         dir: &Path,
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
+        mem_buf: &Pin<Box<Vec<u8>>>,
     ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
         let primary_file = fs::OpenOptions::new()
             .read(true)
             .open(dir.join(PRIMARY_FILE))?;
 
         let primary_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
+        let mem_buf: &Vec<u8> = &mem_buf;
+        // UNSAFE NOTICE: This disables the lifetime check for &mem_buf.
+        // See the "(UNSAFE NOTICE)" comment block in ExternalKeyBuffer for
+        // why this is correct and desirable.
+        let mem_buf: &'static Vec<u8> = unsafe { std::mem::transmute(mem_buf) };
         let key_buf = Arc::new(ExternalKeyBuffer {
             disk_buf: primary_buf.clone(),
             disk_len: meta.primary_len,
+            mem_buf,
         });
         let mut indexes = Vec::with_capacity(index_defs.len());
         for def in index_defs.iter() {
@@ -998,7 +1039,8 @@ impl OpenOptions {
         })?;
 
         let mem_buf = Box::pin(Vec::new());
-        let (disk_buf, indexes) = Log::load_log_and_indexes(dir, &meta, &self.index_defs)?;
+        let (disk_buf, indexes) =
+            Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf)?;
         let mut log = Log {
             dir: dir.to_path_buf(),
             disk_buf,
@@ -1246,8 +1288,12 @@ impl Debug for Log {
 impl ReadonlyBuffer for ExternalKeyBuffer {
     #[inline]
     fn slice(&self, start: u64, len: u64) -> &[u8] {
-        assert!(start < self.disk_len);
-        &self.disk_buf[(start as usize)..(start + len) as usize]
+        if start < self.disk_len {
+            &self.disk_buf[(start as usize)..(start + len) as usize]
+        } else {
+            let start = start - self.disk_len;
+            &self.mem_buf[(start as usize)..(start + len) as usize]
+        }
     }
 }
 
