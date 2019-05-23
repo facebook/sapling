@@ -44,6 +44,9 @@ impl fmt::Display for DownloadStats {
 }
 
 fn fmt_num_bytes(n: usize) -> String {
+    if n == 0 {
+        return "0 B".into();
+    }
     let mut n = n as f64;
     let i = (n.log10() / 3.0).floor() as usize;
     n /= 1000f64.powi(i as i32);
