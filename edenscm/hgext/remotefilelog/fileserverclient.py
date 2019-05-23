@@ -704,7 +704,8 @@ class fileserverclient(object):
             except Exception as e:
                 self.ui.warn(_("encountered error during HTTPS fetching;"))
                 self.ui.warn(_(" falling back to SSH\n"))
-                self.ui.develwarn(_("%s\n") % str(e))
+                if edenapi.debug(self.ui):
+                    self.ui.warn(_("exception: %s\n") % str(e))
                 self.ui.log(
                     "edenapi_error", msg=str(e), traceback=traceback.format_exc()
                 )
