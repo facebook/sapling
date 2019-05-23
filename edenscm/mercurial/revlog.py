@@ -1643,6 +1643,27 @@ class revlog(object):
         tr.replace(self.indexfile, trindex * self._io.size)
         self._chunkclear()
 
+    def _contains(self, node, p1node, p2node):
+        """An efficient version of contains that bounds the search based on the
+        parents.
+        """
+        if p1node == nullid and p2node == nullid:
+            return node in self.nodemap
+
+        maxparent = max(self.rev(p1node), self.rev(p2node))
+
+        # If the parents are far from the tip, computing the descendants will be
+        # expensive, so just revert back to scanning the revlog in C.
+        tip = len(self) - 1
+        if tip - maxparent > 1000:
+            return node in self.nodemap
+
+        getnode = self.node
+        for i in self.revs(start=maxparent + 1):
+            if node == getnode(i):
+                return True
+        return False
+
     def addrevision(
         self,
         text,
@@ -1688,8 +1709,7 @@ class revlog(object):
         # Only validate the hash if it was provided to us
         validatehash &= bool(node)
         node = node or self.hash(rawtext, p1, p2)
-
-        if node in self.nodemap:
+        if self._contains(node, p1, p2):
             return node
 
         if validatehash:
@@ -2075,13 +2095,13 @@ class revlog(object):
 
                 nodes.append(node)
 
-                if node in self.nodemap:
-                    # this can happen if two branches make the same change
-                    continue
-
                 for p in (p1, p2):
                     if p not in self.nodemap:
                         raise LookupError(p, self.indexfile, _("unknown parent"))
+
+                if self._contains(node, p1, p2):
+                    # this can happen if two branches make the same change
+                    continue
 
                 if deltabase not in self.nodemap:
                     raise LookupError(
