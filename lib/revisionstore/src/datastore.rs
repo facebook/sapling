@@ -74,7 +74,9 @@ impl Metadata {
     pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         let mut buf = vec![];
         if let Some(flags) = self.flags {
-            Metadata::write_meta(b'f', flags, &mut buf)?;
+            if flags != 0 {
+                Metadata::write_meta(b'f', flags, &mut buf)?;
+            }
         }
         if let Some(size) = self.size {
             Metadata::write_meta(b's', size, &mut buf)?;
@@ -214,7 +216,8 @@ mod tests {
             let mut buf: Vec<u8> = vec![];
             meta.write(&mut buf).expect("write");
             let read_meta = Metadata::read(&mut Cursor::new(&buf)).expect("read");
-            meta == read_meta
+
+            meta.size == read_meta.size && (meta.flags == read_meta.flags || meta.flags.map_or(false, |v| v == 0))
         }
     }
 }
