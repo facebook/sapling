@@ -12,4 +12,4 @@ extern crate tempfile;
 extern crate types;
 
 pub mod nodemap;
-pub use nodemap::NodeMap;
+pub use crate::nodemap::NodeMap;
