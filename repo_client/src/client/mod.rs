@@ -410,61 +410,8 @@ impl RepoClient {
     fn gettreepack_untimed(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         debug!(self.ctx.logger(), "gettreepack");
 
-        // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
-        let fetchdepth = params.depth.unwrap_or(2 << 16);
-
-        if !params.directories.is_empty() {
-            // This param is not used by core hg, don't worry about implementing it now
-            return stream::once(Err(err_msg("directories param is not supported"))).boxify();
-        }
-
-        // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
-        // already has can be sent to the client.
-        let basemfnode = params
-            .basemfnodes
-            .get(0)
-            .cloned()
-            .unwrap_or(HgManifestId::new(NULL_HASH));
-
-        let rootpath = if params.rootdir.is_empty() {
-            None
-        } else {
-            Some(try_boxstream!(MPath::new(params.rootdir)))
-        };
-
-        let default_pruner = CombinatorPruner::new(FilePruner, DeletedPruner);
-
-        let changed_entries = if params.mfnodes.len() > 1 {
-            let visited_pruner = VisitedPruner::new();
-            select_all(params.mfnodes.iter().map(|manifest_id| {
-                get_changed_manifests_stream(
-                    self.ctx.clone(),
-                    self.repo.blobrepo(),
-                    *manifest_id,
-                    basemfnode,
-                    rootpath.clone(),
-                    CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
-                    fetchdepth,
-                )
-            }))
-            .boxify()
-        } else {
-            match params.mfnodes.get(0) {
-                Some(mfnode) => get_changed_manifests_stream(
-                    self.ctx.clone(),
-                    self.repo.blobrepo(),
-                    *mfnode,
-                    basemfnode,
-                    rootpath.clone(),
-                    default_pruner,
-                    fetchdepth,
-                ),
-                None => empty().boxify(),
-            }
-        };
-
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
-        let changed_entries = changed_entries
+        let changed_entries = gettreepack_entries(self.ctx.clone(), self.repo.blobrepo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
                 move |entry| used_hashes.insert(entry.0.get_hash())
@@ -1436,6 +1383,65 @@ impl HgCommands for RepoClient {
     // whether raw bundle2 contents should be preverved in the blobstore
     fn should_preserve_raw_bundle2(&self) -> bool {
         self.preserve_raw_bundle2
+    }
+}
+
+fn gettreepack_entries(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    params: GettreepackArgs,
+) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
+    // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
+    let fetchdepth = params.depth.unwrap_or(2 << 16);
+
+    if !params.directories.is_empty() {
+        // This param is not used by core hg, don't worry about implementing it now
+        return stream::once(Err(err_msg("directories param is not supported"))).boxify();
+    }
+
+    // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
+    // already has can be sent to the client.
+    let basemfnode = params
+        .basemfnodes
+        .get(0)
+        .cloned()
+        .unwrap_or(HgManifestId::new(NULL_HASH));
+
+    let rootpath = if params.rootdir.is_empty() {
+        None
+    } else {
+        Some(try_boxstream!(MPath::new(params.rootdir)))
+    };
+
+    let default_pruner = CombinatorPruner::new(FilePruner, DeletedPruner);
+
+    if params.mfnodes.len() > 1 {
+        let visited_pruner = VisitedPruner::new();
+        select_all(params.mfnodes.iter().map(|manifest_id| {
+            get_changed_manifests_stream(
+                ctx.clone(),
+                repo,
+                *manifest_id,
+                basemfnode,
+                rootpath.clone(),
+                CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
+                fetchdepth,
+            )
+        }))
+        .boxify()
+    } else {
+        match params.mfnodes.get(0) {
+            Some(mfnode) => get_changed_manifests_stream(
+                ctx.clone(),
+                repo,
+                *mfnode,
+                basemfnode,
+                rootpath.clone(),
+                default_pruner,
+                fetchdepth,
+            ),
+            None => empty().boxify(),
+        }
     }
 }
 
