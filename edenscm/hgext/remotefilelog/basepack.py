@@ -566,6 +566,9 @@ class mutablebasepack(versionmixin):
         else:
             self.abort()
 
+    def __del__(self):
+        self.abort()
+
     @property
     def destpath(self):
         if not self._closed:

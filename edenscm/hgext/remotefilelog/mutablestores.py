@@ -45,30 +45,21 @@ class pendingmutablepack(object):
 
         if self._mutabledpack is not None:
             try:
-                dpackpath = self._mutabledpack.close()
+                dpackpath = self._mutabledpack.flush()
             finally:
                 self._mutabledpack = None
 
         if self._mutablehpack is not None:
             try:
-                hpackpath = self._mutablehpack.close()
+                hpackpath = self._mutablehpack.flush()
             finally:
                 self._mutablehpack = None
 
         return dpackpath, hpackpath
 
     def abort(self):
-        if self._mutabledpack is not None:
-            try:
-                self._mutabledpack.abort()
-            finally:
-                self._mutabledpack = None
-
-        if self._mutablehpack is not None:
-            try:
-                self._mutablehpack.abort()
-            finally:
-                self._mutablehpack = None
+        self._mutabledpack = None
+        self._mutablehpack = None
 
 
 class mutabledatahistorystore(object):
