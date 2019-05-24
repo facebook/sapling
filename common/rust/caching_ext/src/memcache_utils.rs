@@ -4,12 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::mock_store::MockStore;
 use bytes::Bytes;
 use futures::{future::ok, Future};
 use futures_ext::FutureExt;
 use iobuf::IOBuf;
 use memcache::MemcacheClient;
-use mock_store::MockStore;
 use std::sync::atomic::Ordering;
 
 #[derive(Clone)]

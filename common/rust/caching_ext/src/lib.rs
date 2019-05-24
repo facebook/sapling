@@ -13,7 +13,6 @@ extern crate cloned;
 extern crate futures;
 extern crate tokio;
 
-extern crate bytes_ext;
 extern crate cachelib;
 extern crate failure_ext as failure;
 #[macro_use]
@@ -37,18 +36,18 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 
+use crate::failure::prelude::*;
 use bytes::Bytes;
 use cachelib::Abomonation;
-use failure::prelude::*;
 use futures::{future::join_all, prelude::*};
 use futures_ext::{BoxFuture, FutureExt};
 use iobuf::IOBuf;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
 use mononoke_types::RepositoryId;
 
-pub use cachelib_utils::CachelibHandler;
-pub use memcache_utils::MemcacheHandler;
-pub use mock_store::MockStoreStats;
+pub use crate::cachelib_utils::CachelibHandler;
+pub use crate::memcache_utils::MemcacheHandler;
+pub use crate::mock_store::MockStoreStats;
 
 /// Error type to help with proper reporting of memcache errors
 pub enum McErrorKind {
@@ -67,15 +66,15 @@ struct MemcacheKey(String);
 
 pub struct GetOrFillMultipleFromCacheLayers<Key, T> {
     pub repo_id: RepositoryId,
-    pub get_cache_key: Arc<Fn(RepositoryId, &Key) -> String>,
+    pub get_cache_key: Arc<dyn Fn(RepositoryId, &Key) -> String>,
     pub cachelib: CachelibHandler<T>,
     pub keygen: KeyGen,
     pub memcache: MemcacheHandler,
-    pub deserialize: Arc<Fn(IOBuf) -> ::std::result::Result<T, ()> + Send + Sync + 'static>,
-    pub serialize: Arc<Fn(&T) -> Bytes + Send + Sync + 'static>,
-    pub report_mc_result: Arc<Fn(McResult<()>) + Send + Sync + 'static>,
+    pub deserialize: Arc<dyn Fn(IOBuf) -> ::std::result::Result<T, ()> + Send + Sync + 'static>,
+    pub serialize: Arc<dyn Fn(&T) -> Bytes + Send + Sync + 'static>,
+    pub report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
     pub get_from_db:
-        Arc<Fn(HashSet<Key>) -> BoxFuture<HashMap<Key, T>, Error> + Send + Sync + 'static>,
+        Arc<dyn Fn(HashSet<Key>) -> BoxFuture<HashMap<Key, T>, Error> + Send + Sync + 'static>,
 }
 
 impl<Key, T> GetOrFillMultipleFromCacheLayers<Key, T>
@@ -84,7 +83,8 @@ where
     T: Abomonation + Clone + Send + 'static,
 {
     pub fn run(&self, keys: HashSet<Key>) -> BoxFuture<HashMap<Key, T>, Error> {
-        let keys: Vec<(Key, CachelibKey)> = keys.into_iter()
+        let keys: Vec<(Key, CachelibKey)> = keys
+            .into_iter()
             .map(|key| {
                 let cache_key = CachelibKey((self.get_cache_key)(self.repo_id, &key));
                 (key, cache_key)
@@ -106,7 +106,8 @@ where
             &self.memcache,
             self.deserialize.clone(),
             self.report_mc_result.clone(),
-        ).then(move |result: ::std::result::Result<_, !>| {
+        )
+        .then(move |result: ::std::result::Result<_, !>| {
             let (fetched_from_memcache, left_to_fetch) = match result {
                 Ok(result) => result,
                 Err(never) => never,
@@ -146,7 +147,7 @@ where
                 fetched
             })
         })
-            .boxify()
+        .boxify()
     }
 }
 
@@ -154,8 +155,8 @@ fn get_multiple_from_memcache<Key, T>(
     keys: Vec<(Key, CachelibKey)>,
     keygen: &KeyGen,
     memcache: &MemcacheHandler,
-    deserialize: Arc<Fn(IOBuf) -> ::std::result::Result<T, ()> + Send + Sync + 'static>,
-    report_mc_result: Arc<Fn(McResult<()>) + Send + Sync + 'static>,
+    deserialize: Arc<dyn Fn(IOBuf) -> ::std::result::Result<T, ()> + Send + Sync + 'static>,
+    report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
 ) -> impl Future<
     Item = (
         HashMap<Key, (T, CachelibKey)>,
@@ -166,7 +167,8 @@ fn get_multiple_from_memcache<Key, T>(
 where
     Key: Eq + Hash,
 {
-    let mc_fetch_futs: Vec<_> = keys.into_iter()
+    let mc_fetch_futs: Vec<_> = keys
+        .into_iter()
         .map(move |(key, cache_key)| {
             let memcache_key = MemcacheKey(keygen.key(&cache_key.0));
             memcache
@@ -207,7 +209,7 @@ where
 fn fill_multiple_memcache<Key, T>(
     keys: HashMap<Key, (T, CachelibKey, MemcacheKey)>,
     memcache: MemcacheHandler,
-    serialize: Arc<Fn(&T) -> Bytes + Send + Sync + 'static>,
+    serialize: Arc<dyn Fn(&T) -> Bytes + Send + Sync + 'static>,
 ) -> HashMap<Key, (T, CachelibKey)>
 where
     Key: Eq + Hash,
@@ -230,7 +232,10 @@ mod test {
     use super::*;
 
     use futures::future::ok;
-    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
 
     fn test_cachelib_cachekey(_repoid: RepositoryId, key: &String) -> String {
         key.clone()
@@ -272,7 +277,7 @@ mod test {
 
     #[test]
     fn simple() {
-        let db_data = hashmap!{};
+        let db_data = hashmap! {};
         let db_data_fetches = Arc::new(AtomicUsize::new(0));
         let cachelib = CachelibHandler::create_mock();
         let memcache = MemcacheHandler::create_mock();
@@ -285,13 +290,13 @@ mod test {
         );
 
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        let f = params.run(hashset!{});
+        let f = params.run(hashset! {});
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 0);
         assert_eq!(cachelib.gets_count(), 0);
         assert_eq!(memcache.gets_count(), 0);
 
-        let f = params.run(hashset!{"key".to_string()});
+        let f = params.run(hashset! {"key".to_string()});
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 0);
         assert_eq!(cachelib.gets_count(), 1);
@@ -301,7 +306,7 @@ mod test {
 
     #[test]
     fn fetch_from_db_cachelib_memcache() {
-        let db_data = hashmap!{"key".to_string() => 0};
+        let db_data = hashmap! {"key".to_string() => 0};
         let db_data_fetches = Arc::new(AtomicUsize::new(0));
         let cachelib = CachelibHandler::create_mock();
         let memcache = MemcacheHandler::create_mock();
@@ -314,7 +319,7 @@ mod test {
         );
 
         // Fetch from db
-        let f = params.run(hashset!{"key".to_string()});
+        let f = params.run(hashset! {"key".to_string()});
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 1);
@@ -324,7 +329,7 @@ mod test {
         assert_eq!(db_data_fetches.load(Ordering::Relaxed), 1);
 
         // Now fetch from cachelib
-        let f = params.run(hashset!{"key".to_string()});
+        let f = params.run(hashset! {"key".to_string()});
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(cachelib.gets_count(), 2);
@@ -334,7 +339,7 @@ mod test {
         // Reset cachelib, fetch from memcache
         let cachelib = CachelibHandler::create_mock();
         params.cachelib = cachelib.clone();
-        let f = params.run(hashset!{"key".to_string()});
+        let f = params.run(hashset! {"key".to_string()});
         let res = runtime.block_on(f).unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(cachelib.gets_count(), 1);
@@ -344,7 +349,7 @@ mod test {
 
     #[test]
     fn fetch_from_db() {
-        let db_data = hashmap!{
+        let db_data = hashmap! {
             "key0".to_string() => 0,
             "key1".to_string() => 1,
             "key2".to_string() => 2,
@@ -360,7 +365,7 @@ mod test {
             db_data,
         );
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        let f = params.run(hashset!{
+        let f = params.run(hashset! {
             "key0".to_string(), "key1".to_string(), "key2".to_string()
         });
         runtime.block_on(f).unwrap();
@@ -372,7 +377,7 @@ mod test {
 
     #[test]
     fn fetch_from_all() {
-        let db_data = hashmap!{
+        let db_data = hashmap! {
             "key0".to_string() => 0,
             "key1".to_string() => 1,
             "key2".to_string() => 2,
@@ -390,7 +395,7 @@ mod test {
         );
 
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        let f = params.run(hashset!{"key1".to_string()});
+        let f = params.run(hashset! {"key1".to_string()});
         runtime.block_on(f).unwrap();
         assert_eq!(cachelib.gets_count(), 1);
         assert_eq!(memcache.gets_count(), 1);
@@ -399,13 +404,13 @@ mod test {
         // Reset cachelib
         let cachelib = CachelibHandler::create_mock();
         params.cachelib = cachelib.clone();
-        let f = params.run(hashset!{"key0".to_string()});
+        let f = params.run(hashset! {"key0".to_string()});
         runtime.block_on(f).unwrap();
         assert_eq!(cachelib.gets_count(), 1);
         assert_eq!(memcache.gets_count(), 2);
         assert_eq!(db_data_fetches.load(Ordering::Relaxed), 2);
 
-        let f = params.run(hashset!{
+        let f = params.run(hashset! {
             "key0".to_string(), "key1".to_string(), "key2".to_string()
         });
         let res = runtime.block_on(f).unwrap();
@@ -415,7 +420,7 @@ mod test {
         assert_eq!(db_data_fetches.load(Ordering::Relaxed), 2 + 1); // 1 fetch from db
 
         // // Only from cachelib
-        let f = params.run(hashset!{
+        let f = params.run(hashset! {
             "key0".to_string(), "key1".to_string(), "key2".to_string()
         });
         let res = runtime.block_on(f).unwrap();
@@ -427,7 +432,7 @@ mod test {
         // // Reset cachelib, only from memcache
         let cachelib = CachelibHandler::create_mock();
         params.cachelib = cachelib.clone();
-        let f = params.run(hashset!{
+        let f = params.run(hashset! {
             "key0".to_string(), "key1".to_string(), "key2".to_string()
         });
         let res = runtime.block_on(f).unwrap();

@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::Ordering;
 
+use crate::failure::prelude::*;
+use crate::mock_store::MockStore;
 use cachelib::{get_cached, set_cached, Abomonation, LruCachePool};
-use failure::prelude::*;
-use mock_store::MockStore;
 
-use CachelibKey;
+use crate::CachelibKey;
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
