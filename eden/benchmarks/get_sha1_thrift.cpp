@@ -71,47 +71,44 @@ int main(int argc, char** argv) {
   StartingGate gate{static_cast<unsigned>(nthreads)};
   std::vector<uint64_t> samples(nthreads * samples_per_thread);
   for (unsigned i = 0; i < nthreads; ++i) {
-    threads.emplace_back([i,
-                          &gate,
-                          &socket_path,
-                          &repo_path,
-                          &samples,
-                          &files] {
-      // Setup a socket per-thread talking to eden
-      auto sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
-      if (sock_fd == -1) {
-        perror("Failed to create socket");
-        return;
-      }
-      struct sockaddr_un addr;
-      addr.sun_family = AF_UNIX;
-      strncpy(addr.sun_path, socket_path.c_str(), 108);
-      addr.sun_path[107] = '\0';
-      auto rc = connect(sock_fd, (const struct sockaddr*)&addr, sizeof(addr));
-      if (rc == -1) {
-        perror("Failed to connect to socket");
-        return;
-      }
-      folly::EventBase eventBase;
-      auto socket =
-          apache::thrift::async::TAsyncSocket::newSocket(&eventBase, sock_fd);
-      auto channel = folly::to_shared_ptr(
-          apache::thrift::HeaderClientChannel::newChannel(socket));
-      auto client = std::make_unique<EdenServiceAsyncClient>(channel);
+    threads.emplace_back(
+        [i, &gate, &socket_path, &repo_path, &samples, &files] {
+          // Setup a socket per-thread talking to eden
+          auto sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+          if (sock_fd == -1) {
+            perror("Failed to create socket");
+            return;
+          }
+          struct sockaddr_un addr;
+          addr.sun_family = AF_UNIX;
+          strncpy(addr.sun_path, socket_path.c_str(), 108);
+          addr.sun_path[107] = '\0';
+          auto rc =
+              connect(sock_fd, (const struct sockaddr*)&addr, sizeof(addr));
+          if (rc == -1) {
+            perror("Failed to connect to socket");
+            return;
+          }
+          folly::EventBase eventBase;
+          auto socket = apache::thrift::async::TAsyncSocket::newSocket(
+              &eventBase, sock_fd);
+          auto channel = folly::to_shared_ptr(
+              apache::thrift::HeaderClientChannel::newChannel(socket));
+          auto client = std::make_unique<EdenServiceAsyncClient>(channel);
 
-      gate.wait();
-      for (auto j = 0; j < samples_per_thread; ++j) {
-        std::vector<SHA1Result> res;
-        auto start = getTime();
-        folly::doNotOptimizeAway(files[i]);
-        client->sync_getSHA1(res, repo_path.native(), {files[i]});
-        folly::doNotOptimizeAway(res);
-        auto duration = std::chrono::nanoseconds(getTime() - start);
-        samples[i * samples_per_thread + j] =
-            std::chrono::duration_cast<std::chrono::microseconds>(duration)
-                .count();
-      }
-    });
+          gate.wait();
+          for (auto j = 0; j < samples_per_thread; ++j) {
+            std::vector<SHA1Result> res;
+            auto start = getTime();
+            folly::doNotOptimizeAway(files[i]);
+            client->sync_getSHA1(res, repo_path.native(), {files[i]});
+            folly::doNotOptimizeAway(res);
+            auto duration = std::chrono::nanoseconds(getTime() - start);
+            samples[i * samples_per_thread + j] =
+                std::chrono::duration_cast<std::chrono::microseconds>(duration)
+                    .count();
+          }
+        });
   }
 
   gate.waitThenOpen();
