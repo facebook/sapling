@@ -88,39 +88,40 @@ impl Blobimport {
             skip,
             commits_limit,
             phases_store,
-        }.upload()
-            .enumerate()
-            .map({
-                let logger = logger.clone();
-                move |(cs_count, cs)| {
-                    debug!(logger, "{} inserted: {}", cs_count, cs.1.get_changeset_id());
-                    if cs_count % 5000 == 0 {
-                        info!(logger, "inserted commits # {}", cs_count);
-                    }
-                    ()
+        }
+        .upload()
+        .enumerate()
+        .map({
+            let logger = logger.clone();
+            move |(cs_count, cs)| {
+                debug!(logger, "{} inserted: {}", cs_count, cs.1.get_changeset_id());
+                if cs_count % 5000 == 0 {
+                    info!(logger, "inserted commits # {}", cs_count);
                 }
-            })
-            .map_err({
-                let logger = logger.clone();
-                move |err| {
-                    error!(logger, "failed to blobimport: {}", err);
+                ()
+            }
+        })
+        .map_err({
+            let logger = logger.clone();
+            move |err| {
+                error!(logger, "failed to blobimport: {}", err);
 
-                    for cause in err.iter_chain() {
-                        info!(logger, "cause: {}", cause);
-                    }
-                    info!(logger, "root cause: {:?}", err.find_root_cause());
+                for cause in err.iter_chain() {
+                    info!(logger, "cause: {}", cause);
+                }
+                info!(logger, "root cause: {:?}", err.find_root_cause());
 
-                    let msg = format!("failed to blobimport: {}", err);
-                    err_msg(msg)
-                }
-            })
-            .for_each(|()| Ok(()))
-            .inspect({
-                let logger = logger.clone();
-                move |()| {
-                    info!(logger, "finished uploading changesets");
-                }
-            });
+                let msg = format!("failed to blobimport: {}", err);
+                err_msg(msg)
+            }
+        })
+        .for_each(|()| Ok(()))
+        .inspect({
+            let logger = logger.clone();
+            move |()| {
+                info!(logger, "finished uploading changesets");
+            }
+        });
 
         let mononoke_bookmarks = blobrepo.get_bonsai_bookmarks(ctx.clone());
         stale_bookmarks
