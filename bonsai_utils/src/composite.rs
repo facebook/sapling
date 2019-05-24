@@ -6,7 +6,7 @@
 
 use std::collections::{btree_map, BTreeMap, HashMap};
 
-use failure::Error;
+use crate::failure::Error;
 use futures::{future, stream, Future, Stream};
 
 use context::CoreContext;
@@ -15,8 +15,8 @@ use mononoke_types::{FileType, MPathElement};
 
 /// An entry representing composite state formed by multiple parents.
 pub struct CompositeEntry {
-    files: HashMap<(FileType, HgEntryId), Box<Entry + Sync>>,
-    trees: HashMap<HgEntryId, Box<Entry + Sync>>,
+    files: HashMap<(FileType, HgEntryId), Box<dyn Entry + Sync>>,
+    trees: HashMap<HgEntryId, Box<dyn Entry + Sync>>,
 }
 
 impl CompositeEntry {
@@ -29,7 +29,7 @@ impl CompositeEntry {
     }
 
     #[inline]
-    pub fn add_parent(&mut self, entry: Box<Entry + Sync>) {
+    pub fn add_parent(&mut self, entry: Box<dyn Entry + Sync>) {
         match entry.get_type() {
             Type::Tree => self.trees.insert(entry.get_hash(), entry),
             Type::File(ft) => self.files.insert((ft, entry.get_hash()), entry),
@@ -109,7 +109,7 @@ impl CompositeManifest {
         }
     }
 
-    pub fn add(&mut self, entry: Box<Entry + Sync>) {
+    pub fn add(&mut self, entry: Box<dyn Entry + Sync>) {
         self.entries
             .entry(entry.get_name().expect("entry cannot be root").clone())
             .or_insert_with(|| CompositeEntry::new())

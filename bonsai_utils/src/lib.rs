@@ -20,5 +20,5 @@ extern crate mononoke_types;
 mod composite;
 mod diff;
 
-pub use composite::{CompositeEntry, CompositeManifest};
-pub use diff::{bonsai_diff, BonsaiDiffResult};
+pub use crate::composite::{CompositeEntry, CompositeManifest};
+pub use crate::diff::{bonsai_diff, BonsaiDiffResult};

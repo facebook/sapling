@@ -31,7 +31,7 @@ use mercurial_types_mocks::manifest::{MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash::*;
 use mononoke_types::{path::check_pcf, FileType, MPath, RepoPath};
 
-use fixtures::ManifestFixture;
+use crate::fixtures::ManifestFixture;
 
 #[test]
 fn diff_basic() {
@@ -108,7 +108,7 @@ fn diff_merge1() {
     })
 }
 
-fn root_entry(mf: &ManifestFixture) -> Box<Entry + Sync> {
+fn root_entry(mf: &ManifestFixture) -> Box<dyn Entry + Sync> {
     let path_hashes = mf.path_hashes.iter().cloned();
     let dir_hashes = mf.dir_hashes.iter().cloned();
     let mock_manifest =
@@ -120,9 +120,9 @@ fn root_entry(mf: &ManifestFixture) -> Box<Entry + Sync> {
 
 fn compute_diff(
     ctx: CoreContext,
-    working_entry: Box<Entry + Sync>,
-    p1_entry: Option<Box<Entry + Sync>>,
-    p2_entry: Option<Box<Entry + Sync>>,
+    working_entry: Box<dyn Entry + Sync>,
+    p1_entry: Option<Box<dyn Entry + Sync>>,
+    p2_entry: Option<Box<dyn Entry + Sync>>,
 ) -> Vec<BonsaiDiffResult> {
     let diff_stream = bonsai_diff(ctx, working_entry, p1_entry, p2_entry);
     let mut paths = diff_stream.collect().wait().expect("computing diff failed");
