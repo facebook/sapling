@@ -32,12 +32,33 @@ def predecessormarkers(ctx):
 
 @command("^unamend", [])
 def unamend(ui, repo, **opts):
-    """undo an amend operation on the current commit
+    """undo the last amend operation on the current commit
 
-    This command will roll back to the previous version of a changeset,
-    leaving working directory in state in which it was before running
-    `hg amend` (e.g. files modified as part of an amend will be
-    marked as modified `hg status`)"""
+    Reverse the effects of an :hg:`amend` operation. Hides the current commit
+    and checks out the previous version of the commit. :hg:`unamend` does not
+    revert the state of the working copy, so changes that were added to the
+    commit in the last amend operation become pending changes in the working
+    copy.
+
+    :hg:`unamend` cannot be run on amended commits that have children. In
+    other words, you cannot unamend an amended commit in the middle of a
+    stack.
+
+    .. note::
+
+        Running :hg:`unamend` is similar to running :hg:`undo --keep`
+        immediately after :hg:`amend`. However, unlike :hg:`undo`, which can
+        only undo an amend if it was the last operation you performed,
+        :hg:`unamend` can unamend any draft amended commit in the graph that
+        does not have children.
+
+    .. container:: verbose
+
+      Although :hg:`unamend` is typically used to reverse the effects of
+      :hg:`amend`, it actually rolls back the current commit to its previous
+      version, regardless of whether the changes resulted from an :hg:`amend`
+      operation or from another operation, such as :hg:`rebase`.
+    """
     unfi = repo.unfiltered()
 
     # identify the commit from which to unamend
