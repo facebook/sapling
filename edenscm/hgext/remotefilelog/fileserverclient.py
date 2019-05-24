@@ -806,6 +806,7 @@ class fileserverclient(object):
             self.ui.warn(_("%s\n") % stats.to_str())
 
         self.ui.metrics.gauge("http_getfiles_time_ms", stats.time_in_millis())
+        self.ui.metrics.gauge("http_getfiles_latency_ms", stats.latency_in_millis())
         self.ui.metrics.gauge("http_getfiles_bytes_downloaded", stats.downloaded())
         self.ui.metrics.gauge("http_getfiles_bytes_uploaded", stats.uploaded())
         self.ui.metrics.gauge("http_getfiles_requests", stats.requests())
@@ -832,6 +833,7 @@ class fileserverclient(object):
             self.ui.warn(_("%s\n") % stats.to_str())
 
         self.ui.metrics.gauge("http_gethistory_time_ms", stats.time_in_millis())
+        self.ui.metrics.gauge("http_gethistory_latency_ms", stats.latency_in_millis())
         self.ui.metrics.gauge("http_gethistory_bytes_downloaded", stats.downloaded())
         self.ui.metrics.gauge("http_gethistory_bytes_uploaded", stats.uploaded())
         self.ui.metrics.gauge("http_gethistory_requests", stats.requests())

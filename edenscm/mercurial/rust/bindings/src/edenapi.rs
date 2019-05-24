@@ -154,6 +154,10 @@ py_class!(class downloadstats |py| {
         Ok(self.stats(py).time.as_millis() as usize)
     }
 
+    def latency_in_millis(&self) -> PyResult<usize> {
+        Ok(self.stats(py).latency.as_millis() as usize)
+    }
+
     def bytes_per_second(&self) -> PyResult<f64> {
         Ok(self.stats(py).bytes_per_second())
     }
