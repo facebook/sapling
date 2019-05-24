@@ -131,9 +131,13 @@ class SystemdUserServiceManager:
         systemd_run_command.append("--")
         systemd_run_command.extend(command)
 
-        output = subprocess.check_output(
-            systemd_run_command, env=self.env, stderr=subprocess.STDOUT
-        )
+        try:
+            output = subprocess.check_output(
+                systemd_run_command, env=self.env, stderr=subprocess.STDOUT
+            )
+        except subprocess.CalledProcessError as e:
+            sys.stderr.buffer.write(e.output)
+            raise
         match = re.match(
             r"^Running as unit: (?P<unit>.*)$",
             output.decode("utf-8"),
