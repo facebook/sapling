@@ -281,6 +281,8 @@ Test extension help:
        catnotate     (no help text available)
        checkmessagehook
                      (no help text available)
+       checkserverbookmark
+                     (no help text available)
        chistedit
        churn         command to display statistics about repository history
        cleanobsstore
@@ -1302,14 +1304,14 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
-   debugcommitmessage (no help text available)
-   debugshell         a python shell with repo, changelog & manifest objects
+   debugcommitmessage  (no help text available)
+   debugshell          a python shell with repo, changelog & manifest objects
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
-   debugcommitmessage (no help text available)
-   debugshell         a python shell with repo, changelog & manifest objects
+   debugcommitmessage  (no help text available)
+   debugshell          a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ hg help -c schemes
   abort: no such help topic: schemes
