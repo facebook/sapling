@@ -8,6 +8,7 @@ use crate::{
     dataentry::DataEntry,
     historyentry::{HistoryEntry, WireHistoryEntry},
     key::Key,
+    node::Node,
     path::RepoPathBuf,
 };
 
@@ -67,6 +68,41 @@ impl IntoIterator for HistoryResponse {
             .into_iter()
             .map(|(path, entry)| HistoryEntry::from_wire(entry, path));
         Box::new(iter)
+    }
+}
+
+/// Struct reprenting the arguments to a "gettreepack" operation, which
+/// is used by Mercurial to prefetch treemanifests. This struct is intended
+/// to provide a way to support requests compatible with Mercurial's existing
+/// gettreepack wire protocol command.
+///
+/// In the future, we'd like to migrate away from requesting trees in this way.
+/// In general, trees can be requested from the API server using a `DataRequest`
+/// containing the keys of the desired tree nodes.
+///
+/// In all cases, trees will be returned in a `DataResponse`, so there is no
+/// `TreeResponse` type to accompany `TreeRequest`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TreeRequest {
+    pub rootdir: RepoPathBuf,
+    pub mfnodes: Vec<Node>,
+    pub basemfnodes: Vec<Node>,
+    pub depth: Option<usize>,
+}
+
+impl TreeRequest {
+    pub fn new(
+        rootdir: RepoPathBuf,
+        mfnodes: Vec<Node>,
+        basemfnodes: Vec<Node>,
+        depth: Option<usize>,
+    ) -> Self {
+        Self {
+            rootdir,
+            mfnodes,
+            basemfnodes,
+            depth,
+        }
     }
 }
 
