@@ -18,6 +18,7 @@ use mercurial_types::{HgChangesetId, HgManifestId};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::{self, Debug};
 use std::sync::Mutex;
+use types::api::TreeRequest;
 
 mod batch;
 mod commands;
@@ -170,6 +171,30 @@ pub struct GettreepackArgs {
     pub directories: Vec<Bytes>,
     /// The depth from the root that should be sent.
     pub depth: Option<usize>,
+}
+
+impl From<TreeRequest> for GettreepackArgs {
+    fn from(req: TreeRequest) -> Self {
+        let mfnodes = req
+            .mfnodes
+            .into_iter()
+            .map(|node| HgManifestId::new(node.into()))
+            .collect();
+        let basemfnodes = req
+            .basemfnodes
+            .into_iter()
+            .map(|node| HgManifestId::new(node.into()))
+            .collect();
+        let rootdir: &[u8] = req.rootdir.as_ref();
+
+        Self {
+            rootdir: rootdir.into(),
+            mfnodes,
+            basemfnodes,
+            directories: Vec::new(),
+            depth: req.depth,
+        }
+    }
 }
 
 #[derive(Debug)]
