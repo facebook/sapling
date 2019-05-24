@@ -13,7 +13,7 @@ pub struct DownloadStats {
 
 impl DownloadStats {
     pub fn time_in_seconds(&self) -> f64 {
-        self.time.as_secs() as f64 + self.time.subsec_nanos() as f64 / 1_000_000_000.0
+        duration_to_seconds(self.time)
     }
 
     pub fn bytes_per_second(&self) -> f64 {
@@ -23,23 +23,15 @@ impl DownloadStats {
 
 impl fmt::Display for DownloadStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let rate = self.bytes_per_second() / 1_000_000.0; // Convert to MB/s.
-        let time = self.time_in_seconds();
-        let (time, prec, unit) = if time > 1.0 {
-            (time, 2, "s")
-        } else {
-            (time * 1000.0, 0, "ms")
-        };
         write!(
             f,
-            "{} downloaded in {:.*} {} over {} request{} ({:.2} MB/s)",
+            "{} downloaded in {} over {} request{} ({:.2} MB/s; latency: {})",
             fmt_num_bytes(self.downloaded),
-            prec,
-            time,
-            unit,
+            fmt_duration(self.time),
             self.requests,
             if self.requests == 1 { "" } else { "s" },
-            rate
+            self.bytes_per_second() / 1_000_000.0,
+            fmt_duration(self.latency)
         )
     }
 }
@@ -54,4 +46,17 @@ fn fmt_num_bytes(n: usize) -> String {
     let units = ["B", "kB", "MB", "GB"];
     let prec = if i > 0 { 2 } else { 0 };
     format!("{:.*} {}", prec, n, units[i])
+}
+
+fn fmt_duration(time: Duration) -> String {
+    let millis = time.as_millis();
+    if millis > 1000 {
+        format!("{:.2} s", duration_to_seconds(time))
+    } else {
+        format!("{} ms", millis)
+    }
+}
+
+fn duration_to_seconds(time: Duration) -> f64 {
+    time.as_secs() as f64 + time.subsec_nanos() as f64 / 1_000_000_000.0
 }
