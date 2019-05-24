@@ -209,7 +209,6 @@ impl EdenApiCurlClient {
         log::debug!("Fetching data for {} keys", keys.len());
 
         let url = self.repo_base_url()?.join(path)?;
-        let creds = self.creds.clone();
         let batch_size = self.data_batch_size.unwrap_or(cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
@@ -222,38 +221,34 @@ impl EdenApiCurlClient {
             requests.push(DataRequest { keys });
         }
 
-        // Spawn a separate thread for HTTP requests so that we can
-        // perform network and disk I/O in parallel.
-        log::debug!("Spawning network I/O thread");
-        let (tx, rx) = channel();
-        let downloader = thread::spawn(move || {
-            multi_request(
-                &url,
-                creds.as_ref(),
-                requests,
-                progress,
-                |response: DataResponse| {
-                    for entry in response {
-                        tx.send(entry)?;
+        let mut num_responses = 0;
+        let mut num_entries = 0;
+        let stats = multi_request_threaded(
+            &url,
+            self.creds.as_ref(),
+            requests,
+            progress,
+            |response: DataResponse| {
+                num_responses += 1;
+                for entry in response {
+                    num_entries += 1;
+                    let key = entry.key().clone();
+                    if self.validate {
+                        log::trace!("Validating received data for: {}", &key);
                     }
-                    Ok(())
-                },
-            )
-        });
+                    let data = entry.data(self.validate)?;
+                    add_delta(store, key, data)?;
+                }
+                Ok(())
+            },
+        )?;
 
-        // Write entries to the store as we receive them from the other thread.
-        for entry in rx {
-            let key = entry.key().clone();
-            if self.validate {
-                log::trace!("Validating received data for: {}", &key);
-            }
-            let data = entry.data(self.validate)?;
-            add_delta(store, key, data)?;
-        }
-
-        downloader
-            .join()
-            .map_err(|_| err_msg("I/O thread panicked"))?
+        log::debug!(
+            "Received {} responses with {} total entries",
+            num_responses,
+            num_entries
+        );
+        Ok(stats)
     }
 }
 
@@ -377,6 +372,52 @@ where
     log::info!("{}", &dlstats);
 
     Ok(dlstats)
+}
+
+/// Same as `multi_request`, except the HTTP transfers will be handled by
+/// separate thread, while the user-provided response callback will be
+/// run on the main thread. This allows the callback to perform potentially
+/// expensive and/or blocking operations upon receiving a response
+/// without affecting the other ongoing HTTP transfers.
+fn multi_request_threaded<R, I, T, F>(
+    url: &Url,
+    creds: Option<&ClientCreds>,
+    requests: I,
+    progress_cb: Option<ProgressFn>,
+    mut response_cb: F,
+) -> Fallible<DownloadStats>
+where
+    R: Serialize + Send + 'static,
+    I: IntoIterator<Item = R>,
+    T: DeserializeOwned + Send + Sync + 'static,
+    F: FnMut(T) -> Fallible<()>,
+{
+    // Convert arguments to owned types since these will be sent
+    // to a new thread, which requires captured values to have a
+    // 'static lifetime.
+    let url = url.clone();
+    let creds = creds.cloned();
+    let requests = requests.into_iter().collect::<Vec<_>>();
+
+    log::debug!("Spawning HTTP I/O thread");
+    let (tx, rx) = channel();
+    let iothread = thread::spawn(move || {
+        multi_request(
+            &url,
+            creds.as_ref(),
+            requests,
+            progress_cb,
+            |response: T| Ok(tx.send(response)?),
+        )
+    });
+
+    for response in rx {
+        response_cb(response)?;
+    }
+
+    iothread
+        .join()
+        .map_err(|_| err_msg("I/O thread panicked"))?
 }
 
 /// Configure a new curl::Easy2 handle with appropriate default settings.
