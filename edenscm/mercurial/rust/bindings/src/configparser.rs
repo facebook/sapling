@@ -94,11 +94,14 @@ py_class!(class config |py| {
         for source in sources {
             let value = source.value().clone().map(|bytes| PyBytes::new(py, &bytes));
             let file = source.location().map(|(path, range)| {
-                let bytes = path_to_local_bytes(&path).unwrap();
                 // Calculate the line number - count "\n" till range.start
                 let file = source.file_content().unwrap();
                 let line = 1 + file.slice(0, range.start).iter().filter(|ch| **ch == b'\n').count();
-                let pypath = if cfg!(windows) {
+
+                let bytes = path_to_local_bytes(&path).unwrap();
+                let pypath = if bytes.is_empty() {
+                    PyBytes::new(py, b"<builtin>")
+                } else if cfg!(windows) && bytes.starts_with(b"\\\\?\\") {
                     // path.caonicalize() used internally by configparser
                     // adds "\\?\" prefix on Windows.
                     // It's unfriendly to users. Strip them.

@@ -43,7 +43,7 @@
   b.z = '3'
     sources: [('3', ('*b.rc', 22, 23, 3), 'readpath')] (glob)
   c.x = '1'
-    sources: [('1', ('', 6, 7, 2), 'parse')]
+    sources: [('1', ('<builtin>', 6, 7, 2), 'parse')]
   d.x = None
     sources: [(None, None, 'set2')]
   d.y = '2'
