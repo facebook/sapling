@@ -8,6 +8,7 @@ pub struct DownloadStats {
     pub uploaded: usize,
     pub requests: usize,
     pub time: Duration,
+    pub latency: Duration,
 }
 
 impl DownloadStats {

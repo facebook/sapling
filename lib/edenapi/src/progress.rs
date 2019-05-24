@@ -1,6 +1,6 @@
 // Copyright Facebook, Inc. 2019
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, time::Instant};
 
 pub use stats::ProgressStats;
 
@@ -46,6 +46,10 @@ impl ProgressManager {
         self.inner.borrow().stats()
     }
 
+    pub fn first_response_time(&self) -> Option<Instant> {
+        self.inner.borrow().first_response.clone()
+    }
+
     pub fn report(&mut self) {
         let stats = self.stats();
         if let Some(ref mut callback) = self.callback {
@@ -56,12 +60,14 @@ impl ProgressManager {
 
 struct ProgressManagerInner {
     stats: Vec<ProgressStats>,
+    first_response: Option<Instant>,
 }
 
 impl ProgressManagerInner {
     fn with_capacity(capacity: usize) -> Self {
         Self {
             stats: Vec::with_capacity(capacity),
+            first_response: None,
         }
     }
 
@@ -73,6 +79,9 @@ impl ProgressManagerInner {
 
     fn update(&mut self, index: usize, stats: ProgressStats) {
         self.stats[index] = stats;
+        if self.first_response.is_none() && stats.downloaded > 0 {
+            self.first_response = Some(Instant::now());
+        }
     }
 
     fn stats(&self) -> ProgressStats {

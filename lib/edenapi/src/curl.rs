@@ -359,17 +359,24 @@ where
     })?;
 
     let elapsed = start.elapsed();
-    let progress = driver.progress().unwrap().stats();
-    let stats = DownloadStats {
-        downloaded: progress.downloaded,
-        uploaded: progress.uploaded,
+    let progress = driver.progress().unwrap();
+    let progstats = progress.stats();
+    let latency = progress
+        .first_response_time()
+        .unwrap_or(start)
+        .duration_since(start);
+
+    let dlstats = DownloadStats {
+        downloaded: progstats.downloaded,
+        uploaded: progstats.uploaded,
         requests: num_requests,
         time: elapsed,
+        latency,
     };
 
-    log::info!("{}", &stats);
+    log::info!("{}", &dlstats);
 
-    Ok(stats)
+    Ok(dlstats)
 }
 
 /// Configure a new curl::Easy2 handle with appropriate default settings.
