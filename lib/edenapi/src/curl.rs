@@ -227,29 +227,22 @@ impl EdenApiCurlClient {
         log::debug!("Spawning network I/O thread");
         let (tx, rx) = channel();
         let downloader = thread::spawn(move || {
-            let stats = multi_request(
+            multi_request(
                 &url,
                 creds.as_ref(),
                 requests,
                 progress,
                 |response: DataResponse| {
                     for entry in response {
-                        tx.send(Some(entry))?;
+                        tx.send(entry)?;
                     }
                     Ok(())
                 },
-            );
-            tx.send(None)?;
-            stats
+            )
         });
 
         // Write entries to the store as we receive them from the other thread.
         for entry in rx {
-            let entry = match entry {
-                Some(entry) => entry,
-                None => break,
-            };
-
             let key = entry.key().clone();
             if self.validate {
                 log::trace!("Validating received data for: {}", &key);
