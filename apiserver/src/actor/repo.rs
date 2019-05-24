@@ -29,6 +29,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use http::uri::Uri;
 use mononoke_api;
 use remotefilelog;
+use repo_client::gettreepack_entries;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, Logger};
 use sshrelay::SshEnvVars;
@@ -38,8 +39,8 @@ use uuid::Uuid;
 use mercurial_types::{manifest::Content, Entry as _, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use types::{
-    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse},
-    DataEntry, Key, WireHistoryEntry,
+    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
+    DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
 
 use mononoke_types::{FileContents, MPath, RepositoryId};
@@ -533,6 +534,38 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn eden_prefetch_trees(
+        &self,
+        ctx: CoreContext,
+        req: TreeRequest,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        gettreepack_entries(ctx.clone(), &self.repo, req.into())
+            .and_then(move |(entry, basepath)| {
+                let full_path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
+                let path_bytes = full_path
+                    .map(|mpath| mpath.to_vec())
+                    .unwrap_or_else(Vec::new);
+                let path = try_boxfuture!(RepoPathBuf::from_utf8(path_bytes));
+
+                let node = entry.get_hash().into_nodehash().into();
+                let key = Key::new(path, node);
+
+                let get_parents = entry.get_parents(ctx.clone());
+                let get_content = entry.get_raw_content(ctx.clone());
+                get_parents
+                    .and_then(move |parents| {
+                        get_content.map(move |content| {
+                            DataEntry::new(key, content.into_inner(), parents.into())
+                        })
+                    })
+                    .boxify()
+            })
+            .collect()
+            .map(|entries| MononokeRepoResponse::EdenPrefetchTrees(DataResponse::new(entries)))
+            .from_err()
+            .boxify()
+    }
+
     pub fn send_query(
         &self,
         ctx: CoreContext,
@@ -570,6 +603,7 @@ impl MononokeRepo {
                 self.eden_get_history(ctx, keys, depth)
             }
             EdenGetTrees(DataRequest { keys }) => self.eden_get_trees(ctx, keys),
+            EdenPrefetchTrees(req) => self.eden_prefetch_trees(ctx, req),
         }
     }
 }

@@ -1386,7 +1386,7 @@ impl HgCommands for RepoClient {
     }
 }
 
-fn gettreepack_entries(
+pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,

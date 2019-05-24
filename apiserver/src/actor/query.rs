@@ -17,7 +17,7 @@ use apiserver_thrift::types::{
     MononokeGetRawParams, MononokeGetTreeParams, MononokeIsAncestorParams,
     MononokeListDirectoryParams, MononokeRevision,
 };
-use types::api::{DataRequest, HistoryRequest};
+use types::api::{DataRequest, HistoryRequest, TreeRequest};
 
 use super::lfs::BatchRequest;
 
@@ -74,6 +74,7 @@ pub enum MononokeRepoQuery {
     EdenGetData(DataRequest),
     EdenGetHistory(HistoryRequest),
     EdenGetTrees(DataRequest),
+    EdenPrefetchTrees(TreeRequest),
 }
 
 pub struct MononokeQuery {

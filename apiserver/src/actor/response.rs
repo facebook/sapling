@@ -57,6 +57,7 @@ pub enum MononokeRepoResponse {
     EdenGetData(DataResponse),
     EdenGetHistory(HistoryResponse),
     EdenGetTrees(DataResponse),
+    EdenPrefetchTrees(DataResponse),
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -107,6 +108,7 @@ impl Responder for MononokeRepoResponse {
             EdenGetData(response) => Ok(cbor_response(response)),
             EdenGetHistory(response) => Ok(cbor_response(response)),
             EdenGetTrees(response) => Ok(cbor_response(response)),
+            EdenPrefetchTrees(response) => Ok(cbor_response(response)),
         }
     }
 }

@@ -14,7 +14,7 @@ mod client;
 mod errors;
 mod mononoke_repo;
 
-pub use client::RepoClient;
+pub use client::{gettreepack_entries, RepoClient};
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
 pub use repo_read_write_status::RepoReadWriteFetcher;
 pub use streaming_clone::SqlStreamingChunksFetcher;
