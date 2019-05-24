@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
+import contextlib
 import datetime
 import os
 import sys
@@ -72,6 +73,24 @@ def writereport(reportsfile, msg):
     os.fsync(reportsfile.fileno())
 
 
+@contextlib.contextmanager
+def capturelogs(ui, remote, logfile):
+    if logfile is None:
+        yield
+    else:
+        uis = [remote.ui, ui]
+        for u in uis:
+            u.pushbuffer(error=True, subproc=True)
+
+        try:
+            yield
+        finally:
+            output = "".join([u.popbuffer() for u in uis])
+            ui.write_err(output)
+            with open(logfile, "w") as f:
+                f.write(output)
+
+
 @command(
     "^sendunbundlereplaybatch",
     [
@@ -111,13 +130,22 @@ def sendunbundlereplaybatch(ui, **opts):
             if line == "":
                 break
 
-            (bfname, tsfname, ontobook, rebasedhead) = line.split()
+            # The newest sync job sends 5 parameters, but older versions send 4.
+            # We default the last parameter to None for compatibility.
+            parts = line.split()
+            if len(parts) == 4:
+                parts.append(None)
+            (bfname, tsfname, ontobook, rebasedhead, logfile) = parts
+
             rebasedhead = None if rebasedhead == "DELETED" else rebasedhead
             commitdates = getcommitdates(ui, tsfname)
             stream = getstream(bfname)
-            returncode = runreplay(
-                ui, remote, stream, commitdates, rebasedhead, ontobook
-            )
+
+            with capturelogs(ui, remote, logfile):
+                returncode = runreplay(
+                    ui, remote, stream, commitdates, rebasedhead, ontobook
+                )
+
             if returncode != 0:
                 # the word "failed" is an identifier of failure, do not change
                 failure = "unbundle replay batch item #%i failed\n" % counter

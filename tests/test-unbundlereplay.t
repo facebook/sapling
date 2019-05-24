@@ -251,11 +251,11 @@ Send unbundlereplay batch 2 (second has a wrong hash)
   unbundle replay batch item #1 failed
 
 #if respondlightly
-Send unbundlereplay batch 3 (all good)
+Send unbundlereplay batch 3 (all good, this time with logging to files)
   $ cat >$TESTTMP/commands <<EOF
-  > $TESTDIR/bundles/unbundlereplay/5.cba0370ec397f4de9cbd83329410369a1d30575f-cc43a8d5ff4cfd07429374cd22d8d2c94d030807.hg $TESTTMP/goodcommitdates master_bookmark cc43a8d5ff4cfd07429374cd22d8d2c94d030807
-  > $TESTDIR/bundles/unbundlereplay/6.6c384628f7c4fe3b7e89ed2ed382be72bf234c40-a976d3914119f1d620636098b7aeee7ae52ecefc.hg $TESTTMP/goodcommitdates master_bookmark a976d3914119f1d620636098b7aeee7ae52ecefc
-  > $TESTDIR/bundles/unbundlereplay/7.d5313099c10db8d9efee0f2aae13aeed4ab4c2ef-0ee63ce2db781f5a2a2e1a2e063261e2b049011d.hg $TESTTMP/goodcommitdates master_bookmark 0ee63ce2db781f5a2a2e1a2e063261e2b049011d
+  > $TESTDIR/bundles/unbundlereplay/5.cba0370ec397f4de9cbd83329410369a1d30575f-cc43a8d5ff4cfd07429374cd22d8d2c94d030807.hg $TESTTMP/goodcommitdates master_bookmark cc43a8d5ff4cfd07429374cd22d8d2c94d030807 $TESTTMP/log1
+  > $TESTDIR/bundles/unbundlereplay/6.6c384628f7c4fe3b7e89ed2ed382be72bf234c40-a976d3914119f1d620636098b7aeee7ae52ecefc.hg $TESTTMP/goodcommitdates master_bookmark a976d3914119f1d620636098b7aeee7ae52ecefc $TESTTMP/log2
+  > $TESTDIR/bundles/unbundlereplay/7.d5313099c10db8d9efee0f2aae13aeed4ab4c2ef-0ee63ce2db781f5a2a2e1a2e063261e2b049011d.hg $TESTTMP/goodcommitdates master_bookmark 0ee63ce2db781f5a2a2e1a2e063261e2b049011d $TESTTMP/log3
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server \
   > --debug --reports $TESTTMP/reports.txt
@@ -285,14 +285,32 @@ Send unbundlereplay batch 3 (all good)
   remote: [ReplayVerification] Everything seems in order
   single wireproto command took: * (glob)
   unbundle replay batch item #2 successfully sent
+  $ cat $TESTTMP/log1
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     cba0370ec397  5
+  remote: [ReplayVerification] Everything seems in order
+  single wireproto command took: * (glob)
+  $ cat $TESTTMP/log2
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     6c384628f7c4  6
+  remote: [ReplayVerification] Everything seems in order
+  single wireproto command took: * (glob)
+  $ cat $TESTTMP/log3
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     d5313099c10d  7
+  remote: [ReplayVerification] Everything seems in order
+  single wireproto command took: * (glob)
 #endif
 
 #if respondfully
-Send unbundlereplay batch 3 (all good)
+Send unbundlereplay batch 3 (all good, this time with logging to files)
   $ cat >$TESTTMP/commands <<EOF
-  > $TESTDIR/bundles/unbundlereplay/5.cba0370ec397f4de9cbd83329410369a1d30575f-cc43a8d5ff4cfd07429374cd22d8d2c94d030807.hg $TESTTMP/goodcommitdates master_bookmark cc43a8d5ff4cfd07429374cd22d8d2c94d030807
-  > $TESTDIR/bundles/unbundlereplay/6.6c384628f7c4fe3b7e89ed2ed382be72bf234c40-a976d3914119f1d620636098b7aeee7ae52ecefc.hg $TESTTMP/goodcommitdates master_bookmark a976d3914119f1d620636098b7aeee7ae52ecefc
-  > $TESTDIR/bundles/unbundlereplay/7.d5313099c10db8d9efee0f2aae13aeed4ab4c2ef-0ee63ce2db781f5a2a2e1a2e063261e2b049011d.hg $TESTTMP/goodcommitdates master_bookmark 0ee63ce2db781f5a2a2e1a2e063261e2b049011d
+  > $TESTDIR/bundles/unbundlereplay/5.cba0370ec397f4de9cbd83329410369a1d30575f-cc43a8d5ff4cfd07429374cd22d8d2c94d030807.hg $TESTTMP/goodcommitdates master_bookmark cc43a8d5ff4cfd07429374cd22d8d2c94d030807 $TESTTMP/log1
+  > $TESTDIR/bundles/unbundlereplay/6.6c384628f7c4fe3b7e89ed2ed382be72bf234c40-a976d3914119f1d620636098b7aeee7ae52ecefc.hg $TESTTMP/goodcommitdates master_bookmark a976d3914119f1d620636098b7aeee7ae52ecefc $TESTTMP/log2
+  > $TESTDIR/bundles/unbundlereplay/7.d5313099c10db8d9efee0f2aae13aeed4ab4c2ef-0ee63ce2db781f5a2a2e1a2e063261e2b049011d.hg $TESTTMP/goodcommitdates master_bookmark 0ee63ce2db781f5a2a2e1a2e063261e2b049011d $TESTTMP/log3
   > EOF
   $ cat $TESTTMP/commands | hg sendunbundlereplaybatch --path ssh://user@dummy/server \
   > --debug --reports $TESTTMP/reports.txt \
@@ -310,28 +328,55 @@ Send unbundlereplay batch 3 (all good)
   remote:     cba0370ec397  5
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
   single wireproto command took: * (glob)
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #0 successfully sent
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     6c384628f7c4  6
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
   single wireproto command took: * (glob)
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #1 successfully sent
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     d5313099c10d  7
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
   single wireproto command took: * (glob)
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #2 successfully sent
+  $ cat $TESTTMP/log1
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     cba0370ec397  5
+  remote: 1 new changeset from the server will be downloaded
+  remote: [ReplayVerification] Everything seems in order
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
+  single wireproto command took: * (glob)
+  $ cat $TESTTMP/log2
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     6c384628f7c4  6
+  remote: 1 new changeset from the server will be downloaded
+  remote: [ReplayVerification] Everything seems in order
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
+  single wireproto command took: * (glob)
+  $ cat $TESTTMP/log3
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     d5313099c10d  7
+  remote: 1 new changeset from the server will be downloaded
+  remote: [ReplayVerification] Everything seems in order
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
+  single wireproto command took: * (glob)
 #endif
 
   $ cat $TESTTMP/reports.txt
