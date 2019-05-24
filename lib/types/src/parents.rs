@@ -14,7 +14,17 @@ use crate::node::{Node, NULL_ID};
 ///
 /// In Rust, these restrictions can be enforced with an enum that makes invalid
 /// states unrepresentable.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    Deserialize
+)]
 #[serde(untagged)]
 pub enum Parents {
     None,
