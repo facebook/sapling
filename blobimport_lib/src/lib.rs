@@ -34,7 +34,7 @@ mod changeset;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use failure::{err_msg, Error};
+use crate::failure::{err_msg, Error};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::Logger;
@@ -56,7 +56,7 @@ pub struct Blobimport {
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
     pub no_bookmark: bool,
-    pub phases_store: Arc<Phases>,
+    pub phases_store: Arc<dyn Phases>,
 }
 
 impl Blobimport {

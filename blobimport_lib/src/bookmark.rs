@@ -7,9 +7,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::failure::err_msg;
+use crate::failure::prelude::*;
 use ascii::AsciiString;
-use failure::err_msg;
-use failure::prelude::*;
 use futures::{prelude::*, stream};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;

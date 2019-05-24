@@ -7,10 +7,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::failure::err_msg;
+use crate::failure::prelude::*;
 use bytes::Bytes;
 use context::CoreContext;
-use failure::err_msg;
-use failure::prelude::*;
 use futures::future::{self, SharedItem};
 use futures::stream::{self, Stream};
 use futures::sync::{mpsc, oneshot};
@@ -217,7 +217,7 @@ pub struct UploadChangesets {
     pub changeset: Option<HgNodeHash>,
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
-    pub phases_store: Arc<Phases>,
+    pub phases_store: Arc<dyn Phases>,
 }
 
 impl UploadChangesets {
