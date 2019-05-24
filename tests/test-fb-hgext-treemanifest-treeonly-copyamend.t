@@ -366,28 +366,6 @@ Amend the commit to add a new file with an empty cache
   1 trees fetched over *s (glob)
   fetching tree 'a/b/c/d/e/f/g/h/i/j' 798352a5c06a9995fe8ab9d657963810a6e5e603
   1 trees fetched over *s (glob)
-  fetching tree '' 38ea6dcc317f745d7a86874831a4d5e69e0f6a8d, based on efa8fa4352b919302f90e85924e691a632d6bea0, found via 83bc02216909
-  1 trees fetched over *s (glob)
-  fetching tree 'a' e5277630fd2b2f0cdc9f4d49298d828eba30e755
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b' 1c3d05423a7b3edb8eac06cbb42bc7abba6c4c31
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c' 9bb6f075025d85013f1ff6ee9c56983e9fc3e245
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d' 8b67460a16d6f96375cb7fb5748ed8de300d37e2
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d/e' 6b5415b2820af7af445f685e7ec80be03333f7f1
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d/e/f' 320c5962c2c0c8be89af3270b34fc7a2110b068c
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d/e/f/g' b26f7a792b891d966627d18df1887c1607db55fc
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d/e/f/g/h' 4809637d75494dabeae3436388c59fc7760635c6
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d/e/f/g/h/i' f07285d5f517fdbf85061b14a8337d39770fb0c4
-  1 trees fetched over *s (glob)
-  fetching tree 'a/b/c/d/e/f/g/h/i/j' 3724b7d74346d81b3dc95251596dcb69d000cda3
-  1 trees fetched over *s (glob)
   12 files fetched over 1 fetches - (12 misses, 0.00% hit ratio) over 0.00s (?)
 
 Try again, disabling the descendantrevfastpath

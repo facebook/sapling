@@ -185,9 +185,9 @@ def wraprepo(repo):
                     # When possible, only read the deltas.
                     p1, p2 = mfctx.parents
                     if p1 in visited and p2 in visited:
-                        mfdict = mfl[mfnode].readfast()
+                        mfdict = mfctx.readnew()
                     else:
-                        mfdict = mfl[mfnode].read()
+                        mfdict = mfctx.read()
 
                     diff = mfdict.iteritems()
                     if pats:

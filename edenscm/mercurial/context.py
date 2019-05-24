@@ -600,7 +600,7 @@ class changectx(basectx):
 
     @propertycache
     def _manifestdelta(self):
-        return self._manifestctx.readdelta()
+        return self._manifestctx.readnew()
 
     @propertycache
     def _parents(self):
@@ -1011,7 +1011,7 @@ class basefilectx(object):
                 if path in ac[3]:  # checking the 'files' field.
                     # The file has been touched, check if the content is
                     # similar to the one we search for.
-                    if fnode == mfl[ac[0]].readfast().get(path):
+                    if fnode == mfl[ac[0]].read().get(path):
                         return a
             # In theory, we should never get out of that loop without a result.
             # But if manifest uses a buggy file revision (not children of the

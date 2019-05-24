@@ -873,7 +873,11 @@ class hybridmanifestctx(object):
             )
         return self._hybridmanifest
 
-    def readdelta(self, shallow=False):
+    def readnew(self, shallow=False):
+        """Returns the entries that were introduced by this manifest revision.
+
+        If `shallow` is True, it returns only the immediate children in a tree.
+        """
         p1, p2 = self.parents
         mf = self.read()
         parentmf = self._manifestlog[p1].read()
@@ -892,55 +896,8 @@ class hybridmanifestctx(object):
 
         rl = self.revlog
         r = rl.rev(self._node)
-        d = mdiff.patchtext(rl.revdiff(rl.deltaparent(r), r))
+        d = mdiff.patchtext(rl.revdiff(rl.parentrevs(r)[0], r))
         return manifest.manifestdict(d)
-
-    def readfast(self, shallow=False):
-        """readfast returns a manifest containing either A) the list of files
-        added/modified in this manifest or B) the entire manifest, depending on
-        which is faster to compute. In a flat manifest world, option A is very
-        fast if the delta base is equal to p1. In a tree world, we don't have
-        that optimization, but we have efficient diffs, so we use that instead.
-        """
-        mf = self.read()
-
-        p1, p2 = self.parents
-        if p1 == revlog.nullid:
-            return mf
-
-        parentmf = self._manifestlog[p1].read()
-
-        fastmf = None
-        pfastmf = None
-
-        # If both trees, take diff fast path
-        treemf = mf._treemanifest()
-        ptreemf = parentmf._treemanifest()
-        if treemf is not None and ptreemf is not None:
-            fastmf = treemf
-            pfastmf = ptreemf
-
-        if fastmf is None:
-            # If both cached, take diff fast path
-            cachedmf = mf._cachedmanifest()
-            pcachedmf = parentmf._cachedmanifest()
-            if cachedmf is not None and pcachedmf is not None:
-                fastmf = cachedmf
-                pfastmf = pcachedmf
-
-        if fastmf is not None:
-            diff = pfastmf.diff(fastmf)
-            result = manifest.manifestdict()
-            for path, ((oldn, oldf), (newn, newf)) in diff.iteritems():
-                if newn is not None:
-                    result[path] = newn
-                    result.setflag(path, newf)
-        else:
-            # Otherwise, fall back to flat readfast
-            flatctx = manifest.manifestctx(self._manifestlog, self._node)
-            result = flatctx.readfast(shallow=shallow)
-
-        return mf._converttohybridmanifest(result)
 
     def node(self):
         return self._node

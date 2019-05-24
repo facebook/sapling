@@ -355,11 +355,16 @@ Corrupt manifest log base node to cause failure to read revision
   >   2> /dev/null
   $ hg verify -q
    manifest@0: reading delta d0b6632564d4: * (glob)
-   file@0: 362fef284ce2 not in manifests
-  2 integrity errors encountered!
+   manifest@1: reading delta 941fc4534185: revision outside index
+   file@0: in changeset but not in manifest
+  3 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
   $ hg verify -q -r '.'
+   manifest@1: reading delta 941fc4534185: revision outside index
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
   $ hg verify -q -r '.^'
    manifest@0: reading delta d0b6632564d4: * (glob)
   1 integrity errors encountered!

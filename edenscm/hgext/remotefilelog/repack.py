@@ -610,18 +610,19 @@ def keepset(repo, keyfn, lastkeepkeys=None):
 
     # process the commits in toposorted order starting from the oldest
     for r in reversed(keep._list):
-        if repo[r].p1().rev() in processed:
+        ctx = repo[r]
+        if ctx.p1().rev() in processed:
             # if the direct parent has already been processed
             # then we only need to process the delta
-            m = repo[r].manifestctx().readdelta()
+            m = ctx.manifest().diff(ctx.p1().manifest())
         else:
             # otherwise take the manifest and diff it
             # with the previous manifest if one exists
             if lastmanifest:
-                m = repo[r].manifest().diff(lastmanifest)
+                m = ctx.manifest().diff(lastmanifest)
             else:
-                m = repo[r].manifest()
-        lastmanifest = repo[r].manifest()
+                m = ctx.manifest()
+        lastmanifest = ctx.manifest()
         processed.add(r)
 
         # populate keepkeys with keys from the current manifest

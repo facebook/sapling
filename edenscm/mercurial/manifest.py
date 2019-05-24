@@ -1511,30 +1511,14 @@ class manifestctx(object):
                 self._data = manifestdict(text)
         return self._data
 
-    def readfast(self, shallow=False):
-        """Calls either readdelta or read, based on which would be less work.
-        readdelta is called if the delta is against the p1, and therefore can be
-        read quickly.
+    def readnew(self, shallow=False):
+        """Returns the entries that were introduced by this manifest revision.
 
-        If `shallow` is True, nothing changes since this is a flat manifest.
-        """
-        rl = self._revlog()
-        r = rl.rev(self._node)
-        deltaparent = rl.deltaparent(r)
-        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
-            return self.readdelta()
-        return self.read()
-
-    def readdelta(self, shallow=False):
-        """Returns a manifest containing just the entries that are present
-        in this manifest, but not in its p1 manifest. This is efficient to read
-        if the revlog delta is already p1.
-
-        Changing the value of `shallow` has no effect on flat manifests.
+        If `shallow` is True, it returns only the immediate children in a tree.
         """
         revlog = self._revlog()
         r = revlog.rev(self._node)
-        d = mdiff.patchtext(revlog.revdiff(revlog.deltaparent(r), r))
+        d = mdiff.patchtext(revlog.revdiff(revlog.parentrevs(r)[0], r))
         return manifestdict(d)
 
     def find(self, key):
@@ -1637,25 +1621,19 @@ class treemanifestctx(object):
     def parents(self):
         return self._revlog().parents(self._node)
 
-    def readdelta(self, shallow=False):
-        """Returns a manifest containing just the entries that are present
-        in this manifest, but not in its p1 manifest. This is efficient to read
-        if the revlog delta is already p1.
+    def readnew(self, shallow=False):
+        """Returns the entries that were introduced by this manifest revision.
 
-        If `shallow` is True, this will read the delta for this directory,
-        without recursively reading subdirectory manifests. Instead, any
-        subdirectory entry will be reported as it appears in the manifest, i.e.
-        the subdirectory will be reported among files and distinguished only by
-        its 't' flag.
+        If `shallow` is True, it returns only the immediate children in a tree.
         """
         revlog = self._revlog()
         if shallow:
             r = revlog.rev(self._node)
-            d = mdiff.patchtext(revlog.revdiff(revlog.deltaparent(r), r))
+            d = mdiff.patchtext(revlog.revdiff(revlog.parentrevs(r)[0], r))
             return manifestdict(d)
         else:
             # Need to perform a slow delta
-            r0 = revlog.deltaparent(revlog.rev(self._node))
+            r0 = revlog.parentrevs(revlog.rev(self._node))[0]
             m0 = self._manifestlog.get(self._dir, revlog.node(r0)).read()
             m1 = self.read()
             md = treemanifest(dir=self._dir)
@@ -1665,25 +1643,6 @@ class treemanifestctx(object):
                     if fl1:
                         md.setflag(f, fl1)
             return md
-
-    def readfast(self, shallow=False):
-        """Calls either readdelta or read, based on which would be less work.
-        readdelta is called if the delta is against the p1, and therefore can be
-        read quickly.
-
-        If `shallow` is True, it only returns the entries from this manifest,
-        and not any submanifests.
-        """
-        rl = self._revlog()
-        r = rl.rev(self._node)
-        deltaparent = rl.deltaparent(r)
-        if deltaparent != revlog.nullrev and deltaparent in rl.parentrevs(r):
-            return self.readdelta(shallow=shallow)
-
-        if shallow:
-            return manifestdict(rl.revision(self._node))
-        else:
-            return self.read()
 
     def find(self, key):
         return self.read().find(key)

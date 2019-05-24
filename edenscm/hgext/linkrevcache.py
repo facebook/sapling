@@ -391,7 +391,7 @@ def _buildlinkrevcache(ui, repo, db, end):
         for rev in xrange(start, end + 1):
             prog.value = rev
             clr = cl.changelogrevision(rev)
-            md = ml[clr.manifest].readfast()
+            md = ml[clr.manifest].read()
 
             if checkancestor:
                 if len(clr.files) >= ancestorcountthreshold:

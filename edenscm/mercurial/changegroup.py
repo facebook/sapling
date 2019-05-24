@@ -355,7 +355,7 @@ class cg1unpacker(object):
                 # validate incoming csets have their manifests
                 for cset in xrange(clstart, clend):
                     mfnode = cl.changelogrevision(cset).manifest
-                    mfest = ml[mfnode].readdelta()
+                    mfest = ml[mfnode].readnew()
                     # store file cgnodes we must see
                     for f, n in mfest.iteritems():
                         needfiles.setdefault(f, set()).add(n)
@@ -783,7 +783,8 @@ class cg1packer(object):
                 treemanifests to send.
                 """
                 clnode = nodes[x]
-                mdata = mfl.get(dir, x).readfast(shallow=True)
+                mfctx = mfl.get(dir, x)
+                mdata = mfctx.readnew(shallow=True)
                 for p, n, fl in mdata.iterentries():
                     if fl == "t":  # subdirectory manifest
                         subdir = dir + p + "/"

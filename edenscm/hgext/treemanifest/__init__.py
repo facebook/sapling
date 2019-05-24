@@ -954,7 +954,7 @@ class treemanifestctx(object):
             p1 = nullid
         return p1, p2
 
-    def readdelta(self, shallow=False):
+    def readnew(self, shallow=False):
         """Returns a manifest containing just the entries that are present
         in this manifest, but not in its p1 manifest. This is efficient to read
         if the revlog delta is already p1.
@@ -986,16 +986,6 @@ class treemanifestctx(object):
                     if fl2:
                         md.setflag(f, fl2)
             return md
-
-    def readfast(self, shallow=False):
-        """Calls either readdelta or read, based on which would be less work.
-        readdelta is called if the delta is against the p1, and therefore can be
-        read quickly.
-
-        If `shallow` is True, it only returns the entries from this manifest,
-        and not any submanifests.
-        """
-        return self.readdelta(shallow=shallow)
 
     def find(self, key):
         return self.read().find(key)

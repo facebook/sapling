@@ -285,7 +285,7 @@ class verifier(object):
                 self.err(lr, _("%s not in changesets") % short(n), label)
 
             try:
-                mfdelta = mfl.get(dir, n).readdelta(shallow=True)
+                mfdelta = mfl.get(dir, n).readnew(shallow=True)
                 for f, fn, fl in mfdelta.iterentries():
                     if not f:
                         self.err(lr, _("entry without name in manifest"))

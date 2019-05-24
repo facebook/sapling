@@ -131,7 +131,7 @@ class remotefilectx(context.filectx):
             if path in data[3]:  # checking the 'files' field.
                 # The file has been touched, check if the hash is what we're
                 # looking for.
-                if fileid == mfl[data[0]].readfast().get(path):
+                if fileid == mfl[data[0]].read().get(path):
                     return rev
 
         # Couldn't find the linkrev. This should generally not happen, and will
@@ -228,7 +228,7 @@ class remotefilectx(context.filectx):
         manifestnode, files = ancctx[0], ancctx[3]
         # If the file was touched in this ancestor, and the content is similar
         # to the one we are searching for.
-        if path in files and fnode == mfl[manifestnode].readfast().get(path):
+        if path in files and fnode == mfl[manifestnode].read().get(path):
             return cl.node(ancrev)
         return None
 
