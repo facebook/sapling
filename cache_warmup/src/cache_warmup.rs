@@ -43,7 +43,7 @@ mod errors {
     }
 }
 
-use failure::Error;
+use crate::failure::Error;
 
 // Fetches all the manifest entries and their linknodes. Do not fetching files because
 // there can be too many of them.
