@@ -18,7 +18,6 @@ extern crate futures_ext;
 extern crate sql;
 #[macro_use]
 extern crate stats;
-extern crate tokio;
 
 extern crate filenodes;
 extern crate mercurial_types;
@@ -27,8 +26,8 @@ extern crate sql_ext;
 
 mod errors;
 
+use crate::failure::prelude::*;
 use context::CoreContext;
-use failure::prelude::*;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
@@ -42,7 +41,7 @@ use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
 };
 
-use errors::ErrorKind;
+use crate::errors::ErrorKind;
 
 use std::collections::HashSet;
 use std::sync::Arc;

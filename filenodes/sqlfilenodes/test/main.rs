@@ -11,7 +11,7 @@
 
 extern crate async_unit;
 extern crate context;
-extern crate failure_ext as failure;
+
 extern crate filenodes;
 extern crate futures;
 extern crate futures_ext;
@@ -20,15 +20,15 @@ extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 extern crate mononoke_types_mocks;
 extern crate sqlfilenodes;
-extern crate tokio;
 
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::Future;
 use futures_ext::StreamExt;
 use mercurial_types::{HgFileNodeId, RepoPath};
-use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID,
-                                      TWOS_FNID};
+use mercurial_types_mocks::nodehash::{
+    ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID, TWOS_FNID,
+};
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
@@ -112,7 +112,7 @@ fn copied_filenode() -> FilenodeInfo {
 
 fn do_add_filenodes(
     ctx: CoreContext,
-    filenodes: &Filenodes,
+    filenodes: &dyn Filenodes,
     to_insert: Vec<FilenodeInfo>,
     repo_id: RepositoryId,
 ) {
@@ -125,7 +125,7 @@ fn do_add_filenodes(
 
 fn do_add_filenode(
     ctx: CoreContext,
-    filenodes: &Filenodes,
+    filenodes: &dyn Filenodes,
     node: FilenodeInfo,
     repo_id: RepositoryId,
 ) {
@@ -134,7 +134,7 @@ fn do_add_filenode(
 
 fn assert_no_filenode(
     ctx: CoreContext,
-    filenodes: &Filenodes,
+    filenodes: &dyn Filenodes,
     path: &RepoPath,
     hash: HgFileNodeId,
     repo_id: RepositoryId,
@@ -148,7 +148,7 @@ fn assert_no_filenode(
 
 fn assert_filenode(
     ctx: CoreContext,
-    filenodes: &Filenodes,
+    filenodes: &dyn Filenodes,
     path: &RepoPath,
     hash: HgFileNodeId,
     repo_id: RepositoryId,
@@ -164,7 +164,7 @@ fn assert_filenode(
 
 fn assert_all_filenodes(
     ctx: CoreContext,
-    filenodes: &Filenodes,
+    filenodes: &dyn Filenodes,
     path: &RepoPath,
     repo_id: RepositoryId,
     expected: &Vec<FilenodeInfo>,
@@ -220,7 +220,8 @@ macro_rules! filenodes_tests {
                         REPO_ONE,
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -235,7 +236,8 @@ macro_rules! filenodes_tests {
                         REPO_ZERO,
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -246,7 +248,8 @@ macro_rules! filenodes_tests {
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
                     do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -273,7 +276,8 @@ macro_rules! filenodes_tests {
                         root_second_filenode(),
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -294,7 +298,8 @@ macro_rules! filenodes_tests {
                         root_merge_filenode(),
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -329,7 +334,8 @@ macro_rules! filenodes_tests {
                         file_b_first_filenode(),
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -366,7 +372,8 @@ macro_rules! filenodes_tests {
                         root_second_filenode(),
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -400,7 +407,8 @@ macro_rules! filenodes_tests {
                         root_second_filenode(),
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -424,7 +432,8 @@ macro_rules! filenodes_tests {
                         copied_filenode(),
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -446,7 +455,8 @@ macro_rules! filenodes_tests {
                         REPO_ZERO,
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -498,7 +508,8 @@ macro_rules! filenodes_tests {
                         notcopied,
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
 
             #[test]
@@ -552,10 +563,11 @@ macro_rules! filenodes_tests {
                         &vec![file_b_first_filenode()],
                     );
                     Ok(())
-                }).expect("test failed");
+                })
+                .expect("test failed");
             }
         }
-    }
+    };
 }
 
 filenodes_tests!(unsharded_test, create_unsharded_db);
