@@ -53,6 +53,7 @@ function mononoke_hg_sync {
     --do-not-init-cachelib \
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
+    --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
@@ -61,6 +62,7 @@ function mononoke_hg_sync_with_retry {
     --do-not-init-cachelib \
     --base-retry-delay-ms 1 \
     --mononoke-config-path mononoke-config  \
+    --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
@@ -70,6 +72,7 @@ function mononoke_hg_sync_with_failure_handler {
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
     --run-on-failure "$3" \
+    --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 

@@ -280,6 +280,11 @@ Use the same code here as in the actual opsfiles hook
   single wireproto command took: * (glob)
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
+  connected to * (glob)
+  creating a peer took: * (glob)
+  running lookup took: * (glob)
+  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * retrying attempt 2 of 3... (glob)
   * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
@@ -302,6 +307,11 @@ Use the same code here as in the actual opsfiles hook
   single wireproto command took: * (glob)
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
+  connected to * (glob)
+  creating a peer took: * (glob)
+  running lookup took: * (glob)
+  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * retrying attempt 3 of 3... (glob)
   * syncing log entries [2] ... (glob)
   running * 'hg -R repo-hg-2 serve --stdio' (glob)
@@ -324,6 +334,11 @@ Use the same code here as in the actual opsfiles hook
   single wireproto command took: * (glob)
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
+  connected to * (glob)
+  creating a peer took: * (glob)
+  running lookup took: * (glob)
+  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * queue size after processing: 2 (glob)
   * sync failed for ids [2] (glob)
   * caused by: sync failed (glob)
@@ -359,6 +374,11 @@ Now bookmark is not blocked
   single wireproto command took: * (glob)
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
+  connected to * (glob)
+  creating a peer took: * (glob)
+  running lookup took: * (glob)
+  hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * queue size after processing: 2 (glob)
   * sync failed for ids [2] (glob)
   * caused by: sync failed (glob)
@@ -583,8 +603,10 @@ Test hook bypass using REPLAY_BYPASS file
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ touch repo-hg-2/.hg/REPLAY_BYPASS
+
+Test failing to sync, but already having the correct bookmark location
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"add0c792bfce89610d277fd5b1e32f5287994d1d\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #2 ... (glob)
@@ -605,6 +627,37 @@ Test hook bypass using REPLAY_BYPASS file
   remote:     1e43292ffbb3  pushcommit
   single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
+  * queue size after processing: 5 (glob)
+  * successful sync of entries [2] (glob)
+
+Test further sync
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
+  $ mononoke_hg_sync_with_retry repo-hg-2 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #2 ... (glob)
+  * successful prepare of entry #2 (glob)
+  * syncing log entries [2] ... (glob)
+  running * 'hg -R repo-hg-2 serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities:* (glob)
+  remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
+  creating a peer took: * (glob)
+  using * as a reports file (glob)
+  sending unbundlereplay command
+  single wireproto command took: * (glob)
+  replay failed: error:abort
+  part message: conflicting changes in:
+      pushcommit
+  unbundle replay batch item #0 failed
+  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
+  connected to * (glob)
+  creating a peer took: * (glob)
+  running lookup took: * (glob)
+  hg server has expected bookmark location. book: master_bookmark, hash: 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * queue size after processing: 5 (glob)
   * successful sync of entries [2] (glob)
 
