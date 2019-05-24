@@ -341,9 +341,6 @@ class basectx(object):
                 raise error.ManifestLookupError(
                     self._node, path, _("not found in manifest")
                 )
-        if r"_manifestdelta" in self.__dict__ or path in self.files():
-            if path in self._manifestdelta:
-                return (self._manifestdelta[path], self._manifestdelta.flags(path))
         mfl = self._repo.manifestlog
         try:
             node, flag = mfl[self._changeset.manifest].find(path)
@@ -597,10 +594,6 @@ class changectx(basectx):
     def _manifestctx(self):
         self._repo.manifestlog.recentlinknode = self.node()
         return self._repo.manifestlog[self._changeset.manifest]
-
-    @propertycache
-    def _manifestdelta(self):
-        return self._manifestctx.readnew()
 
     @propertycache
     def _parents(self):

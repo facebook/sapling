@@ -150,7 +150,6 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] remote:  (?)
   [client2 push] remote: read manifest outside the lock :)
   [client2 push] remote: read manifest outside the lock :)
-  [client2 push] remote: read manifest outside the lock :)
   [client2 push] remote: pushing 1 changeset:
   [client2 push] remote:     4ab7e28729f6  c2 => yyy (second)
   [client2 push] remote: 2 new changesets from the server will be downloaded
@@ -183,7 +182,6 @@ Check that the first push is still running/blocked...
   [client1 push] remote:  (?)
   [client1 push] remote:  (?)
   [client1 push] remote:  (?)
-  [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: pushing 2 changesets:

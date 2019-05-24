@@ -223,7 +223,7 @@ Test pulling new commits from a hybrid server
        1        51      51     -1       1 c0196aba344d 85b359fdb09e 000000000000
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
   $ hg log -r tip --stat --pager=off
-  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   changeset:   5:2937cde31c19
   tag:         tip
@@ -476,7 +476,7 @@ Switch back to hybrid mode
   $ hg log -r 'last(public())' --stat
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
-  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2937cde31c19
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   changeset:   4:2937cde31c19
   parent:      0:2278cc8c6ce6
@@ -597,7 +597,7 @@ Test pulling to a treeonly client from a treeonly server
   $ hg log -r tip -T '{desc}\n' --stat
   fetching tree '' 83b03df1c9d62b8a2dedf46629e3262423af655c, based on d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 4f84204095e0
   1 trees fetched over * (glob)
-  fetching tree '' bd5ff58fa887770ff0ea29dde0b91f5804cdeff0, based on 83b03df1c9d62b8a2dedf46629e3262423af655c, found via 5b1ec8639460
+  fetching tree '' bd5ff58fa887770ff0ea29dde0b91f5804cdeff0, based on 83b03df1c9d62b8a2dedf46629e3262423af655c, found via 4f84204095e0
   2 trees fetched over * (glob)
   modify subdir/x again
    subdir/x |  1 +

@@ -102,7 +102,6 @@ Make some non-conflicting commits in in the client repos.
   remote: *FULL* manifest read for 1e4ac5512124 (outside lock)
   remote: cached manifest read for 1e4ac5512124 (outside lock)
   remote: cached manifest read for 1e4ac5512124 (outside lock)
-  remote: cached manifest read for 1e4ac5512124 (outside lock)
   remote: *FULL* manifest read for 8655e3409b0e (outside lock)
   remote: pushing 1 changeset:
   remote:     8ee8e01cbc17  third commit
@@ -199,7 +198,6 @@ Meanwhile, push from client2 -> server2.
   [client2 push] remote: *FULL* manifest read for 1e4ac5512124 (outside lock)
   [client2 push] remote: cached manifest read for 1e4ac5512124 (outside lock)
   [client2 push] remote: cached manifest read for 1e4ac5512124 (outside lock)
-  [client2 push] remote: cached manifest read for 1e4ac5512124 (outside lock)
   [client2 push] remote: *FULL* manifest read for 8655e3409b0e (outside lock)
   [client2 push] remote: pushing 2 changesets:
   [client2 push] remote:     8ee8e01cbc17  third commit
@@ -222,7 +220,6 @@ Check that the first push is still running/blocked...
   [client1 push] pushing to ssh://user@dummy/server1
   [client1 push] searching for changes
   [client1 push] remote: *FULL* manifest read for 8655e3409b0e (outside lock)
-  [client1 push] remote: cached manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: cached manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: cached manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: pushing 1 changeset:
