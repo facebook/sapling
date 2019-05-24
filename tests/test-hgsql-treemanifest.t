@@ -5,6 +5,8 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > pushrebase=
+  > [treemanifest]
+  > treeonly=False
   > EOF
 
 Test that treemanifest backfill populates the database

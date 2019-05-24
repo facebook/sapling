@@ -1,6 +1,6 @@
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
-  $ setconfig treemanifest.flatcompat=False
+  $ setconfig treemanifest.flatcompat=False treemanifest.treeonly=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server
@@ -608,9 +608,9 @@ Test pulling to a treeonly client from a treeonly server
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
   treemanifest.flatcompat=False
+  treemanifest.treeonly=True
   treemanifest.sendtrees=True
   treemanifest.demanddownload=True
-  treemanifest.treeonly=True
   $ echo 'pushable' >> subdir/x
   $ hg commit -Aqm 'pushable treeonly commit'
 

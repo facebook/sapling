@@ -1,5 +1,6 @@
 
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.treeonly=False
 
   $ hginit master
 

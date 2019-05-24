@@ -1,5 +1,6 @@
 # Integration tests between tree and fastmanifest
 
+  $ setconfig treemanifest.treeonly=False
   $ . "$TESTDIR/library.sh"
 
 

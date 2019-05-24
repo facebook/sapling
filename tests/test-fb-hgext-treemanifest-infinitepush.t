@@ -1,6 +1,6 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
-  $ setconfig treemanifest.flatcompat=False
+  $ setconfig treemanifest.flatcompat=False treemanifest.treeonly=False
 
   $ setupcommon
 

@@ -1,4 +1,5 @@
   $ CACHEDIR=`pwd`/hgcache
+  $ setconfig treemanifest.treeonly=False
 
   $ hg init master
   $ cd master

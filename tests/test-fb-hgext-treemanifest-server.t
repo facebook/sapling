@@ -1,5 +1,5 @@
 #testcases vfscachestore simplecachestore
-  $ setconfig treemanifest.flatcompat=False
+  $ setconfig treemanifest.flatcompat=False treemanifest.treeonly=False
 
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
@@ -424,7 +424,7 @@ Try pulling while treemanifest.blocksendflat is True
 - Pull to a flat manifest only repo
   $ cd ../client
   $ hg config treemanifest.treeonly
-  [1]
+  False
   $ hg debugstrip -qr a30b520ebf7a
   $ hg pull --config extension.treemanifest=! --config fastmanifest.usetree=False 1>/dev/null
   remote: abort: must produce treeonly changegroups in a treeonly repository

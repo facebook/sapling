@@ -1,4 +1,6 @@
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig treemanifest.treeonly=False
+
 #testcases respondlightly respondfully
 
 Do some initial setup

@@ -1,6 +1,7 @@
   $ CACHEDIR=`pwd`/hgcache
 
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.treeonly=False
 
 Create server
   $ hginit master

@@ -4,6 +4,7 @@
   > [treemanifest]
   > sendtrees=True
   > EOF
+  $ setconfig treemanifest.treeonly=False
 
 Setup the server
 

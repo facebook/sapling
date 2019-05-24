@@ -1,4 +1,5 @@
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.treeonly=False
 
 Start with a server that has flat manifests
 

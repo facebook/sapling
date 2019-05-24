@@ -1,5 +1,6 @@
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
+  $ setconfig treemanifest.treeonly=False
 
   $ hginit master
   $ cd master

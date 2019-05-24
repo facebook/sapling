@@ -7,6 +7,7 @@
   > mainbranch=default
   > modes=fctx
   > EOF
+  $ setconfig treemanifest.treeonly=False
 
 Setup the server
 

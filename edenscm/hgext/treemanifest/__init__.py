@@ -214,6 +214,7 @@ configitem("treemanifest", "servermaxcachesize", default=1000000)
 configitem("treemanifest", "servercacheevictionpercent", default=50)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
+configitem("treemanifest", "treeonly", default=True)
 
 PACK_CATEGORY = "manifests"
 
