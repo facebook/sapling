@@ -30,17 +30,14 @@ def getstream(fname):
         return util.chunkbuffer([f.read()])
 
 
+@util.timed(annotation="creating a peer took")
 def getremote(ui, path):
-    before = datetime.datetime.utcnow()
-    remote = hg.peer(ui, {}, path)
-    elapsed = (datetime.datetime.utcnow() - before).total_seconds()
-    ui.warn(_("creating a peer took: %r\n") % elapsed)
-    return remote
+    return hg.peer(ui, {}, path)
 
 
+@util.timed(annotation="single wireproto command took")
 def runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook):
     returncode = 0
-    before = datetime.datetime.utcnow()
     try:
         reply = remote.unbundlereplay(
             stream,
@@ -52,8 +49,6 @@ def runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook):
     except Exception:
         returncode = 255
     finally:
-        elapsed = (datetime.datetime.utcnow() - before).total_seconds()
-        ui.warn(_("single wireproto command took: %r\n") % elapsed)
         if returncode != 0:
             return returncode
 

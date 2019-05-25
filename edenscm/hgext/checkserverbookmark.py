@@ -9,40 +9,26 @@ from __future__ import absolute_import
 
 import datetime
 
-from edenscm.mercurial import error, hg
+from edenscm.mercurial import error, hg, util
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 
 
+@util.timed(annotation="creating a peer took")
 def getremote(ui, path):
-    before = datetime.datetime.utcnow()
     remote = hg.peer(ui, {}, path)
-    elapsed = (datetime.datetime.utcnow() - before).total_seconds()
-    ui.warn(_("creating a peer took: %r\n") % elapsed)
     return remote
 
 
+@util.timed(annotation="running lookup took")
 def runlookup(ui, remote, name):
-    before = datetime.datetime.utcnow()
-    result = ""
-    try:
-        result = remote.lookup(name)
-    finally:
-        elapsed = (datetime.datetime.utcnow() - before).total_seconds()
-        ui.warn(_("running lookup took: %r\n") % elapsed)
-    return result
+    return remote.lookup(name)
 
 
+@util.timed(annotation="running listkeys took")
 def runlistkeys(ui, remote):
-    before = datetime.datetime.utcnow()
-    result = {}
-    try:
-        result = remote.listkeys("bookmarks")
-    finally:
-        elapsed = (datetime.datetime.utcnow() - before).total_seconds()
-        ui.warn(_("running listkeys took: %r\n") % elapsed)
-    return result
+    return remote.listkeys("bookmarks")
 
 
 def verifyexisting(ui, remote, name, hash):
