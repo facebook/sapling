@@ -191,45 +191,53 @@ impl RotateLog {
     ///
     /// Return the index of the latest [`Log`].
     pub fn sync(&mut self) -> Fallible<u8> {
-        // Read-only fast path - no need to take directory lock.
-        if self.writable_log().iter_dirty().nth(0).is_none() {
-            *self = self.open_options.clone().open(&self.dir)?;
-            return Ok(self.latest);
-        }
-
-        let mut lock_file = open_dir(&self.dir)?;
-        let _lock = ScopedFileLock::new(&mut lock_file, true)?;
-
         let latest = read_latest(&self.dir)?;
-        if latest != self.latest {
-            // Latest changed. Re-load and write to the real latest Log.
-            //
-            // This is needed because RotateLog assumes non-latest logs
-            // are read-only. Other processes using RotateLog won't reload
-            // non-latest logs automatically.
 
-            // PERF(minor): This can be smarter by avoiding reloading some logs.
-            let mut new_logs = read_logs(&self.dir, &self.open_options, latest)?;
-            if let Some(filter) = self.open_options.log_open_options.flush_filter {
-                let log = &mut new_logs[0];
-                for entry in self.writable_log().iter_dirty() {
-                    let content = entry?;
-                    let context = FlushFilterContext { log };
-                    match filter(&context, content)? {
-                        FlushFilterOutput::Drop => (),
-                        FlushFilterOutput::Keep => log.append(content)?,
-                        FlushFilterOutput::Replace(content) => log.append(content)?,
+        if self.writable_log().iter_dirty().nth(0).is_none() {
+            // Read-only path, no need to take directory lock.
+            if latest != self.latest {
+                // Latest changed. Re-load and write to the real latest Log.
+                // PERF(minor): This can be smarter by avoiding reloading some logs.
+                self.logs = read_logs(&self.dir, &self.open_options, latest)?;
+                self.latest = latest;
+            }
+        } else {
+            // Read-write path. Take the directory lock.
+            let mut lock_file = open_dir(&self.dir)?;
+            let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+
+            // Re-read latest, since it might have changed after taking the lock.
+            let latest = read_latest(&self.dir)?;
+            if latest != self.latest {
+                // Latest changed. Re-load and write to the real latest Log.
+                //
+                // This is needed because RotateLog assumes non-latest logs
+                // are read-only. Other processes using RotateLog won't reload
+                // non-latest logs automatically.
+
+                // PERF(minor): This can be smarter by avoiding reloading some logs.
+                let mut new_logs = read_logs(&self.dir, &self.open_options, latest)?;
+                if let Some(filter) = self.open_options.log_open_options.flush_filter {
+                    let log = &mut new_logs[0];
+                    for entry in self.writable_log().iter_dirty() {
+                        let content = entry?;
+                        let context = FlushFilterContext { log };
+                        match filter(&context, content)? {
+                            FlushFilterOutput::Drop => (),
+                            FlushFilterOutput::Keep => log.append(content)?,
+                            FlushFilterOutput::Replace(content) => log.append(content)?,
+                        }
+                    }
+                } else {
+                    // Copy entries to new Logs.
+                    for entry in self.writable_log().iter_dirty() {
+                        let bytes = entry?;
+                        new_logs[0].append(bytes)?;
                     }
                 }
-            } else {
-                // Copy entries to new Logs.
-                for entry in self.writable_log().iter_dirty() {
-                    let bytes = entry?;
-                    new_logs[0].append(bytes)?;
-                }
+                self.logs = new_logs;
+                self.latest = latest;
             }
-            self.logs = new_logs;
-            self.latest = latest;
         }
 
         let size = self.writable_log().flush()?;
