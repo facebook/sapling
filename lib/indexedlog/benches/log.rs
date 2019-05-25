@@ -78,7 +78,7 @@ fn main() {
         })
     });
 
-    bench("log sync (write)", || {
+    bench("log sync (write N)", || {
         let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
         let mut log = log_with_index(dir.path(), 0);
@@ -88,6 +88,30 @@ fn main() {
         for i in 1..N {
             log.append(&buf[20 * i..20 * (i + 1)]).unwrap();
         }
+        MeasureSync::measure(|| {
+            log.sync().unwrap();
+        })
+    });
+
+    bench("log sync (write 1, update index)", || {
+        let dir = tempdir().unwrap();
+        let buf = gen_buf(N * 20);
+        let mut log = log_with_index(dir.path(), 0);
+        log.append(&buf[0..20]).unwrap();
+        log.sync().unwrap();
+        log.append(&buf[20..40]).unwrap();
+        MeasureSync::measure(|| {
+            log.sync().unwrap();
+        })
+    });
+
+    bench("log sync (write 1, not update index)", || {
+        let dir = tempdir().unwrap();
+        let buf = gen_buf(N * 20);
+        let mut log = log_with_index(dir.path(), u64::max_value());
+        log.append(&buf[0..20]).unwrap();
+        log.sync().unwrap();
+        log.append(&buf[20..40]).unwrap();
         MeasureSync::measure(|| {
             log.sync().unwrap();
         })
