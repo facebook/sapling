@@ -385,7 +385,12 @@ impl Log {
     pub fn sync(&mut self) -> Fallible<u64> {
         // Read-only fast path - no need to take directory lock.
         if self.mem_buf.is_empty() {
-            *self = self.open_options.clone().open(&self.dir)?;
+            let meta = Self::load_meta(&self.dir, false)?;
+            let changed = self.meta != meta;
+            // No need to reload anything if metadata hasn't changed.
+            if changed {
+                *self = self.open_options.clone().open(&self.dir)?;
+            }
             return Ok(self.meta.primary_len);
         }
 
