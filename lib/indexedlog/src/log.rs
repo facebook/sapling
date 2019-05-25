@@ -442,19 +442,7 @@ impl Log {
         meta.primary_len += self.mem_buf.len() as u64;
         self.mem_buf.clear();
 
-        // Step 3: Reload primary log and indexes to get the latest view.
-        let (disk_buf, indexes) = Self::load_log_and_indexes(
-            &self.dir,
-            &meta,
-            &self.open_options.index_defs,
-            &self.mem_buf,
-        )?;
-
-        self.meta = meta;
-        self.disk_buf = disk_buf;
-        self.indexes = indexes;
-
-        // Step 4: Update the indexes. Optionally flush them.
+        // Decide what indexes need to be updated on disk.
         let indexes_to_flush: Vec<usize> = self
             .open_options
             .index_defs
@@ -462,10 +450,44 @@ impl Log {
             .enumerate()
             .filter(|&(_i, def)| {
                 let indexed = self.meta.indexes.get(def.name).cloned().unwrap_or(0);
-                indexed + def.lag_threshold < self.meta.primary_len
+                indexed + def.lag_threshold < meta.primary_len
             })
             .map(|(i, _def)| i)
             .collect();
+
+        // Step 3: Reload primary log and indexes to get the latest view.
+        let (disk_buf, indexes) = Self::load_log_and_indexes(
+            &self.dir,
+            &meta,
+            &self.open_options.index_defs,
+            &self.mem_buf,
+            if changed {
+                // Existing indexes cannot be reused.
+                None
+            } else {
+                // Indexes can be reused, because they already contain all entries
+                // that were just written to disk and the on-disk files do not
+                // have new entries (tested by "self.meta != meta" in Step 1).
+                let mut indexes = Vec::new();
+                std::mem::swap(&mut self.indexes, &mut indexes);
+                // The indexes contain all entries, because they were previously
+                // "always-up-to-date", and the on-disk log does not have anything new.
+                // Update "meta" so "update_indexes_for_on_disk_entries" below won't
+                // re-index entries.
+                let mut index_meta = Vec::new();
+                index_meta.write_vlq(meta.primary_len).unwrap();
+                for index in indexes.iter_mut() {
+                    index.set_meta(&index_meta);
+                }
+                Some(indexes)
+            },
+        )?;
+
+        self.disk_buf = disk_buf;
+        self.indexes = indexes;
+        self.meta = meta;
+
+        // Step 4: Update the indexes. Optionally flush them.
         self.update_indexes_for_on_disk_entries()?;
         for i in indexes_to_flush {
             let new_length = self.indexes[i].flush();
@@ -722,11 +744,16 @@ impl Log {
     }
 
     /// Read `(log.disk_buf, indexes)` from the directory using the metadata.
+    ///
+    /// If `reuse_indexes` is not None, they are existing indexes that match `index_defs`
+    /// order. This should only be used in `sync` code path when the on-disk `meta` matches
+    /// the in-memory `meta`. Otherwise it is not a sound use.
     fn load_log_and_indexes(
         dir: &Path,
         meta: &LogMetadata,
         index_defs: &Vec<IndexDef>,
         mem_buf: &Pin<Box<Vec<u8>>>,
+        reuse_indexes: Option<Vec<Index>>,
     ) -> Fallible<(Arc<Mmap>, Vec<Index>)> {
         let primary_file = fs::OpenOptions::new()
             .read(true)
@@ -743,16 +770,31 @@ impl Log {
             disk_len: meta.primary_len,
             mem_buf,
         });
-        let mut indexes = Vec::with_capacity(index_defs.len());
-        for def in index_defs.iter() {
-            let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
-            indexes.push(Self::load_index(
-                dir,
-                &def.name,
-                index_len,
-                key_buf.clone(),
-            )?);
-        }
+        let indexes = match reuse_indexes {
+            None => {
+                // No indexes are reused, reload them.
+                let mut indexes = Vec::with_capacity(index_defs.len());
+                for def in index_defs.iter() {
+                    let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
+                    indexes.push(Self::load_index(
+                        dir,
+                        &def.name,
+                        index_len,
+                        key_buf.clone(),
+                    )?);
+                }
+                indexes
+            }
+            Some(mut indexes) => {
+                assert_eq!(index_defs.len(), indexes.len());
+                // Avoid reloading the index from disk.
+                // Update their ExternalKeyBuffer so they have the updated meta.primary_len.
+                for index in indexes.iter_mut() {
+                    index.key_buf = key_buf.clone();
+                }
+                indexes
+            }
+        };
         Ok((primary_buf, indexes))
     }
 
@@ -1051,7 +1093,7 @@ impl OpenOptions {
 
         let mem_buf = Box::pin(Vec::new());
         let (disk_buf, indexes) =
-            Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf)?;
+            Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf, None)?;
         let mut log = Log {
             dir: dir.to_path_buf(),
             disk_buf,

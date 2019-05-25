@@ -1443,7 +1443,8 @@ pub struct Index {
     checksum_chunk_size: u64,
 
     // Additional buffer for external keys.
-    key_buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
+    // Log::sync needs write access to this field.
+    pub(crate) key_buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
 }
 
 /// Abstraction of the "external key buffer".
