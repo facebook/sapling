@@ -487,11 +487,7 @@ impl Log {
                 // "always-up-to-date", and the on-disk log does not have anything new.
                 // Update "meta" so "update_indexes_for_on_disk_entries" below won't
                 // re-index entries.
-                let mut index_meta = Vec::new();
-                index_meta.write_vlq(meta.primary_len).unwrap();
-                for index in indexes.iter_mut() {
-                    index.set_meta(&index_meta);
-                }
+                Self::set_index_log_len(&mut indexes, meta.primary_len);
                 Some(indexes)
             },
         )?;
@@ -690,15 +686,7 @@ impl Log {
         assert!(self.mem_buf.is_empty());
         for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
             // The index meta is used to store the next offset the index should be built.
-            let mut offset = {
-                let index_meta = index.get_meta();
-                if index_meta.is_empty() {
-                    // New index. Start processing at the first entry.
-                    PRIMARY_START_OFFSET
-                } else {
-                    index_meta.read_vlq_at(0)?.0
-                }
-            };
+            let mut offset = Self::get_index_log_len(index)?;
             // PERF: might be worthwhile to cache xxhash verification result.
             while let Some(entry_result) = Self::read_entry_from_buf(&self.disk_buf, offset)? {
                 let data = entry_result.data;
@@ -720,11 +708,9 @@ impl Log {
                 }
                 offset = entry_result.next_offset;
             }
-            // The index now contains all entries. Write "next_offset" as the index meta.
-            let mut index_meta = Vec::new();
-            index_meta.write_vlq(offset)?;
-            index.set_meta(index_meta);
         }
+        // The index now contains all entries. Write "next_offset" as the index meta.
+        Self::set_index_log_len(&mut self.indexes, self.meta.primary_len);
         Ok(())
     }
 
@@ -937,6 +923,31 @@ impl Log {
             Err(data_error(msg))
         } else {
             Ok(())
+        }
+    }
+
+    /// Get the log length (in bytes) covered by the given index.
+    ///
+    /// This only makes sense at open() or sync() time, since the data won't be updated
+    /// by append() for performance reasons.
+    fn get_index_log_len(index: &Index) -> Fallible<u64> {
+        let index_meta = index.get_meta();
+        Ok(if index_meta.is_empty() {
+            // New index. Start processing at the first entry.
+            PRIMARY_START_OFFSET
+        } else {
+            index_meta.read_vlq_at(0)?.0
+        })
+    }
+
+    /// Update the log length (in bytes) covered by the given indexes.
+    ///
+    /// `len` is usually `meta.primary_len`.
+    fn set_index_log_len(indexes: &mut [Index], len: u64) {
+        let mut index_meta = Vec::new();
+        for index in indexes.iter_mut() {
+            index_meta.write_vlq(len).unwrap();
+            index.set_meta(&index_meta);
         }
     }
 }
