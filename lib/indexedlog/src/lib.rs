@@ -28,4 +28,4 @@ pub mod index;
 mod lock;
 pub mod log;
 pub mod rotate;
-mod utils;
+pub mod utils;

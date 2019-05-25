@@ -11,6 +11,8 @@ use std::path::Path;
 use tempfile;
 use twox_hash::{XxHash, XxHash32};
 
+pub use crate::lock::ScopedFileLock;
+
 /// Return a read-only mmap view of the entire file, and its length.
 ///
 /// If `len` is `None`, detect the file length automatically.
