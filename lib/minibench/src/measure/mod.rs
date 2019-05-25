@@ -13,7 +13,7 @@ pub trait Measure: Sized {
     type FuncOutput;
 
     /// Measure a function.
-    fn measure(impl FnMut() -> Self::FuncOutput) -> Result<Self, String>;
+    fn measure(func: impl FnMut() -> Self::FuncOutput) -> Result<Self, String>;
 
     /// Merge with another measure result.
     fn merge(self, _rhs: Self) -> Self;
