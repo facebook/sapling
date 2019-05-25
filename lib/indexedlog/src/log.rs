@@ -389,7 +389,15 @@ impl Log {
             let changed = self.meta != meta;
             // No need to reload anything if metadata hasn't changed.
             if changed {
-                *self = self.open_options.clone().open(&self.dir)?;
+                // Indexes can be reused, since they do not have new in-memory
+                // entries, and the on-disk primary log is append-only (so data
+                // already present in the indexes is valid).
+                let mut indexes = Vec::new();
+                std::mem::swap(&mut self.indexes, &mut indexes);
+                *self = self
+                    .open_options
+                    .clone()
+                    .open_internal(&self.dir, Some(indexes))?;
             }
             return Ok(self.meta.primary_len);
         }
@@ -1078,6 +1086,13 @@ impl OpenOptions {
     /// transaction.
     pub fn open(self, dir: impl AsRef<Path>) -> Fallible<Log> {
         let dir = dir.as_ref();
+        self.open_internal(dir, None)
+    }
+
+    // "Back-door" version of "open" that allows reusing indexes.
+    // Used by [`Log::sync`]. See [`Log::load_log_and_indexes`] for when indexes
+    // can be reused.
+    fn open_internal(self, dir: &Path, reuse_indexes: Option<Vec<Index>>) -> Fallible<Log> {
         let create = self.create;
 
         let meta = Log::load_meta(dir, false).or_else(|_| {
@@ -1098,7 +1113,7 @@ impl OpenOptions {
 
         let mem_buf = Box::pin(Vec::new());
         let (disk_buf, indexes) =
-            Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf, None)?;
+            Log::load_log_and_indexes(dir, &meta, &self.index_defs, &mem_buf, reuse_indexes)?;
         let mut log = Log {
             dir: dir.to_path_buf(),
             disk_buf,
