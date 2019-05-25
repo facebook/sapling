@@ -769,6 +769,7 @@ impl Log {
             disk_len: meta.primary_len,
             mem_buf,
         });
+
         let indexes = match reuse_indexes {
             None => {
                 // No indexes are reused, reload them.
@@ -788,8 +789,15 @@ impl Log {
                 assert_eq!(index_defs.len(), indexes.len());
                 // Avoid reloading the index from disk.
                 // Update their ExternalKeyBuffer so they have the updated meta.primary_len.
-                for index in indexes.iter_mut() {
-                    index.key_buf = key_buf.clone();
+                for (index, def) in indexes.iter_mut().zip(index_defs) {
+                    let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
+                    if index_len > Self::get_index_log_len(index).unwrap_or(0) {
+                        // The on-disk index covers more entries. Loading it is probably
+                        // better than reusing the existing in-memory index.
+                        *index = Self::load_index(dir, &def.name, index_len, key_buf.clone())?;
+                    } else {
+                        index.key_buf = key_buf.clone();
+                    }
                 }
                 indexes
             }
