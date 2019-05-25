@@ -175,9 +175,9 @@ Sync a pushrebase bookmark move
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 0 (glob)
   * successful sync of entries [4] (glob)
@@ -277,8 +277,8 @@ Use the same code here as in the actual opsfiles hook
   remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
-  single wireproto command took: * (glob)
   replay failed: error:pushkey
+  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -304,8 +304,8 @@ Use the same code here as in the actual opsfiles hook
   remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
-  single wireproto command took: * (glob)
   replay failed: error:pushkey
+  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -331,8 +331,8 @@ Use the same code here as in the actual opsfiles hook
   remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
-  single wireproto command took: * (glob)
   replay failed: error:pushkey
+  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -371,8 +371,8 @@ Now bookmark is not blocked
   remote: pushkey-abort: prepushkey hook failed
   remote: transaction abort!
   remote: rollback completed
-  single wireproto command took: * (glob)
   replay failed: error:pushkey
+  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -439,8 +439,8 @@ Replay in a loop
   * preparing log entry #4 ... (glob)
   * successful prepare of entry #4 (glob)
   * syncing log entries [4] ... (glob)
-  sending unbundlereplay command
   single wireproto command took: * (glob)
+  sending unbundlereplay command
   unbundle replay batch item #2 successfully sent
   * queue size after processing: 0 (glob)
   * successful sync of entries [4] (glob)
@@ -648,10 +648,10 @@ Test further sync
   creating a peer took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
   replay failed: error:abort
   part message: conflicting changes in:
       pushcommit
+  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -696,16 +696,15 @@ Test bookmark deletion sync
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 0 (glob)
   * successful sync of entries [8] (glob)
   $ cd $TESTTMP/client-push
   $ hgmn push --delete book_to_delete
   pushing to * (glob)
-  remote: * (glob)
   searching for changes
   no changes found
   deleting remote bookmark book_to_delete
@@ -734,9 +733,9 @@ Test bookmark deletion sync
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 0 (glob)
   * successful sync of entries [9] (glob)
