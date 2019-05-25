@@ -3,6 +3,7 @@
 use bytes::Bytes;
 use crypto::{digest::Digest, sha1::Sha1};
 use failure::{ensure, Fallible};
+use log;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{key::Key, node::Node, parents::Parents};
@@ -52,6 +53,8 @@ impl DataEntry {
     /// Compute the filenode hash of this `DataEntry` using its parents and
     /// content, and compare it with the known node hash from the entry's `Key`.
     fn validate(&self) -> Fallible<()> {
+        log::trace!("Validating data for: {}", &self.key);
+
         // Mercurial hashes the parent nodes in sorted order
         // when computing the node hash.
         let (p1, p2) = match self.parents.clone().into_nodes() {
