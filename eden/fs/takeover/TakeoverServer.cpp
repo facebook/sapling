@@ -143,9 +143,10 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           protocolVersion_ = supported.value();
           return server_->getTakeoverHandler()->startTakeoverShutdown();
         })
-        .then(server_->eventBase_, [this](folly::Try<TakeoverData>&& data) {
-          return sendTakeoverData(std::move(data));
-        });
+        .thenTryInline(folly::makeAsyncTask(
+            server_->eventBase_, [this](folly::Try<TakeoverData>&& data) {
+              return sendTakeoverData(std::move(data));
+            }));
   } catch (const std::exception& ex) {
     return makeFuture<Unit>(
         folly::exception_wrapper{std::current_exception(), ex});
