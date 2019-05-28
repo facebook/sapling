@@ -152,6 +152,8 @@ class HgBackingStore : public BackingStore {
   initializeCurlMononokeBackingStore();
 #endif
 
+  folly::Future<std::unique_ptr<Blob>> getBlobFromHgImporter(const Hash& id);
+
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.

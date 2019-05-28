@@ -775,17 +775,15 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
                     << "', " << revHash.toString()
                     << " from mononoke: " << ex.what()
                     << ", fall back to import helper.";
-          return folly::via(
-                     importThreadPool_.get(),
-                     [id] {
-                       return getThreadLocalImporter().importFileContents(id);
-                     })
-              // Ensure that the control moves back to the main thread pool
-              // to process the caller-attached .then routine.
-              .via(serverThreadPool_);
+          return getBlobFromHgImporter(id);
         });
   }
 
+  return getBlobFromHgImporter(id);
+}
+
+Future<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
+    const Hash& id) {
   return folly::via(
              importThreadPool_.get(),
              [id] { return getThreadLocalImporter().importFileContents(id); })
