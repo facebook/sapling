@@ -42,7 +42,7 @@ import os
 import re
 import weakref
 
-from edenscm.mercurial import error, registrar, ui as uimod, util
+from edenscm.mercurial import extensions, registrar, ui as uimod, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 
@@ -225,8 +225,16 @@ def wrapui(ui):
     uimod.ui = blackboxui
 
 
+def utillog(orig, event, *msg, **opts):
+    ui = lastui()
+    if ui is not None:
+        ui.log(event, *msg, **opts)
+    return orig(event, *msg, **opts)
+
+
 def uisetup(ui):
     wrapui(ui)
+    extensions.wrapfunction(util, "log", utillog)
 
 
 def reposetup(ui, repo):

@@ -4407,3 +4407,20 @@ def makerandomidentifier(length=16):
     """Generate a random identifier"""
     alphabet = string.ascii_letters + string.digits
     return "".join(random.choice(alphabet) for _x in range(length))
+
+
+def log(service, *msg, **opts):
+    """hook for logging facility extensions
+
+    This allows extension logging when a ui object is not available.
+    Prefer to use 'ui.log' if a ui object is available as more extensions
+    are able to hook that location.
+
+    service should be a readily-identifiable subsystem, which will
+    allow filtering.
+
+    *msg should be a newline-terminated format string to log, and
+    then any values to %-format into that format string.
+
+    **opts is a dict of additional key-value pairs to log.
+    """

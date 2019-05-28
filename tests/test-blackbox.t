@@ -343,13 +343,16 @@ blackbox does not crash with empty log message
   $ newrepo
   $ cat > $TESTTMP/uilog.py << EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import registrar, scmutil
+  > from edenscm.mercurial import registrar, scmutil, util
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('uilog')
-  > def logcmd(ui, repo, category, *args):
+  > def uilogcmd(ui, repo, category, *args):
   >     args = [a.replace('-NEWLINE', '\n') for a in args]
   >     ui.log(category, *args)
+  > @command('utillog')
+  > def utillogcmd(ui, repo, category, *args):
+  >     util.log(category, *args)
   > EOF
   $ setconfig extensions.uilog=$TESTTMP/uilog.py
   $ setconfig blackbox.track=foo
@@ -368,6 +371,13 @@ blackbox adds "\n" automatically
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar1
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar2
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> bar3
+
+blackbox can log without a ui object using util.log
+
+  $ setconfig blackbox.track=withoutui
+  $ hg utillog withoutui "this log is without a ui"
+  $ hg blackbox | grep without
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> this log is without a ui
 
 blackbox writes Request ID if HGREQUESTID is set
 

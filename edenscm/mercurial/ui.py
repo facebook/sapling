@@ -1527,7 +1527,7 @@ class ui(object):
         *msg should be a newline-terminated format string to log, and
         then any values to %-format into that format string.
 
-        **opts currently has no defined meanings.
+        **opts is a dict of additional key-value pairs to log.
         """
 
     def label(self, msg, label):
