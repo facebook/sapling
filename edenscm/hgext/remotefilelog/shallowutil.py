@@ -576,19 +576,6 @@ def mkstickygroupdir(ui, path):
         os.umask(oldumask)
 
 
-def receivepack(ui, fh, packpath):
-    # Avoid circular references
-    from . import datapack, historypack, wirepack
-
-    mkstickygroupdir(ui, packpath)
-
-    with datapack.mutabledatapack(ui, packpath) as dpack:
-        with historypack.mutablehistorypack(ui, packpath) as hpack:
-            receiveddata, receivedhistory = wirepack.receivepack(ui, fh, dpack, hpack)
-
-    return receiveddata, receivedhistory, dpack.destpath, hpack.destpath
-
-
 def trygetattr(obj, names):
     """try different attribute names, return the first matched attribute,
     or raise if no names are matched.

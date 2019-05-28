@@ -87,8 +87,9 @@ from ..remotefilelog import (
     datapack,
     historypack,
     metadatastore,
+    mutablestores,
     shallowbundle,
-    shallowutil,
+    wirepack,
 )
 from .errors import ConflictsError, StackPushUnsupportedError
 
@@ -1045,7 +1046,9 @@ def packparthandler(op, part):
 
     temppackpath = tempfile.mkdtemp()
     op.records.add("tempdirs", temppackpath)
-    shallowutil.receivepack(repo.ui, part, temppackpath)
+    with mutablestores.mutabledatastore(repo, temppackpath) as dpack:
+        with mutablestores.mutablehistorystore(repo, temppackpath) as hpack:
+            wirepack.receivepack(repo.ui, part, dpack, hpack)
     op.records.add("temp%spackdir" % part.params.get("category", ""), temppackpath)
     # TODO: clean up
 

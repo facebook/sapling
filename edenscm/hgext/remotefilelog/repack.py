@@ -26,7 +26,15 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
 from edenscm.mercurial.rust.bindings import revisionstore
 
-from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
+from . import (
+    constants,
+    contentstore,
+    datapack,
+    historypack,
+    metadatastore,
+    mutablestores,
+    shallowutil,
+)
 from ..extutil import flock, runshellcommand
 
 
@@ -572,8 +580,8 @@ def _runrepack(
         shared=shared,
     )
 
-    with datapack.mutabledatapack(repo.ui, packpath) as dpack:
-        with historypack.mutablehistorypack(repo.ui, packpath) as hpack:
+    with mutablestores.mutabledatastore(repo, packpath) as dpack:
+        with mutablestores.mutablehistorystore(repo, packpath) as hpack:
             packer.run(packpath, dpack, hpack)
 
 

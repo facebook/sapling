@@ -174,18 +174,8 @@ from ..remotefilelog import (
     wirepack,
 )
 from ..remotefilelog.contentstore import manifestrevlogstore, unioncontentstore
-from ..remotefilelog.datapack import (
-    datapack,
-    datapackstore,
-    memdatapack,
-    mutabledatapack,
-)
-from ..remotefilelog.historypack import (
-    historypack,
-    historypackstore,
-    memhistorypack,
-    mutablehistorypack,
-)
+from ..remotefilelog.datapack import datapack, datapackstore, memdatapack
+from ..remotefilelog.historypack import historypack, historypackstore, memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
 from ..remotefilelog.repack import (
     _computeincrementaldatapack,
@@ -1217,8 +1207,8 @@ def debuggentrees(ui, repo, rev1, rev2, *args, **opts):
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
     if opts.get("skip_allowed_roots", False):
         ui.setconfig("treemanifest", "allowedtreeroots", None)
-    with mutabledatapack(repo.ui, packpath) as dpack:
-        with mutablehistorypack(repo.ui, packpath) as hpack:
+    with mutablestores.mutabledatastore(repo, packpath) as dpack:
+        with mutablestores.mutablehistorystore(repo, packpath) as hpack:
             recordmanifest(
                 dpack, hpack, repo, mfrev1, mfrev2, verify=opts.get("verify", False)
             )
@@ -1482,8 +1472,8 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
 
         # TODO: only put in cache if pulling from main server
         packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-        with mutabledatapack(repo.ui, packpath) as dpack:
-            with mutablehistorypack(repo.ui, packpath) as hpack:
+        with mutablestores.mutabledatastore(repo, packpath) as dpack:
+            with mutablestores.mutablehistorystore(repo, packpath) as hpack:
                 recordmanifest(dpack, hpack, repo, oldtip, len(mfrevlog))
 
         # Alert the store that there may be new packs

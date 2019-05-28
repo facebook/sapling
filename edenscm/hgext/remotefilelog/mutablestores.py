@@ -11,6 +11,47 @@ from .datapack import mutabledatapack
 from .historypack import mutablehistorypack
 
 
+class mutablebasestore(object):
+    def __init__(self):
+        self._store = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            self._store.flush()
+        self._store = None
+
+    def __getattr__(self, name):
+        return getattr(self._store, name)
+
+
+class mutabledatastore(mutablebasestore):
+    @staticmethod
+    def makestore(repo, path):
+        if repo.ui.configbool("format", "userustmutablestore"):
+            shallowutil.mkstickygroupdir(repo.ui, path)
+            return revisionstore.mutabledeltastore(packfilepath=path)
+        else:
+            return mutabledatapack(repo.ui, path)
+
+    def __init__(self, repo, path):
+        super(mutabledatastore, self).__init__()
+
+        self._store = self.makestore(repo, path)
+
+
+class mutablehistorystore(mutablebasestore):
+    @staticmethod
+    def makestore(repo, path):
+        return mutablehistorypack(repo.ui, path, repo=repo)
+
+    def __init__(self, repo, path):
+        super(mutablehistorystore, self).__init__()
+        self._store = self.makestore(repo, path)
+
+
 class pendingmutablepack(object):
     def __init__(self, repo, pathcb):
         self._mutabledpack = None
@@ -22,20 +63,14 @@ class pendingmutablepack(object):
     def getmutabledpack(self, read=False):
         if self._mutabledpack is None and not read:
             path = self._pathcb()
-            if self._repo.ui.configbool("format", "userustmutablestore"):
-                shallowutil.mkstickygroupdir(self._repo.ui, path)
-                self._mutabledpack = revisionstore.mutabledeltastore(packfilepath=path)
-            else:
-                self._mutabledpack = mutabledatapack(self._repo.ui, path)
+            self._mutabledpack = mutabledatastore.makestore(self._repo, path)
 
         return self._mutabledpack
 
     def getmutablehpack(self, read=False):
         if self._mutablehpack is None and not read:
             path = self._pathcb()
-            self._mutablehpack = mutablehistorypack(
-                self._repo.ui, path, repo=self._repo
-            )
+            self._mutablehpack = mutablehistorystore.makestore(self._repo, path)
 
         return self._mutablehpack
 

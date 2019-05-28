@@ -557,15 +557,6 @@ class mutablebasepack(versionmixin):
         self.__init__(self._ui, self._packdir)
         return path
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is None:
-            self._destpath = self.close()
-        else:
-            self.abort()
-
     def __del__(self):
         self.abort()
 
