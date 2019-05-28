@@ -10,15 +10,11 @@
 import typing
 from pathlib import Path
 
-from eden.thrift import EdenClient
-
 from .lib import testcase
 from .lib.hgrepo import HgRepository
 
 
 class HgImporterStatsTest(testcase.EdenRepoTest):
-    thrift_client: EdenClient
-
     def test_reading_file_imports_blob(self) -> None:
         counters_before = self.get_counters()
         path = Path(self.mount) / "dir" / "subdir" / "file"
@@ -40,13 +36,3 @@ class HgImporterStatsTest(testcase.EdenRepoTest):
         self.repo.write_file("dir/subdir/file", "hello world!\n")
 
         self.repo.commit("Initial commit.")
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.thrift_client = self.get_thrift_client()
-        self.thrift_client.open()
-        self.addCleanup(lambda: self.thrift_client.close())
-
-    def get_counters(self) -> typing.Mapping[str, float]:
-        self.thrift_client.flushStatsNow()
-        return self.thrift_client.getCounters()

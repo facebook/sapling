@@ -180,6 +180,11 @@ class EdenTestCase(
         """
         return self.eden.get_thrift_client()
 
+    def get_counters(self) -> typing.Mapping[str, float]:
+        with self.get_thrift_client() as thrift_client:
+            thrift_client.flushStatsNow()
+            return thrift_client.getCounters()
+
     def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
         """
         Get the log settings to pass to edenfs via the --logging argument.

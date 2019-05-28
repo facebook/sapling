@@ -142,9 +142,8 @@ class ThriftTest(testcase.EdenRepoTest):
             unload_count, 0, "Number of loaded inodes should reduce after unload"
         )
 
-    def get_counter(self, name: str) -> int:
-        self.client.flushStatsNow()
-        return self.client.getCounters()[name]
+    def get_counter(self, name: str) -> float:
+        return self.get_counters()[name]
 
     def test_invalidate_inode_cache(self) -> None:
         filename = "bdir/file"
