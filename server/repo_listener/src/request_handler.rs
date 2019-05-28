@@ -8,7 +8,7 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use failure::{prelude::*, SlogKVError};
+use crate::failure::{prelude::*, SlogKVError};
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
 use slog::{self, Drain, Level, Logger};
@@ -25,7 +25,7 @@ use repo_client::RepoClient;
 use scuba_ext::ScubaSampleBuilderExt;
 use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
 
-use repo_handlers::RepoHandler;
+use crate::repo_handlers::RepoHandler;
 
 use context::CoreContext;
 use hooks::HookManager;

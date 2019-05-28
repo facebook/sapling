@@ -13,10 +13,10 @@ use std::sync::{
 };
 use std::time::Duration;
 
-use acl::VALID_ACL_MEMBER_TYPES;
+use crate::acl::VALID_ACL_MEMBER_TYPES;
+use crate::failure::{err_msg, SlogKVError};
 use aclchecker::{AclChecker, Identity};
 use bytes::Bytes;
-use failure::{err_msg, SlogKVError};
 use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -36,9 +36,9 @@ use x509::identity;
 
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
-use errors::*;
-use repo_handlers::RepoHandler;
-use request_handler::request_handler;
+use crate::errors::*;
+use crate::repo_handlers::RepoHandler;
+use crate::request_handler::request_handler;
 
 const CHUNK_SIZE: usize = 10000;
 

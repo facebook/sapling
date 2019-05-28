@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use failure::prelude::*;
+use crate::failure::prelude::*;
 use futures::{
     future::{self, ok},
     Future,
@@ -38,8 +38,8 @@ pub struct RepoHandler {
     pub wireproto_scribe_category: Option<String>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
-    pub lca_hint: Arc<LeastCommonAncestorsHint>,
-    pub phases_hint: Arc<Phases>,
+    pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    pub phases_hint: Arc<dyn Phases>,
     pub preserve_raw_bundle2: bool,
 }
 

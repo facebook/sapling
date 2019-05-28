@@ -10,7 +10,7 @@
 #![feature(never_type)]
 
 extern crate aclchecker;
-extern crate blobrepo;
+
 extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate bytes;
@@ -58,7 +58,7 @@ extern crate phases;
 extern crate reachabilityindex;
 extern crate ready_state;
 extern crate repo_client;
-extern crate scribe;
+
 extern crate scuba_ext;
 extern crate skiplist;
 extern crate sshrelay;
@@ -77,9 +77,9 @@ use std::sync::atomic::AtomicBool;
 
 use metaconfig_types::{CommonConfig, RepoConfig};
 
-use connection_acceptor::connection_acceptor;
-use errors::*;
-use repo_handlers::repo_handlers;
+use crate::connection_acceptor::connection_acceptor;
+use crate::errors::*;
+use crate::repo_handlers::repo_handlers;
 
 pub fn create_repo_listeners(
     common_config: CommonConfig,
