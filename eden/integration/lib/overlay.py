@@ -52,19 +52,5 @@ class OverlayStore:
         subdir = "{:02x}".format(inode_number % 256)
         return self.overlay_dir / subdir / str(inode_number)
 
-    def corrupt_file(
-        self,
-        path: pathlib.Path,
-        corrupt_function: typing.Callable[[pathlib.Path], None],
-    ) -> None:
-        """Given a relative path to a regular file in the checkout, ensure that the file
-        is materialized, unmount the checkout, corrupt the file in the overlay by
-        calling the specified corrupt_functoin and then remount the checkout.
-        """
-        overlay_file_path = self.materialize_file(path)
-        self.eden.unmount(self.mount)
-        corrupt_function(overlay_file_path)
-        self.eden.mount(self.mount)
-
     def delete_cached_next_inode_number(self) -> None:
         (self.overlay_dir / "next-inode-number").unlink()
