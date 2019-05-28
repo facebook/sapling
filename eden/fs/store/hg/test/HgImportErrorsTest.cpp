@@ -156,9 +156,12 @@ class HgImportErrorTest : public ::testing::Test {
     localStore_ = make_shared<MemoryLocalStore>();
 
     importer_ = make_unique<ImporterType>(
-        testPath_, localStore_.get(), stats_, fakeImportHelper);
+        testPath_,
+        localStore_.get(),
+        getSharedStatsForCurrentThread(stats_),
+        fakeImportHelper);
     backingStore_ =
-        make_shared<HgBackingStore>(importer_.get(), localStore_.get());
+        make_shared<HgBackingStore>(importer_.get(), localStore_.get(), stats_);
     objectStore_ = ObjectStore::create(localStore_, backingStore_);
   }
 
@@ -181,7 +184,7 @@ class HgImportErrorTest : public ::testing::Test {
   std::shared_ptr<MemoryLocalStore> localStore_;
   std::shared_ptr<HgBackingStore> backingStore_;
   std::shared_ptr<ObjectStore> objectStore_;
-  std::shared_ptr<EdenThreadStats> stats_ = std::make_shared<EdenThreadStats>();
+  std::shared_ptr<EdenStats> stats_ = std::make_shared<EdenStats>();
 };
 
 AbsolutePath HgImportErrorTest::findFakeImportHelperPath() {

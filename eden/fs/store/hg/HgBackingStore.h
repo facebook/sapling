@@ -67,7 +67,10 @@ class HgBackingStore : public BackingStore {
    * executor to process loaded objects rather than the thread pools used in
    * production Eden.
    */
-  HgBackingStore(Importer* importer, LocalStore* localStore);
+  HgBackingStore(
+      Importer* importer,
+      LocalStore* localStore,
+      std::shared_ptr<EdenStats>);
 
   ~HgBackingStore() override;
 

@@ -263,8 +263,12 @@ HgBackingStore::HgBackingStore(
  * executor to process loaded objects rather than the thread pools used in
  * production Eden.
  */
-HgBackingStore::HgBackingStore(Importer* importer, LocalStore* localStore)
+HgBackingStore::HgBackingStore(
+    Importer* importer,
+    LocalStore* localStore,
+    std::shared_ptr<EdenStats> stats)
     : localStore_{localStore},
+      stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       serverThreadPool_{importThreadPool_.get()} {}
 
