@@ -975,7 +975,7 @@ class StartCmd(Subcmd):
             return 0
 
         if instance.should_use_experimental_systemd_mode():
-            if args.foreground:
+            if args.foreground or args.gdb:
                 return self.start(args, instance)
             else:
                 return self.start_using_systemd(args, instance)
@@ -997,8 +997,6 @@ class StartCmd(Subcmd):
     def start_using_systemd(
         self, args: argparse.Namespace, instance: EdenInstance
     ) -> int:
-        if args.gdb:
-            raise NotImplementedError("TODO(T33122320): Implement 'eden start --gdb'")
         if args.strace:
             raise NotImplementedError(
                 "TODO(T33122320): Implement 'eden start --strace'"
