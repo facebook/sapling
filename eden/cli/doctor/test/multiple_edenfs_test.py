@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import itertools
 from typing import Tuple
 
 import eden.cli.doctor as doctor
@@ -234,3 +235,15 @@ kill -9 123901
             "lock file contains data that cannot be parsed",
             "\n".join(logs_assertion.output),
         )
+
+    def test_process_ids_are_ordered_consistently(self) -> None:
+        pids = [1, 200, 30]
+        expected_pid_order = "1 30 200"
+        for rogue_pids_list in itertools.permutations(pids):
+            with self.subTest(rogue_pids_list=rogue_pids_list):
+                problem = check_rogue_edenfs.ManyEdenFsRunning(
+                    rogue_pids_list=rogue_pids_list
+                )
+                message = problem.get_manual_remediation_message()
+                assert message is not None
+                self.assertIn(expected_pid_order, message)

@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import shlex
+from typing import List
 
 from eden.cli import process_finder
 from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
@@ -23,8 +24,10 @@ def check_many_edenfs_are_running(
 
 
 class ManyEdenFsRunning(Problem):
+    _rogue_pids_list: List[process_finder.ProcessID]
+
     def __init__(self, rogue_pids_list):
-        self._rogue_pids_list = rogue_pids_list
+        self._rogue_pids_list = list(sorted(rogue_pids_list))
         self.set_manual_remediation_message()
 
     def description(self) -> str:
