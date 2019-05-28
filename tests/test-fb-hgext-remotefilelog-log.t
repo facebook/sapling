@@ -13,11 +13,6 @@
 Shallow clone from full
 
   $ clone master shallow --noupdate
-  streaming all changes
-  2 files to transfer, 472 bytes of data
-  transferred 472 bytes in * seconds (*/sec) (glob)
-  searching for changes
-  no changes found
   $ cd shallow
   $ cat .hg/requires
   dotencode
@@ -29,7 +24,7 @@ Shallow clone from full
   treestate
 
   $ hg update
-  fetching tree '' 479230b8a7bab24c6717f4997ec84092d304b5dd, found via 2e73264fab97
+  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06, found via 79c51fb96423
   2 trees fetched over 0.00s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
@@ -37,8 +32,7 @@ Shallow clone from full
 Log on a file without -f
 
   $ hg log dir/y
-  warning: file log can be slow on large repos - use -f to speed it up
-  changeset:   1:2e73264fab97
+  changeset:   1:79c51fb96423
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -47,7 +41,7 @@ Log on a file without -f
 Log on a file with -f
 
   $ hg log -f dir/y
-  changeset:   1:2e73264fab97
+  changeset:   1:79c51fb96423
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -55,7 +49,7 @@ Log on a file with -f
   
 Log on a file with kind in path
   $ hg log -r "filelog('path:dir/y')"
-  changeset:   1:2e73264fab97
+  changeset:   1:79c51fb96423
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -64,7 +58,7 @@ Log on a file with kind in path
 Log on multiple files with -f
 
   $ hg log -f dir/y x
-  changeset:   1:2e73264fab97
+  changeset:   1:79c51fb96423
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -78,7 +72,7 @@ Log on multiple files with -f
 Log on a directory
 
   $ hg log dir
-  changeset:   1:2e73264fab97
+  changeset:   1:79c51fb96423
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -88,8 +82,7 @@ Log on a file from inside a directory
 
   $ cd dir
   $ hg log y
-  warning: file log can be slow on large repos - use -f to speed it up
-  changeset:   1:2e73264fab97
+  changeset:   1:79c51fb96423
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

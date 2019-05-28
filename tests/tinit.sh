@@ -22,7 +22,9 @@ newserver() {
 
   cat >> "$reponame/.hg/hgrc" <<EOF
 [extensions]
+lz4revlog=
 remotefilelog=
+remotenames=
 treemanifest=
 
 [remotefilelog]
@@ -30,6 +32,7 @@ reponame=$reponame
 server=True
 
 [treemanifest]
+flatcompat=False
 server=True
 treeonly=True
 EOF
@@ -40,16 +43,24 @@ clone() {
   clientname="$2"
   shift 2
   cd "$TESTTMP"
-  hg clone --shallow "ssh://user@dummy/$servername" "$clientname" "$@" \
+  remotecmd="hg"
+  hg clone -q --shallow "ssh://user@dummy/$servername" "$clientname" "$@" \
+    --config "extensions.lz4revlog=" \
     --config "extensions.remotefilelog=" \
+    --config "extensions.remotenames=" \
     --config "extensions.treemanifest=" \
     --config "remotefilelog.reponame=$servername" \
-    --config "treemanifest.treeonly=True"
+    --config "treemanifest.treeonly=True" \
+    --config "ui.ssh=$TESTDIR/dummyssh" \
+    --config "ui.remotecmd=$remotecmd"
 
   cat >> $clientname/.hg/hgrc <<EOF
 [extensions]
+lz4revlog=
 remotefilelog=
+remotenames=
 treemanifest=
+tweakdefaults=
 
 [phases]
 publish=False
@@ -58,7 +69,12 @@ publish=False
 reponame=$servername
 
 [treemanifest]
+flatcompat=False
+sendtrees=True
 treeonly=True
+
+[ui]
+ssh=$TESTDIR/dummyssh
 EOF
 
 }
