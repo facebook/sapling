@@ -101,16 +101,23 @@ class hgtests(unittest.TestCase):
     @classmethod
     def collecttests(cls, path):
         """scan tests in path and add them as test methods"""
+        if os.environ.get("HGTEST_IGNORE_WHITELIST") == "1":
+            whitelist = None
+        else:
+            whitelist = re.compile(r"\A%s\Z" % os.environ.get("HGTEST_WHITELIST", ".*"))
+
         if os.environ.get("HGTEST_IGNORE_BLACKLIST") == "1":
             blacklist = None
         else:
-            blacklist = re.compile("\A%s\Z" % os.environ.get("HGTEST_BLACKLIST", ""))
+            blacklist = re.compile(r"\A%s\Z" % os.environ.get("HGTEST_BLACKLIST", ""))
         # Randomize the port so a stress run of a single test would be fine
         port = random.randint(10000, 60000)
         with chdir(path):
             cls._runtests_dir = os.getcwd()
             for name in glob.glob("test-*.t") + glob.glob("test-*.py"):
                 method_name = name.replace(".", "_").replace("-", "_")
+                if whitelist and not whitelist.match(method_name):
+                    continue
                 if blacklist and blacklist.match(method_name):
                     continue
                 # Running a lot run-tests.py in parallel will trigger race
