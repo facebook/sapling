@@ -1,6 +1,17 @@
 #!/bin/bash
 # Library routines and initial setup for Mononoke-related tests.
 
+function next_repo_id {
+    if [[ -e "$TESTTMP/mononoke-config/last_id" ]] ; then
+        LAST_ID=$(cat "$TESTTMP/mononoke-config/last_id")
+    else
+        LAST_ID=-1
+    fi
+    NEW_ID=$(( LAST_ID + 1 ))
+    printf $NEW_ID
+    printf $NEW_ID > "$TESTTMP/mononoke-config/last_id"
+}
+
 function get_free_socket {
 
 # From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port
@@ -253,123 +264,11 @@ identity_type = "USER"
 identity_data = "$ALLOWED_USERNAME"
 CONFIG
 
-  mkdir -p repos/repo
-  cat > repos/repo/server.toml <<CONFIG
-repoid=0
-enabled=true
-hash_validation_percentage=100
-bookmarks_cache_ttl=2000
-storage_config = "blobstore"
-CONFIG
-
-if [[ -v READ_ONLY_REPO ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-readonly=true
-CONFIG
-fi
-
-if [[ -v MULTIPLEXED ]]; then
-cat >> repos/repo/server.toml <<CONFIG
-[storage.blobstore]
-db.local_db_path = "$TESTTMP/repo"
-blobstore_type="multiplexed"
-
-    [[storage.blobstore.components]]
-    blobstore_id=0
-    blobstore_type="blob:files"
-    path = "$TESTTMP/repo/0"
-
-    [[storage.blobstore.components]]
-    blobstore_id=1
-    blobstore_type="blob:files"
-    path = "$TESTTMP/repo/1"
-CONFIG
-else
-  cat >> repos/repo/server.toml <<CONFIG
-[storage.blobstore]
-db.local_db_path = "$TESTTMP/repo"
-blobstore_type = "$REPOTYPE"
-path = "$TESTTMP/repo"
-
-CONFIG
-fi
-
-if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-[[bookmarks]]
-name="$ONLY_FAST_FORWARD_BOOKMARK"
-only_fast_forward=true
-CONFIG
-fi
-
-if [[ -v ONLY_FAST_FORWARD_BOOKMARK_REGEX ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-[[bookmarks]]
-regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
-only_fast_forward=true
-CONFIG
-fi
-
-  cat >> repos/repo/server.toml <<CONFIG
-[pushrebase]
-forbid_p2_root_rebases=false
-CONFIG
-
-if [[ -v BLOCK_MERGES ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-block_merges=true
-CONFIG
-fi
-
-if [[ -v PUSHREBASE_REWRITE_DATES ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-rewritedates=true
-CONFIG
-else
-  cat >> repos/repo/server.toml <<CONFIG
-rewritedates=false
-CONFIG
-fi
-
-if [[ -v EMIT_OBSMARKERS ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-emit_obsmarkers=true
-CONFIG
-fi
-
-if [[ ! -v ENABLE_ACL_CHECKER ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-[hook_manager_params]
-entrylimit=1048576
-weightlimit=104857600
-disable_acl_checker=true
-CONFIG
-fi
-
-if [[ -v ENABLE_PRESERVE_BUNDLE2 ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-[bundle2_replay_params]
-preserve_raw_bundle2 = true
-CONFIG
-fi
-
-if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-[cache_warmup]
-bookmark="$CACHE_WARMUP_BOOKMARK"
-CONFIG
-fi
-
-if [[ -v LFS_THRESHOLD ]]; then
-  cat >> repos/repo/server.toml <<CONFIG
-[lfs]
-threshold=$LFS_THRESHOLD
-CONFIG
-fi
+  setup_mononoke_repo_config repo
 
   mkdir -p repos/disabled_repo
   cat > repos/disabled_repo/server.toml <<CONFIG
-repoid=2
+repoid=$(next_repo_id)
 enabled=false
 storage_config = "blobstore"
 
@@ -378,6 +277,124 @@ blobstore_type = "$REPOTYPE"
 path = "$TESTTMP/disabled_repo"
 db.local_db_path = "$TESTTMP/disabled_repo"
 CONFIG
+}
+
+function setup_mononoke_repo_config {
+  cd "$TESTTMP/mononoke-config" || exit
+  local reponame="$1"
+  mkdir -p "repos/$reponame"
+  cat > "repos/$reponame/server.toml" <<CONFIG
+repoid=$(next_repo_id)
+enabled=true
+hash_validation_percentage=100
+bookmarks_cache_ttl=2000
+storage_config = "blobstore"
+CONFIG
+
+if [[ -v READ_ONLY_REPO ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+readonly=true
+CONFIG
+fi
+
+if [[ -v MULTIPLEXED ]]; then
+cat >> "repos/$reponame/server.toml" <<CONFIG
+[storage.blobstore]
+db.local_db_path = "$TESTTMP/$reponame"
+blobstore_type="multiplexed"
+
+    [[storage.blobstore.components]]
+    blobstore_id=0
+    blobstore_type="blob:files"
+    path = "$TESTTMP/$reponame/0"
+
+    [[storage.blobstore.components]]
+    blobstore_id=1
+    blobstore_type="blob:files"
+    path = "$TESTTMP/$reponame/1"
+CONFIG
+else
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[storage.blobstore]
+db.local_db_path = "$TESTTMP/$reponame"
+blobstore_type = "$REPOTYPE"
+path = "$TESTTMP/$reponame"
+
+CONFIG
+fi
+
+if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[[bookmarks]]
+name="$ONLY_FAST_FORWARD_BOOKMARK"
+only_fast_forward=true
+CONFIG
+fi
+
+if [[ -v ONLY_FAST_FORWARD_BOOKMARK_REGEX ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[[bookmarks]]
+regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
+only_fast_forward=true
+CONFIG
+fi
+
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[pushrebase]
+forbid_p2_root_rebases=false
+CONFIG
+
+if [[ -v BLOCK_MERGES ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+block_merges=true
+CONFIG
+fi
+
+if [[ -v PUSHREBASE_REWRITE_DATES ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+rewritedates=true
+CONFIG
+else
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+rewritedates=false
+CONFIG
+fi
+
+if [[ -v EMIT_OBSMARKERS ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+emit_obsmarkers=true
+CONFIG
+fi
+
+if [[ ! -v ENABLE_ACL_CHECKER ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[hook_manager_params]
+entrylimit=1048576
+weightlimit=104857600
+disable_acl_checker=true
+CONFIG
+fi
+
+if [[ -v ENABLE_PRESERVE_BUNDLE2 ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[bundle2_replay_params]
+preserve_raw_bundle2 = true
+CONFIG
+fi
+
+if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[cache_warmup]
+bookmark="$CACHE_WARMUP_BOOKMARK"
+CONFIG
+fi
+
+if [[ -v LFS_THRESHOLD ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[lfs]
+threshold=$LFS_THRESHOLD
+CONFIG
+fi
 }
 
 function register_hook {
