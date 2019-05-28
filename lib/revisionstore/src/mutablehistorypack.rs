@@ -20,7 +20,7 @@ use tempfile::NamedTempFile;
 use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 
 use crate::ancestors::{AncestorIterator, AncestorTraversal};
-use crate::error::EmptyMutablePack;
+use crate::error::{EmptyMutablePack, KeyError};
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
@@ -296,15 +296,21 @@ impl HistoryStore for MutableHistoryPack {
             .inner
             .mem_index
             .get(&key.path)
-            .ok_or(MutableHistoryPackError(format!(
-                "key '{:?}' not present in mutable history pack",
-                key
-            )))?
+            .ok_or(KeyError::new(
+                MutableHistoryPackError(format!(
+                    "key '{:?}' not present in mutable history pack",
+                    key
+                ))
+                .into(),
+            ))?
             .get(key)
-            .ok_or(MutableHistoryPackError(format!(
-                "key '{:?}' not present in mutable history pack",
-                key
-            )))?
+            .ok_or(KeyError::new(
+                MutableHistoryPackError(format!(
+                    "key '{:?}' not present in mutable history pack",
+                    key
+                ))
+                .into(),
+            ))?
             .clone())
     }
 }

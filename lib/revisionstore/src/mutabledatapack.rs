@@ -23,7 +23,7 @@ use types::{Key, Node};
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
-use crate::error::EmptyMutablePack;
+use crate::error::{EmptyMutablePack, KeyError};
 use crate::localstore::LocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
@@ -79,8 +79,11 @@ impl MutableDataPackInner {
 
     fn read_entry(&self, key: &Key) -> Fallible<(Delta, Metadata)> {
         let location: &DeltaLocation = self.mem_index.get(&key.node).ok_or::<Error>(
-            MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
-                .into(),
+            KeyError::new(
+                MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
+                    .into(),
+            )
+            .into(),
         )?;
         // Make sure the buffers are empty so the reads below are consistent with what is being
         // written.
