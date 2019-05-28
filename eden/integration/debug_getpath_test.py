@@ -52,8 +52,8 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         with self.assertRaises(edenclient.EdenCommandError) as context:
             self.eden.run_cmd("debug", "getpath", "1234", cwd=self.mount)
             self.assertIn(
-                # pyre-fixme[16]: `_E` has no attribute `stderr`.
                 "unknown inode number 1234",
+                # pyre-fixme[16]: `_E` has no attribute `stderr`.
                 context.exception.stderr.decode(),
             )
 
