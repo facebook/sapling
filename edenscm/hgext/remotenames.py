@@ -1660,11 +1660,21 @@ def _readremotenamesfrom(vfs, filename):
             nametype = None
             remote, rname = None, None
 
-            node, name = line.split(" ", 1)
+            try:
+                node, name = line.split(" ", 1)
+            except ValueError:
+                raise error.CorruptedState(
+                    _("corrupt entry in file %s: %s") % (filename, line)
+                )
 
             # check for nametype being written into the file format
             if " " in name:
-                nametype, name = name.split(" ", 1)
+                try:
+                    nametype, name = name.split(" ", 1)
+                except ValueError:
+                    raise error.CorruptedState(
+                        _("corrupt entry in file %s: %s") % (filename, line)
+                    )
 
             remote, rname = splitremotename(name)
 
