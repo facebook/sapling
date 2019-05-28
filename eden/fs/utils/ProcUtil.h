@@ -24,6 +24,35 @@ constexpr folly::StringPiece kLinuxProcSmapsPath{"/proc/self/smaps"};
 
 namespace proc_util {
 
+struct MemoryStats {
+  size_t size; // Total VM Size, in bytes
+  size_t resident; // Resident set size, in bytes
+  size_t shared; // Resident shared bytes (file mappings + shared memory)
+  size_t text; // text (code) bytes
+  size_t data; // data + stack bytes
+};
+
+/**
+ * Read the memory stats for the current process.
+ *
+ * Returns std::nullopt if an error occurs reading or parsing the data.
+ */
+std::optional<MemoryStats> readMemoryStats();
+
+/**
+ * Read a /proc/<pid>/statm file and return the results as a MemoryStats object.
+ *
+ * Returns std::nullopt if an error occurs reading or parsing the data.
+ */
+std::optional<MemoryStats> readStatmFile(const char* filename);
+
+/**
+ * Parse the contents of a /proc/<pid>/statm file.
+ */
+std::optional<MemoryStats> parseStatmFile(
+    folly::StringPiece data,
+    size_t pageSize);
+
 /**
  * Trim leading and trailing delimiter characters from passed string.
  * @return the modified string.
@@ -81,44 +110,6 @@ std::optional<uint64_t> calculatePrivateBytes();
 std::optional<uint64_t> calculatePrivateBytes(
     std::vector<std::unordered_map<std::string, std::string>> smapsListOfMaps);
 
-/**
- * Parse the passed stream (typically /proc/self/status).
- * Callers should handle io exceptions (catch std::ios_base::failure).
- * @return a map of key value pairs from the file.
- */
-std::unordered_map<std::string, std::string> parseProcStatus(
-    std::istream& input);
-
-/**
- * Load the contents of the linux system file kLinuxProcStatusPath.
- * It catches file operations and exceptions.  It makes use of
- * parseProcStatus for parsing file contents.
- * @return a map of file contents or an empty map on error.
- */
-std::unordered_map<std::string, std::string> loadProcStatus();
-
-/**
- * Load the contents of the linux proc/status file from procStatusPath.
- * It catches file operations and exceptions.  It makes use of
- * parseProcStatus for parsing file contents.
- * Intended to test the loadProcStatus().
- * @return a map of file contents or an empty map on error.
- */
-std::unordered_map<std::string, std::string> loadProcStatus(
-    folly::StringPiece procStatusPath);
-
-/**
- *  Retrieve the identified value based on the passed key.
- *  The value must present, a valid unsigned long and contain the
- *  trailing unitSuffix. Example use:
- *  getUnsignedLongLongValue(procMap, "VmRSS", "kB").
- *  If the value does not exist or is invalid, 0 will be returned.
- *  @see loadProcStatMap for parsing the /proc/self/status file.
- */
-std::optional<uint64_t> getUnsignedLongLongValue(
-    const std::unordered_map<std::string, std::string>& procStatMap,
-    const std::string& key,
-    const std::string& unitSuffix);
 } // namespace proc_util
 } // namespace eden
 } // namespace facebook

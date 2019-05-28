@@ -9,12 +9,14 @@
  */
 #include "eden/fs/utils/ProcUtil.h"
 
-#include <eden/fs/utils/PathFuncs.h>
-#include <folly/ExceptionWrapper.h>
-#include <gtest/gtest.h>
 #include <fstream>
 
+#include <eden/fs/utils/PathFuncs.h>
+#include <folly/Portability.h>
+#include <folly/portability/GTest.h>
+
 using namespace facebook::eden;
+using namespace facebook::eden::proc_util;
 
 TEST(proc_util, trimTest) {
   std::string tst("");
@@ -84,45 +86,57 @@ static AbsolutePath dataPath(PathComponentPiece name) {
   return thisFile.dirname() + "test-data"_relpath + name;
 }
 
-TEST(proc_util, procStatusRssBytes) {
-  auto procPath = dataPath("ProcStatus.txt"_pc);
-  std::ifstream input(procPath.c_str());
-  auto statMap = proc_util::parseProcStatus(input);
-  auto rssBytes = proc_util::getUnsignedLongLongValue(
-      statMap,
-      std::string(kVmRSSKey.data(), kVmRSSKey.size()),
-      std::string(kKBytes.data(), kKBytes.size()));
-  EXPECT_EQ(statMap["VmRSS"], "1449644 kB");
-  EXPECT_EQ(rssBytes.value(), 1449644);
+TEST(proc_util, readMemoryStats) {
+  auto stats = readMemoryStats();
+  if (!stats) {
+    EXPECT_FALSE(folly::kIsLinux);
+    return;
+  }
+
+  EXPECT_GT(stats->size, 0);
+  EXPECT_GT(stats->resident, 0);
+  EXPECT_GT(stats->shared, 0);
+  EXPECT_GT(stats->text, 0);
+  EXPECT_GT(stats->data, 0);
+  EXPECT_GE(stats->size, stats->resident);
+  EXPECT_GE(stats->size, stats->text);
+  EXPECT_GE(stats->size, stats->data);
+}
+
+TEST(proc_util, parseMemoryStats) {
+  size_t pageSize = 4096;
+  auto stats = parseStatmFile("26995 164 145 11 0 80 0\n", pageSize);
+  ASSERT_TRUE(stats.has_value());
+  EXPECT_EQ(pageSize * 26995, stats->size);
+  EXPECT_EQ(pageSize * 164, stats->resident);
+  EXPECT_EQ(pageSize * 145, stats->shared);
+  EXPECT_EQ(pageSize * 11, stats->text);
+  EXPECT_EQ(pageSize * 80, stats->data);
+
+  stats = parseStatmFile("6418297 547249 17716 22695 0 1657632 0\n", pageSize);
+  EXPECT_EQ(pageSize * 6418297, stats->size);
+  EXPECT_EQ(pageSize * 547249, stats->resident);
+  EXPECT_EQ(pageSize * 17716, stats->shared);
+  EXPECT_EQ(pageSize * 22695, stats->text);
+  EXPECT_EQ(pageSize * 1657632, stats->data);
 }
 
 TEST(proc_util, procStatusSomeInvalidInput) {
-  auto procPath = dataPath("ProcStatusError.txt"_pc);
-  std::ifstream input(procPath.c_str());
-  auto statMap = proc_util::parseProcStatus(input);
-  EXPECT_EQ(statMap["Name"], "edenfs");
-  EXPECT_EQ(statMap["Umask"], "0022");
-  EXPECT_EQ(statMap["VmRSS"], "1449644");
-  EXPECT_EQ(statMap["Uid"], "131926\t131926\t131926\t131926");
-  EXPECT_EQ(statMap["Gid"], "100\t100\t100\t100");
-  EXPECT_EQ(statMap.size(), 5);
+  EXPECT_FALSE(parseStatmFile("26995 164 145 11 0\n", 4096));
+  EXPECT_FALSE(parseStatmFile("abc 547249 17716 22695 0 1657632 0\n", 4096));
+  EXPECT_FALSE(
+      parseStatmFile("6418297 547249 foobar 22695 0 1657632 0\n", 4096));
+  EXPECT_FALSE(parseStatmFile("6418297 547249 17716", 4096));
+  EXPECT_FALSE(
+      parseStatmFile("6418297 -547249 17716 22695 0 1657632 0\n", 4096));
+  EXPECT_FALSE(parseStatmFile("6418297 0x14 17716 22695 0 1657632 0\n", 4096));
 
-  auto rssBytes = proc_util::getUnsignedLongLongValue(
-      statMap,
-      std::string(kVmRSSKey.data(), kVmRSSKey.size()),
-      std::string(kKBytes.data(), kKBytes.size()));
-
-  EXPECT_EQ(rssBytes, std::nullopt);
+  EXPECT_TRUE(parseStatmFile("6418297 547249 17716 22695 0 1657632 0\n", 4096));
 }
 
-TEST(proc_util, procStatusNoThrow) {
-  std::string procPath("/DOES_NOT_EXIST");
-  auto statMap = proc_util::loadProcStatus(procPath);
-  auto rssBytes = proc_util::getUnsignedLongLongValue(
-      statMap,
-      std::string(kVmRSSKey.data(), kVmRSSKey.size()),
-      std::string(kKBytes.data(), kKBytes.size()));
-  EXPECT_EQ(rssBytes, std::nullopt);
+TEST(proc_util, readMemoryStatsNoThrow) {
+  auto stats = readStatmFile("/DOES_NOT_EXIST");
+  EXPECT_FALSE(stats.has_value());
 }
 
 TEST(proc_util, procSmapsPrivateBytes) {

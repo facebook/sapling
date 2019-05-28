@@ -1180,11 +1180,18 @@ void EdenServer::reportMemoryStats() {
   // Throttle stats collection to every kMemoryPollSeconds
   if (std::chrono::duration_cast<std::chrono::seconds>(
           now - lastProcStatsRun_.load()) > kMemoryPollSeconds) {
-    auto rssKBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
-        proc_util::loadProcStatus(), kVmRSSKey.data(), kKBytes.data());
-    if (rssKBytes) {
+    auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+    if (memoryStats) {
+      // TODO: Stop using the legacy addStatValue() call that checks to see
+      // if it needs to re-export counters each time it is used.
+      //
+      // It's not really even clear to me that it's worth exporting this a
+      // timeseries vs a simple counter.  We mainly only care about the
+      // last 60-second timeseries level.  Since we only update this once every
+      // 30 seconds we are basically just reporting an average of the last 2
+      // data points.
       stats::ServiceData::get()->addStatValue(
-          kRssBytes, rssKBytes.value() * 1024, stats::AVG);
+          kRssBytes, memoryStats->resident, stats::AVG);
     }
     lastProcStatsRun_.store(now);
   }

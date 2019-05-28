@@ -8,13 +8,60 @@
  *
  */
 #include "eden/fs/utils/ProcUtil.h"
-#include <folly/logging/xlog.h>
+
+#include <array>
 #include <fstream>
 #include <vector>
+
+#include <folly/Conv.h>
+#include <folly/FileUtil.h>
+#include <folly/logging/xlog.h>
+#include <folly/portability/Unistd.h>
+
+using folly::StringPiece;
+using std::optional;
 
 namespace facebook {
 namespace eden {
 namespace proc_util {
+
+optional<MemoryStats> readMemoryStats() {
+  return readStatmFile("/proc/self/statm");
+}
+
+optional<MemoryStats> readStatmFile(const char* filename) {
+  std::string contents;
+  if (!folly::readFile(filename, contents)) {
+    return std::nullopt;
+  }
+  auto pageSize = sysconf(_SC_PAGESIZE);
+  if (pageSize == -1) {
+    return std::nullopt;
+  }
+  return parseStatmFile(contents, pageSize);
+}
+
+optional<MemoryStats> parseStatmFile(StringPiece data, size_t pageSize) {
+  std::array<size_t, 7> values;
+  for (size_t& value : values) {
+    auto parseResult = folly::parseTo(data, value);
+    if (parseResult.hasError()) {
+      return std::nullopt;
+    }
+    data = parseResult.value();
+  }
+
+  MemoryStats stats{};
+  stats.size = pageSize * values[0];
+  stats.resident = pageSize * values[1];
+  stats.shared = pageSize * values[2];
+  stats.text = pageSize * values[3];
+  // values[4] is always 0 since Linux 2.6
+  stats.data = pageSize * values[5];
+  // values[6] is always 0 since Linux 2.6
+
+  return stats;
+}
 
 std::string& trim(std::string& str, const std::string& delim) {
   str.erase(0, str.find_first_not_of(delim));
@@ -34,61 +81,6 @@ std::pair<std::string, std::string> getKeyValuePair(
   }
   return result;
 }
-
-std::unordered_map<std::string, std::string> parseProcStatus(
-    std::istream& input) {
-  std::unordered_map<std::string, std::string> statMap;
-  for (std::string line; getline(input, line);) {
-    auto keyValue = getKeyValuePair(line, ":");
-    if (!keyValue.first.empty()) {
-      statMap[keyValue.first] = keyValue.second;
-    } else {
-      XLOG(WARN) << "Failed to parse /proc/self/status, line : " << line;
-    }
-  }
-  return statMap;
-}
-
-std::unordered_map<std::string, std::string> loadProcStatus() {
-  return loadProcStatus(kLinuxProcStatusPath);
-}
-
-std::unordered_map<std::string, std::string> loadProcStatus(
-    folly::StringPiece procStatusPath) {
-  try {
-    std::ifstream input(procStatusPath.data());
-    return parseProcStatus(input);
-  } catch (const std::exception& ex) {
-    XLOG(WARN) << "Failed to parse proc/status file : " << ex.what();
-  }
-  return std::unordered_map<std::string, std::string>();
-}
-
-std::optional<uint64_t> getUnsignedLongLongValue(
-    const std::unordered_map<std::string, std::string>& procStatMap,
-    const std::string& key,
-    const std::string& unitSuffix) {
-  std::optional<uint64_t> value;
-  const auto& pos = procStatMap.find(key);
-  if (pos != procStatMap.end()) {
-    auto valString = pos->second;
-    if (valString.find(unitSuffix) != std::string::npos) {
-      valString = valString.substr(0, valString.size() - unitSuffix.size());
-      try {
-        value = std::stoull(valString);
-      } catch (const std::invalid_argument& ex) {
-        XLOG(WARN) << "Failed to extract long from proc/status value ''"
-                   << valString << "' error: " << ex.what();
-        return std::nullopt;
-      } catch (const std::out_of_range& ex) {
-        XLOG(WARN) << "Failed to extract long from proc/status value ''"
-                   << valString << "' error: " << ex.what();
-        return std::nullopt;
-      }
-    }
-  }
-  return value;
-} // namespace eden
 
 std::vector<std::unordered_map<std::string, std::string>> parseProcSmaps(
     std::istream& input) {

@@ -1,9 +1,0 @@
-Name:	edenfs
-Umask:	0022
-State:	S (sleeping)
-VmPeak:	21479063392 kB
-VmSize:	21479002400 kB
-VmRSS:	 1449644 kB
-SigPnd:	0000000000000000
-voluntary_ctxt_switches:	22311
-nonvoluntary_ctxt_switches:	100

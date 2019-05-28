@@ -1260,10 +1260,9 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     result.privateBytes = privateDirtyBytes.value();
   }
 
-  auto vmRSSKBytes = facebook::eden::proc_util::getUnsignedLongLongValue(
-      proc_util::loadProcStatus(), kVmRSSKey.data(), kKBytes.data());
-  if (vmRSSKBytes) {
-    result.vmRSSBytes = vmRSSKBytes.value() * 1024;
+  auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+  if (memoryStats) {
+    result.vmRSSBytes = memoryStats->resident;
   }
 
   // Note: this will be removed in a subsequent commit.
