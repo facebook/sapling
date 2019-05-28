@@ -576,7 +576,7 @@ class mutablebasepack(versionmixin):
         self.packfp.write(data)
         self.sha.update(data)
 
-    def close(self, ledger=None):
+    def close(self):
         if self._closed:
             return
 
@@ -586,7 +586,8 @@ class mutablebasepack(versionmixin):
             # Doing a repack. Sync the newly created pack files to disk
             # now so that the new pack files are persisted before
             # deletion of the old datapacks.
-            syncfile = ledger is not None
+            # syncfile = ledger is not None
+            syncfile = True
 
             if syncfile:
                 util.syncfile(self.packfp)
@@ -616,10 +617,7 @@ class mutablebasepack(versionmixin):
             raise
 
         self._closed = True
-        result = self.opener.join(sha)
-        if ledger:
-            ledger.addcreated(result)
-        return result
+        return self.opener.join(sha)
 
     def _cleantemppacks(self):
         try:

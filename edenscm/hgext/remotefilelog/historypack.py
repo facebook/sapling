@@ -555,13 +555,13 @@ class mutablehistorypack(basepack.mutablebasepack):
             node = hashlib.sha1(filename).digest()
             self.entries[node] = node
 
-    def close(self, ledger=None):
+    def close(self):
         if self._closed:
             return
 
         self._write()
 
-        return super(mutablehistorypack, self).close(ledger=ledger)
+        return super(mutablehistorypack, self).close()
 
     def createindex(self, nodelocations, indexoffset):
         fileindexformat = self.INDEXFORMAT

@@ -1008,7 +1008,7 @@ class repacker(object):
 
                 prog.value += 1
 
-        target.close(ledger=ledger)
+        ledger.addcreated(target.flush())
 
     def repackhistory(self, ledger, target):
         ui = self.repo.ui
@@ -1071,7 +1071,7 @@ class repacker(object):
 
                 prog.value += 1
 
-        target.close(ledger=ledger)
+        ledger.addcreated(target.flush())
 
     def _toposort(self, ancestors):
         def parentfunc(node):
