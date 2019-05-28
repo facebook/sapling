@@ -30,13 +30,13 @@ mod bonsai;
 mod changeset;
 mod errors;
 
-pub use bonsai::{BonsaiMFVerify, BonsaiMFVerifyDifference, BonsaiMFVerifyResult};
-pub use changeset::{visit_changesets, ChangesetVisitor};
-pub use errors::ErrorKind;
+pub use crate::bonsai::{BonsaiMFVerify, BonsaiMFVerifyDifference, BonsaiMFVerifyResult};
+pub use crate::changeset::{visit_changesets, ChangesetVisitor};
+pub use crate::errors::ErrorKind;
 
 pub mod internals {
     // This shouldn't actually be public, but it needs to be because of
     // https://github.com/rust-lang/rust/issues/50865.
     // TODO: (rain1) T31595868 make apply_diff private once Rust 1.29 is released
-    pub use bonsai::apply_diff;
+    pub use crate::bonsai::apply_diff;
 }

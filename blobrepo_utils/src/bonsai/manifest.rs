@@ -27,8 +27,8 @@ use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mononoke_types::DateTime;
 
-use changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
-use errors::*;
+use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
+use crate::errors::*;
 
 #[derive(Clone, Debug)]
 pub enum BonsaiMFVerifyResult {
@@ -115,7 +115,7 @@ impl BonsaiMFVerifyDifference {
 }
 
 impl fmt::Debug for BonsaiMFVerifyDifference {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("BonsaiMFVerifyDifference")
             .field("lookup_mf_id", &format!("{}", self.lookup_mf_id))
             .field("expected_mf_id", &format!("{}", self.expected_mf_id))
@@ -354,7 +354,8 @@ pub fn apply_diff(
         IncompleteFilenodes::new(),
         manifest_p1,
         manifest_p2,
-    ).and_then({
+    )
+    .and_then({
         move |memory_manifest| {
             let memory_manifest = Arc::new(memory_manifest);
             let futures: Vec<_> = diff_result
@@ -398,7 +399,7 @@ fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobE
 }
 
 #[inline]
-fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<Entry + Sync> {
+fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<dyn Entry + Sync> {
     let manifest_id = changeset.manifestid();
     Box::new(repo.get_root_entry(manifest_id))
 }

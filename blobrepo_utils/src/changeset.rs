@@ -6,10 +6,13 @@
 
 use std::sync::Arc;
 
+use crate::failure::{Error, Result};
 use chashmap::CHashMap;
 use context::CoreContext;
-use failure::{Error, Result};
-use futures::{Future, Stream, sync::mpsc::{self, Sender}};
+use futures::{
+    sync::mpsc::{self, Sender},
+    Future, Stream,
+};
 use slog::Logger;
 use tokio;
 

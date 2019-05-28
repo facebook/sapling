@@ -15,10 +15,8 @@ extern crate slog_glog_fmt;
 
 extern crate blobrepo_utils;
 extern crate context;
-extern crate mercurial_types;
 
 extern crate fixtures;
-extern crate tokio;
 
 use fixtures::*;
 
@@ -38,7 +36,7 @@ mod test {
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
                 use context::CoreContext;
 
-                use $repo;
+                use crate::$repo;
 
                 #[test]
                 fn test() {
