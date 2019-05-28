@@ -630,32 +630,30 @@ Clean up by hiding some commits, and create a new stack
   
 Test race between syncing obsmarkers and a transaction creating new ones
 
-Create an extension that runs a restack command while we're syncing
-
-  $ cat > $TESTTMP/syncrace.py << EOF
-  > from edenscm.mercurial import extensions
-  > from edenscm.hgext.commitcloud import service
-  > def extsetup(ui):
-  >     def wrapget(orig, *args, **kwargs):
-  >         serv = orig(*args, **kwargs)
-  >         class WrappedService(serv.__class__):
-  >             def updatereferences(self, *args, **kwargs):
-  >                 res = super(WrappedService, self).updatereferences(*args, **kwargs)
-  >                 ui.system('hg rebase --restack')
-  >                 return res
-  >         serv.__class__ = WrappedService
-  >         return serv
-  >     extensions.wrapfunction(service, 'get', wrapget)
-  > EOF
-
   $ hg next -q
   [74473a] stack commit 1
+
   $ hg amend -m "race attempt" --no-rebase
   hint[amend-restack]: descendants of 74473a0f136f are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg cloud sync -q --config extensions.syncrace=$TESTTMP/syncrace.py
-  rebasing 17:f2ccc2716735 "stack commit 2" (testbookmark)
+
+Create a simultanous rebase and cloud sync, where the cloud sync has won the
+race for the lock
+
+  $ touch $TESTTMP/lockdelay
+  $ HGPREWLOCKFILE=$TESTTMP/lockdelay hg rebase --restack --config extensions.lockdelay=$TESTDIR/lockdelay.py >$TESTTMP/racerebase.out 2>&1 &
+  $ HGPOSTLOCKFILE=$TESTTMP/lockdelay hg cloud sync -q --config extensions.lockdelay=$TESTDIR/lockdelay.py >$TESTTMP/racecloudsync.out 2>&1 &
+  $ sleep 1
+
+Let them both run together
+  $ rm $TESTTMP/lockdelay
+
+Wait for them to complete and then do another cloud sync
+  $ sleep 1
+  $ hg debugwaitbackup
   $ hg cloud sync -q
+  $ grep rebasing $TESTTMP/racerebase.out
+  rebasing 17:f2ccc2716735 "stack commit 2" (testbookmark)
   $ tglog
   o  19: 715c1454ae33 'stack commit 2' testbookmark
   |

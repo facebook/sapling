@@ -109,20 +109,21 @@ def sync(
     if cloudrefs is None:
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
 
-    synced = False
-    while not synced:
-        # Apply any changes from the cloud to the local repo.
-        if cloudrefs.version != fetchversion:
-            _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage)
+    with repo.wlock(), repo.lock(), repo.transaction("cloudsync"):
+        synced = False
+        while not synced:
+            # Apply any changes from the cloud to the local repo.
+            if cloudrefs.version != fetchversion:
+                _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage)
 
-        # Check if any omissions are now included in the repo
-        _checkomissions(repo, remotepath, lastsyncstate)
+            # Check if any omissions are now included in the repo
+            _checkomissions(repo, remotepath, lastsyncstate)
 
-        # Send updates to the cloud.  If this fails then we have lost the race
-        # to update the server and must start again.
-        synced, cloudrefs = _submitlocalchanges(
-            repo, reponame, workspacename, lastsyncstate, failed, serv
-        )
+            # Send updates to the cloud.  If this fails then we have lost the race
+            # to update the server and must start again.
+            synced, cloudrefs = _submitlocalchanges(
+                repo, reponame, workspacename, lastsyncstate, failed, serv
+            )
 
     # Update the backup bookmarks with any changes we have made by syncing.
     backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection)

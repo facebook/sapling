@@ -98,29 +98,28 @@ Let the background sync we started earlier continue.
   $ rm $TESTTMP/wlockpre1
   $ hg cloud sync
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  visibility: read 1 heads: 79089e97b9e7
+  visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
   abort: 00changelog.i@79089e97b9e7: no node!
   [255]
 
 BUG! The pulled node wasn't visible to this cloud sync command.
 
   $ tglogp
-  visibility: read 1 heads: 79089e97b9e7
+  visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
   o  2: 79089e97b9e7 draft 'commit1'
   |
+  | o  1: 1292cc1f1c17 draft 'commit2'
+  |/
   @  0: df4f53cec30a public 'base'
   
-
-BUG! 'commit2' has vanished.
-
 Wait for the background backup to finish and check its output.
 
   $ hg debugwaitbackup
   $ cat $TESTTMP/bgsync.out
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 0 heads: 
-  pulling 79089e97b9e7
   visibility: read 1 heads: 1292cc1f1c17
+  pulling 79089e97b9e7
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -128,9 +127,9 @@ Wait for the background backup to finish and check its output.
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
-  visibility: removed 1 heads [1292cc1f1c17]; added 0 heads []
-  visibility: wrote 1 heads: 79089e97b9e7
-  new changesets 79089e97b9e7
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted)
+  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted)
+  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
+  new changesets 79089e97b9e7
   commitcloud: commits synchronized
   finished in 0.00 sec

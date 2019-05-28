@@ -157,8 +157,8 @@ Connect to commit cloud
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 3 files (+1 heads)
-  new changesets 64b4d9634423:878302dcadc7
   detected obsmarker inconsistency (fixing by obsoleting [] and reviving [449486ddff7a, 65299708466c, 27ad02806080])
+  new changesets 64b4d9634423:878302dcadc7
   commitcloud: commits synchronized
   finished in * (glob)
 
