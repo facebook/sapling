@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ LFSPATH=$TESTTMP/lfs
   $ export LFSPATH
   $ mkdir $LFSPATH

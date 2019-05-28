@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 There are three cases which are of interest in this test:
 
  - client remotefilelog enabled and the client repo is a shallowrepo

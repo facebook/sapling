@@ -1,6 +1,4 @@
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > EOF
+  $ setconfig extensions.treemanifest=!
 
   $ setup() {
   > cat << EOF >> .hg/hgrc

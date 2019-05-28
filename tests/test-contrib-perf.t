@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require test-repo
 
 Set vars:

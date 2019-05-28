@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 # Integration tests between tree and fastmanifest
 
   $ setconfig treemanifest.treeonly=False

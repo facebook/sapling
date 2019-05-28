@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ CACHEDIR=`pwd`/hgcache
   $ setconfig treemanifest.treeonly=False
 

@@ -234,7 +234,11 @@ except NameError:
 
 
 def treeenabled(ui):
-    return ui.config("extensions", "treemanifest") not in (None, "!")
+    return (
+        ui.config("extensions", "treemanifest") not in (None, "!")
+        or "treemanifest" in extensions.DEFAULT_EXTENSIONS
+        or "treemanifest" in extensions.ALWAYS_ON_EXTENSIONS
+    )
 
 
 def hgupdate(orig, repo, node, quietempty=False, updatecheck=None):

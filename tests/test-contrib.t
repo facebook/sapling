@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Set vars:
 
   $ CONTRIBDIR="$TESTDIR/../contrib"

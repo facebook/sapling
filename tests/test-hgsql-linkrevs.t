@@ -1,4 +1,5 @@
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig extensions.treemanifest=!
 
 # Create initial repo that can be pulled out of order
 

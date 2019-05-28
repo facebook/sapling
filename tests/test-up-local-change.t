@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ HGMERGE=true; export HGMERGE
 
   $ hg init r1

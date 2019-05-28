@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #testcases vfscachestore simplecachestore
 
   $ . "$TESTDIR/library.sh"

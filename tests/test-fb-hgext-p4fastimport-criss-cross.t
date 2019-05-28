@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require p4
 
   $ . $TESTDIR/p4setup.sh

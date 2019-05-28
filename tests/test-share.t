@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require killdaemons
 
   $ echo "[extensions]"      >> $HGRCPATH

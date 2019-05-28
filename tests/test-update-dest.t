@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Test update.requiredest
   $ cd $TESTTMP
   $ cat >> $HGRCPATH <<EOF

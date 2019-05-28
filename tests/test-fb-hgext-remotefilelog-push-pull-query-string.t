@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
 
   $ unset SCM_SAMPLING_FILEPATH

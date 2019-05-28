@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   > echo "[extensions]" >> $HGRCPATH
   > echo "remotenames=" >> $HGRCPATH
   > echo "[remotenames]" >> $HGRCPATH

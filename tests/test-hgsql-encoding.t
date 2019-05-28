@@ -1,4 +1,5 @@
 #testcases case-innodb case-rocksdb
+  $ setconfig extensions.treemanifest=!
 
 #if case-rocksdb
   $ DBENGINE=rocksdb

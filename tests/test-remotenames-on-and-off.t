@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Set up global extensions
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

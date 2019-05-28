@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Setup
 
   $ setconfig format.dirstate=1

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ hg init t
   $ cd t
   $ echo 1 > foo

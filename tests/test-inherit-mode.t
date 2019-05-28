@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require unix-permissions
 
 test that new files created in .hg inherit the permissions from .hg/store

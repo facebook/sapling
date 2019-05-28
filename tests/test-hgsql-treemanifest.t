@@ -5,7 +5,9 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > pushrebase=
+  > treemanifest=!
   > [treemanifest]
+  > flatcompat=False
   > treeonly=False
   > EOF
 

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Set up a repo
 
   $ cat <<EOF >> $HGRCPATH

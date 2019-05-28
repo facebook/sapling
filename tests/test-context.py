@@ -7,6 +7,7 @@ from edenscm.mercurial.node import hex
 
 
 u = uimod.ui.load()
+u.setconfig("extensions", "treemanifest", "!")
 
 repo = hg.repository(u, "test1", create=1)
 os.chdir("test1")

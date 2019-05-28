@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ hg init
   $ echo a > a
   $ hg ci -Am0

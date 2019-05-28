@@ -10,6 +10,8 @@
   >    hg ci -m "add $1"
   > }
 
+  $ setconfig extensions.treemanifest=!
+
 Test that remotenames works on a repo without any names file
 
   $ hg init alpha

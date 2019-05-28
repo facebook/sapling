@@ -1,4 +1,5 @@
 #require jq
+  $ setconfig extensions.treemanifest=!
   $ enable smartlog
 
   $ cat >> $HGRCPATH << EOF

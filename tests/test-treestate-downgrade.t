@@ -1,4 +1,5 @@
 #require fsmonitor
+  $ setconfig extensions.treemanifest=!
 
 Fsmonitor is required for treestate to track untracked files.
 

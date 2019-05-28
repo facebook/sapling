@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 
 Function to test discovery between two repos in both directions, using both the local shortcut
 (which is currently not activated by default) and the full remotable protocol:

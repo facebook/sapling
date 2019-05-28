@@ -1,5 +1,5 @@
   $ . "$TESTDIR/hgsql/library.sh"
-
+  $ setconfig extensions.treemanifest=!
 
 Populate the db with an initial commit.
 

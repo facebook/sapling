@@ -1,5 +1,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
+  $ setconfig extensions.treemanifest=!
 
   $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/

@@ -1,5 +1,6 @@
 #testcases hgsql.true hgsql.false
 
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/hgsql/library.sh"
 
 #if hgsql.false

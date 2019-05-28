@@ -1,4 +1,5 @@
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig extensions.treemanifest=!
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

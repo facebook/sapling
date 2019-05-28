@@ -1,5 +1,6 @@
 Inital setup
 
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/hgsql/library.sh"
   $ initclient client
   $ initserver server lfsrepo

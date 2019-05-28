@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ HGFOO=BAR; export HGFOO
   $ cat >> $HGRCPATH <<EOF
   > [alias]

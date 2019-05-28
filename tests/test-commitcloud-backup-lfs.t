@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ enable amend
 
 Setup common infinitepush

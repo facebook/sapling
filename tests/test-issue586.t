@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Issue586: removing remote files after merge appears to corrupt the
 dirstate
 

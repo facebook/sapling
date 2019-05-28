@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require no-fsmonitor
 
 Show all commands except debug commands

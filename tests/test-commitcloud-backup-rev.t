@@ -1,4 +1,4 @@
-u
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setconfig extensions.commitcloud=

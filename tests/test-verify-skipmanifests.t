@@ -1,3 +1,5 @@
+  $ setconfig extensions.treemanifest=!
+
 Turn manifest verification on and off:
   $ hg init repo1
   $ cd repo1

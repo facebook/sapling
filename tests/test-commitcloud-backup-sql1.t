@@ -1,4 +1,5 @@
 #if no-windows no-osx
+  $ setconfig extensions.treemanifest=!
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"

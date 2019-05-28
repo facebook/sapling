@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 This test makes sure that we don't mark a file as merged with its ancestor
 when we do a merge.
 

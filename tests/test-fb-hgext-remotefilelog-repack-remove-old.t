@@ -1,4 +1,4 @@
-
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH <<EOF

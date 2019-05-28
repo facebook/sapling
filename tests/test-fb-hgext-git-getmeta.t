@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #testcases onlymapdelta.true onlymapdelta.false
 
   $ echo "[extensions]" >> $HGRCPATH

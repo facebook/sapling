@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ cat > bundle2.py << EOF
   > """A small extension to test bundle2 pushback parts.
   > Current bundle2 implementation doesn't provide a way to generate those

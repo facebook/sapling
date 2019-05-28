@@ -1,4 +1,5 @@
 #testcases nostackpush stackpush
+  $ setconfig extensions.treemanifest=!
   $ setconfig experimental.evolution=
   $ . helpers-usechg.sh
 

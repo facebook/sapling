@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ . helpers-usechg.sh
 
 Test for changeset ba7c74081861

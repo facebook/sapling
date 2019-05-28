@@ -1,4 +1,5 @@
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig extensions.treemanifest=!
 
 Test operations on server repository with bad configuration fail in expected
 ways.

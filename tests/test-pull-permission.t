@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require unix-permissions no-root
 
   $ hg init a

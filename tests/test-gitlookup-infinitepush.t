@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "gitlookup= " >> $HGRCPATH

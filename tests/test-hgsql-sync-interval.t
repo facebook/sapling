@@ -1,6 +1,7 @@
 Test hgsql tries to sync before entering the critical section
 
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig extensions.treemanifest=!
   $ setconfig hgsql.verbose=1
 
   $ newrepo state1

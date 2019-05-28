@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 test command parsing and dispatch
 
   $ hg init a

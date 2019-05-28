@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ enable lfs remotefilelog
   $ setconfig lfs.url=file://$TESTTMP/cache lfs.threshold=1 remotefilelog.cachepath=$TESTTMP/rflcache
 

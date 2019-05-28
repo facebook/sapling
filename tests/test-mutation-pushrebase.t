@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #testcases nostackpush stackpush
   $ enable pushrebase amend
   $ setconfig experimental.evolution=

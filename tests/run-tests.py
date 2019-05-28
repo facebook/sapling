@@ -1525,6 +1525,8 @@ class Test(unittest.TestCase):
             hgrc.write(b"ipv6 = %s\n" % str(self._useipv6).encode("ascii"))
 
             # treemanifest
+            hgrc.write(b"[extensions]\n")
+            hgrc.write(b"treemanifest=\n")
             hgrc.write(b"[treemanifest]\n")
             hgrc.write(b"flatcompat=True\n")
             hgrc.write(b"[remotefilelog]\n")

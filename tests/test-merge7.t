@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ . helpers-usechg.sh
 
 initial

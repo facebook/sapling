@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ hg init repo
   $ cd repo
   $ echo foo > foo

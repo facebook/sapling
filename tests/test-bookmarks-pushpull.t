@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ . helpers-usechg.sh
 
 #testcases b2-pushkey b2-binary

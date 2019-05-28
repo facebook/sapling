@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Issue1678: IndexError when pushing
 
 setting up base repo

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 This test is dedicated to test the bundle2 container format
 
 It test multiple existing parts to test different feature of the container. You

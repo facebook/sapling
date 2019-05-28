@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require no-msys # MSYS will translate web paths as if they were file paths
 
   $ cat << EOF >> $HGRCPATH

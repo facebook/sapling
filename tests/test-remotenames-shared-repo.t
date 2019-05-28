@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Set up upstream repo
 
   $ echo "[extensions]" >> $HGRCPATH

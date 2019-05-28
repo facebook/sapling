@@ -19,6 +19,8 @@ Do some initial setup
   > [remotefilelog]
   > reponame=testrepo
   > cachepath=$CACHEDIR
+  > [treemanifest]
+  > treeonly=False
   > CONFIG
 
 Setup helpers

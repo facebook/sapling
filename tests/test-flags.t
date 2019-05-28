@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require execbit
 
   $ umask 027

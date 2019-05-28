@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Create an empty repo:
 
   $ hg init a

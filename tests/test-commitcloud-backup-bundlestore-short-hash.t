@@ -1,4 +1,5 @@
 Create an ondisk bundlestore
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ cp $HGRCPATH $TESTTMP/defaulthgrc

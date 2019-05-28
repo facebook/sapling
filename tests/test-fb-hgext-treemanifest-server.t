@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #testcases vfscachestore simplecachestore
   $ setconfig treemanifest.flatcompat=False treemanifest.treeonly=False
 

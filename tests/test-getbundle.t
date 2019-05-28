@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require serve
 
   $ cat >> $HGRCPATH <<EOF

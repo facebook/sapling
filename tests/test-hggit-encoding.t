@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 # -*- coding: utf-8 -*-
 
 Load commonly used test logic

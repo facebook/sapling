@@ -1,4 +1,5 @@
 TODO: Make this test work with obsstore
+  $ setconfig extensions.treemanifest=!
   $ setconfig experimental.evolution=
   $ . "$TESTDIR/hgsql/library.sh"
 

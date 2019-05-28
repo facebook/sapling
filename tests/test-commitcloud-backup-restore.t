@@ -1,4 +1,5 @@
   $ . helpers-usechg.sh
+  $ setconfig extensions.treemanifest=!
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

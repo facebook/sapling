@@ -1,5 +1,6 @@
 #require no-fsmonitor
 
+  $ setconfig extensions.treemanifest=!
   $ hg debugextensions --excludedefault
 
   $ debugpath=`pwd`/extwithoutinfos.py

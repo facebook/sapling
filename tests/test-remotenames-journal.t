@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Tests for the journal extension integration with remotenames.
 
 Skip if journal is not available in mercurial

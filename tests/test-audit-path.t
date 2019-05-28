@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ hg init
 
 audit of .hg

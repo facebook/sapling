@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require killdaemons
   $ enable obsstore
   $ cat << EOF >> $HGRCPATH

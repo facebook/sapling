@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ hg init test
   $ cd test
 

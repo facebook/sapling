@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ CACHEDIR=`pwd`/hgcache
   $ cat >> $TESTTMP/uilog.py <<EOF
   > from edenscm.mercurial import extensions

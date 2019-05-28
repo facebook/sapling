@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Test basic functionality of url#rev syntax
 
   $ hg init repo

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ enable amend rebase histedit fbhistedit
   $ setconfig experimental.evolution=
   $ setconfig visibility.enabled=true

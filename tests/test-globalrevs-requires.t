@@ -1,4 +1,5 @@
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig extensions.treemanifest=!
 
 Add common configuration for the client and server.
 

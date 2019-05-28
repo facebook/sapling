@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require no-fsmonitor
 
 Short help:

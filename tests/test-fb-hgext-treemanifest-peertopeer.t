@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ CACHEDIR=`pwd`/hgcache
 
   $ . "$TESTDIR/library.sh"

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 
 no-check-code
   $ . "$TESTDIR/library.sh"

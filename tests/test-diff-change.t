@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Testing diff --change
 
   $ hg init a

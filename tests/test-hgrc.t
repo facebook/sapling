@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 hide outer repo
   $ hg init
 

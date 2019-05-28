@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ enable rebase strip
   $ setconfig phases.publish=0
 

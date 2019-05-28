@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require no-osx
 
 Setup the extension

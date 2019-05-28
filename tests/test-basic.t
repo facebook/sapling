@@ -1,9 +1,12 @@
+  $ setconfig extensions.treemanifest=!
+
 Create a repository:
 
   $ hg config
   devel.all-warnings=true
   devel.default-date=0 0
   extensions.fsmonitor= (fsmonitor !)
+  extensions.treemanifest=!
   fsmonitor.detectrace=1 (fsmonitor !)
   remotefilelog.reponame=reponame-default
   remotefilelog.cachepath=$TESTTMP/default-hgcache

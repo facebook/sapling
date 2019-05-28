@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ cat << EOF >> $HGRCPATH
   > [ui]
   > interactive=yes

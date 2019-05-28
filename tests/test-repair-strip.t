@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 #require unix-permissions no-root
 
   $ cat > $TESTTMP/dumpjournal.py <<EOF

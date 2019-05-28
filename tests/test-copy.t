@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 # enable bundle2 in advance
 
   $ cat << EOF >> $HGRCPATH

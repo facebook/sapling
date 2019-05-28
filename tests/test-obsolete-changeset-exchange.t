@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Test changesets filtering during exchanges (some tests are still in
 test-obsolete.t)
 

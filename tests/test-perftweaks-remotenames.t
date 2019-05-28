@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 
   $ cat >> $HGRCPATH << EOF
   > [ui]

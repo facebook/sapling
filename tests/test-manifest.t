@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Source bundle was generated with the following script:
 
 # hg init

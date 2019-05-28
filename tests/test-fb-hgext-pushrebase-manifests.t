@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 This test does two things:
 
 1/ Simulate a common condition of pushrebase under load. Normally pushrebase

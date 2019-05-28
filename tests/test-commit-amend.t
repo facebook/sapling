@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ newrepo
   $ drawdag << 'EOS'
   > B  # B/B=B\n

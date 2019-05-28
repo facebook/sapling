@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 This test demonstrates how Hg works with remote Hg bookmarks compared with
 remote branches via Hg-Git.  Ideally, they would behave identically.  In
 practice, some differences are unavoidable, but we should try to minimize

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ enable infinitepush remotenames
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""

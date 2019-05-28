@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 Test file dedicated to testing the divergent troubles from obsolete changeset.
 
 This is the most complex troubles from far so we isolate it in a dedicated

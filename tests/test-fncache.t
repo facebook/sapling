@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
 
 Init repo1:
 

@@ -1,3 +1,4 @@
+  $ setconfig extensions.treemanifest=!
   $ . "$TESTDIR/hggit/testutil"
 
   $ git init -q gitrepo
