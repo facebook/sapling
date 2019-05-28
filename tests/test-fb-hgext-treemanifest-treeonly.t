@@ -224,7 +224,7 @@ Test pulling new commits from a hybrid server
        1        51      51     -1       1 c0196aba344d 85b359fdb09e 000000000000
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
   $ hg log -r tip --stat --pager=off
-  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd* (glob)
   2 trees fetched over * (glob)
   changeset:   5:2937cde31c19
   tag:         tip

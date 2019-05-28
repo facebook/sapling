@@ -122,7 +122,7 @@ generated for the commit 'b9b574be2f5d' and its parent commit '9055b56f3916'.
   fetching tree '' 40f43426c87ba597f0d9553077c72fe06d4e2acb, found via 9055b56f3916
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 9055b56f3916
   2 trees fetched over * (glob)
-  fetching tree '' 53c631458e338938766702d93d8bdd5c5d89b69f, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 9055b56f3916
+  fetching tree '' 53c631458e338938766702d93d8bdd5c5d89b69f, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via * (glob)
   changeset:   2:b9b574be2f5d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -216,7 +216,7 @@ able to view it even with 'treemanifest.demandgenerate' being False.
 manifest for commit 'f7febcf0f689'.
 
   $ hg log -vpr 'f7febcf0f689'
-  fetching tree '' a6875e5fbf695d5fe67e03b8a5df2bab0e6dd045, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 9055b56f3916
+  fetching tree '' a6875e5fbf695d5fe67e03b8a5df2bab0e6dd045, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via * (glob)
   changeset:   3:f7febcf0f689
   parent:      1:9055b56f3916
   user:        test
