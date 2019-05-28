@@ -61,8 +61,8 @@ class visibleheads(object):
 
     LOGHEADLIMIT = 4
 
-    def __init__(self, ui, repo):
-        self.vfs = repo.svfs
+    def __init__(self, vfs):
+        self.vfs = vfs
         self._invisiblerevs = None
         try:
             lines = self.vfs("visibleheads").readlines()
@@ -70,12 +70,12 @@ class visibleheads(object):
                 raise error.Abort("invalid visibleheads file format")
             self.heads = [node.bin(head.strip()) for head in lines[1:]]
             self.dirty = False
+            self._logheads("read", visibility_headcount=len(self.heads))
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             self.heads = []
             self.dirty = True
-        self._logheads("read", visibility_headcount=len(self.heads))
 
     def _write(self, fp):
         fp.write("%s\n" % FORMAT_VERSION)
@@ -209,7 +209,7 @@ def setvisibleheads(repo, newheads):
     """
     if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
-            repo._visibleheads.setvisibleheads(repo, newheads, tr)
+            repo.changelog._visibleheads.setvisibleheads(repo, newheads, tr)
 
 
 def add(repo, newnodes):
@@ -220,7 +220,7 @@ def add(repo, newnodes):
     """
     if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
-            repo._visibleheads.add(repo, newnodes, tr)
+            repo.changelog._visibleheads.add(repo, newnodes, tr)
 
 
 def remove(repo, oldnodes):
@@ -250,7 +250,7 @@ def remove(repo, oldnodes):
     """
     if tracking(repo):
         with repo.lock(), repo.transaction("update-visibility") as tr:
-            repo._visibleheads.remove(repo, oldnodes, tr)
+            repo.changelog._visibleheads.remove(repo, oldnodes, tr)
 
 
 def phaseadjust(repo, tr, newdraft=None, newpublic=None):
@@ -265,19 +265,19 @@ def phaseadjust(repo, tr, newdraft=None, newpublic=None):
     provided in the ``newdraft`` list.
     """
     if tracking(repo):
-        repo._visibleheads.phaseadjust(repo, tr, newdraft, newpublic)
+        repo.changelog._visibleheads.phaseadjust(repo, tr, newdraft, newpublic)
 
 
 def heads(repo):
     """returns the current set of visible mutable heads"""
     if tracking(repo):
-        return repo._visibleheads.heads
+        return repo.changelog._visibleheads.heads
 
 
 def invisiblerevs(repo):
     """returns the invisible mutable revs in this repo"""
     if tracking(repo):
-        return repo._visibleheads.invisiblerevs(repo)
+        return repo.changelog._visibleheads.invisiblerevs(repo)
 
 
 def tracking(repo):

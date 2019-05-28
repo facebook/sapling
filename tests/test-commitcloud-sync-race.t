@@ -22,12 +22,13 @@
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud auth -t XXXXXX
+  visibility: read 0 heads: 
   setting authentication token
   authentication successful
   $ hg cloud join
+  visibility: read 0 heads: 
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  visibility: read 0 heads: 
   commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted)
   commitcloud: commits synchronized
   finished in 0.00 sec
@@ -42,12 +43,13 @@
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud auth -t XXXXXX
+  visibility: read 0 heads: 
   updating authentication token
   authentication successful
   $ hg cloud join
+  visibility: read 0 heads: 
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  visibility: read 0 heads: 
   commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted)
   commitcloud: commits synchronized
   finished in 0.00 sec
@@ -60,8 +62,8 @@
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
   visibility: wrote 1 heads: 79089e97b9e7
   $ hg cloud sync
-  commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 79089e97b9e7
+  commitcloud: synchronizing 'testrepo' with 'user/test/default'
   backing up stack rooted at 79089e97b9e7
   remote: pushing 1 commit:
   remote:     79089e97b9e7  commit1
@@ -97,9 +99,9 @@ Let the background sync we started earlier continue.
 
   $ rm $TESTTMP/wlockpre1
   $ hg cloud sync
+  visibility: read 1 heads: 1292cc1f1c17
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
-  abort: 00changelog.i@79089e97b9e7: no node!
+  abort: unknown revision '79089e97b9e7c2d5091a0fed699b90fb71f827a2'!
   [255]
 
 BUG! The pulled node wasn't visible to this cloud sync command.
@@ -115,9 +117,10 @@ BUG! The pulled node wasn't visible to this cloud sync command.
 Wait for the background backup to finish and check its output.
 
   $ hg debugwaitbackup
+  visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
   $ cat $TESTTMP/bgsync.out
-  commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 0 heads: 
+  commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
   pulling 79089e97b9e7
   pulling from ssh://user@dummy/server

@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from . import encoding, error, revlog, util
+from . import encoding, error, revlog, util, visibility
 from .i18n import _
 from .node import bin, hex, nullid
 from .thirdparty import attr
@@ -284,6 +284,8 @@ class changelog(revlog.revlog):
         It exists in a separate file to facilitate readers (such as
         hooks processes) accessing data before a transaction is finalized.
         """
+        self._visibleheads = visibility.visibleheads(opener)
+
         if trypending and opener.exists("00changelog.i.a"):
             indexfile = "00changelog.i.a"
         else:
