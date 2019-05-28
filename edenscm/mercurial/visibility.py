@@ -59,8 +59,9 @@ class visibleheads(object):
     them to the store.
     """
 
+    LOGHEADLIMIT = 4
+
     def __init__(self, ui, repo):
-        self.ui = ui
         self.vfs = repo.svfs
         self._invisiblerevs = None
         try:
@@ -74,22 +75,36 @@ class visibleheads(object):
                 raise
             self.heads = []
             self.dirty = True
-        ui.log("visibility", visibility_headcount=len(self.heads))
+        self._logheads("read", visibility_headcount=len(self.heads))
 
     def _write(self, fp):
         fp.write("%s\n" % FORMAT_VERSION)
         for h in self.heads:
             fp.write("%s\n" % (node.hex(h),))
         self.dirty = False
+        self._logheads("wrote", visibility_newheadcount=len(self.heads))
 
-    def _logchange(self, repo, oldheads, newheads):
+    def _logheads(self, op, **opts):
+        util.log(
+            "visibility",
+            "%s %d heads: %s%s\n",
+            op,
+            len(self.heads),
+            ", ".join(
+                node.short(h) for h in reversed(self.heads[-self.LOGHEADLIMIT :])
+            ),
+            ", ..." if len(self.heads) > self.LOGHEADLIMIT else "",
+            **opts
+        )
+
+    def _logchange(self, oldheads, newheads):
         newheads = set(newheads)
         oldheads = set(oldheads)
         addedheads = newheads - oldheads
         removedheads = oldheads - newheads
-        repo.ui.log(
+        util.log(
             "visibility",
-            "removed %s heads [%s]; added %s heads [%s]",
+            "removed %s heads [%s]; added %s heads [%s]\n",
             len(removedheads),
             ", ".join(node.short(n) for n in removedheads),
             len(addedheads),
@@ -107,7 +122,7 @@ class visibleheads(object):
             [head for head in self.heads if head in realnewheadsset] + realnewheads
         )
         if self.heads != newheads:
-            self._logchange(repo, self.heads, newheads)
+            self._logchange(self.heads, newheads)
             self.heads = newheads
             self.dirty = True
             self._invisiblerevs = None
