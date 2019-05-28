@@ -33,14 +33,6 @@ pub enum MononokeRepoQuery {
         path: String,
         revision: Revision,
     },
-    GetHgFile {
-        filenode: String,
-    },
-    GetFileHistory {
-        filenode: String,
-        path: String,
-        depth: Option<u32>,
-    },
     ListDirectory {
         path: String,
         revision: Revision,

@@ -92,55 +92,6 @@ fn get_raw_file(
 }
 
 #[derive(Deserialize)]
-struct GetHgFileParams {
-    repo: String,
-    filenode: String,
-}
-
-fn get_hg_file(
-    (state, params): (State<HttpServerState>, Path<GetHgFileParams>),
-) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let params = params.into_inner();
-    state.mononoke.send_query(
-        prepare_fake_ctx(&state),
-        MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::GetHgFile {
-                filenode: params.filenode,
-            },
-        },
-    )
-}
-
-#[derive(Deserialize)]
-struct GetFileHistoryParams {
-    repo: String,
-    filenode: String,
-    path: String,
-}
-
-fn get_file_history(
-    (state, req, params): (
-        State<HttpServerState>,
-        HttpRequest<HttpServerState>,
-        Path<GetFileHistoryParams>,
-    ),
-) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    let params = params.into_inner();
-    state.mononoke.send_query(
-        prepare_fake_ctx(&state),
-        MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::GetFileHistory {
-                filenode: params.filenode,
-                path: params.path,
-                depth: req.query().get("depth").and_then(|d| d.parse().ok()),
-            },
-        },
-    )
-}
-
-#[derive(Deserialize)]
 struct IsAncestorParams {
     repo: String,
     ancestor: String,
@@ -679,12 +630,6 @@ fn main() -> Fallible<()> {
             .scope("/{repo}", |repo| {
                 repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
-                })
-                .resource("/gethgfile/{filenode}", |r| {
-                    r.method(http::Method::GET).with_async(get_hg_file)
-                })
-                .resource("/getfilehistory/{filenode}/{path:.*}", |r| {
-                    r.method(http::Method::GET).with_async(get_file_history)
                 })
                 .resource("/is_ancestor/{ancestor}/{descendant}", |r| {
                     r.method(http::Method::GET).with_async(is_ancestor)

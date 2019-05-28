@@ -25,7 +25,7 @@ use futures::{
     stream::iter_ok,
     Future, IntoFuture, Stream,
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use http::uri::Uri;
 use mononoke_api;
 use remotefilelog;
@@ -169,48 +169,6 @@ impl MononokeRepo {
             })
             .from_err()
             .boxify()
-    }
-
-    /// Given a Mercurial filenode hash, return the raw content of the file in the format
-    /// expected by the Mercurial client. This includes the raw bytes of the file content,
-    /// optionally prefixed with a header containing copy-from information. Content in
-    /// this format can be directly stored by Mercurial without additional manipulation.
-    fn get_hg_file(
-        &self,
-        ctx: CoreContext,
-        filenode: String,
-    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let filenode = try_boxfuture!(FS::get_nodehash(&filenode));
-        let validate_hash = false;
-        self.repo
-            .get_raw_hg_content(ctx, HgFileNodeId::new(filenode), validate_hash)
-            .map(|content| MononokeRepoResponse::GetHgFile {
-                content: content.into_inner(),
-            })
-            .from_err()
-            .boxify()
-    }
-
-    fn get_file_history(
-        &self,
-        ctx: CoreContext,
-        filenode: String,
-        path: String,
-        depth: Option<u32>,
-    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let filenode = try_boxfuture!(FS::get_filenode_id(&filenode));
-        let path = try_boxfuture!(FS::get_mpath(path));
-
-        let history =
-            remotefilelog::get_file_history(ctx, self.repo.clone(), filenode, path.clone(), depth)
-                .and_then(move |entry| {
-                    let entry = WireHistoryEntry::try_from(entry)?;
-                    Ok(Bytes::from(serde_json::to_vec(&entry)?))
-                })
-                .from_err()
-                .boxify();
-
-        ok(MononokeRepoResponse::GetFileHistory { history }).boxify()
     }
 
     fn is_ancestor(
@@ -575,12 +533,6 @@ impl MononokeRepo {
 
         match msg {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
-            GetHgFile { filenode } => self.get_hg_file(ctx, filenode),
-            GetFileHistory {
-                filenode,
-                path,
-                depth,
-            } => self.get_file_history(ctx, filenode, path, depth),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             GetTree { hash } => self.get_tree(ctx, hash),
