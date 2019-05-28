@@ -101,8 +101,12 @@ def sync(
         )
         return 0
 
+    origheads = _getheads(repo)
+    origbookmarks = _getbookmarks(repo)
+
     # Back up all local commits that are not already backed up.
-    backedup, failed = backup.backup(repo, remotepath, getconnection)
+    state = backupstate.BackupState(repo, remotepath)
+    backedup, failed = backup.backup(repo, state, remotepath, getconnection)
 
     # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
     # fetch them from the commit cloud service.
@@ -110,11 +114,23 @@ def sync(
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
 
     with repo.wlock(), repo.lock(), repo.transaction("cloudsync"):
+
+        if origheads != _getheads(repo) or origbookmarks != _getbookmarks(repo):
+            # Another transaction changed the repository while we were backing
+            # up commits. This may have introduced new commits that also need
+            # backing up.  That transaction should have started its own sync
+            # process, so give up on this sync, and let the later one perform
+            # the sync.
+            raise ccerror.SynchronizationError(ui, _("repo changed while backing up"))
+
         synced = False
         while not synced:
+
             # Apply any changes from the cloud to the local repo.
             if cloudrefs.version != fetchversion:
-                _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage)
+                _applycloudchanges(
+                    repo, remotepath, lastsyncstate, cloudrefs, maxage, state
+                )
 
             # Check if any omissions are now included in the repo
             _checkomissions(repo, remotepath, lastsyncstate)
@@ -126,7 +142,7 @@ def sync(
             )
 
     # Update the backup bookmarks with any changes we have made by syncing.
-    backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection)
+    backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
 
     backuplock.progresscomplete(repo)
 
@@ -203,7 +219,7 @@ def _maybeupdateworkingcopy(repo, currentnode):
     return 0
 
 
-def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage):
+def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state):
     pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
 
     try:
@@ -347,7 +363,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage):
 
     # Also update backup state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
-    state = backupstate.BackupState(repo, remotepath)
     state.update([nodemod.bin(head) for head in newheads])
 
 
@@ -504,6 +519,7 @@ def _mergeobsmarkers(repo, tr, obsmarkers):
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
         tr._commitcloudskippendingobsmarkers = True
         repo.obsstore.add(tr, obsmarkers)
+        repo.filteredrevcache.clear()
 
 
 def _checkomissions(repo, remotepath, lastsyncstate):

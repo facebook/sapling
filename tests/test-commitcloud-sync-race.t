@@ -95,16 +95,29 @@ While that is getting started, create a new commit locally.
   @  0: df4f53cec30a public 'base'
   
 
-Let the background sync we started earlier continue.
+Let the background sync we started earlier continue, and start a concurrent cloud sync.
 
   $ rm $TESTTMP/wlockpre1
   $ hg cloud sync
   visibility: read 1 heads: 1292cc1f1c17
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  abort: unknown revision '79089e97b9e7c2d5091a0fed699b90fb71f827a2'!
-  [255]
-
-BUG! The pulled node wasn't visible to this cloud sync command.
+  backing up stack rooted at 1292cc1f1c17
+  remote: pushing 1 commit:
+  remote:     1292cc1f1c17  commit2
+  pulling 79089e97b9e7
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
+  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted)
+  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted)
+  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
+  new changesets 79089e97b9e7
+  commitcloud: commits synchronized
+  finished in 0.00 sec
 
   $ tglogp
   visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
@@ -122,17 +135,6 @@ Wait for the background backup to finish and check its output.
   visibility: read 0 heads: 
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
-  pulling 79089e97b9e7
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
-  visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
-  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted)
-  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted)
-  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
-  new changesets 79089e97b9e7
-  commitcloud: commits synchronized
-  finished in 0.00 sec
+  abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
+  (please retry 'hg cloud sync')
+  (please contact the Source Control Team if this error persists)

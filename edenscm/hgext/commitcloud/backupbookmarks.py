@@ -11,10 +11,10 @@ import os
 import re
 import socket
 
-from edenscm.mercurial import encoding, error, hg, node as nodemod, phases, util
+from edenscm.mercurial import encoding, error, node as nodemod, phases, util
 from edenscm.mercurial.i18n import _
 
-from . import backupstate, dependencies, util as ccutil
+from . import dependencies
 
 
 prefix = "infinitepushbackups/infinitepushbackupstate"
@@ -108,12 +108,11 @@ def _writelocalbackupstate(repo, remotepath, heads, bookmarks):
         json.dump(state, f)
 
 
-def pushbackupbookmarks(repo, remotepath, getconnection):
+def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
     """
     Push a backup bundle to the server that updates the infinitepush backup
     bookmarks.
     """
-    state = backupstate.BackupState(repo, remotepath)
     unfi = repo.unfiltered()
 
     # Create backup bookmarks for the heads and bookmarks of the user.  We
@@ -121,12 +120,12 @@ def pushbackupbookmarks(repo, remotepath, getconnection):
     # that we can sure they are available on the server.
     clrev = unfi.changelog.rev
     ancestors = unfi.changelog.ancestors(
-        [clrev(head) for head in state.heads], inclusive=True
+        [clrev(head) for head in backupstate.heads], inclusive=True
     )
     # Get the heads of visible draft commits that are already backed up,
     # including commits made visible by bookmarks.
     revset = "heads((draft() & ::((draft() - obsolete() - hidden()) + bookmark())) & (draft() & ::%ln))"
-    heads = [nodemod.hex(head) for head in unfi.nodes(revset, state.heads)]
+    heads = [nodemod.hex(head) for head in unfi.nodes(revset, backupstate.heads)]
     # Get the bookmarks that point to ancestors of backed up draft commits or
     # to commits that are public.
     bookmarks = {}

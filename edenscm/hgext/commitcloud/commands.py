@@ -357,11 +357,12 @@ def cloudbackup(ui, repo, *revs, **opts):
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)
 
     with backuplock.lock(repo):
-        backedup, failed = backup.backup(repo, remotepath, getconnection, revs)
+        state = backupstate.BackupState(repo, remotepath)
+        backedup, failed = backup.backup(repo, state, remotepath, getconnection, revs)
 
         if revs is None:
             # For a full backup, also update the backup bookmarks.
-            backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection)
+            backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
 
     if backedup:
         repo.ui.status(
@@ -478,17 +479,20 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
     if dest:
         pullopts["source"] = dest
 
-    maxrevbeforepull = len(repo.changelog)
-    result = pullcmd(ui, repo, **pullopts)
-    maxrevafterpull = len(repo.changelog)
+    with backuplock.lock(repo), repo.wlock(), repo.lock(), repo.transaction(
+        "backuprestore"
+    ) as tr:
 
-    if ui.config("infinitepushbackup", "createlandedasmarkers", False):
-        pullcreatemarkers = extensions.find("pullcreatemarkers")
-        pullcreatemarkers.createmarkers(
-            result, repo, maxrevbeforepull, maxrevafterpull, fromdrafts=False
-        )
+        maxrevbeforepull = len(repo.changelog)
+        result = pullcmd(ui, repo, **pullopts)
+        maxrevafterpull = len(repo.changelog)
 
-    with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
+        if ui.config("infinitepushbackup", "createlandedasmarkers", False):
+            pullcreatemarkers = extensions.find("pullcreatemarkers")
+            pullcreatemarkers.createmarkers(
+                result, repo, maxrevbeforepull, maxrevafterpull, fromdrafts=False
+            )
+
         changes = []
         for name, hexnode in bookmarks.iteritems():
             if hexnode in repo:
@@ -497,14 +501,14 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
                 ui.warn(_("%s not found, not creating %s bookmark") % (hexnode, name))
         repo._bookmarks.applychanges(repo, tr, changes)
 
-    # Update local backup state and flag to not autobackup just after we
-    # restored, which would be pointless.
-    state = backupstate.BackupState(repo, remotepath)
-    state.update([nodemod.bin(hexnode) for hexnode in heads + bookmarknodes])
-    backupbookmarks._writelocalbackupstate(
-        repo, ccutil.getremotepath(repo, dest), heads, bookmarks
-    )
-    repo.ignoreautobackup = True
+        # Update local backup state and flag to not autobackup just after we
+        # restored, which would be pointless.
+        state = backupstate.BackupState(repo, remotepath)
+        state.update([nodemod.bin(hexnode) for hexnode in heads + bookmarknodes])
+        backupbookmarks._writelocalbackupstate(
+            repo, ccutil.getremotepath(repo, dest), heads, bookmarks
+        )
+        repo.ignoreautobackup = True
 
     return result
 

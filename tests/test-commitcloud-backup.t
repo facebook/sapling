@@ -42,10 +42,9 @@ Pushing in this new, empty clone shouldn't clear the old backup
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/heads/606a357e69adb2e36d559ae3237626e82a955c9d 606a357e69adb2e36d559ae3237626e82a955c9d
 
-Make commit and backup it. Use lockfail.py to make sure lock is not taken during
-pushbackup
+Make commit and backup it.
   $ mkcommit commit
-  $ hg cloud backup --config extensions.lockfail=$TESTDIR/lockfail.py
+  $ hg cloud backup
   backing up stack rooted at 7e6a6fd9c7c8
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit

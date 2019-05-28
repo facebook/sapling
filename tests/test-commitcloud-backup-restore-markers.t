@@ -89,7 +89,7 @@ Push all pulled commit to backup
   updating bookmark master
   new changesets 948715751816
   obsoleted 1 changesets
-  $ hg cloud backup --config extensions.lockfail=$TESTDIR/lockfail.py
+  $ hg cloud backup
   backing up stack rooted at 9b3ead1d8005
   remote: pushing 2 commits:
   remote:     9b3ead1d8005  add b
@@ -129,8 +129,7 @@ Clone fresh repo and try to restore from backup
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
-  new changesets 9b3ead1d8005:3969cd9723d1
-  obsoleted 1 changesets
+  new changesets 3969cd9723d1
   $ hg sl --all
   @  changeset:   2:948715751816
   :  bookmark:    master
