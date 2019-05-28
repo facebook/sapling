@@ -17,9 +17,9 @@ use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 
-use errors::*;
-use setcommon::*;
-use BonsaiNodeStream;
+use crate::errors::*;
+use crate::setcommon::*;
+use crate::BonsaiNodeStream;
 
 pub struct IntersectNodeStream {
     inputs: Vec<(
@@ -32,7 +32,11 @@ pub struct IntersectNodeStream {
 }
 
 impl IntersectNodeStream {
-    pub fn new<I>(ctx: CoreContext, changeset_fetcher: &Arc<ChangesetFetcher>, inputs: I) -> Self
+    pub fn new<I>(
+        ctx: CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        inputs: I,
+    ) -> Self
     where
         I: IntoIterator<Item = Box<BonsaiNodeStream>>,
     {
@@ -166,28 +170,28 @@ impl Stream for IntersectNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
+    use crate::async_unit;
+    use crate::fixtures::linear;
+    use crate::fixtures::unshared_merge_even;
+    use crate::fixtures::unshared_merge_uneven;
+    use crate::setcommon::NotReadyEmptyStream;
+    use crate::tests::get_single_bonsai_streams;
+    use crate::tests::TestChangesetFetcher;
+    use crate::BonsaiNodeStream;
+    use crate::UnionNodeStream;
     use context::CoreContext;
-    use fixtures::linear;
-    use fixtures::unshared_merge_even;
-    use fixtures::unshared_merge_uneven;
     use futures::executor::spawn;
     use futures_ext::StreamExt;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::{single_changeset_id, string_to_bonsai};
-    use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
-    use tests::get_single_bonsai_streams;
-    use tests::TestChangesetFetcher;
-    use BonsaiNodeStream;
-    use UnionNodeStream;
 
     #[test]
     fn intersect_identical_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
@@ -211,7 +215,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let bcs_a947 = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
@@ -237,7 +241,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let bcs_d0a = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
@@ -259,7 +263,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let bcs_3c15 = string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759");
@@ -289,7 +293,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash1 = "d0a361e9022d226ae52f689667bd7d212a19cfe0";
@@ -328,7 +332,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
@@ -360,7 +364,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let inputs: Vec<Box<BonsaiNodeStream>> = vec![];
@@ -377,7 +381,7 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let inputs: Vec<Box<BonsaiNodeStream>> =
                 vec![Box::new(NotReadyEmptyStream::new(repeats))];
@@ -405,7 +409,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(unshared_merge_even::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Post-merge, merge, and both unshared branches
@@ -458,7 +462,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Post-merge, merge, and both unshared branches

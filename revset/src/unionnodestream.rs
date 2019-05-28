@@ -17,10 +17,10 @@ use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 
-use failure::Error;
+use crate::failure::Error;
 
-use setcommon::*;
-use BonsaiNodeStream;
+use crate::setcommon::*;
+use crate::BonsaiNodeStream;
 
 pub struct UnionNodeStream {
     inputs: Vec<(
@@ -33,7 +33,11 @@ pub struct UnionNodeStream {
 }
 
 impl UnionNodeStream {
-    pub fn new<I>(ctx: CoreContext, changeset_fetcher: &Arc<ChangesetFetcher>, inputs: I) -> Self
+    pub fn new<I>(
+        ctx: CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        inputs: I,
+    ) -> Self
     where
         I: IntoIterator<Item = Box<BonsaiNodeStream>>,
     {
@@ -156,26 +160,26 @@ impl Stream for UnionNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
+    use crate::async_unit;
+    use crate::errors::ErrorKind;
+    use crate::fixtures::{branch_even, branch_uneven, branch_wide, linear};
+    use crate::setcommon::{NotReadyEmptyStream, RepoErrorStream};
+    use crate::tests::get_single_bonsai_streams;
+    use crate::tests::TestChangesetFetcher;
+    use crate::BonsaiNodeStream;
     use context::CoreContext;
-    use errors::ErrorKind;
-    use fixtures::{branch_even, branch_uneven, branch_wide, linear};
     use futures::executor::spawn;
     use futures_ext::StreamExt;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::{single_changeset_id, string_to_bonsai};
-    use setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use std::sync::Arc;
-    use tests::get_single_bonsai_streams;
-    use tests::TestChangesetFetcher;
-    use BonsaiNodeStream;
 
     #[test]
     fn union_identical_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
@@ -197,7 +201,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
@@ -230,7 +234,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let bcs_d0a = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
@@ -260,7 +264,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let inputs: Vec<Box<BonsaiNodeStream>> = vec![];
@@ -275,7 +279,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let bcs_d0a = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
@@ -313,7 +317,7 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let inputs: Vec<Box<BonsaiNodeStream>> =
@@ -341,7 +345,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_even::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodes = vec![
@@ -367,7 +371,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let cs_1 = string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a");
@@ -400,7 +404,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_wide::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Two nodes should share the same generation number

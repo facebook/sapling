@@ -10,7 +10,7 @@ use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
-use failure::prelude::*;
+use crate::failure::prelude::*;
 
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
@@ -22,7 +22,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct HashGen {
@@ -38,21 +38,21 @@ struct ParentChild {
 
 pub struct RangeNodeStream {
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     start_node: ChangesetId,
-    start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
+    start_generation: Box<dyn Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
     // Child, parent
-    pending_nodes: Box<Stream<Item = ParentChild, Error = Error> + Send>,
+    pending_nodes: Box<dyn Stream<Item = ParentChild, Error = Error> + Send>,
     output_nodes: Option<BTreeMap<Generation, HashSet<ChangesetId>>>,
     drain: Option<IntoIter<ChangesetId>>,
 }
 
 fn make_pending(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     child: HashGen,
-) -> Box<Stream<Item = ParentChild, Error = Error> + Send> {
+) -> Box<dyn Stream<Item = ParentChild, Error = Error> + Send> {
     changeset_fetcher
         .get_parents(ctx.clone(), child.hash)
         .map(move |parents| (child, parents))
@@ -79,7 +79,7 @@ impl RangeNodeStream {
     // otherwise stream will be empty
     pub fn new(
         ctx: CoreContext,
-        changeset_fetcher: Arc<ChangesetFetcher>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
         start_node: ChangesetId,
         end_node: ChangesetId,
     ) -> Self {
@@ -231,11 +231,11 @@ impl Stream for RangeNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
+    use crate::async_unit;
+    use crate::fixtures::linear;
+    use crate::fixtures::merge_uneven;
     use blobrepo::BlobRepo;
     use context::CoreContext;
-    use fixtures::linear;
-    use fixtures::merge_uneven;
     use futures_ext::StreamExt;
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;

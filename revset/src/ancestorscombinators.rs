@@ -27,7 +27,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::iter::{self, FromIterator};
 use std::sync::Arc;
 
-use failure::prelude::*;
+use crate::failure::prelude::*;
 use futures::future::{ok, Future};
 use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, IntoFuture, Poll};
@@ -39,10 +39,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier};
 
-use errors::*;
-use setcommon::*;
-use BonsaiNodeStream;
-use UniqueHeap;
+use crate::errors::*;
+use crate::setcommon::*;
+use crate::BonsaiNodeStream;
+use crate::UniqueHeap;
 
 /// As the name suggests, it's a difference of unions of ancestors of nodes.
 /// In mercurial revset's terms it's (::A) - (::B), where A and B are sets of nodes.
@@ -82,14 +82,14 @@ use UniqueHeap;
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     ctx: CoreContext,
 
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
 
     // Given a set "nodes", and a maximum generation "gen",
     // return a set of nodes "C" which satisfies:
     // - Max generation number in "C" is <= gen
     // - Any ancestor of "nodes" with generation <= gen is also an ancestor of "C"
     // It's used to move `exclude` NodeFrontier
-    lca_hint_index: Arc<LeastCommonAncestorsHint>,
+    lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
 
     // Nodes that we know about, grouped by generation.
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
@@ -100,7 +100,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
     // Parents of entries from `drain`. We fetch generation number for them.
     pending_changesets:
-        SelectAll<Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send>>,
+        SelectAll<Box<dyn Stream<Item = (ChangesetId, Generation), Error = Error> + Send>>,
 
     // Stream of (Hashset, Generation) that needs to be excluded
     exclude_ancestors_future: BoxFuture<NodeFrontier, Error>,
@@ -116,9 +116,9 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
 fn make_pending(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     hash: ChangesetId,
-) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
+) -> Box<dyn Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
     let new_repo_changesets = changeset_fetcher.clone();
     let new_repo_gennums = changeset_fetcher.clone();
 
@@ -148,8 +148,8 @@ fn make_pending(
 impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<ChangesetFetcher>,
-        lca_hint_index: Arc<LeastCommonAncestorsHint>,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hash: ChangesetId,
     ) -> Box<BonsaiNodeStream> {
         Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, vec![hash], vec![])
@@ -157,8 +157,8 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     pub fn new_union(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<ChangesetFetcher>,
-        lca_hint_index: Arc<LeastCommonAncestorsHint>,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
         Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, hashes, vec![])
@@ -166,8 +166,8 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     pub fn new_with_excludes(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<ChangesetFetcher>,
-        lca_hint_index: Arc<LeastCommonAncestorsHint>,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
@@ -360,20 +360,20 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
+    use crate::async_unit;
+    use crate::fixtures::linear;
+    use crate::fixtures::merge_uneven;
+    use crate::tests::TestChangesetFetcher;
     use context::CoreContext;
-    use fixtures::linear;
-    use fixtures::merge_uneven;
-    use skiplist::SkiplistIndex;
     use revset_test_helper::{assert_changesets_sequence, string_to_bonsai};
-    use tests::TestChangesetFetcher;
+    use skiplist::SkiplistIndex;
 
     #[test]
     fn empty_ancestors_combinators() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
@@ -409,7 +409,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
@@ -444,7 +444,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
@@ -471,7 +471,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
@@ -509,7 +509,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
@@ -545,7 +545,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(

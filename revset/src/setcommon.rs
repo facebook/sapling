@@ -16,19 +16,19 @@ use std::boxed::Box;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use errors::*;
-use failure::Error;
-use BonsaiNodeStream;
+use crate::errors::*;
+use crate::failure::Error;
+use crate::BonsaiNodeStream;
 
 use futures::{Async, Poll};
 
-type GenericStream<T> = Box<Stream<Item = (T, Generation), Error = Error> + 'static + Send>;
+type GenericStream<T> = Box<dyn Stream<Item = (T, Generation), Error = Error> + 'static + Send>;
 pub type BonsaiInputStream = GenericStream<ChangesetId>;
 
 pub fn add_generations_by_bonsai(
     ctx: CoreContext,
     stream: Box<BonsaiNodeStream>,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
 ) -> BonsaiInputStream {
     let stream = stream.and_then(move |changesetid| {
         changeset_fetcher

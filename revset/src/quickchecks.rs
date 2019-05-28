@@ -4,48 +4,48 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use tests::*;
+use crate::tests::*;
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use ancestors::AncestorsNodeStream;
-    use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
-    use async_unit;
+    use crate::ancestors::AncestorsNodeStream;
+    use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
+    use crate::async_unit;
+    use crate::failure::Error;
+    use crate::fixtures::branch_even;
+    use crate::fixtures::branch_uneven;
+    use crate::fixtures::branch_wide;
+    use crate::fixtures::linear;
+    use crate::fixtures::merge_even;
+    use crate::fixtures::merge_uneven;
+    use crate::fixtures::unshared_merge_even;
+    use crate::fixtures::unshared_merge_uneven;
+    use crate::intersectnodestream::IntersectNodeStream;
+    use crate::quickcheck::rand::{
+        distributions::{range::Range, Sample},
+        thread_rng, Rng,
+    };
+    use crate::quickcheck::{quickcheck, Arbitrary, Gen};
+    use crate::setdifferencenodestream::SetDifferenceNodeStream;
+    use crate::unionnodestream::UnionNodeStream;
+    use crate::validation::ValidateNodeStream;
+    use crate::BonsaiNodeStream;
     use blobrepo::BlobRepo;
     use changeset_fetcher::ChangesetFetcher;
     use context::CoreContext;
-    use failure::Error;
-    use fixtures::branch_even;
-    use fixtures::branch_uneven;
-    use fixtures::branch_wide;
-    use fixtures::linear;
-    use fixtures::merge_even;
-    use fixtures::merge_uneven;
-    use fixtures::unshared_merge_even;
-    use fixtures::unshared_merge_uneven;
     use futures::executor::spawn;
     use futures::{
         future::{join_all, ok},
         Stream,
     };
     use futures_ext::{BoxFuture, BoxStream, StreamExt};
-    use intersectnodestream::IntersectNodeStream;
     use mononoke_types::ChangesetId;
-    use quickcheck::rand::{
-        distributions::{range::Range, Sample},
-        thread_rng, Rng,
-    };
-    use quickcheck::{quickcheck, Arbitrary, Gen};
-    use skiplist::SkiplistIndex;
     use revset_test_helper::single_changeset_id;
-    use setdifferencenodestream::SetDifferenceNodeStream;
+    use skiplist::SkiplistIndex;
     use std::collections::HashSet;
     use std::iter::Iterator;
     use std::sync::Arc;
-    use unionnodestream::UnionNodeStream;
-    use validation::ValidateNodeStream;
-    use BonsaiNodeStream;
 
     #[derive(Clone, Copy, Debug)]
     enum RevsetEntry {
@@ -138,7 +138,7 @@ mod test {
 
         pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> Box<BonsaiNodeStream> {
             let mut output: Vec<Box<BonsaiNodeStream>> = Vec::with_capacity(self.rp_entries.len());
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             for entry in self.rp_entries.iter() {
                 let next_node = ValidateNodeStream::new(
@@ -320,16 +320,16 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             #[test]
             fn $test_name() {
-                                                fn prop(set: RevsetSpec) -> bool {
-                                                    async_unit::tokio_unit_test(|| {
-                                                        let ctx = CoreContext::test_mock();
-                                                        let repo = Arc::new($repo::getrepo(None));
-                                                        match_hashset_to_revset(ctx, repo, set)
-                                                    })
-                                                }
+                fn prop(set: RevsetSpec) -> bool {
+                    async_unit::tokio_unit_test(|| {
+                        let ctx = CoreContext::test_mock();
+                        let repo = Arc::new($repo::getrepo(None));
+                        match_hashset_to_revset(ctx, repo, set)
+                    })
+                }
 
-                                                quickcheck(prop as fn(RevsetSpec) -> bool)
-                                            }
+                quickcheck(prop as fn(RevsetSpec) -> bool)
+            }
         };
     }
 
@@ -403,7 +403,7 @@ mod test {
                     let ctx = CoreContext::test_mock();
 
                     let repo = Arc::new($repo::getrepo(None));
-                    let changeset_fetcher: Arc<ChangesetFetcher> =
+                    let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                         Arc::new(TestChangesetFetcher::new(repo.clone()));
 
                     let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo);
@@ -430,26 +430,33 @@ mod test {
                             .flatten_stream()
                             .boxify();
 
-                        let actual =
-                            ValidateNodeStream::new(ctx.clone(), difference_stream, &changeset_fetcher);
+                        let actual = ValidateNodeStream::new(
+                            ctx.clone(),
+                            difference_stream,
+                            &changeset_fetcher,
+                        );
 
                         let mut includes = vec![];
                         for i in include.clone() {
                             includes.push(
-                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
+                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i)
+                                    .boxify(),
                             );
                         }
 
                         let mut excludes = vec![];
                         for i in exclude.clone() {
                             excludes.push(
-                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
+                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i)
+                                    .boxify(),
                             );
                         }
                         let includes =
-                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes).boxify();
+                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes)
+                                .boxify();
                         let excludes =
-                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, excludes).boxify();
+                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, excludes)
+                                .boxify();
                         let expected = SetDifferenceNodeStream::new(
                             ctx.clone(),
                             &changeset_fetcher,

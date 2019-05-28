@@ -4,10 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::failure::{err_msg, Error};
+use crate::BonsaiNodeStream;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use failure::{err_msg, Error};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mononoke_types::{ChangesetId, Generation};
@@ -15,7 +16,6 @@ use revset_test_helper::{single_changeset_id, string_to_bonsai};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use BonsaiNodeStream;
 
 pub struct TestChangesetFetcher {
     repo: Arc<BlobRepo>,
@@ -49,7 +49,7 @@ impl ChangesetFetcher for TestChangesetFetcher {
             .boxify()
     }
 
-    fn get_stats(&self) -> HashMap<String, Box<Any>> {
+    fn get_stats(&self) -> HashMap<String, Box<dyn Any>> {
         HashMap::new()
     }
 }

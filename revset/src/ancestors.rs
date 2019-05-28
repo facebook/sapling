@@ -12,27 +12,27 @@ use std::collections::hash_set::IntoIter;
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
-use failure::prelude::*;
+use crate::failure::prelude::*;
 
 use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
 use futures::{Async, Poll};
 use futures_ext::StreamExt;
 
+use crate::UniqueHeap;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, Generation};
-use UniqueHeap;
 
-use errors::*;
-use BonsaiNodeStream;
-use IntersectNodeStream;
+use crate::errors::*;
+use crate::BonsaiNodeStream;
+use crate::IntersectNodeStream;
 
 pub struct AncestorsNodeStream {
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
-    pending_changesets: Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send>,
+    pending_changesets: Box<dyn Stream<Item = (ChangesetId, Generation), Error = Error> + Send>,
     drain: IntoIter<ChangesetId>,
 
     // max heap of all relevant unique generation numbers
@@ -41,9 +41,9 @@ pub struct AncestorsNodeStream {
 
 fn make_pending(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     hashes: IntoIter<ChangesetId>,
-) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
+) -> Box<dyn Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
 
     Box::new(
@@ -72,7 +72,7 @@ fn make_pending(
 impl AncestorsNodeStream {
     pub fn new(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<ChangesetFetcher>,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         hash: ChangesetId,
     ) -> Self {
         let node_set: HashSet<ChangesetId> = hashset! {hash};
@@ -149,7 +149,7 @@ impl Stream for AncestorsNodeStream {
 
 pub fn common_ancestors<I>(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     nodes: I,
 ) -> Box<BonsaiNodeStream>
 where
@@ -165,7 +165,7 @@ where
 
 pub fn greatest_common_ancestor<I>(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     nodes: I,
 ) -> Box<BonsaiNodeStream>
 where
@@ -177,20 +177,20 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
-    use fixtures::linear;
-    use fixtures::merge_uneven;
-    use fixtures::unshared_merge_uneven;
+    use crate::async_unit;
+    use crate::fixtures::linear;
+    use crate::fixtures::merge_uneven;
+    use crate::fixtures::unshared_merge_uneven;
+    use crate::tests::TestChangesetFetcher;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_bonsai;
-    use tests::TestChangesetFetcher;
 
     #[test]
     fn linear_ancestors() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
@@ -223,7 +223,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
@@ -261,7 +261,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
@@ -292,7 +292,7 @@ mod test {
             // The unshared_merge_uneven fixture has a commit after the merge. Pull in everything
             // by starting at the head and working back to the original unshared history commits
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
@@ -336,7 +336,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = greatest_common_ancestor(
@@ -356,7 +356,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = greatest_common_ancestor(
@@ -384,7 +384,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = greatest_common_ancestor(
@@ -412,7 +412,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = common_ancestors(
@@ -440,7 +440,7 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = common_ancestors(

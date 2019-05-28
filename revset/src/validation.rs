@@ -4,18 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::failure::Error;
+use crate::setcommon::{add_generations_by_bonsai, BonsaiInputStream};
+use crate::BonsaiNodeStream;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use failure::Error;
 use futures::stream::Stream;
 use futures::{Async, Poll};
 use futures_ext::StreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use setcommon::{add_generations_by_bonsai, BonsaiInputStream};
 use std::collections::HashSet;
 use std::sync::Arc;
-use BonsaiNodeStream;
 
 /// A wrapper around a NodeStream that asserts that the two revset invariants hold:
 /// 1. The generation number never increases
@@ -31,7 +31,7 @@ impl ValidateNodeStream {
     pub fn new(
         ctx: CoreContext,
         wrapped: Box<BonsaiNodeStream>,
-        changeset_fetcher: &Arc<ChangesetFetcher>,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
     ) -> ValidateNodeStream {
         ValidateNodeStream {
             wrapped: add_generations_by_bonsai(ctx, wrapped, changeset_fetcher.clone()).boxify(),
@@ -73,20 +73,20 @@ impl Stream for ValidateNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use async_unit;
-    use fixtures::linear;
+    use crate::async_unit;
+    use crate::fixtures::linear;
+    use crate::setcommon::NotReadyEmptyStream;
+    use crate::tests::TestChangesetFetcher;
     use futures_ext::StreamExt;
     use revset_test_helper::{assert_changesets_sequence, single_changeset_id, string_to_bonsai};
-    use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
-    use tests::TestChangesetFetcher;
 
     #[test]
     fn validate_accepts_single_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let head_csid = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -107,7 +107,7 @@ mod test {
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
 
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let mut nodestream = ValidateNodeStream::new(
                 ctx,
@@ -142,7 +142,7 @@ mod test {
             let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo)
                 .chain(single_changeset_id(ctx.clone(), head_csid.clone(), &repo));
 
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let mut nodestream =
                 ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
@@ -173,7 +173,7 @@ mod test {
                 string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
             ));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
+            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let mut nodestream =
                 ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();

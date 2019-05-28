@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-pub use failure::{Error, Result};
+pub use crate::failure::{Error, Result};
 
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
