@@ -60,7 +60,7 @@ def sync(
     repo, remotepath, getconnection, cloudrefs=None, full=False, cloudversion=None
 ):
     ui = repo.ui
-    start = time.time()
+    start = util.timer()
 
     startnode = repo["."].node()
 
@@ -144,7 +144,7 @@ def sync(
     else:
         ui.status(_("commits synchronized\n"), component="commitcloud")
 
-    elapsed = time.time() - start
+    elapsed = util.timer() - start
     ui.status(_("finished in %0.2f sec\n") % elapsed)
 
     # Check that Scm Service is running and a subscription exists

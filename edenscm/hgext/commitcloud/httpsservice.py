@@ -220,9 +220,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
             "repo_name": reponame,
             "workspace": workspace,
         }
-        start = time.time()
+        start = util.timer()
         response = self._send(path, data)
-        elapsed = time.time() - start
+        elapsed = util.timer() - start
         self.ui.debug(
             "response received in %0.2f sec\n" % elapsed, component="commitcloud"
         )
@@ -289,9 +289,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
             "new_obsmarkers_data": self._encodedmarkers(newobsmarkers),
         }
 
-        start = time.time()
+        start = util.timer()
         response = self._send(path, data)
-        elapsed = time.time() - start
+        elapsed = util.timer() - start
         self.ui.debug(
             "response received in %0.2f sec\n" % elapsed, component="commitcloud"
         )
@@ -326,9 +326,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         path = "/commit_cloud/get_smartlog"
         data = {"repo_name": reponame, "workspace": workspace}
 
-        start = time.time()
+        start = util.timer()
         response = self._send(path, data)
-        elapsed = time.time() - start
+        elapsed = util.timer() - start
         self.ui.debug(
             "responce received in %0.2f sec\n" % elapsed, component="commitcloud"
         )
