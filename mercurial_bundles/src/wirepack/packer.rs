@@ -14,13 +14,13 @@ use byteorder::BigEndian;
 use bytes::BufMut;
 use futures::{Poll, Stream};
 
-use chunk::Chunk;
+use crate::chunk::Chunk;
 use mercurial_types::{MPath, RepoPath};
 
 use super::converter::{WirePackConverter, WirePackPartProcessor};
 use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
 
-use errors::*;
+use crate::errors::*;
 
 pub struct WirePackPacker<S> {
     stream: WirePackConverter<S, PackerProcessor>,

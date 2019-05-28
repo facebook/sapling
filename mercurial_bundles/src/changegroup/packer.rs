@@ -11,9 +11,9 @@ use futures::{Async, Poll, Stream};
 use byteorder::ByteOrder;
 use bytes::{BigEndian, BufMut};
 
-use chunk::Chunk;
-use delta;
-use errors::*;
+use crate::chunk::Chunk;
+use crate::delta;
+use crate::errors::*;
 
 use super::{CgDeltaChunk, Part, Section};
 

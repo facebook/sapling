@@ -12,15 +12,15 @@ use std::mem;
 use bytes::Bytes;
 use futures::{Async, Future, Poll, Stream};
 
-use chunk::Chunk;
-use errors::*;
-use part_header::{PartHeader, PartHeaderBuilder, PartHeaderType};
+use crate::chunk::Chunk;
+use crate::errors::*;
+use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType};
 
 /// Represents a stream of chunks produced by the individual part handler.
-pub struct ChunkStream(Box<Stream<Item = Chunk, Error = Error> + Send>);
+pub struct ChunkStream(Box<dyn Stream<Item = Chunk, Error = Error> + Send>);
 
 impl Debug for ChunkStream {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("ChunkStream").finish()
     }
 }

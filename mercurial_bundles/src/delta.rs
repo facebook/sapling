@@ -11,8 +11,8 @@ use bytes::{BufMut, BytesMut};
 use bytes_ext::SizeCounter;
 use mercurial_types::delta::{Delta, Fragment};
 
-use errors::*;
-use utils::BytesExt;
+use crate::errors::*;
+use crate::utils::BytesExt;
 
 const DELTA_HEADER_LEN: usize = 12;
 

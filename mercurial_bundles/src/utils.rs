@@ -15,7 +15,7 @@ use bytes::{Bytes, BytesMut};
 use async_compression::{CompressorType, DecompressorType};
 use mercurial_types::{HgNodeHash, MPath};
 
-use errors::*;
+use crate::errors::*;
 
 pub trait SplitTo {
     fn split_to(&mut self, at: usize) -> Self;

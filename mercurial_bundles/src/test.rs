@@ -17,25 +17,25 @@ use futures_ext::BoxStream;
 use tokio::runtime::Runtime;
 use tokio_io::AsyncRead;
 
+use crate::parts::phases_part;
 use async_compression::membuf::MemBuf;
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use mercurial_types::{HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
-use parts::phases_part;
 use quickcheck::rand;
 use quickcheck::{QuickCheck, StdGen};
 
-use bundle2::{Bundle2Stream, StreamEvent};
-use bundle2_encode::Bundle2EncodeBuilder;
-use changegroup;
+use crate::bundle2::{Bundle2Stream, StreamEvent};
+use crate::bundle2_encode::Bundle2EncodeBuilder;
+use crate::changegroup;
+use crate::errors::*;
+use crate::part_encode::PartEncodeBuilder;
+use crate::part_header::{PartHeaderBuilder, PartHeaderType};
+use crate::types::StreamHeader;
+use crate::utils::get_compression_param;
+use crate::wirepack;
+use crate::Bundle2Item;
 use context::CoreContext;
-use errors::*;
-use part_encode::PartEncodeBuilder;
-use part_header::{PartHeaderBuilder, PartHeaderType};
-use types::StreamHeader;
-use utils::get_compression_param;
-use wirepack;
-use Bundle2Item;
 
 const BZIP2_BUNDLE2: &[u8] = include_bytes!("fixtures/bzip2.bin");
 const UNCOMP_BUNDLE2: &[u8] = include_bytes!("fixtures/uncompressed.bin");
@@ -53,7 +53,7 @@ const DEF_HASH_STR: &str = "bb969a19e8853962b4347bea4c24796324f10d8b";
 struct ByteBuf<'a>(&'a [u8]);
 
 impl<'a> Debug for ByteBuf<'a> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for byte in self.0 {
             fmt.write_fmt(format_args!(r"\x{:02x}", byte))?;
         }

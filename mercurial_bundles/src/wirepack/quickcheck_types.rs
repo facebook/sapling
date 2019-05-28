@@ -35,7 +35,7 @@ impl Arbitrary for WirePackPartSequence {
         Self { kind, files }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let kind = self.kind;
         Box::new(self.files.shrink().map(move |files| Self { kind, files }))
     }
@@ -83,7 +83,7 @@ impl Arbitrary for FileEntries {
         unimplemented!("use WirePackPartSequence::arbitrary instead")
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let filename = self.filename.clone();
         let self_history = self.history.clone();
         let self_data = self.data.clone();
@@ -150,7 +150,7 @@ impl Arbitrary for DataEntry {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         // The delta is the only shrinkable here.
         let node = self.node;
         let delta_base = self.delta_base;

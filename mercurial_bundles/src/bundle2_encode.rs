@@ -9,9 +9,9 @@ use std::io::{self, Cursor};
 use std::mem;
 use std::vec::IntoIter;
 
+use crate::failure::prelude::*;
 use byteorder::ByteOrder;
 use bytes::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
-use failure::prelude::*;
 use futures::stream::Forward;
 use futures::{Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
@@ -20,12 +20,12 @@ use tokio_io::AsyncWrite;
 
 use async_compression::{Compressor, CompressorType};
 
-use chunk::{Chunk, ChunkEncoder};
-use errors::*;
+use crate::chunk::{Chunk, ChunkEncoder};
+use crate::errors::*;
+use crate::part_encode::{PartEncode, PartEncodeBuilder};
+use crate::types::StreamHeader;
+use crate::utils::{capitalize_first, get_compression_param, is_mandatory_param};
 use mercurial_types::percent_encode;
-use part_encode::{PartEncode, PartEncodeBuilder};
-use types::StreamHeader;
-use utils::{capitalize_first, get_compression_param, is_mandatory_param};
 
 /// This is a general wrapper around a Sink to prevent closing of the underlying Sink. This is
 /// useful when using Sink::send_all, because in addition to writing and flushing the data it also

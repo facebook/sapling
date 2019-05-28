@@ -11,9 +11,9 @@ use std::collections::HashMap;
 use bytes::{BufMut, Bytes};
 use quickcheck::{Arbitrary, Gen};
 
-use chunk::Chunk;
-use errors::*;
-use utils::BytesExt;
+use crate::chunk::Chunk;
+use crate::errors::*;
+use crate::utils::BytesExt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum PartHeaderType {
@@ -430,7 +430,7 @@ mod test {
     use quickcheck::{quickcheck, TestResult};
 
     use super::*;
-    use quickcheck_types::QCBytes;
+    use crate::quickcheck_types::QCBytes;
 
     const MAX_LEN: usize = ::std::u8::MAX as usize;
 

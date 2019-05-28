@@ -6,7 +6,6 @@
 
 #![deny(warnings)]
 
-extern crate ascii;
 #[macro_use]
 #[cfg(test)]
 extern crate assert_matches;
@@ -17,7 +16,7 @@ extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
 extern crate futures_stats;
-extern crate futures_trace;
+
 #[cfg(test)]
 #[macro_use]
 extern crate itertools;
@@ -32,19 +31,18 @@ extern crate quickcheck;
 extern crate quickcheck;
 #[macro_use]
 extern crate slog;
-#[cfg(test)]
-extern crate slog_term;
+
 extern crate tokio;
 extern crate tokio_codec;
 extern crate tokio_io;
-extern crate tokio_proto;
+
 extern crate url;
 
 extern crate async_compression;
 extern crate bytes_ext;
 extern crate context;
 extern crate futures_ext;
-extern crate mercurial;
+
 extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
@@ -75,11 +73,11 @@ mod types;
 pub mod wirepack;
 
 mod errors;
-pub use errors::*;
+pub use crate::errors::*;
 mod utils;
 
+use crate::failure::err_msg;
 use bytes::Bytes;
-use failure::err_msg;
 use futures::sync::{mpsc, oneshot};
 use futures::{Future, Stream};
 use futures_ext::SinkToAsyncWrite;
@@ -88,9 +86,9 @@ use std::fmt;
 
 use futures_ext::{BoxFuture, BoxStream};
 
-pub use bundle2_encode::Bundle2EncodeBuilder;
-pub use part_header::{PartHeader, PartHeaderType};
-pub use types::StreamHeader;
+pub use crate::bundle2_encode::Bundle2EncodeBuilder;
+pub use crate::part_header::{PartHeader, PartHeaderType};
+pub use crate::types::StreamHeader;
 
 pub enum Bundle2Item {
     Start(StreamHeader),
@@ -127,8 +125,8 @@ impl Bundle2Item {
 }
 
 impl fmt::Debug for Bundle2Item {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Bundle2Item::*;
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use crate::Bundle2Item::*;
         match self {
             &Start(ref header) => write!(f, "Bundle2Item::Start({:?})", header),
             &Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),

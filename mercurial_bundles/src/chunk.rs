@@ -7,8 +7,8 @@
 use bytes::{BufMut, Bytes, BytesMut};
 use tokio_codec::{Decoder, Encoder};
 
-use errors::*;
-use utils::BytesExt;
+use crate::errors::*;
+use crate::utils::BytesExt;
 
 /// A bundle2 chunk.
 ///

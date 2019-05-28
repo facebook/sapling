@@ -10,11 +10,13 @@ use super::obsmarkers::packer::obsmarkers_packer_stream;
 use super::obsmarkers::MetadataEntry;
 use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
+use crate::errors::*;
+use crate::failure::prelude::*;
+use crate::part_encode::PartEncodeBuilder;
+use crate::part_header::PartHeaderType;
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
 use context::CoreContext;
-use errors::*;
-use failure::prelude::*;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
 use futures_ext::BoxFuture;
@@ -23,8 +25,6 @@ use mercurial_types::{
     Delta, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath, NULL_HASH,
 };
 use mononoke_types::DateTime;
-use part_encode::PartEncodeBuilder;
-use part_header::PartHeaderType;
 use scuba_ext::ScubaSampleBuilderExt;
 use std::fmt;
 use std::io::Write;
@@ -214,7 +214,7 @@ pub enum ChangegroupApplyResult {
 // -1 + heads_num_diff if the number of heads decreased. Note that we may change it in the future
 
 impl fmt::Display for ChangegroupApplyResult {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             &ChangegroupApplyResult::Success { heads_num_diff } => {
                 if heads_num_diff >= 0 {

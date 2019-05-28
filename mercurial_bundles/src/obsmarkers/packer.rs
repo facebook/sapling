@@ -8,10 +8,10 @@
 //! Format documentation: https://www.mercurial-scm.org/repo/hg/file/tip/mercurial/obsolete.py
 
 use super::MetadataEntry;
+use crate::chunk::Chunk;
+use crate::errors::*;
 use byteorder::ByteOrder;
 use bytes::{BigEndian, BufMut};
-use chunk::Chunk;
-use errors::*;
 use futures::stream::iter_result;
 use futures::Stream;
 use mercurial_types::HgChangesetId;
@@ -98,7 +98,7 @@ fn prepare_obsmarker_chunk(
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure::err_msg;
+    use crate::failure::err_msg;
     use futures::{stream, Async, Poll};
     use futures_ext::StreamExt;
     use mercurial_types_mocks::nodehash;

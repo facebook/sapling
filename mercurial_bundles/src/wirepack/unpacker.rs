@@ -16,8 +16,8 @@ use context::CoreContext;
 use mercurial_types::RepoPath;
 
 use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
-use errors::*;
-use utils::BytesExt;
+use crate::errors::*;
+use crate::utils::BytesExt;
 
 #[derive(Debug)]
 pub struct WirePackUnpacker {

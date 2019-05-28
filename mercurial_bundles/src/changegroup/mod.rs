@@ -59,9 +59,9 @@ mod test {
     use futures_ext::StreamLayeredExt;
     use partial_io::{GenWouldBlock, PartialAsyncRead, PartialAsyncWrite, PartialWithErrors};
 
-    use chunk::{ChunkDecoder, ChunkEncoder};
+    use crate::chunk::{ChunkDecoder, ChunkEncoder};
+    use crate::quickcheck_types::CgPartSequence;
     use context::CoreContext;
-    use quickcheck_types::CgPartSequence;
 
     use super::*;
 

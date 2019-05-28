@@ -14,7 +14,7 @@ use mercurial_types::RepoPath;
 
 use super::{DataEntry, HistoryEntry, Part};
 
-use errors::*;
+use crate::errors::*;
 
 pub trait WirePackPartProcessor {
     type Data;

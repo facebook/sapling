@@ -17,12 +17,12 @@ use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
 use tokio_codec::{Decoder, Framed, FramedParts};
 use tokio_io::AsyncRead;
 
+use crate::errors::*;
+use crate::part_header::{self, PartHeader, PartHeaderType};
+use crate::part_inner::validate_header;
+use crate::types::StreamHeader;
+use crate::utils::{get_decompressor_type, BytesExt};
 use context::CoreContext;
-use errors::*;
-use part_header::{self, PartHeader, PartHeaderType};
-use part_inner::validate_header;
-use types::StreamHeader;
-use utils::{get_decompressor_type, BytesExt};
 
 pub fn outer_stream<R: AsyncRead + BufRead + Send>(
     ctx: CoreContext,

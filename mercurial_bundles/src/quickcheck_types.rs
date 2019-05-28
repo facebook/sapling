@@ -21,9 +21,9 @@ use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use mercurial_types::{Delta, HgNodeHash, MPath};
 
-use changegroup;
+use crate::changegroup;
 #[cfg(test)]
-use errors::*;
+use crate::errors::*;
 
 #[derive(Clone, Debug)]
 pub struct QCBytes(Bytes);
@@ -41,7 +41,7 @@ impl Arbitrary for QCBytes {
         QCBytes(v.into())
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         Box::new(self.0.to_vec().shrink().map(|v| QCBytes(v.into())))
     }
 }
@@ -62,7 +62,7 @@ pub struct CgPartSequence {
 
 impl CgPartSequence {
     /// Combine all the changesets, manifests and filelogs into a single iterator.
-    pub fn as_iter<'a>(&'a self) -> Box<Iterator<Item = &'a changegroup::Part> + 'a> {
+    pub fn as_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a changegroup::Part> + 'a> {
         // Trying to describe the type here is madness. Just box it.
         Box::new(
             self.changesets
@@ -112,8 +112,8 @@ impl PartialEq<[changegroup::Part]> for CgPartSequence {
 
 impl Arbitrary for CgPartSequence {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        use changegroup::unpacker::*;
-        use changegroup::*;
+        use crate::changegroup::unpacker::*;
+        use crate::changegroup::*;
 
         let version_ind = g.gen_weighted_bool(2);
         let version = match version_ind {
@@ -148,8 +148,8 @@ impl Arbitrary for CgPartSequence {
         gen_sequence(changesets, manifests, filelogs)
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
-        use changegroup::unpacker::*;
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::changegroup::unpacker::*;
 
         let gen_sequence = match self.version {
             CgVersion::Cg2Version => gen_sequence_v2,
@@ -197,7 +197,7 @@ fn gen_sequence_v2(
     manifests: Vec<changegroup::Part>,
     filelogs: Vec<(Vec<changegroup::Part>, changegroup::Part)>,
 ) -> CgPartSequence {
-    use changegroup::*;
+    use crate::changegroup::*;
     CgPartSequence {
         changesets,
         changesets_end: Part::SectionEnd(Section::Changeset),
@@ -215,7 +215,7 @@ fn gen_sequence_v3(
     manifests: Vec<changegroup::Part>,
     filelogs: Vec<(Vec<changegroup::Part>, changegroup::Part)>,
 ) -> CgPartSequence {
-    use changegroup::*;
+    use crate::changegroup::*;
     CgPartSequence {
         changesets,
         changesets_end: Part::SectionEnd(Section::Changeset),
@@ -234,8 +234,8 @@ impl Arbitrary for changegroup::Part {
         unimplemented!()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
-        use changegroup::Part::CgChunk;
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        use crate::changegroup::Part::CgChunk;
 
         match self {
             &CgChunk(ref section, ref delta_chunk) => {
@@ -266,7 +266,7 @@ impl Arbitrary for changegroup::CgDeltaChunk {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         // Don't bother trying to shrink node hashes -- the meat is in the delta.
         let clone = self.clone();
         Box::new(

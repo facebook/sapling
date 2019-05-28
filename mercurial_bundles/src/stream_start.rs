@@ -11,9 +11,9 @@ use bytes::BytesMut;
 use tokio_io::codec::Decoder;
 use url::percent_encoding;
 
-use errors::*;
-use types::StreamHeader;
-use utils::is_mandatory_param;
+use crate::errors::*;
+use crate::types::StreamHeader;
+use crate::utils::is_mandatory_param;
 
 #[derive(Debug)]
 pub struct StartDecoder;

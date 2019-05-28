@@ -13,9 +13,9 @@ use bytes::{BufMut, BytesMut};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 
-use delta;
-use errors::*;
-use utils::BytesExt;
+use crate::delta;
+use crate::errors::*;
+use crate::utils::BytesExt;
 
 pub mod converter;
 pub mod packer;
@@ -33,7 +33,7 @@ pub enum Kind {
 }
 
 impl fmt::Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Kind::Tree => write!(f, "tree"),
             Kind::File => write!(f, "file"),
@@ -138,8 +138,9 @@ impl HistoryEntry {
                     "tree entry {} is marked as copied from path {}, but they cannot be copied",
                     node, path
                 ))),
-                Kind::File => Some(RepoPath::file(path)
-                    .with_context(|_| ErrorKind::WirePackDecode("invalid copy from path".into()))?),
+                Kind::File => Some(RepoPath::file(path).with_context(|_| {
+                    ErrorKind::WirePackDecode("invalid copy from path".into())
+                })?),
             }
         } else {
             None
@@ -271,7 +272,8 @@ impl DataEntry {
         if self.delta_base == NULL_HASH {
             // This is a fulltext -- the spec requires that instead of storing a delta with
             // start = 0 and end = 0, the fulltext be stored directly.
-            let fulltext = self.delta
+            let fulltext = self
+                .delta
                 .maybe_fulltext()
                 .expect("verify will have already checked that the delta is a fulltext");
             buf.put_u64_be(fulltext.len() as u64);
@@ -301,8 +303,8 @@ impl DataEntry {
 mod test {
     use std::cmp;
 
-    use quickcheck::{Gen, StdGen};
     use quickcheck::rand::{self, Rng};
+    use quickcheck::{Gen, StdGen};
 
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};

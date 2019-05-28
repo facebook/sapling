@@ -17,17 +17,17 @@ use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 
-use capabilities;
-use changegroup;
+use crate::capabilities;
+use crate::changegroup;
+use crate::errors::*;
+use crate::infinitepush;
+use crate::part_header::{PartHeader, PartHeaderType};
+use crate::part_outer::{OuterFrame, OuterStream};
+use crate::pushrebase;
+use crate::wirepack;
+use crate::Bundle2Item;
 use context::CoreContext;
-use errors::*;
 use futures_ext::{StreamExt, StreamLayeredExt};
-use infinitepush;
-use part_header::{PartHeader, PartHeaderType};
-use part_outer::{OuterFrame, OuterStream};
-use pushrebase;
-use wirepack;
-use Bundle2Item;
 
 // --- Part parameters
 
@@ -219,9 +219,9 @@ impl Decoder for EmptyUnpacker {
 #[cfg(test)]
 mod test {
 
-    use changegroup::unpacker::CgVersion;
-    use part_header::{PartHeaderBuilder, PartHeaderType};
-    use part_inner::*;
+    use crate::changegroup::unpacker::CgVersion;
+    use crate::part_header::{PartHeaderBuilder, PartHeaderType};
+    use crate::part_inner::*;
 
     #[test]
     fn test_cg_unpacker_v3() {

@@ -18,12 +18,12 @@ use futures_ext::BoxFuture;
 use tokio_codec::{Framed, FramedParts};
 use tokio_io::AsyncRead;
 
+use crate::errors::*;
+use crate::part_inner::inner_stream;
+use crate::part_outer::{outer_stream, OuterFrame, OuterStream};
+use crate::stream_start::StartDecoder;
+use crate::Bundle2Item;
 use context::CoreContext;
-use errors::*;
-use part_inner::inner_stream;
-use part_outer::{outer_stream, OuterFrame, OuterStream};
-use stream_start::StartDecoder;
-use Bundle2Item;
 
 pub enum StreamEvent<I, S> {
     Next(I),
@@ -41,7 +41,7 @@ impl<I, S> StreamEvent<I, S> {
 }
 
 impl<I, S> Debug for StreamEvent<I, S> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             &StreamEvent::Next(_) => write!(f, "Next(...)"),
             &StreamEvent::Done(_) => write!(f, "Done(...)"),
@@ -90,7 +90,7 @@ impl<R> Display for CurrentStream<R>
 where
     R: AsyncRead + BufRead + 'static + Send,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::CurrentStream::*;
 
         let s = match self {
@@ -108,7 +108,7 @@ impl<R> Debug for CurrentStream<R>
 where
     R: AsyncRead + BufRead + Debug + 'static + Send,
 {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             &CurrentStream::Start(ref framed_stream) => write!(f, "Start({:?})", framed_stream),
             &CurrentStream::Outer(ref outer_stream) => write!(f, "Outer({:?})", outer_stream),

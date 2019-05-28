@@ -9,9 +9,9 @@
 use bytes::{Bytes, BytesMut};
 use tokio_io::codec::Decoder;
 
-use utils::BytesExt;
+use crate::utils::BytesExt;
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Debug)]
 pub struct InfinitepushBookmarksUnpacker {

@@ -13,7 +13,7 @@ use bytes::BytesMut;
 use tokio_io::codec::Decoder;
 use url::percent_encoding::percent_decode;
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Capabilities {

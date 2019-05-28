@@ -17,9 +17,9 @@ use tokio_io::codec::Decoder;
 use context::CoreContext;
 use mercurial_types::MPath;
 
-use delta;
-use errors::*;
-use utils::BytesExt;
+use crate::delta;
+use crate::errors::*;
+use crate::utils::BytesExt;
 
 use super::{CgDeltaChunk, Part, Section};
 
