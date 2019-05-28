@@ -26,9 +26,9 @@ use tokio::net::TcpStream;
 
 use clap::ArgMatches;
 
-use errors::*;
+use crate::errors::*;
 
-use failure::SlogKVError;
+use crate::failure::SlogKVError;
 use fbwhoami;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
@@ -45,7 +45,7 @@ const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 // Wait for up to 1sec to let Scuba flush it's data to the server.
 const SCUBA_TIMEOUT_MS: i64 = 1000;
 
-pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
+pub fn cmd(main: &ArgMatches<'_>, sub: &ArgMatches<'_>) -> BoxFuture<(), Error> {
     if sub.is_present("stdio") {
         if let Some(repo) = main.value_of("repository") {
             let query_string = main.value_of("query-string").unwrap_or("");

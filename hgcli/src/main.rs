@@ -14,7 +14,6 @@ extern crate failure_ext as failure;
 #[macro_use]
 extern crate slog;
 extern crate slog_term;
-extern crate tokio_uds;
 
 extern crate bytes;
 extern crate dns_lookup;
@@ -25,13 +24,9 @@ extern crate secure_utils;
 extern crate tokio;
 extern crate tokio_io;
 extern crate tokio_openssl;
-extern crate tokio_proto;
-extern crate tokio_service;
+
 extern crate users;
 extern crate uuid;
-
-extern crate mio;
-extern crate nix;
 
 extern crate fbwhoami;
 #[macro_use]
@@ -45,9 +40,9 @@ use clap::{App, Arg, SubCommand};
 mod serve;
 
 pub mod errors {
-    pub use failure::{Error, Result};
+    pub use crate::failure::{Error, Result};
 }
-use errors::Error;
+use crate::errors::Error;
 
 fn main() {
     let matches = App::new("Mononoke CLI")
