@@ -6,7 +6,6 @@
 
 #![deny(warnings)]
 
-extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
 extern crate cachelib;
@@ -31,14 +30,14 @@ extern crate mercurial_types;
 
 mod caching;
 
+use crate::failure::{Error, Result};
 use context::CoreContext;
-use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
 use mononoke_types::{hash, RepositoryId};
 use quickcheck::{Arbitrary, Gen};
 
-pub use caching::CachingFilenodes;
+pub use crate::caching::CachingFilenodes;
 
 mod thrift {
     pub use filenodes_if::*;

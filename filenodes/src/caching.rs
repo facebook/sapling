@@ -8,9 +8,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::failure::{Error, Result};
 use cachelib::{get_cached_or_fill, LruCachePool};
 use context::CoreContext;
-use failure::{Error, Result};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
@@ -22,7 +22,7 @@ use stats::{Histogram, Timeseries};
 use tokio;
 
 use super::thrift::{MC_CODEVER, MC_SITEVER};
-use {thrift, FilenodeInfo, Filenodes, blake2_path_hash};
+use crate::{blake2_path_hash, thrift, FilenodeInfo, Filenodes};
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -52,7 +52,7 @@ type Pointer = i64;
 struct PathHash(String);
 
 pub struct CachingFilenodes {
-    filenodes: Arc<Filenodes>,
+    filenodes: Arc<dyn Filenodes>,
     cache_pool: LruCachePool,
     memcache: MemcacheClient,
     keygen: KeyGen,
@@ -60,7 +60,7 @@ pub struct CachingFilenodes {
 
 impl CachingFilenodes {
     pub fn new(
-        filenodes: Arc<Filenodes>,
+        filenodes: Arc<dyn Filenodes>,
         cache_pool: LruCachePool,
         backing_store_name: impl ToString,
         backing_store_params: impl ToString,
