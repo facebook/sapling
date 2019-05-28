@@ -65,5 +65,20 @@ if cmdargv[:2] == ["hg", "-R"] and cmdargv[3:] == ["serve", "--stdio"]:
     cmdargv[2] = path
     hgcmd = subprocess.list2cmdline(cmdargv)
 
+if "hgcli" in hgcmd:
+    certdir = os.environ.get("HGTEST_CERTDIR", os.environ.get("TESTDIR", "") + "/certs")
+    cert = os.path.join(certdir, "localhost.crt")
+    capem = os.path.join(certdir, "root-ca.crt")
+    privatekey = os.path.join(certdir, "localhost.key")
+
+    hgcmd += (
+        " --mononoke-path [::1]:"
+        + os.getenv("MONONOKE_SOCKET")
+        + (" --cert %s --ca-pem %s --private-key %s --common-name localhost" % (cert, capem, privatekey))
+    )
+
+    mock_username = os.environ.get("MOCK_USERNAME")
+    hgcmd += " --mock-username '{}'".format(mock_username)
+
 r = os.system(hgcmd)
 sys.exit(bool(r))
