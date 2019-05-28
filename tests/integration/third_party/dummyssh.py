@@ -25,15 +25,22 @@ if os.name == "nt":
 
 log = open("dummylog", "a+b")
 
-cert = os.path.join(os.getenv("TESTDIR"), "certs/localhost.crt")
-capem = os.path.join(os.getenv("TESTDIR"), "certs/root-ca.crt")
-privatekey = os.path.join(os.getenv("TESTDIR"), "certs/localhost.key")
+certdir = os.environ.get(
+    "HGTEST_CERTDIR", os.path.join(os.environ.get("TESTDIR"), "certs")
+)
+
+cert = os.path.join(certdir, "localhost.crt")
+capem = os.path.join(certdir, "root-ca.crt")
+privatekey = os.path.join(certdir, "localhost.key")
 
 if "hgcli" in hgcmd:
     hgcmd += (
         " --mononoke-path [::1]:"
         + os.getenv("MONONOKE_SOCKET")
-        + (" --cert %s --ca-pem %s --private-key %s --common-name localhost" % (cert, capem, privatekey))
+        + (
+            " --cert %s --ca-pem %s --private-key %s --common-name localhost"
+            % (cert, capem, privatekey)
+        )
     )
 
     mock_username = os.environ.get("MOCK_USERNAME")

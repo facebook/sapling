@@ -1,6 +1,8 @@
 #!/bin/bash
 # Library routines and initial setup for Mononoke-related tests.
 
+TEST_CERTDIR="${HGTEST_CERTDIR:-$TESTDIR/certs}"
+
 function next_repo_id {
     if [[ -e "$TESTTMP/mononoke-config/last_id" ]] ; then
         LAST_ID=$(cat "$TESTTMP/mononoke-config/last_id")
@@ -39,7 +41,7 @@ function random_int() {
 }
 
 function sslcurl {
-  curl --cert "$TESTDIR/certs/localhost.crt" --cacert "$TESTDIR/certs/root-ca.crt" --key "$TESTDIR/certs/localhost.key" "$@"
+  curl --cert "$TEST_CERTDIR/localhost.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/localhost.key" "$@"
 }
 
 function mononoke {
@@ -47,10 +49,10 @@ function mononoke {
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
   PYTHONWARNINGS="ignore:::requests" \
-  "$MONONOKE_SERVER" "$@" --ca-pem "$TESTDIR/certs/root-ca.crt" \
-  --private-key "$TESTDIR/certs/localhost.key" \
-  --cert "$TESTDIR/certs/localhost.crt" \
-  --ssl-ticket-seeds "$TESTDIR/certs/server.pem.seeds" \
+  "$MONONOKE_SERVER" "$@" --ca-pem "$TEST_CERTDIR/root-ca.crt" \
+  --private-key "$TEST_CERTDIR/localhost.key" \
+  --cert "$TEST_CERTDIR/localhost.crt" \
+  --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
   --debug \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
@@ -451,10 +453,10 @@ function setup_no_ssl_apiserver {
 
 function apiserver {
   $MONONOKE_APISERVER "$@" --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --ssl-ca "$TESTDIR/certs/root-ca.crt" \
-    --ssl-private-key "$TESTDIR/certs/localhost.key" \
-    --ssl-certificate "$TESTDIR/certs/localhost.crt" \
-    --ssl-ticket-seeds "$TESTDIR/certs/server.pem.seeds" \
+    --ssl-ca "$TEST_CERTDIR/root-ca.crt" \
+    --ssl-private-key "$TEST_CERTDIR/localhost.key" \
+    --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
+    --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
     --do-not-init-cachelib >> "$TESTTMP/apiserver.out" 2>&1 &
   export APISERVER_PID=$!
   echo "$APISERVER_PID" >> "$DAEMON_PIDS"
@@ -689,9 +691,9 @@ function mkcommit() {
 function pushrebase_replay() {
   DB_INDICES=$1
 
-  REPLAY_CA_PEM="$TESTDIR/certs/root-ca.crt" \
-  THRIFT_TLS_CL_CERT_PATH="$TESTDIR/certs/localhost.crt" \
-  THRIFT_TLS_CL_KEY_PATH="$TESTDIR/certs/localhost.key" $PUSHREBASE_REPLAY \
+  REPLAY_CA_PEM="$TEST_CERTDIR/root-ca.crt" \
+  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
+  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" $PUSHREBASE_REPLAY \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --reponame repo \
     --hgcli "$MONONOKE_HGCLI" \
