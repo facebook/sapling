@@ -137,6 +137,7 @@ from edenscm.mercurial import (
     bundlerepo,
     changegroup,
     commands,
+    encoding,
     error,
     exchange,
     extensions,
@@ -472,7 +473,7 @@ def wraprepo(repo):
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
 
-            start = time.time()
+            start = util.timer()
             with self.ui.timesection("fetchingtrees"):
                 with self.connectionpool.get(fallbackpath) as conn:
                     remote = conn.peer
@@ -1797,9 +1798,8 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start, d
             count += len(reply)
         perftrace.tracevalue("Fetched", count)
         if op.repo.ui.configbool("remotefilelog", "debug"):
-            op.repo.ui.warn(
-                _("%s trees fetched over %0.2fs\n") % (count, time.time() - start)
-            )
+            duration = util.timer() - start
+            op.repo.ui.warn(_("%s trees fetched over %0.2fs\n") % (count, duration))
 
         if missingnodes:
             raise shallowutil.MissingNodesError(
