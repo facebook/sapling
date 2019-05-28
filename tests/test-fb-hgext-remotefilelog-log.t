@@ -1,13 +1,21 @@
   $ . "$TESTDIR/library.sh"
 
   $ newserver master
-  $ cd master
+  $ clone master client1
+  $ cd client1
   $ echo x > x
   $ hg commit -qAm x
   $ mkdir dir
   $ echo y > dir/y
   $ hg commit -qAm y
-
+  $ hg push -r tip --to master --create
+  pushing rev 79c51fb96423 to destination ssh://user@dummy/master bookmark master
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 2 changes to 2 files
+  exporting bookmark master
   $ cd ..
 
 Shallow clone from full
@@ -34,6 +42,8 @@ Log on a file without -f
   $ hg log dir/y
   changeset:   1:79c51fb96423
   tag:         tip
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -43,6 +53,8 @@ Log on a file with -f
   $ hg log -f dir/y
   changeset:   1:79c51fb96423
   tag:         tip
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -51,6 +63,8 @@ Log on a file with kind in path
   $ hg log -r "filelog('path:dir/y')"
   changeset:   1:79c51fb96423
   tag:         tip
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -60,6 +74,8 @@ Log on multiple files with -f
   $ hg log -f dir/y x
   changeset:   1:79c51fb96423
   tag:         tip
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -74,6 +90,8 @@ Log on a directory
   $ hg log dir
   changeset:   1:79c51fb96423
   tag:         tip
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -84,6 +102,8 @@ Log on a file from inside a directory
   $ hg log y
   changeset:   1:79c51fb96423
   tag:         tip
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
