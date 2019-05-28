@@ -15,6 +15,54 @@ newrepo() {
   hg init
 }
 
+newserver() {
+  reponame="$1"
+  newrepo "$reponame"
+  cd "$TESTTMP"
+
+  cat >> "$reponame/.hg/hgrc" <<EOF
+[extensions]
+remotefilelog=
+treemanifest=
+
+[remotefilelog]
+reponame=$reponame
+server=True
+
+[treemanifest]
+server=True
+treeonly=True
+EOF
+}
+
+clone() {
+  servername="$1"
+  clientname="$2"
+  shift 2
+  cd "$TESTTMP"
+  hg clone --shallow "ssh://user@dummy/$servername" "$clientname" "$@" \
+    --config "extensions.remotefilelog=" \
+    --config "extensions.treemanifest=" \
+    --config "remotefilelog.reponame=$servername" \
+    --config "treemanifest.treeonly=True"
+
+  cat >> $clientname/.hg/hgrc <<EOF
+[extensions]
+remotefilelog=
+treemanifest=
+
+[phases]
+publish=False
+
+[remotefilelog]
+reponame=$servername
+
+[treemanifest]
+treeonly=True
+EOF
+
+}
+
 switchrepo() {
     reponame="$1"
     cd $TESTTMP/$reponame

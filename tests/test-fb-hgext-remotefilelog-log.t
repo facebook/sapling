@@ -1,13 +1,7 @@
-  $ setconfig extensions.treemanifest=!
-
   $ . "$TESTDIR/library.sh"
 
-  $ hginit master
+  $ newserver master
   $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > server=True
-  > EOF
   $ echo x > x
   $ hg commit -qAm x
   $ mkdir dir
@@ -18,10 +12,10 @@
 
 Shallow clone from full
 
-  $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
+  $ clone master shallow --noupdate
   streaming all changes
-  2 files to transfer, 473 bytes of data
-  transferred 473 bytes in * seconds (*/sec) (glob)
+  2 files to transfer, 472 bytes of data
+  transferred 472 bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
   $ cd shallow
@@ -35,6 +29,8 @@ Shallow clone from full
   treestate
 
   $ hg update
+  fetching tree '' 479230b8a7bab24c6717f4997ec84092d304b5dd, found via 2e73264fab97
+  2 trees fetched over 0.00s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
