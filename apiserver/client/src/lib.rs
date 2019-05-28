@@ -23,7 +23,7 @@ use apiserver_thrift::types::{
 use srclient::SRChannelBuilder;
 
 pub struct MononokeAPIClient {
-    inner: Arc<MononokeAPIService + Send + Sync + 'static>,
+    inner: Arc<dyn MononokeAPIService + Send + Sync + 'static>,
     repo: String,
 }
 

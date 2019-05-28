@@ -16,9 +16,9 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
-use client::MononokeAPIClient;
+use crate::client::MononokeAPIClient;
 
-fn cat(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+fn cat(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let revision = matches.value_of("revision").expect("must provide revision");
     let path = matches.value_of("path").expect("must provide path");
     let bookmark = matches.is_present("bookmark");
@@ -33,7 +33,7 @@ fn cat(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
         .boxify()
 }
 
-fn get_changeset(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+fn get_changeset(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let revision = matches
         .value_of("revision")
         .expect("must provide changeset");
@@ -59,7 +59,7 @@ fn get_branches(client: MononokeAPIClient) -> BoxFuture<(), ()> {
         .boxify()
 }
 
-fn list_directory(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+fn list_directory(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let revision = matches.value_of("revision").expect("must provide revision");
     let path = matches.value_of("path").expect("must provide path");
 
@@ -75,7 +75,7 @@ fn list_directory(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<
         .boxify()
 }
 
-fn is_ancestor(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+fn is_ancestor(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let ancestor = matches.value_of("ancestor").expect("must provide ancestor");
     let descendant = matches
         .value_of("descendant")
@@ -93,7 +93,7 @@ fn is_ancestor(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(),
         .boxify()
 }
 
-fn get_blob(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+fn get_blob(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let hash = matches
         .value_of("hash")
         .expect("must provide hash of the blob");
@@ -105,7 +105,7 @@ fn get_blob(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()
         .boxify()
 }
 
-fn get_tree(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+fn get_tree(client: MononokeAPIClient, matches: &ArgMatches<'_>) -> BoxFuture<(), ()> {
     let hash = matches
         .value_of("hash")
         .expect("must provide hash of the tree");
