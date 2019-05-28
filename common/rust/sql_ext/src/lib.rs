@@ -9,7 +9,7 @@ extern crate sql;
 
 use std::path::Path;
 
-use failure::prelude::*;
+use crate::failure::prelude::*;
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
 
 pub struct SqlConnections {
