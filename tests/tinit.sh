@@ -17,10 +17,11 @@ newrepo() {
 
 newserver() {
   reponame="$1"
-  newrepo "$reponame"
-  cd "$TESTTMP"
+  mkdir "$TESTTMP/$reponame"
+  cd "$TESTTMP/$reponame"
+  hg init --config extensions.lz4revlog=
 
-  cat >> "$reponame/.hg/hgrc" <<EOF
+  cat >> ".hg/hgrc" <<EOF
 [extensions]
 lz4revlog=
 remotefilelog=

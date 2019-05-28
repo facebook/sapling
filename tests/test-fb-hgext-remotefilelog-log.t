@@ -26,6 +26,7 @@ Shallow clone from full
   dotencode
   fncache
   generaldelta
+  lz4revlog
   remotefilelog
   revlogv1
   store
