@@ -74,8 +74,8 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
     }
 }
 
-/// Assumption: input is complete
-/// We can't use 'integer' defined above as it reads until a non digit character
+// Assumption: input is complete
+// We can't use 'integer' defined above as it reads until a non digit character
 named!(
     boolean<bool>,
     map_res!(take_while1!(is_digit), |s| -> Result<bool> {
@@ -96,24 +96,24 @@ named!(
     )
 );
 
-/// A "*" parameter is a meta-parameter - its argument is a count of
-/// a number of other parameters. (We accept nested/recursive star parameters,
-/// but I don't know if that ever happens in practice.)
+// A "*" parameter is a meta-parameter - its argument is a count of
+// a number of other parameters. (We accept nested/recursive star parameters,
+// but I don't know if that ever happens in practice.)
 named!(
     param_star<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(tag!(b"* ") >> count: integer >> tag!(b"\n") >> res: apply!(params, count) >> (res))
 );
 
-/// List of comma-separated values, each of which is encoded using batch param encoding.
+// List of comma-separated values, each of which is encoded using batch param encoding.
 named!(
     gettreepack_directories<Vec<Bytes>>,
     separated_list_complete!(tag!(","), batch_param_comma_separated)
 );
 
-/// A named parameter is a name followed by a decimal integer of the number of
-/// bytes in the parameter, followed by newline. The parameter value has no terminator.
-/// ident <bytelen>\n
-/// <bytelen bytes>
+// A named parameter is a name followed by a decimal integer of the number of
+// bytes in the parameter, followed by newline. The parameter value has no terminator.
+// ident <bytelen>\n
+// <bytelen bytes>
 named!(
     param_kv<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(
@@ -161,10 +161,10 @@ fn notcomma(b: u8) -> bool {
     b != b','
 }
 
-/// A batch parameter is "name=value", where name ad value are escaped with an ad-hoc
-/// scheme to protect ',', ';', '=', ':'. The value ends either at the end of the input
-/// (which is actually from the "batch" command "cmds" parameter), or at a ',', as they're
-/// comma-delimited.
+// A batch parameter is "name=value", where name ad value are escaped with an ad-hoc
+// scheme to protect ',', ';', '=', ':'. The value ends either at the end of the input
+// (which is actually from the "batch" command "cmds" parameter), or at a ',', as they're
+// comma-delimited.
 named!(
     batch_param_escaped<(Vec<u8>, Vec<u8>)>,
     map_res!(
@@ -173,9 +173,9 @@ named!(
     )
 );
 
-/// Extract parameters from batch - same signature as params
-/// Batch parameters are a comma-delimited list of parameters; count is unused
-/// and there's no notion of star params.
+// Extract parameters from batch - same signature as params
+// Batch parameters are a comma-delimited list of parameters; count is unused
+// and there's no notion of star params.
 named_args!(batch_params(_count: usize)<HashMap<Vec<u8>, Vec<u8>>>,
     map!(
         separated_list_complete!(tag!(","), batch_param_escaped),
@@ -183,55 +183,55 @@ named_args!(batch_params(_count: usize)<HashMap<Vec<u8>, Vec<u8>>>,
     )
 );
 
-/// A nodehash is simply 40 hex digits.
+// A nodehash is simply 40 hex digits.
 named!(
     nodehash<HgChangesetId>,
     map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
 );
 
-/// A manifestid is simply 40 hex digits.
+// A manifestid is simply 40 hex digits.
 named!(
     manifestid<HgManifestId>,
     map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
 );
 
-/// A pair of nodehashes, separated by '-'
+// A pair of nodehashes, separated by '-'
 named!(
     pair<(HgChangesetId, HgChangesetId)>,
     do_parse!(a: nodehash >> tag!("-") >> b: nodehash >> ((a, b)))
 );
 
-/// A space-separated list of pairs.
+// A space-separated list of pairs.
 named!(
     pairlist<Vec<(HgChangesetId, HgChangesetId)>>,
     separated_list_complete!(tag!(" "), pair)
 );
 
-/// A space-separated list of changeset IDs
+// A space-separated list of changeset IDs
 named!(
     hashlist<Vec<HgChangesetId>>,
     separated_list_complete!(tag!(" "), nodehash)
 );
 
-/// A changeset is simply 40 hex digits.
+// A changeset is simply 40 hex digits.
 named!(
     hg_changeset_id<HgChangesetId>,
     map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
 );
 
-/// A space-separated list of hg changesets
+// A space-separated list of hg changesets
 named!(
     hg_changeset_list<Vec<HgChangesetId>>,
     separated_list_complete!(tag!(" "), hg_changeset_id)
 );
 
-/// A space-separated list of manifest IDs
+// A space-separated list of manifest IDs
 named!(
     manifestlist<Vec<HgManifestId>>,
     separated_list_complete!(tag!(" "), manifestid)
 );
 
-/// A space-separated list of strings
+// A space-separated list of strings
 named!(
     stringlist<Vec<String>>,
     separated_list!(
@@ -278,8 +278,8 @@ fn notsemi(b: u8) -> bool {
     b != b';'
 }
 
-/// A command in a batch. Commands are represented as "command parameters". The parameters
-/// end either at the end of the buffer or at ';'.
+// A command in a batch. Commands are represented as "command parameters". The parameters
+// end either at the end of the buffer or at ';'.
 named!(
     cmd<(Vec<u8>, Vec<u8>)>,
     do_parse!(
@@ -289,7 +289,7 @@ named!(
     )
 );
 
-/// A list of batched commands - the list is delimited by ';'.
+// A list of batched commands - the list is delimited by ';'.
 named!(
     cmdlist<Vec<(Vec<u8>, Vec<u8>)>>,
     separated_list!(complete!(tag!(";")), cmd)

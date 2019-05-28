@@ -358,8 +358,6 @@ where
 
 /// Ensure that Bundle2Encode is Send.
 fn _assert_send() {
-    use std::io::Cursor;
-
     fn _assert<T: Send>(_val: &T) {}
 
     let builder = Bundle2EncodeBuilder::new(Cursor::new(Vec::new()));

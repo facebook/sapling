@@ -41,7 +41,7 @@ pub mod Badness {
     pub const BadLZ4: Error = 4;
 }
 
-/// `Revlog` features
+// `Revlog` features
 bitflags! {
     pub struct Features: u16 {
         const INLINE        = 1 << 0;
@@ -49,7 +49,7 @@ bitflags! {
     }
 }
 
-/// Per-revision flags
+// Per-revision flags
 bitflags! {
     pub struct IdxFlags: u16 {
         const EXTSTORED     = 1 << 13;
@@ -91,7 +91,7 @@ impl Entry {
     }
 }
 
-/// Parse the revlog header
+// Parse the revlog header
 named!(pub header<Header>,
     do_parse!(
         features: return_error!(ErrorKind::Custom(Badness::IO), be_u16) >>
@@ -119,7 +119,7 @@ pub fn indexng_size() -> usize {
     6 + 2 + 4 + 4 + 4 + 4 + 4 + 4 + 32
 }
 
-/// Parse an "NG" revlog entry
+// Parse an "NG" revlog entry
 named!(pub indexng<Entry>,
     do_parse!(
         offset: return_error!(ErrorKind::Custom(Badness::IO), be_u48) >>    // XXX if first, then only 2 bytes, implied 0 in top 4
@@ -151,7 +151,7 @@ pub fn index0_size() -> usize {
     4 + 4 + 4 + 4 + 4 + 4 + 4 + 20
 }
 
-/// Parse an original revlog entry
+// Parse an original revlog entry
 named!(pub index0<Entry>,
     do_parse!(
         _header: header >>
@@ -178,7 +178,7 @@ named!(pub index0<Entry>,
     )
 );
 
-/// Parse a single Delta
+// Parse a single Delta
 named!(pub delta<Delta>,
     do_parse!(
         start: be_u32 >>
@@ -194,7 +194,7 @@ named!(pub delta<Delta>,
     )
 );
 
-/// Parse 0 or more deltas
+// Parse 0 or more deltas
 named!(deltas<Vec<Delta>>, many0!(delta));
 
 // A chunk of data data that contains some Deltas; the caller defines the framing bytes
@@ -218,7 +218,7 @@ fn remains(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 named!(remains_owned<Vec<u8>>, map!(remains, |x: &[u8]| x.into()));
 
-/// Parse some literal data, possibly compressed
+// Parse some literal data, possibly compressed
 named!(pub literal<Vec<u8> >,
     alt!(
         do_parse!(peek!(tag!(b"\0")) >> d: remains >> (d.into())) |
