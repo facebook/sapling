@@ -55,6 +55,16 @@ class UserInfo {
   }
 
   /**
+   * Update the home directory path.
+   *
+   * This is primarily intended to be used in unit tests.  In most other
+   * situations we use the home directory detected initially by lookup().
+   */
+  void setHomeDirectory(AbsolutePathPiece path) {
+    homeDirectory_ = path.copy();
+  }
+
+  /**
    * If the program is currently running with an effective user ID of root,
    * drop privileges to the information listed in this UserInfo object.
    *
