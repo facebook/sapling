@@ -3,6 +3,7 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=testrepo
   $ setconfig mutation.record=true mutation.enabled=true
+  $ setconfig extensions.treemanifest=!
   $ setconfig visibility.enabled=true
 
   $ newrepo server

@@ -3,6 +3,10 @@
 
 _repocount=0
 
+if [ -n "$USE_MONONOKE" ] ; then
+  . "$TESTDIR/../../mononoke/tests/integration/library.sh"
+fi
+
 # Create a new repo
 newrepo() {
   reponame="$1"
@@ -16,12 +20,18 @@ newrepo() {
 }
 
 newserver() {
-  reponame="$1"
-  mkdir "$TESTTMP/$reponame"
-  cd "$TESTTMP/$reponame"
-  hg init --config extensions.lz4revlog=
+  local reponame="$1"
+  if [ -n "$USE_MONONOKE" ] ; then
+    setup_mononoke_config
+    setup_mononoke_repo_config "$reponame"
+    mononoke
+    wait_for_mononoke "$TESTTMP/$reponame"
+  else
+    mkdir "$TESTTMP/$reponame"
+    cd "$TESTTMP/$reponame"
+    hg init --config extensions.lz4revlog=
 
-  cat >> ".hg/hgrc" <<EOF
+    cat >> ".hg/hgrc" <<EOF
 [extensions]
 lz4revlog=
 remotefilelog=
@@ -37,6 +47,7 @@ flatcompat=False
 server=True
 treeonly=True
 EOF
+  fi
 }
 
 clone() {
@@ -45,6 +56,9 @@ clone() {
   shift 2
   cd "$TESTTMP"
   remotecmd="hg"
+  if [ -n "$USE_MONONOKE" ] ; then
+    remotecmd="$MONONOKE_HGCLI"
+  fi
   hg clone -q --shallow "ssh://user@dummy/$servername" "$clientname" "$@" \
     --config "extensions.lz4revlog=" \
     --config "extensions.remotefilelog=" \
@@ -78,6 +92,12 @@ treeonly=True
 ssh=$TESTDIR/dummyssh
 EOF
 
+  if [ -n "$USE_MONONOKE" ] ; then
+      cat >> $clientname/.hg/hgrc <<EOF
+[ui]
+remotecmd=$MONONOKE_HGCLI
+EOF
+  fi
 }
 
 switchrepo() {

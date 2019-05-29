@@ -23,10 +23,14 @@ try:
     hgpath = pathutils.get_build_rule_output_path("//scm/hg:hg")
     pythonbinpath = pathutils.get_build_rule_output_path("//scm/hg:hgpython")
     watchman = pathutils.get_build_rule_output_path("//watchman:watchman")
+    mononoke_server = pathutils.get_build_rule_output_path("//scm/mononoke:mononoke")
+    mononoke_hgcli = pathutils.get_build_rule_output_path("//scm/mononoke/hgcli:hgcli")
 except ImportError:
     hgpath = os.environ.get("HGTEST_HG")
     pythonbinpath = os.environ.get("HGTEST_PYTHON", "python2")
     watchman = os.environ.get("HGTEST_WATCHMAN")
+    mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
+    mononoke_hgcli = os.environ.get("HGTEST_MONONOKE_HGCLI")
 
 
 try:
@@ -66,6 +70,12 @@ def prepareargsenv(runtestsdir, port=None):
     env["HGPYTHONPATH"] = pythonpath
     # set other environments useful for buck testing
     env["HGTEST_NORMAL_LAYOUT"] = "0"
+
+    # Variables needed for mononoke integration
+    if os.environ.get("USE_MONONOKE"):
+        env["MONONOKE_SERVER"] = mononoke_server
+        env["MONONOKE_HGCLI"] = mononoke_hgcli
+
     return args, env
 
 

@@ -11,10 +11,10 @@
   $ hg push -r tip --to master --create
   pushing rev 79c51fb96423 to destination ssh://user@dummy/master bookmark master
   searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 2 changesets with 2 changes to 2 files
+  remote: adding changesets (?)
+  remote: adding manifests (?)
+  remote: adding file changes (?)
+  remote: added 2 changesets with 2 changes to 2 files (?)
   exporting bookmark master
   $ cd ..
 
