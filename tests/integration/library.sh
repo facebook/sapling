@@ -285,6 +285,8 @@ function setup_mononoke_repo_config {
   cd "$TESTTMP/mononoke-config" || exit
   local reponame="$1"
   mkdir -p "repos/$reponame"
+  mkdir -p "$TESTTMP/$reponame"
+  mkdir -p "$TESTTMP/$reponame/blobs"
   cat > "repos/$reponame/server.toml" <<CONFIG
 repoid=$(next_repo_id)
 enabled=true

@@ -6,7 +6,6 @@
 
 setup configuration
   $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob:files
-  $ mkdir "$TESTTMP"/repo
   $ create_books_sqlite3_db
   $ write_stub_log_entry create "$ZERO"
   $ write_stub_log_entry update "$ZERO" "$ONE"

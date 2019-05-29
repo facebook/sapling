@@ -2,7 +2,6 @@
 
 setup configuration
   $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob:files
-  $ mkdir "$TESTTMP"/repo
 
 setup stub data
   $ ZERO=0000000000000000000000000000000000000000000000000000000000000000

@@ -13,8 +13,8 @@ setup hg server repo
   $ cd $TESTTMP
 
 setup client repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo --noupdate -q
-  $ cd repo
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-client --noupdate -q
+  $ cd repo-client
   $ setup_hg_client
 
 make a few commits on the server
@@ -43,7 +43,7 @@ start mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 switch to client and enable inifitepush extension
-  $ cd repo
+  $ cd repo-client
   $ setconfig extensions.infinitepush=
 
 match with glob pattern

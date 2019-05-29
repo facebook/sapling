@@ -30,8 +30,8 @@ setup repo
   $ cd $TESTTMP
 
 setup client repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo
-  $ cd repo
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-client
+  $ cd repo-client
   $ setup_hg_client
   $ cat >> .hg/hgrc << EOF
   > [extensions]
@@ -45,7 +45,7 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
-  $ cd repo
+  $ cd repo-client
 
 push new bookmark
   $ hg up G
