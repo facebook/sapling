@@ -31,6 +31,7 @@ using folly::checkUnixError;
 using folly::File;
 using folly::StringPiece;
 using std::string;
+using namespace std::chrono_literals;
 
 namespace facebook {
 namespace eden {
@@ -290,54 +291,71 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
 
 DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
     pid_t childPid) {
-  int status;
-  auto waitedPid = waitpid(childPid, &status, WNOHANG);
-  if (waitedPid == childPid) {
-    if (WIFSIGNALED(status)) {
-      return ParentResult(
-          EX_SOFTWARE,
-          "error: edenfs crashed with signal ",
-          WTERMSIG(status),
-          " before it finished initializing");
-    } else if (WIFEXITED(status)) {
-      int exitCode = WEXITSTATUS(status);
-      if (exitCode == 0) {
-        // We don't ever want to exit successfully in this case, even if
-        // the edenfs daemon somehow did.
-        exitCode = EX_SOFTWARE;
+  constexpr size_t kMaxRetries = 5;
+  constexpr auto kRetrySleep = 100ms;
+
+  size_t numRetries = 0;
+  while (true) {
+    int status;
+    auto waitedPid = waitpid(childPid, &status, WNOHANG);
+    if (waitedPid == childPid) {
+      if (WIFSIGNALED(status)) {
+        return ParentResult(
+            EX_SOFTWARE,
+            "error: edenfs crashed with signal ",
+            WTERMSIG(status),
+            " before it finished initializing");
+      } else if (WIFEXITED(status)) {
+        int exitCode = WEXITSTATUS(status);
+        if (exitCode == 0) {
+          // We don't ever want to exit successfully in this case, even if
+          // the edenfs daemon somehow did.
+          exitCode = EX_SOFTWARE;
+        }
+        return ParentResult(
+            exitCode,
+            "error: edenfs exited with status ",
+            WEXITSTATUS(status),
+            " before it finished initializing");
+      } else {
+        // This is unlikely to occur; it potentially means something attached to
+        // the child with ptrace.
+        return ParentResult(
+            EX_SOFTWARE,
+            "error: edenfs stopped unexpectedly before it "
+            "finished initializing");
       }
-      return ParentResult(
-          exitCode,
-          "error: edenfs exited with status ",
-          WEXITSTATUS(status),
-          " before it finished initializing");
-    } else {
-      // This is unlikely to occur; it potentially means something attached to
-      // the child with ptrace.
+    }
+
+    if (waitedPid == 0) {
+      // The child hasn't actually exited yet.
+      // Some of our tests appear to trigger this when killing the child with
+      // SIGKILL.  We see the pipe closed before the child is waitable.
+      // Sleep briefly and try the wait again, under the assumption that the
+      // child will become waitable soon.
+      if (numRetries < kMaxRetries) {
+        ++numRetries;
+        /* sleep override */ std::this_thread::sleep_for(kRetrySleep);
+        continue;
+      }
+
+      // The child still wasn't waitable after waiting for a while.
+      // This should only happen if there is a bug somehow.
       return ParentResult(
           EX_SOFTWARE,
-          "error: edenfs stopped unexpectedly before it "
-          "finished initializing");
+          "error: edenfs is still running but did not report "
+          "its initialization status");
     }
-  }
 
-  if (waitedPid == 0) {
-    // The child hasn't actually exited yet.
-    // This should only happen if there is a bug somehow.
-    return ParentResult(
-        EX_SOFTWARE,
-        "error: edenfs is still running but did not report "
-        "its initialization status");
+    string msg = "error: edenfs did not report its initialization status";
+    if (waitedPid == -1) {
+      // Something went wrong trying to wait.  Also report that error.
+      msg += folly::to<string>(
+          "\nerror: error checking status of edenfs daemon: ",
+          folly::errnoStr(errno));
+    }
+    return ParentResult(EX_SOFTWARE, msg);
   }
-
-  string msg = "error: edenfs did not report its initialization status";
-  if (waitedPid == -1) {
-    // Something went wrong trying to wait.  Also report that error.
-    msg += folly::to<string>(
-        "\nerror: error checking status of edenfs daemon: ",
-        folly::errnoStr(errno));
-  }
-  return ParentResult(EX_SOFTWARE, msg);
 }
 
 void ForegroundStartupLogger::writeMessageImpl(folly::LogLevel, StringPiece) {}
