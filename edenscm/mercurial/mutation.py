@@ -777,8 +777,6 @@ def convertfromobsmarkers(repo):
 
 def automigrate(repo):
     if recording(repo) and repo.ui.configbool("mutation", "automigrate"):
-        msg = _(
-            "please wait while we migrate obsmarker information to the mutation store\n"
-        )
+        msg = _("checking for new obsmarkers to migrate to the mutation store\n")
         repo.ui.status(msg)
         convertfromobsmarkers(repo)
