@@ -1127,7 +1127,10 @@ fn setup_hook_manager(
 }
 
 fn default_rejection() -> HookExecution {
-    HookExecution::Rejected(HookRejectionInfo::new("desc".into(), "long_desc".into()))
+    HookExecution::Rejected(HookRejectionInfo::new_long(
+        "desc".into(),
+        "long_desc".into(),
+    ))
 }
 
 fn default_changeset_id() -> HgChangesetId {

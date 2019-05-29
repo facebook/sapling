@@ -66,9 +66,13 @@ values:
   `false` if it was not. If this is `true`, then `description` and
   `long_description` must be `nil`.
 * `description` (`string` or `nil`) If the hook was not satisfied, this
-  should provide a short description of the failure.
+  must provide a short description of the failure, used to summarize this failure
+  with other similar failures.
 * `long_description` (`string` or `nil`) If the hook was not satisfied, this
-  should provide a long description of the failure.
+  should provide a long description of the failure with suggestions for how the
+  user should approach fixing this hook failure. Mononoke will use `description` if this
+  is not provided, but this message needs to stand alone (`description` is not
+  automatically added to this message).
 
 Here are some common properties of hooks:
 

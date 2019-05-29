@@ -745,7 +745,9 @@ impl Weight for HookExecution {
 /// Information on why the hook rejected the changeset
 #[derive(Clone, Debug, PartialEq)]
 pub struct HookRejectionInfo {
+    /// A short description for summarizing this failure with similar failures
     pub description: String,
+    /// A full explanation of what went wrong, suitable for presenting to the user (should include guidance for fixing this failure, where possible)
     pub long_description: String,
 }
 
@@ -756,8 +758,17 @@ impl Weight for HookRejectionInfo {
 }
 
 impl HookRejectionInfo {
-    pub fn new(description: String, long_description: String) -> HookRejectionInfo {
-        HookRejectionInfo {
+    pub fn new(description: String) -> Self {
+        Self::new_long(description.clone(), description)
+    }
+
+    pub fn new_opt(description: String, long_description: Option<String>) -> Self {
+        let long_description = long_description.unwrap_or(description.clone());
+        Self::new_long(description, long_description)
+    }
+
+    pub fn new_long(description: String, long_description: String) -> Self {
+        Self {
             description,
             long_description,
         }

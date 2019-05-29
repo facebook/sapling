@@ -352,19 +352,13 @@ impl LuaHook {
             .map(|mut t| {
                 t.get::<bool, _, _>(1)
                     .ok_or(ErrorKind::HookRuntimeError("No hook return".to_string()).into())
-                    .map(|acc| {
+                    .and_then(|acc| {
                         if acc {
-                            HookExecution::Accepted
+                            Ok(HookExecution::Accepted)
                         } else {
-                            let desc = match t.get::<String, _, _>(2) {
-                                Some(desc) => desc,
-                                None => "".into(),
-                            };
-                            let long_desc = match t.get::<String, _, _>(3) {
-                                Some(long_desc) => long_desc,
-                                None => "".into(),
-                            };
-                            HookExecution::Rejected(HookRejectionInfo::new(desc, long_desc))
+                            let desc = t.get::<String, _, _>(2).ok_or(Error::from(ErrorKind::HookRuntimeError("No description".to_string())))?;
+                            let long_desc = t.get::<String, _, _>(3);
+                            Ok(HookExecution::Rejected(HookRejectionInfo::new_opt(desc, long_desc)))
                         }
                     })
             })
@@ -455,7 +449,7 @@ mod test {
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return false\n\
+                 return false, 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1043,6 +1037,24 @@ mod test {
     }
 
     #[test]
+    fn test_cs_hook_no_short_desc() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false\n\
+                 end",
+            );
+            assert_matches!(
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("No description")
+            );
+        });
+    }
+
+    #[test]
     fn test_cs_hook_invalid_short_desc() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
@@ -1172,7 +1184,7 @@ mod test {
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file.contains_string(\"gerbils\")\n\
+                 return ctx.file.contains_string(\"gerbils\"), 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1189,7 +1201,7 @@ mod test {
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file.path_regex_match(\"a[0-9]bcde\")\n\
+                 return ctx.file.path_regex_match(\"a[0-9]bcde\"), 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1206,7 +1218,7 @@ mod test {
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.regex_match(\"a[0-9]bcde\", ctx.file.path)\n\
+                 return ctx.regex_match(\"a[0-9]bcde\", ctx.file.path), 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1327,7 +1339,7 @@ mod test {
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file.is_symlink()\n\
+                 return ctx.file.is_symlink(), 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1378,7 +1390,7 @@ mod test {
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.file.len() == 123\n\
+                 return ctx.file.len() == 123, 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1395,7 +1407,7 @@ mod test {
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return false\n\
+                 return false, 'fail'\n\
                  end",
             );
             assert_matches!(
@@ -1471,6 +1483,24 @@ mod test {
                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("invalid hook return type")
+            );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_no_short_desc() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return false\n\
+                 end",
+            );
+            assert_matches!(
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("No description")
             );
         });
     }

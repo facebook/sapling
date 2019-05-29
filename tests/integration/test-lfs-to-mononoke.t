@@ -138,7 +138,7 @@
   remote:     While resolving Changegroup
   remote:   Root cause:
   remote:     MissingTypedKeyEntry(
-  remote:         "alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7"
+  remote:         "alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7",
   remote:     )
   remote:   Caused by:
   remote:     While uploading File Blobs
@@ -230,7 +230,7 @@
   remote:             While processing entries
   remote:             
   remote:             While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: * (glob)
-  remote:         }
+  remote:         },
   remote:     }
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: * (glob)

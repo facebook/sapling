@@ -387,7 +387,7 @@ fn resolve_pushrebase(
                                 if let HookExecution::Rejected(info) = exec_info {
                                     err_msgs.push(format!(
                                         "{} for {}: {}",
-                                        exec_id.hook_name, exec_id.cs_id, info.description
+                                        exec_id.hook_name, exec_id.cs_id, info.long_description
                                     ));
                                 }
                             }
@@ -395,7 +395,7 @@ fn resolve_pushrebase(
                                 if let HookExecution::Rejected(info) = exec_info {
                                     err_msgs.push(format!(
                                         "{} for {}: {}",
-                                        exec_id.hook_name, exec_id.cs_id, info.description
+                                        exec_id.hook_name, exec_id.cs_id, info.long_description
                                     ));
                                 }
                             }
