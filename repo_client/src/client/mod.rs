@@ -18,8 +18,8 @@ use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, stream::empty, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{
-    select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt,
-    StreamTimeoutError,
+    select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt,
+    StreamExt, StreamTimeoutError,
 };
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
@@ -1247,16 +1247,15 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "{}", ops::GETPACKV1);
         let mut wireproto_logger = self.wireproto_logger(ops::GETPACKV1, None);
 
-        // TODO(stash): make it configurable
-        let getpackv1_buffer_size = 100;
         // We buffer all parameters in memory so that we can log them.
         // That shouldn't be a problem because requests are quite small
         let getpackv1_params = Arc::new(Mutex::new(vec![]));
         let ctx = self.ctx.clone();
         let repo = self.repo.blobrepo().clone();
+
         let validate_hash =
             rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
-
+        let getpackv1_buffer_size = 500;
         // Let's fetch the whole request before responding.
         // That's prevents deadlocks, because hg client doesn't start reading the response
         // before all the arguments were sent.
@@ -1265,34 +1264,54 @@ impl HgCommands for RepoClient {
             .map(|v| stream::iter_ok(v.into_iter()))
             .flatten_stream()
             .map({
-                cloned!(ctx, getpackv1_params);
+                cloned!(ctx, getpackv1_params, repo);
                 move |(path, filenodes)| {
                     {
                         let mut getpackv1_params = getpackv1_params.lock().unwrap();
                         getpackv1_params.push((path.clone(), filenodes.clone()));
                     }
-                    let history = get_unordered_file_history_for_multiple_nodes(
+                    let mut sizes_futs = vec![];
+                    for filenode in filenodes.iter() {
+                        let f = repo.get_file_size(ctx.clone(), *filenode);
+                        sizes_futs.push(f);
+                    }
+
+                    let contents: Vec<_> = filenodes
+                        .iter()
+                        .map(|filenode| {
+                            repo.get_raw_hg_content(ctx.clone(), *filenode, validate_hash)
+                                .map({
+                                    cloned!(filenode);
+                                    move |content| (filenode, content.into_inner())
+                                })
+                        })
+                        .collect();
+
+                    let history_fut = get_unordered_file_history_for_multiple_nodes(
                         ctx.clone(),
                         repo.clone(),
-                        filenodes.clone().into_iter().collect(),
+                        filenodes.into_iter().collect(),
                         &path,
                     )
                     .collect();
 
-                    let mut contents = vec![];
-                    for filenode in filenodes {
-                        // TODO(stash): T41600715 - getpackv1 doesn't seem to support lfs
-                        let fut = repo
-                            .get_raw_hg_content(ctx.clone(), filenode, validate_hash)
-                            .map(move |content| (filenode, content));
-                        contents.push(fut);
-                    }
-                    future::join_all(contents)
-                        .join(history)
+                    let contents_fut = future::join_all(contents.into_iter())
+                        .join(history_fut)
                         .map(move |(contents, history)| (path, contents, history))
+                        .boxify();
+
+                    future::join_all(sizes_futs.into_iter())
+                        .map(move |filenode_sizes| (contents_fut, filenode_sizes.into_iter().sum()))
                 }
             })
-            .buffered(getpackv1_buffer_size)
+            .buffered(getpackv1_buffer_size);
+
+        let params = BufferedParams {
+            weight_limit: 100_000_000,
+            buffer_size: getpackv1_buffer_size,
+        };
+        let s = s
+            .buffered_weight_limited(params)
             .whole_stream_timeout(getfiles_timeout_duration())
             .map_err(process_stream_timeout_error)
             .map({
@@ -1324,7 +1343,7 @@ impl HgCommands for RepoClient {
                         entry_count: contents.len() as u32,
                     });
                     for (filenode, content) in contents {
-                        let content = content.into_inner().to_vec();
+                        let content = content.to_vec();
                         ctx.perf_counters()
                             .set_max_counter("getpackv1_max_file_size", content.len() as i64);
                         res.push(wirepack::Part::Data(wirepack::DataEntry {

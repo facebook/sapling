@@ -130,6 +130,11 @@ pub trait FutureExt: Future + Sized {
 
 impl<T> FutureExt for T where T: Future {}
 
+pub struct BufferedParams {
+    pub weight_limit: u64,
+    pub buffer_size: usize,
+}
+
 pub trait StreamExt: Stream {
     /// Fork elements in a stream out to two sinks, depending on a predicate
     ///
@@ -276,9 +281,85 @@ pub trait StreamExt: Stream {
     {
         BatchStream::new(self, limit)
     }
+
+    // Like `buffered()` call, but can also limit number of futures in a buffer by "weight".
+    fn buffered_weight_limited<I, E, Fut>(
+        self,
+        params: BufferedParams,
+    ) -> WeightLimitedBufferedStream<Self, I, E>
+    where
+        Self: Sized + Send + 'static,
+        Self: Stream<Item = (Fut, u64), Error = E>,
+        Fut: Future<Item = I, Error = E>,
+    {
+        WeightLimitedBufferedStream::new(params, self)
+    }
 }
 
 impl<T> StreamExt for T where T: Stream {}
+
+pub struct WeightLimitedBufferedStream<S, I, E> {
+    queue: stream::FuturesOrdered<BoxFuture<(I, u64), E>>,
+    current_weight: u64,
+    weight_limit: u64,
+    max_buffer_size: usize,
+    stream: stream::Fuse<S>,
+}
+
+impl<S, I, E> WeightLimitedBufferedStream<S, I, E>
+where
+    S: Stream,
+{
+    pub fn new(params: BufferedParams, stream: S) -> Self {
+        Self {
+            queue: stream::FuturesOrdered::new(),
+            current_weight: 0,
+            weight_limit: params.weight_limit,
+            max_buffer_size: params.buffer_size,
+            stream: stream.fuse(),
+        }
+    }
+}
+
+impl<S, Fut, I: 'static, E: 'static> Stream for WeightLimitedBufferedStream<S, I, E>
+where
+    S: Stream<Item = (Fut, u64), Error = E>,
+    Fut: Future<Item = I, Error = E> + Send + 'static,
+{
+    type Item = I;
+    type Error = E;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, E> {
+        // First up, try to spawn off as many futures as possible by filling up
+        // our slab of futures.
+        while self.queue.len() < self.max_buffer_size && self.current_weight < self.weight_limit {
+            let future = match self.stream.poll()? {
+                Async::Ready(Some((s, weight))) => {
+                    self.current_weight += weight;
+                    s.map(move |val| (val, weight)).boxify()
+                }
+                Async::Ready(None) | Async::NotReady => break,
+            };
+
+            self.queue.push(future);
+        }
+
+        // Try polling a new future
+        if let Some((val, weight)) = try_ready!(self.queue.poll()) {
+            self.current_weight -= weight;
+            return Ok(Async::Ready(Some(val)));
+        }
+
+        // If we've gotten this far, then there are no events for us to process
+        // and nothing was ready, so figure out if we're not done yet  or if
+        // we've reached the end.
+        if self.stream.is_done() {
+            Ok(Async::Ready(None))
+        } else {
+            Ok(Async::NotReady)
+        }
+    }
+}
 
 pub trait StreamLayeredExt: Stream<Item = Bytes> {
     fn decode<Dec>(self, decoder: Dec) -> decode::LayeredDecode<Self, Dec>
@@ -999,5 +1080,61 @@ mod test {
         };
 
         assert!(count.load(Ordering::Relaxed) < 5);
+    }
+
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    #[test]
+    fn test_buffered() {
+        fn create_stream() -> (Arc<AtomicUsize>, BoxStream<(BoxFuture<(), ()>, u64), ()>) {
+            let s: BoxStream<(BoxFuture<(), ()>, u64), ()> = stream::iter_ok(vec![
+                (future::ok(()).boxify(), 100),
+                (future::ok(()).boxify(), 2),
+            ])
+            .boxify();
+
+            let counter = Arc::new(AtomicUsize::new(0));
+
+            (
+                counter.clone(),
+                s.inspect({
+                    move |_val| {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                })
+                .boxify(),
+            )
+        }
+
+        let mut runtime = tokio::runtime::Builder::new().build().unwrap();
+
+        let (counter, s) = create_stream();
+        let params = BufferedParams {
+            weight_limit: 10,
+            buffer_size: 10,
+        };
+        let s = s.buffered_weight_limited(params);
+        if let Ok((Some(()), s)) = runtime.block_on(s.into_future()) {
+            assert_eq!(counter.load(Ordering::SeqCst), 1);
+            assert_eq!(runtime.block_on(s.collect()).unwrap().len(), 1);
+            assert_eq!(counter.load(Ordering::SeqCst), 2);
+        } else {
+            panic!("failed to block on a stream");
+        }
+
+        let (counter, s) = create_stream();
+        let params = BufferedParams {
+            weight_limit: 200,
+            buffer_size: 10,
+        };
+        let s = s.buffered_weight_limited(params);
+        if let Ok((Some(()), s)) = runtime.block_on(s.into_future()) {
+            assert_eq!(counter.load(Ordering::SeqCst), 2);
+            assert_eq!(runtime.block_on(s.collect()).unwrap().len(), 1);
+            assert_eq!(counter.load(Ordering::SeqCst), 2);
+        } else {
+            panic!("failed to block on a stream");
+        }
     }
 }
