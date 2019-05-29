@@ -22,6 +22,7 @@ use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use maplit::{hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
+use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
     BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, HookConfig, HookParams,
     HookType, MetadataDBConfig, RepoConfig, RepoReadOnly, StorageConfig,
@@ -500,20 +501,21 @@ fn test_changeset_hook_context() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
         let files = vec![
-            "dir1/subdir1/subsubdir1/file_1".to_string(),
-            "dir1/subdir1/subsubdir2/file_1".to_string(),
-            "dir1/subdir1/subsubdir2/file_2".to_string(),
+            ("dir1/subdir1/subsubdir1/file_1".to_string(), ONES_FNID),
+            ("dir1/subdir1/subsubdir2/file_1".to_string(), TWOS_FNID),
+            ("dir1/subdir1/subsubdir2/file_2".to_string(), THREES_FNID),
         ];
         let content_store = Arc::new(InMemoryFileContentStore::new());
         let cs_id = default_changeset_id();
         let hook_files = files
             .iter()
-            .map(|path| {
+            .map(|(path, entry_id)| {
                 HookFile::new(
                     path.clone(),
                     content_store.clone(),
                     cs_id,
                     ChangedFileType::Added,
+                    Some((*entry_id, FileType::Regular)),
                 )
             })
             .collect();
@@ -1147,6 +1149,11 @@ fn hook_manager_blobrepo() -> HookManager {
     )
 }
 
+fn to_mpath(string: &str) -> MPath {
+    // Please... avert your eyes
+    MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
+}
+
 fn hook_manager_inmem() -> HookManager {
     let ctx = CoreContext::test_mock();
     let repo = many_files_dirs::getrepo(None);
@@ -1157,20 +1164,46 @@ fn hook_manager_inmem() -> HookManager {
         .wait()
         .unwrap();
     let mut changeset_store = InMemoryChangesetStore::new();
-    changeset_store.insert(cs_id, &cs);
+    changeset_store.insert_changeset(cs_id, cs);
+    let files = vec![
+        (
+            "dir1/subdir1/subsubdir1/file_1".to_string(),
+            ChangedFileType::Added,
+            Some((ONES_FNID, FileType::Symlink)),
+        ),
+        (
+            "dir1/subdir1/subsubdir2/file_1".to_string(),
+            ChangedFileType::Added,
+            Some((TWOS_FNID, FileType::Regular)),
+        ),
+        (
+            "dir1/subdir1/subsubdir2/file_2".to_string(),
+            ChangedFileType::Added,
+            Some((THREES_FNID, FileType::Regular)),
+        ),
+    ];
+    changeset_store.insert_files(cs_id, files);
+
     let mut content_store = InMemoryFileContentStore::new();
     content_store.insert(
-        (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir1/file_1")),
-        (FileType::Symlink, "elephants".into()),
+        cs_id.clone(),
+        to_mpath("dir1/subdir1/subsubdir1/file_1"),
+        ONES_FNID,
+        "elephants".into(),
     );
     content_store.insert(
-        (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_1")),
-        (FileType::Regular, "hippopatami".into()),
+        cs_id.clone(),
+        to_mpath("dir1/subdir1/subsubdir2/file_1"),
+        TWOS_FNID,
+        "hippopatami".into(),
     );
     content_store.insert(
-        (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_2")),
-        (FileType::Regular, "eels".into()),
+        cs_id,
+        to_mpath("dir1/subdir1/subsubdir2/file_2"),
+        THREES_FNID,
+        "eels".into(),
     );
+
     let logger = Logger::root(Discard {}.ignore_res(), o!());
     HookManager::new(
         ctx,
@@ -1179,11 +1212,6 @@ fn hook_manager_inmem() -> HookManager {
         Default::default(),
         logger,
     )
-}
-
-fn to_mpath(string: &str) -> MPath {
-    // Please... avert your eyes
-    MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
 }
 
 fn default_repo_config() -> RepoConfig {

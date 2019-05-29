@@ -16,9 +16,9 @@ use failure_ext::Error;
 use futures::{finished, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{ChangedFileType, ChangesetStore, FileContentStore};
-use mercurial_types::manifest_utils;
+use mercurial_types::manifest_utils::{self, EntryStatus};
 use mercurial_types::{
-    manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId, MPath,
+    manifest::get_empty_manifest, Changeset, HgChangesetId, HgFileNodeId, MPath, Type,
 };
 use mononoke_types::{FileContents, FileType};
 
@@ -66,32 +66,19 @@ impl FileContentStore for BlobRepoFileContentStore {
             .boxify()
     }
 
-    fn get_file_type(
+    fn get_file_content_by_id(
         &self,
         ctx: CoreContext,
-        changesetid: HgChangesetId,
-        path: MPath,
-    ) -> BoxFuture<Option<FileType>, Error> {
-        find_file_in_repo(ctx.clone(), self.repo.clone(), changesetid, path)
-            .map(move |opt| opt.map(|(file_type, _)| file_type))
+        hash: HgFileNodeId,
+    ) -> BoxFuture<Bytes, Error> {
+        self.repo
+            .get_file_content(ctx, hash)
+            .map(|FileContents::Bytes(bytes)| bytes)
             .boxify()
     }
 
-    fn get_file_size(
-        &self,
-        ctx: CoreContext,
-        changesetid: HgChangesetId,
-        path: MPath,
-    ) -> BoxFuture<Option<u64>, Error> {
-        find_file_in_repo(ctx.clone(), self.repo.clone(), changesetid, path)
-            .and_then({
-                cloned!(self.repo);
-                move |opt| match opt {
-                    Some((_, hash)) => repo.get_file_size(ctx, hash).map(Some).left_future(),
-                    None => finished(None).right_future(),
-                }
-            })
-            .boxify()
+    fn get_file_size(&self, ctx: CoreContext, hash: HgFileNodeId) -> BoxFuture<u64, Error> {
+        self.repo.get_file_size(ctx, hash).boxify()
     }
 }
 
@@ -114,7 +101,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error> {
+    ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
         cloned!(self.repo);
         self.repo
             .get_changeset_by_changesetid(ctx.clone(), changesetid)
@@ -145,8 +132,30 @@ impl ChangesetStore for BlobRepoChangesetStore {
                         let path = changed_entry
                             .get_full_path()
                             .expect("File should have a path");
-                        let ty = ChangedFileType::from(changed_entry.status);
-                        (String::from_utf8_lossy(&path.to_vec()).into_owned(), ty)
+                        let entry = match &changed_entry.status {
+                            EntryStatus::Added(entry) => Some(entry),
+                            EntryStatus::Deleted(_entry) => None,
+                            EntryStatus::Modified { to_entry, .. } => Some(to_entry),
+                        };
+
+                        let hash_and_type = entry.map(|entry| {
+                            let file_type = match entry.get_type() {
+                                Type::File(file_type) => file_type,
+                                Type::Tree => {
+                                    panic!("unexpected tree returned");
+                                }
+                            };
+
+                            let filenode = HgFileNodeId::new(entry.get_hash().into_nodehash());
+                            (filenode, file_type)
+                        });
+
+                        let change_ty = ChangedFileType::from(changed_entry.status);
+                        (
+                            String::from_utf8_lossy(&path.to_vec()).into_owned(),
+                            change_ty,
+                            hash_and_type,
+                        )
                     })
                     .collect()
             })

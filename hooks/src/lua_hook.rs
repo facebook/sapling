@@ -444,14 +444,9 @@ mod test {
     use bytes::Bytes;
     use failure_ext::err_downcast;
     use futures::Future;
-    use mercurial_types::HgChangesetId;
+    use mercurial_types::{HgChangesetId, MPath};
     use std::str::FromStr;
     use std::sync::Arc;
-
-    fn to_mpath(string: &str) -> MPath {
-        // Please... avert your eyes
-        MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
-    }
 
     #[test]
     fn test_cs_hook_simple_rejected() {
@@ -467,6 +462,25 @@ mod test {
                 run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Rejected(_))
             );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_simple_fails_on_deleted_read() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 for _, file in ipairs(ctx.files) do\n\
+                 if file.path == \"deleted\" then\n\
+                 file:file_content()\n\
+                 end\n\
+                 end\n\
+                 return true\n\
+                 end",
+            );
+            assert!(run_changeset_hook(ctx.clone(), code, changeset).is_err());
         });
     }
 
@@ -1667,37 +1681,57 @@ end"#;
         hook.run(ctx, context).wait()
     }
 
+    use mercurial_types::HgFileNodeId;
+    use mercurial_types_mocks::nodehash::{
+        FIVES_FNID, FOURS_FNID, ONES_FNID, THREES_FNID, TWOS_FNID,
+    };
+
     fn default_changeset() -> HookChangeset {
-        let added = vec!["file1".into(), "file2".into(), "file3".into()];
-        let deleted = vec!["deleted".into()];
-        let modified = vec!["modified".into()];
+        let added = vec![
+            ("file1".into(), ONES_FNID),
+            ("file2".into(), TWOS_FNID),
+            ("file3".into(), THREES_FNID),
+        ];
+        let deleted = vec![("deleted".into(), FOURS_FNID)];
+        let modified = vec![("modified".into(), FIVES_FNID)];
         create_hook_changeset(added, deleted, modified)
     }
 
+    fn to_mpath(string: &str) -> MPath {
+        // Please... avert your eyes
+        MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
+    }
+
     fn create_hook_changeset(
-        added: Vec<String>,
-        deleted: Vec<String>,
-        modified: Vec<String>,
+        added: Vec<(String, HgFileNodeId)>,
+        deleted: Vec<(String, HgFileNodeId)>,
+        modified: Vec<(String, HgFileNodeId)>,
     ) -> HookChangeset {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        for path in added.iter().chain(modified.iter()) {
+        for (path, entry_id) in added.iter().chain(modified.iter()) {
             let content = path.clone() + "sausages";
             let content_bytes: Bytes = content.into();
-            content_store.insert(
-                (cs_id.clone(), to_mpath(&path)),
-                (FileType::Regular, content_bytes.into()),
-            );
+            content_store.insert(cs_id, to_mpath(path), *entry_id, content_bytes.into());
         }
         let content_store = Arc::new(content_store);
         let content_store2 = content_store.clone();
 
-        let create_hook_files = move |files: Vec<String>, ty: ChangedFileType| -> Vec<HookFile> {
-            files
-                .into_iter()
-                .map(|path| HookFile::new(path.clone(), content_store.clone(), cs_id, ty.clone()))
-                .collect()
-        };
+        let create_hook_files =
+            move |files: Vec<(String, HgFileNodeId)>, ty: ChangedFileType| -> Vec<HookFile> {
+                files
+                    .into_iter()
+                    .map(|(path, hash)| {
+                        HookFile::new(
+                            path.clone(),
+                            content_store.clone(),
+                            cs_id,
+                            ty.clone(),
+                            Some((hash, FileType::Regular)),
+                        )
+                    })
+                    .collect()
+            };
 
         let mut hook_files = vec![];
         hook_files.extend(create_hook_files(added, ChangedFileType::Added));
@@ -1718,30 +1752,28 @@ end"#;
     fn default_hook_symlink_file() -> HookFile {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        content_store.insert(
-            (cs_id.clone(), to_mpath("/a/b/c.txt")),
-            (FileType::Symlink, "sausages".into()),
-        );
+        let path = "/a/b/c.txt";
+        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, "sausages".into());
         HookFile::new(
-            "/a/b/c.txt".into(),
+            path.into(),
             Arc::new(content_store),
             cs_id,
             ChangedFileType::Added,
+            Some((ONES_FNID, FileType::Symlink)),
         )
     }
 
     fn default_hook_added_file() -> HookFile {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        content_store.insert(
-            (cs_id.clone(), to_mpath("/a/b/c.txt")),
-            (FileType::Regular, "sausages".into()),
-        );
+        let path = "/a/b/c.txt";
+        content_store.insert(cs_id.clone(), to_mpath(path), ONES_FNID, "sausages".into());
         HookFile::new(
-            "/a/b/c.txt".into(),
+            path.into(),
             Arc::new(content_store),
             cs_id,
             ChangedFileType::Added,
+            Some((ONES_FNID, FileType::Regular)),
         )
     }
 
@@ -1753,6 +1785,7 @@ end"#;
             Arc::new(content_store),
             cs_id,
             ChangedFileType::Deleted,
+            None,
         )
     }
 

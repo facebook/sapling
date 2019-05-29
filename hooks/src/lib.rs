@@ -29,9 +29,11 @@ use cloned::cloned;
 use context::CoreContext;
 pub use errors::*;
 use failure_ext::{err_msg, Error, FutureFailureErrorExt};
-use futures::{failed, finished, Future, IntoFuture};
+use futures::{finished, future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use mercurial_types::{manifest_utils::EntryStatus, Changeset, HgChangesetId, HgParents, MPath};
+use mercurial_types::{
+    manifest_utils::EntryStatus, Changeset, HgChangesetId, HgFileNodeId, HgParents, MPath,
+};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::FileType;
 use regex::Regex;
@@ -451,8 +453,14 @@ impl HookManager {
                 let author = str::from_utf8(changeset.user())?.into();
                 let files = changed_files
                     .into_iter()
-                    .map(|(path, ty)| {
-                        HookFile::new(path, content_store.clone(), changeset_id.clone(), ty)
+                    .map(|(path, ty, hash_and_type)| {
+                        HookFile::new(
+                            path,
+                            content_store.clone(),
+                            changeset_id.clone(),
+                            ty,
+                            hash_and_type,
+                        )
                     })
                     .collect();
                 let comments = str::from_utf8(changeset.comments())?.into();
@@ -581,6 +589,7 @@ pub struct HookFile {
     content_store: Arc<FileContentStore>,
     changeset_id: HgChangesetId,
     ty: ChangedFileType,
+    hash_and_type: Option<(HgFileNodeId, FileType)>,
 }
 
 impl fmt::Debug for HookFile {
@@ -620,12 +629,14 @@ impl HookFile {
         content_store: Arc<FileContentStore>,
         changeset_id: HgChangesetId,
         ty: ChangedFileType,
+        hash_and_type: Option<(HgFileNodeId, FileType)>,
     ) -> HookFile {
         HookFile {
             path,
             content_store,
             changeset_id,
             ty,
+            hash_and_type,
         }
     }
 
@@ -641,34 +652,35 @@ impl HookFile {
 
     pub fn len(&self, ctx: CoreContext) -> BoxFuture<u64, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
-        cloned!(self.changeset_id);
-        self.content_store
-            .get_file_size(ctx, changeset_id, path.clone())
-            .and_then(move |opt| {
-                opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
-            })
-            .boxify()
+        match self.hash_and_type {
+            Some((entry_id, _)) => self.content_store.get_file_size(ctx, entry_id).boxify(),
+            None => {
+                future::err(ErrorKind::MissingFile(self.changeset_id, path.into()).into()).boxify()
+            }
+        }
     }
 
     pub fn file_content(&self, ctx: CoreContext) -> BoxFuture<Bytes, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
-        cloned!(self.changeset_id);
-        self.content_store
-            .get_file_content(ctx, changeset_id, path.clone())
-            .and_then(move |opt| {
-                opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
-            })
-            .boxify()
+        match self.hash_and_type {
+            Some((entry_id, _)) => self
+                .content_store
+                .get_file_content_by_id(ctx, entry_id)
+                .boxify(),
+            None => {
+                future::err(ErrorKind::MissingFile(self.changeset_id, path.into()).into()).boxify()
+            }
+        }
     }
 
-    pub fn file_type(&self, ctx: CoreContext) -> BoxFuture<FileType, Error> {
+    pub fn file_type(&self, _ctx: CoreContext) -> BoxFuture<FileType, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
         cloned!(self.changeset_id);
-        self.content_store
-            .get_file_type(ctx, changeset_id, path.clone())
-            .and_then(move |opt| {
-                opt.ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
-            })
+
+        self.hash_and_type
+            .ok_or(ErrorKind::MissingFile(changeset_id, path.into()).into())
+            .into_future()
+            .map(|(_, file_type)| file_type)
             .boxify()
     }
 
@@ -763,11 +775,13 @@ pub trait ChangesetStore: Send + Sync {
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error>;
+    ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error>;
 }
 
 pub struct InMemoryChangesetStore {
-    map: HashMap<HgChangesetId, HgBlobChangeset>,
+    map_files:
+        HashMap<HgChangesetId, Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>>,
+    map_cs: HashMap<HgChangesetId, HgBlobChangeset>,
 }
 
 impl ChangesetStore for InMemoryChangesetStore {
@@ -776,9 +790,9 @@ impl ChangesetStore for InMemoryChangesetStore {
         _ctx: CoreContext,
         changesetid: HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
-        match self.map.get(&changesetid) {
-            Some(cs) => Box::new(finished(cs.clone())),
-            None => Box::new(failed(
+        match self.map_cs.get(&changesetid) {
+            Some(cs) => Box::new(future::ok(cs.clone())),
+            None => Box::new(future::err(
                 ErrorKind::NoSuchChangeset(changesetid.to_string()).into(),
             )),
         }
@@ -788,16 +802,10 @@ impl ChangesetStore for InMemoryChangesetStore {
         &self,
         _ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error> {
-        match self.map.get(&changesetid) {
-            Some(cs) => Box::new(finished(
-                cs.files()
-                    .into_iter()
-                    .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
-                    .map(|path| (path, ChangedFileType::Added))
-                    .collect(),
-            )),
-            None => Box::new(failed(
+    ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
+        match self.map_files.get(&changesetid) {
+            Some(files) => future::ok(files.clone()).boxify(),
+            None => Box::new(future::err(
                 ErrorKind::NoSuchChangeset(changesetid.to_string()).into(),
             )),
         }
@@ -807,12 +815,21 @@ impl ChangesetStore for InMemoryChangesetStore {
 impl InMemoryChangesetStore {
     pub fn new() -> InMemoryChangesetStore {
         InMemoryChangesetStore {
-            map: HashMap::new(),
+            map_cs: HashMap::new(),
+            map_files: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, changeset_id: HgChangesetId, changeset: &HgBlobChangeset) {
-        self.map.insert(changeset_id.clone(), changeset.clone());
+    pub fn insert_files(
+        &mut self,
+        changeset_id: HgChangesetId,
+        files: Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>,
+    ) {
+        self.map_files.insert(changeset_id.clone(), files);
+    }
+
+    pub fn insert_changeset(&mut self, changeset_id: HgChangesetId, cs: HgBlobChangeset) {
+        self.map_cs.insert(changeset_id.clone(), cs);
     }
 }
 
@@ -824,76 +841,65 @@ pub trait FileContentStore: Send + Sync {
         path: MPath,
     ) -> BoxFuture<Option<Bytes>, Error>;
 
-    fn get_file_type(
+    fn get_file_content_by_id(
         &self,
         ctx: CoreContext,
-        changesetid: HgChangesetId,
-        path: MPath,
-    ) -> BoxFuture<Option<FileType>, Error>;
+        entry_id: HgFileNodeId,
+    ) -> BoxFuture<Bytes, Error>;
 
-    fn get_file_size(
-        &self,
-        ctx: CoreContext,
-        changesetid: HgChangesetId,
-        path: MPath,
-    ) -> BoxFuture<Option<u64>, Error>;
+    fn get_file_size(&self, ctx: CoreContext, entry_id: HgFileNodeId) -> BoxFuture<u64, Error>;
 }
 
 #[derive(Clone)]
 pub struct InMemoryFileContentStore {
-    map: HashMap<(HgChangesetId, MPath), (FileType, Bytes)>,
+    entry_id_to_bytes: HashMap<HgFileNodeId, Bytes>,
+    path_to_bytes: HashMap<(HgChangesetId, MPath), Bytes>,
 }
 
 impl FileContentStore for InMemoryFileContentStore {
     fn get_file_content(
         &self,
         _ctx: CoreContext,
-        changesetid: HgChangesetId,
+        cs_id: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<Bytes>, Error> {
-        let opt = self
-            .map
-            .get(&(changesetid, path.clone()))
-            .map(|(_, bytes)| bytes.clone());
-        finished(opt).boxify()
+        future::ok(self.path_to_bytes.get(&(cs_id, path)).cloned()).boxify()
     }
 
-    fn get_file_type(
+    fn get_file_content_by_id(
         &self,
         _ctx: CoreContext,
-        changesetid: HgChangesetId,
-        path: MPath,
-    ) -> BoxFuture<Option<FileType>, Error> {
-        let opt = self
-            .map
-            .get(&(changesetid, path.clone()))
-            .map(|(file_type, _)| file_type.clone());
-        finished(opt).boxify()
+        hash: HgFileNodeId,
+    ) -> BoxFuture<Bytes, Error> {
+        self.entry_id_to_bytes
+            .get(&hash)
+            .map(|bytes| bytes.clone())
+            .ok_or(err_msg("file not found"))
+            .into_future()
+            .boxify()
     }
 
-    fn get_file_size(
-        &self,
-        _ctx: CoreContext,
-        changesetid: HgChangesetId,
-        path: MPath,
-    ) -> BoxFuture<Option<u64>, Error> {
-        let opt = self
-            .map
-            .get(&(changesetid, path.clone()))
-            .map(|(_, bytes)| bytes.len() as u64);
-        finished(opt).boxify()
+    fn get_file_size(&self, _ctx: CoreContext, hash: HgFileNodeId) -> BoxFuture<u64, Error> {
+        self.entry_id_to_bytes
+            .get(&hash)
+            .map(|bytes| bytes.len() as u64)
+            .ok_or(err_msg("file not found"))
+            .into_future()
+            .boxify()
     }
 }
 
 impl InMemoryFileContentStore {
     pub fn new() -> InMemoryFileContentStore {
         InMemoryFileContentStore {
-            map: HashMap::new(),
+            entry_id_to_bytes: HashMap::new(),
+            path_to_bytes: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, key: (HgChangesetId, MPath), content: (FileType, Bytes)) {
-        self.map.insert(key, content);
+    pub fn insert(&mut self, cs_id: HgChangesetId, path: MPath, key: HgFileNodeId, content: Bytes) {
+        self.entry_id_to_bytes.insert(key, content.clone());
+        self.path_to_bytes.insert((cs_id, path), content);
     }
 }
 
