@@ -125,7 +125,7 @@ Add OWNERS file, then delete it. Make sure deletion is not allowed
   remote:     no_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nno_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed"
+  remote:         msg: "hooks failed:\nno_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -159,7 +159,7 @@ Add OWNERS2 file. This time bypass it with pushvars
   remote:     no_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nno_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed"
+  remote:         msg: "hooks failed:\nno_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -185,7 +185,7 @@ Send large file
   remote:     file_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nfile_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large"
+  remote:         msg: "hooks failed:\nfile_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -215,7 +215,7 @@ Send large file inside a directory
   remote:     file_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "hooks failed:\nfile_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large"
+  remote:         msg: "hooks failed:\nfile_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

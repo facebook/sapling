@@ -74,7 +74,7 @@ filenode won't be send at all
   remote:             While processing entries
   remote:             
   remote:             While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
-  remote:         }
+  remote:         },
   remote:     }
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)

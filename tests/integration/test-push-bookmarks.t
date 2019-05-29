@@ -84,7 +84,7 @@ Try non fastforward moves (backwards and across branches)
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move"
+  remote:         msg: "Non fastforward bookmark move",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks
@@ -101,7 +101,7 @@ Try non fastforward moves (backwards and across branches)
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move"
+  remote:         msg: "Non fastforward bookmark move",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks
@@ -133,7 +133,7 @@ Try non fastfoward moves on regex bookmark
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "Non fastforward bookmark move"
+  remote:         msg: "Non fastforward bookmark move",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks
@@ -153,7 +153,7 @@ Try to delete master
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "Deletion of bookmark master_bookmark is forbidden."
+  remote:         msg: "Deletion of bookmark master_bookmark is forbidden.",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks

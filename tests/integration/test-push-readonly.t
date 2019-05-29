@@ -81,7 +81,7 @@ create new commit in repo2 and check that push fails
   remote:     Repo is marked as read-only: Set by config option
   remote:   Root cause:
   remote:     RepoReadOnly(
-  remote:         "Set by config option"
+  remote:         "Set by config option",
   remote:     )
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

@@ -91,7 +91,7 @@ Push rebase fails with conflict in the bottom of the stack
   remote: * pushrebase failed * (glob)
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])",
   remote:     }
   abort: * (glob)
   [255]
@@ -110,7 +110,7 @@ Push rebase fails with conflict in the top of the stack
   remote: * pushrebase failed * (glob)
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
+  remote:         msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])",
   remote:     }
   abort: * (glob)
   [255]
@@ -254,7 +254,7 @@ Push-Rebase over merge is not allowed
   remote:     pushrebase failed RebaseOverMerge
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "pushrebase failed RebaseOverMerge"
+  remote:         msg: "pushrebase failed RebaseOverMerge",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

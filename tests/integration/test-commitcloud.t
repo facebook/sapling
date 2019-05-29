@@ -281,7 +281,7 @@ Make one of the commits public when it shouldn't be.
   remote:             While waiting for parents to complete
   remote:             
   remote:             While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
-  remote:         }
+  remote:         },
   remote:     }
   remote:   Caused by:
   remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]

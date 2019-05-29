@@ -101,9 +101,9 @@ because everything has been already downloaded.
   remote:     ManifestMissing(
   remote:         HgManifestId(
   remote:             HgNodeHash(
-  remote:                 Sha1(1111111111111111111111111111111111111111)
-  remote:             )
-  remote:         )
+  remote:                 Sha1(1111111111111111111111111111111111111111),
+  remote:             ),
+  remote:         ),
   remote:     )
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

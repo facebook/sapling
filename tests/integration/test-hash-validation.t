@@ -67,18 +67,18 @@ Prefetch should fail with corruption error
   remote:   Root cause:
   remote:     DataCorruption {
   remote:         path: FilePath(
-  remote:             MPath("A")
+  remote:             MPath("A"),
   remote:         ),
   remote:         expected: HgFileNodeId(
   remote:             HgNodeHash(
-  remote:                 Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3)
-  remote:             )
+  remote:                 Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3),
+  remote:             ),
   remote:         ),
   remote:         actual: HgFileNodeId(
   remote:             HgNodeHash(
-  remote:                 Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)
-  remote:             )
-  remote:         )
+  remote:                 Sha1(005d992c5dcf32993668f7cede29d296c494a5d9),
+  remote:             ),
+  remote:         ),
   remote:     }
   abort: error downloading file contents:
   'connection closed early for filename A and node 005d992c5dcf32993668f7cede29d296c494a5d9'
@@ -93,14 +93,14 @@ Same for getpackv1
   remote:     CorruptHgFileNode {
   remote:         expected: HgFileNodeId(
   remote:             HgNodeHash(
-  remote:                 Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)
-  remote:             )
+  remote:                 Sha1(005d992c5dcf32993668f7cede29d296c494a5d9),
+  remote:             ),
   remote:         ),
   remote:         actual: HgFileNodeId(
   remote:             HgNodeHash(
-  remote:                 Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3)
-  remote:             )
-  remote:         )
+  remote:                 Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3),
+  remote:             ),
+  remote:         ),
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 2)
   [255]

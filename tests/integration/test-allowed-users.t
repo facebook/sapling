@@ -60,7 +60,7 @@ push new bookmark
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"D\" }`"
+  remote:         msg: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"D\" }`",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks
@@ -86,7 +86,7 @@ push updates existing bookmark
   remote:     bundle2_resolver error
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`"
+  remote:         msg: "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`",
   remote:     }
   remote:   Caused by:
   remote:     While updating Bookmarks
@@ -117,7 +117,7 @@ pushrebase
   remote:     [pushrebase] This user `Some("a")` is not allowed to move `BookmarkName { bookmark: "C" }`
   remote:   Root cause:
   remote:     ErrorMessage {
-  remote:         msg: "[pushrebase] This user `Some(\"a\")` is not allowed to move `BookmarkName { bookmark: \"C\" }`"
+  remote:         msg: "[pushrebase] This user `Some(\"a\")` is not allowed to move `BookmarkName { bookmark: \"C\" }`",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
