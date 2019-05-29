@@ -64,7 +64,7 @@ WRITE_STUB_LOG_ENTRY_TARGET = (
     help="keep temporary directory after running tests",
 )
 @click.option(
-    "--test-selectors", default=None, help="select specific tests to run"
+    "--simple-test-selector", default=None, help="select an individual test to run"
 )
 @click.argument("tests", nargs=-1, type=click.Path())
 @click.pass_context
@@ -76,7 +76,7 @@ def run(
     output,
     verbose,
     debug,
-    test_selectors,
+    simple_test_selector,
     keep_tmpdir,
 ):
     testdir = parutil.get_dir_path(TESTDIR_PATH)
@@ -101,13 +101,13 @@ def run(
     if keep_tmpdir:
         args.append("--keep-tmpdir")
     args.extend(["-j", "%d" % multiprocessing.cpu_count()])
-    if test_selectors is not None:
-        suite, test = test_selectors.split("#", 1)
+    if simple_test_selector is not None:
+        suite, test = simple_test_selector.split(",", 1)
         if suite != "run-tests":
             raise click.BadParameter(
                 'suite should always be "run-tests"',
                 ctx,
-                param_hint="test_selectors",
+                param_hint="simple_test_selector",
             )
         args.append(test)
     if tests:
@@ -162,13 +162,12 @@ def run(
             p.communicate("")
             ret = p.returncode
 
-        if dry_run:
-            # The output must go to stdout. Set simple_test_selector to make
-            # execution runs simpler.
-            with open(xunit_output, "rb") as f:
-                xunit_xml = ET.parse(f)
-            xunit_xml.getroot().set("runner_capabilities", "simple_test_selector")
-            xunit_xml.write(sys.stdout.buffer, xml_declaration=True)
+        # Expose the simple_test_selector capability to TestPilot.
+        with open(xunit_output, "rb") as f:
+            xunit_xml = ET.parse(f)
+        xunit_xml.getroot().set("runner_capabilities", "simple_test_selector")
+        with open(xunit_output, "wb") as f:
+            xunit_xml.write(f, xml_declaration=True)
 
         ctx.exit(ret)
     finally:
