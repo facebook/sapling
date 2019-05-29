@@ -853,3 +853,21 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   |/
   o  0: df4f53cec30a public 'base'
   
+Sync in client 4.  Some of the omitted heads in this client have been removed
+from the cloud workspace, but the sync should still work.
+
+  $ cd ../client4
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  pulling 2ace67ee4791
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 3 files (+1 heads)
+  f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
+  transaction abort!
+  rollback completed
+  abort: unknown revision 'd133b886da6874fe25998d26ae1b2b8528b07c59'!
+  [255]
