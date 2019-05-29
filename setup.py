@@ -1150,7 +1150,7 @@ class buildembedded(Command):
 
     def _zip_pyc_files(self, zipname, dirtozip):
         """Create a zip archive of all the .pyc files"""
-        with zipfile.ZipFile(zipname, "w") as z:
+        with zipfile.ZipFile(zipname, "a") as z:
             for dirpath, dirnames, filenames in os.walk(dirtozip):
                 for filename in filenames:
                     fullfname = pjoin(dirpath, filename)
@@ -1207,7 +1207,13 @@ class buildembedded(Command):
         self._process_hg_source(tozip)
         self._process_hg_exts(libdir)
         self._process_py_exts(libdir)
-        self._zip_pyc_files(pjoin(libdir, "library.zip"), tozip)
+
+        # Use the IPython.zip as a start and add new things to it.
+        buildpyzip(self.distribution).run()
+        oldzippath = pjoin(builddir, "IPython.zip")
+        zippath = pjoin(libdir, "library.zip")
+        copy_to(oldzippath, zippath)
+        self._zip_pyc_files(zippath, tozip)
         rmtree(tozip)
         # On Windows, Python shared library has to live at the same level
         # as the main project binary, since this is the location which
@@ -1299,10 +1305,7 @@ class buildpyzip(Command):
         depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.pyassets]
 
         # Perform a mtime check so we can skip building if possible
-        if self.inplace:
-            zippath = pjoin(scriptdir, "edenscm/mercurial/thirdparty/IPython.zip")
-        else:
-            zippath = pjoin(builddir, "IPython.zip")
+        zippath = pjoin(builddir, "IPython.zip")
         if os.path.exists(zippath):
             depmtime = max(os.stat(d).st_mtime for d in depdirs)
             zipmtime = os.stat(zippath).st_mtime
