@@ -22,6 +22,7 @@
 #include <wangle/ssl/SSLContextConfig.h>
 
 #include "eden/fs/store/mononoke/CurlHttpClient.h"
+#include "eden/fs/utils/ServiceAddress.h"
 
 using namespace facebook::eden;
 using folly::test::TemporaryDirectory;
@@ -264,7 +265,7 @@ class CurlTest : public ::testing::Test {
         certs_->path() / kClientCACertName);
 
     const auto address = server_->getAddresses()[0].address;
-    address_ = folly::SocketAddress("::1", address.getPort());
+    address_ = std::make_shared<ServiceAddress>("::1", address.getPort());
   }
 
   static void TearDownTestCase() {
@@ -274,12 +275,12 @@ class CurlTest : public ::testing::Test {
 
   static std::unique_ptr<TemporaryDirectory> certs_;
   static std::unique_ptr<ScopedHTTPServer> server_;
-  static folly::SocketAddress address_;
+  static std::shared_ptr<ServiceAddress> address_;
 };
 
 std::unique_ptr<TemporaryDirectory> CurlTest::certs_ = nullptr;
 std::unique_ptr<ScopedHTTPServer> CurlTest::server_ = nullptr;
-folly::SocketAddress CurlTest::address_;
+std::shared_ptr<ServiceAddress> CurlTest::address_ = nullptr;
 
 TEST_F(CurlTest, Success) {
   auto client = CurlHttpClient(

@@ -12,6 +12,7 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/logging/xlog.h>
 #include <folly/synchronization/CallOnce.h>
+#include "eden/fs/utils/ServiceAddress.h"
 
 using folly::call_once;
 using folly::once_flag;
@@ -30,25 +31,41 @@ write_callback(char* contents, size_t size, size_t nmemb, void* out) {
 } // namespace
 
 CurlHttpClient::CurlHttpClient(
-    folly::SocketAddress address,
+    std::shared_ptr<ServiceAddress> service,
     AbsolutePath certificate,
     std::chrono::milliseconds timeout)
-    : address_(std::move(address)),
+    : service_(std::move(service)),
       certificate_(std::move(certificate)),
       timeout_(timeout) {
   handle_ = buildRequest();
 }
 
+std::string CurlHttpClient::buildAddress(folly::StringPiece path) {
+  if (!address_) {
+    auto address = service_->getSocketAddressBlocking();
+    if (!address) {
+      throw std::runtime_error(
+          "failed to resolve Mononoke API Service address");
+    }
+
+    address_.emplace(std::move(address->first));
+
+    XLOG(DBG5) << "CurlHttpClient is using " << *address_;
+  }
+
+  return folly::to<std::string>(
+      "https://", address_->getHostStr(), ":", address_->getPort(), path);
+}
+
 /// Makes an HTTP GET request to the given path.
-std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
+std::unique_ptr<folly::IOBuf> CurlHttpClient::get(folly::StringPiece path) {
   auto buffer = folly::IOBufQueue{};
 
   if (curl_easy_setopt(handle_.get(), CURLOPT_WRITEDATA, &buffer) != CURLE_OK) {
     throw std::runtime_error("curl failed to set CURLOPT_WRITEDATA");
   }
 
-  auto url = folly::to<std::string>(
-      "https://", address_.getHostStr(), ":", address_.getPort(), path);
+  auto url = buildAddress(path);
 
   if (curl_easy_setopt(handle_.get(), CURLOPT_URL, url.c_str()) != CURLE_OK) {
     throw std::runtime_error(
@@ -57,6 +74,8 @@ std::unique_ptr<folly::IOBuf> CurlHttpClient::get(const std::string& path) {
 
   auto ret = curl_easy_perform(handle_.get());
   if (ret != CURLE_OK) {
+    address_.reset();
+
     throw std::runtime_error(folly::to<std::string>(
         "curl error: while fetching ",
         path,

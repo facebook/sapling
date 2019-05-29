@@ -50,7 +50,7 @@ CurlHttpClient& getCurlHttpClient() {
 class MononokeCurlThreadFactory : public folly::ThreadFactory {
  public:
   MononokeCurlThreadFactory(
-      std::unique_ptr<ServiceAddress> service,
+      std::shared_ptr<ServiceAddress> service,
       AbsolutePath certificate,
       std::chrono::milliseconds timeout)
       : delegate_("CurlClient"),
@@ -60,26 +60,15 @@ class MononokeCurlThreadFactory : public folly::ThreadFactory {
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
-      try {
-        auto address = service_->getSocketAddressBlocking();
-        if (address) {
-          threadCurlClient.reset(
-              new CurlHttpClient(address->first, certificate_, timeout_));
-          func();
-        } else {
-          XLOG(WARN) << "failed to resolve address for Mononoke API Server";
-        }
-      } catch (const std::exception& ex) {
-        XLOG(WARN)
-            << "failed to resolve address for Mononoke API Server, reason: "
-            << ex.what();
-      }
+      threadCurlClient.reset(
+          new CurlHttpClient(service_, certificate_, timeout_));
+      func();
     });
   }
 
  private:
   folly::NamedThreadFactory delegate_;
-  std::unique_ptr<ServiceAddress> service_;
+  std::shared_ptr<ServiceAddress> service_;
   AbsolutePath certificate_;
   const std::chrono::milliseconds timeout_;
 }; // namespace

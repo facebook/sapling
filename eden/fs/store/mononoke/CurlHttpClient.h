@@ -10,15 +10,20 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <memory>
+#include <optional>
+#include <string>
 
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
+
+class ServiceAddress;
 
 struct CurlshDeleter {
   void operator()(CURL* p) const {
@@ -35,17 +40,19 @@ struct CurlDeleter {
 class CurlHttpClient {
  public:
   CurlHttpClient(
-      folly::SocketAddress address,
+      std::shared_ptr<ServiceAddress> service,
       AbsolutePath certificate,
       std::chrono::milliseconds timeout);
 
-  std::unique_ptr<folly::IOBuf> get(const std::string& path);
+  std::unique_ptr<folly::IOBuf> get(folly::StringPiece path);
 
  private:
   void initGlobal();
   std::unique_ptr<CURL, CurlDeleter> buildRequest();
+  std::string buildAddress(folly::StringPiece path);
 
-  folly::SocketAddress address_;
+  std::shared_ptr<ServiceAddress> service_;
+  std::optional<folly::SocketAddress> address_;
   AbsolutePath certificate_;
 
   // cURL timeout for the request (see CURLOPT_TIMEOUT_MS for detail)
