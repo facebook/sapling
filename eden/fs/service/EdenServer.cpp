@@ -1055,6 +1055,7 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
   server_->setMinCompressBytes(FLAGS_thrift_min_compress_bytes);
+  server_->enableRocketServer(false);
 
   handler_ = make_shared<EdenServiceHandler>(this);
   server_->setInterface(handler_);
