@@ -8,6 +8,7 @@
   $ newrepo server
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
+  $ setconfig treemanifest.server=True
   $ touch base
   $ hg commit -Aqm base
   $ hg phase -p .
