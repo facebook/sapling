@@ -64,7 +64,7 @@ WRITE_STUB_LOG_ENTRY_TARGET = (
     help="keep temporary directory after running tests",
 )
 @click.option(
-    "--simple-test-selector", default=None, help="select an individual test to run"
+    "--test-selectors", default=None, help="select specific tests to run"
 )
 @click.argument("tests", nargs=-1, type=click.Path())
 @click.pass_context
@@ -76,7 +76,7 @@ def run(
     output,
     verbose,
     debug,
-    simple_test_selector,
+    test_selectors,
     keep_tmpdir,
 ):
     testdir = parutil.get_dir_path(TESTDIR_PATH)
@@ -101,13 +101,13 @@ def run(
     if keep_tmpdir:
         args.append("--keep-tmpdir")
     args.extend(["-j", "%d" % multiprocessing.cpu_count()])
-    if simple_test_selector is not None:
-        suite, test = simple_test_selector.split(",", 1)
+    if test_selectors is not None:
+        suite, test = test_selectors.split("#", 1)
         if suite != "run-tests":
             raise click.BadParameter(
                 'suite should always be "run-tests"',
                 ctx,
-                param_hint="simple_test_selector",
+                param_hint="test_selectors",
             )
         args.append(test)
     if tests:
