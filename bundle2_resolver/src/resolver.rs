@@ -629,6 +629,10 @@ impl Bundle2Resolver {
         let repo = resolver.repo.clone();
         let bookmark_attrs = resolver.bookmark_attrs.clone();
 
+        if bookmark_pushes.is_empty() {
+            return ok(()).left_future();
+        }
+
         let bookmarks_push_fut = bookmark_pushes
             .into_iter()
             .map(move |bp| {
@@ -648,26 +652,28 @@ impl Bundle2Resolver {
             })
             .collect::<Vec<_>>();
 
-        future::join_all(bookmarks_push_fut).and_then({
-            cloned!(resolver);
-            move |bonsai_bookmark_pushes| {
-                let mut txn = resolver
-                    .repo
-                    .update_bookmark_transaction(resolver.ctx.clone());
-                for bp in bonsai_bookmark_pushes {
-                    try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp, reason.clone(),));
+        future::join_all(bookmarks_push_fut)
+            .and_then({
+                cloned!(resolver);
+                move |bonsai_bookmark_pushes| {
+                    let mut txn = resolver
+                        .repo
+                        .update_bookmark_transaction(resolver.ctx.clone());
+                    for bp in bonsai_bookmark_pushes {
+                        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp, reason.clone(),));
+                    }
+                    txn.commit()
+                        .and_then(|ok| {
+                            if ok {
+                                Ok(())
+                            } else {
+                                Err(format_err!("Bookmark transaction failed"))
+                            }
+                        })
+                        .boxify()
                 }
-                txn.commit()
-                    .and_then(|ok| {
-                        if ok {
-                            Ok(())
-                        } else {
-                            Err(format_err!("Bookmark transaction failed"))
-                        }
-                    })
-                    .boxify()
-            }
-        })
+            })
+            .right_future()
     }
 
     /// Peek at the next `bundle2` item and check if it is a `Pushkey` part
