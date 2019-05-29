@@ -257,7 +257,9 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         cloudheadsset = set(cloudheads)
         if localheadsset != cloudheadsset:
             oldvisibleheads = [
-                head for head in lastsyncstate.heads if head not in omittedheads
+                head
+                for head in lastsyncstate.heads
+                if head not in lastsyncstate.omittedheads
             ]
             newvisibleheads = util.removeduplicates(
                 oldvisibleheads + cloudheads + localheads
@@ -331,7 +333,11 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         cloudhiddenonly = list(
             unfi.set(
                 "(draft() & ::%ls) - (draft() & ::%ls) - hidden() - obsolete()",
-                [head for head in lastsyncstate.heads if head not in omittedheads],
+                [
+                    head
+                    for head in lastsyncstate.heads
+                    if head not in lastsyncstate.omittedheads
+                ],
                 [head for head in cloudrefs.heads if head not in omittedheads],
             )
         )

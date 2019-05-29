@@ -867,7 +867,7 @@ from the cloud workspace, but the sync should still work.
   adding file changes
   added 1 changesets with 0 changes to 3 files (+1 heads)
   f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
-  transaction abort!
-  rollback completed
-  abort: unknown revision 'd133b886da6874fe25998d26ae1b2b8528b07c59'!
-  [255]
+  obsoleted 1 changesets
+  new changesets 2ace67ee4791
+  commitcloud: commits synchronized
+  finished in 0.00 sec
