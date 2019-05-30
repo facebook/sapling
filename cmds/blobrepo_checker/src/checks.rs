@@ -4,18 +4,19 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use crate::errors::ErrorKind;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use crate::errors::ErrorKind;
 use failure_ext::Error;
-use futures::{future, stream, Future, Sink, Stream, sync::mpsc};
+use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
 use futures_ext::{spawn_future, FutureExt};
 use mercurial_types::HgChangesetId;
-use mononoke_types::{ChangesetId, ContentId, FileChange, MPath, blob::BlobstoreValue};
+use mononoke_types::{blob::BlobstoreValue, ChangesetId, ContentId, FileChange, MPath};
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 
 fn check_bonsai_cs(
@@ -27,7 +28,8 @@ fn check_bonsai_cs(
     file_queue: mpsc::Sender<FileInformation>,
 ) -> impl Future<Item = (), Error = Error> {
     let changeset = repo.get_bonsai_changeset(ctx.clone(), cs_id);
-    let repo_parents = repo.get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+    let repo_parents = repo
+        .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
         .and_then(move |parents| {
             // Add parents to the check queue ASAP - we'll validate them later
             stream::iter_ok(parents.clone())
@@ -52,7 +54,8 @@ fn check_bonsai_cs(
             };
 
             // Queue check on Mercurial equivalent
-            let hg_cs = repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
                 .and_then(move |hg_cs| {
                     repo.get_bonsai_from_hg(ctx, hg_cs)
                         .and_then(move |new_id| {
@@ -72,7 +75,8 @@ fn check_bonsai_cs(
                 .and_then(|hg_cs| hg_cs_queue.send(hg_cs).map(|_| ()).from_err());
 
             // Queue checks on files
-            let file_changes: Vec<_> = bcs.file_changes()
+            let file_changes: Vec<_> = bcs
+                .file_changes()
                 .filter_map(|(mpath, opt_change)| {
                     FileInformation::maybe_from_change(cs_id, mpath, opt_change)
                 })
@@ -96,50 +100,6 @@ fn check_bonsai_cs(
     })
 }
 
-fn bonsai_checker_task(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    cs_queue: mpsc::Sender<ChangesetId>,
-    hg_cs_queue: mpsc::Sender<HgChangesetId>,
-    file_queue: mpsc::Sender<FileInformation>,
-    input: mpsc::Receiver<ChangesetId>,
-    error: mpsc::Sender<Error>,
-) -> impl Future<Item = (), Error = ()> {
-    let already_seen = Arc::new(Mutex::new(HashSet::new()));
-
-    input
-        .map({
-            cloned!(already_seen, ctx, repo, cs_queue, error);
-            move |cs| {
-                {
-                    let mut already_seen = already_seen.lock().expect("lock poisoned");
-                    if already_seen.contains(&cs) {
-                        return future::ok(()).left_future();
-                    }
-
-                    already_seen.insert(cs);
-                }
-
-                spawn_future(
-                    check_bonsai_cs(
-                        cs,
-                        ctx.clone(),
-                        repo.clone(),
-                        cs_queue.clone(),
-                        hg_cs_queue.clone(),
-                        file_queue.clone(),
-                    ).or_else({
-                        cloned!(error);
-                        move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
-                    }),
-                ).map_err(|e| panic!("Could not queue error: {:#?}", e))
-                    .right_future()
-            }
-        })
-        .buffer_unordered(1000)
-        .for_each(|id| future::ok(id))
-}
-
 #[derive(Clone, Debug)]
 pub struct FileInformation {
     cs_id: ChangesetId,
@@ -160,6 +120,21 @@ impl FileInformation {
             id: change.content_id(),
             size: change.size(),
         })
+    }
+}
+
+// Cheating for Eq and Hash - just compare cs_id
+impl Eq for FileInformation {}
+
+impl PartialEq for FileInformation {
+    fn eq(&self, other: &Self) -> bool {
+        self.cs_id == other.cs_id
+    }
+}
+
+impl Hash for FileInformation {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.cs_id.hash(state)
     }
 }
 
@@ -198,7 +173,8 @@ fn check_one_file(
         }
     });
 
-    let sha256_check = repo.get_file_sha256(ctx.clone(), file_info.id)
+    let sha256_check = repo
+        .get_file_sha256(ctx.clone(), file_info.id)
         .and_then(move |sha256| {
             repo.get_file_content_id_by_alias(ctx, sha256)
                 .map(move |id| (sha256, id))
@@ -214,38 +190,6 @@ fn check_one_file(
     sha256_check.join(file_checks).map(|_| ())
 }
 
-fn content_checker_task(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    input: mpsc::Receiver<FileInformation>,
-    error: mpsc::Sender<Error>,
-) -> impl Future<Item = (), Error = ()> {
-    let already_seen = Arc::new(Mutex::new(HashSet::new()));
-
-    input
-        .map({
-            cloned!(already_seen, ctx, repo, error);
-            move |file| {
-                {
-                    let mut already_seen = already_seen.lock().expect("lock poisoned");
-                    if already_seen.contains(&file.id) {
-                        return future::ok(()).left_future();
-                    }
-
-                    already_seen.insert(file.id);
-                }
-
-                spawn_future(check_one_file(file, ctx.clone(), repo.clone()).or_else({
-                    cloned!(error);
-                    move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
-                })).map_err(|e| panic!("Could not queue error: {:#?}", e))
-                    .right_future()
-            }
-        })
-        .buffer_unordered(1000)
-        .for_each(|id| Ok(id))
-}
-
 fn check_hg_cs(
     cs: HgChangesetId,
     ctx: CoreContext,
@@ -253,7 +197,8 @@ fn check_hg_cs(
     cs_queue: mpsc::Sender<ChangesetId>,
 ) -> impl Future<Item = (), Error = Error> {
     // Fetch the changeset and check its hash
-    let changeset = repo.get_changeset_by_changesetid(ctx.clone(), cs)
+    let changeset = repo
+        .get_changeset_by_changesetid(ctx.clone(), cs)
         .and_then(move |changeset| {
             if changeset.get_changeset_id() == cs {
                 future::ok(changeset)
@@ -305,7 +250,8 @@ fn check_hg_cs(
             // Queue the Bonsai of this CS for rechecking, too. Also a 1:1 mapping, but will
             // break if the mapping is bad and this CS is found via (e.g.) a linknode
             // The skipping of already checked CSes will avoid an infinite loop
-            let queue_bonsai = repo.get_bonsai_from_hg(ctx, cs)
+            let queue_bonsai = repo
+                .get_bonsai_from_hg(ctx, cs)
                 .and_then(move |opt_cs| {
                     if let Some(cs_id) = opt_cs {
                         future::ok(cs_id)
@@ -318,39 +264,41 @@ fn check_hg_cs(
         })
 }
 
-fn hg_changeset_checker_task(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    cs_queue: mpsc::Sender<ChangesetId>,
-    input: mpsc::Receiver<HgChangesetId>,
+fn checker_task<InHash, Spawner, F>(
+    mut spawner: Spawner,
+    input: mpsc::Receiver<InHash>,
     error: mpsc::Sender<Error>,
-) -> impl Future<Item = (), Error = ()> {
+    queue_length: usize,
+) -> impl Future<Item = (), Error = ()>
+where
+    InHash: Hash + Eq + Clone,
+    Spawner: FnMut(InHash) -> F,
+    F: Future<Item = (), Error = Error> + Send + 'static,
+{
     let already_seen = Arc::new(Mutex::new(HashSet::new()));
 
     input
         .map({
-            cloned!(already_seen, ctx, repo, cs_queue, error);
+            cloned!(already_seen, error);
             move |cs| {
                 {
                     let mut already_seen = already_seen.lock().expect("lock poisoned");
-                    if already_seen.contains(&cs) {
+                    if !already_seen.insert(cs.clone()) {
+                        // Don't retry a known-good item
                         return future::ok(()).left_future();
                     }
-
-                    already_seen.insert(cs);
                 }
 
-                spawn_future(
-                    check_hg_cs(cs, ctx.clone(), repo.clone(), cs_queue.clone()).or_else({
-                        cloned!(error);
-                        move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
-                    }),
-                ).map_err(|e| panic!("Could not queue error: {:#?}", e))
-                    .right_future()
+                spawn_future(spawner(cs).or_else({
+                    cloned!(error);
+                    move |err| error.send(err).map(|_| ()).map_err(|e| e.into_inner())
+                }))
+                .map_err(|e| panic!("Could not queue error: {:#?}", e))
+                .right_future()
             }
         })
-        .buffer_unordered(1000)
-        .for_each(|id| future::ok(id))
+        .buffer_unordered(queue_length)
+        .for_each(|id| Ok(id))
 }
 
 pub struct Checker {
@@ -395,29 +343,57 @@ impl Checker {
     }
 
     pub fn spawn_tasks(self, ctx: CoreContext, repo: BlobRepo, error_sender: mpsc::Sender<Error>) {
-        tokio::spawn(bonsai_checker_task(
-            ctx.clone(),
-            repo.clone(),
-            self.bonsai_to_check_sender.clone(),
-            self.hg_changeset_to_check_sender.clone(),
-            self.content_to_check_sender,
+        tokio::spawn(checker_task(
+            {
+                let (bcs, hgcs, ccs) = (
+                    self.bonsai_to_check_sender.clone(),
+                    self.hg_changeset_to_check_sender.clone(),
+                    self.content_to_check_sender.clone(),
+                );
+                {
+                    cloned!(ctx, repo);
+                    move |hash| {
+                        check_bonsai_cs(
+                            hash,
+                            ctx.clone(),
+                            repo.clone(),
+                            bcs.clone(),
+                            hgcs.clone(),
+                            ccs.clone(),
+                        )
+                    }
+                }
+            },
             self.bonsai_to_check_receiver,
             error_sender.clone(),
+            1000,
         ));
 
-        tokio::spawn(content_checker_task(
-            ctx.clone(),
-            repo.clone(),
+        tokio::spawn(checker_task(
+            {
+                cloned!(ctx, repo);
+                move |hash| check_one_file(hash, ctx.clone(), repo.clone())
+            },
             self.content_to_check_receiver,
             error_sender.clone(),
+            10000,
         ));
 
-        tokio::spawn(hg_changeset_checker_task(
-            ctx,
-            repo,
-            self.bonsai_to_check_sender,
+        tokio::spawn(checker_task(
+            {
+                cloned!(ctx, repo, self.bonsai_to_check_sender);
+                move |hash| {
+                    check_hg_cs(
+                        hash,
+                        ctx.clone(),
+                        repo.clone(),
+                        bonsai_to_check_sender.clone(),
+                    )
+                }
+            },
             self.hg_changeset_to_check_receiver,
             error_sender,
+            1000,
         ));
     }
 }
