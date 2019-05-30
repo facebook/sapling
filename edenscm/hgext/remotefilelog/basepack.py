@@ -570,6 +570,8 @@ class mutablebasepack(versionmixin):
 
     def abort(self):
         # Unclean exit
+        self.packfp.close()
+        self.idxfp.close()
         self._cleantemppacks()
 
     def writeraw(self, data):
