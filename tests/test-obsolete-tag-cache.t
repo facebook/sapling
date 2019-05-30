@@ -68,11 +68,11 @@ Hiding a non-tip changeset should change filtered hash and cause tags recompute
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
 
   $ hg blackbox -l 5
-  1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> 2/2 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> writing .hg/cache/tags2-visible with 2 tags
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> blackbox -l 5
+  1970/01/01 00:00:00 bob @(unknown) (5000)> blackbox -l 5
 
 Hiding another changeset should cause the filtered hash to change
 
@@ -90,11 +90,11 @@ Hiding another changeset should cause the filtered hash to change
   042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
 
   $ hg blackbox -l 5
-  1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> 1/1 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> blackbox -l 5
+  1970/01/01 00:00:00 bob @(unknown) (5000)> blackbox -l 5
 
 Resolving tags on an unfiltered repo writes a separate tags cache
 
@@ -111,8 +111,8 @@ Resolving tags on an unfiltered repo writes a separate tags cache
   d75775ffbc6bca1794d300f5571272879bd280da test2
 
   $ hg blackbox -l 5
-  1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> --hidden tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> --hidden tags
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> 2/2 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> writing .hg/cache/tags2 with 3 tags
   1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> --hidden tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @2942a772f72a444bef4bef13874d515f50fa27b6 (5000)> blackbox -l 5
+  1970/01/01 00:00:00 bob @(unknown) (5000)> blackbox -l 5

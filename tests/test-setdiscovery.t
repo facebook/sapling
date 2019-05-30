@@ -570,8 +570,8 @@ fixed in 86c35b7ae300:
   101 102 103 104 105 106 107 108 109 110  (no-eol)
   $ hg -R r1 --config extensions.blackbox= blackbox
   * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> serve --cmdserver chgunix * (glob) (chg !)
-  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> -R r1 outgoing r2 *-T{rev} * --config *extensions.blackbox=* (glob)
+  1970/01/01 00:00:00 test @(unknown) (42)> -R r1 outgoing r2 '-T{rev} ' --config 'extensions.blackbox='
   * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> found 101 common and 1 unknown server heads, 2 roundtrips in *.????s (glob)
-  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> -R r1 outgoing r2 *-T{rev} * --config *extensions.blackbox=* exited 0 after *.?? seconds (glob)
-  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> -R r1 --config *extensions.blackbox=* blackbox (glob)
+  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> -R r1 outgoing r2 *-T{rev} * --config *extensions.blackbox=* (glob)
+  1970/01/01 00:00:00 test @(unknown) (42)> -R r1 --config 'extensions.blackbox=' blackbox
   $ cd ..

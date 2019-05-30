@@ -1517,10 +1517,17 @@ else:
 if safehasattr(time, "perf_counter"):
     timer = time.perf_counter
 
+
 if "TESTTMP" in encoding.environ:
     # Stabilize test output
     def timer():
         return 0
+
+    def getpid():
+        return 42
+
+    def getuser():
+        return "test"
 
 
 def fstat(fp):

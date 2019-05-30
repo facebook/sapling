@@ -182,7 +182,9 @@ def wrapui(ui):
                     formattedmsg = " ".join(msg)
             rev = "(unknown)"
             changed = ""
-            if repo:
+            # Only log the current commit if the changelog has already been
+            # loaded.
+            if repo and "changelog" in repo.__dict__:
                 try:
                     ctx = repo[None]
                     parents = ctx.parents()

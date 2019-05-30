@@ -132,12 +132,12 @@ Stripping from a transaction
 
 #if no-chg normal-layout
   $ hg blackbox -l 7
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
+  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated
+  1970/01/01 00:00:00 bob @(unknown) (5000)> devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
+  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated exited 0 after 0.00 seconds
+  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated --traceback
+  1970/01/01 00:00:00 bob @(unknown) (5000)> devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
    */hg:* in <module> (glob) (?)
    */mercurial/entrypoint.py:* in * (glob) (?)
@@ -154,8 +154,8 @@ Stripping from a transaction
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 7
+  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated --traceback exited 0 after 0.00 seconds
+  1970/01/01 00:00:00 bob @(unknown) (5000)> blackbox -l 7
 #endif
 
 #if chg normal-layout
