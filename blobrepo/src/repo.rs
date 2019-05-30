@@ -724,6 +724,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
+        max: u64,
     ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
         let stream = self.bookmarks.list_all_by_prefix(
@@ -731,6 +732,7 @@ impl BlobRepo {
             prefix,
             self.repoid,
             Freshness::MaybeStale,
+            max,
         );
         to_hg_bookmark_stream(&self, &ctx, stream)
     }

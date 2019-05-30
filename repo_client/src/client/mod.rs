@@ -907,13 +907,14 @@ impl HgCommands for RepoClient {
             .clone();
 
         let queries = patterns.into_iter().map({
+            let max = self.repo.list_keys_patterns_max();
             let repo = self.repo.blobrepo();
             cloned!(self.ctx);
             move |pattern| {
                 if pattern.ends_with("*") {
                     // prefix match
                     let prefix = try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
-                    repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix)
+                    repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix, max)
                         .map(|(bookmark, cs_id): (Bookmark, HgChangesetId)| {
                             (bookmark.into_name().to_string(), cs_id)
                         })

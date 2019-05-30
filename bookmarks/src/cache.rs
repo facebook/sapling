@@ -248,11 +248,12 @@ impl Bookmarks for CachedBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
+        max: u64,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         // We don't cache queries that hit all bookmarks.
         return self
             .bookmarks
-            .list_all_by_prefix(ctx, prefix, repo_id, freshness);
+            .list_all_by_prefix(ctx, prefix, repo_id, freshness, max);
     }
 
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction> {
@@ -523,6 +524,7 @@ mod tests {
             _prefix: &BookmarkPrefix,
             _repo_id: RepositoryId,
             freshness: Freshness,
+            _max: u64,
         ) -> BoxStream<(Bookmark, ChangesetId), Error> {
             self.list_impl(freshness, Request::All)
         }
@@ -929,7 +931,7 @@ mod tests {
 
         fn filter_all(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
             fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
-                bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness)
+                bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, std::u64::MAX)
             }
 
             let have = mock_then_query(&bookmarks, query, freshness, Request::All);

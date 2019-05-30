@@ -1243,6 +1243,7 @@ fn default_repo_config() -> RepoConfig {
         skiplist_index_blobstore_key: None,
         bundle2_replay_params: Bundle2ReplayParams::default(),
         infinitepush: None,
+        list_keys_patterns_max: 123,
     }
 }
 

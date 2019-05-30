@@ -37,6 +37,7 @@ pub struct MononokeRepo {
     readonly_fetcher: RepoReadWriteFetcher,
     bookmark_attrs: BookmarkAttrs,
     infinitepush: Option<InfinitepushParams>,
+    list_keys_patterns_max: u64,
 }
 
 impl MononokeRepo {
@@ -51,6 +52,7 @@ impl MononokeRepo {
         reponame: String,
         readonly_fetcher: RepoReadWriteFetcher,
         infinitepush: Option<InfinitepushParams>,
+        list_keys_patterns_max: u64,
     ) -> Self {
         MononokeRepo {
             blobrepo,
@@ -62,6 +64,7 @@ impl MononokeRepo {
             readonly_fetcher,
             bookmark_attrs: BookmarkAttrs::new(bookmark_params),
             infinitepush,
+            list_keys_patterns_max,
         }
     }
 
@@ -100,6 +103,10 @@ impl MononokeRepo {
 
     pub fn infinitepush(&self) -> &Option<InfinitepushParams> {
         &self.infinitepush
+    }
+
+    pub fn list_keys_patterns_max(&self) -> u64 {
+        self.list_keys_patterns_max
     }
 }
 

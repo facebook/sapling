@@ -31,6 +31,8 @@ use metaconfig_types::{
 use regex::Regex;
 use toml;
 
+const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
+
 /// Configuration of a metaconfig repository
 #[derive(Debug, Eq, PartialEq)]
 pub struct MetaConfig {}
@@ -424,6 +426,10 @@ impl RepoConfigs {
             InfinitepushParams { namespace }
         });
 
+        let list_keys_patterns_max = this
+            .list_keys_patterns_max
+            .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
+
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
         Ok(RepoConfig {
             enabled,
@@ -445,6 +451,7 @@ impl RepoConfigs {
             bundle2_replay_params,
             write_lock_db_address: this.write_lock_db_address,
             infinitepush,
+            list_keys_patterns_max,
         })
     }
 }
@@ -519,6 +526,7 @@ struct RawRepoConfig {
     skiplist_index_blobstore_key: Option<String>,
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
     infinitepush: Option<RawInfinitepushParams>,
+    list_keys_patterns_max: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -815,6 +823,7 @@ mod test {
             skiplist_index_blobstore_key="skiplist_key"
             bookmarks_cache_ttl=5000
             storage_config="main"
+            list_keys_patterns_max=123
 
             [cache_warmup]
             bookmark="master"
@@ -1058,6 +1067,7 @@ mod test {
                 infinitepush: Some(InfinitepushParams {
                     namespace: InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap()),
                 }),
+                list_keys_patterns_max: 123,
             },
         );
         repos.insert(
@@ -1089,6 +1099,7 @@ mod test {
                 skiplist_index_blobstore_key: None,
                 bundle2_replay_params: Bundle2ReplayParams::default(),
                 infinitepush: None,
+                list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
             },
         );
         assert_eq!(
@@ -1327,6 +1338,7 @@ mod test {
                 },
                 repoid: 123,
                 generation_cache_size: 10 * 1024 * 1024,
+                list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 ..Default::default()
             }
         };
@@ -1388,6 +1400,7 @@ mod test {
                 },
                 repoid: 123,
                 generation_cache_size: 10 * 1024 * 1024,
+                list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 ..Default::default()
             }
         };

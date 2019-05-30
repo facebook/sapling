@@ -1,7 +1,7 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-  $ setup_common_config
+  $ LIST_KEYS_PATTERNS_MAX=6 setup_common_config
   $ cd $TESTTMP
 
 setup common configuration for these tests
@@ -26,10 +26,9 @@ create master bookmark
 
   $ cd $TESTTMP
 
-setup repo-push, repo-2 and repo-3
+setup repo-push, repo-pull
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-2 --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-3 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
 
 blobimport
 
@@ -75,7 +74,7 @@ create new bookmarks, then update their properties
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 test publishing
-  $ cd "$TESTTMP/repo-2"
+  $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
@@ -114,3 +113,33 @@ test publishing
      master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
      not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
      scratch                   b2d646f64a9978717516887968786c6b7a33edf9
+Exercise the limit (5 bookmarks should be allowed, this was our limit)
+  $ cd ../repo-push
+  $ hgmn push ssh://user@dummy/repo -r . --to "more/1" --create >/dev/null 2>&1
+  $ hgmn push ssh://user@dummy/repo -r . --to "more/2" --create >/dev/null 2>&1
+  [1]
+  $ hgmn bookmarks --list-remote "*"
+     master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
+     more/1                    b2d646f64a9978717516887968786c6b7a33edf9
+     more/2                    b2d646f64a9978717516887968786c6b7a33edf9
+     not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
+     scratch                   b2d646f64a9978717516887968786c6b7a33edf9
+  $ sqlite3 "$TESTTMP/repo/bookmarks" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE name LIKE 'more/%';"
+Exercise the limit (6 bookmarks should fail)
+  $ hgmn push ssh://user@dummy/repo -r . --to "more/3" --create >/dev/null 2>&1
+  $ hgmn bookmarks --list-remote "*"
+  remote: Command failed
+  remote:   Error:
+  remote:     Bookmark query was truncated after 6 results, use a more specific prefix search.
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Bookmark query was truncated after 6 results, use a more specific prefix search.",
+  remote:     }
+  abort: unexpected response: empty string
+  [255]
+
+Narrowing down our query should fix it:
+  $ hgmn bookmarks --list-remote "more/*"
+     more/1                    b2d646f64a9978717516887968786c6b7a33edf9
+     more/2                    b2d646f64a9978717516887968786c6b7a33edf9
+     more/3                    b2d646f64a9978717516887968786c6b7a33edf9

@@ -11,7 +11,7 @@ use bookmarks::{
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness, Transaction,
 };
 use context::CoreContext;
-use failure_ext::{bail_msg, err_msg, Error, Result};
+use failure_ext::{bail_msg, err_msg, format_err, Error, Result};
 use futures::{
     future::{self, loop_fn, Loop},
     stream, Future, IntoFuture, Stream,
@@ -23,6 +23,8 @@ use sql::{queries, Connection, Transaction as SqlTransaction};
 pub use sql_ext::SqlConstructors;
 use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
+
+const DEFAULT_MAX: u64 = std::u64::MAX;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks";
@@ -192,27 +194,30 @@ queries! {
          LIMIT {max_records}"
       }
 
-    read SelectAll(repo_id: RepositoryId, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
+    read SelectAll(repo_id: RepositoryId, limit: u64, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
         "SELECT name, hg_kind, changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
-           AND hg_kind IN {hg_kind}"
+           AND hg_kind IN {hg_kind}
+         LIMIT {limit}"
     }
 
-    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
+    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix, limit: u64, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
         mysql(
             "SELECT name, hg_kind, changeset_id
              FROM bookmarks
              WHERE repo_id = {repo_id}
                AND name LIKE CONCAT({prefix}, '%')
-               AND hg_kind IN {hg_kind}"
+               AND hg_kind IN {hg_kind}
+              LIMIT {limit}"
         )
         sqlite(
             "SELECT name, hg_kind, changeset_id
              FROM bookmarks
              WHERE repo_id = {repo_id}
                AND name LIKE {prefix} || '%'
-               AND hg_kind IN {hg_kind}"
+               AND hg_kind IN {hg_kind}
+             LIMIT {limit}"
         )
     }
 }
@@ -237,19 +242,29 @@ impl SqlConstructors for SqlBookmarks {
     }
 }
 
-fn query_to_stream<F>(v: F) -> BoxStream<(Bookmark, ChangesetId), Error>
+fn query_to_stream<F>(v: F, max: u64) -> BoxStream<(Bookmark, ChangesetId), Error>
 where
     F: Future<Item = Vec<(BookmarkName, BookmarkHgKind, ChangesetId)>, Error = Error>
         + Send
         + 'static,
 {
-    v.map(|rows| stream::iter_ok(rows))
-        .flatten_stream()
-        .map(|row| {
-            let (name, hg_kind, changeset_id) = row;
-            (Bookmark::new(name, hg_kind), changeset_id)
-        })
-        .boxify()
+    v.map(move |rows| {
+        if rows.len() as u64 >= max {
+            let message = format_err!(
+                "Bookmark query was truncated after {} results, use a more specific prefix search.",
+                max
+            );
+            future::err(message).into_stream().left_stream()
+        } else {
+            stream::iter_ok(rows).right_stream()
+        }
+    })
+    .flatten_stream()
+    .map(|row| {
+        let (name, hg_kind, changeset_id) = row;
+        (Bookmark::new(name, hg_kind), changeset_id)
+    })
+    .boxify()
 }
 
 impl SqlBookmarks {
@@ -260,6 +275,7 @@ impl SqlBookmarks {
         prefix: &BookmarkPrefix,
         kinds: &Vec<&BookmarkHgKind>,
         freshness: Freshness,
+        max: u64,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         let conn = match freshness {
             Freshness::MostRecent => &self.read_master_connection,
@@ -267,12 +283,12 @@ impl SqlBookmarks {
         };
 
         let query = if prefix.is_empty() {
-            SelectAll::query(&conn, &repo_id, &kinds).left_future()
+            SelectAll::query(&conn, &repo_id, &max, &kinds).left_future()
         } else {
-            SelectByPrefix::query(&conn, &repo_id, &prefix, &kinds).right_future()
+            SelectByPrefix::query(&conn, &repo_id, &prefix, &max, &kinds).right_future()
         };
 
-        query_to_stream(query)
+        query_to_stream(query, max)
     }
 }
 
@@ -291,7 +307,7 @@ impl Bookmarks for SqlBookmarks {
 
         use BookmarkHgKind::*;
         let kinds = vec![&PublishingNotPullDefault, &PullDefault];
-        self.list_impl(ctx, repo_id, prefix, &kinds, freshness)
+        self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
     }
 
     fn list_pull_default_by_prefix(
@@ -308,7 +324,7 @@ impl Bookmarks for SqlBookmarks {
 
         use BookmarkHgKind::*;
         let kinds = vec![&PullDefault];
-        self.list_impl(ctx, repo_id, prefix, &kinds, freshness)
+        self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
     }
 
     fn list_all_by_prefix(
@@ -317,6 +333,7 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
+        max: u64,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         match freshness {
             Freshness::MaybeStale => STATS::list_all_by_prefix_maybe_stale.add_value(1),
@@ -325,7 +342,7 @@ impl Bookmarks for SqlBookmarks {
 
         use BookmarkHgKind::*;
         let kinds = vec![&Scratch, &PublishingNotPullDefault, &PullDefault];
-        self.list_impl(ctx, repo_id, prefix, &kinds, freshness)
+        self.list_impl(ctx, repo_id, prefix, &kinds, freshness, max)
     }
 
     fn get(
@@ -1116,7 +1133,7 @@ mod test {
 
         fn filter_all(bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
             fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
-                bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness)
+                bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, DEFAULT_MAX)
             }
 
             let have = insert_then_query(&bookmarks, query, freshness);

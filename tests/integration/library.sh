@@ -307,6 +307,12 @@ readonly=true
 CONFIG
 fi
 
+if [[ -v LIST_KEYS_PATTERNS_MAX ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
+CONFIG
+fi
+
 if [[ -v MULTIPLEXED ]]; then
 cat >> "repos/$reponame/server.toml" <<CONFIG
 [storage.blobstore]

@@ -804,7 +804,13 @@ fn test_list_by_prefix() {
 
     assert_eq!(
         bookmarks
-            .list_all_by_prefix(ctx.clone(), &prefix, REPO_ZERO, Freshness::MostRecent)
+            .list_all_by_prefix(
+                ctx.clone(),
+                &prefix,
+                REPO_ZERO,
+                Freshness::MostRecent,
+                std::u64::MAX
+            )
             .collect()
             .map(|vs| vs.into_iter().collect::<HashMap<_, _>>())
             .wait()
@@ -821,7 +827,8 @@ fn test_list_by_prefix() {
                 ctx.clone(),
                 &name_1_prefix,
                 REPO_ZERO,
-                Freshness::MostRecent
+                Freshness::MostRecent,
+                std::u64::MAX,
             )
             .collect()
             .wait()
@@ -838,7 +845,8 @@ fn test_list_by_prefix() {
                 ctx.clone(),
                 &name_2_prefix,
                 REPO_ZERO,
-                Freshness::MostRecent
+                Freshness::MostRecent,
+                std::u64::MAX,
             )
             .collect()
             .wait()

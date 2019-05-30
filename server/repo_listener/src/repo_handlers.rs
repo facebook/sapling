@@ -140,6 +140,7 @@ pub fn repo_handlers(
                     reponame.clone(),
                     read_write_fetcher,
                     config.infinitepush,
+                    config.list_keys_patterns_max,
                 );
 
                 let listen_log = root_log.new(o!("repo" => reponame.clone()));

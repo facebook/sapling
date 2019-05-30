@@ -266,13 +266,16 @@ pub trait Bookmarks: Send + Sync + 'static {
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// List all bookmarks that match the prefix. You should not normally call this with an empty
-    /// prefix.
+    /// prefix. Provide a max, which is an (exclusive!) limit representing how many bookmarks
+    /// will be returned. If more bookmarks are found, an error will be rerturned (there is no
+    /// provision for paging through results).
     fn list_all_by_prefix(
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
         freshness: Freshness,
+        max: u64,
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// Creates a transaction that will be used for write operations.

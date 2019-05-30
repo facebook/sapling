@@ -86,6 +86,8 @@ pub struct RepoConfig {
     pub skiplist_index_blobstore_key: Option<String>,
     /// Params fro the bunle2 replay
     pub bundle2_replay_params: Bundle2ReplayParams,
+    /// Max number of results in listkeyspatterns.
+    pub list_keys_patterns_max: u64,
 }
 
 impl RepoConfig {
