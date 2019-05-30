@@ -132,6 +132,7 @@ using std::optional;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
+using namespace std::chrono_literals;
 
 namespace {
 using namespace facebook::eden;
@@ -311,17 +312,25 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
 }
 #endif
 
+void EdenServer::startPeriodicTasks() {
+  // Flush stats must run once every second for accurate aggregation of
+  // the time series & histogram buckets
+  flushStatsTask_.updateInterval(1s, /*splay=*/false);
+
+  // Report memory usage stats once every 30 seconds
+  memoryStatsTask_.updateInterval(30s);
+
 #ifndef _WIN32
-void EdenServer::scheduleFlushStats() {
-  mainEventBase_->timer().scheduleTimeoutFn(
-      [this] {
-        flushStatsNow();
-        reportMemoryStats();
-        scheduleFlushStats();
-      },
-      std::chrono::seconds(1));
+  // Schedule a periodic job to unload unused inodes based on the last access
+  // time. currently Eden does not have accurate timestamp tracking for inodes,
+  // so using unloadChildrenNow just to validate the behaviour. We will have to
+  // modify current unloadChildrenNow function to unload inodes based on the
+  // last access time.
+  if (FLAGS_unload_interval_minutes > 0) {
+    scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
+  }
+#endif
 }
-#endif // !_WIN32
 
 #ifndef _WIN32
 void EdenServer::unloadInodes() {
@@ -407,25 +416,15 @@ Future<Unit> EdenServer::prepareImpl(
 #ifndef _WIN32
   // Start the PrivHelper client, using our main event base to drive its I/O
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
-
-  // Start stats aggregation
-  scheduleFlushStats();
 #endif
 
   // Set the ServiceData counter for tracking number of inodes unloaded by
   // periodic job for unloading inodes to zero on EdenServer start.
   stats::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
 
-#ifndef _WIN32
-  // Schedule a periodic job to unload unused inodes based on the last access
-  // time. currently Eden does not have accurate timestamp tracking for inodes,
-  // so using unloadChildrenNow just to validate the behaviour. We will have to
-  // modify current unloadChildrenNow function to unload inodes based on the
-  // last access time.
-  if (FLAGS_unload_interval_minutes > 0) {
-    scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
-  }
+  startPeriodicTasks();
 
+#ifndef _WIN32
   // If we are gracefully taking over from an existing edenfs process,
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
@@ -1167,26 +1166,19 @@ void EdenServer::flushStatsNow() {
 void EdenServer::reportMemoryStats() {
 #ifndef _WIN32
   constexpr folly::StringPiece kRssBytes{"memory_vm_rss_bytes"};
-  constexpr std::chrono::seconds kMemoryPollSeconds{30};
 
-  auto now = std::chrono::system_clock::now().time_since_epoch();
-  // Throttle stats collection to every kMemoryPollSeconds
-  if (std::chrono::duration_cast<std::chrono::seconds>(
-          now - lastProcStatsRun_.load()) > kMemoryPollSeconds) {
-    auto memoryStats = facebook::eden::proc_util::readMemoryStats();
-    if (memoryStats) {
-      // TODO: Stop using the legacy addStatValue() call that checks to see
-      // if it needs to re-export counters each time it is used.
-      //
-      // It's not really even clear to me that it's worth exporting this a
-      // timeseries vs a simple counter.  We mainly only care about the
-      // last 60-second timeseries level.  Since we only update this once every
-      // 30 seconds we are basically just reporting an average of the last 2
-      // data points.
-      stats::ServiceData::get()->addStatValue(
-          kRssBytes, memoryStats->resident, stats::AVG);
-    }
-    lastProcStatsRun_.store(now);
+  auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+  if (memoryStats) {
+    // TODO: Stop using the legacy addStatValue() call that checks to see
+    // if it needs to re-export counters each time it is used.
+    //
+    // It's not really even clear to me that it's worth exporting this a
+    // timeseries vs a simple counter.  We mainly only care about the
+    // last 60-second timeseries level.  Since we only update this once every
+    // 30 seconds we are basically just reporting an average of the last 2
+    // data points.
+    stats::ServiceData::get()->addStatValue(
+        kRssBytes, memoryStats->resident, stats::AVG);
   }
 #else
   NOT_IMPLEMENTED();

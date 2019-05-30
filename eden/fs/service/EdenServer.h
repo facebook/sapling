@@ -28,6 +28,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/service/EdenStateDir.h"
+#include "eden/fs/service/PeriodicTask.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/tracing/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -301,11 +302,6 @@ class EdenServer : private TakeoverHandler {
   void flushStatsNow();
 
   /**
-   * Report memory usage statistics to ServiceData.
-   */
-  void reportMemoryStats();
-
-  /**
    * Get the main thread's EventBase.
    *
    * Callers can use this for scheduling work to be run in the main thread.
@@ -328,6 +324,15 @@ class EdenServer : private TakeoverHandler {
           unmountPromise(folly::SharedPromise<folly::Unit>()) {}
   };
 
+  template <void (EdenServer::*MemberFn)()>
+  class PeriodicFnTask : public PeriodicTask {
+   public:
+    using PeriodicTask::PeriodicTask;
+    void runTask() override {
+      (getServer()->*MemberFn)();
+    }
+  };
+
   using BackingStoreKey = std::pair<std::string, std::string>;
   using BackingStoreMap =
       std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
@@ -338,12 +343,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(EdenServer const&) = delete;
   EdenServer& operator=(EdenServer const&) = delete;
 
-  /**
-   * Schedules a timer to flush stats (and reschedule itself).
-   * We should have at most one of these pending at a time.
-   * Must be called only from the eventBase thread.
-   */
-  void scheduleFlushStats();
+  void startPeriodicTasks();
 
   /**
    * Schedule a call to unloadInodes() to happen after timeout
@@ -412,6 +412,9 @@ class EdenServer : private TakeoverHandler {
   void registerStats(std::shared_ptr<EdenMount> edenMount);
   void unregisterStats(EdenMount* edenMount);
 
+  // Report memory usage statistics to ServiceData.
+  void reportMemoryStats();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -474,12 +477,10 @@ class EdenServer : private TakeoverHandler {
    */
   folly::EventBase* mainEventBase_;
 
-  /**
-   * Track the last time we calculated the /proc based statistics.
-   * We use this for throttling purposes. Note: we use time since epoch since
-   * std::atomic chokes on time_point.
-   */
-  std::atomic<std::chrono::system_clock::duration> lastProcStatsRun_;
+  PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{this,
+                                                             "flush_stats"};
+  PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{this,
+                                                                  "mem_stats"};
 };
 } // namespace eden
 } // namespace facebook
