@@ -389,22 +389,38 @@ mod tests {
         Ok(())
     }
 
-    fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName) {
+    fn delete_all_publishing_bookmarks(rt: &mut Runtime, ctx: CoreContext, repo: BlobRepo) {
+        let bookmarks = rt
+            .block_on(
+                repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+                    .collect(),
+            )
+            .unwrap();
+
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_delete(
-            &book,
-            BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
-        )
-        .unwrap();
-        txn.commit().wait().unwrap();
+
+        for (bookmark, _) in bookmarks {
+            txn.force_delete(
+                bookmark.name(),
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                },
+            )
+            .unwrap();
+        }
+
+        assert!(rt.block_on(txn.commit()).unwrap());
     }
 
-    fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &BookmarkName, cs_id: &str) {
-        let head = repo
-            .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap())
-            .wait()
+    fn set_bookmark(
+        rt: &mut Runtime,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        book: &BookmarkName,
+        cs_id: &str,
+    ) {
+        let head = rt
+            .block_on(repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap()))
             .unwrap()
             .unwrap();
         let mut txn = repo.update_bookmark_transaction(ctx);
@@ -416,161 +432,139 @@ mod tests {
             },
         )
         .unwrap();
-        txn.commit().wait().unwrap();
+
+        assert!(rt.block_on(txn.commit()).unwrap());
     }
 
-    /*
-            @  79a13814c5ce7330173ec04d279bf95ab3f652fb
-            |
-            o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
-            |
-            o  3c15267ebf11807f3d772eb891272b911ec68759
-            |
-            o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
-            |
-            o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
-            |
-            o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
-            |
-            o  cb15ca4a43a59acff5388cea9648c162afde8372
-            |
-            o  d0a361e9022d226ae52f689667bd7d212a19cfe0
-            |
-            o  607314ef579bd2407752361ba1b0c1729d08b281
-            |
-            o  3e0e761030db6e479a7fb58b12881883f9f8c63f
-            |
-            o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
-    */
+    #[test]
+    fn get_phase_hint_test() {
+        let mut rt = Runtime::new().unwrap();
 
-    fn get_hint_phase() {
-        let ctx = CoreContext::test_mock();
         let repo = linear::getrepo(None);
+        //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
+        //  |
+        //  o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
+        //  |
+        //  o  3c15267ebf11807f3d772eb891272b911ec68759
+        //  |
+        //  o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
+        //  |
+        //  o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
+        //  |
+        //  o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
+        //  |
+        //  o  cb15ca4a43a59acff5388cea9648c162afde8372
+        //  |
+        //  o  d0a361e9022d226ae52f689667bd7d212a19cfe0
+        //  |
+        //  o  607314ef579bd2407752361ba1b0c1729d08b281
+        //  |
+        //  o  3e0e761030db6e479a7fb58b12881883f9f8c63f
+        //  |
+        //  o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
 
-        // delete all existing bookmarks
-        for (bookmark, _) in repo
-            .get_bonsai_bookmarks(ctx.clone())
-            .collect()
-            .wait()
-            .unwrap()
-        {
-            delete_bookmark(ctx.clone(), repo.clone(), &bookmark);
-        }
+        let ctx = CoreContext::test_mock();
+
+        delete_all_publishing_bookmarks(&mut rt, ctx.clone(), repo.clone());
 
         // create a new master bookmark
         set_bookmark(
+            &mut rt,
             ctx.clone(),
             repo.clone(),
             &BookmarkName::new("master").unwrap(),
             "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
         );
 
-        let public_commit = repo
-            .get_bonsai_from_hg(
+        let public_commit = rt
+            .block_on(repo.get_bonsai_from_hg(
                 ctx.clone(),
                 HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
-            )
-            .wait()
+            ))
             .unwrap()
             .unwrap();
 
-        let other_public_commit = repo
-            .get_bonsai_from_hg(
+        let other_public_commit = rt
+            .block_on(repo.get_bonsai_from_hg(
                 ctx.clone(),
                 HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            )
-            .wait()
+            ))
             .unwrap()
             .unwrap();
 
-        let draft_commit = repo
-            .get_bonsai_from_hg(
+        let draft_commit = rt
+            .block_on(repo.get_bonsai_from_hg(
                 ctx.clone(),
                 HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
-            )
-            .wait()
+            ))
             .unwrap()
             .unwrap();
 
-        let other_draft_commit = repo
-            .get_bonsai_from_hg(
+        let other_draft_commit = rt
+            .block_on(repo.get_bonsai_from_hg(
                 ctx.clone(),
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
-            )
-            .wait()
+            ))
             .unwrap()
             .unwrap();
 
-        let public_bookmark_commit = repo
-            .get_bonsai_from_hg(
+        let public_bookmark_commit = rt
+            .block_on(repo.get_bonsai_from_hg(
                 ctx.clone(),
                 HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").unwrap(),
-            )
-            .wait()
+            ))
             .unwrap()
             .unwrap();
 
         let phases = SqlPhases::with_sqlite_in_memory().unwrap();
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), public_bookmark_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), public_bookmark_commit))
                 .unwrap(),
             true,
             "slow path: get phase for a Public commit which is also a public bookmark"
         );
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), public_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), public_commit))
                 .unwrap(),
             true,
             "slow path: get phase for a Public commit"
         );
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), other_public_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), other_public_commit))
                 .unwrap(),
             true,
             "slow path: get phase for other Public commit"
         );
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), draft_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), draft_commit))
                 .unwrap(),
             false,
             "slow path: get phase for a Draft commit"
         );
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), other_draft_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), other_draft_commit))
                 .unwrap(),
             false,
             "slow path: get phase for other Draft commit"
         );
 
         assert_eq!(
-            phases
-                .get_public(
-                    ctx.clone(),
-                    repo.clone(),
-                    vec![
-                        public_commit,
-                        other_public_commit,
-                        draft_commit,
-                        other_draft_commit
-                    ]
-                )
-                .wait()
-                .unwrap(),
+            rt.block_on(phases.get_public(
+                ctx.clone(),
+                repo.clone(),
+                vec![
+                    public_commit,
+                    other_public_commit,
+                    draft_commit,
+                    other_draft_commit
+                ]
+            ))
+            .unwrap(),
             hashset! {
                 public_commit,
                 other_public_commit,
@@ -579,29 +573,18 @@ mod tests {
         );
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), public_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), public_commit))
                 .expect("Get phase failed"),
             true,
             "sql: make sure that phase was written to the db for public commit"
         );
 
         assert_eq!(
-            phases
-                .is_public(ctx.clone(), repo.clone(), draft_commit)
-                .wait()
+            rt.block_on(phases.is_public(ctx.clone(), repo.clone(), draft_commit))
                 .expect("Get phase failed"),
             false,
             "sql: make sure that phase was not written to the db for draft commit"
         );
-    }
-
-    #[test]
-    fn get_phase_hint_test() {
-        async_unit::tokio_unit_test(|| {
-            get_hint_phase();
-        });
     }
 
     #[test]
@@ -634,18 +617,7 @@ mod tests {
         ];
         let ctx = CoreContext::test_mock();
 
-        // delete all existing bookmarks
-        let bookmarks = rt.block_on(repo.get_bonsai_bookmarks(ctx.clone()).collect())?;
-        let mut transaction = repo.update_bookmark_transaction(ctx.clone());
-        for bookmark in bookmarks {
-            transaction.force_delete(
-                &bookmark.0,
-                BookmarkUpdateReason::TestMove {
-                    bundle_replay_data: None,
-                },
-            )?;
-        }
-        assert!(rt.block_on(transaction.commit())?);
+        delete_all_publishing_bookmarks(&mut rt, ctx.clone(), repo.clone());
 
         // resolve bonsai
         let bcss = rt

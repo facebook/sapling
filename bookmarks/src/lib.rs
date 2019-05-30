@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(never_type)]
 
 use ascii::{AsciiChar, AsciiString};
 use asyncmemo::Weight;
@@ -13,6 +14,7 @@ use failure_ext::{err_msg, format_err, Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
+use quickcheck::{Arbitrary, Gen};
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -25,6 +27,82 @@ use std::ops::Range;
 mod cache;
 pub use cache::CachedBookmarks;
 
+/// This enum represents how fresh you want results to be. MostRecent will go to the master, so you
+/// normally don't want to issue queries using MostRecent unless you have a very good reason.
+/// MaybeStale will go to a replica, which might lag behind the master (there is no SLA on
+/// replication lag). MaybeStale reads might also be served from a local cache.
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum Freshness {
+    MostRecent,
+    MaybeStale,
+}
+
+impl Arbitrary for Freshness {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        use Freshness::*;
+
+        match g.gen_range(0, 2) {
+            0 => MostRecent,
+            1 => MaybeStale,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Bookmark {
+    pub(crate) name: BookmarkName,
+    pub(crate) hg_kind: BookmarkHgKind,
+}
+
+impl Arbitrary for Bookmark {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let name = BookmarkName::arbitrary(g);
+        Self {
+            name,
+            hg_kind: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+impl Bookmark {
+    pub fn new(name: BookmarkName, hg_kind: BookmarkHgKind) -> Self {
+        Bookmark { name, hg_kind }
+    }
+
+    pub fn into_name(self) -> BookmarkName {
+        self.name
+    }
+
+    pub fn name(&self) -> &BookmarkName {
+        &self.name
+    }
+
+    pub fn hg_kind(&self) -> &BookmarkHgKind {
+        &self.hg_kind
+    }
+
+    pub fn publishing(&self) -> bool {
+        use BookmarkHgKind::*;
+
+        match self.hg_kind {
+            Scratch => false,
+            PublishingNotPullDefault => true,
+            PullDefault => true,
+        }
+    }
+
+    pub fn pull_default(&self) -> bool {
+        use BookmarkHgKind::*;
+
+        match self.hg_kind {
+            Scratch => false,
+            PublishingNotPullDefault => false,
+            PullDefault => true,
+        }
+    }
+}
+
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
@@ -35,6 +113,19 @@ pub struct BookmarkName {
 impl fmt::Display for BookmarkName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.bookmark)
+    }
+}
+
+impl Arbitrary for BookmarkName {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        // NOTE: We use a specific large size here because our tests exercise DB Bookmarks, which
+        // require unique names in the DB.
+        let size = 128;
+        let mut bookmark = AsciiString::with_capacity(size);
+        for _ in 0..size {
+            bookmark.push(AsciiChar::arbitrary(g));
+        }
+        Self { bookmark }
     }
 }
 
@@ -147,29 +238,38 @@ pub trait Bookmarks: Send + Sync + 'static {
         repoid: RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error>;
 
-    /// Lists the bookmarks that match the prefix with bookmark's values.
-    /// Empty prefix means list all of the available bookmarks
-    /// TODO(stash): do we need to have a separate method list_all() to avoid accidentally
-    /// listing all the bookmarks?
-    fn list_by_prefix(
-        &self,
-        ctx: CoreContext,
-        prefix: &BookmarkPrefix,
-        repoid: RepositoryId,
-    ) -> BoxStream<(BookmarkName, ChangesetId), Error>;
+    // TODO(stash): do we need to have a separate methods list_all() to avoid accidentally
+    // listing all the bookmarks?
 
-    /// Lists the bookmarks that match the prefix with bookmark's values but the bookmarks may not
-    /// be the most up-to-date i.e. they may be read from a replica that's behind master.
-    /// There are no guarantees on how big is the replica delay.
-    /// Unless it's absolutely crucial to have the most up-to-date bookmarks using this method
-    /// should be preferred over list_by_prefix.
-    /// Empty prefix means list all of the available bookmarks
-    fn list_by_prefix_maybe_stale(
+    /// List publishing bookmarks that match a given prefix. There should normally be few, it's
+    /// reasonable to pass an empty prefix here.
+    fn list_publishing_by_prefix(
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
-    ) -> BoxStream<(BookmarkName, ChangesetId), Error>;
+        freshness: Freshness,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+
+    /// List pull default bookmarks that match a given prefix. There should normally be few, it's
+    /// reasonable to pass an empty prefix here.
+    fn list_pull_default_by_prefix(
+        &self,
+        ctx: CoreContext,
+        prefix: &BookmarkPrefix,
+        repoid: RepositoryId,
+        freshness: Freshness,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+
+    /// List all bookmarks that match the prefix. You should not normally call this with an empty
+    /// prefix.
+    fn list_all_by_prefix(
+        &self,
+        ctx: CoreContext,
+        prefix: &BookmarkPrefix,
+        repoid: RepositoryId,
+        freshness: Freshness,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// Creates a transaction that will be used for write operations.
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction>;
@@ -451,5 +551,82 @@ impl FromValue for BookmarkName {
 impl From<BookmarkPrefix> for Value {
     fn from(bookmark_prefix: BookmarkPrefix) -> Self {
         Value::Bytes(bookmark_prefix.bookmark_prefix.into())
+    }
+}
+
+/// Describes the behavior of a Bookmark in Mercurial operations.
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Copy)]
+pub enum BookmarkHgKind {
+    Scratch,
+    PublishingNotPullDefault,
+    /// NOTE: PullDefault implies Publishing.
+    PullDefault,
+}
+
+impl std::fmt::Display for BookmarkHgKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use BookmarkHgKind::*;
+
+        let s = match self {
+            Scratch => "scratch",
+            PublishingNotPullDefault => "publishing",
+            PullDefault => "pull_default",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+const SCRATCH_HG_KIND: &[u8] = b"scratch";
+const PUBLISHING_HG_KIND: &[u8] = b"publishing";
+const PULL_DEFAULT_HG_KIND: &[u8] = b"pull_default";
+
+impl ConvIr<BookmarkHgKind> for BookmarkHgKind {
+    fn new(v: Value) -> FromValueResult<Self> {
+        use BookmarkHgKind::*;
+
+        match v {
+            Value::Bytes(ref b) if b == &SCRATCH_HG_KIND => Ok(Scratch),
+            Value::Bytes(ref b) if b == &PUBLISHING_HG_KIND => Ok(PublishingNotPullDefault),
+            Value::Bytes(ref b) if b == &PULL_DEFAULT_HG_KIND => Ok(PullDefault),
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> BookmarkHgKind {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for BookmarkHgKind {
+    type Intermediate = BookmarkHgKind;
+}
+
+impl From<BookmarkHgKind> for Value {
+    fn from(bookmark_update_reason: BookmarkHgKind) -> Self {
+        use BookmarkHgKind::*;
+
+        match bookmark_update_reason {
+            Scratch => Value::Bytes(SCRATCH_HG_KIND.to_vec()),
+            PublishingNotPullDefault => Value::Bytes(PUBLISHING_HG_KIND.to_vec()),
+            PullDefault => Value::Bytes(PULL_DEFAULT_HG_KIND.to_vec()),
+        }
+    }
+}
+
+impl Arbitrary for BookmarkHgKind {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        use BookmarkHgKind::*;
+
+        match g.gen_range(0, 3) {
+            0 => Scratch,
+            1 => PublishingNotPullDefault,
+            2 => PullDefault,
+            _ => unreachable!(),
+        }
     }
 }

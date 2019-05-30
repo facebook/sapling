@@ -20,7 +20,9 @@ use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
-use bookmarks::{self, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks};
+use bookmarks::{
+    self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
+};
 use bytes::Bytes;
 use cacheblob::{LeaseOps, MemWritesBlobstore};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
@@ -33,7 +35,7 @@ use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt};
 use futures_stats::{FutureStats, Timed};
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
@@ -63,6 +65,7 @@ define_stats! {
     prefix = "mononoke.blobrepo";
     get_bonsai_changeset: timeseries(RATE, SUM),
     get_bonsai_heads_maybe_stale: timeseries(RATE, SUM),
+    get_bonsai_publishing_bookmarks_maybe_stale: timeseries(RATE, SUM),
     get_file_content: timeseries(RATE, SUM),
     get_raw_hg_content: timeseries(RATE, SUM),
     get_changesets: timeseries(RATE, SUM),
@@ -82,8 +85,9 @@ define_stats! {
     get_manifest_by_nodeid: timeseries(RATE, SUM),
     get_root_entry: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
-    get_bookmarks: timeseries(RATE, SUM),
-    get_bookmarks_maybe_stale: timeseries(RATE, SUM),
+    get_bookmarks_by_prefix_maybe_stale: timeseries(RATE, SUM),
+    get_publishing_bookmarks_maybe_stale: timeseries(RATE, SUM),
+    get_pull_default_bookmarks_maybe_stale: timeseries(RATE, SUM),
     get_bonsai_from_hg: timeseries(RATE, SUM),
     get_hg_bonsai_mapping: timeseries(RATE, SUM),
     update_bookmark_transaction: timeseries(RATE, SUM),
@@ -472,28 +476,47 @@ impl BlobRepo {
             .boxify()
     }
 
-    /// Heads maybe read from replica, so they may be out of date
+    /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
     pub fn get_heads_maybe_stale(
         &self,
         ctx: CoreContext,
     ) -> impl Stream<Item = HgChangesetId, Error = Error> {
         STATS::get_heads_maybe_stale.add_value(1);
-        self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
-            .and_then({
-                let repo = self.clone();
-                move |(_, cs)| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
-            })
+        self.get_bonsai_heads_maybe_stale(ctx.clone()).and_then({
+            let repo = self.clone();
+            move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
+        })
     }
 
+    /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
+    /// Bookmarks. Those will be served from cache, so they might be stale.
     pub fn get_bonsai_heads_maybe_stale(
         &self,
         ctx: CoreContext,
     ) -> impl Stream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(ctx, &BookmarkPrefix::empty(), self.repoid)
+            .list_publishing_by_prefix(
+                ctx,
+                &BookmarkPrefix::empty(),
+                self.repoid,
+                Freshness::MaybeStale,
+            )
             .map(|(_, cs_id)| cs_id)
+    }
+
+    /// List all publishing Bonsai bookmarks.
+    pub fn get_bonsai_publishing_bookmarks_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
+        STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
+        self.bookmarks.list_publishing_by_prefix(
+            ctx,
+            &BookmarkPrefix::empty(),
+            self.repoid,
+            Freshness::MaybeStale,
+        )
     }
 
     // TODO(stash): make it accept ChangesetId
@@ -664,63 +687,57 @@ impl BlobRepo {
             .list_bookmark_log_entries(ctx.clone(), name, self.repoid, max_rec)
     }
 
-    /// Heads maybe read from replica, so they may be out of date. Prefer to use this method
-    /// over `get_bookmarks` unless you need the most up-to-date bookmarks
-    pub fn get_bookmarks_maybe_stale(
+    /// Get Pull-Default (Pull-Default is a Mercurial concept) bookmarks by prefix, they will be
+    /// read from cache or a replica, so they might be stale.
+    pub fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = (BookmarkName, HgChangesetId), Error = Error> {
-        self.get_bookmarks_by_prefix_maybe_stale(ctx, &BookmarkPrefix::empty())
+    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
+        STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
+        let stream = self.bookmarks.list_pull_default_by_prefix(
+            ctx.clone(),
+            &BookmarkPrefix::empty(),
+            self.repoid,
+            Freshness::MaybeStale,
+        );
+        to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
+    /// Get Publishing (Publishing is a Mercurial concept) bookmarks by prefix, they will be read
+    /// from cache or a replica, so they might be stale.
+    pub fn get_publishing_bookmarks_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
+        STATS::get_publishing_bookmarks_maybe_stale.add_value(1);
+        let stream = self.bookmarks.list_publishing_by_prefix(
+            ctx.clone(),
+            &BookmarkPrefix::empty(),
+            self.repoid,
+            Freshness::MaybeStale,
+        );
+        to_hg_bookmark_stream(&self, &ctx, stream)
+    }
+
+    /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
     pub fn get_bookmarks_by_prefix_maybe_stale(
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
-    ) -> impl Stream<Item = (BookmarkName, HgChangesetId), Error = Error> {
-        STATS::get_bookmarks_maybe_stale.add_value(1);
-        self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), prefix, self.repoid)
-            .map({
-                let repo = self.clone();
-                move |(bm, cs)| {
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
-                        .map(move |cs| (bm, cs))
-                }
-            })
-            .buffer_unordered(100)
-    }
-
-    pub fn get_bonsai_bookmarks_maybe_stale(
-        &self,
-        ctx: CoreContext,
-    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
-        STATS::get_bookmarks_maybe_stale.add_value(1);
-        self.bookmarks
-            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
-            .boxify()
-    }
-
-    pub fn get_bonsai_bookmarks(
-        &self,
-        ctx: CoreContext,
-    ) -> BoxStream<(BookmarkName, ChangesetId), Error> {
-        STATS::get_bookmarks.add_value(1);
-        self.bookmarks
-            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), self.repoid)
-            .boxify()
+    ) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error> {
+        STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
+        let stream = self.bookmarks.list_all_by_prefix(
+            ctx.clone(),
+            prefix,
+            self.repoid,
+            Freshness::MaybeStale,
+        );
+        to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<bookmarks::Transaction> {
         STATS::update_bookmark_transaction.add_value(1);
         self.bookmarks.create_transaction(ctx, self.repoid)
-    }
-
-    pub fn get_bonsai_heads(
-        &self,
-        ctx: CoreContext,
-    ) -> impl Stream<Item = (BookmarkName, ChangesetId), Error = Error> {
-        self.get_bonsai_bookmarks(ctx)
     }
 
     pub fn get_linknode_opt(
@@ -2409,4 +2426,25 @@ impl Clone for BlobRepo {
             hg_generation_lease: self.hg_generation_lease.clone(),
         }
     }
+}
+
+fn to_hg_bookmark_stream<T>(
+    repo: &BlobRepo,
+    ctx: &CoreContext,
+    stream: T,
+) -> impl Stream<Item = (Bookmark, HgChangesetId), Error = Error>
+where
+    T: Stream<Item = (Bookmark, ChangesetId), Error = Error>,
+{
+    // TODO: (torozco) T44876554 If this hits the database for all (or most of) the bookmarks,
+    // it'll be fairly inefficient.
+    stream
+        .map({
+            cloned!(repo, ctx);
+            move |(bookmark, cs_id)| {
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .map(move |cs_id| (bookmark, cs_id))
+            }
+        })
+        .buffer_unordered(100)
 }

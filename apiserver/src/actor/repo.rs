@@ -13,7 +13,7 @@ use std::{
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
-use bookmarks::BookmarkName;
+use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
 use cachelib::LruCachePool;
 use cloned::cloned;
@@ -309,8 +309,13 @@ impl MononokeRepo {
 
     fn get_branches(&self, ctx: CoreContext) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         self.repo
-            .get_bookmarks_maybe_stale(ctx)
-            .map(|(bookmark, changesetid)| (bookmark.to_string(), changesetid.to_hex().to_string()))
+            .get_publishing_bookmarks_maybe_stale(ctx)
+            .map(|(bookmark, changesetid): (Bookmark, HgChangesetId)| {
+                (
+                    bookmark.into_name().to_string(),
+                    changesetid.to_hex().to_string(),
+                )
+            })
             .collect()
             .map(|vec| MononokeRepoResponse::GetBranches {
                 branches: vec.into_iter().collect(),

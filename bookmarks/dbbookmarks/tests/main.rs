@@ -4,25 +4,25 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! Tests for the Filenodes store.
+//! Tests for the Bookmarks store.
 
 #![deny(warnings)]
 
 use bookmarks::{
-    BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
-    BundleReplayData,
+    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
+    BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use futures::{Future, Stream};
-use maplit::{btreemap, hashmap};
+use maplit::hashmap;
 use mercurial_types_mocks::nodehash as mercurial_mocks;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, SIXES_CSID, THREES_CSID, TWOS_CSID,
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 fn create_bookmark_name(book: &str) -> BookmarkName {
     BookmarkName::new(book.to_string()).unwrap()
@@ -757,7 +757,7 @@ fn test_list_by_prefix() {
     .unwrap();
     txn.create(
         &name_2,
-        ONES_CSID,
+        TWOS_CSID,
         BookmarkUpdateReason::TestMove {
             bundle_replay_data: None,
         },
@@ -768,32 +768,52 @@ fn test_list_by_prefix() {
     let prefix = create_prefix("book");
     let name_1_prefix = create_prefix("book1");
     let name_2_prefix = create_prefix("book2");
+
     assert_eq!(
         bookmarks
-            .list_by_prefix(ctx.clone(), &prefix, REPO_ZERO)
+            .list_all_by_prefix(ctx.clone(), &prefix, REPO_ZERO, Freshness::MostRecent)
             .collect()
-            .map(|vs| vs.into_iter().collect::<BTreeMap<_, _>>())
+            .map(|vs| vs.into_iter().collect::<HashMap<_, _>>())
             .wait()
             .unwrap(),
-        btreemap! { name_1.clone() => ONES_CSID, name_2.clone() => ONES_CSID }
+        hashmap! {
+            Bookmark::new(name_1.clone(), BookmarkHgKind::PullDefault) => ONES_CSID,
+            Bookmark::new(name_2.clone(), BookmarkHgKind::PullDefault) => TWOS_CSID
+        }
     );
 
     assert_eq!(
         bookmarks
-            .list_by_prefix(ctx.clone(), &name_1_prefix, REPO_ZERO)
+            .list_all_by_prefix(
+                ctx.clone(),
+                &name_1_prefix,
+                REPO_ZERO,
+                Freshness::MostRecent
+            )
             .collect()
             .wait()
             .unwrap(),
-        vec![(name_1.clone(), ONES_CSID)]
+        vec![(
+            Bookmark::new(name_1.clone(), BookmarkHgKind::PullDefault),
+            ONES_CSID
+        )]
     );
 
     assert_eq!(
         bookmarks
-            .list_by_prefix(ctx.clone(), &name_2_prefix, REPO_ZERO)
+            .list_all_by_prefix(
+                ctx.clone(),
+                &name_2_prefix,
+                REPO_ZERO,
+                Freshness::MostRecent
+            )
             .collect()
             .wait()
             .unwrap(),
-        vec![(name_2, ONES_CSID)]
+        vec![(
+            Bookmark::new(name_2.clone(), BookmarkHgKind::PullDefault),
+            TWOS_CSID
+        )]
     );
 }
 

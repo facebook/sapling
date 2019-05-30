@@ -67,6 +67,7 @@ use std::iter::FromIterator;
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
+// TODO: (torozco) T44843329 Why does this duplicate scm/mononoke/bundle2_resolver/src/errors.rs?
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]

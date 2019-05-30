@@ -8,7 +8,7 @@ use crate::errors::*;
 use crate::mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use blobrepo::BlobRepo;
 use blobrepo::HgBlobChangeset;
-use bookmarks::{BookmarkName, BookmarkPrefix};
+use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bundle2_resolver;
 use bytes::{BufMut, Bytes, BytesMut};
 use cloned::cloned;
@@ -394,10 +394,10 @@ impl RepoClient {
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
             let items = blobrepo
-                .get_bookmarks_maybe_stale(self.ctx.clone())
-                .map(|(book, cs)| {
+                .get_pull_default_bookmarks_maybe_stale(self.ctx.clone())
+                .map(|(book, cs): (Bookmark, HgChangesetId)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (book.to_string(), hash)
+                    (book.into_name().to_string(), hash)
                 });
             bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
         }
@@ -845,12 +845,13 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
             let mut scuba_logger = self.prepared_ctx(ops::LISTKEYS, None).scuba().clone();
+
             self.repo
                 .blobrepo()
-                .get_bookmarks_maybe_stale(self.ctx.clone())
-                .map(|(book, cs)| {
+                .get_pull_default_bookmarks_maybe_stale(self.ctx.clone())
+                .map(|(book, cs): (Bookmark, HgChangesetId)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (book.to_string(), hash)
+                    (book.into_name(), hash)
                 })
                 .collect()
                 .map(|bookmarks| {
@@ -913,7 +914,9 @@ impl HgCommands for RepoClient {
                     // prefix match
                     let prefix = try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
                     repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix)
-                        .map(|(bookmark, cs_id)| (bookmark.to_string(), cs_id))
+                        .map(|(bookmark, cs_id): (Bookmark, HgChangesetId)| {
+                            (bookmark.into_name().to_string(), cs_id)
+                        })
                         .collect()
                         .boxify()
                 } else {
