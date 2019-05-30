@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "bookmarkstore",
+    "cliparser",
     "commitcloudsubscriber",
     "configparser",
     "cpython-ext",
