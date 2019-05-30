@@ -274,7 +274,7 @@ impl HgPython {
                         .is_ok()
                 };
                 let exit_code = {
-                    let mut err = &mut err;
+                    let err = &mut err;
                     let inst = err.instance(py);
                     if is_system_exit {
                         match inst.getattr(py, "code") {
