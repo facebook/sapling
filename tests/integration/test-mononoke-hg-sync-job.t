@@ -105,11 +105,11 @@ Sync a pushrebase bookmark move
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 2 (glob)
   * successful sync of entries [2] (glob)
@@ -137,11 +137,11 @@ Sync a pushrebase bookmark move
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     6cc06ef82eeb  anothercommit
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 1 (glob)
   * successful sync of entries [3] (glob)
@@ -269,6 +269,7 @@ Use the same code here as in the actual opsfiles hook
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -278,7 +279,6 @@ Use the same code here as in the actual opsfiles hook
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -296,6 +296,7 @@ Use the same code here as in the actual opsfiles hook
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -305,7 +306,6 @@ Use the same code here as in the actual opsfiles hook
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -323,6 +323,7 @@ Use the same code here as in the actual opsfiles hook
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -332,7 +333,6 @@ Use the same code here as in the actual opsfiles hook
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -341,7 +341,16 @@ Use the same code here as in the actual opsfiles hook
   hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * queue size after processing: 2 (glob)
   * sync failed for ids [2] (glob)
-  * caused by: sync failed (glob)
+  * caused by: sync failed: hg logs follow: (glob)
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     1e43292ffbb3  pushcommit
+  remote: [ReplayVerification] only allowed to unbundlereplay on ['other_bookmark']
+  remote: pushkey-abort: prepushkey hook failed
+  remote: transaction abort!
+  remote: rollback completed
+  replay failed: error:pushkey
+  
 Oops, we allowed a wrong bookmark to be unbundlereplayed onto
   $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
   > [facebook]
@@ -363,6 +372,7 @@ Now bookmark is not blocked
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
@@ -372,7 +382,6 @@ Now bookmark is not blocked
   remote: transaction abort!
   remote: rollback completed
   replay failed: error:pushkey
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
@@ -381,7 +390,16 @@ Now bookmark is not blocked
   hg server does not have an expected bookmark location. book: master_bookmark, server: add0c792bfce89610d277fd5b1e32f5287994d1d; expected 1e43292ffbb38fa183e7f21fb8e8a8450e61c890
   * queue size after processing: 2 (glob)
   * sync failed for ids [2] (glob)
-  * caused by: sync failed (glob)
+  * caused by: sync failed: hg logs follow: (glob)
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     1e43292ffbb3  pushcommit
+  remote: [ReplayVerification] Expected: (master_bookmark, 1e43292ffbb38fa183e7f21fb8e8a8450e61c890). Actual: (master_bookmark, acc06228d802cbe9e2a6740c0abacf017f3be65c)
+  remote: pushkey-abort: prepushkey hook failed
+  remote: transaction abort!
+  remote: rollback completed
+  replay failed: error:pushkey
+  
 
 Set the correct timestamp back
   $ sqlite3 "$TESTTMP/repo/bookmarks" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
@@ -418,21 +436,21 @@ Replay in a loop
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 2 (glob)
   * successful sync of entries [2] (glob)
   * preparing log entry #3 ... (glob)
   * successful prepare of entry #3 (glob)
   * syncing log entries [3] ... (glob)
+  single wireproto command took: * (glob)
   sending unbundlereplay command
   remote: * (glob)
   remote: * (glob)
-  single wireproto command took: * (glob)
   unbundle replay batch item #1 successfully sent
   * queue size after processing: 1 (glob)
   * successful sync of entries [3] (glob)
@@ -469,11 +487,11 @@ Continue replay
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     67d5c96d65a7  onemorecommit
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 0 (glob)
   * successful sync of entries [5] (glob)
@@ -536,21 +554,21 @@ Continue replay
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     15776eb106e6  exec mode
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 1 (glob)
   * successful sync of entries [6] (glob)
   * preparing log entry #7 ... (glob)
   * successful prepare of entry #7 (glob)
   * syncing log entries [7] ... (glob)
+  single wireproto command took: * (glob)
   sending unbundlereplay command
   remote: * (glob)
   remote:     6f060fabc8e7  symlink
-  single wireproto command took: * (glob)
   unbundle replay batch item #1 successfully sent
   * queue size after processing: 0 (glob)
   * successful sync of entries [7] (glob)
@@ -621,11 +639,11 @@ Test failing to sync, but already having the correct bookmark location
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     1e43292ffbb3  pushcommit
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 successfully sent
   * queue size after processing: 5 (glob)
   * successful sync of entries [2] (glob)
@@ -646,12 +664,12 @@ Test further sync
   sending clienttelemetry command
   connected to * (glob)
   creating a peer took: * (glob)
+  single wireproto command took: * (glob)
   using * as a reports file (glob)
   sending unbundlereplay command
   replay failed: error:abort
   part message: conflicting changes in:
       pushcommit
-  single wireproto command took: * (glob)
   unbundle replay batch item #0 failed
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
