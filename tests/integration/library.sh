@@ -1,4 +1,10 @@
 #!/bin/bash
+# Copyright (c) 2019-present, Facebook, Inc.
+# All Rights Reserved.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 # Library routines and initial setup for Mononoke-related tests.
 
 TEST_CERTDIR="${HGTEST_CERTDIR:-$TESTDIR/certs}"
@@ -397,6 +403,13 @@ if [[ -v LFS_THRESHOLD ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [lfs]
 threshold=$LFS_THRESHOLD
+CONFIG
+fi
+
+if [[ -v INFINITE_PUSH_NAMESPACE_REGEX ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[infinitepush]
+namespace="$INFINITE_PUSH_NAMESPACE_REGEX"
 CONFIG
 fi
 }

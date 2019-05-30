@@ -515,6 +515,39 @@ fn test_noop_update() {
 }
 
 #[test]
+fn test_infinitepush_update_bookmark() {
+    let ctx = CoreContext::test_mock();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
+    let name_1 = create_bookmark_name("book");
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.create_infinitepush(&name_1, ONES_CSID).unwrap();
+    assert!(txn.commit().wait().unwrap());
+
+    let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
+    txn.update_infinitepush(&name_1, TWOS_CSID, ONES_CSID)
+        .unwrap();
+    assert!(txn.commit().wait().unwrap());
+
+    assert_eq!(
+        bookmarks
+            .get(ctx.clone(), &name_1, REPO_ZERO)
+            .wait()
+            .unwrap(),
+        Some(TWOS_CSID)
+    );
+
+    compare_log_entries(
+        bookmarks
+            .read_next_bookmark_log_entries(ctx.clone(), 1, REPO_ZERO, 1)
+            .collect()
+            .wait()
+            .unwrap(),
+        vec![],
+    );
+}
+
+#[test]
 fn test_update_non_existent_bookmark() {
     let ctx = CoreContext::test_mock();
     let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();

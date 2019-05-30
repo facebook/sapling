@@ -57,10 +57,15 @@ queries! {
         "{insert_or_ignore} INTO bookmarks (repo_id, name, changeset_id, hg_kind) VALUES {values}"
     }
 
+    // NOTE: This query lets you pick up to 2 kinds you want to update (unfortunately, I have not
+    // been, able to get >list to work to make this cleaner).
+    // TODO: (torozco) T45054960 Update UpdateBookmark query to use >list, if possible.
     write UpdateBookmark(
         repo_id: RepositoryId,
         name: BookmarkName,
         old_id: ChangesetId,
+        kind_1: BookmarkHgKind,
+        kind_2: Option<BookmarkHgKind>,
         new_id: ChangesetId,
     ) {
         none,
@@ -68,7 +73,8 @@ queries! {
          SET changeset_id = {new_id}
          WHERE repo_id = {repo_id}
            AND name = {name}
-           AND changeset_id = {old_id}"
+           AND changeset_id = {old_id}
+           AND (hg_kind = {kind_1} OR hg_kind = {kind_2})"
     }
 
     write DeleteBookmark(repo_id: RepositoryId, name: BookmarkName) {
@@ -522,6 +528,8 @@ struct SqlBookmarksTransaction {
     sets: HashMap<BookmarkName, (BookmarkSetData, BookmarkUpdateReason)>,
     force_deletes: HashMap<BookmarkName, BookmarkUpdateReason>,
     deletes: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
+    infinitepush_sets: HashMap<BookmarkName, BookmarkSetData>,
+    infinitepush_creates: HashMap<BookmarkName, ChangesetId>,
 }
 
 impl SqlBookmarksTransaction {
@@ -534,6 +542,8 @@ impl SqlBookmarksTransaction {
             sets: HashMap::new(),
             force_deletes: HashMap::new(),
             deletes: HashMap::new(),
+            infinitepush_sets: HashMap::new(),
+            infinitepush_creates: HashMap::new(),
         }
     }
 
@@ -543,6 +553,8 @@ impl SqlBookmarksTransaction {
             || self.sets.contains_key(key)
             || self.force_deletes.contains_key(key)
             || self.deletes.contains_key(key)
+            || self.infinitepush_sets.contains_key(key)
+            || self.infinitepush_creates.contains_key(key)
         {
             bail_msg!("{} bookmark was already used", key);
         }
@@ -681,6 +693,24 @@ impl Transaction for SqlBookmarksTransaction {
         Ok(())
     }
 
+    fn update_infinitepush(
+        &mut self,
+        key: &BookmarkName,
+        new_cs: ChangesetId,
+        old_cs: ChangesetId,
+    ) -> Result<()> {
+        self.check_if_bookmark_already_used(key)?;
+        self.infinitepush_sets
+            .insert(key.clone(), BookmarkSetData { new_cs, old_cs });
+        Ok(())
+    }
+
+    fn create_infinitepush(&mut self, key: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+        self.check_if_bookmark_already_used(key)?;
+        self.infinitepush_creates.insert(key.clone(), new_cs);
+        Ok(())
+    }
+
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
         let this = *self;
 
@@ -692,6 +722,8 @@ impl Transaction for SqlBookmarksTransaction {
             sets,
             force_deletes,
             deletes,
+            infinitepush_sets,
+            infinitepush_creates,
         } = this;
 
         let mut log_rows: HashMap<_, (Option<ChangesetId>, Option<ChangesetId>, _)> =
@@ -718,6 +750,11 @@ impl Transaction for SqlBookmarksTransaction {
             log_rows.insert(bookmark, (Some(from_cs_id), None, reason));
         }
 
+        // NOTE: Infinitepush updates do *not* go into log_rows. This is because the
+        // BookmarkUpdateLog is currently used for replays to Mercurial, and those updates should
+        // not be replayed (for Infinitepush, those updates are actually dispatched by the client
+        // to both destination).
+
         write_connection
             .start_transaction()
             .map_err(Some)
@@ -732,8 +769,9 @@ impl Transaction for SqlBookmarksTransaction {
                 ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..]).map_err(Some)
             })
             .and_then(move |(transaction, _)| {
-                let creates_vec: Vec<_> = creates.clone().into_iter().collect();
                 let mut ref_rows = Vec::new();
+
+                let creates_vec: Vec<_> = creates.clone().into_iter().collect();
                 for idx in 0..creates_vec.len() {
                     let (ref to_changeset_id, _) = creates_vec[idx].1;
                     ref_rows.push((
@@ -744,7 +782,11 @@ impl Transaction for SqlBookmarksTransaction {
                     ))
                 }
 
-                let rows_to_insert = creates_vec.len() as u64;
+                for (name, cs_id) in infinitepush_creates.iter() {
+                    ref_rows.push((&repo_id, &name, cs_id, &BookmarkHgKind::Scratch));
+                }
+
+                let rows_to_insert = ref_rows.len() as u64;
                 InsertBookmarks::query_with_transaction(transaction, &ref_rows[..]).then(
                     move |res| match res {
                         Err(err) => Err(Some(err)),
@@ -759,18 +801,31 @@ impl Transaction for SqlBookmarksTransaction {
                 )
             })
             .and_then(move |transaction| {
+                // Iterate over (BookmarkName, BookmarkSetData, *Allowed Kinds to update from)
+                // We allow up to 2 kinds to update from.
+                use BookmarkHgKind::*;
+
+                let sets_iter = sets.into_iter().map(|(name, (data, _reason))| {
+                    (name, data, PullDefault, Some(PublishingNotPullDefault))
+                });
+
+                let infinitepush_sets_iter = infinitepush_sets
+                    .into_iter()
+                    .map(|(name, data)| (name, data, Scratch, None));
+
+                let updates_iter = sets_iter.chain(infinitepush_sets_iter);
+
                 loop_fn(
-                    (transaction, sets.into_iter()),
+                    (transaction, updates_iter),
                     move |(transaction, mut updates)| match updates.next() {
                         Some((
                             ref name,
-                            (
-                                BookmarkSetData {
-                                    ref new_cs,
-                                    ref old_cs,
-                                },
-                                ref _reason,
-                            ),
+                            BookmarkSetData {
+                                ref new_cs,
+                                ref old_cs,
+                            },
+                            ref _kind1,
+                            ref _kind2,
                         )) if new_cs == old_cs => {
                             // no-op update. If bookmark points to a correct update then
                             // let's continue the transaction, otherwise revert it
@@ -791,12 +846,14 @@ impl Transaction for SqlBookmarksTransaction {
                                 .map(Loop::Continue)
                                 .boxify()
                         }
-                        Some((name, (BookmarkSetData { new_cs, old_cs }, _reason))) => {
+                        Some((name, BookmarkSetData { new_cs, old_cs }, kind_1, kind_2)) => {
                             UpdateBookmark::query_with_transaction(
                                 transaction,
                                 &repo_id,
                                 &name,
                                 &old_cs,
+                                &kind_1,
+                                &kind_2,
                                 &new_cs,
                             )
                             .then(move |res| match res {
@@ -900,10 +957,106 @@ fn get_bundle_replay_data(
 #[cfg(test)]
 mod test {
     use super::*;
+    use mononoke_types_mocks::{
+        changesetid::{ONES_CSID, TWOS_CSID},
+        repo::REPO_ZERO,
+    };
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::iter::FromIterator;
     use tokio::runtime::Runtime;
+
+    fn create_bookmark_name(book: &str) -> BookmarkName {
+        BookmarkName::new(book.to_string()).unwrap()
+    }
+
+    #[test]
+    fn test_update_kind_compatibility() {
+        let mut rt = Runtime::new().unwrap();
+
+        let data = BookmarkUpdateReason::TestMove {
+            bundle_replay_data: None,
+        };
+
+        let ctx = CoreContext::test_mock();
+        let store = SqlBookmarks::with_sqlite_in_memory().unwrap();
+        let scratch_name = create_bookmark_name("book1");
+        let publishing_name = create_bookmark_name("book2");
+        let pull_default_name = create_bookmark_name("book3");
+
+        let conn = store.write_connection.clone();
+
+        let rows = vec![
+            (
+                &REPO_ZERO,
+                &scratch_name,
+                &ONES_CSID,
+                &BookmarkHgKind::Scratch,
+            ),
+            (
+                &REPO_ZERO,
+                &publishing_name,
+                &ONES_CSID,
+                &BookmarkHgKind::PublishingNotPullDefault,
+            ),
+            (
+                &REPO_ZERO,
+                &pull_default_name,
+                &ONES_CSID,
+                &BookmarkHgKind::PullDefault,
+            ),
+        ];
+
+        rt.block_on(InsertBookmarks::query(&conn, &rows[..]))
+            .expect("insert failed");
+
+        // Create normal over scratch should fail
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.create_infinitepush(&publishing_name, ONES_CSID)
+            .unwrap();
+        assert!(!txn.commit().wait().unwrap());
+
+        // Create scratch over normal should fail
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.create(&scratch_name, ONES_CSID, data.clone()).unwrap();
+        assert!(!txn.commit().wait().unwrap());
+
+        // Updating publishing with infinite push should fail.
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.update_infinitepush(&publishing_name, TWOS_CSID, ONES_CSID)
+            .unwrap();
+        assert!(!txn.commit().wait().unwrap());
+
+        // Updating pull default with infinite push should fail.
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.update_infinitepush(&pull_default_name, TWOS_CSID, ONES_CSID)
+            .unwrap();
+        assert!(!txn.commit().wait().unwrap());
+
+        // Updating publishing with normal should succeed
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.update(&publishing_name, TWOS_CSID, ONES_CSID, data.clone())
+            .unwrap();
+        assert!(txn.commit().wait().unwrap());
+
+        // Updating pull default with normal should succeed
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.update(&pull_default_name, TWOS_CSID, ONES_CSID, data.clone())
+            .unwrap();
+        assert!(txn.commit().wait().unwrap());
+
+        // Updating scratch with normal should fail.
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.update(&scratch_name, TWOS_CSID, ONES_CSID, data.clone())
+            .unwrap();
+        assert!(!txn.commit().wait().unwrap());
+
+        // Updating scratch with infinite push should succeed.
+        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        txn.update_infinitepush(&scratch_name, TWOS_CSID, ONES_CSID)
+            .unwrap();
+        assert!(txn.commit().wait().unwrap());
+    }
 
     fn insert_then_query(
         bookmarks: &Vec<(Bookmark, ChangesetId)>,

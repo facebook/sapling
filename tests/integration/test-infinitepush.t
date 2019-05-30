@@ -1,7 +1,7 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-  $ setup_common_config
+  $ INFINITE_PUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
 
 setup common configuration for these tests
@@ -47,6 +47,7 @@ Do infinitepush (aka commit cloud) push
   > remotenames=
   > [infinitepush]
   > server=False
+  > branchpattern=re:scratch/.+
   > EOF
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -101,6 +102,13 @@ Do infinitepush (aka commit cloud) push
   
 
   $ cd ../repo-pull
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > remotenames=
+  > [infinitepush]
+  > server=False
+  > branchpattern=re:scratch/.+
+  > EOF
   $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
   pulling from ssh://user@dummy/repo
   searching for changes
@@ -119,6 +127,116 @@ Do infinitepush (aka commit cloud) push
   o  0: 3903775176ed public 'a' master_bookmark
   
 
+Do infinitepush (aka commit cloud) push, to a bookmark
+  $ cd ../repo-push
+  $ hg up tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo new2 > newfile2
+  $ hg addremove -q
+  $ hg ci -m new2
+  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123"
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Unknown bookmark: scratch/123. Use --create to create one.",
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     While verifying Infinite Push bookmark push
+  remote:   Caused by:
+  remote:     Unknown bookmark: scratch/123. Use --create to create one.
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123" --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  $ tglogp
+  @  2: 007299f6399f draft 'new2'
+  |
+  o  1: 47da8b81097c draft 'new'
+  |
+  o  0: 3903775176ed public 'a' master_bookmark
+  
+  $ sqlite3 "$TESTTMP/repo/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
+  scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
+  $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123"
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "Non fastforward bookmark move (try --force?)",
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     While verifying Infinite Push bookmark push
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move (try --force?)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123" --force
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  $ sqlite3 "$TESTTMP/repo/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
+  scratch/123|scratch|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
+  $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/123"
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  $ sqlite3 "$TESTTMP/repo/bookmarks" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
+  master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
+  scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
+  $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/123" --create --config "infinitepush.branchpattern=foo"
+  pushing rev 007299f6399f to destination ssh://user@dummy/repo bookmark scratch/123
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     bundle2_resolver error
+  remote:   Root cause:
+  remote:     ErrorMessage {
+  remote:         msg: "[push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$",
+  remote:     }
+  remote:   Caused by:
+  remote:     While updating Bookmarks
+  remote:   Caused by:
+  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
+
+  $ cd ../repo-pull
+  $ hgmn pull -B "scratch/123"
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  new changesets 007299f6399f
+  $ hgmn up -q "007299f6399f"
+  $ cat newfile2
+  new2
+
+  $ tglogp
+  @  2: 007299f6399f draft 'new2'
+  |
+  o  1: 47da8b81097c draft 'new'
+  |
+  o  0: 3903775176ed public 'a' master_bookmark
+  
+  $ hg book --remote
+     default/master_bookmark   0:3903775176ed
+     default/scratch/123       2:007299f6399f
+
 Pushbackup also works
   $ cd ../repo-push
   $ echo aa > aa && hg addremove && hg ci -q -m newrepo
@@ -134,10 +252,11 @@ Pushbackup also works
   sending knownnodes command
   sending knownnodes command
   backing up stack rooted at 47da8b81097c
-  2 changesets found
+  3 changesets found
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
-  95cad53aab1b0b33eceee14473b3983312721529
+  007299f6399f84ad9c3b269137902d47d908936d
+  2cfeca6399fdb0084a6eba69275ea7aeb1d07667
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
@@ -152,7 +271,9 @@ Pushbackup also works
   commitcloud: backed up 1 commit
 
   $ tglogp
-  @  2: 95cad53aab1b draft 'newrepo'
+  @  3: 2cfeca6399fd draft 'newrepo'
+  |
+  o  2: 007299f6399f draft 'new2'
   |
   o  1: 47da8b81097c draft 'new'
   |
@@ -160,20 +281,22 @@ Pushbackup also works
   
 
   $ cd ../repo-pull
-  $ hgmn pull -r 95cad53aab1b0b33eceee14473b3983312721529
+  $ hgmn pull -r 2cfeca6399fdb0084a6eba69275ea7aeb1d07667
   pulling from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  new changesets 95cad53aab1b
-  $ hgmn up -q 95cad53aab1b0b33ecee
+  new changesets 2cfeca6399fd
+  $ hgmn up -q 2cfeca6399fd
   $ cat aa
   aa
 
   $ tglogp
-  @  2: 95cad53aab1b draft 'newrepo'
+  @  3: 2cfeca6399fd draft 'newrepo'
+  |
+  o  2: 007299f6399f draft 'new2'
   |
   o  1: 47da8b81097c draft 'new'
   |
@@ -199,7 +322,9 @@ Pushbackup that pushes only bookmarks
   nothing to back up
 
   $ tglogp
-  @  2: 95cad53aab1b draft 'newrepo' newbook
+  @  3: 2cfeca6399fd draft 'newrepo' newbook
+  |
+  o  2: 007299f6399f draft 'new2'
   |
   o  1: 47da8b81097c draft 'new'
   |
@@ -208,12 +333,14 @@ Pushbackup that pushes only bookmarks
 
 Finally, try to push existing commit to a public bookmark
   $ hgmn push -r . --to master_bookmark
-  pushing rev 95cad53aab1b to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 2cfeca6399fd to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
   $ tglogp
-  @  2: 95cad53aab1b public 'newrepo' newbook
+  @  3: 2cfeca6399fd public 'newrepo' newbook
+  |
+  o  2: 007299f6399f public 'new2'
   |
   o  1: 47da8b81097c public 'new'
   |
@@ -231,14 +358,15 @@ Check phases on another side (for pull command and pull -r)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  updating bookmark master_bookmark
 
   $ tglogp
-  @  2: 95cad53aab1b draft 'newrepo' master_bookmark
+  @  3: 2cfeca6399fd draft 'newrepo'
+  |
+  o  2: 007299f6399f draft 'new2'
   |
   o  1: 47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  0: 3903775176ed public 'a' master_bookmark
   
 
   $ hgmn pull
@@ -252,17 +380,19 @@ Check phases on another side (for pull command and pull -r)
   added 0 changesets with 0 changes to 0 files
 
   $ tglogp
-  @  2: 95cad53aab1b public 'newrepo' master_bookmark
+  @  3: 2cfeca6399fd public 'newrepo'
+  |
+  o  2: 007299f6399f public 'new2'
   |
   o  1: 47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  0: 3903775176ed public 'a' master_bookmark
   
 
 # Test phases a for stack that is partially public
   $ cd ../repo-push
   $ hgmn up 3903775176ed
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   (leaving bookmark newbook)
   $ echo new > file1
   $ hg addremove -q
@@ -280,11 +410,13 @@ Check phases on another side (for pull command and pull -r)
   commitcloud: backed up 1 commit
 
   $ tglogp
-  @  4: eca836c7c651 draft 'change on top of the release'
+  @  5: eca836c7c651 draft 'change on top of the release'
   |
-  o  3: 500658c138a4 public 'feature release'
+  o  4: 500658c138a4 public 'feature release'
   |
-  | o  2: 95cad53aab1b public 'newrepo' newbook
+  | o  3: 2cfeca6399fd public 'newrepo' newbook
+  | |
+  | o  2: 007299f6399f public 'new2'
   | |
   | o  1: 47da8b81097c public 'new'
   |/
@@ -302,19 +434,20 @@ Check phases on another side (for pull command and pull -r)
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files (+1 heads)
-  adding remote bookmark test_release_1.0.0
   new changesets 500658c138a4:eca836c7c651
 
   $ tglogp
-  o  4: eca836c7c651 draft 'change on top of the release'
+  o  5: eca836c7c651 draft 'change on top of the release'
   |
-  o  3: 500658c138a4 public 'feature release' test_release_1.0.0
+  o  4: 500658c138a4 public 'feature release'
   |
-  | @  2: 95cad53aab1b public 'newrepo' master_bookmark
+  | @  3: 2cfeca6399fd public 'newrepo'
+  | |
+  | o  2: 007299f6399f public 'new2'
   | |
   | o  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  0: 3903775176ed public 'a' master_bookmark
   
 
   $ hgmn pull -r test_release_1.0.0
@@ -327,15 +460,17 @@ Check phases on another side (for pull command and pull -r)
   added 0 changesets with 0 changes to 0 files
 
   $ tglogp
-  o  4: eca836c7c651 draft 'change on top of the release'
+  o  5: eca836c7c651 draft 'change on top of the release'
   |
-  o  3: 500658c138a4 public 'feature release' test_release_1.0.0
+  o  4: 500658c138a4 public 'feature release'
   |
-  | @  2: 95cad53aab1b public 'newrepo' master_bookmark
+  | @  3: 2cfeca6399fd public 'newrepo'
+  | |
+  | o  2: 007299f6399f public 'new2'
   | |
   | o  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  0: 3903775176ed public 'a' master_bookmark
   
  
 
@@ -359,15 +494,17 @@ Test phases with pushrebase
   updating bookmark master_bookmark
 
   $ tglogp
-  o  6: 2bea0b154d91 public 'new feature on top of master'
+  o  7: 1708c61178dd public 'new feature on top of master'
   |
-  | @  5: f9e4cd522499 draft 'new feature on top of master'
+  | @  6: f9e4cd522499 draft 'new feature on top of master'
   | |
-  | | o  4: eca836c7c651 draft 'change on top of the release'
+  | | o  5: eca836c7c651 draft 'change on top of the release'
   | | |
-  | | o  3: 500658c138a4 public 'feature release'
+  | | o  4: 500658c138a4 public 'feature release'
   | |/
-  o |  2: 95cad53aab1b public 'newrepo' newbook
+  o |  3: 2cfeca6399fd public 'newrepo' newbook
+  | |
+  o |  2: 007299f6399f public 'new2'
   | |
   o |  1: 47da8b81097c public 'new'
   |/
@@ -388,28 +525,28 @@ More sophisticated test for phases
   > pushrebase=!
   > EOF
 
-  $ hgmn up 2bea0b154d91 -q
+  $ hgmn up 1708c61178dd -q
   $ mkcommit ww
   $ hgmn push -r . --to "release 1"  --create -q
   $ mkcommit xx
   $ mkcommit yy
   $ mkcommit zz
 
-  $ hgmn up 2bea0b154d91 -q
+  $ hgmn up 1708c61178dd -q
   $ mkcommit www
   $ mkcommit xxx
   $ hgmn push -r . --to "release 2"  --create -q
   $ mkcommit yyy
   $ mkcommit zzz
 
-  $ hgmn up 2bea0b154d91 -q
+  $ hgmn up 1708c61178dd -q
   $ mkcommit wwww
   $ mkcommit xxxx
   $ mkcommit yyyy
   $ hgmn push -r . --to "release 3"  --create -q
   $ mkcommit zzzz
 
-  $ hgmn up 2bea0b154d91 -q
+  $ hgmn up 1708c61178dd -q
   $ mkcommit wwwww
   $ mkcommit xxxxx
   $ mkcommit yyyyy
@@ -418,51 +555,53 @@ More sophisticated test for phases
 
   $ hgmn cloud backup --dest ssh://user@dummy/repo -q
 
-  $ hgmn cloud check --dest ssh://user@dummy/repo -r e4ae5d869b06 --remote
-  e4ae5d869b061c927cf739de04162653c9c4a9ab backed up
-  $ hgmn cloud check --dest ssh://user@dummy/repo -r 8336071380f0 --remote
-  8336071380f0f7cf919e51f7f1818f2fed425fdb backed up
-  $ hgmn cloud check --dest ssh://user@dummy/repo -r 884e1b02454b --remote
-  884e1b02454b186570b35d47eac3794b2f8d952f backed up
+  $ hgmn cloud check --dest ssh://user@dummy/repo -r 7d67c7248d48 --remote
+  7d67c7248d486cb264270530ef906f1d09d6c650 backed up
+  $ hgmn cloud check --dest ssh://user@dummy/repo -r bf677f20a49d --remote
+  bf677f20a49dc5ac94946f3d91ad181f8a6fdbab backed up
+  $ hgmn cloud check --dest ssh://user@dummy/repo -r 5e59ac0f4dd0 --remote
+  5e59ac0f4dd00fd4d751f9f3663be99df0f4765d backed up
 
   $ tglogp
-  @  22: 1e6a6d6a35a6 public 'zzzzz'
+  @  23: b9f080ea9500 public 'zzzzz'
   |
-  o  21: 9279bca0443c public 'yyyyy'
+  o  22: 6e068f112af8 public 'yyyyy'
   |
-  o  20: 9d588b656b51 public 'xxxxx'
+  o  21: 0ff6f97758ae public 'xxxxx'
   |
-  o  19: 4c250e6f06f5 public 'wwwww'
+  o  20: 8be205326fcf public 'wwwww'
   |
-  | o  18: e4ae5d869b06 draft 'zzzz'
+  | o  19: 7d67c7248d48 draft 'zzzz'
   | |
-  | o  17: 3370986ca01b public 'yyyy'
+  | o  18: 859e9fdde968 public 'yyyy'
   | |
-  | o  16: fb3ba87e275a public 'xxxx'
+  | o  17: abe01677f4a6 public 'xxxx'
   | |
-  | o  15: 86268dc9ba00 public 'wwww'
+  | o  16: 4710fc0238de public 'wwww'
   |/
-  | o  14: 8336071380f0 draft 'zzz'
+  | o  15: bf677f20a49d draft 'zzz'
   | |
-  | o  13: a9e7b029fb67 draft 'yyy'
+  | o  14: 43db2471732d draft 'yyy'
   | |
-  | o  12: 49c7e143a5d1 public 'xxx'
+  | o  13: f743965444d9 public 'xxx'
   | |
-  | o  11: eedfd85fd934 public 'www'
+  | o  12: 83da839eb4d2 public 'www'
   |/
-  | o  10: 884e1b02454b draft 'zz'
+  | o  11: 5e59ac0f4dd0 draft 'zz'
   | |
-  | o  9: 43bb408f4831 draft 'yy'
+  | o  10: 1a4fd3035391 draft 'yy'
   | |
-  | o  8: 8417b8ce7989 draft 'xx'
+  | o  9: c2234433b092 draft 'xx'
   | |
-  | o  7: bce1d74baf69 public 'ww'
+  | o  8: 2ba1f5f6cccd public 'ww'
   |/
-  o  6: 2bea0b154d91 public 'new feature on top of master'
+  o  7: 1708c61178dd public 'new feature on top of master'
   |
-  | o  3: 500658c138a4 public 'feature release'
+  | o  4: 500658c138a4 public 'feature release'
   | |
-  o |  2: 95cad53aab1b public 'newrepo' newbook
+  o |  3: 2cfeca6399fd public 'newrepo' newbook
+  | |
+  o |  2: 007299f6399f public 'new2'
   | |
   o |  1: 47da8b81097c public 'new'
   |/
@@ -471,10 +610,10 @@ More sophisticated test for phases
 At the moment short hahses are not working, print the full hashes to use then in hg pull command
   $ hg log -T '{node}\n' -r 'heads(all())'
   500658c138a447f7ba651547d45ac510ae4e6db2
-  884e1b02454b186570b35d47eac3794b2f8d952f
-  8336071380f0f7cf919e51f7f1818f2fed425fdb
-  e4ae5d869b061c927cf739de04162653c9c4a9ab
-  1e6a6d6a35a683a946e96ab16d011883f0dc8f77
+  5e59ac0f4dd00fd4d751f9f3663be99df0f4765d
+  bf677f20a49dc5ac94946f3d91ad181f8a6fdbab
+  7d67c7248d486cb264270530ef906f1d09d6c650
+  b9f080ea95005f3513a22aa15f1f74d7371ce5d4
 
   $ cd ../repo-pull
 
@@ -482,45 +621,45 @@ At the moment short hahses are not working, print the full hashes to use then in
   abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
   [255]
 
-  $ hgmn pull -r 884e1b02454b186570b35d47eac3794b2f8d952f -r 8336071380f0f7cf919e51f7f1818f2fed425fdb -r e4ae5d869b061c927cf739de04162653c9c4a9ab -r 1e6a6d6a35a683a946e96ab16d011883f0dc8f77 -q
+  $ hgmn pull -r 5e59ac0f4dd00fd4d751f9f3663be99df0f4765d -r bf677f20a49dc5ac94946f3d91ad181f8a6fdbab -r 7d67c7248d486cb264270530ef906f1d09d6c650 -r b9f080ea95005f3513a22aa15f1f74d7371ce5d4 -q
 
-  $ tglogpnr -r "::1e6a6d6a35a683a946e96ab16d011883f0dc8f77 - ::master_bookmark"
-  o  1e6a6d6a35a6 public 'zzzzz' release 4
+  $ tglogpnr -r "::b9f080ea95005f3513a22aa15f1f74d7371ce5d4 - ::default/master_bookmark"
+  o  b9f080ea9500 public 'zzzzz'
   |
-  o  9279bca0443c public 'yyyyy'
+  o  6e068f112af8 public 'yyyyy'
   |
-  o  9d588b656b51 public 'xxxxx'
+  o  0ff6f97758ae public 'xxxxx'
   |
-  o  4c250e6f06f5 public 'wwwww'
-  |
-  ~
-  $ tglogpnr -r "::e4ae5d869b061c927cf739de04162653c9c4a9ab - ::master_bookmark"
-  o  e4ae5d869b06 draft 'zzzz'
-  |
-  o  3370986ca01b public 'yyyy' release 3
-  |
-  o  fb3ba87e275a public 'xxxx'
-  |
-  o  86268dc9ba00 public 'wwww'
+  o  8be205326fcf public 'wwwww'
   |
   ~
-  $ tglogpnr -r "::8336071380f0f7cf919e51f7f1818f2fed425fdb - ::master_bookmark"
-  o  8336071380f0 draft 'zzz'
+  $ tglogpnr -r "::7d67c7248d486cb264270530ef906f1d09d6c650 - ::default/master_bookmark"
+  o  7d67c7248d48 draft 'zzzz'
   |
-  o  a9e7b029fb67 draft 'yyy'
+  o  859e9fdde968 public 'yyyy'
   |
-  o  49c7e143a5d1 public 'xxx' release 2
+  o  abe01677f4a6 public 'xxxx'
   |
-  o  eedfd85fd934 public 'www'
+  o  4710fc0238de public 'wwww'
   |
   ~
-  $ tglogpnr -r "::884e1b02454b186570b35d47eac3794b2f8d952f - ::master_bookmark"
-  o  884e1b02454b draft 'zz'
+  $ tglogpnr -r "::bf677f20a49dc5ac94946f3d91ad181f8a6fdbab - ::default/master_bookmark"
+  o  bf677f20a49d draft 'zzz'
   |
-  o  43bb408f4831 draft 'yy'
+  o  43db2471732d draft 'yyy'
   |
-  o  8417b8ce7989 draft 'xx'
+  o  f743965444d9 public 'xxx'
   |
-  o  bce1d74baf69 public 'ww' release 1
+  o  83da839eb4d2 public 'www'
+  |
+  ~
+  $ tglogpnr -r "::5e59ac0f4dd00fd4d751f9f3663be99df0f4765d - ::default/master_bookmark"
+  o  5e59ac0f4dd0 draft 'zz'
+  |
+  o  1a4fd3035391 draft 'yy'
+  |
+  o  c2234433b092 draft 'xx'
+  |
+  o  2ba1f5f6cccd public 'ww'
   |
   ~

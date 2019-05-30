@@ -970,6 +970,7 @@ impl HgCommands for RepoClient {
                     client.repo.blobrepo().clone(),
                     client.repo.pushrebase_params().clone(),
                     client.repo.bookmark_attrs(),
+                    client.repo.infinitepush().clone(),
                     heads,
                     stream,
                     hook_manager,

@@ -148,6 +148,10 @@ impl BookmarkName {
     pub fn to_string(&self) -> String {
         self.bookmark.clone().into()
     }
+
+    pub fn as_str(&self) -> &str {
+        self.bookmark.as_str()
+    }
 }
 
 impl Weight for BookmarkName {
@@ -471,7 +475,7 @@ impl From<BookmarkUpdateReason> for Value {
 pub trait Transaction: Send + Sync + 'static {
     /// Adds set() operation to the transaction set.
     /// Updates a bookmark's value. Bookmark should already exist and point to `old_cs`, otherwise
-    /// committing the transaction will fail.
+    /// committing the transaction will fail. The Bookmark should also not be Scratch.
     fn update(
         &mut self,
         key: &BookmarkName,
@@ -482,7 +486,7 @@ pub trait Transaction: Send + Sync + 'static {
 
     /// Adds create() operation to the transaction set.
     /// Creates a bookmark. BookmarkName should not already exist, otherwise committing the
-    /// transaction will fail.
+    /// transaction will fail. The resulting Bookmark will be PushDefault.
     fn create(
         &mut self,
         key: &BookmarkName,
@@ -512,6 +516,19 @@ pub trait Transaction: Send + Sync + 'static {
     /// Adds force_delete operation to the transaction set.
     /// Deletes bookmark unconditionally.
     fn force_delete(&mut self, key: &BookmarkName, reason: BookmarkUpdateReason) -> Result<()>;
+
+    /// Adds an infinitepush update operation to the transaction set.
+    /// Updates the changeset referenced by the bookmark, if it is already a scratch bookmark.
+    fn update_infinitepush(
+        &mut self,
+        key: &BookmarkName,
+        new_cs: ChangesetId,
+        old_cs: ChangesetId,
+    ) -> Result<()>;
+
+    /// Adds an infinitepush create operation to the transaction set.
+    /// Creates a new bookmark, configured as scratch. It shuld not exist already.
+    fn create_infinitepush(&mut self, key: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
 
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by

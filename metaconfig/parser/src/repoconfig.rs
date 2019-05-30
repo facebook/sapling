@@ -24,8 +24,9 @@ use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, CommonConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
-    HookType, LfsParams, MetadataDBConfig, PushrebaseParams, RepoConfig, RepoReadOnly,
-    ShardedFilenodesParams, StorageConfig, WhitelistEntry,
+    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
+    PushrebaseParams, RepoConfig, RepoReadOnly, ShardedFilenodesParams, StorageConfig,
+    WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -418,6 +419,11 @@ impl RepoConfigs {
             RepoReadOnly::ReadWrite
         };
 
+        let infinitepush = this.infinitepush.map(|p| {
+            let namespace = InfinitepushNamespace::new(p.namespace.0);
+            InfinitepushParams { namespace }
+        });
+
         let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
         Ok(RepoConfig {
             enabled,
@@ -438,6 +444,7 @@ impl RepoConfigs {
             skiplist_index_blobstore_key,
             bundle2_replay_params,
             write_lock_db_address: this.write_lock_db_address,
+            infinitepush,
         })
     }
 }
@@ -511,6 +518,7 @@ struct RawRepoConfig {
     hash_validation_percentage: Option<usize>,
     skiplist_index_blobstore_key: Option<String>,
     bundle2_replay_params: Option<RawBundle2ReplayParams>,
+    infinitepush: Option<RawInfinitepushParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -765,6 +773,12 @@ struct RawShardedFilenodesParams {
     shard_num: usize,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawInfinitepushParams {
+    namespace: RawRegex,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -875,6 +889,9 @@ mod test {
 
             [bundle2_replay_params]
             preserve_raw_bundle2 = true
+
+            [infinitepush]
+            namespace = "foobar/.+"
         "#;
         let www_content = r#"
             repoid=1
@@ -1038,6 +1055,9 @@ mod test {
                 bundle2_replay_params: Bundle2ReplayParams {
                     preserve_raw_bundle2: true,
                 },
+                infinitepush: Some(InfinitepushParams {
+                    namespace: InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap()),
+                }),
             },
         );
         repos.insert(
@@ -1068,6 +1088,7 @@ mod test {
                 readonly: RepoReadOnly::ReadWrite,
                 skiplist_index_blobstore_key: None,
                 bundle2_replay_params: Bundle2ReplayParams::default(),
+                infinitepush: None,
             },
         );
         assert_eq!(

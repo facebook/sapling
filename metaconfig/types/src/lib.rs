@@ -63,6 +63,8 @@ pub struct RepoConfig {
     pub cache_warmup: Option<CacheWarmupParams>,
     /// Configuration for bookmarks
     pub bookmarks: Vec<BookmarkParams>,
+    /// Namespace for infinite push scratch bookmarks
+    pub infinitepush: Option<InfinitepushParams>,
     /// Enables bookmarks cache with specified ttl (time to live)
     pub bookmarks_cache_ttl: Option<Duration>,
     /// Configuration for hooks
@@ -565,4 +567,40 @@ pub struct ShardedFilenodesParams {
     pub shard_map: String,
     /// Number of shards to distribute filenodes across.
     pub shard_num: NonZeroUsize,
+}
+
+/// Regex for valid branches that Infinite Pushes can be directed to.
+#[derive(Debug, Clone)]
+pub struct InfinitepushNamespace(Regex);
+
+impl PartialEq for InfinitepushNamespace {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_str() == other.0.as_str()
+    }
+}
+
+impl Eq for InfinitepushNamespace {}
+
+impl InfinitepushNamespace {
+    /// Instantiate a new InfinitepushNamespace
+    pub fn new(regex: Regex) -> Self {
+        Self(regex)
+    }
+
+    /// Returns whether a given Bookmark matches this namespace.
+    pub fn matches_bookmark(&self, bookmark: &BookmarkName) -> bool {
+        self.0.is_match(bookmark.as_str())
+    }
+
+    /// Returns this namespace's controlling Regex.
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+/// Params for Infinitepush configuration
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct InfinitepushParams {
+    /// Valid namespace for infinite push bookmarks.
+    pub namespace: InfinitepushNamespace,
 }

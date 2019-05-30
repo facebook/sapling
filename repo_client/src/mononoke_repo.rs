@@ -9,7 +9,9 @@ use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use futures_ext::BoxFuture;
 use hooks::HookManager;
-use metaconfig_types::{BookmarkAttrs, BookmarkParams, LfsParams, PushrebaseParams, RepoReadOnly};
+use metaconfig_types::{
+    BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
+};
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
@@ -34,6 +36,7 @@ pub struct MononokeRepo {
     reponame: String,
     readonly_fetcher: RepoReadWriteFetcher,
     bookmark_attrs: BookmarkAttrs,
+    infinitepush: Option<InfinitepushParams>,
 }
 
 impl MononokeRepo {
@@ -47,6 +50,7 @@ impl MononokeRepo {
         lfs_params: LfsParams,
         reponame: String,
         readonly_fetcher: RepoReadWriteFetcher,
+        infinitepush: Option<InfinitepushParams>,
     ) -> Self {
         MononokeRepo {
             blobrepo,
@@ -57,6 +61,7 @@ impl MononokeRepo {
             reponame,
             readonly_fetcher,
             bookmark_attrs: BookmarkAttrs::new(bookmark_params),
+            infinitepush,
         }
     }
 
@@ -91,6 +96,10 @@ impl MononokeRepo {
 
     pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
         self.readonly_fetcher.readonly()
+    }
+
+    pub fn infinitepush(&self) -> &Option<InfinitepushParams> {
+        &self.infinitepush
     }
 }
 

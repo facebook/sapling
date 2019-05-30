@@ -122,49 +122,56 @@ impl PartHeaderType {
     }
 }
 
-/// A bundle2 part header.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PartHeader {
-    part_type: PartHeaderType,
-    mandatory: bool,
-    part_id: u32,
+pub struct PartHeaderInner {
+    pub part_type: PartHeaderType,
+    pub mandatory: bool,
+    pub part_id: u32,
     // Part parameter keys are strings and values are arbitrary bytestrings
     // (which can even include null characters).
-    mparams: HashMap<String, Bytes>,
-    aparams: HashMap<String, Bytes>,
+    pub mparams: HashMap<String, Bytes>,
+    pub aparams: HashMap<String, Bytes>,
 }
+
+/// A bundle2 part header.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PartHeader(PartHeaderInner);
 
 impl PartHeader {
     #[inline]
     pub fn part_type(&self) -> &PartHeaderType {
-        &self.part_type
+        &self.0.part_type
     }
 
     #[inline]
     pub fn part_id(&self) -> u32 {
-        self.part_id
+        self.0.part_id
     }
 
     #[inline]
     pub fn mparams(&self) -> &HashMap<String, Bytes> {
-        &self.mparams
+        &self.0.mparams
     }
 
     #[inline]
     pub fn aparams(&self) -> &HashMap<String, Bytes> {
-        &self.aparams
+        &self.0.aparams
     }
 
     pub fn mandatory(&self) -> bool {
-        self.mandatory
+        self.0.mandatory
+    }
+
+    pub fn into_inner(self) -> PartHeaderInner {
+        self.0
     }
 
     pub fn encode(self) -> Chunk {
         let mut out_buf: Vec<u8> = Vec::new();
 
         // part type
-        let part_type = self.part_type.as_str();
-        let part_type = if self.mandatory {
+        let part_type = self.0.part_type.as_str();
+        let part_type = if self.0.mandatory {
             part_type.to_ascii_uppercase()
         } else {
             part_type.to_owned()
@@ -174,19 +181,19 @@ impl PartHeader {
         out_buf.put_slice(part_type);
 
         // part id
-        out_buf.put_u32_be(self.part_id);
+        out_buf.put_u32_be(self.0.part_id);
 
         // mandatory/advisory params
-        let num_mparams = self.mparams.len() as u8;
-        let num_aparams = self.aparams.len() as u8;
+        let num_mparams = self.0.mparams.len() as u8;
+        let num_aparams = self.0.aparams.len() as u8;
 
         out_buf.put_u8(num_mparams);
         out_buf.put_u8(num_aparams);
 
         // sort the params to ensure determinism
-        let mut mparams: Vec<(String, Bytes)> = self.mparams.into_iter().collect();
+        let mut mparams: Vec<(String, Bytes)> = self.0.mparams.into_iter().collect();
         mparams.sort();
-        let mut aparams: Vec<(String, Bytes)> = self.aparams.into_iter().collect();
+        let mut aparams: Vec<(String, Bytes)> = self.0.aparams.into_iter().collect();
         aparams.sort();
 
         // param sizes
@@ -369,13 +376,13 @@ impl PartHeaderBuilder {
     /// We only accept part_id at this point because in the serialization use
     /// case, a part id is only assigned when the header is finalized.
     pub fn build(self, part_id: u32) -> PartHeader {
-        PartHeader {
+        PartHeader(PartHeaderInner {
             part_type: self.part_type,
             mandatory: self.mandatory,
             part_id,
             mparams: self.mparams,
             aparams: self.aparams,
-        }
+        })
     }
 
     fn check_param(&self, key: &str, val: &[u8]) -> Result<()> {

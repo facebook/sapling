@@ -388,6 +388,20 @@ impl Transaction for CachedBookmarksTransaction {
         self.transaction.force_delete(bookmark, reason)
     }
 
+    fn update_infinitepush(
+        &mut self,
+        bookmark: &BookmarkName,
+        new_cs: ChangesetId,
+        old_cs: ChangesetId,
+    ) -> Result<()> {
+        self.transaction
+            .update_infinitepush(bookmark, new_cs, old_cs)
+    }
+
+    fn create_infinitepush(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+        self.transaction.create_infinitepush(bookmark, new_cs)
+    }
+
     fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
         let CachedBookmarksTransaction {
             transaction,
@@ -625,6 +639,23 @@ mod tests {
             &mut self,
             _key: &BookmarkName,
             _reason: BookmarkUpdateReason,
+        ) -> Result<()> {
+            Ok(())
+        }
+
+        fn update_infinitepush(
+            &mut self,
+            _bookmark: &BookmarkName,
+            _new_cs: ChangesetId,
+            _old_cs: ChangesetId,
+        ) -> Result<()> {
+            Ok(())
+        }
+
+        fn create_infinitepush(
+            &mut self,
+            _bookmark: &BookmarkName,
+            _new_cs: ChangesetId,
         ) -> Result<()> {
             Ok(())
         }
