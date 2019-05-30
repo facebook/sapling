@@ -156,7 +156,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .long("set")
                         .required(false)
                         .takes_value(true)
-                        .help("get the value of the latest processed mononoke-hg-sync counter"),
+                        .help("set the value of the latest processed mononoke-hg-sync counter"),
                 )
                 .arg(
                     Arg::with_name("skip-blobimport")
