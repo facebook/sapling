@@ -30,7 +30,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Fallible<()> {
     let extension = path
         .extension()
         .and_then(|ext| ext.to_str())
-        .map_or("to-delete".to_owned(), |ext| ext.to_owned() + "-tmp");
+        .map_or(".to-delete".to_owned(), |ext| ".".to_owned() + ext + "-tmp");
 
     let dest_path = Builder::new()
         .prefix("")
