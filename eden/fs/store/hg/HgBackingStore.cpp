@@ -116,7 +116,9 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
       threadLocalImporter.reset(new HgImporterManager(
-          repository_, localStore_, getSharedStatsForCurrentThread(stats_)));
+          repository_,
+          localStore_,
+          getSharedHgImporterStatsForCurrentThread(stats_)));
       func();
     });
   }
@@ -252,7 +254,7 @@ HgBackingStore::HgBackingStore(
   initializeDatapackImport(repository);
 #endif
   HgImporter importer(
-      repository, localStore, getSharedStatsForCurrentThread(stats));
+      repository, localStore, getSharedHgImporterStatsForCurrentThread(stats));
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
@@ -473,8 +475,8 @@ Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
                                    batch = std::move(writeBatch),
                                    watch = std::move(watch)](auto tree) {
     batch->flush();
-    stats->getStatsForCurrentThread().hgBackingStoreGetTree.addValue(
-        watch.elapsed().count());
+    stats->getHgBackingStoreStatsForCurrentThread()
+        .hgBackingStoreGetTree.addValue(watch.elapsed().count());
     return tree;
   });
 }
@@ -541,7 +543,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
           writeBatch->put(
               KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
           auto count = watch.elapsed().count();
-          stats->getStatsForCurrentThread()
+          stats->getHgBackingStoreStatsForCurrentThread()
               .mononokeBackingStoreGetTree.addValue(count);
           return makeFuture(std::move(tree));
         })
@@ -768,7 +770,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
     return mononoke->getBlob(revHashCopy)
         .ensure([stats = stats_, watch = std::move(watch)]() {
           auto count = watch.elapsed().count();
-          stats->getStatsForCurrentThread()
+          stats->getHgBackingStoreStatsForCurrentThread()
               .mononokeBackingStoreGetBlob.addValue(count);
         })
         .thenError([this,

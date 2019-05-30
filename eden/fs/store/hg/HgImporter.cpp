@@ -250,7 +250,7 @@ class HgImporterEofError : public HgImporterError {
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    std::shared_ptr<EdenThreadStats> stats,
+    std::shared_ptr<HgImporterThreadStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath}, store_{store}, stats_{std::move(stats)} {
   std::vector<string> cmd;
@@ -706,7 +706,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
 HgImporter::TransactionID HgImporter::sendManifestRequest(
     folly::StringPiece revName) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->hgImporterManifest.addValue(1);
+  stats_->manifest.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -729,7 +729,7 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
 HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
     folly::StringPiece revName) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->hgImporterManifestNodeForCommit.addValue(1);
+  stats_->manifestNodeForCommit.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -753,7 +753,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
     Hash revHash) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->hgImporterCatFile.addValue(1);
+  stats_->catFile.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -779,7 +779,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
 HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->hgImporterPrefetchFiles.addValue(1);
+  stats_->prefetchFiles.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -838,7 +838,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash pathManifestNode) {
 #if defined(EDEN_HAVE_STATS)
-  stats_->hgImporterFetchTree.addValue(1);
+  stats_->fetchTree.addValue(1);
 #endif
 
   auto txnID = nextRequestID_++;
@@ -945,7 +945,7 @@ const ImporterOptions& HgImporter::getOptions() const {
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    std::shared_ptr<EdenThreadStats> stats,
+    std::shared_ptr<HgImporterThreadStats> stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},

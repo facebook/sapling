@@ -50,7 +50,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
   std::shared_ptr<EdenStats> stats{std::make_shared<EdenStats>()};
   HgImporter importer{repo.path(),
                       localStore.get(),
-                      getSharedStatsForCurrentThread(stats)};
+                      getSharedHgImporterStatsForCurrentThread(stats)};
   std::shared_ptr<HgBackingStore> backingStore{
       std::make_shared<HgBackingStore>(&importer, localStore.get(), stats)};
   std::shared_ptr<ObjectStore> objectStore{

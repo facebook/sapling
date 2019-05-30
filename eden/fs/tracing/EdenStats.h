@@ -17,7 +17,9 @@
 namespace facebook {
 namespace eden {
 
-class EdenThreadStats;
+class FuseThreadStats;
+class HgBackingStoreThreadStats;
+class HgImporterThreadStats;
 
 class EdenStats {
  public:
@@ -26,7 +28,21 @@ class EdenStats {
    *
    * The returned object can be used only on the current thread.
    */
-  EdenThreadStats& getStatsForCurrentThread();
+  FuseThreadStats& getFuseStatsForCurrentThread();
+
+  /**
+   * This function can be called on any thread.
+   *
+   * The returned object can be used only on the current thread.
+   */
+  HgBackingStoreThreadStats& getHgBackingStoreStatsForCurrentThread();
+
+  /**
+   * This function can be called on any thread.
+   *
+   * The returned object can be used only on the current thread.
+   */
+  HgImporterThreadStats& getHgImporterStatsForCurrentThread();
 
   /**
    * This function can be called on any thread.
@@ -36,29 +52,44 @@ class EdenStats {
  private:
   class ThreadLocalTag {};
 
-  folly::ThreadLocal<EdenThreadStats, ThreadLocalTag, void> threadLocalStats_;
+  folly::ThreadLocal<FuseThreadStats, ThreadLocalTag, void>
+      threadLocalFuseStats_;
+  folly::ThreadLocal<HgBackingStoreThreadStats, ThreadLocalTag, void>
+      threadLocalHgBackingStoreStats_;
+  folly::ThreadLocal<HgImporterThreadStats, ThreadLocalTag, void>
+      threadLocalHgImporterStats_;
 };
 
-std::shared_ptr<EdenThreadStats> getSharedStatsForCurrentThread(
+std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
     std::shared_ptr<EdenStats>);
 
 /**
- * EdenThreadStats contains various thread-local stats structures.
+ * EdenThreadStatsBase is a base class for a group of thread-local stats
+ * structures.
  *
- * Each EdenThreadStats object should only be used from a single thread.
- * The EdenStats object should be used to maintain one EdenThreadStats object
+ * Each EdenThreadStatsBase object should only be used from a single thread. The
+ * EdenStats object should be used to maintain one EdenThreadStatsBase object
  * for each thread that needs to access/update the stats.
  */
-class EdenThreadStats : public facebook::stats::ThreadLocalStatsT<
-                            facebook::stats::TLStatsThreadSafe> {
+class EdenThreadStatsBase : public facebook::stats::ThreadLocalStatsT<
+                                facebook::stats::TLStatsThreadSafe> {
  public:
   using Histogram = TLHistogram;
 #if defined(EDEN_HAVE_STATS)
   using Timeseries = TLTimeseries;
 #endif
 
-  explicit EdenThreadStats();
+  explicit EdenThreadStatsBase();
 
+ protected:
+  Histogram createHistogram(const std::string& name);
+#if defined(EDEN_HAVE_STATS)
+  Timeseries createTimeseries(const std::string& name);
+#endif
+};
+
+class FuseThreadStats : public EdenThreadStatsBase {
+ public:
   // We track latency in units of microseconds, hence the _us suffix
   // in the histogram names below.
 
@@ -96,31 +127,11 @@ class EdenThreadStats : public facebook::stats::ThreadLocalStatsT<
   Histogram poll{createHistogram("fuse.poll_us")};
   Histogram forgetmulti{createHistogram("fuse.forgetmulti_us")};
 
-#if defined(EDEN_HAVE_STATS)
-  /**
-   * @see HgImporter
-   */
-  Timeseries hgImporterCatFile{createTimeseries("hg_importer.cat_file")};
-  Timeseries hgImporterFetchTree{createTimeseries("hg_importer.fetch_tree")};
-  Timeseries hgImporterManifest{createTimeseries("hg_importer.manifest")};
-  Timeseries hgImporterManifestNodeForCommit{
-      createTimeseries("hg_importer.manifest_node_for_commit")};
-  Timeseries hgImporterPrefetchFiles{
-      createTimeseries("hg_importer.prefetch_files")};
-#endif
-
-  Histogram hgBackingStoreGetTree{createHistogram("store.hg.get_tree")};
-  Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_file")};
-  Histogram mononokeBackingStoreGetTree{
-      createHistogram("store.mononoke.get_tree")};
-  Histogram mononokeBackingStoreGetBlob{
-      createHistogram("store.mononoke.get_blob")};
-
   // Since we can potentially finish a request in a different
   // thread from the one used to initiate it, we use HistogramPtr
   // as a helper for referencing the pointer-to-member that we
   // want to update at the end of the request.
-  using HistogramPtr = Histogram EdenThreadStats::*;
+  using HistogramPtr = Histogram FuseThreadStats::*;
 
   /** Record a the latency for an operation.
    * item is the pointer-to-member for one of the histograms defined
@@ -133,11 +144,35 @@ class EdenThreadStats : public facebook::stats::ThreadLocalStatsT<
       HistogramPtr item,
       std::chrono::microseconds elapsed,
       std::chrono::seconds now);
+};
 
- private:
-  Histogram createHistogram(const std::string& name);
+/**
+ * @see HgBackingStore
+ */
+class HgBackingStoreThreadStats : public EdenThreadStatsBase {
+ public:
+  Histogram hgBackingStoreGetTree{createHistogram("store.hg.get_tree")};
+  Histogram mononokeBackingStoreGetTree{
+      createHistogram("store.mononoke.get_tree")};
+  Histogram mononokeBackingStoreGetBlob{
+      createHistogram("store.mononoke.get_blob")};
+};
+
+/**
+ * @see HgImporter
+ * @see HgBackingStore
+ */
+class HgImporterThreadStats : public EdenThreadStatsBase {
+ public:
+  Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_file")};
+
 #if defined(EDEN_HAVE_STATS)
-  Timeseries createTimeseries(const std::string& name);
+  Timeseries catFile{createTimeseries("hg_importer.cat_file")};
+  Timeseries fetchTree{createTimeseries("hg_importer.fetch_tree")};
+  Timeseries manifest{createTimeseries("hg_importer.manifest")};
+  Timeseries manifestNodeForCommit{
+      createTimeseries("hg_importer.manifest_node_for_commit")};
+  Timeseries prefetchFiles{createTimeseries("hg_importer.prefetch_files")};
 #endif
 };
 

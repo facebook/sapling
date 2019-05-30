@@ -53,7 +53,7 @@ RequestData& RequestData::create(
 
 void RequestData::startRequest(
     EdenStats* stats,
-    EdenThreadStats::HistogramPtr histogram) {
+    FuseThreadStats::HistogramPtr histogram) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;
@@ -64,7 +64,7 @@ void RequestData::finishRequest() {
   const auto now = steady_clock::now();
   const auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
   const auto diff = duration_cast<microseconds>(now - startTime_);
-  stats_->getStatsForCurrentThread().recordLatency(
+  stats_->getFuseStatsForCurrentThread().recordLatency(
       latencyHistogram_, diff, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;

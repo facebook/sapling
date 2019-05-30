@@ -27,25 +27,39 @@ constexpr std::chrono::microseconds kBucketSize{1000};
 namespace facebook {
 namespace eden {
 
-EdenThreadStats& EdenStats::getStatsForCurrentThread() {
-  return *threadLocalStats_.get();
+FuseThreadStats& EdenStats::getFuseStatsForCurrentThread() {
+  return *threadLocalFuseStats_.get();
+}
+
+HgBackingStoreThreadStats& EdenStats::getHgBackingStoreStatsForCurrentThread() {
+  return *threadLocalHgBackingStoreStats_.get();
+}
+
+HgImporterThreadStats& EdenStats::getHgImporterStatsForCurrentThread() {
+  return *threadLocalHgImporterStats_.get();
 }
 
 void EdenStats::aggregate() {
-  for (auto& stats : threadLocalStats_.accessAllThreads()) {
+  for (auto& stats : threadLocalFuseStats_.accessAllThreads()) {
+    stats.aggregate();
+  }
+  for (auto& stats : threadLocalHgBackingStoreStats_.accessAllThreads()) {
+    stats.aggregate();
+  }
+  for (auto& stats : threadLocalHgImporterStats_.accessAllThreads()) {
     stats.aggregate();
   }
 }
 
-std::shared_ptr<EdenThreadStats> getSharedStatsForCurrentThread(
+std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
     std::shared_ptr<EdenStats> stats) {
-  return std::shared_ptr<EdenThreadStats>(
-      stats, &stats->getStatsForCurrentThread());
+  return std::shared_ptr<HgImporterThreadStats>(
+      stats, &stats->getHgImporterStatsForCurrentThread());
 }
 
-EdenThreadStats::EdenThreadStats() {}
+EdenThreadStatsBase::EdenThreadStatsBase() {}
 
-EdenThreadStats::Histogram EdenThreadStats::createHistogram(
+EdenThreadStatsBase::Histogram EdenThreadStatsBase::createHistogram(
     const std::string& name) {
   return Histogram{this,
                    name,
@@ -59,7 +73,7 @@ EdenThreadStats::Histogram EdenThreadStats::createHistogram(
 }
 
 #if defined(EDEN_HAVE_STATS)
-EdenThreadStats::Timeseries EdenThreadStats::createTimeseries(
+EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
     const std::string& name) {
   auto timeseries = Timeseries{this, name};
   timeseries.exportStat(facebook::stats::COUNT);
@@ -67,7 +81,7 @@ EdenThreadStats::Timeseries EdenThreadStats::createTimeseries(
 }
 #endif
 
-void EdenThreadStats::recordLatency(
+void FuseThreadStats::recordLatency(
     HistogramPtr item,
     std::chrono::microseconds elapsed,
     std::chrono::seconds now) {

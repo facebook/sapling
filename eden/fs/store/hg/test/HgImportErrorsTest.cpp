@@ -158,7 +158,7 @@ class HgImportErrorTest : public ::testing::Test {
     importer_ = make_unique<ImporterType>(
         testPath_,
         localStore_.get(),
-        getSharedStatsForCurrentThread(stats_),
+        getSharedHgImporterStatsForCurrentThread(stats_),
         fakeImportHelper);
     backingStore_ =
         make_shared<HgBackingStore>(importer_.get(), localStore_.get(), stats_);
