@@ -1523,9 +1523,6 @@ if "TESTTMP" in encoding.environ:
     def timer():
         return 0
 
-    def getpid():
-        return 42
-
     def getuser():
         return "test"
 

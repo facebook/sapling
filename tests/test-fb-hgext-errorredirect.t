@@ -10,6 +10,7 @@
   > [extensions]
   > errorredirect=
   > crash=$TESTTMP/crash.py
+  > mock=$TESTDIR/mockblackbox.py
   > EOF
 
 Test errorredirect will respect original behavior by default
@@ -63,12 +64,12 @@ Traces are logged in blackbox
   > EOF
 
   $ hg blackbox -l 2
-  1970/01/01 00:00:00 test @(unknown) (42) [command]> blackbox -l 2
+  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> blackbox -l 2
   $ hg crash --config errorredirect.script='echo Works'
   Works
   [255]
   $ hg blackbox -l 12 | grep '\[command'
-  1970/01/01 00:00:00 test @(unknown) (42) [command]> blackbox -l 2
-  1970/01/01 00:00:00 test @(unknown) (42) [command]> crash --config 'errorredirect.script=echo Works'
-  1970/01/01 00:00:00 test @(unknown) (42) [command_exception]> ** Mercurial Distributed SCM (version *) has crashed: (glob)
-  1970/01/01 00:00:00 test @(unknown) (42) [command]> blackbox -l 12
+  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> blackbox -l 2
+  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> crash --config 'errorredirect.script=echo Works'
+  1970/01/01 00:00:00 bob @(unknown) (5000) [command_exception]> ** Mercurial Distributed SCM (version *) has crashed: (glob)
+  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> blackbox -l 12
