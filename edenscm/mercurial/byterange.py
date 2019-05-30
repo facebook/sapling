@@ -17,8 +17,6 @@
 
 # $Id: byterange.py,v 1.9 2005/02/14 21:55:07 mstenner Exp $
 
-# @lint-ignore-every FBPYTHON4
-
 from __future__ import absolute_import
 
 import email

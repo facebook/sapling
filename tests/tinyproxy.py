@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# @lint-ignore-every FBPYTHON4
 
 from __future__ import absolute_import, print_function
 
