@@ -136,11 +136,14 @@ class EdenInstance:
         # In some cases this path may traverse symlinks that are readable as the
         # original user but not as root: this can happen if the user has a home
         # directory on NFS, which may not be readable as root.
-        self._config_dir = (
-            Path(config_dir)
-            if config_dir is not None
-            else (self._home_dir / "local" / ".eden")
-        ).resolve(strict=False)
+        if config_dir:
+            self._config_dir = Path(config_dir)
+        elif os.name == "nt":
+            self._config_dir = self._home_dir / ".eden"
+        else:
+            self._config_dir = self._home_dir / "local" / ".eden"
+
+        self._config_dir = self._config_dir.resolve(strict=False)
 
     def __repr__(self) -> str:
         return f"EdenInstance({self._config_dir!r})"

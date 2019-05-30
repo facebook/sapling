@@ -1063,17 +1063,9 @@ Future<Unit> EdenServer::createThriftServer() {
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
   folly::SocketAddress thriftAddress;
-#ifdef _WIN32
-  // Until we have Python support for Unix Domain sockets on Windows
-  // we will fall back to using loopback interface.
-  thriftAddress.setFromIpPort("127.0.0.1:20201");
-#else
   thriftAddress.setFromPath(thriftSocketPath.stringPiece());
-#endif
   server_->setAddress(thriftAddress);
-#ifndef _WIN32
   serverState_->setSocketPath(thriftSocketPath);
-#endif
 
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);

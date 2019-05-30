@@ -14,8 +14,9 @@ from facebook.eden import EdenService
 from thrift.protocol.THeaderProtocol import THeaderProtocol
 from thrift.Thrift import TApplicationException
 from thrift.transport.THeaderTransport import THeaderTransport
-from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
+
+from .windows_thrift import EdenTSocket
 
 
 SOCKET_PATH = "socket"
@@ -59,7 +60,7 @@ class EdenClient(EdenService.Client):
             self._socket_path = os.path.join(eden_dir, SOCKET_PATH)
         else:
             raise TypeError("one of eden_dir or socket_path is required")
-        self._socket = TSocket(unix_socket=self._socket_path)
+        self._socket = EdenTSocket(unix_socket=self._socket_path)
         # We used to set a timeout here, but picking the right duration is hard,
         # and safely retrying an arbitrary thrift call may not be safe.  So we
         # just leave the client with no timeout.
