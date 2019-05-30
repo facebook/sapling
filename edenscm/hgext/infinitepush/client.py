@@ -158,6 +158,9 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             opts.get("non_forward_move"),
             "--non-forward-move",
         )
+
+        otherpath = None
+
         if scratchpush:
             ui.setconfig("experimental", "infinitepush-scratchpush", True)
             oldphasemove = extensions.wrapfunction(
@@ -166,6 +169,14 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             path = ui.paths.getpath(
                 dest, default=("infinitepush", "default-push", "default")
             )
+
+            # We'll replicate the push if the user provided no destination and
+            # intended their push to go to the default infinitepush destination.
+            if dest is None:
+                try:
+                    otherpath = repo.ui.paths.getpath("infinitepush-other")
+                except error.RepoError:
+                    pass
         else:
             path = ui.paths.getpath(dest, default=("default-push", "default"))
         # Copy-paste from `push` command
@@ -184,6 +195,21 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         # know about them. Let's save it before push and restore after
         remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, dest)
         result = orig(ui, repo, dest, *args, **opts)
+
+        # If an alternate Infinitepush destination is specified, replicate the
+        # push there. This ensures scratch bookmarks (and their commits) can
+        # properly be replicated to Mononoke.
+        if otherpath is not None:
+            otherdest = otherpath.pushloc or otherpath.loc
+            if otherdest != dest:
+                m = _(
+                    "please wait while we replicate this push to an alternate repository\n"
+                )
+                ui.warn(m)
+                # NOTE: We ignore the result here (which only represents whether
+                # there were changes to land).
+                orig(ui, repo, otherdest, *args, **opts)
+
         if bookmarks.remotebookmarksenabled(ui):
             if bookmark and scratchpush:
                 other = hg.peer(repo, opts, dest)
