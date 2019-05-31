@@ -243,18 +243,28 @@ impl RotateLog {
         let size = self.writable_log().flush()?;
 
         if size >= self.open_options.max_bytes_per_log {
-            // Create a new Log. Bump latest.
-            let next = self.latest.wrapping_add(1);
-            let log = create_empty_log(&self.dir, &self.open_options, next)?;
-            if self.logs.len() >= self.open_options.max_log_count as usize {
-                self.logs.pop();
-            }
-            self.logs.insert(0, log);
-            self.latest = next;
-            self.try_remove_old_logs();
+            self.rotate_assume_locked()?;
         }
 
         Ok(self.latest)
+    }
+
+    /// Force create a new [`Log`]. Bump latest.
+    ///
+    /// This function assumes it's protected by a directory lock, and the
+    /// callsite makes sure that [`Log`]s are consistent (ex. up-to-date,
+    /// and do not have dirty entries in non-writable logs).
+    fn rotate_assume_locked(&mut self) -> Fallible<()> {
+        // Create a new Log. Bump latest.
+        let next = self.latest.wrapping_add(1);
+        let log = create_empty_log(&self.dir, &self.open_options, next)?;
+        if self.logs.len() >= self.open_options.max_log_count as usize {
+            self.logs.pop();
+        }
+        self.logs.insert(0, log);
+        self.latest = next;
+        self.try_remove_old_logs();
+        Ok(())
     }
 
     /// Renamed. Use [`RotateLog::sync`] instead.
@@ -291,6 +301,38 @@ impl RotateLog {
     /// Get the writable [`Log`].
     fn writable_log(&mut self) -> &mut Log {
         &mut self.logs[0]
+    }
+}
+
+/// Get access to internals of [`RotateLog`].
+///
+/// This can be useful when there are low-level needs. For example:
+/// - Get access to individual logs for things like range query.
+/// - Rotate logs manually.
+pub trait RotateLowLevelExt {
+    /// Get a view of all individual logs. Newest first.
+    fn logs(&self) -> &[Log];
+
+    /// Forced rotate. This can be useful as a quick way to ensure new
+    /// data can be written when data corruption happens.
+    ///
+    /// Data not written will get lost.
+    fn force_rotate(&mut self) -> Fallible<()>;
+}
+
+impl RotateLowLevelExt for RotateLog {
+    fn logs(&self) -> &[Log] {
+        &self.logs
+    }
+
+    fn force_rotate(&mut self) -> Fallible<()> {
+        // Read-write path. Take the directory lock.
+        let mut lock_file = open_dir(&self.dir)?;
+        let _lock = ScopedFileLock::new(&mut lock_file, true)?;
+        self.latest = read_latest(&self.dir)?;
+        self.rotate_assume_locked()?;
+        self.logs = read_logs(&self.dir, &self.open_options, self.latest)?;
+        Ok(())
     }
 }
 
@@ -365,7 +407,12 @@ fn read_logs(dir: &Path, open_options: &OpenOptions, latest: u8) -> Fallible<Vec
     let mut remaining = open_options.max_log_count;
     while remaining > 0 {
         let log_path = dir.join(format!("{}", current));
-        if let Ok(log) = open_options.log_open_options.clone().open(&log_path) {
+        if let Ok(log) = open_options
+            .log_open_options
+            .clone()
+            .create(false)
+            .open(&log_path)
+        {
             logs.push(log);
             current = current.wrapping_sub(1);
             remaining -= 1;
@@ -513,6 +560,26 @@ mod tests {
     #[test]
     fn test_wrapping_rotate_255() {
         test_wrapping_rotate(255)
+    }
+
+    #[test]
+    fn test_force_rotate() {
+        let dir = tempdir().unwrap();
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(1 << 30)
+            .max_log_count(3)
+            .open(&dir)
+            .unwrap();
+
+        use super::RotateLowLevelExt;
+        assert_eq!(rotate.logs().len(), 1);
+        rotate.force_rotate().unwrap();
+        assert_eq!(rotate.logs().len(), 2);
+        rotate.force_rotate().unwrap();
+        assert_eq!(rotate.logs().len(), 3);
+        rotate.force_rotate().unwrap();
+        assert_eq!(rotate.logs().len(), 3);
     }
 
     #[test]
