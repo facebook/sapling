@@ -1414,14 +1414,14 @@ impl Bundle2Resolver {
             params
         };
 
-        let user = ctx.user_unix_name();
-        if !self.bookmark_attrs.is_allowed_user(user, bookmark) {
-            return future::err(format_err!(
-                "[pushrebase] This user `{:?}` is not allowed to move `{:?}`",
-                user,
-                bookmark
-            ))
-            .boxify();
+        if let Err(error) = check_plain_bookmark_move_preconditions(
+            &ctx,
+            &bookmark,
+            "pushrebase",
+            &self.bookmark_attrs,
+            &self.infinitepush_params,
+        ) {
+            return future::err(error).boxify();
         }
 
         let block_merges = pushrebase.block_merges.clone();
@@ -1577,6 +1577,36 @@ fn check_is_ancestor_opt(
     }
 }
 
+fn check_plain_bookmark_move_preconditions(
+    ctx: &CoreContext,
+    bookmark: &BookmarkName,
+    reason: &'static str,
+    bookmark_attrs: &BookmarkAttrs,
+    infinitepush_params: &Option<InfinitepushParams>,
+) -> Result<()> {
+    let user = ctx.user_unix_name();
+    if !bookmark_attrs.is_allowed_user(user, bookmark) {
+        return Err(format_err!(
+            "[{}] This user `{:?}` is not allowed to move `{:?}`",
+            reason,
+            user,
+            bookmark
+        ));
+    }
+
+    if let Some(InfinitepushParams { namespace }) = infinitepush_params {
+        if namespace.matches_bookmark(bookmark) {
+            return Err(format_err!(
+                "[{}] Only Infinitepush bookmarks are allowed to match pattern {}",
+                reason,
+                namespace.as_str(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 fn check_bookmark_push_allowed(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -1586,24 +1616,14 @@ fn check_bookmark_push_allowed(
     bp: PlainBookmarkPush<ChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
 ) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> {
-    let user = ctx.user_unix_name();
-    if !bookmark_attrs.is_allowed_user(user, &bp.name) {
-        return future::err(format_err!(
-            "[push] This user `{:?}` is not allowed to move `{:?}`",
-            user,
-            &bp.name
-        ))
-        .right_future();
-    }
-
-    if let Some(InfinitepushParams { namespace }) = infinitepush_params {
-        if namespace.matches_bookmark(&bp.name) {
-            return future::err(format_err!(
-                "[push] Only Infinitepush bookmarks are allowed to match pattern {}",
-                namespace.as_str(),
-            ))
-            .right_future();
-        }
+    if let Err(error) = check_plain_bookmark_move_preconditions(
+        &ctx,
+        &bp.name,
+        "push",
+        &bookmark_attrs,
+        &infinitepush_params,
+    ) {
+        return future::err(error).right_future();
     }
 
     let fastforward_only_bookmark = bookmark_attrs.is_fast_forward_only(&bp.name);
