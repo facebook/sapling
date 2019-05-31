@@ -15,6 +15,7 @@ add_library(
 target_link_libraries(
   eden_win_mount
   PUBLIC
+    eden_service_thrift
     Folly::folly
     ProjectedFS
 )
