@@ -15,6 +15,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt};
 use slog::{self, o, Discard, Drain, Logger};
+use std::collections::HashSet;
 
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
@@ -343,7 +344,7 @@ fn new_remote(
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
-    let blobstore = CensoredBlob::new(blobstore);
+    let blobstore = CensoredBlob::new(blobstore, Arc::new(HashSet::new()));
     let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
     let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
         ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
