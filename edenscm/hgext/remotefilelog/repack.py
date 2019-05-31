@@ -726,15 +726,15 @@ def _cleanupoldpacks(ui, packpath, limit):
             root, ext = os.path.splitext(f)
             try:
                 if ext == datapack.PACKSUFFIX:
-                    os.unlink(root + datapack.INDEXSUFFIX)
+                    util.unlink(root + datapack.INDEXSUFFIX)
                 else:
-                    os.unlink(root + historypack.INDEXSUFFIX)
+                    util.unlink(root + historypack.INDEXSUFFIX)
             except OSError as ex:
                 if ex.errno != errno.ENOENT:
                     raise
 
             try:
-                os.unlink(f)
+                util.unlink(f)
             except OSError as ex:
                 if ex.errno != errno.ENOENT:
                     raise
