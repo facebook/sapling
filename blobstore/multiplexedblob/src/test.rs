@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::borrow::BorrowMut;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -15,6 +14,7 @@ use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;
 use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
+use lock_ext::LockExt;
 
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
@@ -24,14 +24,6 @@ use mononoke_types::{BlobstoreBytes, RepositoryId};
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
-
-fn with<T, F, V>(value: &Arc<Mutex<T>>, scope: F) -> V
-where
-    F: FnOnce(&mut T) -> V,
-{
-    let mut value_guard = value.lock().expect("Lock poisoned");
-    scope(value_guard.borrow_mut())
-}
 
 pub struct TickBlobstore {
     pub storage: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
@@ -43,7 +35,7 @@ impl fmt::Debug for TickBlobstore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TickBlobstore")
             .field("storage", &self.storage)
-            .field("pending", &with(&self.queue, |q| q.len()))
+            .field("pending", &self.queue.with(|q| q.len()))
             .finish()
     }
 }
@@ -76,14 +68,14 @@ impl Blobstore for TickBlobstore {
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let storage = self.storage.clone();
         self.on_tick()
-            .map(move |_| with(&storage, |s| s.get(&key).cloned()))
+            .map(move |_| storage.with(|s| s.get(&key).cloned()))
             .boxify()
     }
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let storage = self.storage.clone();
         self.on_tick()
             .map(move |_| {
-                with(&storage, |s| {
+                storage.with(|s| {
                     s.insert(key, value);
                 })
             })
@@ -102,7 +94,7 @@ impl LogHandler {
         }
     }
     fn clear(&self) {
-        with(&self.log, |log| log.clear())
+        self.log.with(|log| log.clear())
     }
 }
 
@@ -113,7 +105,7 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
         blobstore_id: BlobstoreId,
         key: String,
     ) -> BoxFuture<(), Error> {
-        with(&self.log, move |log| log.push((blobstore_id, key)));
+        self.log.with(move |log| log.push((blobstore_id, key)));
         Ok(()).into_future().boxify()
     }
 }
@@ -147,14 +139,12 @@ fn base() {
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
             bs0.tick(None);
             put_fut.wait().unwrap();
-            assert_eq!(
-                with(&bs0.storage, |s| s.get(&k0).cloned()),
-                Some(v0.clone())
-            );
-            assert!(with(&bs1.storage, |s| s.is_empty()));
+            assert_eq!(bs0.storage.with(|s| s.get(&k0).cloned()), Some(v0.clone()));
+            assert!(bs1.storage.with(|s| s.is_empty()));
             bs1.tick(Some("bs1 failed"));
-            assert!(with(&log.log, |log| log
-                == &vec![(BlobstoreId::new(0), k0.clone())]));
+            assert!(log
+                .log
+                .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())]));
 
             // should succeed as it is stored in bs1
             let mut get_fut = bs.get(ctx.clone(), k0);
@@ -162,7 +152,7 @@ fn base() {
             bs0.tick(None);
             bs1.tick(None);
             assert_eq!(get_fut.wait().unwrap(), Some(v0));
-            assert!(with(&bs1.storage, |s| s.is_empty()));
+            assert!(bs1.storage.with(|s| s.is_empty()));
 
             log.clear();
         }
@@ -178,13 +168,11 @@ fn base() {
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
             bs1.tick(None);
             put_fut.wait().unwrap();
-            assert!(with(&bs0.storage, |s| s.get(&k1).is_none()));
-            assert_eq!(
-                with(&bs1.storage, |s| s.get(&k1).cloned()),
-                Some(v1.clone())
-            );
-            assert!(with(&log.log, |log| log
-                == &vec![(BlobstoreId::new(1), k1.clone())]));
+            assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
+            assert_eq!(bs1.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
+            assert!(log
+                .log
+                .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())]));
 
             let mut get_fut = bs.get(ctx.clone(), k1.clone());
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
@@ -192,7 +180,7 @@ fn base() {
             assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
             bs1.tick(None);
             assert_eq!(get_fut.wait().unwrap(), Some(v1));
-            assert!(with(&bs0.storage, |s| s.get(&k1).is_none()));
+            assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
 
             log.clear();
         }
@@ -246,16 +234,10 @@ fn base() {
             assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
             bs0.tick(None);
             put_fut.wait().unwrap();
-            assert_eq!(
-                with(&bs0.storage, |s| s.get(&k4).cloned()),
-                Some(v4.clone())
-            );
+            assert_eq!(bs0.storage.with(|s| s.get(&k4).cloned()), Some(v4.clone()));
             bs1.tick(None);
-            while with(&log.log, |log| log.len() != 2) {}
-            assert_eq!(
-                with(&bs1.storage, |s| s.get(&k4).cloned()),
-                Some(v4.clone())
-            );
+            while log.log.with(|log| log.len() != 2) {}
+            assert_eq!(bs1.storage.with(|s| s.get(&k4).cloned()), Some(v4.clone()));
         }
     });
 }

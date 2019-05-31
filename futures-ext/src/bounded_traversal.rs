@@ -279,6 +279,7 @@ mod tests {
         sync::oneshot::{channel, Sender},
         Future,
     };
+    use lock_ext::LockExt;
     use std::{
         cmp::{Ord, Ordering},
         collections::{BinaryHeap, HashSet},
@@ -289,26 +290,6 @@ mod tests {
         time::Duration,
     };
     use tokio::runtime::Runtime;
-
-    trait MutexExt {
-        type Value;
-
-        fn with<F, O>(&self, f: F) -> O
-        where
-            F: FnOnce(&mut Self::Value) -> O;
-    }
-
-    impl<T> MutexExt for Mutex<T> {
-        type Value = T;
-
-        fn with<F, O>(&self, f: F) -> O
-        where
-            F: FnOnce(&mut Self::Value) -> O,
-        {
-            let mut value = self.lock().expect("lock poisoned");
-            f(&mut *value)
-        }
-    }
 
     // Tree for test purposes
     struct TreeInner {
