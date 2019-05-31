@@ -9,7 +9,9 @@ use actix_web::{
     middleware::{Finished, Middleware, Started},
     HttpRequest, HttpResponse,
 };
+use openssl::x509::X509;
 use scuba_ext::ScubaSampleBuilder;
+use x509::identity;
 
 use super::response_time::ResponseTime;
 
@@ -34,6 +36,21 @@ impl<S> Middleware<S> for ScubaMiddleware {
             scuba.add("hostname", info.host());
             if let Some(remote) = info.remote() {
                 scuba.add("client", remote);
+            }
+        }
+
+        if let Some(stream_extensions) = (*req).stream_extensions() {
+            if let Some(cert) = (*stream_extensions).get::<X509>() {
+                if let Ok(identities) = identity::get_identities(&cert) {
+                    scuba.add(
+                        "client_identities",
+                        identities
+                            .into_iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>()
+                            .join(","),
+                    );
+                }
             }
         }
 
