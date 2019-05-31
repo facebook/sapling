@@ -25,8 +25,8 @@ use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, CommonConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
     HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
-    PushrebaseParams, RepoConfig, RepoReadOnly, ShardedFilenodesParams, StorageConfig,
-    WhitelistEntry,
+    PushParams, PushrebaseParams, RepoConfig, RepoReadOnly,
+    ShardedFilenodesParams, StorageConfig, WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -381,6 +381,16 @@ impl RepoConfigs {
         };
         let bookmarks_cache_ttl = this.bookmarks_cache_ttl.map(Duration::from_millis);
 
+        let push = this
+            .push
+            .map(|raw| {
+                let default = PushParams::default();
+                PushParams {
+                    pure_push_allowed: raw.pure_push_allowed.unwrap_or(default.pure_push_allowed),
+                }
+            })
+            .unwrap_or_default();
+
         let pushrebase = this
             .pushrebase
             .map(|raw| {
@@ -442,6 +452,7 @@ impl RepoConfigs {
             bookmarks,
             bookmarks_cache_ttl,
             hooks,
+            push,
             pushrebase,
             lfs,
             wireproto_scribe_category,
@@ -519,6 +530,7 @@ struct RawRepoConfig {
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
     cache_warmup: Option<RawCacheWarmupConfig>,
+    push: Option<RawPushParams>,
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
     wireproto_scribe_category: Option<String>,
@@ -752,6 +764,12 @@ enum RawDbConfig {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct RawPushParams {
+    pure_push_allowed: Option<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawPushrebaseParams {
     rewritedates: Option<bool>,
     recursion_limit: Option<usize>,
@@ -885,6 +903,9 @@ mod test {
             name="rust:rusthook"
             hook_type="PerChangeset"
             config_ints={ int1 = 44 }
+
+            [push]
+            pure_push_allowed = false
 
             [pushrebase]
             rewritedates = false
@@ -1045,6 +1066,9 @@ mod test {
                         },
                     },
                 ],
+                push: PushParams {
+                    pure_push_allowed: false,
+                },
                 pushrebase: PushrebaseParams {
                     rewritedates: false,
                     recursion_limit: 1024,
@@ -1091,6 +1115,7 @@ mod test {
                 bookmarks: vec![],
                 bookmarks_cache_ttl: None,
                 hooks: vec![],
+                push: Default::default(),
                 pushrebase: Default::default(),
                 lfs: Default::default(),
                 wireproto_scribe_category: Some("category".to_string()),

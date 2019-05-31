@@ -69,6 +69,8 @@ pub struct RepoConfig {
     pub bookmarks_cache_ttl: Option<Duration>,
     /// Configuration for hooks
     pub hooks: Vec<HookParams>,
+    /// Push configuration options
+    pub push: PushParams,
     /// Pushrebase configuration options
     pub pushrebase: PushrebaseParams,
     /// LFS configuration options
@@ -322,6 +324,21 @@ pub struct HookParams {
     pub code: Option<String>,
     /// Configs that should be passed to hook
     pub config: HookConfig,
+}
+
+/// Push configuration options
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PushParams {
+    /// Whether normal non-pushrebase pushes are allowed
+    pub pure_push_allowed: bool,
+}
+
+impl Default for PushParams {
+    fn default() -> Self {
+        PushParams {
+            pure_push_allowed: true,
+        }
+    }
 }
 
 /// Pushrebase configuration options

@@ -1235,6 +1235,7 @@ fn default_repo_config() -> RepoConfig {
         bookmarks_cache_ttl: None,
         bookmarks: vec![],
         hooks: vec![],
+        push: Default::default(),
         pushrebase: Default::default(),
         lfs: Default::default(),
         wireproto_scribe_category: None,
