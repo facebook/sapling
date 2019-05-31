@@ -353,6 +353,10 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
 ]:
     """Create an isolated systemd instance for tests."""
 
+    parent_systemd = SystemdUserServiceManager(
+        xdg_runtime_dir=_get_current_xdg_runtime_dir(), process_id=None
+    )
+
     def should_create_managed() -> bool:
         forced_type_variable = "EDEN_TEST_FORCE_SYSTEMD_USER_SERVICE_MANAGER_TYPE"
         forced_type = os.getenv(forced_type_variable)
@@ -367,14 +371,24 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
 
         if not _is_system_booted_with_systemd():
             return False
+
+        # It's possible that the system was booted with systemd but PID 1 is not
+        # systemd. This happens on Sandcastle (Facebook's CI) which runs tests
+        # in a Linux process namespace. If this is the case, systemctl and
+        # systemd-run fail with the following message:
+        #
+        # > Failed to connect to bus: No data available
+        #
+        # If we can't talk to the system's systemd for this reason, run our
+        # temporary systemd user service manager unmanaged.
+        if os.getuid() == 0 and not parent_systemd.is_alive():
+            return False
+
         return True
 
     lifetime_duration = 30
     with create_tmp_dir() as xdg_runtime_dir:
         if should_create_managed():
-            parent_systemd = SystemdUserServiceManager(
-                xdg_runtime_dir=_get_current_xdg_runtime_dir(), process_id=None
-            )
             with _transient_managed_systemd_user_service_manager(
                 xdg_runtime_dir=xdg_runtime_dir,
                 parent_systemd=parent_systemd,
