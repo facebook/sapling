@@ -171,3 +171,86 @@ TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
     journal.addDelta(std::move(delta));
   }
 }
+
+TEST(Journal, empty_journal_returns_none_for_stats) {
+  // Empty journal returns None for stats
+  Journal journal;
+  auto stats = journal.getStats();
+  ASSERT_FALSE(stats.has_value());
+}
+
+TEST(Journal, basic_journal_stats) {
+  Journal journal;
+  // Journal with 1 entry
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::REMOVED));
+  auto from1 = journal.getLatest()->fromTime;
+  auto to1 = journal.getLatest()->toTime;
+  auto stats = journal.getStats();
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(1, stats->entryCount);
+  ASSERT_EQ(from1, stats->earliestTimestamp);
+  ASSERT_EQ(to1, stats->latestTimestamp);
+
+  // Journal with 2 entries
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::CREATED));
+  stats = journal.getStats();
+  auto to2 = journal.getLatest()->toTime;
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(2, stats->entryCount);
+  ASSERT_EQ(from1, stats->earliestTimestamp);
+  ASSERT_EQ(to2, stats->latestTimestamp);
+}
+
+TEST(Journal, merge_journal_stats) {
+  Journal journal;
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::REMOVED));
+  auto from1 = journal.getLatest()->fromTime;
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::CREATED));
+  auto stats = journal.getStats();
+  auto to2 = journal.getLatest()->toTime;
+
+  // Journal with 2 entries merged into 1 entry
+  auto latest = journal.getLatest();
+  journal.replaceJournal(latest->merge());
+  stats = journal.getStats();
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(1, stats->entryCount);
+  ASSERT_EQ(from1, stats->earliestTimestamp);
+  ASSERT_EQ(to2, stats->latestTimestamp);
+}
+
+TEST(Journal, prune_journal_stats) {
+  Journal journal;
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::REMOVED));
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::CREATED));
+  auto stats = journal.getStats();
+  auto from2 = journal.getLatest()->fromTime;
+  auto to2 = journal.getLatest()->toTime;
+  auto latest = journal.getLatest();
+  // Journal with the first entry pruned
+  journal.replaceJournal(latest->merge(2, true));
+  stats = journal.getStats();
+  ASSERT_TRUE(stats.has_value());
+  ASSERT_EQ(1, stats->entryCount);
+  ASSERT_EQ(from2, stats->earliestTimestamp);
+  ASSERT_EQ(to2, stats->latestTimestamp);
+}
+
+TEST(Journal, fully_pruned_journal_stats) {
+  Journal journal;
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::REMOVED));
+  journal.addDelta(std::make_unique<JournalDelta>(
+      "test.txt"_relpath, JournalDelta::CREATED));
+  auto latest = journal.getLatest();
+  // Journal with all entries pruned
+  journal.replaceJournal(latest->merge(3, true));
+  auto stats = journal.getStats();
+  ASSERT_FALSE(stats.has_value());
+}

@@ -87,5 +87,23 @@ bool Journal::isSubscriberValid(uint64_t id) const {
   return subscribers.find(id) != subscribers.end();
 }
 
+std::optional<JournalStats> Journal::getStats() {
+  JournalStats stats;
+  auto curr = getLatest();
+  if (curr == nullptr) {
+    // return None since this is an empty journal
+    return std::nullopt;
+  }
+  stats.latestTimestamp = curr->toTime;
+  stats.earliestTimestamp = curr->fromTime;
+  while (curr != nullptr) {
+    ++stats.entryCount;
+    stats.latestTimestamp = std::max(stats.latestTimestamp, curr->toTime);
+    stats.earliestTimestamp = std::min(stats.earliestTimestamp, curr->fromTime);
+    curr = curr->previous;
+  }
+  return stats;
+}
+
 } // namespace eden
 } // namespace facebook

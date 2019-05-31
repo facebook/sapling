@@ -11,13 +11,22 @@
 
 #include <folly/Function.h>
 #include <folly/Synchronized.h>
+#include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include "eden/fs/journal/JournalDelta.h"
 
 namespace facebook {
 namespace eden {
+
+/** Contains statistics about the current state of the journal */
+struct JournalStats {
+  uint64_t entryCount = 0;
+  std::chrono::steady_clock::time_point earliestTimestamp;
+  std::chrono::steady_clock::time_point latestTimestamp;
+};
 
 /** The Journal exists to answer questions about how files are changing
  * over time.
@@ -78,6 +87,10 @@ class Journal {
 
   void cancelAllSubscribers();
   bool isSubscriberValid(SubscriberId id) const;
+
+  /** Returns an option that is nullopt if the Journal is empty or an option
+   * that contains valid JournalStats if the Journal is non-empty*/
+  std::optional<JournalStats> getStats();
 
  private:
   struct DeltaState {
