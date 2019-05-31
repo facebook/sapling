@@ -113,6 +113,17 @@ def call_conduit(method, timeout=DEFAULT_TIMEOUT, **kwargs):
     # don't close the connection b/c we want to avoid the connection overhead
 
 
+def getmirroredrev(fromrepo, fromtype, torepo, totype, rev):
+    return call_conduit(
+        "scmquery.get.mirrored.revs",
+        from_repo=fromrepo,
+        from_scm=fromtype,
+        to_repo=torepo,
+        to_scm=totype,
+        revs=[rev],
+    ).get(rev, "")
+
+
 @templater.templatefunc("mirrornode")
 def mirrornode(ctx, mapping, args):
     """template: find this commit in other repositories"""
@@ -134,19 +145,11 @@ def mirrornode(ctx, mapping, args):
         torepo, totype = args
 
     try:
-        result = call_conduit(
-            "scmquery.get.mirrored.revs",
-            from_repo=reponame,
-            from_scm="hg",
-            to_repo=torepo,
-            to_scm=totype,
-            revs=[node],
-        )
+        return getmirroredrev(reponame, "hg", torepo, totype, node)
     except ConduitError as e:
         if "unknown revision" not in str(e.args):
             mapping["repo"].ui.warn((str(e.args) + "\n"))
         return ""
-    return result.get(node, "")
 
 
 templatekeyword = registrar.templatekeyword()
@@ -168,15 +171,7 @@ def showgitnode(repo, ctx, templ, **args):
     matches = []
     for backingrepo in backingrepos:
         try:
-            result = call_conduit(
-                "scmquery.get.mirrored.revs",
-                from_repo=reponame,
-                from_scm="hg",
-                to_repo=backingrepo,
-                to_scm="git",
-                revs=[ctx.hex()],
-            )
-            githash = result[ctx.hex()]
+            githash = getmirroredrev(reponame, "hg", backingrepo, "git", ctx.hex())
             if githash != "":
                 matches.append((backingrepo, githash))
         except ConduitError:
@@ -209,15 +204,7 @@ def gitnode(repo, subset, x):
     hghash = None
     for backingrepo in backingrepos:
         try:
-            result = call_conduit(
-                "scmquery.get.mirrored.revs",
-                from_repo=backingrepo,
-                from_scm="git",
-                to_repo=reponame,
-                to_scm="hg",
-                revs=[n],
-            )
-            hghash = result[n]
+            hghash = getmirroredrev(backingrepo, "git", reponame, "hg", n)
             if hghash != "":
                 break
         except Exception as ex:
