@@ -44,6 +44,8 @@ class TemporarySystemdUserServiceManagerTest(
                 return False
             if unit_name in ("dbus.service", "dbus.socket"):
                 return False
+            if unit_name.endswith(".device"):
+                return False
             if unit_name.endswith(".mount") or unit_name.endswith(".swap"):
                 return False
             if unit_name.endswith(".scope"):
