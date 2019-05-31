@@ -177,6 +177,7 @@ struct CachedBookmarksTransaction {
     repoid: RepositoryId,
     caches: CachedBookmarks,
     transaction: Box<dyn Transaction>,
+    dirty: bool,
 }
 
 impl CachedBookmarksTransaction {
@@ -191,6 +192,7 @@ impl CachedBookmarksTransaction {
             repoid,
             transaction,
             caches,
+            dirty: false,
         }
     }
 }
@@ -351,6 +353,7 @@ impl Transaction for CachedBookmarksTransaction {
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
+        self.dirty = true;
         self.transaction.update(bookmark, new_cs, old_cs, reason)
     }
 
@@ -360,6 +363,7 @@ impl Transaction for CachedBookmarksTransaction {
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
+        self.dirty = true;
         self.transaction.create(bookmark, new_cs, reason)
     }
 
@@ -369,6 +373,7 @@ impl Transaction for CachedBookmarksTransaction {
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
+        self.dirty = true;
         self.transaction.force_set(bookmark, new_cs, reason)
     }
 
@@ -378,6 +383,7 @@ impl Transaction for CachedBookmarksTransaction {
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
+        self.dirty = true;
         self.transaction.delete(bookmark, old_cs, reason)
     }
 
@@ -386,6 +392,7 @@ impl Transaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
+        self.dirty = true;
         self.transaction.force_delete(bookmark, reason)
     }
 
@@ -395,11 +402,13 @@ impl Transaction for CachedBookmarksTransaction {
         new_cs: ChangesetId,
         old_cs: ChangesetId,
     ) -> Result<()> {
+        // Infinitepush bookmarks aren't stored in the cache.
         self.transaction
             .update_infinitepush(bookmark, new_cs, old_cs)
     }
 
     fn create_infinitepush(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+        // Infinitepush bookmarks aren't stored in the cache.
         self.transaction.create_infinitepush(bookmark, new_cs)
     }
 
@@ -409,12 +418,13 @@ impl Transaction for CachedBookmarksTransaction {
             caches,
             repoid,
             ctx,
+            dirty,
         } = *self;
 
         transaction
             .commit()
             .map(move |success| {
-                if success {
+                if success && dirty {
                     caches.purge_cache(ctx, repoid);
                 }
                 success
@@ -486,6 +496,26 @@ mod tests {
                 .flatten_stream()
                 .boxify()
         }
+    }
+
+    fn create_dirty_transaction<T: Bookmarks>(
+        bookmarks: &T,
+        ctx: CoreContext,
+        repoid: RepositoryId,
+    ) -> Box<Transaction> {
+        let mut transaction = bookmarks.create_transaction(ctx.clone(), repoid);
+
+        // Dirty the transaction.
+        transaction
+            .force_delete(
+                &BookmarkName::new("".to_string()).unwrap(),
+                BookmarkUpdateReason::TestMove {
+                    bundle_replay_data: None,
+                },
+            )
+            .unwrap();
+
+        transaction
     }
 
     impl Bookmarks for MockBookmarks {
@@ -774,8 +804,15 @@ mod tests {
         // We expect no further request to show up.
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
-        // successfull transaction should redirect further requests to master
+        // Create a non dirty transaction and make sure that no requests go to master.
         let transaction = bookmarks.create_transaction(ctx.clone(), repoid);
+        rt.block_on(transaction.commit()).unwrap();
+
+        let _ = spawn_query("c", &mut rt);
+        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+
+        // successfull transaction should redirect further requests to master
+        let transaction = create_dirty_transaction(&bookmarks, ctx.clone(), repoid);
         rt.block_on(transaction.commit()).unwrap();
 
         let res = spawn_query("a", &mut rt);
