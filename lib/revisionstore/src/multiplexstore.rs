@@ -14,13 +14,13 @@ use crate::localstore::LocalStore;
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
 /// delta stores that it is made of.
 pub struct MultiplexDeltaStore<'a> {
-    stores: Vec<Box<dyn MutableDeltaStore + 'a>>,
+    stores: Vec<Box<dyn MutableDeltaStore + Send + 'a>>,
 }
 
 /// A `MultiplexHistoryStore` is a store that will duplicate all the writes to all the
 /// history stores that it is made of.
 pub struct MultiplexHistoryStore<'a> {
-    stores: Vec<Box<dyn MutableHistoryStore + 'a>>,
+    stores: Vec<Box<dyn MutableHistoryStore + Send + 'a>>,
 }
 
 impl<'a> MultiplexDeltaStore<'a> {
@@ -28,7 +28,7 @@ impl<'a> MultiplexDeltaStore<'a> {
         Self { stores: Vec::new() }
     }
 
-    pub fn add_store(&mut self, store: Box<dyn MutableDeltaStore + 'a>) {
+    pub fn add_store(&mut self, store: Box<dyn MutableDeltaStore + Send + 'a>) {
         self.stores.push(store)
     }
 }
@@ -38,7 +38,7 @@ impl<'a> MultiplexHistoryStore<'a> {
         Self { stores: Vec::new() }
     }
 
-    pub fn add_store(&mut self, store: Box<dyn MutableHistoryStore + 'a>) {
+    pub fn add_store(&mut self, store: Box<dyn MutableHistoryStore + Send + 'a>) {
         self.stores.push(Box::new(store))
     }
 }
