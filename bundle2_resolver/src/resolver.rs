@@ -73,7 +73,7 @@ pub fn resolve(
     phases_hint: Arc<dyn Phases>,
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
-    _pure_push_allowed: bool,
+    pure_push_allowed: bool,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(
         ctx.clone(),
@@ -144,6 +144,9 @@ pub fn resolve(
                             lca_hint,
                         )
                     } else {
+                        fn changegroup_always_unacceptable() -> bool {
+                            false
+                        };
                         resolve_pushrebase(
                             ctx,
                             commonheads,
@@ -153,6 +156,7 @@ pub fn resolve(
                             lca_hint,
                             phases_hint,
                             maybe_full_content,
+                            changegroup_always_unacceptable,
                         )
                     }
                 } else {
@@ -163,6 +167,7 @@ pub fn resolve(
                         allow_non_fast_forward,
                         maybe_full_content,
                         lca_hint,
+                        move || pure_push_allowed,
                     )
                 }
             },
@@ -177,9 +182,10 @@ fn resolve_push(
     allow_non_fast_forward: bool,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> BoxFuture<Bytes, Error> {
     resolver
-        .maybe_resolve_changegroup(ctx.clone(), bundle2)
+        .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
         .and_then({
             cloned!(resolver);
             move |(cg_push, bundle2)| {
@@ -289,6 +295,7 @@ fn resolve_pushrebase(
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     phases_hint: Arc<dyn Phases>,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .resolve_b2xtreegroup2(ctx.clone(), bundle2)
@@ -296,7 +303,7 @@ fn resolve_pushrebase(
             cloned!(ctx, resolver);
             move |(manifests, bundle2)| {
                 resolver
-                    .maybe_resolve_changegroup(ctx, bundle2)
+                    .maybe_resolve_changegroup(ctx, bundle2, changegroup_acceptable)
                     .map(move |(cg_push, bundle2)| (cg_push, manifests, bundle2))
             }
         })
@@ -859,10 +866,13 @@ impl Bundle2Resolver {
     /// The Changesets should be parsed as RevlogChangesets and used for uploading changesets
     /// The Filelogs should be scheduled for uploading to BlobRepo and the Future resolving in
     /// their upload should be used for uploading changesets
+    /// `pure_push_allowed` argument is responsible for allowing
+    /// pure (non-pushrebase and non-infinitepush) pushes
     fn maybe_resolve_changegroup(
         &self,
         ctx: CoreContext,
         bundle2: BoxStream<Bundle2Item, Error>,
+        changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
     ) -> BoxFuture<(Option<ChangegroupPush>, BoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
 
@@ -873,6 +883,11 @@ impl Bundle2Resolver {
                 Some(Bundle2Item::Changegroup(header, parts))
                 | Some(Bundle2Item::B2xInfinitepush(header, parts))
                 | Some(Bundle2Item::B2xRebase(header, parts)) => {
+                    if header.part_type() == &PartHeaderType::Changegroup && !changegroup_acceptable() {
+                        // Changegroup part type signals that we are in a pure push scenario
+                        return err(format_err!("Pure pushes are disallowed in this repo"))
+                            .boxify();
+                    }
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)
                         .collect()

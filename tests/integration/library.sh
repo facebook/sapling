@@ -398,6 +398,13 @@ preserve_raw_bundle2 = true
 CONFIG
 fi
 
+if [[ -v DISALLOW_NON_PUSHREBASE ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[push]
+pure_push_allowed = false
+CONFIG
+fi
+
 if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [cache_warmup]
