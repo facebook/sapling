@@ -2598,7 +2598,7 @@ def walkchangerevs(repo, match, opts, prepare):
     return iterate()
 
 
-def _makefollowlogfilematcher(repo, files, followfirst):
+def _makefollowlogfilematcher(repo, paths, followfirst, pctx):
     # When displaying a revision with --patch --follow FILE, we have
     # to know which file of the revision must be diffed. With
     # --follow, we want the names of the ancestors of FILE in the
@@ -2608,17 +2608,28 @@ def _makefollowlogfilematcher(repo, files, followfirst):
     # good enough).
     fcache = {}
     fcacheready = [False]
-    pctx = repo["."]
 
-    # "files" might be directories. Normalize them to actual files.
-    for path in files:
+    dirs = []
+    files = []
+
+    for path in paths:
         if path not in pctx:
-            # "path" could be a prefix matching a directory, use the
-            # real matcher interface to handle it.
-            files = list(pctx.walk(scmutil.match(pctx, files, default="path")))
-            break
+            dirs.append(path)
+        else:
+            files.append(path)
 
-    def populate():
+    # When directories are passed in, walking the ancestors graph can be
+    # extremely expensive, let's not attempt to do it and instead just match
+    # all the files under the given directories.
+    if not dirs:
+        dirmatcher = None
+    else:
+        dirmatcher = matchmod.match(
+            repo.root, repo.getcwd(), patterns=["path:%s" % path for path in dirs]
+        )
+
+    def populatefiles():
+        # Walk the ancestors graph for all the files passed in.
         for fn in files:
             fctx = pctx[fn]
             fcache.setdefault(fctx.introrev(), set()).add(fctx.path())
@@ -2627,10 +2638,16 @@ def _makefollowlogfilematcher(repo, files, followfirst):
 
     def filematcher(rev):
         if not fcacheready[0]:
-            # Lazy initialization
+            populatefiles()
             fcacheready[0] = True
-            populate()
-        return scmutil.matchfiles(repo, fcache.get(rev, []))
+
+        fileset = fcache.get(rev, [])
+        if not fileset:
+            filematcher = None
+        else:
+            filematcher = scmutil.matchfiles(repo, fcache.get(rev, []))
+
+        return matchmod.union([dirmatcher, filematcher], repo.root, repo.getcwd())
 
     return filematcher
 
@@ -2763,7 +2780,9 @@ def _makelogrevset(repo, pats, opts, revs):
         if follow and not match.always() and not slowpath:
             # _makefollowlogfilematcher expects its files argument to be
             # relative to the repo root, so use match.files(), not pats.
-            filematcher = _makefollowlogfilematcher(repo, match.files(), followfirst)
+            filematcher = _makefollowlogfilematcher(
+                repo, match.files(), followfirst, repo[startrev]
+            )
         else:
             filematcher = _makenofollowlogfilematcher(repo, pats, opts)
             if filematcher is None:
