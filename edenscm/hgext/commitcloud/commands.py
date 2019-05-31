@@ -357,7 +357,9 @@ def cloudbackup(ui, repo, *revs, **opts):
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)
 
     with backuplock.lock(repo):
-        state = backupstate.BackupState(repo, remotepath)
+        # Load the backup state under the repo lock to ensure a consistent view.
+        with repo.lock():
+            state = backupstate.BackupState(repo, remotepath)
         backedup, failed = backup.backup(repo, state, remotepath, getconnection, revs)
 
         if revs is None:

@@ -29,28 +29,26 @@ class BackupState(object):
             self.prefix + hashlib.sha256(remotepath).hexdigest()[0:8]
         )
         self.heads = set()
-        # Load the backup state under the repo lock to ensure a consistent view.
-        with repo.lock():
-            if repo.sharedvfs.exists(self.filename):
-                with repo.sharedvfs.open(self.filename) as f:
-                    lines = f.readlines()
-                    if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
-                        repo.ui.debug(
-                            "unrecognised backedupheads version '%s', ignoring\n"
-                            % lines[0].strip()
-                        )
-                        self.initfromserver()
-                        return
-                    if lines[1].strip() != remotepath:
-                        repo.ui.debug(
-                            "backupheads file is for a different remote ('%s' instead of '%s'), reinitializing\n"
-                            % (lines[1].strip(), remotepath)
-                        )
-                        self.initfromserver()
-                        return
-                    self.heads = set(nodemod.bin(head.strip()) for head in lines[2:])
-            else:
-                self.initfromserver()
+        if repo.sharedvfs.exists(self.filename):
+            with repo.sharedvfs.open(self.filename) as f:
+                lines = f.readlines()
+                if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
+                    repo.ui.debug(
+                        "unrecognised backedupheads version '%s', ignoring\n"
+                        % lines[0].strip()
+                    )
+                    self.initfromserver()
+                    return
+                if lines[1].strip() != remotepath:
+                    repo.ui.debug(
+                        "backupheads file is for a different remote ('%s' instead of '%s'), reinitializing\n"
+                        % (lines[1].strip(), remotepath)
+                    )
+                    self.initfromserver()
+                    return
+                self.heads = set(nodemod.bin(head.strip()) for head in lines[2:])
+        else:
+            self.initfromserver()
 
     def initfromserver(self):
         # Check with the server about all visible commits that we don't already
