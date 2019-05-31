@@ -637,7 +637,7 @@ revision numbers.
 
 - If the `startrev` is greater than the first globalrev based commit i.e. 5000
 then effectively only the globalrevs based commit in the repository >=
-`startrev` are have valid global revision numbers.
+`startrev` have valid global revision numbers.
 
   $ firstvalidglobalrevcommit 5003
   5003

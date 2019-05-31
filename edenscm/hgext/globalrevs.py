@@ -79,7 +79,7 @@ from edenscm.mercurial.node import bin, hex, nullid
 from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
-from .hgsubversion import svnrevkw, util as svnutil
+from .hgsubversion import util as svnutil
 from .pushrebase import isnonpushrebaseblocked
 
 
@@ -99,27 +99,15 @@ namespacepredicate = registrar.namespacepredicate()
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
+EXTRASCONVERTKEY = "convert_revision"
 EXTRASGLOBALREVKEY = "global_rev"
-EXTRACONVERTKEY = "convert_revision"
-MAPFILE = "globalrev-nodemap"
 LASTREVFILE = "globalrev-nodemap/last-rev"
+MAPFILE = "globalrev-nodemap"
 
 
 @templatekeyword("globalrev")
 def globalrevkw(repo, ctx, **kwargs):
-    return _globalrevkw(repo, ctx, **kwargs)
-
-
-def _globalrevkw(repo, ctx, **kwargs):
-    grev = ctx.extra().get(EXTRASGLOBALREVKEY)
-    # If the revision number associated with the commit is before the supported
-    # starting revision, nothing to do.
-    if grev is not None and repo.ui.configint("globalrevs", "startrev") <= int(grev):
-        return grev
-
-
-def _globalrevkwwrapper(orig, repo, ctx, **kwargs):
-    return orig(repo, ctx, **kwargs) or svnrevkw(repo=repo, ctx=ctx, **kwargs)
+    return _getglobalrev(repo.ui, ctx.extra())
 
 
 def _newreporequirementswrapper(orig, repo):
@@ -147,8 +135,6 @@ def uisetup(ui):
             )
 
             globalrevsmod = extensions.find("globalrevs")
-
-            extensions.wrapfunction(globalrevsmod, "_globalrevkw", _globalrevkwwrapper)
             extensions.wrapfunction(
                 globalrevsmod, "_lookupglobalrev", _lookupglobalrevwrapper
             )
@@ -401,6 +387,21 @@ def _revsetglobalrev(repo, subset, x):
     return subset & smartset.baseset(_lookupglobalrev(repo, globalrev))
 
 
+def _getglobalrev(ui, commitextra):
+    grev = commitextra.get(EXTRASGLOBALREVKEY)
+
+    # If we did not find `globalrev` in the commit extras, lets also look for
+    # the `svnrev` in the commit extras before we give up. Also, do not return
+    # the `globalrev` if it is before the supported starting revision.
+    if not grev or ui.configint("globalrevs", "startrev") > int(grev):
+        convertrev = commitextra.get(EXTRASCONVERTKEY)
+        if convertrev:
+            # ex. svn:uuid/path@1234
+            return convertrev.rsplit("@", 1)[-1]
+    else:
+        return grev
+
+
 @command("^updateglobalrevmeta", [], _("hg updateglobalrevmeta"))
 def updateglobalrevmeta(ui, repo, *args, **opts):
     """Reads globalrevs from the latest hg commits and adds them to the
@@ -416,21 +417,11 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
         with progress.bar(ui, _("indexing"), _("revs"), repolen - lastrev) as prog:
             for rev in xrange(lastrev, repolen):
                 commitdata = clrevision(rev)
-                extra = commitdata.extra
-                grev = extra.get(EXTRASGLOBALREVKEY)
+                grev = _getglobalrev(ui, commitdata.extra)
                 if grev:
                     grev = int(grev)
                     hgnode = clnode(rev)
                     globalrevmap.add(grev, hgnode)
-                else:
-                    convertrev = extra.get(EXTRACONVERTKEY)
-                    if convertrev:
-                        # ex. svn:uuid/path@1234
-                        svnrev = convertrev.rsplit("@", 1)[-1]
-                        if svnrev:
-                            svnrev = int(svnrev)
-                            hgnode = clnode(rev)
-                            globalrevmap.add(svnrev, hgnode)
                 prog.value += 1
 
         globalrevmap.lastrev = repolen
