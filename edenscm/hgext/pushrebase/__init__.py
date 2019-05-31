@@ -608,6 +608,10 @@ def commonheadspartgen(pushop, bundler):
         # Server doesn't support pushrebase, so just fallback to normal push.
         return
 
+    if pushop.ui.configbool("experimental", "infinitepush-scratchpush"):
+        # We are doing an infinitepush: it's not a pushrebase.
+        return
+
     bundler.newpart(commonheadsparttype, data="".join(pushop.outgoing.commonheads))
 
 
