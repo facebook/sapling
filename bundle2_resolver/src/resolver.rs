@@ -73,6 +73,7 @@ pub fn resolve(
     phases_hint: Arc<dyn Phases>,
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    _pure_push_allowed: bool,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(
         ctx.clone(),

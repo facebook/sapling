@@ -41,6 +41,7 @@ pub struct RepoHandler {
     pub lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     pub phases_hint: Arc<dyn Phases>,
     pub preserve_raw_bundle2: bool,
+    pub pure_push_allowed: bool,
 }
 
 pub fn repo_handlers(
@@ -151,6 +152,7 @@ pub fn repo_handlers(
                 let wireproto_scribe_category = config.wireproto_scribe_category.clone();
                 let preserve_raw_bundle2 =
                     config.bundle2_replay_params.preserve_raw_bundle2.clone();
+                let pure_push_allowed = config.push.pure_push_allowed.clone();
 
                 let skip_index = match config.skiplist_index_blobstore_key.clone() {
                     Some(skiplist_index_blobstore_key) => {
@@ -227,6 +229,7 @@ pub fn repo_handlers(
                                     lca_hint,
                                     phases_hint,
                                     preserve_raw_bundle2,
+                                    pure_push_allowed,
                                 },
                             )
                         }

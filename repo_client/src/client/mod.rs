@@ -223,6 +223,8 @@ pub struct RepoClient {
     phases_hint: Arc<Phases>,
     // Whether to save raw bundle2 content into the blobstore
     preserve_raw_bundle2: bool,
+    // Whether to allow non-pushrebase pushes
+    pure_push_allowed: bool,
     hook_manager: Arc<HookManager>,
 }
 
@@ -327,6 +329,7 @@ impl RepoClient {
         lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
         preserve_raw_bundle2: bool,
+        pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
     ) -> Self {
         RepoClient {
@@ -336,6 +339,7 @@ impl RepoClient {
             lca_hint,
             phases_hint,
             preserve_raw_bundle2,
+            pure_push_allowed,
             hook_manager,
         }
     }
@@ -956,6 +960,7 @@ impl HgCommands for RepoClient {
         maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
         let client = self.clone();
+        let pure_push_allowed = self.pure_push_allowed;
         cloned!(self.hook_manager);
 
         self.repo
@@ -979,6 +984,7 @@ impl HgCommands for RepoClient {
                     client.phases_hint.clone(),
                     read_write,
                     maybe_full_content,
+                    pure_push_allowed,
                 );
 
                 res.timeout(timeout_duration())
