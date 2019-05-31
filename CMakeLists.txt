@@ -1,3 +1,10 @@
+# Copyright (c) 2019-present, Facebook, Inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree. An additional grant
+# of patent rights can be found in the PATENTS file in the same directory.
+
 cmake_minimum_required(VERSION 3.1.3 FATAL_ERROR)
 # We use the GoogleTest module if it is available (only in CMake 3.9+)
 # It requires CMP0054 and CMP0057 to be enabled.
@@ -38,7 +45,10 @@ else()
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
-include(CompilerSettingsUnix)
+
+if (NOT WIN32)
+  include(CompilerSettingsUnix)
+endif()
 include(EdenConfigChecks)
 include(ThriftCppLibrary)
 include(FBMercurialFeatures)
