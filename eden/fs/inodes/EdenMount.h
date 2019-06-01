@@ -343,17 +343,6 @@ class EdenMount {
   folly::Future<InodePtr> getInode(RelativePathPiece path) const;
 
   /**
-   * A blocking version of getInode().
-   *
-   * @return the InodeBase for the specified path or throws a std::system_error
-   *     with ENOENT.
-   *
-   * TODO: We should switch all callers to use the Future-base API, and remove
-   * the blocking API.
-   */
-  InodePtr getInodeBlocking(RelativePathPiece path) const;
-
-  /**
    * Syntactic sugar for getInode().get().asTreePtr()
    *
    * TODO: We should switch all callers to use the Future-base API, and remove

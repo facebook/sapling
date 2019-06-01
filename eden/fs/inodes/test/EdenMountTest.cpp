@@ -168,36 +168,36 @@ TEST(EdenMount, resolveSymlink) {
   TestMount testMount{builder};
   const auto& edenMount = testMount.getEdenMount();
 
-  const auto getInodeBlocking = [edenMount](std::string path) {
-    return edenMount->getInodeBlocking(
-        RelativePathPiece{folly::StringPiece{path}});
+  const auto getInode = [edenMount](std::string path) {
+    return edenMount->getInode(RelativePathPiece{folly::StringPiece{path}})
+        .get();
   };
 
   const auto resolveSymlink = [edenMount](const InodePtr& pInode) {
     return edenMount->resolveSymlink(pInode).get(1s);
   };
 
-  const InodePtr pDir{getInodeBlocking("src")};
+  const InodePtr pDir{getInode("src")};
   EXPECT_EQ(dtype_t::Dir, pDir->getType());
-  const InodePtr pSymlinkA{getInodeBlocking("a")};
+  const InodePtr pSymlinkA{getInode("a")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkA->getType());
   EXPECT_TRUE(pSymlinkA.asFileOrNull() != nullptr);
-  const InodePtr pSymlinkB{getInodeBlocking("b")};
+  const InodePtr pSymlinkB{getInode("b")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkB->getType());
-  const InodePtr pSymlinkC{getInodeBlocking("src/c")};
+  const InodePtr pSymlinkC{getInode("src/c")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkC->getType());
-  const InodePtr pSymlinkD{getInodeBlocking("d")};
+  const InodePtr pSymlinkD{getInode("d")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkD->getType());
-  const InodePtr pSymlinkBadlink{getInodeBlocking("badlink")};
+  const InodePtr pSymlinkBadlink{getInode("badlink")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkBadlink->getType());
-  const InodePtr pSymlinkOutsideMount{getInodeBlocking("link_outside_mount")};
+  const InodePtr pSymlinkOutsideMount{getInode("link_outside_mount")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkOutsideMount->getType());
-  const InodePtr pSymlinkLoop{getInodeBlocking("loop1")};
+  const InodePtr pSymlinkLoop{getInode("loop1")};
   EXPECT_EQ(dtype_t::Symlink, pSymlinkLoop->getType());
-  const InodePtr pLinkToDir{getInodeBlocking("src/link_to_dir")};
+  const InodePtr pLinkToDir{getInode("src/link_to_dir")};
   EXPECT_EQ(dtype_t::Symlink, pLinkToDir->getType());
 
-  const InodePtr pTargetFile{getInodeBlocking("src/test.c")};
+  const InodePtr pTargetFile{getInode("src/test.c")};
   EXPECT_EQ(dtype_t::Regular, pTargetFile->getType());
   EXPECT_TRUE(pTargetFile.asFileOrNull() != nullptr);
 
@@ -208,13 +208,13 @@ TEST(EdenMount, resolveSymlink) {
   EXPECT_TRUE(resolveSymlink(pSymlinkA) == pTargetFile);
   EXPECT_TRUE(resolveSymlink(pLinkToDir) == pDir);
 
-  const InodePtr pFoo{getInodeBlocking("d1/foo.txt")};
+  const InodePtr pFoo{getInode("d1/foo.txt")};
   EXPECT_EQ(dtype_t::Regular, pFoo->getType());
-  const InodePtr pSymlink2deep{getInodeBlocking("d1/d2/d3/somelink")};
+  const InodePtr pSymlink2deep{getInode("d1/d2/d3/somelink")};
   EXPECT_TRUE(resolveSymlink(pSymlink2deep) == pFoo);
-  const InodePtr pSymlink3deep{getInodeBlocking("d1/d2/d3/anotherlink")};
+  const InodePtr pSymlink3deep{getInode("d1/d2/d3/anotherlink")};
   EXPECT_TRUE(resolveSymlink(pSymlink3deep) == pTargetFile);
-  const InodePtr pSelfLoop{getInodeBlocking("src/selfloop")};
+  const InodePtr pSelfLoop{getInode("src/selfloop")};
   EXPECT_EQ(dtype_t::Symlink, pSelfLoop->getType());
 
   EXPECT_THROW_ERRNO(resolveSymlink(pSymlinkLoop), ELOOP);
@@ -235,7 +235,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
   builder.setReady("a");
   const auto& edenMount = testMount.getEdenMount();
   const InodePtr pA{
-      edenMount->getInodeBlocking(RelativePathPiece{folly::StringPiece{"a"}})};
+      edenMount->getInode(RelativePathPiece{folly::StringPiece{"a"}}).get()};
   EXPECT_EQ(dtype_t::Symlink, pA->getType());
 
   auto bFuture = edenMount->resolveSymlink(pA);
@@ -245,7 +245,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
   builder.setReady("b");
 
   const InodePtr pB{
-      edenMount->getInodeBlocking(RelativePathPiece{folly::StringPiece{"b"}})};
+      edenMount->getInode(RelativePathPiece{folly::StringPiece{"b"}}).get()};
   EXPECT_EQ(dtype_t::Regular, pB->getType());
 
   const auto pResolvedB = std::move(bFuture).get(1s);
@@ -517,7 +517,7 @@ class ChownTest : public ::testing::Test {
   }
 
   InodeNumber load() {
-    auto file = edenMount_->getInodeBlocking("file.txt"_relpath);
+    auto file = edenMount_->getInode("file.txt"_relpath).get();
     // Load the file into the inode map
     file->incFuseRefcount();
     file->getNodeId();

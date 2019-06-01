@@ -398,7 +398,7 @@ bool TestMount::hasFileAt(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   mode_t mode;
   try {
-    auto child = edenMount_->getInodeBlocking(relativePath);
+    auto child = edenMount_->getInode(relativePath).get();
     mode = child->getattr().get().st.st_mode;
   } catch (const std::system_error& e) {
     if (e.code().value() == ENOENT) {

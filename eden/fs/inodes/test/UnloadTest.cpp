@@ -44,7 +44,7 @@ TYPED_TEST(UnloadTest, inodesAreUnloaded) {
 
   std::vector<InodeNumber> loadedInodeNumbers;
   auto load = [&](RelativePathPiece relpath) -> InodeNumber {
-    auto inode = edenMount->getInodeBlocking(relpath);
+    auto inode = edenMount->getInode(relpath).get();
     inode->incFuseRefcount();
     loadedInodeNumbers.push_back(inode->getNodeId());
     return inode->getNodeId();
@@ -120,7 +120,7 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   const auto* edenMount = testMount.getEdenMount().get();
   auto inodeMap = edenMount->getInodeMap();
 
-  auto inode = edenMount->getInodeBlocking("src/file.txt"_relpath);
+  auto inode = edenMount->getInode("src/file.txt"_relpath).get();
   inode->incFuseRefcount();
   inode.reset();
 
