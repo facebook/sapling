@@ -343,22 +343,6 @@ class EdenMount {
   folly::Future<InodePtr> getInode(RelativePathPiece path) const;
 
   /**
-   * Syntactic sugar for getInode().get().asTreePtr()
-   *
-   * TODO: We should switch all callers to use the Future-base API, and remove
-   * the blocking API.
-   */
-  TreeInodePtr getTreeInodeBlocking(RelativePathPiece path) const;
-
-  /**
-   * Syntactic sugar for getInode().get().asFilePtr()
-   *
-   * TODO: We should switch all callers to use the Future-base API, and remove
-   * the blocking API.
-   */
-  FileInodePtr getFileInodeBlocking(RelativePathPiece path) const;
-
-  /**
    * Chases (to bounded depth) and returns the final non-symlink in the
    * (possibly 0-length) chain of symlinks rooted at pInode.  Specifically:
    * If pInode is a file or directory, it is immediately returned.

@@ -574,14 +574,6 @@ Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
   return inodeMap_->getRootInode()->getChildRecursive(path);
 }
 
-TreeInodePtr EdenMount::getTreeInodeBlocking(RelativePathPiece path) const {
-  return getInode(path).get().asTreePtr();
-}
-
-FileInodePtr EdenMount::getFileInodeBlocking(RelativePathPiece path) const {
-  return getInode(path).get().asFilePtr();
-}
-
 folly::Future<InodePtr> EdenMount::resolveSymlink(InodePtr pInode) const {
   auto pathOptional = pInode->getPath();
   if (!pathOptional) {
