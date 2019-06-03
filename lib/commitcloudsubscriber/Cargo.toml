@@ -13,6 +13,7 @@ description = """ \
 	* the library also contains a module to find OAuth token, \
 		this logic should be in sync with `hg cloud auth` command. \
 """
+edition = "2015"
 
 [dependencies]
 eventsource = "0.3.0"

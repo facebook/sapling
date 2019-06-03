@@ -16,12 +16,12 @@ extern crate zstd_sys;
 
 mod zstdelta;
 
+use crate::zstdelta::{apply, diff};
 use std::env::args;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use zstdelta::{apply, diff};
 
 fn read(path: &Path) -> Vec<u8> {
     let mut buf = Vec::new();

@@ -2,6 +2,7 @@
 name = "mkscratch"
 version = "0.1.0"
 authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
+edition = "2018"
 
 [dependencies]
 clap = "2.31.2"

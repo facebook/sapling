@@ -1,6 +1,7 @@
 [package]
 name = "mpatch-sys"
 version = "0.1.0"
+edition = "2018"
 
 [build-dependencies]
 cc = "1.0.25"
