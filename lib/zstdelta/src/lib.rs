@@ -8,6 +8,8 @@
 extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
+#[cfg(test)]
+extern crate rand_chacha;
 
 extern crate libc;
 extern crate zstd_sys;

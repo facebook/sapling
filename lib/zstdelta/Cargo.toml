@@ -9,6 +9,7 @@ zstd-sys = { version = "= 1.4.10+zstd.1.4.0", features = ["experimental"] } # pi
 [dev-dependencies]
 quickcheck = "0.6"
 rand = "0.5"
+rand_chacha = "0.1.0"
 
 [[bin]]
 name = "zstdelta"

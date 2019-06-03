@@ -147,7 +147,8 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{ChaChaRng, RngCore, SeedableRng};
+    use rand::{RngCore, SeedableRng};
+    use rand_chacha::ChaChaRng;
 
     fn check_round_trip(base: &[u8], data: &[u8]) -> bool {
         let delta = diff(base, data).expect("delta");
