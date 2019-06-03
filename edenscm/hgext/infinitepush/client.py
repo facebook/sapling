@@ -100,6 +100,30 @@ def extsetup(ui):
     )
 
 
+def preparepush(ui, dest):
+    # If the user is saying they want to push to "default", and this is a
+    # scratch push, then we're going to go to the infinitepush destination
+    # instead, if it exists. This ensures that as long as infinitepush and
+    # infinitepush-other (see below) route to different places (respectively
+    # Mercurial and Mononoke), then infinite pushes without a path OR with a
+    # path of "default" will be routed to both of them. Put it another way: when
+    # you do a scratch push, "default" means the infinitepush path.
+    if dest == "default":
+        try:
+            return (True, ui.paths.getpath("infinitepush"))
+        except error.RepoError:
+            # Fallthrough to the next block.
+            pass
+
+    if dest is None or dest in ("default", "infinitepush"):
+        path = ui.paths.getpath(
+            dest, default=("infinitepush", "default-push", "default")
+        )
+        return (True, path)
+
+    return (False, ui.paths.getpath(dest))
+
+
 def _push(orig, ui, repo, dest=None, *args, **opts):
     bookmark = opts.get("to") or ""
     create = opts.get("create") or False
@@ -163,22 +187,23 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
 
         if scratchpush:
             ui.setconfig("experimental", "infinitepush-scratchpush", True)
+
             oldphasemove = extensions.wrapfunction(
                 exchange, "_localphasemove", _phasemove
             )
-            path = ui.paths.getpath(
-                dest, default=("infinitepush", "default-push", "default")
-            )
 
-            # We'll replicate the push if the user provided no destination and
-            # intended their push to go to the default infinitepush destination.
-            if dest is None:
+            replicate, path = preparepush(ui, dest)
+
+            # We'll replicate the push if the user intended their push to go to
+            # the default infinitepush destination.
+            if replicate:
                 try:
                     otherpath = repo.ui.paths.getpath("infinitepush-other")
                 except error.RepoError:
                     pass
         else:
             path = ui.paths.getpath(dest, default=("default-push", "default"))
+
         # Copy-paste from `push` command
         if not path:
             raise error.Abort(

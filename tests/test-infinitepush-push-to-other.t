@@ -24,6 +24,8 @@ Check that we replicate a push
   $ cp "$TESTTMP/defaulthgrc" "$HGRCPATH"
   $ cat >> "$HGRCPATH" << EOF
   > [paths]
+  > default-push=ssh://user@dummy/repo3
+  > infinitepush=ssh://user@dummy/repo1
   > infinitepush-other=ssh://user@dummy/repo2
   > [infinitepush]
   > branchpattern=re:scratch/.+
@@ -40,6 +42,34 @@ Check that we replicate a push
   searching for changes
   remote: pushing 1 commit:
   remote:     67145f466344  initialcommit
+  $ mkcommit morecommit
+  $ hg push infinitepush -r . --to scratch/test123
+  pushing to ssh://user@dummy/repo1
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     67145f466344  initialcommit
+  remote:     6b2f28e02245  morecommit
+  please wait while we replicate this push to an alternate repository
+  pushing to ssh://user@dummy/repo2
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     67145f466344  initialcommit
+  remote:     6b2f28e02245  morecommit
+  $ mkcommit anothercommit
+  $ hg push default -r . --to scratch/test123
+  pushing to ssh://user@dummy/repo1
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     67145f466344  initialcommit
+  remote:     6b2f28e02245  morecommit
+  remote:     17528c345014  anothercommit
+  please wait while we replicate this push to an alternate repository
+  pushing to ssh://user@dummy/repo2
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     67145f466344  initialcommit
+  remote:     6b2f28e02245  morecommit
+  remote:     17528c345014  anothercommit
   $ cd ..
 
 Check that we do not replicate a push to the same destination
@@ -53,7 +83,7 @@ Check that we do not replicate a push to the same destination
   > EOF
   $ cd client2
   $ mkcommit initialcommit
-  $ hg push -r . --to scratch/test123 --create
+  $ hg push -r . --to scratch/test456 --create
   pushing to ssh://user@dummy/repo1
   searching for changes
   remote: pushing 1 commit:
@@ -70,7 +100,7 @@ Check that we do not replicate a push when the destination is set
   > EOF
   $ cd client3
   $ mkcommit initialcommit
-  $ hg push ssh://user@dummy/repo3 -r . --to scratch/test123 --create
+  $ hg push ssh://user@dummy/repo3 -r . --to scratch/test789 --create
   pushing to ssh://user@dummy/repo3
   searching for changes
   remote: pushing 1 commit:
