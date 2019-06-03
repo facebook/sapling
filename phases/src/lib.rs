@@ -298,53 +298,66 @@ where
     &'a Heads: IntoIterator<Item = &'a ChangesetId>,
 {
     let changeset_fetcher = repo.get_changeset_fetcher();
-    let input: Vec<_> = public_heads.into_iter().cloned().collect();
-    future::loop_fn((HashMap::new(), input), {
-        cloned!(ctx, repo, phases);
-        move |(mut output, mut input)| match input.pop() {
-            None => future::ok(Loop::Break(output)).left_future(),
-            Some(cs) => phases
-                .get_single_raw(repo.get_repoid(), cs)
-                .and_then({
-                    cloned!(changeset_fetcher, ctx);
-                    move |phase| match phase {
-                        Some(Phase::Public) => {
-                            future::ok(Loop::Continue((output, input))).left_future()
-                        }
-                        _ => (
-                            changeset_fetcher.get_generation_number(ctx.clone(), cs),
-                            changeset_fetcher.get_parents(ctx, cs),
-                        )
-                            .into_future()
-                            .map(move |(generation, parents)| {
-                                output.insert(cs, generation);
-                                input.extend(
-                                    parents.into_iter().filter(|p| !output.contains_key(p)),
-                                );
-                                Loop::Continue((output, input))
+    let all_heads: Vec<_> = public_heads.into_iter().cloned().collect();
+    phases
+        .get_public_raw(repo.get_repoid(), &all_heads)
+        .and_then({
+            cloned!(ctx, repo, phases);
+            move |public| {
+                let input = all_heads
+                    .into_iter()
+                    .filter(|csid| !public.contains(csid))
+                    .collect::<Vec<_>>();
+                future::loop_fn((HashMap::new(), input), {
+                    cloned!(ctx, repo, phases);
+                    move |(mut output, mut input)| match input.pop() {
+                        None => future::ok(Loop::Break(output)).left_future(),
+                        Some(cs) => phases
+                            .get_single_raw(repo.get_repoid(), cs)
+                            .and_then({
+                                cloned!(changeset_fetcher, ctx);
+                                move |phase| match phase {
+                                    Some(Phase::Public) => {
+                                        future::ok(Loop::Continue((output, input))).left_future()
+                                    }
+                                    _ => (
+                                        changeset_fetcher.get_generation_number(ctx.clone(), cs),
+                                        changeset_fetcher.get_parents(ctx, cs),
+                                    )
+                                        .into_future()
+                                        .map(move |(generation, parents)| {
+                                            output.insert(cs, generation);
+                                            input.extend(
+                                                parents
+                                                    .into_iter()
+                                                    .filter(|p| !output.contains_key(p)),
+                                            );
+                                            Loop::Continue((output, input))
+                                        })
+                                        .right_future(),
+                                }
                             })
                             .right_future(),
                     }
                 })
-                .right_future(),
-        }
-    })
-    .and_then({
-        move |unmarked| {
-            // NOTE: We need to write phases in increasing generation number order, this will
-            //       ensure that our phases in a valid state (i.e do not have any gaps). Once
-            //       first public changeset is found we assume that all ancestors of it have
-            //       already been marked as public.
-            let mut unmarked: Vec<_> = unmarked.into_iter().map(|(k, v)| (v, k)).collect();
-            unmarked.sort_by(|l, r| l.0.cmp(&r.0));
-            let mark: Vec<_> = unmarked.into_iter().map(|(_gen, cs)| cs).collect();
-            stream::iter_ok(mark.clone())
-                .chunks(100)
-                .and_then(move |chunk| phases.add_public(ctx.clone(), repo.clone(), chunk))
-                .for_each(|()| future::ok(()))
-                .map(move |_| mark)
-        }
-    })
+            }
+        })
+        .and_then({
+            move |unmarked| {
+                // NOTE: We need to write phases in increasing generation number order, this will
+                //       ensure that our phases in a valid state (i.e do not have any gaps). Once
+                //       first public changeset is found we assume that all ancestors of it have
+                //       already been marked as public.
+                let mut unmarked: Vec<_> = unmarked.into_iter().map(|(k, v)| (v, k)).collect();
+                unmarked.sort_by(|l, r| l.0.cmp(&r.0));
+                let mark: Vec<_> = unmarked.into_iter().map(|(_gen, cs)| cs).collect();
+                stream::iter_ok(mark.clone())
+                    .chunks(100)
+                    .and_then(move |chunk| phases.add_public(ctx.clone(), repo.clone(), chunk))
+                    .for_each(|()| future::ok(()))
+                    .map(move |_| mark)
+            }
+        })
 }
 
 #[cfg(test)]
