@@ -957,3 +957,33 @@ def preparehookargs(name, old, new):
     if old is None:
         old = ""
     return {"bookmark": name, "node": hex(new), "oldnode": hex(old)}
+
+
+def reachablerevs(repo, bookmarks):
+    """revisions reachable only from the given bookmarks
+
+    Returns a revset matching all commits that are only reachable by the given
+    bookmarks.
+    """
+    repobookmarks = repo._bookmarks
+    if not bookmarks.issubset(repobookmarks):
+        raise error.Abort(
+            _("bookmark not found: %s")
+            % ", ".join(
+                "'%s'" % bookmark
+                for bookmark in sorted(bookmarks - set(repobookmarks.keys()))
+            )
+        )
+
+    nodes = [repobookmarks[bookmark] for bookmark in bookmarks]
+
+    # Compute nodes that are pointed to by other bookmarks.  This is not the
+    # same as 'bookmark() - nodes', as it includes nodes that are pointed to by
+    # both bookmarks we are deleting and other bookmarks.
+    othernodes = [
+        node
+        for bookmark, node in repobookmarks.iteritems()
+        if bookmark not in bookmarks
+    ]
+
+    return repo.revs("(%ln) %% (head() - (%ln) + (%ln))", nodes, nodes, othernodes)

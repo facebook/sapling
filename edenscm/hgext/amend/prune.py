@@ -44,49 +44,6 @@ def _getmetadata(**opts):
     return metadata
 
 
-def _reachablefrombookmark(repo, revs, bookmarks):
-    """filter revisions and bookmarks reachable from the given bookmark
-    yoinked from mq.py
-    """
-    repomarks = repo._bookmarks
-    if not bookmarks.issubset(repomarks):
-        raise error.Abort(
-            _("bookmark '%s' not found")
-            % ",".join(sorted(bookmarks - set(repomarks.keys())))
-        )
-
-    # If the requested bookmark is not the only one pointing to a
-    # a revision we have to only delete the bookmark and not strip
-    # anything. revsets cannot detect that case.
-    nodetobookmarks = {}
-    for mark, bnode in repomarks.iteritems():
-        nodetobookmarks.setdefault(bnode, []).append(mark)
-    for marks in nodetobookmarks.values():
-        if bookmarks.issuperset(marks):
-            rsrevs = repair.stripbmrevset(repo, marks[0])
-            revs = set(revs)
-            revs.update(set(rsrevs))
-            revs = sorted(revs)
-    return repomarks, revs
-
-
-def _deletebookmark(repo, repomarks, bookmarks):
-    wlock = lock = tr = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-        tr = repo.transaction("prune")
-        changes = []
-        for bookmark in bookmarks:
-            changes.append((bookmark, None))  # delete the bookmark
-        repomarks.applychanges(repo, tr, changes)
-        tr.close()
-        for bookmark in sorted(bookmarks):
-            repo.ui.write(_("bookmark '%s' deleted\n") % bookmark)
-    finally:
-        lockmod.release(tr, lock, wlock)
-
-
 @command(
     "^prune|strip",
     [
@@ -148,10 +105,15 @@ def prune(ui, repo, *revs, **opts):
         raise error.Abort(_("can only specify one of %s") % ", ".join(options))
 
     if bookmarks:
-        repomarks, revs = _reachablefrombookmark(repo, revs, bookmarks)
+        revs += bookmarksmod.reachablerevs(repo, bookmarks)
         if not revs:
-            # no revisions to prune - delete bookmark immediately
-            _deletebookmark(repo, repomarks, bookmarks)
+            # No revs are reachable exclusively from these bookmarks, just
+            # delete the bookmarks.
+            with repo.wlock(), repo.lock(), repo.transaction("prune-bookmarks") as tr:
+                bookmarksmod.delete(repo, tr, bookmarks)
+            for bookmark in sorted(bookmarks):
+                ui.write(_("bookmark '%s' deleted\n") % bookmark)
+            return 0
 
     if not revs:
         raise error.Abort(_("nothing to prune"))
@@ -251,7 +213,10 @@ def prune(ui, repo, *revs, **opts):
 
         # update bookmarks
         if bookmarks:
-            _deletebookmark(repo, repomarks, bookmarks)
+            with repo.wlock(), repo.lock(), repo.transaction("prune-bookmarks") as tr:
+                bookmarksmod.delete(repo, tr, bookmarks)
+            for bookmark in sorted(bookmarks):
+                ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
         # create markers
         obsolete.createmarkers(repo, relations, metadata=metadata, operation="prune")

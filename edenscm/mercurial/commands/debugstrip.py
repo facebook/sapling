@@ -72,12 +72,9 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
 
         repair.strip(ui, repo, revs, backup)
 
-        repomarks = repo._bookmarks
         if bookmarks:
-            with repo.transaction("strip") as tr:
-                if repo._activebookmark in bookmarks:
-                    bookmarksmod.deactivate(repo)
-                repomarks.applychanges(repo, tr, [(b, None) for b in bookmarks])
+            with repo.transaction("strip-bookmarks") as tr:
+                bookmarksmod.delete(repo, tr, bookmarks)
             for bookmark in sorted(bookmarks):
                 ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
@@ -139,27 +136,12 @@ def stripcmd(ui, repo, *revs, **opts):
     with repo.wlock():
         bookmarks = set(opts.get("bookmark"))
         if bookmarks:
-            repomarks = repo._bookmarks
-            if not bookmarks.issubset(repomarks):
-                raise error.Abort(
-                    _("bookmark '%s' not found")
-                    % ",".join(sorted(bookmarks - set(repomarks.keys())))
-                )
-
-            # If the requested bookmark is not the only one pointing to a
-            # a revision we have to only delete the bookmark and not strip
-            # anything. revsets cannot detect that case.
-            nodetobookmarks = {}
-            for mark, node in repomarks.iteritems():
-                nodetobookmarks.setdefault(node, []).append(mark)
-            for marks in nodetobookmarks.values():
-                if bookmarks.issuperset(marks):
-                    rsrevs = repair.stripbmrevset(repo, marks[0])
-                    revs.update(set(rsrevs))
+            revs.update(bookmarksmod.reachablerevs(repo, bookmarks))
             if not revs:
-                with repo.lock(), repo.transaction("bookmark") as tr:
-                    bmchanges = [(b, None) for b in bookmarks]
-                    repomarks.applychanges(repo, tr, bmchanges)
+                # No revs are reachable exclusively from these bookmarks, just
+                # delete the bookmarks.
+                with repo.lock(), repo.transaction("strip-bookmarks") as tr:
+                    bookmarksmod.delete(repo, tr, bookmarks)
                 for bookmark in sorted(bookmarks):
                     ui.write(_("bookmark '%s' deleted\n") % bookmark)
 

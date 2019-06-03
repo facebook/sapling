@@ -854,10 +854,8 @@ def exnowarnheads(orig, pushop):
     return heads
 
 
-def exstripbmrevset(orig, repo, mark):
-    return orig(repo, mark) - repo.revs(
-        "ancestors(remotenames() and " "not bookmark(%s))", mark
-    )
+def exreachablerevs(orig, repo, bookmarks):
+    return orig(repo, bookmarks) - repo.revs("ancestors(remotenames())")
 
 
 def extsetup(ui):
@@ -874,7 +872,7 @@ def extsetup(ui):
             blockername = "_getdynamicblockers"
     extensions.wrapfunction(repoview, blockername, blockerhook)
     extensions.wrapfunction(bookmarks, "updatefromremote", exupdatefromremote)
-    extensions.wrapfunction(repair, "stripbmrevset", exstripbmrevset)
+    extensions.wrapfunction(bookmarks, "reachablerevs", exreachablerevs)
     if util.safehasattr(bookmarks, "activate"):
         extensions.wrapfunction(bookmarks, "activate", exactivate)
     else:

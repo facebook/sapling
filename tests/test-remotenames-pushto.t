@@ -184,9 +184,9 @@ Test that local must have rev of remote to push --to without --non-forward-move
 
   $ hg up -r 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg debugstrip -B headb
+  $ hg debugstrip -r headb
   saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/1846eede8b68-61b88d4a-*.hg (glob)
-  bookmark 'headb' deleted
+  $ hg book -d headb
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes

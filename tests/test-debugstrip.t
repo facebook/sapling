@@ -551,7 +551,7 @@ test hg debugstrip -B bookmark
      singlenode1               13:43227190fef8
      singlenode2               13:43227190fef8
   $ hg debugstrip -B multipledelete1 -B multipledelete2
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/e46a4836065c-89ec65c2-backup.hg
+  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'multipledelete1' deleted
   bookmark 'multipledelete2' deleted
   $ hg id -ir e46a4836065c
@@ -561,20 +561,20 @@ test hg debugstrip -B bookmark
   abort: unknown revision 'b4594d867745'!
   [255]
   $ hg debugstrip -B singlenode1 -B singlenode2
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/43227190fef8-8da858f2-backup.hg
+  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'singlenode1' deleted
   bookmark 'singlenode2' deleted
   $ hg id -ir 43227190fef8
   abort: unknown revision '43227190fef8'!
   [255]
   $ hg debugstrip -B unknownbookmark
-  abort: bookmark 'unknownbookmark' not found
+  abort: bookmark not found: 'unknownbookmark'
   [255]
   $ hg debugstrip -B unknownbookmark1 -B unknownbookmark2
-  abort: bookmark 'unknownbookmark1,unknownbookmark2' not found
+  abort: bookmark not found: 'unknownbookmark1', 'unknownbookmark2'
   [255]
   $ hg debugstrip -B delete -B unknownbookmark
-  abort: bookmark 'unknownbookmark' not found
+  abort: bookmark not found: 'unknownbookmark'
   [255]
   $ hg debugstrip -B delete
   saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
