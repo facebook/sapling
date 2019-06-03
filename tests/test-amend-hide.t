@@ -39,7 +39,7 @@ Create repo
 Hide a single commit
   $ hg hide 3
   hiding commit be0ef73c17ad "D"
-  1 changesets hidden
+  1 changeset hidden
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
@@ -150,7 +150,7 @@ hg hide --cleanup tests
   hiding commit 1f7934a9b4de "F"
   2 changesets hidden
   removing bookmark "alive (was at: 1f7934a9b4de)"
-  1 bookmarks removed
+  1 bookmark removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
@@ -170,9 +170,9 @@ Hiding the head bookmark of a stack hides the stack.
   $ hg book -r 3 somebookmark
   $ hg hide -B somebookmark
   hiding commit be0ef73c17ad "D"
-  1 changesets hidden
+  1 changeset hidden
   removing bookmark "somebookmark (was at: be0ef73c17ad)"
-  1 bookmarks removed
+  1 bookmark removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'

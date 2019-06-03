@@ -365,7 +365,7 @@ Create a commit that was obsoleted without the commitcloud extension loaded, but
 
   $ hg hide $G --config extensions.commitcloud=!
   hiding commit 878302dcadc7 "G"
-  1 changesets hidden
+  1 changeset hidden
   $ hg book --hidden -r $G hiddenbook
   $ tglogp -r $F::
   x  7: 878302dcadc7 draft 'G' hiddenbook
@@ -521,7 +521,7 @@ with commit cloud inactive.
   hiding commit 48be23e24839 "X"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at df4f53cec30a
-  1 changesets hidden
+  1 changeset hidden
 
 Cloud sync should act as if it never saw the commit.
 

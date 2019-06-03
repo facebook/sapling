@@ -129,7 +129,10 @@ def hide(ui, repo, *revs, **opts):
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             obsolete.createmarkers(repo, [(r, []) for r in hidectxs], operation="hide")
         visibility.remove(repo, [c.node() for c in hidectxs])
-        ui.status(_("%i changesets hidden\n") % len(hidectxs))
+        ui.status(
+            _n("%i changeset hidden\n", "%i changesets hidden\n", len(hidectxs))
+            % len(hidectxs)
+        )
 
         # remove bookmarks pointing to hidden changesets
         hnodes = [r.node() for r in hidectxs]
@@ -145,7 +148,14 @@ def hide(ui, repo, *revs, **opts):
                         % (bookmark, short(repo._bookmarks[bookmark]))
                     )
             bookmarksmod.delete(repo, tr, deletebookmarks)
-            ui.status(_("%i bookmarks removed\n") % len(deletebookmarks))
+            ui.status(
+                _n(
+                    "%i bookmark removed\n",
+                    "%i bookmarks removed\n",
+                    len(deletebookmarks),
+                )
+                % len(deletebookmarks)
+            )
         hintutil.trigger("undo")
 
 

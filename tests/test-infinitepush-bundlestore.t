@@ -435,7 +435,7 @@ Scratch pull of pruned commits
   $ hg book -d scratch/mybranch
   $ hg hide 8872775dd97a
   hiding commit 8872775dd97a "scratch amended commit"
-  1 changesets hidden
+  1 changeset hidden
   $ hg pull -B scratch/mybranch
   pulling from ssh://user@dummy/repo
   no changes found

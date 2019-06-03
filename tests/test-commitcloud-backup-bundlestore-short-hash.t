@@ -69,7 +69,7 @@ Check update now accesses hidden commits rather than trying to pull
   hiding commit c1b6fe8fce73 "someothercommit"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at f8b49bf62d4d
-  1 changesets hidden
+  1 changeset hidden
   $ hg up c1b6fe8fce73
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -80,7 +80,7 @@ Test that updating to new head after hiding current head works as expected.
   hiding commit 5862354b0f4f "newheadcommit"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at f8b49bf62d4d
-  1 changesets hidden
+  1 changeset hidden
   $ hg up -qr "heads(.::)"
   $ hg log -r "." -T "{node|short}\n"
   c1b6fe8fce73

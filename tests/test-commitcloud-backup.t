@@ -433,7 +433,7 @@ Hide the commit. Make sure isbackedup still works
   hiding commit 6c4f4b30ae4c "headtwo"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 630839011471
-  1 changesets hidden
+  1 changeset hidden
   $ hg cloud check -r 6c4f4b30ae4c2dd928d551836c70c741ee836650 --hidden
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
 

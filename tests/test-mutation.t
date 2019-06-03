@@ -904,7 +904,7 @@ Many splits and folds:
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
   $ hg hide $P
   hiding commit b5712e65f604 "P"
-  1 changesets hidden
+  1 changeset hidden
   $ hg debugsuccessorssets $A
   ac2f7407182b
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4

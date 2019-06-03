@@ -242,7 +242,7 @@ Hide and unhide
   $ hg up -q 0
   $ hg hide 11
   hiding commit 00c8b0f0741e "merge1"
-  1 changesets hidden
+  1 changeset hidden
   $ sort < .hg/store/visibleheads
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
   v1

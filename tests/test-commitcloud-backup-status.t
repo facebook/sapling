@@ -63,7 +63,7 @@ Check hiding the backup head doesn't affect backed-up changesets
   $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
   $ hg hide 3
   hiding commit * (glob)
-  1 changesets hidden
+  1 changeset hidden
   $ hg log -T '{rev} {desc}\n' -r 'backedup()' --traceback
   2 Backed up changeset
   $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
