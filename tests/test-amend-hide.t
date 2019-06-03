@@ -166,3 +166,39 @@ hg hide --cleanup tests
   |
   o  0 A
   
+Hiding the head bookmark of a stack hides the stack.
+  $ hg book -r 3 somebookmark
+  $ hg hide -B somebookmark
+  hiding commit be0ef73c17ad "D"
+  1 changesets hidden
+  removing bookmark "somebookmark (was at: be0ef73c17ad)"
+  1 bookmarks removed
+  hint[undo]: you can undo this using the `hg undo` command
+  hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  7 F
+  |
+  @  6 E2
+  |
+  o  2 C
+  |
+  o  1 B
+  |
+  o  0 A
+  
+Hiding a bookmark in the middle of a stack just deletes the bookmark.
+  $ hg book -r 2 stackmidbookmark
+  $ hg hide -B stackmidbookmark
+  removing bookmark 'stackmidbookmark' (was at: 26805aba1e60)
+  1 bookmark removed
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  7 F
+  |
+  @  6 E2
+  |
+  o  2 C
+  |
+  o  1 B
+  |
+  o  0 A
+  
