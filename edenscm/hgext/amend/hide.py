@@ -31,7 +31,7 @@ command = registrar.command(cmdtable)
 
 
 @command(
-    "^hide",
+    "^hide|strip",
     [
         ("r", "rev", [], _("revisions to hide")),
         (

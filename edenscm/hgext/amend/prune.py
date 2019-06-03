@@ -45,7 +45,7 @@ def _getmetadata(**opts):
 
 
 @command(
-    "^prune|strip",
+    "^prune",
     [
         ("s", "succ", [], _("successor changeset")),
         ("r", "rev", [], _("revisions to prune")),
