@@ -3,15 +3,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::{
+    fs::File,
+    hash::Hasher,
+    io::{self, Write},
+    path::Path,
+};
+
 use memmap::{Mmap, MmapOptions};
-use std::fs::File;
-use std::hash::Hasher;
-use std::io::{self, Write};
-use std::path::Path;
 use tempfile;
 use twox_hash::{XxHash, XxHash32};
-
-pub use crate::lock::ScopedFileLock;
 
 /// Return a read-only mmap view of the entire file, and its length.
 ///
@@ -97,6 +98,15 @@ pub fn atomic_write(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> io::Re
     let dir = path.parent().expect("path has a parent");
     let mut file = tempfile::NamedTempFile::new_in(dir)?;
     file.as_file_mut().write_all(content.as_ref())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // The tempfile crate is working on adding a way to do this automatically, until then, we
+        // need to do that by hand.
+        // https://github.com/Stebalien/tempfile/pull/61
+        let permissions = PermissionsExt::from_mode(0o664);
+        file.as_file().set_permissions(permissions)?;
+    }
     file.persist(path)?;
     Ok(())
 }
