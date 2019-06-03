@@ -258,9 +258,10 @@ def branch(ui, repo, *args, **kwargs):
         ui.status(_("Mercurial has no concept of upstream branches\n"))
         return
     elif opts.get("delete"):
-        cmd = Command("strip")
-        for branch in args:
-            cmd["-B"] = branch
+        cmd = Command("hide")
+        if args:
+            for branch in args:
+                cmd["-B"] = branch
         else:
             cmd["-B"] = None
     elif opts.get("move"):

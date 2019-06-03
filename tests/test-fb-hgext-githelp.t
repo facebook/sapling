@@ -245,11 +245,11 @@ When the old name is omitted, git branch -m new renames the current branch.
 
 Branch deletion in git strips commits
   $ hg githelp -- git branch -d
-  hg strip -B
+  hg hide -B
   $ hg githelp -- git branch -d feature
-  hg strip -B feature -B
+  hg hide -B feature
   $ hg githelp -- git branch --delete experiment1 experiment2
-  hg strip -B experiment1 -B experiment2 -B
+  hg hide -B experiment1 -B experiment2
 
 githelp for reuse message using the shorthand
   $ hg githelp -- git commit -C deadbeef
