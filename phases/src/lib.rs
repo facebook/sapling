@@ -26,6 +26,7 @@ use sql::mysql_async::{
 };
 use sql::{queries, Connection};
 pub use sql_ext::SqlConstructors;
+use stats::{define_stats, Timeseries};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -139,6 +140,13 @@ pub trait Phases: Send + Sync {
     }
 }
 
+define_stats! {
+    prefix = "mononoke.phases";
+    get_single: timeseries(RATE, SUM),
+    get_many: timeseries(RATE, SUM),
+    add_many: timeseries(RATE, SUM),
+}
+
 queries! {
     write InsertPhase(values: (repo_id: RepositoryId, cs_id: ChangesetId, phase: Phase)) {
         none,
@@ -177,6 +185,7 @@ impl SqlPhases {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> impl Future<Item = Option<Phase>, Error = Error> {
+        STATS::get_single.add_value(1);
         SelectPhase::query(&self.read_connection, &repo_id, &cs_id)
             .map(move |rows| rows.into_iter().next().map(|row| row.0))
     }
@@ -184,12 +193,16 @@ impl SqlPhases {
     fn get_public_raw(
         &self,
         repo_id: RepositoryId,
-        cs_ids: &Vec<ChangesetId>,
+        csids: &Vec<ChangesetId>,
     ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
+        if csids.is_empty() {
+            return future::ok(Default::default()).left_future();
+        }
+        STATS::get_many.add_value(1);
         SelectPhases::query(
             &self.read_connection,
             &repo_id,
-            &cs_ids.iter().collect::<Vec<_>>(),
+            &csids.iter().collect::<Vec<_>>(),
         )
         .map(move |rows| {
             rows.into_iter()
@@ -197,6 +210,7 @@ impl SqlPhases {
                 .map(|row| row.0)
                 .collect()
         })
+        .right_future()
     }
 
     pub fn add_public(
@@ -213,6 +227,7 @@ impl SqlPhases {
             .iter()
             .map(|csid| (repoid, csid, &Phase::Public))
             .collect();
+        STATS::add_many.add_value(1);
         InsertPhase::query(&self.write_connection, &phases)
             .map(|_| ())
             .right_future()
