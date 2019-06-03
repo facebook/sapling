@@ -149,38 +149,56 @@ class PushTests(test_hgsubversion_util.TestBase):
         tip = self.repo["tip"]
         self.assertEqual(new_hash, tip.node())
 
+    def _get_free_address_port(self):
+        host = socket.gethostname()
+        for attempt in range(5):
+            port = random.randint(socket.IPPORT_USERRESERVED, 65535)
+
+            # The `svnserve` binary appears to use the obsolete
+            # `gethostbyname(3)` function, which always returns an IPv4
+            # address, even on hosts that support and expect IPv6. As a
+            # workaround, resolve the hostname within the test harness
+            # with `getaddrinfo(3)` to ensure that the client and server
+            # both use the same IPv4 or IPv6 address.
+            try:
+                addrinfo = socket.getaddrinfo(host, port)
+            except socket.gaierror:
+                # gethostname() can give a hostname that doesn't
+                # resolve. Seems bad, but let's fall back to `localhost`
+                # in that case and hope for the best.
+                host = "localhost"
+                addrinfo = socket.getaddrinfo(host, port)
+            # On macOS svn seems to have issues with IPv6 at least some
+            # of the time, so try and bias towards IPv4. This works
+            # because AF_INET is less than AF_INET6 on all platforms
+            # I've checked. Hopefully any platform where that's not true
+            # will be fine with IPv6 all the time. :)
+            selected = sorted(addrinfo)[0]
+            # Check the port is free for use by attempting to bind it.
+            # `svnserve` sets `SO_REUSEADDR`, so as long as nothing binds the
+            # same port in the time between us closing the port and svnserve
+            # binding it, we should be fine.
+            try:
+                s = socket.socket(selected[0], selected[1])
+                s.bind((selected[4][0], selected[4][1]))
+                s.close()
+                return selected
+            except Exception:
+                pass
+        assert False, "Could not get a free port after 5 attempts"
+
     def internal_push_over_svnserve(self, subdir="", commit=True):
         repo_path = self.load_svndump("simple_branch.svndump")
         open(os.path.join(repo_path, "conf", "svnserve.conf"), "w").write(
             "[general]\nanon-access=write\n[sasl]\n"
         )
-        self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
-        self.host = socket.gethostname()
-
-        # The `svnserve` binary appears to use the obsolete `gethostbyname(3)`
-        # function, which always returns an IPv4 address, even on hosts that
-        # support and expect IPv6. As a workaround, resolve the hostname
-        # within the test harness with `getaddrinfo(3)` to ensure that the
-        # client and server both use the same IPv4 or IPv6 address.
-        try:
-            addrinfo = socket.getaddrinfo(self.host, self.port)
-        except socket.gaierror:
-            # gethostname() can give a hostname that doesn't
-            # resolve. Seems bad, but let's fall back to `localhost` in
-            # that case and hope for the best.
-            self.host = "localhost"
-            addrinfo = socket.getaddrinfo(self.host, self.port)
-        # On macOS svn seems to have issues with IPv6 at least some of
-        # the time, so try and bias towards IPv4. This works because
-        # AF_INET is less than AF_INET6 on all platforms I've
-        # checked. Hopefully any platform where that's not true will
-        # be fine with IPv6 all the time. :)
-        selected = sorted(addrinfo)[0]
-        self.host = selected[4][0]
+        addrinfo = self._get_free_address_port()
+        self.host = addrinfo[4][0]
+        self.port = addrinfo[4][1]
 
         # If we're connecting via IPv6 the need to put brackets around the
         # hostname in the URL.
-        ipv6 = selected[0] == socket.AF_INET6
+        ipv6 = addrinfo[0] == socket.AF_INET6
 
         # Ditch any interface information since that's not helpful in
         # a URL
