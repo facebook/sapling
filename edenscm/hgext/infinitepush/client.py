@@ -210,39 +210,50 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                 _("default repository not configured!"),
                 hint=_("see 'hg help config.paths'"),
             )
-        dest = path.pushloc or path.loc
-        if dest.startswith("svn+") and scratchpush:
+        realdest = path.pushloc or path.loc
+        if realdest.startswith("svn+") and scratchpush:
             raise error.Abort(
                 "infinite push does not work with svn repo",
                 hint="did you forget to `hg push default`?",
             )
+
+        otherdest = otherpath and (otherpath.pushloc or otherpath.loc)
+
+        if scratchpush:
+            ui.log(
+                "infinitepush_destinations",
+                dest=dest,
+                real_dest=realdest,
+                other_dest=otherdest,
+                bookmark=bookmark,
+            )
+
         # Remote scratch bookmarks will be deleted because remotenames doesn't
         # know about them. Let's save it before push and restore after
-        remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, dest)
-        result = orig(ui, repo, dest, *args, **opts)
+        remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, realdest)
+        result = orig(ui, repo, realdest, *args, **opts)
 
         # If an alternate Infinitepush destination is specified, replicate the
         # push there. This ensures scratch bookmarks (and their commits) can
         # properly be replicated to Mononoke.
-        if otherpath is not None:
-            otherdest = otherpath.pushloc or otherpath.loc
-            if otherdest != dest:
-                m = _(
-                    "please wait while we replicate this push to an alternate repository\n"
-                )
-                ui.warn(m)
-                # NOTE: We ignore the result here (which only represents whether
-                # there were changes to land).
-                orig(ui, repo, otherdest, *args, **opts)
+
+        if otherdest is not None and otherdest != realdest:
+            m = _(
+                "please wait while we replicate this push to an alternate repository\n"
+            )
+            ui.warn(m)
+            # NOTE: We ignore the result here (which only represents whether
+            # there were changes to land).
+            orig(ui, repo, otherdest, *args, **opts)
 
         if bookmarks.remotebookmarksenabled(ui):
             if bookmark and scratchpush:
-                other = hg.peer(repo, opts, dest)
+                other = hg.peer(repo, opts, realdest)
                 fetchedbookmarks = other.listkeyspatterns(
                     "bookmarks", patterns=[bookmark]
                 )
                 remotescratchbookmarks.update(fetchedbookmarks)
-            bookmarks.saveremotebookmarks(repo, remotescratchbookmarks, dest)
+            bookmarks.saveremotebookmarks(repo, remotescratchbookmarks, realdest)
     if oldphasemove:
         exchange._localphasemove = oldphasemove
     return result
