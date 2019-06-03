@@ -938,6 +938,22 @@ for related options for the annotate command.
 ``unified``
     Number of lines of context to show.
 
+
+``discovery``
+--------
+
+Options that control how discovery of commits to push/pull works
+
+The following options apply to all hosts.
+
+``fastdiscovery``
+    Special mode that makes pull time discovery faster but less precise i.e.
+    client can pull more commits than necessary.
+
+``knownserverbookmarks``
+    Optional. Bookmarks that should normally be present on client and server.
+    Can be used to make fastdiscovery more precise
+
 ``email``
 ---------
 

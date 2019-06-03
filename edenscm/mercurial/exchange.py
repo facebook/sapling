@@ -1465,7 +1465,11 @@ def _pulldiscoverychangegroup(pullop):
     Current handle changeset discovery only, will change handle all discovery
     at some point."""
     tmp = discovery.findcommonincoming(
-        pullop.repo, pullop.remote, heads=pullop.heads, force=pullop.force
+        pullop.repo,
+        pullop.remote,
+        heads=pullop.heads,
+        force=pullop.force,
+        needlargestcommonset=False,
     )
     common, fetch, rheads = tmp
     nm = pullop.repo.unfiltered().changelog.nodemap
