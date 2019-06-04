@@ -9,6 +9,7 @@ use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::hash::Hash;
+use std::path::Path;
 
 use bytes::Bytes;
 use dirs;
@@ -51,6 +52,10 @@ pub trait ConfigSetHgExt {
     /// set, load files listed in that environment variable instead.
     /// Return errors parsing files.
     fn load_user(&mut self) -> Vec<Error>;
+
+    /// Load a specified config file. Respect HGPLAIN environment variables.
+    /// Return errors parsing files.
+    fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
 }
 
 impl OptionsHgExt for Options {
@@ -269,6 +274,11 @@ impl ConfigSetHgExt for ConfigSet {
         }
 
         errors
+    }
+
+    fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error> {
+        let opts = Options::new().source(source).process_hgplain();
+        self.load_path(path, &opts)
     }
 }
 
@@ -593,6 +603,30 @@ mod tests {
         cfg.load_user();
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));
+    }
+
+    #[test]
+    fn test_load_hgrc() {
+        let dir = TempDir::new("test_hgrcpath").unwrap();
+        let path = dir.path().join("1.rc");
+
+        write_file(path.clone(), "[x]\na=1\n[alias]\nb=c\n");
+
+        let _guard = ENV_LOCK.lock().unwrap();
+        env::set_var(HGPLAIN, "1");
+        env::remove_var(HGPLAINEXCEPT);
+
+        let mut cfg = ConfigSet::new();
+        cfg.load_hgrc(&path, "hgrc");
+
+        assert!(cfg.keys("alias").is_empty());
+        assert!(cfg.get("alias", "b").is_none());
+        assert_eq!(cfg.get("x", "a").unwrap(), "1");
+
+        env::remove_var(HGPLAIN);
+        cfg.load_hgrc(&path, "hgrc");
+
+        assert_eq!(cfg.get("alias", "b").unwrap(), "c");
     }
 
     #[test]
