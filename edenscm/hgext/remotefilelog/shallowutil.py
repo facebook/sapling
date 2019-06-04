@@ -318,7 +318,7 @@ def buildfileblobheader(size, flags, version=1):
     return header
 
 
-def verifyfilenode(raw, hexexpectedfilenode):
+def verifyfilenode(ui, raw, hexexpectedfilenode):
     offset, size, flags = parsesizeflags(raw)
     text = raw[offset : offset + size]
 
@@ -343,6 +343,12 @@ def verifyfilenode(raw, hexexpectedfilenode):
 
         actualhash = hex(revlog.hash(text, p1, p2))
         if hexexpectedfilenode != actualhash:
+            ui.log(
+                "remotefilelog",
+                "remotefilelog hash verification failed \n",
+                actual_hash=actualhash,
+                expected_hash=hexexpectedfilenode,
+            )
             return False
     return True
 

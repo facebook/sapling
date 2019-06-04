@@ -489,7 +489,7 @@ class basestore(object):
 
                 hexdatanode = hex(datanode)
                 if self._validatehashes:
-                    if not shallowutil.verifyfilenode(data, hexdatanode):
+                    if not shallowutil.verifyfilenode(self.ui, data, hexdatanode):
                         return False
 
                 # and compare against the path

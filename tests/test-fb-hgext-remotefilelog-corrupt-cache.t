@@ -18,6 +18,13 @@
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
   $ cd shallow
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > sampling=
+  > [sampling]
+  > filepath = $TESTTMP/sampling.txt
+  > key.remotefilelog = client
+  > EOF
 
 Verify corrupt cache handling repairs by default
 
@@ -79,6 +86,18 @@ Verify that hashes are checked
   corrupt $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 during contains
   $ cat x
   x
+
+verify logging when hashes do not match
+  >>> import json
+  >>> with open("$TESTTMP/sampling.txt") as f:
+  ...     data = f.read()
+  >>> for record in data.strip("\0").split("\0"):
+  ...     parsedrecord = json.loads(record)
+  ...     if "actual_hash" in parsedrecord["data"]:
+  ...         for key in "actual_hash","expected_hash":
+  ...             print("%s: %s" % (key, parsedrecord["data"]["%s" % key]))
+  actual_hash: 69a1b67522704ec122181c0890bd16e9d3e7516a
+  expected_hash: 1406e74118627694268417491f018a4a883152f0
 
 Verify handling of corrupt server cache
 
