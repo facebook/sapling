@@ -79,7 +79,6 @@ from edenscm.mercurial.node import bin, hex, nullid
 from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
-from .hgsubversion import util as svnutil
 from .pushrebase import isnonpushrebaseblocked
 
 
@@ -132,11 +131,6 @@ def uisetup(ui):
             hgsubversionmod = extensions.find("hgsubversion")
             extensions.wrapfunction(
                 hgsubversionmod.util, "lookuprev", _lookupsvnrevwrapper
-            )
-
-            globalrevsmod = extensions.find("globalrevs")
-            extensions.wrapfunction(
-                globalrevsmod, "_lookupglobalrev", _lookupglobalrevwrapper
             )
 
     if ui.configbool("globalrevs", "svnrevinteroperation"):
@@ -273,22 +267,7 @@ def _sqllocalrepowrapper(orig, repo):
 
 
 def _lookupsvnrevwrapper(orig, repo, rev):
-    return _lookuprev(orig, _lookupglobalrev, repo, rev)
-
-
-def _lookupglobalrevwrapper(orig, repo, rev):
-    return _lookuprev(svnutil.lookuprev, orig, repo, rev)
-
-
-def _lookuprev(svnrevlookupfunc, globalrevlookupfunc, repo, rev):
-    # If the revision number being looked up is before the supported starting
-    # global revision, try if it works as a svn revision number.
-    lookupfunc = (
-        svnrevlookupfunc
-        if (repo.ui.configint("globalrevs", "startrev") > rev)
-        else globalrevlookupfunc
-    )
-    return lookupfunc(repo, rev)
+    return _lookupglobalrev(repo, rev)
 
 
 _u64lestruct = struct.Struct("<Q")
@@ -326,20 +305,26 @@ class _globalrevmap(object):
 
 
 def _lookupglobalrev(repo, grev):
-    # If the revision number being looked up is before the supported starting
-    # global revision, nothing to do.
-    if repo.ui.configint("globalrevs", "startrev") > grev:
+    # A `globalrev` < 0 will never resolve to any commit.
+    if grev < 0:
         return []
 
     cl = repo.changelog
     changelogrevision = cl.changelogrevision
     tonode = cl.node
+    ui = repo.ui
 
     def matchglobalrev(rev):
-        commitglobalrev = changelogrevision(rev).extra.get(EXTRASGLOBALREVKEY)
-        return commitglobalrev is not None and int(commitglobalrev) == grev
+        commitextra = changelogrevision(rev).extra
+        globalrev = _getglobalrev(ui, commitextra)
+        svnrev = _getsvnrev(commitextra)
 
-    usefastlookup = repo.ui.configbool("globalrevs", "fastlookup")
+        def isequal(strrev, rev):
+            return strrev is not None and int(strrev) == rev
+
+        return isequal(globalrev, grev) or isequal(svnrev, grev)
+
+    usefastlookup = ui.configbool("globalrevs", "fastlookup")
     if usefastlookup:
         globalrevmap = _globalrevmap(repo)
         lastrev = globalrevmap.lastrev
@@ -364,7 +349,13 @@ def _lookupglobalrev(repo, grev):
 
 
 def _lookupname(repo, name):
-    if name.startswith("m") and name[1:].isdigit():
+    if (
+        name.startswith("m")
+        or (
+            repo.ui.configbool("globalrevs", "svnrevinteroperation")
+            and name.startswith("r")
+        )
+    ) and name[1:].isdigit():
         return _lookupglobalrev(repo, int(name[1:]))
 
 
@@ -393,13 +384,18 @@ def _getglobalrev(ui, commitextra):
     # If we did not find `globalrev` in the commit extras, lets also look for
     # the `svnrev` in the commit extras before we give up. Also, do not return
     # the `globalrev` if it is before the supported starting revision.
-    if not grev or ui.configint("globalrevs", "startrev") > int(grev):
-        convertrev = commitextra.get(EXTRASCONVERTKEY)
-        if convertrev:
-            # ex. svn:uuid/path@1234
-            return convertrev.rsplit("@", 1)[-1]
-    else:
-        return grev
+    return (
+        _getsvnrev(commitextra)
+        if not grev or ui.configint("globalrevs", "startrev") > int(grev)
+        else grev
+    )
+
+
+def _getsvnrev(commitextra):
+    convertrev = commitextra.get(EXTRASCONVERTKEY)
+    if convertrev:
+        # ex. svn:uuid/path@1234
+        return convertrev.rsplit("@", 1)[-1]
 
 
 @command("^updateglobalrevmeta", [], _("hg updateglobalrevmeta"))
