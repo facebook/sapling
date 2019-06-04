@@ -13,6 +13,9 @@
 #include <folly/system/ThreadName.h>
 #include <optional>
 #include "eden/fs/utils/Synchronized.h"
+#ifdef __APPLE__
+#include <libproc.h> // @manual
+#endif
 
 using namespace std::literals;
 
@@ -27,6 +30,19 @@ ProcPidCmdLine getProcPidCmdLine(pid_t pid) {
 }
 
 std::string readPidName(pid_t pid) {
+#ifdef __APPLE__
+  char target[PROC_PIDPATHINFO_MAXSIZE];
+  // libproc is undocumented and unsupported, but the implementation is open
+  // source:
+  // https://opensource.apple.com/source/xnu/xnu-2782.40.9/libsyscall/wrappers/libproc/libproc.c
+  // The return value is 0 on error, otherwise is the length of the buffer.
+  // It takes care of overflow/truncation.
+  ssize_t rv = proc_pidpath(pid, target, sizeof(target));
+  if (rv == 0) {
+    return folly::to<std::string>("<err:", errno, ">");
+  }
+  return std::string{target, target + rv};
+#else
   char target[256];
   const auto fd =
       folly::openNoInt(getProcPidCmdLine(pid).data(), O_RDONLY | O_CLOEXEC);
@@ -46,6 +62,7 @@ std::string readPidName(pid_t pid) {
     // result.
     return std::string{target, target + rv};
   }
+#endif
 }
 } // namespace facebook::eden::detail
 
