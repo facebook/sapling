@@ -301,12 +301,13 @@ impl Changesets for SqlChangesets {
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
-        STATS::get_many.add_value(1);
         cloned!(self.read_master_connection);
 
         if cs_ids.is_empty() {
             ok(vec![]).boxify()
         } else {
+            STATS::get_many.add_value(1);
+
             select_many_changesets(&self.read_connection, repo_id, &cs_ids)
                 .and_then(move |fetched_cs| {
                     let fetched_set: HashSet<_> = fetched_cs
