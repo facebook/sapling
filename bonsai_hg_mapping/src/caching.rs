@@ -14,7 +14,7 @@ use caching_ext::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::ok, Future};
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
 use iobuf::IOBuf;
@@ -137,9 +137,6 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
             HashMap<BonsaiOrHgChangesetId, BonsaiHgMappingEntry>,
             Error,
         > {
-            if keys.is_empty() {
-                return ok(HashMap::new()).boxify();
-            }
             let mut bcs_ids = vec![];
             let mut hg_cs_ids = vec![];
             for key in keys {

@@ -39,7 +39,10 @@ use std::sync::Arc;
 use crate::failure::prelude::*;
 use bytes::Bytes;
 use cachelib::Abomonation;
-use futures::{future::join_all, prelude::*};
+use futures::{
+    future::{join_all, ok},
+    prelude::*,
+};
 use futures_ext::{BoxFuture, FutureExt};
 use iobuf::IOBuf;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
@@ -123,7 +126,16 @@ where
                 })
                 .collect();
 
-            get_from_db(left_to_fetch).map(move |fetched_from_db| {
+            // Skip calling get_from_db if we have nothing left to fetch: unlike the Memcache and
+            // Cachelib paths, we don't control what this function does, so we have no guarantees
+            // that it won't e.g. make a query or increment monitoring counters.
+            let fetched_from_db = if left_to_fetch.is_empty() {
+                ok(HashMap::new()).left_future()
+            } else {
+                get_from_db(left_to_fetch).right_future()
+            };
+
+            fetched_from_db.map(move |fetched_from_db| {
                 let fetched_from_db: HashMap<Key, (T, CachelibKey, MemcacheKey)> = fetched_from_db
                     .into_iter()
                     .map(move |(key, value)| {
@@ -246,6 +258,7 @@ mod test {
     fn create_params(
         cachelib: CachelibHandler<u8>,
         memcache: MemcacheHandler,
+        db_data_calls: Arc<AtomicUsize>,
         db_data_fetches: Arc<AtomicUsize>,
         db_data: HashMap<String, u8>,
     ) -> GetOrFillMultipleFromCacheLayers<String, u8> {
@@ -253,6 +266,7 @@ mod test {
 
         let serialize = |byte: &u8| -> Bytes { Bytes::from(vec![byte.clone()]) };
         let get_from_db = move |keys: HashSet<String>| -> BoxFuture<HashMap<String, u8>, Error> {
+            db_data_calls.fetch_add(1, Ordering::SeqCst);
             db_data_fetches.fetch_add(keys.len(), Ordering::SeqCst);
             let mut res = HashMap::new();
             for key in keys {
@@ -285,6 +299,7 @@ mod test {
         let params = create_params(
             cachelib.clone(),
             memcache.clone(),
+            Arc::new(AtomicUsize::new(0)),
             db_data_fetches.clone(),
             db_data,
         );
@@ -314,6 +329,7 @@ mod test {
         let mut params = create_params(
             cachelib.clone(),
             memcache.clone(),
+            Arc::new(AtomicUsize::new(0)),
             db_data_fetches.clone(),
             db_data,
         );
@@ -361,6 +377,7 @@ mod test {
         let params = create_params(
             cachelib.clone(),
             memcache.clone(),
+            Arc::new(AtomicUsize::new(0)),
             db_data_fetches.clone(),
             db_data,
         );
@@ -390,6 +407,7 @@ mod test {
         let mut params = create_params(
             cachelib.clone(),
             memcache.clone(),
+            Arc::new(AtomicUsize::new(0)),
             db_data_fetches.clone(),
             db_data,
         );
@@ -440,5 +458,27 @@ mod test {
         assert_eq!(cachelib.gets_count(), 3); // 3 misses
         assert_eq!(memcache.gets_count(), 4 + 3); // 3 hits
         assert_eq!(db_data_fetches.load(Ordering::Relaxed), 3);
+    }
+
+    #[test]
+    fn get_from_db_elision() {
+        let db_data = hashmap! {};
+        let db_data_calls = Arc::new(AtomicUsize::new(0));
+        let cachelib = CachelibHandler::create_mock();
+        let memcache = MemcacheHandler::create_mock();
+
+        let params = create_params(
+            cachelib.clone(),
+            memcache.clone(),
+            db_data_calls.clone(),
+            Arc::new(AtomicUsize::new(0)),
+            db_data,
+        );
+
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+
+        let f = params.run(hashset! {});
+        let _ = runtime.block_on(f).unwrap();
+        assert_eq!(db_data_calls.load(Ordering::SeqCst), 0);
     }
 }
