@@ -12,6 +12,7 @@ rand = "0.6"
 serde = "1"
 serde_cbor = "0.9"
 serde_derive = "1"
+serde_json = "1"
 
 [dev-dependencies]
 tempfile = "3"

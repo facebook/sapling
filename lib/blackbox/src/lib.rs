@@ -4,6 +4,11 @@
 // GNU General Public License version 2 or any later version.
 
 //! Logging support
+//!
+//! - The `blackbox` module provides building blocks for logging serializable
+//!   objects, searching them by time range, etc. It is application agnostic.
+//! - The `event` module assumes the source control application. It is not
+//!   designed to be general purpose.
 
 // This is a library exporting functions that seem "dead" if compiled alone.
 #![allow(dead_code)]
@@ -11,3 +16,5 @@
 mod blackbox;
 
 pub use self::blackbox::{Blackbox, BlackboxOptions, Entry, Filter};
+
+pub mod event;
