@@ -197,3 +197,35 @@ Make sure that globalrevs work
 
   $ hg up -q rWWW5000
   $ hg up -q rWWWHGff7a2f4908d3dd5010cc3a620bd8e8abc7ef634d
+
+
+Make sure that the `globalrevs.scmquerylookup` configuration works as expected.
+
+- Set the configurations to ensure we are using the ScmQuery lookup for
+globalrevs.
+
+  $ setconfig globalrevs.scmquerylookup=True fbconduit.path=/invalid/path/
+
+- Test that if the ScmQuery lookup throws an exception, we are still able to
+fallback to the slow lookup path.
+
+  $ hg up -q m5000
+
+- Fix the conduit configurations so that we can mock ScmQuery lookups.
+
+  $ setconfig fbconduit.path=/intern/conduit/
+
+- Test that the lookup fails because ScmQuery returns no hash corresponding to
+the globalrev 5000.
+
+  $ hg up -q m5000
+  abort: unknown revision 'm5000'!
+  [255]
+
+- Setup the `globalrev->hash` mapping for commit with globalrev 5000.
+
+  $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/globalrev/basic/hg/5000/ff7a2f4908d3dd5010cc3a620bd8e8abc7ef634d
+
+- Test that the lookup succeeds now.
+
+  $ hg up -q m5000

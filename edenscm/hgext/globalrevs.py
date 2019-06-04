@@ -58,6 +58,12 @@ template.
     # hash` to enable fast lookup of commits based on the globalrev. This
     # mapping can be built using the `updateglobalrevmeta` command.
     fastlookup = False
+
+    # If this configuration is true, we use ScmQuery to lookup the mapping from
+    # `globalrev->hash` to enable fast lookup of the commits based on the
+    # globalrev. This configuration is only effective on the clients. For
+    # speedup on the servers, the `fastlookup` configuration should be used.
+    scmquerylookup = False
 """
 from __future__ import absolute_import
 
@@ -89,6 +95,7 @@ configitem("globalrevs", "fastlookup", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
+configitem("globalrevs", "scmquerylookup ", default=False)
 configitem("globalrevs", "startrev", default=0)
 configitem("globalrevs", "svnrevinteroperation", default=False)
 

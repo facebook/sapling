@@ -8,7 +8,7 @@ import json
 import re
 from urllib import urlencode
 
-from edenscm.mercurial import error, namespaces, node, registrar, revset, templater
+from edenscm.mercurial import extensions, namespaces, node, registrar, revset, templater
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.util import httplib
 
@@ -42,10 +42,20 @@ svnrevre = re.compile("^r[A-Z]+(\d+)$")
 phabhashre = re.compile("^r([A-Z]+)([0-9a-f]{12,40})$")
 
 
-def extsetup(ui):
+def uisetup(ui):
     if not conduit_config(ui):
         ui.warn(_("No conduit host specified in config; disabling fbconduit\n"))
         return
+
+    def _globalrevswrapper(loaded):
+        if loaded:
+            globalrevsmod = extensions.find("globalrevs")
+            extensions.wrapfunction(
+                globalrevsmod, "_lookupglobalrev", _scmquerylookupglobalrev
+            )
+
+    if ui.configbool("globalrevs", "scmquerylookup"):
+        extensions.afterloaded("globalrevs", _globalrevswrapper)
 
     revset.symbols["gitnode"] = gitnode
     gitnode._weight = 10
@@ -263,3 +273,20 @@ def _phablookup(repo, phabrev):
             return gittohg(githash)
         else:
             return []
+
+
+def _scmquerylookupglobalrev(orig, repo, rev):
+    reponame = repo.ui.config("fbconduit", "reponame")
+    if reponame:
+        try:
+            hghash = str(
+                getmirroredrev(reponame, "globalrev", reponame, "hg", str(rev))
+            )
+            matchedrevs = []
+            if hghash:
+                matchedrevs.append(repo[hghash].node())
+            return matchedrevs
+        except Exception:
+            pass
+
+    return orig(repo, rev)
