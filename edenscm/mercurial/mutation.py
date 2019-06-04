@@ -61,6 +61,49 @@ def makemutationstore(repo):
     return mutationstore.mutationstore(repo.svfs.join("mutation"))
 
 
+class bundlemutationstore(object):
+    def __init__(self, bundlerepo):
+        self._entries = {}
+        self._splitheads = {}
+        self._successorssets = {}
+        self._mutationstore = makemutationstore(bundlerepo)
+
+    def addbundleentries(self, entries):
+        for entry in entries:
+            self._entries[entry.succ()] = entry
+            succs = []
+            for split in entry.split() or ():
+                self._splitheads[split] = entry.succ()
+                succs.append(split)
+            succs.append(entry.succ())
+            for pred in entry.preds():
+                self._successorssets.setdefault(pred, []).append(succs)
+
+    def get(self, node):
+        return self._mutationstore.get(node) or self._entries.get(node)
+
+    def getsplithead(self, node):
+        return self._mutationstore.getsplithead(node) or self._splitheads.get(node)
+
+    def getsuccessorssets(self, node):
+        storesets = self._mutationstore.getsuccessorssets(node)
+        bundlesets = self._successorssets.get(node, [])
+        if bundlesets and storesets:
+            return util.removeduplicates(storesets + bundlesets)
+        else:
+            return storesets or bundlesets
+
+    def has(self, node):
+        return self._mutationstore.has(node) or node in self._entries
+
+    def add(self, entry):
+        # bundlerepo mutation stores are immutable.  This should never be called.
+        raise NotImplementedError
+
+    def flush(self):
+        pass
+
+
 class mutationentry(object):
     def __init__(self, node, extra):
         self.extra = extra
@@ -629,8 +672,7 @@ def bundle(repo, nodes):
     """Generate bundled mutation data for bundling alongside the given nodes.
 
     This consists of mutation entries for all predecessors of the given nodes,
-    excluding the nodes themselves, as they are expected to have the mutation
-    information embedded in the commit extras.
+    including the nodes themselves.
     """
     nodes = set(nodes)
     remaining = set(nodes)
@@ -644,8 +686,7 @@ def bundle(repo, nodes):
 
         entry = lookupsplit(repo, current)
         if entry is not None:
-            if entry.succ() not in nodes:
-                entries.append(entry.tostoreentry())
+            entries.append(entry.tostoreentry())
             for nextnode in entry.preds():
                 if nextnode not in seen:
                     remaining.add(nextnode)

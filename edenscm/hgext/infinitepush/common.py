@@ -7,6 +7,7 @@ import os
 import tempfile
 
 from edenscm.mercurial import (
+    bundlerepo,
     encoding,
     error,
     extensions,
@@ -36,6 +37,9 @@ def extsetup(ui):
     )
     wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
     extensions.wrapfunction(debugcommands, "_debugbundle2part", debugbundle2part)
+    extensions.wrapfunction(
+        bundlerepo.bundlerepository, "_handlebundle2part", bundlerepohandlebundle2part
+    )
 
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
@@ -73,6 +77,14 @@ def debugbundle2part(orig, ui, part, all, **opts):
             )
 
     orig(ui, part, all, **opts)
+
+
+def bundlerepohandlebundle2part(orig, self, bundle, part):
+    if part.type == constants.scratchmutationparttype:
+        entries = mutation.mutationstore.unbundle(part.read())
+        self._mutationstore.addbundleentries(entries)
+    else:
+        orig(self, bundle, part)
 
 
 class scratchbranchmatcher(object):

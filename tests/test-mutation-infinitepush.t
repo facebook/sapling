@@ -113,3 +113,26 @@ The successor information succesfully reaches from A to C and F (it was split)
   91713f37cee7 C
   9d3e6062ef0c F
   f9407b1692b9 A
+
+Clone the repo again, and pull an earlier commit.  This will cause the server to rebundle.
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo client3 -q
+  $ cd client3
+  $ hg pull -q -r $C
+
+Check the history of the commits has been included.
+  $ hg debugmutation f1f3b
+    f1f3b31bcda86dbc8fe6a31ba7c6893bee792127 amend by test at 1970-01-01T00:00:00 (from remote commit) from:
+      01c5cd3313b899dca3e059b77aa454e0e2b5df7b amend by test at 1970-01-01T00:00:00 from:
+        598fd30ad50172d0389be262a242092f221bd196 amend by test at 1970-01-01T00:00:00 from:
+          ef7d26c88be0bf3c8d40a3569fd9c018f32a19ab amend by test at 1970-01-01T00:00:00 from:
+            20759b6926ce827d5a8c73eb1fa9726d6f7defb2
+
+Pulling in an earlier predecessor makes the predecessor show up.
+  $ hg pull -q -r $A
+  $ hg log -r "predecessors($C)" -T '{node} {desc}\n' --hidden
+  91713f37cee74b0145e53c32cf3fef354944ce4d C
+  f9407b1692b919f7a3e45186464e2256e67c1be5 A
+  $ hg log -r "successors($A)" -T '{node} {desc}\n' --hidden
+  91713f37cee74b0145e53c32cf3fef354944ce4d C
+  f9407b1692b919f7a3e45186464e2256e67c1be5 A

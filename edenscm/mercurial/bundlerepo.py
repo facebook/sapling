@@ -29,6 +29,7 @@ from . import (
     localrepo,
     manifest,
     mdiff,
+    mutation,
     node as nodemod,
     pathutil,
     phases,
@@ -372,6 +373,10 @@ class bundlerepository(localrepo.localrepository):
     @localrepo.unfilteredpropertycache
     def _phasecache(self):
         return bundlephasecache(self, self._phasedefaults)
+
+    @localrepo.unfilteredpropertycache
+    def _mutationstore(self):
+        return mutation.bundlemutationstore(self)
 
     @localrepo.unfilteredpropertycache
     def _visibleheads(self):

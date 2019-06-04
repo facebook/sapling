@@ -24,6 +24,7 @@ from edenscm.mercurial import (
     extensions,
     hg,
     localrepo,
+    mutation,
     node as nodemod,
     phases,
     util,
@@ -414,22 +415,28 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
     cgpart.addparam("version", cgversion)
     parts.append(cgpart)
 
+    # This parsing should be refactored to be shared with
+    # exchange.getbundlechunks. But I'll do that in a separate diff.
+    if bundlecaps is None:
+        bundlecaps = set()
+    b2caps = {}
+    for bcaps in bundlecaps:
+        if bcaps.startswith("bundle2="):
+            blob = util.urlreq.unquote(bcaps[len("bundle2=") :])
+            b2caps.update(bundle2.decodecaps(blob))
+
+    if constants.scratchmutationparttype in b2caps:
+        mutdata = mutation.bundle(bundlerepo, outgoing.missing)
+        parts.append(
+            bundle2.bundlepart(constants.scratchmutationparttype, data=mutdata)
+        )
+
     try:
         treemod = extensions.find("treemanifest")
         remotefilelog = extensions.find("remotefilelog")
     except KeyError:
         pass
     else:
-        # This parsing should be refactored to be shared with
-        # exchange.getbundlechunks. But I'll do that in a separate diff.
-        if bundlecaps is None:
-            bundlecaps = set()
-        b2caps = {}
-        for bcaps in bundlecaps:
-            if bcaps.startswith("bundle2="):
-                blob = util.urlreq.unquote(bcaps[len("bundle2=") :])
-                b2caps.update(bundle2.decodecaps(blob))
-
         missing = outgoing.missing
         if remotefilelog.shallowbundle.cansendtrees(
             bundlerepo, missing, source="pull", bundlecaps=bundlecaps, b2caps=b2caps
