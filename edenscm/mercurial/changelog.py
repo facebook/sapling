@@ -284,7 +284,7 @@ class changelog(revlog.revlog):
         It exists in a separate file to facilitate readers (such as
         hooks processes) accessing data before a transaction is finalized.
         """
-        self._visibleheads = visibility.visibleheads(opener)
+        self._visibleheads = self._loadvisibleheads(opener)
 
         if trypending and opener.exists("00changelog.i.a"):
             indexfile = "00changelog.i.a"
@@ -316,6 +316,9 @@ class changelog(revlog.revlog):
         self._delaybuf = None
         self._divert = False
         self.filteredrevs = frozenset()
+
+    def _loadvisibleheads(self, opener):
+        return visibility.visibleheads(opener)
 
     def tip(self):
         """filtered version of revlog.tip"""

@@ -37,6 +37,7 @@ from . import (
     revlog,
     util,
     vfs as vfsmod,
+    visibility,
 )
 from .i18n import _
 from .node import nullid
@@ -57,6 +58,7 @@ class bundlerevlog(revlog.revlog):
         n = len(self)
         self.repotiprev = n - 1
         self.bundlerevs = set()  # used by 'bundle()' revset expression
+        self.bundleheads = set()  # used by visibility
         for deltadata in cgunpacker.deltaiter():
             node, p1, p2, cs, deltabase, delta, flags = deltadata
 
@@ -77,6 +79,8 @@ class bundlerevlog(revlog.revlog):
                 raise LookupError(deltabase, self.indexfile, _("unknown delta base"))
 
             baserev = self.rev(deltabase)
+            p1rev = self.rev(p1)
+            p2rev = self.rev(p2)
             # start, size, full unc. size, base (unused), link, p1, p2, node
             e = (
                 revlog.offset_type(start, flags),
@@ -84,13 +88,17 @@ class bundlerevlog(revlog.revlog):
                 -1,
                 baserev,
                 link,
-                self.rev(p1),
-                self.rev(p2),
+                p1rev,
+                p2rev,
                 node,
             )
             self.index.insert(-1, e)
             self.nodemap[node] = n
             self.bundlerevs.add(n)
+            self.bundleheads.add(n)
+            self.bundleheads.discard(p1rev)
+            self.bundleheads.discard(p2rev)
+
             n += 1
 
     def _chunk(self, rev, df=None):
@@ -179,6 +187,7 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         changelog.changelog.__init__(self, opener)
         linkmapper = lambda x: x
         bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker, linkmapper)
+        self._visibleheads.addbundleheads([self.node(r) for r in self.bundleheads])
 
     def baserevision(self, nodeorrev):
         # Although changelog doesn't override 'revision' method, some extensions
@@ -193,6 +202,9 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
             return changelog.changelog.revision(self, nodeorrev, raw=True)
         finally:
             self.filteredrevs = oldfilter
+
+    def _loadvisibleheads(self, opener):
+        return visibility.bundlevisibleheads(opener)
 
 
 class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
@@ -377,11 +389,6 @@ class bundlerepository(localrepo.localrepository):
     @localrepo.unfilteredpropertycache
     def _mutationstore(self):
         return mutation.bundlemutationstore(self)
-
-    @localrepo.unfilteredpropertycache
-    def _visibleheads(self):
-        # TODO(mbthomas): return bundlevisibleheads(self)
-        return None
 
     @localrepo.unfilteredpropertycache
     def changelog(self):

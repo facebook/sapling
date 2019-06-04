@@ -202,6 +202,24 @@ class visibleheads(object):
         return hidden
 
 
+class bundlevisibleheads(visibleheads):
+    """specialization of visibleheads for bundlerepos
+
+    In bundlerepos, all the bundle commits are visible, so the bundleheads
+    are added to the set of visible heads.
+    """
+
+    def addbundleheads(self, bundleheads):
+        # Some of the bundleheads may be descendants of the visible heads.
+        # There shouldn't be too much overlap, so we ignore this and just add
+        # the bundle heads as additional visible heads.
+        self.heads = util.removeduplicates(self.heads + bundleheads)
+
+    def _updateheads(self, repo, newheads, tr):
+        # bundlerepo visibleheads are immutable.  This should never be called.
+        raise NotImplementedError
+
+
 def setvisibleheads(repo, newheads):
     """set the visible heads
 
@@ -287,11 +305,6 @@ def tracking(repo):
 
 def enabled(repo):
     """returns true if this repo is using visibleheads to determine visibility"""
-    # TODO(mbthomas): support bundlerepo
-    from . import bundlerepo  # avoid import cycle
-
-    if isinstance(repo, bundlerepo.bundlerepository):
-        return False
     return tracking(repo) and repo.ui.configbool("visibility", "enabled")
 
 
