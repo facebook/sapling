@@ -1,0 +1,17 @@
+[package]
+name = "blackbox"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+byteorder = "1"
+failure = "0.1"
+indexedlog = { path = "../indexedlog" }
+libc = "0.2"
+rand = "0.6"
+serde = "1"
+serde_cbor = "0.9"
+serde_derive = "1"
+
+[dev-dependencies]
+tempfile = "3"

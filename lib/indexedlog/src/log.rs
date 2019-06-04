@@ -167,7 +167,7 @@ pub enum ChecksumType {
     /// Use xxhash64 checksum algorithm. Efficient on 64bit platforms.
     Xxhash64,
 
-    /// Use xxhash64 checksum algorithm. It is slower than xxhash64 for 64bit
+    /// Use xxhash32 checksum algorithm. It is slower than xxhash64 for 64bit
     /// platforms, but takes less space. Perhaps a good fit when entries are
     /// short.
     Xxhash32,
@@ -1184,7 +1184,13 @@ impl<'a> Iterator for LogLookupIter<'a> {
                 Ok(Some(entry)) => Some(Ok(entry.data)),
                 Ok(None) => None,
                 Err(err) => {
-                    self.errored = true;
+                    // Do not set this iterator to an error state. It's possible
+                    // that the index iterator still provides valid data, and
+                    // only the "log" portion is corrupted.
+                    //
+                    // The index iterator is finite if integrity check is turned
+                    // on. So trust it and don't worry about infinite iteration
+                    // here.
                     Some(Err(err))
                 }
             },
