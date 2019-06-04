@@ -14,7 +14,9 @@
 #![allow(dead_code)]
 
 mod blackbox;
+mod singleton;
 
 pub use self::blackbox::{Blackbox, BlackboxOptions, Entry, Filter};
+pub use self::singleton::{init, log, SINGLETON};
 
 pub mod event;
