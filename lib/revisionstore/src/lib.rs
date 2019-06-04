@@ -34,6 +34,7 @@ pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogDataStore;
 pub use crate::localstore::LocalStore;
+pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::repack::IterableStore;
