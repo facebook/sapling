@@ -289,8 +289,6 @@ TEST_F(PeriodicTaskTest, testSplayOff) {
 }
 
 TEST_F(PeriodicTaskTest, taskException) {
-  TestServer server;
-
   // Make sure that the periodic task keeps getting run even after it throws an
   // exception and that the exception isn't propagated up farther to the main
   // thread.
