@@ -39,7 +39,7 @@ impl<'a> MultiplexHistoryStore<'a> {
     }
 
     pub fn add_store(&mut self, store: Box<dyn MutableHistoryStore + Send + 'a>) {
-        self.stores.push(Box::new(store))
+        self.stores.push(store)
     }
 }
 
