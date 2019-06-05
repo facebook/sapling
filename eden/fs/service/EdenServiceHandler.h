@@ -189,16 +189,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   int64_t unblockFault(std::unique_ptr<UnblockFaultArg> info) override;
 
   /**
-   * When this Thrift handler is notified to shutdown, it notifies the
-   * EdenServer to shut down, as well.  We prefer that external
-   * clients use initiateShutdown() instead so that we can log some
-   * context.
-   */
-  void shutdown() override;
-
-  /**
-   * A thrift client has requested that we shutdown and provided
-   * the reason why.
+   * A thrift client has requested that we shutdown.
    */
   void initiateShutdown(std::unique_ptr<std::string> reason) override;
 

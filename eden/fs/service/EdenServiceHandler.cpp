@@ -1318,11 +1318,6 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
 #endif // !_WIN32
 }
 
-void EdenServiceHandler::shutdown() {
-  auto helper = INSTRUMENT_THRIFT_CALL(INFO);
-  server_->stop();
-}
-
 void EdenServiceHandler::enableTracing() {
   XLOG(INFO) << "Enabling tracing";
   eden::enableTracing();
