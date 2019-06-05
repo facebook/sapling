@@ -46,7 +46,7 @@ def run(binaryexecution):
     # for `hg dbsh` and the thrift runtime for the eden extension
     from edenscm.mercurial import thirdparty
 
-    ipypath = os.path.join(os.path.dirname(thirdparty.__file__), "IPython.zip")
+    ipypath = os.path.join(libdir, "build", "IPython.zip")
     if ipypath not in sys.path and os.path.exists(ipypath):
         sys.path.insert(0, ipypath)
 
