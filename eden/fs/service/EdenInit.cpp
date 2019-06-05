@@ -44,11 +44,11 @@ void findEdenDir(EdenConfig& config) {
     boost::filesystem::create_directories(boostPath);
     auto resolvedDir = facebook::eden::realpath(boostPath.string());
 
-    // Updating the value in the config using ConfigSource COMMAND_LINE also
+    // Updating the value in the config using ConfigSource::CommandLine also
     // makes sure that any future updates to the config file do not affect the
     // value we use.  Once we start we want to always use a fixed location for
     // the eden directory.
-    config.setEdenDir(resolvedDir, ConfigSource::COMMAND_LINE);
+    config.setEdenDir(resolvedDir, ConfigSource::CommandLine);
   } catch (const std::exception& ex) {
     throw ArgumentError(
         "error creating ", boostPath.string(), ": ", folly::exceptionStr(ex));

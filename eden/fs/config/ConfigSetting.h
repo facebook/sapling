@@ -18,26 +18,10 @@
 #include <folly/Range.h>
 
 #include "eden/fs/config/FieldConverter.h"
+#include "eden/fs/config/gen-cpp2/eden_config_types.h"
 
 namespace facebook {
 namespace eden {
-
-/**
- * ConfigSource identifies the point of origin of a config setting.
- * It is ordered from low to high precedence. Higher precedence
- * configuration values over-ride lower precedence values. A config
- * setting of COMMAND_LINE takes precedence over all other settings.
- * NOTE: ConfigSource enum values are used to access array elements. Thus,
- * they should be ordered from 0 to kConfigSourceLastIndex, with increments
- * of 1.
- */
-enum class ConfigSource {
-  DEFAULT = 0,
-  SYSTEM_CONFIG_FILE = 1,
-  USER_CONFIG_FILE = 2,
-  COMMAND_LINE = 3,
-};
-constexpr size_t kConfigSourceLastIndex = 3;
 
 class ConfigSettingBase;
 
@@ -133,7 +117,7 @@ class ConfigSetting : public ConfigSettingBase {
       T value,
       ConfigSettingManager* configSettingManager)
       : ConfigSettingBase(key, configSettingManager) {
-    getSlot(ConfigSource::DEFAULT).emplace(std::move(value));
+    getSlot(ConfigSource::Default).emplace(std::move(value));
   }
 
   /**
@@ -180,7 +164,7 @@ class ConfigSetting : public ConfigSettingBase {
       folly::StringPiece stringValue,
       const std::map<std::string, std::string>& attrMap,
       ConfigSource newSource) override {
-    if (newSource == ConfigSource::DEFAULT) {
+    if (newSource == ConfigSource::Default) {
       return folly::makeUnexpected<std::string>(
           "Convert ignored for default value");
     }
@@ -194,15 +178,15 @@ class ConfigSetting : public ConfigSettingBase {
    * Set the value with the identified source.
    */
   void setValue(T newVal, ConfigSource newSource, bool force = false) {
-    if (force || newSource != ConfigSource::DEFAULT) {
+    if (force || newSource != ConfigSource::Default) {
       getSlot(newSource).emplace(std::move(newVal));
     }
   }
 
   /** Clear the value for the passed ConfigSource. The operation will be
-   * ignored for ConfigSource::DEFAULT. */
+   * ignored for ConfigSource::Default. */
   void clearValue(ConfigSource source) override {
-    if (source != ConfigSource::DEFAULT && getSlot(source).has_value()) {
+    if (source != ConfigSource::Default && getSlot(source).has_value()) {
       getSlot(source).reset();
     }
   }
@@ -210,6 +194,9 @@ class ConfigSetting : public ConfigSettingBase {
   virtual ~ConfigSetting() {}
 
  private:
+  static constexpr size_t kConfigSourceLastIndex =
+      static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSource>::max());
+
   std::optional<T>& getSlot(ConfigSource source) {
     return configValueArray_[static_cast<size_t>(source)];
   }
@@ -221,14 +208,14 @@ class ConfigSetting : public ConfigSettingBase {
    *  Get the index of the highest priority source that is populated.
    */
   size_t getHighestPriorityIdx() const {
-    for (auto idx = static_cast<size_t>(kConfigSourceLastIndex);
-         idx > static_cast<size_t>(ConfigSource::DEFAULT);
+    for (auto idx = kConfigSourceLastIndex;
+         idx > static_cast<size_t>(ConfigSource::Default);
          --idx) {
       if (configValueArray_[idx].has_value()) {
         return idx;
       }
     }
-    return static_cast<size_t>(ConfigSource::DEFAULT);
+    return static_cast<size_t>(ConfigSource::Default);
   }
 
   /**

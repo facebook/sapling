@@ -149,12 +149,12 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->setSystemConfigPath(updatedSystemConfigPath);
 
   // Configuration
-  edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::COMMAND_LINE);
-  edenConfig->setSystemIgnoreFile(systemIgnoreFile, ConfigSource::COMMAND_LINE);
-  edenConfig->setEdenDir(edenDir, ConfigSource::COMMAND_LINE);
+  edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::CommandLine);
+  edenConfig->setSystemIgnoreFile(systemIgnoreFile, ConfigSource::CommandLine);
+  edenConfig->setEdenDir(edenDir, ConfigSource::CommandLine);
   edenConfig->setClientCertificate(
-      clientCertificate, ConfigSource::COMMAND_LINE);
-  edenConfig->setUseMononoke(useMononoke, ConfigSource::COMMAND_LINE);
+      clientCertificate, ConfigSource::CommandLine);
+  edenConfig->setUseMononoke(useMononoke, ConfigSource::CommandLine);
 
   // Config path
   EXPECT_EQ(edenConfig->getUserConfigPath(), updatedUserConfigPath);
@@ -192,13 +192,13 @@ TEST_F(EdenConfigTest, cloneTest) {
         systemConfigPath);
 
     // Configuration
-    edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::COMMAND_LINE);
+    edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::CommandLine);
     edenConfig->setSystemIgnoreFile(
-        systemIgnoreFile, ConfigSource::SYSTEM_CONFIG_FILE);
-    edenConfig->setEdenDir(edenDir, ConfigSource::USER_CONFIG_FILE);
+        systemIgnoreFile, ConfigSource::SystemConfig);
+    edenConfig->setEdenDir(edenDir, ConfigSource::UserConfig);
     edenConfig->setClientCertificate(
-        clientCertificate, ConfigSource::USER_CONFIG_FILE);
-    edenConfig->setUseMononoke(useMononoke, ConfigSource::USER_CONFIG_FILE);
+        clientCertificate, ConfigSource::UserConfig);
+    edenConfig->setUseMononoke(useMononoke, ConfigSource::UserConfig);
 
     EXPECT_EQ(edenConfig->getUserName(), testUser_);
     EXPECT_EQ(edenConfig->getUserID(), userID);
@@ -227,9 +227,9 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getClientCertificate(), clientCertificate);
   EXPECT_EQ(configCopy->getUseMononoke(), useMononoke);
 
-  configCopy->clearAll(ConfigSource::USER_CONFIG_FILE);
-  configCopy->clearAll(ConfigSource::SYSTEM_CONFIG_FILE);
-  configCopy->clearAll(ConfigSource::COMMAND_LINE);
+  configCopy->clearAll(ConfigSource::UserConfig);
+  configCopy->clearAll(ConfigSource::SystemConfig);
+  configCopy->clearAll(ConfigSource::CommandLine);
 
   EXPECT_EQ(configCopy->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(configCopy->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
@@ -257,34 +257,32 @@ TEST_F(EdenConfigTest, clearAllTest) {
 
   // We will set the config on 3 properties, each with different sources
   // We will then run for each source to check results
-  edenConfig->setUserIgnoreFile(
-      fromUserConfigPath, ConfigSource::USER_CONFIG_FILE);
+  edenConfig->setUserIgnoreFile(fromUserConfigPath, ConfigSource::UserConfig);
   edenConfig->setSystemIgnoreFile(
-      fromSystemConfigPath, ConfigSource::SYSTEM_CONFIG_FILE);
-  edenConfig->setEdenDir(fromCommandLine, ConfigSource::COMMAND_LINE);
-  edenConfig->setEdenDir(fromUserConfigPath, ConfigSource::USER_CONFIG_FILE);
-  edenConfig->setEdenDir(
-      fromSystemConfigPath, ConfigSource::SYSTEM_CONFIG_FILE);
+      fromSystemConfigPath, ConfigSource::SystemConfig);
+  edenConfig->setEdenDir(fromCommandLine, ConfigSource::CommandLine);
+  edenConfig->setEdenDir(fromUserConfigPath, ConfigSource::UserConfig);
+  edenConfig->setEdenDir(fromSystemConfigPath, ConfigSource::SystemConfig);
 
   // Check over-rides
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), fromUserConfigPath);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), fromSystemConfigPath);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
-  // Clear USER_CONFIG_FILE and check
-  edenConfig->clearAll(ConfigSource::USER_CONFIG_FILE);
+  // Clear UserConfig and check
+  edenConfig->clearAll(ConfigSource::UserConfig);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), fromSystemConfigPath);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
-  // Clear SYSTEM_CONFIG_FILE and check
-  edenConfig->clearAll(ConfigSource::SYSTEM_CONFIG_FILE);
+  // Clear SystemConfig and check
+  edenConfig->clearAll(ConfigSource::SystemConfig);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), fromCommandLine);
 
-  // Clear COMMAND_LINE and check
-  edenConfig->clearAll(ConfigSource::COMMAND_LINE);
+  // Clear CommandLine and check
+  edenConfig->clearAll(ConfigSource::CommandLine);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
@@ -311,14 +309,13 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   AbsolutePath ignoreFile{"/USER_IGNORE_FILE"};
   AbsolutePath systemIgnoreFile{"/SYSTEM_IGNORE_FILE"};
 
-  edenConfig->setUserIgnoreFile(cliIgnoreFile, ConfigSource::COMMAND_LINE);
+  edenConfig->setUserIgnoreFile(cliIgnoreFile, ConfigSource::CommandLine);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 
-  edenConfig->setUserIgnoreFile(
-      cliIgnoreFile, ConfigSource::SYSTEM_CONFIG_FILE);
+  edenConfig->setUserIgnoreFile(cliIgnoreFile, ConfigSource::SystemConfig);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 
-  edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::USER_CONFIG_FILE);
+  edenConfig->setUserIgnoreFile(ignoreFile, ConfigSource::UserConfig);
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), cliIgnoreFile);
 }
 

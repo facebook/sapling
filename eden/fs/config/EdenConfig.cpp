@@ -47,13 +47,13 @@ namespace eden {
 
 std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {
   switch (cs) {
-    case ConfigSource::DEFAULT:
+    case ConfigSource::Default:
       return "default";
-    case ConfigSource::COMMAND_LINE:
+    case ConfigSource::CommandLine:
       return "command-line";
-    case ConfigSource::USER_CONFIG_FILE:
+    case ConfigSource::UserConfig:
       return userConfigPath_.c_str();
-    case ConfigSource::SYSTEM_CONFIG_FILE:
+    case ConfigSource::SystemConfig:
       return systemConfigPath_.c_str();
   }
   throw std::invalid_argument(
@@ -119,12 +119,12 @@ EdenConfig::EdenConfig(
       systemConfigDir_(systemConfigDir) {
   // Force set defaults that require passed arguments
   edenDir_.setValue(
-      userHomePath_ + kDefaultEdenDirectory, ConfigSource::DEFAULT, true);
+      userHomePath_ + kDefaultEdenDirectory, ConfigSource::Default, true);
   userIgnoreFile_.setValue(
-      userHomePath + kDefaultUserIgnoreFile, ConfigSource::DEFAULT, true);
+      userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
   systemIgnoreFile_.setValue(
-      systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::DEFAULT, true);
-  clientCertificate_.setValue(kUnspecifiedDefault, ConfigSource::DEFAULT, true);
+      systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
+  clientCertificate_.setValue(kUnspecifiedDefault, ConfigSource::Default, true);
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -335,17 +335,14 @@ static void getConfigStat(
 }
 
 void EdenConfig::loadSystemConfig() {
-  clearAll(ConfigSource::SYSTEM_CONFIG_FILE);
+  clearAll(ConfigSource::SystemConfig);
   loadConfig(
-      systemConfigPath_,
-      ConfigSource::SYSTEM_CONFIG_FILE,
-      &systemConfigFileStat_);
+      systemConfigPath_, ConfigSource::SystemConfig, &systemConfigFileStat_);
 }
 
 void EdenConfig::loadUserConfig() {
-  clearAll(ConfigSource::USER_CONFIG_FILE);
-  loadConfig(
-      userConfigPath_, ConfigSource::USER_CONFIG_FILE, &userConfigFileStat_);
+  clearAll(ConfigSource::UserConfig);
+  loadConfig(userConfigPath_, ConfigSource::UserConfig, &userConfigFileStat_);
 }
 
 void EdenConfig::loadConfig(
