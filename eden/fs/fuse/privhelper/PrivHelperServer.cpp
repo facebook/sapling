@@ -363,7 +363,8 @@ void PrivHelperServer::bindMount(
 #else
   const int rc =
       mount(clientPath, mountPath, /*type*/ nullptr, MS_BIND, /*data*/ nullptr);
-  checkUnixError(rc, "failed to mount");
+  checkUnixError(
+      rc, "failed to bind mount `", clientPath, "` over `", mountPath, "`");
 #endif
 }
 
