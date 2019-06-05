@@ -256,6 +256,7 @@ function setup_mononoke_config {
 
   if [[ ! -e "$TESTTMP/mononoke_hgcli" ]]; then
     cat >> "$TESTTMP/mononoke_hgcli" <<EOF
+#! /bin/sh
 "$MONONOKE_HGCLI" --no-session-output "\$@"
 EOF
     chmod a+x "$TESTTMP/mononoke_hgcli"
