@@ -120,6 +120,6 @@ class NopMountTable(MountTable):
 
 
 def new() -> MountTable:
-    if sys.platform == "linux2":
+    if "linux" in sys.platform:
         return LinuxMountTable()
     return NopMountTable()
