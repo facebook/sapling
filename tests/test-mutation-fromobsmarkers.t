@@ -71,4 +71,4 @@ The successors and predecessors information should be correct.
         DUPLICATE PREDECESSORS: 2 x 917a077edb8d775c96bc95d34025c800b243ce6f
           917a077edb8d775c96bc95d34025c800b243ce6f
 
-BUG! There are duplicate predecessors.  Successors-sets and predecessors-set calculations are exponential!
+BUG! There are duplicate predecessors.

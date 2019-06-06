@@ -208,7 +208,8 @@ def lookupsplit(repo, node):
 
 def lookupsuccessors(repo, node):
     """Look up the immediate successors sets for the given node"""
-    return sorted(repo._mutationstore.getsuccessorssets(node))
+    succsets = sorted(repo._mutationstore.getsuccessorssets(node))
+    return util.removesortedduplicates(succsets)
 
 
 def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
@@ -456,7 +457,11 @@ def predecessorsset(repo, startnode, closest=False):
             if newnextpreds:
                 expanded = newnextpreds != nextpreds
                 nextpreds = newnextpreds
-    return util.removeduplicates(preds)
+        # Remove duplicates from the list of predecessors.  Splits and folds
+        # can lead to the same commits via multiple routes, but we don't need
+        # to process them multiple times.
+        nextpreds = util.removeduplicates(nextpreds)
+    return preds
 
 
 def _succproduct(succsetlist):
@@ -590,7 +595,11 @@ def successorssets(repo, startnode, closest=False, cache=None):
             if newnextsuccsets:
                 expanded = newnextsuccsets != nextsuccsets
                 nextsuccsets = newnextsuccsets
-    return util.removeduplicates(succsets, key=frozenset)
+        # Remove duplicates from the list of successors sets.  Splits and folds
+        # can lead to the same commits via multiple routes, but we don't need
+        # to process them multiple times.
+        nextsuccsets = util.removeduplicates(nextsuccsets, key=frozenset)
+    return succsets
 
 
 def foreground(repo, nodes):

@@ -4356,6 +4356,8 @@ def removeduplicates(items, key=None):
     The order of items is preserved.  Where duplicates are encountered, the
     first item in the list is preserved.
     """
+    if len(items) < 2:
+        return items
     if key is None:
         key = lambda item: item
     uniqueitems = []
@@ -4365,6 +4367,21 @@ def removeduplicates(items, key=None):
         if itemkey not in seen:
             seen.add(itemkey)
             uniqueitems.append(item)
+    return uniqueitems
+
+
+def removesortedduplicates(items):
+    """Returns the sorted list items, with duplicates removed.
+
+    This is faster than removeduplicates, but only works on sorted lists."""
+    if len(items) < 2:
+        return items
+    uniqueitems = []
+    prev = object()
+    for item in items:
+        if item != prev:
+            uniqueitems.append(item)
+            prev = item
     return uniqueitems
 
 
