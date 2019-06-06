@@ -188,7 +188,10 @@ class FindExeClass(object):
 
         start_path = os.path.abspath(sys.argv[0])
         hg_real_bin = pathutils.get_build_rule_output_path(
-            "//scm/hg:hg", pathutils.BuildRuleTypes.PYTHON_BINARY, start_path=start_path
+            "//scm/hg:hg",
+            pathutils.BuildRuleTypes.GENRULE,
+            start_path=start_path,
+            output_name="hg/hg",
         )
         if hg_real_bin:
             return hg_real_bin
