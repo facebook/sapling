@@ -20,7 +20,9 @@ import unittest
 try:
     import libfb.py.pathutils as pathutils
 
-    hgpath = pathutils.get_build_rule_output_path("//scm/hg:hg")
+    hgpath = pathutils.get_build_rule_output_path(
+        "//scm/hg:hg", pathutils.BuildRuleTypes.GENRULE, output_name="hg/hg"
+    )
     pythonbinpath = pathutils.get_build_rule_output_path("//scm/hg:hgpython")
     watchman = pathutils.get_build_rule_output_path("//watchman:watchman")
     mononoke_server = pathutils.get_build_rule_output_path("//scm/mononoke:mononoke")
