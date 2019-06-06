@@ -10,7 +10,7 @@
 #include "eden/fs/utils/FaultInjector.h"
 
 #include <folly/Overload.h>
-#include <folly/futures/helpers.h>
+#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
 using folly::SemiFuture;
