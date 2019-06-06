@@ -230,16 +230,8 @@ impl EdenApiCurlClient {
             progress,
             |response: DataResponse| {
                 num_responses += 1;
-                for entry in response {
-                    num_entries += 1;
-                    let key = entry.key().clone();
-                    if self.validate {
-                        log::trace!("Validating received data for: {}", &key);
-                    }
-                    let data = entry.data(self.validate)?;
-                    add_delta(store, key, data)?;
-                }
-                Ok(())
+                num_entries += response.entries.len();
+                add_data_response(store, response, self.validate)
             },
         )?;
 
@@ -459,5 +451,17 @@ fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> Fallible<(
         key,
     };
     store.add(&delta, &metadata)?;
+    Ok(())
+}
+
+fn add_data_response(
+    store: &mut MutableDeltaStore,
+    response: DataResponse,
+    validate: bool,
+) -> Fallible<()> {
+    for entry in response {
+        let data = entry.data(validate)?;
+        add_delta(store, entry.key().clone(), data)?;
+    }
     Ok(())
 }
