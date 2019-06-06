@@ -119,6 +119,14 @@ trees from the server.
 
     [treemanifest]
     fetchdepth = 65536
+
+`treemanifest.usehttp` causes treemanifest to fetch tress over HTTP using
+the Eden API.
+
+::
+
+    [treemanifest]
+    usehttp = true
 """
 from __future__ import absolute_import
 
@@ -166,6 +174,7 @@ from edenscm.mercurial.node import bin, hex, nullid, short
 from ..extlib import cstore
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
+    edenapi,
     mutablestores,
     resolveprefetchopts,
     shallowbundle,
@@ -206,6 +215,7 @@ configitem("treemanifest", "servercacheevictionpercent", default=50)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
+configitem("treemanifest", "usehttp", default=False)
 
 PACK_CATEGORY = "manifests"
 
@@ -462,6 +472,22 @@ def wraprepo(repo):
 
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
+
+            usehttp = self.ui.configbool("treemanifest", "usehttp")
+            if edenapi.enabled(self.ui) and usehttp:
+                try:
+                    if edenapi.debug(self.ui):
+                        self.ui.warn(_("fetching trees over HTTPS\n"))
+                    dpack, hpack = self.manifestlog.getmutablesharedpacks()
+                    self.edenapi.prefetch_trees(
+                        rootdir, mfnodes, basemfnodes, dpack, depth
+                    )
+                    return
+                except Exception as e:
+                    self.ui.warn(_("encountered error during HTTPS fetching;"))
+                    self.ui.warn(_(" falling back to SSH\n"))
+                    if edenapi.debug(self.ui):
+                        self.ui.warn(_("exception: %s\n") % str(e))
 
             start = util.timer()
             with self.ui.timesection("fetchingtrees"):

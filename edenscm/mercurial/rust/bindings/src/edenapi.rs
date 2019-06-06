@@ -152,11 +152,11 @@ py_class!(class client |py| {
         let rootdir = make_path(py, &rootdir)?;
         let mfnodes = mfnodes
             .into_iter()
-            .map(|node| make_node(py, &node))
+            .map(|node| make_node_from_bytes(py, &node))
             .collect::<PyResult<Vec<_>>>()?;
         let basemfnodes = basemfnodes
             .into_iter()
-            .map(|node| make_node(py, &node))
+            .map(|node| make_node_from_bytes(py, &node))
             .collect::<PyResult<Vec<_>>>()?;
 
         let mut store = get_deltastore(py, store)?;
@@ -209,13 +209,17 @@ py_class!(class downloadstats |py| {
 
 fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
     let path = make_path(py, path)?;
-    let node = make_node(py, node)?;
+    let node = make_node_from_utf8(py, node)?;
     Ok(Key::new(path, node))
 }
 
-fn make_node(py: Python, node: &PyBytes) -> PyResult<Node> {
+fn make_node_from_utf8(py: Python, node: &PyBytes) -> PyResult<Node> {
     let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
     Ok(Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?)
+}
+
+fn make_node_from_bytes(py: Python, node: &PyBytes) -> PyResult<Node> {
+    Ok(Node::from_slice(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?)
 }
 
 fn make_path(py: Python, path: &PyBytes) -> PyResult<RepoPathBuf> {
