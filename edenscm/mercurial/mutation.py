@@ -732,6 +732,9 @@ def convertfromobsmarkers(repo):
                 candidates.update(mutpreds)
         return True
 
+    def checkduplicate(marker, markers):
+        return any(marker[:2] == m[:2] for m in markers)
+
     dropprune = 0
     droprevive = 0
     dropundo = 0
@@ -762,7 +765,7 @@ def convertfromobsmarkers(repo):
             succ = obssuccs[-1]
             if succ in newmut:
                 preds, split, markers = newmut[succ]
-                if obsmarker in markers:
+                if checkduplicate(obsmarker, markers):
                     # duplicate
                     continue
                 repo.ui.debug(
@@ -774,7 +777,7 @@ def convertfromobsmarkers(repo):
             newmut[succ] = ([obspred], obssuccs[:-1], [obsmarker])
         elif obssuccs[0] in newmut:
             preds, split, markers = newmut[obssuccs[0]]
-            if obsmarker in markers:
+            if checkduplicate(obsmarker, markers):
                 # duplicate
                 continue
             # Fold marker
