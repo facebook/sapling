@@ -21,6 +21,7 @@ use futures::sync::mpsc;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use itertools::join;
+use loadlimiter::{bump_load, LIMIT_EGRESS_BYTES};
 use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -347,11 +348,17 @@ where
                 let (etx, erx) = mpsc::channel(1);
 
                 let orx = orx
-                    .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                    .map(|blob: Bytes| {
+                        bump_load(&LIMIT_EGRESS_BYTES, blob.len() as f64);
+                        split_bytes_in_chunk(blob, CHUNK_SIZE)
+                    })
                     .flatten()
                     .map(|v| SshMsg::new(SshStream::Stdout, v));
                 let erx = erx
-                    .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                    .map(|blob: Bytes| {
+                        bump_load(&LIMIT_EGRESS_BYTES, blob.len() as f64);
+                        split_bytes_in_chunk(blob, CHUNK_SIZE)
+                    })
                     .flatten()
                     .map(|v| SshMsg::new(SshStream::Stderr, v));
 
