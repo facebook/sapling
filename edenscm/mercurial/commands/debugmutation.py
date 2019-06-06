@@ -49,6 +49,23 @@ def debugmutation(ui, repo, *revs, **opts):
                     (" %s by %s at %s%s%s from:")
                     % (mutop, mutuser, mutdate, extra, origin)
                 )
+
+                # Check for duplicate predecessors.  There shouldn't be any.
+                if len(preds) != len(set(preds)):
+                    predcount = {}
+                    for pred in preds:
+                        predcount.setdefault(pred, []).append(0)
+                    predinfo = [
+                        "%s x %s" % (len(c), nodemod.hex(n))
+                        for n, c in predcount.iteritems()
+                        if len(c) > 1
+                    ]
+                    ui.status(
+                        ("\n%sDUPLICATE PREDECESSORS: %s")
+                        % ("  " * len(nodestack), ", ".join(predinfo))
+                    )
+
+                    preds = util.removeduplicates(preds)
                 nodestack.append(list(reversed(preds)))
             ui.status(("\n"))
             while nodestack and not nodestack[-1]:

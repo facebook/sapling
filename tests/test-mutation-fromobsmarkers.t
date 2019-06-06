@@ -66,11 +66,9 @@ The successors and predecessors information should be correct.
   $ hg debugmutation $O
     11164ffef7a9840cc182930dae0e032875937b6a split by test at 1970-01-01T00:00:01 (split into this and: e1beb503e4fb1cec5df43ac57edfcff177d705ec) (from obsmarker) from:
       e900f94a0435abcada5fcbc21f0ff399981ad817 rebase by test at 1970-01-01T00:00:00 (from obsmarker) from:
+      DUPLICATE PREDECESSORS: 2 x daf025dd63009f8b02a358a8b98a29347717170f
         daf025dd63009f8b02a358a8b98a29347717170f amend by test at 1969-12-31T23:59:59 (from obsmarker) from:
-          917a077edb8d775c96bc95d34025c800b243ce6f
-          917a077edb8d775c96bc95d34025c800b243ce6f
-        daf025dd63009f8b02a358a8b98a29347717170f amend by test at 1969-12-31T23:59:59 (from obsmarker) from:
-          917a077edb8d775c96bc95d34025c800b243ce6f
+        DUPLICATE PREDECESSORS: 2 x 917a077edb8d775c96bc95d34025c800b243ce6f
           917a077edb8d775c96bc95d34025c800b243ce6f
 
 BUG! There are duplicate predecessors.  Successors-sets and predecessors-set calculations are exponential!
