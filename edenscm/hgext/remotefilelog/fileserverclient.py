@@ -786,14 +786,19 @@ class fileserverclient(object):
 
     def _httpfetchdata(self, fileids, dpack):
         """Fetch file data over HTTPS using the Eden API"""
-        if edenapi.debug(self.ui):
-            self.ui.warn(_("fetching %d files over HTTPS\n") % len(fileids))
+        n = len(fileids)
+        s = "" if n == 1 else "s"
+        msg = _("fetching %d file%s over HTTPS") % (n, s)
 
-        self.ui.metrics.gauge("http_getfiles_revs", len(fileids))
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("%s\n") % msg)
+
+        self.ui.metrics.gauge("http_getfiles_revs", n)
         self.ui.metrics.gauge("http_getfiles_calls", 1)
 
-        msg = _("fetching %d files over HTTPS") % len(fileids)
-        with progress.bar(self.ui, msg, start=None, unit="bytes") as prog:
+        with progress.bar(
+            self.ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+        ) as prog:
 
             def progcallback(dl, dlt, ul, ult):
                 if dl > 0:
@@ -813,14 +818,19 @@ class fileserverclient(object):
 
     def _httpfetchhistory(self, fileids, hpack, depth=None):
         """Fetch file history over HTTPS using the Eden API"""
-        if edenapi.debug(self.ui):
-            self.ui.warn(_("fetching history for %d files over HTTPS\n") % len(fileids))
+        n = len(fileids)
+        s = "" if n == 1 else "s"
+        msg = _("fetching %d file%s over HTTPS") % (n, s)
 
-        self.ui.metrics.gauge("http_gethistory_revs", len(fileids))
+        if edenapi.debug(self.ui):
+            self.ui.warn(_("%s\n") % msg)
+
+        self.ui.metrics.gauge("http_gethistory_revs", n)
         self.ui.metrics.gauge("http_gethistory_calls", 1)
 
-        msg = _("fetching history for %d files over HTTPS") % len(fileids)
-        with progress.bar(self.ui, msg, start=None, unit="bytes") as prog:
+        with progress.bar(
+            self.ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+        ) as prog:
 
             def progcallback(dl, dlt, ul, ult):
                 if dl > 0:

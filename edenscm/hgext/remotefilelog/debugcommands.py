@@ -11,7 +11,7 @@ import os
 import sys
 
 from edenscm.hgext import extutil
-from edenscm.mercurial import error, filelog, progress, revlog
+from edenscm.mercurial import error, filelog, progress, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 
@@ -513,7 +513,9 @@ def debuggetfiles(ui, repo, **opts):
     dpack, __ = repo.fileslog.getmutablesharedpacks()
 
     msg = _("fetching %d files") % len(keys)
-    with progress.bar(ui, msg, start=None, unit="bytes") as prog:
+    with progress.bar(
+        ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+    ) as prog:
 
         def progcb(dl, dlt, ul, ult):
             if dl > 0:
@@ -538,7 +540,9 @@ def debuggethistory(ui, repo, **opts):
     __, hpack = repo.fileslog.getmutablesharedpacks()
 
     msg = _("fetching history for %d files") % len(keys)
-    with progress.bar(ui, msg, start=None, unit="bytes") as prog:
+    with progress.bar(
+        ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+    ) as prog:
 
         def progcb(dl, dlt, ul, ult):
             if dl > 0:
@@ -565,7 +569,9 @@ def debuggettrees(ui, repo, **opts):
     dpack, __ = repo.manifestlog.getmutablesharedpacks()
 
     msg = _("fetching %d trees") % len(keys)
-    with progress.bar(ui, msg, start=None, unit="bytes") as prog:
+    with progress.bar(
+        ui, msg, start=None, unit=_("bytes"), formatfunc=util.bytecount
+    ) as prog:
 
         def progcb(dl, dlt, ul, ult):
             if dl > 0:
