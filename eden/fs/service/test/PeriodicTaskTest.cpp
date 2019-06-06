@@ -78,6 +78,13 @@ struct PreciseEventBase {
 
 class PeriodicTaskTest : public ::testing::Test {
  protected:
+  struct MultiTaskResult {
+    // The time the server started
+    TimePoint start;
+    // A vector with 1 entry per task, containing the times that task was run
+    std::vector<std::vector<TimePoint>> taskInvocations;
+  };
+
   EventBase& getEventBase() {
     return preciseEventBase_.eventBase;
   }
@@ -96,6 +103,54 @@ class PeriodicTaskTest : public ::testing::Test {
     thriftServer->serve();
     XLOG(INFO) << "serve done";
   }
+
+  /**
+   * Run a function from the server's main EventBase thread once the server has
+   * started.
+   *
+   * The goal of this function is to delay running the supplied function until
+   * the server is up and running, so we can begin performing timing tests
+   * without having them be affected by the latency required to start the
+   * server.
+   */
+  template <typename F>
+  void runOnServerStart(F&& fn) {
+    class Callback : public EventBase::LoopCallback {
+     public:
+      explicit Callback(EventBase* evb, F&& fn)
+          : eventBase_(evb), fn_(std::forward<F>(fn)) {}
+      void runLoopCallback() noexcept override {
+        if (delayLoops_ > 0) {
+          // Delay for a few iterations of the loop to wait for things to settle
+          // down and for any tasks that run immediate on start-up to finish
+          // running.
+          --delayLoops_;
+          eventBase_->runInLoop(this);
+        } else {
+          XLOG(INFO) << "server started";
+          fn_();
+          delete this;
+        }
+      }
+
+     private:
+      EventBase* eventBase_;
+      size_t delayLoops_{3};
+      F fn_;
+    };
+
+    auto cb = std::make_unique<Callback>(&getEventBase(), std::forward<F>(fn));
+    getEventBase().runInLoop(cb.release());
+  }
+
+  /**
+   * Run several tasks for the specified number of iterations.
+   */
+  MultiTaskResult runMultipleTasks(
+      size_t numTasks,
+      size_t runsPerTask,
+      std::chrono::milliseconds interval,
+      bool splay);
 
   PreciseEventBase preciseEventBase_;
   TestServer testServer_;
@@ -120,12 +175,8 @@ TEST_F(PeriodicTaskTest, testInterval) {
 
   // Call updateInterval() to start the task inside the EventBase
   // thread once we have started the server.
-  //
-  // We don't do this immediately (before starting the server) just to avoid
-  // flaky test failures that can be caused if the server takes a little extra
-  // time to start before it begins executing the periodic tasks.
   std::optional<TimePoint> start;
-  getEventBase().runInEventBaseThread([&] {
+  runOnServerStart([&] {
     start = TimePoint();
     task.updateInterval(kInterval, /*splay=*/true);
   });
@@ -152,19 +203,7 @@ TEST_F(PeriodicTaskTest, testInterval) {
   }
 }
 
-namespace {
-struct MultiTaskResult {
-  // The time the server started
-  TimePoint start;
-  // A vector with 1 entry per task, containing the times that task was run
-  std::vector<std::vector<TimePoint>> taskInvocations;
-};
-
-/**
- * Run several tasks for the specified number of iterations.
- */
-MultiTaskResult runMultipleTasks(
-    EdenServer& server,
+PeriodicTaskTest::MultiTaskResult PeriodicTaskTest::runMultipleTasks(
     size_t numTasks,
     size_t runsPerTask,
     std::chrono::milliseconds interval,
@@ -175,6 +214,7 @@ MultiTaskResult runMultipleTasks(
   std::vector<std::vector<TimePoint>> taskInvocations;
   taskInvocations.resize(numTasks);
 
+  auto& server = getServer();
   size_t tasksRunning = numTasks;
   for (size_t n = 0; n < numTasks; ++n) {
     tasks.emplace_back(&server, folly::to<string>("task", n), [&, n] {
@@ -195,32 +235,26 @@ MultiTaskResult runMultipleTasks(
 
   // Start all of the tasks from inside the EventBase
   // once we have started the server.
-  TimePoint start;
-  server.getMainEventBase()->runInEventBaseThread([&] {
+  std::optional<TimePoint> start;
+  runOnServerStart([&] {
     start = TimePoint();
     for (auto& task : tasks) {
       task.updateInterval(interval, splay);
     }
   });
 
-  // Run the server.
-  XLOG(INFO) << "serve start";
-  auto& thriftServer = server.getServer();
-  thriftServer->serve();
-  XLOG(INFO) << "serve done";
+  runServer();
 
-  return MultiTaskResult{start, taskInvocations};
+  return MultiTaskResult{start.value(), taskInvocations};
 }
-
-} // namespace
 
 TEST_F(PeriodicTaskTest, testSplayOn) {
   constexpr size_t kNumTasks = 64;
   constexpr size_t kRunsPerTask = 3;
   constexpr auto kInterval = 200ms;
   constexpr auto kTolerance = 20ms;
-  auto result = runMultipleTasks(
-      getServer(), kNumTasks, kRunsPerTask, kInterval, /*splay=*/true);
+  auto result =
+      runMultipleTasks(kNumTasks, kRunsPerTask, kInterval, /*splay=*/true);
 
   ASSERT_EQ(kNumTasks, result.taskInvocations.size());
   TimePoint maxFirstRun = result.taskInvocations[0][0];
@@ -264,8 +298,8 @@ TEST_F(PeriodicTaskTest, testSplayOff) {
   constexpr size_t kRunsPerTask = 3;
   constexpr auto kInterval = 200ms;
   constexpr auto kTolerance = 20ms;
-  auto result = runMultipleTasks(
-      getServer(), kNumTasks, kRunsPerTask, kInterval, /*splay=*/false);
+  auto result =
+      runMultipleTasks(kNumTasks, kRunsPerTask, kInterval, /*splay=*/false);
 
   ASSERT_EQ(kNumTasks, result.taskInvocations.size());
   for (size_t taskIdx = 0; taskIdx < result.taskInvocations.size(); ++taskIdx) {
