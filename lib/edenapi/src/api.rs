@@ -3,7 +3,7 @@
 use failure::Fallible;
 
 use revisionstore::{MutableDeltaStore, MutableHistoryStore};
-use types::Key;
+use types::{Key, Node, RepoPathBuf};
 
 use crate::progress::ProgressFn;
 use crate::stats::DownloadStats;
@@ -50,6 +50,19 @@ pub trait EdenApi: Send + Sync {
     fn get_trees(
         &self,
         keys: Vec<Key>,
+        store: &mut MutableDeltaStore,
+        progress: Option<ProgressFn>,
+    ) -> Fallible<DownloadStats>;
+
+    /// Fetch trees from the server in a manner similar to Mercurial's
+    /// "gettreepack" wire protocol command. Intended to be used by
+    /// the treemanifest extension's tree prefetching logic.
+    fn prefetch_trees(
+        &self,
+        rootdir: RepoPathBuf,
+        mfnodes: Vec<Node>,
+        basemfnodes: Vec<Node>,
+        depth: Option<usize>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> Fallible<DownloadStats>;

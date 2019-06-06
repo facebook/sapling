@@ -17,8 +17,8 @@ use url::Url;
 use driver::MultiDriver;
 use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{
-    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse},
-    Key,
+    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
+    Key, Node, RepoPathBuf,
 };
 
 use crate::api::EdenApi;
@@ -34,6 +34,7 @@ mod paths {
     pub const DATA: &str = "eden/data";
     pub const HISTORY: &str = "eden/history";
     pub const TREES: &str = "eden/trees";
+    pub const PREFETCH_TREES: &str = "eden/trees/prefetch";
 }
 
 pub struct EdenApiCurlClient {
@@ -186,6 +187,23 @@ impl EdenApi for EdenApiCurlClient {
         progress: Option<ProgressFn>,
     ) -> Fallible<DownloadStats> {
         self.get_data(paths::TREES, keys, store, progress)
+    }
+
+    fn prefetch_trees(
+        &self,
+        rootdir: RepoPathBuf,
+        mfnodes: Vec<Node>,
+        basemfnodes: Vec<Node>,
+        depth: Option<usize>,
+        store: &mut MutableDeltaStore,
+        progress: Option<ProgressFn>,
+    ) -> Fallible<DownloadStats> {
+        let url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
+        let creds = self.creds.as_ref();
+        let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
+        multi_request_threaded(&url, creds, requests, progress, |res| {
+            add_data_response(store, res, self.validate)
+        })
     }
 }
 
