@@ -15,6 +15,7 @@ from . import (
     eden_dirstate_map,
     encoding,
     match as matchmod,
+    perftrace,
     policy,
     scmutil,
     util,
@@ -157,7 +158,11 @@ class eden_dirstate(dirstate.dirstate):
 
         Return a dict mapping filename to stat-like object
         """
-        edenstatus = self.eden_client.getStatus(self.p1(), list_ignored=ignored).entries
+        with perftrace.trace("Get EdenFS Status"):
+            perftrace.traceflag("walk")
+            edenstatus = self.eden_client.getStatus(
+                self.p1(), list_ignored=ignored
+            ).entries
 
         nonnormal = self._map._map
 
@@ -293,7 +298,11 @@ class eden_dirstate(dirstate.dirstate):
         return False
 
     def status(self, match, ignored, clean, unknown):  # override
-        edenstatus = self.eden_client.getStatus(self.p1(), list_ignored=ignored).entries
+        with perftrace.trace("Get EdenFS Status"):
+            perftrace.traceflag("status")
+            edenstatus = self.eden_client.getStatus(
+                self.p1(), list_ignored=ignored
+            ).entries
 
         nonnormal_copy = self._map.create_clone_of_internal_map()
 
