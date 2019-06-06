@@ -11,7 +11,7 @@ use cpython_failure::ResultPyErrExt;
 use edenapi::{Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
 use encoding::local_bytes_to_path;
 use revisionstore::MutableDeltaStore;
-use types::{Key, Node, RepoPath};
+use types::{Key, Node, RepoPath, RepoPathBuf};
 
 use crate::revisionstore::{mutabledeltastore, PythonMutableDataPack, PythonMutableHistoryPack};
 
@@ -76,7 +76,12 @@ py_class!(class client |py| {
         self.inner(py).hostname().map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_files(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<downloadstats> {
+    def get_files(
+        &self,
+        keys: Vec<(PyBytes, PyBytes)>,
+        store: PyObject,
+        progress_fn: Option<PyObject> = None
+    ) -> PyResult<downloadstats> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
@@ -97,7 +102,7 @@ py_class!(class client |py| {
         keys: Vec<(PyBytes, PyBytes)>,
         store: PyObject,
         depth: Option<u32> = None,
-        progress_cb: Option<PyObject> = None
+        progress_fn: Option<PyObject> = None
     ) -> PyResult<downloadstats> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
@@ -106,15 +111,20 @@ py_class!(class client |py| {
         let mut store = PythonMutableHistoryPack::new(store)?;
 
         let client = self.inner(py);
-        let progress_cb = progress_cb.map(wrap_callback);
+        let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
-            client.get_history(keys, &mut store, depth, progress_cb)
+            client.get_history(keys, &mut store, depth, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
         downloadstats::create_instance(py, stats)
     }
 
-    def get_trees(&self, keys: Vec<(PyBytes, PyBytes)>, store: PyObject, progress_fn: Option<PyObject> = None) -> PyResult<downloadstats> {
+    def get_trees(
+        &self,
+        keys: Vec<(PyBytes, PyBytes)>,
+        store: PyObject,
+        progress_fn: Option<PyObject> = None
+    ) -> PyResult<downloadstats> {
         let keys = keys.into_iter()
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
@@ -125,6 +135,36 @@ py_class!(class client |py| {
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
             client.get_trees(keys, &mut store, progress_fn)
+        }).map_pyerr::<exc::RuntimeError>(py)?;
+
+        downloadstats::create_instance(py, stats)
+    }
+
+    def prefetch_trees(
+        &self,
+        rootdir: PyBytes,
+        mfnodes: Vec<PyBytes>,
+        basemfnodes: Vec<PyBytes>,
+        store: PyObject,
+        depth: Option<usize> = None,
+        progress_fn: Option<PyObject> = None
+    )  -> PyResult<downloadstats> {
+        let rootdir = make_path(py, &rootdir)?;
+        let mfnodes = mfnodes
+            .into_iter()
+            .map(|node| make_node(py, &node))
+            .collect::<PyResult<Vec<_>>>()?;
+        let basemfnodes = basemfnodes
+            .into_iter()
+            .map(|node| make_node(py, &node))
+            .collect::<PyResult<Vec<_>>>()?;
+
+        let mut store = get_deltastore(py, store)?;
+
+        let client = self.inner(py);
+        let progress_fn = progress_fn.map(wrap_callback);
+        let stats = py.allow_threads(move || {
+            client.prefetch_trees(rootdir, mfnodes, basemfnodes, depth, &mut store, progress_fn)
         }).map_pyerr::<exc::RuntimeError>(py)?;
 
         downloadstats::create_instance(py, stats)
@@ -168,13 +208,20 @@ py_class!(class downloadstats |py| {
 });
 
 fn make_key(py: Python, path: &PyBytes, node: &PyBytes) -> PyResult<Key> {
-    let path = path.data(py);
-    let path = RepoPath::from_utf8(path)
-        .map_pyerr::<exc::RuntimeError>(py)?
-        .to_owned();
-    let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-    let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
+    let path = make_path(py, path)?;
+    let node = make_node(py, node)?;
     Ok(Key::new(path, node))
+}
+
+fn make_node(py: Python, node: &PyBytes) -> PyResult<Node> {
+    let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
+    Ok(Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?)
+}
+
+fn make_path(py: Python, path: &PyBytes) -> PyResult<RepoPathBuf> {
+    Ok(RepoPath::from_utf8(path.data(py))
+        .map_pyerr::<exc::RuntimeError>(py)?
+        .to_owned())
 }
 
 fn wrap_callback(callback: PyObject) -> ProgressFn {
