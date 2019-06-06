@@ -41,6 +41,8 @@ pub enum WhitelistEntry {
 pub struct CommonConfig {
     /// Who can interact with Mononoke
     pub security_config: Vec<WhitelistEntry>,
+    /// Parent category to use for load limiting
+    pub loadlimiter_category: Option<String>,
 }
 
 /// Configuration of a single repository

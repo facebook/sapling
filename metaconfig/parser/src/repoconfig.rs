@@ -24,10 +24,9 @@ use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
     CacheWarmupParams, CommonConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
-    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
-    PushParams, PushrebaseParams, RepoConfig, RepoReadOnly,
-    ShardedFilenodesParams, StorageConfig, WhitelistEntry,
-
+    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig, PushParams,
+    PushrebaseParams, RepoConfig, RepoReadOnly, ShardedFilenodesParams, StorageConfig,
+    WhitelistEntry,
 };
 use regex::Regex;
 use toml;
@@ -156,8 +155,21 @@ impl RepoConfigs {
                         ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into(),
                     );
                 }
+
+                let loadlimiter_category = match raw_config.loadlimiter_category {
+                    Some(category) => {
+                        if category.len() > 0 {
+                            Some(category)
+                        } else {
+                            None
+                        }
+                    }
+                    None => None,
+                };
+
                 return Ok(Some(CommonConfig {
                     security_config: whitelisted_entries?,
+                    loadlimiter_category,
                 }));
             }
         }
@@ -472,6 +484,7 @@ impl RepoConfigs {
 #[serde(deny_unknown_fields)]
 struct RawCommonConfig {
     whitelist_entry: Option<Vec<RawWhitelistEntry>>,
+    loadlimiter_category: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -936,6 +949,8 @@ mod test {
             path = "/tmp/www"
         "#;
         let common_content = r#"
+            loadlimiter_category="test-category"
+
             [[whitelist_entry]]
             tier = "tier1"
 
@@ -1138,6 +1153,7 @@ mod test {
                         data: "user".to_string(),
                     },
                 ],
+                loadlimiter_category: Some("test-category".to_string()),
             }
         );
         assert_eq!(
