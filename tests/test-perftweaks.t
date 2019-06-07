@@ -1,35 +1,3 @@
-Test disabling the tag cache
-  $ hg init tagcache
-  $ cd tagcache
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > blackbox=
-  > EOF
-  $ touch a && hg add -q a
-  $ hg commit -qm "Foo"
-  $ hg tag foo
-
-  $ rm -rf .hg/cache .hg/blackbox.log
-  $ hg tags
-  tip                                1:2cc13e58bcd8
-  foo                                0:be5a2292aa62
-#if no-fsmonitor
-  $ hg blackbox | grep tag
-  *> tags (glob)
-  *> writing * bytes to cache/hgtagsfnodes1 (glob)
-  *> writing .hg/cache/tags2-visible with 1 tags (glob)
-  *> tags exited 0 after * seconds (glob)
-#endif
-
-  $ rm -rf .hg/cache .hg/blackbox.log
-  $ hg tags --config perftweaks.disabletags=True
-  tip                                1:2cc13e58bcd8
-  $ hg blackbox | grep tag
-  *> tags* (glob)
-  *> tags --config 'perftweaks.disabletags=True' exited 0 after * seconds (glob)
-
-  $ cd ..
-
 #if osx
 #else
 Test disabling the case conflict check (only fails on case sensitive systems)

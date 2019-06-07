@@ -30,8 +30,7 @@
   >     test_archtype_run "$@"
   > }
   > test_archtype_run() {
-  >     hg serve -p 0 --port-file $TESTTMP/.p -d --pid-file=hg.pid -E errors.log \
-  >         --config extensions.blackbox= --config blackbox.track=develwarn
+  >     hg serve -p 0 --port-file $TESTTMP/.p -d --pid-file=hg.pid -E errors.log
   >     HGPORT=`cat $TESTTMP/.p`
   >     cat hg.pid >> $DAEMON_PIDS
   >     echo % $1 allowed should give 200
@@ -41,7 +40,6 @@
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$4" | head -n 1
   >     killdaemons.py
   >     cat errors.log
-  >     hg blackbox --config extensions.blackbox= --config blackbox.track=
   >     cp .hg/hgrc-base .hg/hgrc
   > }
 
