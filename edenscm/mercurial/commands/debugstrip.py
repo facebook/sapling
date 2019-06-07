@@ -14,18 +14,16 @@ from .. import (
     merge,
     node as nodemod,
     pycompat,
-    registrar,
     repair,
     scmutil,
     util,
 )
 from ..i18n import _
+from .cmdtable import command
 
 
 nullid = nodemod.nullid
 release = lockmod.release
-
-command = registrar.command()
 
 
 def checklocalchanges(repo, force=False, excsuffix=""):

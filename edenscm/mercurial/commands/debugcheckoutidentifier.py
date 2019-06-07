@@ -5,10 +5,7 @@
 
 from __future__ import absolute_import
 
-from .. import registrar
-
-
-command = registrar.command()
+from .cmdtable import command
 
 
 @command("debugcheckoutidentifier", [])

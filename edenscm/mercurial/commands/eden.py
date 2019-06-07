@@ -13,11 +13,9 @@ import struct
 import sys
 import time
 
-from .. import error, extensions, hg, pycompat, registrar, scmutil, txnutil, ui, util
+from .. import error, extensions, hg, pycompat, scmutil, txnutil, ui, util
 from ..i18n import _
-
-
-command = registrar.command()
+from .cmdtable import command
 
 
 if pycompat.iswindows:

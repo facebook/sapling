@@ -25,17 +25,13 @@ from .. import (
     copies,
     error,
     pycompat,
-    registrar,
     rewriteutil,
     scmutil,
     treestate,
 )
 from ..i18n import _
 from ..node import nullid
-
-
-cmdtable = {}
-command = registrar.command(cmdtable)
+from .cmdtable import command
 
 
 @command(

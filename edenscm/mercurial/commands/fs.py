@@ -10,11 +10,9 @@ from __future__ import absolute_import
 import errno
 import subprocess
 
-from .. import cmdutil, error, registrar
+from .. import cmdutil, error
 from ..i18n import _
-
-
-command = registrar.command()
+from .cmdtable import command
 
 
 @command("fs", [], subonly=True, norepo=True)

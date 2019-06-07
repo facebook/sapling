@@ -7,11 +7,9 @@
 
 from __future__ import absolute_import
 
-from .. import mutation, node as nodemod, pycompat, registrar, scmutil, util, visibility
+from .. import mutation, node as nodemod, pycompat, scmutil, util, visibility
 from ..i18n import _
-
-
-command = registrar.command()
+from .cmdtable import command
 
 
 @command(b"debugmutation", [], _("[REV]"))

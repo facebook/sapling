@@ -17,16 +17,7 @@ import subprocess
 import sys
 import time
 
-from . import (
-    debug,
-    debugcheckoutidentifier,
-    debugmutation,
-    debugstatus,
-    debugstrip,
-    eden,
-    fs,
-    uncommit,
-)
+from . import cmdtable
 from .. import (
     archival,
     bookmarks,
@@ -64,29 +55,33 @@ from .. import (
     streamclone,
     tags as tagsmod,
     templatekw,
-    treestate,
     ui as uimod,
     util,
 )
+from ... import hgdemandimport
 from ..i18n import _
 from ..node import bin, hex, nullid, nullrev, short
 
 
+with hgdemandimport.disabled():
+    # Importing these modules have side effect on the command table.
+    from . import (  # noqa: F401
+        debug,
+        debugcheckoutidentifier,
+        debugmutation,
+        debugstatus,
+        debugstrip,
+        eden,
+        fs,
+        uncommit,
+    )
+
 release = lockmod.release
 
-table = {}
-table.update(debug.command._table)
+table = cmdtable.table
+command = cmdtable.command
 
-command = registrar.command(table)
 readonly = registrar.command.readonly
-
-table.update(uncommit.cmdtable)
-table.update(debugcheckoutidentifier.command._table)
-table.update(debugmutation.command._table)
-table.update(debugstatus.command._table)
-table.update(debugstrip.command._table)
-table.update(eden.command._table)
-table.update(fs.command._table)
 
 # common command options
 

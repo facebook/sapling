@@ -53,7 +53,6 @@ from .. import (
     progress,
     pvec,
     pycompat,
-    registrar,
     repair,
     revlog,
     revset,
@@ -73,11 +72,10 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid, nullrev, short
+from .cmdtable import command
 
 
 release = lockmod.release
-
-command = registrar.command()
 
 try:
     xrange(0)

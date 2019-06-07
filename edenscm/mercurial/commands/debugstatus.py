@@ -3,11 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from .. import error, registrar
+from .. import error
 from ..i18n import _
-
-
-command = registrar.command()
+from .cmdtable import command
 
 
 @command("debugstatus", [("n", "nonnormal", 0, _("print nonnormalfiltered samples"))])
