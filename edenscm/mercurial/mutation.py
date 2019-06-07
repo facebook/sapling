@@ -830,6 +830,8 @@ def convertfromobsmarkers(repo):
 
 def automigrate(repo):
     if recording(repo) and repo.ui.configbool("mutation", "automigrate"):
-        msg = _("checking for new obsmarkers to migrate to the mutation store\n")
+        msg = _(
+            "checking for new obsmarkers to migrate to the mutation store (https://fburl.com/hgmutation)\n"
+        )
         repo.ui.status(msg)
         convertfromobsmarkers(repo)
