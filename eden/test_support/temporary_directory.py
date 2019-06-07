@@ -37,6 +37,8 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
         exc_info: Tuple[Type, BaseException, types.TracebackType],
     ) -> None:
         _ex_type, ex, _traceback = exc_info
+        # pyre-fixme[29]: `Union[Callable[[object], bool], Callable[[object], bool],
+        #  Callable[[object], bool], Callable[[object], bool]]` is not a function.
         if path == tmp_dir:
             logging.warning(
                 f"failed to remove temporary test directory {tmp_dir}: {ex}"
