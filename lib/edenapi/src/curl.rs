@@ -11,7 +11,7 @@ use std::{
 use bytes::Bytes;
 use curl::{
     self,
-    easy::{Easy2, Handler, HttpVersion, List, WriteError},
+    easy::{Easy2, Handler, HttpVersion, List},
     multi::Multi,
 };
 use failure::{bail, ensure, err_msg, Fallible};
@@ -22,6 +22,7 @@ use serde_cbor;
 use url::Url;
 
 use driver::MultiDriver;
+use handler::Collector;
 use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
@@ -30,10 +31,11 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::progress::{ProgressFn, ProgressHandle, ProgressManager, ProgressStats};
+use crate::progress::{ProgressFn, ProgressManager};
 use crate::stats::DownloadStats;
 
 mod driver;
+mod handler;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";
@@ -284,59 +286,6 @@ impl EdenApiCurlClient {
             num_entries
         );
         Ok(stats)
-    }
-}
-
-/// Simple Handler that just writes all received data to an internal buffer.
-struct Collector {
-    data: Vec<u8>,
-    progress: Option<ProgressHandle>,
-}
-
-impl Collector {
-    fn new() -> Self {
-        Self {
-            data: Vec::new(),
-            progress: None,
-        }
-    }
-
-    fn with_progress(progress: ProgressHandle) -> Self {
-        Self {
-            data: Vec::new(),
-            progress: Some(progress),
-        }
-    }
-
-    fn data(&self) -> &[u8] {
-        &self.data
-    }
-}
-
-impl Handler for Collector {
-    fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
-        self.data.extend_from_slice(data);
-        Ok(data.len())
-    }
-
-    fn header(&mut self, data: &[u8]) -> bool {
-        if log::log_enabled!(log::Level::Trace) {
-            let line = String::from_utf8_lossy(data);
-            log::trace!("Received header: {:?}", line);
-        }
-        true
-    }
-
-    fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
-        if let Some(ref progress) = self.progress {
-            let dltotal = dltotal as usize;
-            let dlnow = dlnow as usize;
-            let ultotal = ultotal as usize;
-            let ulnow = ulnow as usize;
-            let stats = ProgressStats::new(dlnow, ulnow, dltotal, ultotal);
-            progress.update(stats);
-        }
-        true
     }
 }
 
