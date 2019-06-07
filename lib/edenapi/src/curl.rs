@@ -319,6 +319,14 @@ impl Handler for Collector {
         Ok(data.len())
     }
 
+    fn header(&mut self, data: &[u8]) -> bool {
+        if log::log_enabled!(log::Level::Trace) {
+            let line = String::from_utf8_lossy(data);
+            log::trace!("Received header: {:?}", line);
+        }
+        true
+    }
+
     fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
         if let Some(ref progress) = self.progress {
             let dltotal = dltotal as usize;
