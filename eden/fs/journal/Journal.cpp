@@ -100,10 +100,10 @@ std::optional<JournalStats> Journal::getStats() {
     ++stats.entryCount;
     stats.latestTimestamp = std::max(stats.latestTimestamp, curr->toTime);
     stats.earliestTimestamp = std::min(stats.earliestTimestamp, curr->fromTime);
+    stats.memoryUsage += curr->estimateMemoryUsage();
     curr = curr->previous;
   }
   return stats;
 }
-
 } // namespace eden
 } // namespace facebook

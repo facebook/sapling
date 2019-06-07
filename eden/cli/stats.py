@@ -85,6 +85,20 @@ def do_stats_general(
         files = info.loadedFileCount
         trees = info.loadedTreeCount
 
+        if stat_info.mountPointJournalInfo is None:
+            journal = None
+        else:
+            journal = stat_info.mountPointJournalInfo.get(key)
+
+        if journal is None:
+            journalLine = ""
+        else:
+            entries = journal.entryCount
+            mem = journal.memoryUsage
+            journalLine = (
+                f"- Journal entry count: {entries} "
+                f"(memory usage: {stats_print.format_size(mem)})\n"
+            )
         out.write(
             textwrap.dedent(
                 f"""\
@@ -92,7 +106,7 @@ def do_stats_general(
               - Inodes in memory: {in_memory} ({trees} trees, {files} files)
               - Unloaded, tracked inodes: {info.unloadedInodeCount}
               - Loaded and materialized inodes: {info.materializedInodeCount}
-
+              {journalLine}
             """
             )
         )

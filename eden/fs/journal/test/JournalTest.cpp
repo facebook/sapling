@@ -254,3 +254,22 @@ TEST(Journal, fully_pruned_journal_stats) {
   auto stats = journal.getStats();
   ASSERT_FALSE(stats.has_value());
 }
+
+TEST(Journal, memory_usage) {
+  Journal journal;
+  auto stats = journal.getStats();
+  uint64_t prevMem = stats ? stats->memoryUsage : 0;
+  for (int i = 0; i < 10; i++) {
+    if (i % 2 == 0) {
+      journal.addDelta(std::make_unique<JournalDelta>(
+          "test.txt"_relpath, JournalDelta::CREATED));
+    } else {
+      journal.addDelta(std::make_unique<JournalDelta>(
+          "test.txt"_relpath, JournalDelta::REMOVED));
+    }
+    stats = journal.getStats();
+    uint64_t newMem = stats ? stats->memoryUsage : 0;
+    ASSERT_GT(newMem, prevMem);
+    prevMem = newMem;
+  }
+}

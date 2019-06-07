@@ -113,6 +113,9 @@ class JournalDelta {
       SequenceNumber limitSequence = 0,
       bool pruneAfterLimit = false) const;
 
+  /** Get memory used (in bytes) by this Delta */
+  size_t estimateMemoryUsage() const;
+
  private:
   void incRef() const noexcept;
   void decRef() const noexcept;

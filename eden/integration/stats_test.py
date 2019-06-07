@@ -7,10 +7,13 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+
 import logging
 import time
 import typing
 from pathlib import Path
+
+from facebook.eden.ttypes import JournalInfo
 
 from .lib import testcase
 from .lib.hgrepo import HgRepository
@@ -122,4 +125,37 @@ class HgImporterStatsTest(testcase.EdenRepoTest):
         # inside the root.
         self.repo.write_file("dir/subdir/file", "hello world!\n")
 
+        self.repo.commit("Initial commit.")
+
+
+@testcase.eden_repo_test
+class JournalInfoTest(testcase.EdenRepoTest):
+    def test_journal_info(self) -> None:
+        journal = self.journal_stats()
+        old_mem = journal.memoryUsage
+        old_data_counts = journal.entryCount
+        path = Path(self.mount) / "new_file"
+        path.write_bytes(b"hello")
+        journal = self.journal_stats()
+        new_mem = journal.memoryUsage
+        new_data_counts = journal.entryCount
+        self.assertLess(
+            old_data_counts,
+            new_data_counts,
+            "Changing the repo should cause entry count to increase",
+        )
+        self.assertLess(
+            old_mem, new_mem, "Changing the repo should cause memory usage to increase"
+        )
+
+    def journal_stats(self) -> JournalInfo:
+        with self.get_thrift_client() as thrift_client:
+            stats = thrift_client.getStatInfo()
+            journal_key = self.mount.encode()
+            journal = stats.mountPointJournalInfo[journal_key]
+            self.assertIsNotNone(journal, "Journal does not exist")
+            return journal
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("file", "hello world!\n")
         self.repo.commit("Initial commit.")

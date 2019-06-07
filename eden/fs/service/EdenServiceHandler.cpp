@@ -1233,6 +1233,17 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     mountInodeInfo.loadedFileCount = counts.fileCount;
     mountInodeInfo.loadedTreeCount = counts.treeCount;
 
+    JournalInfo journalThrift;
+    if (auto journalStats = mount->getJournal().getStats()) {
+      journalThrift.entryCount = journalStats->entryCount;
+      journalThrift.memoryUsage = journalStats->memoryUsage;
+    } else {
+      journalThrift.entryCount = 0;
+      journalThrift.memoryUsage = 0;
+    }
+    result.mountPointJournalInfo[mount->getPath().stringPiece().str()] =
+        journalThrift;
+
     // TODO: Currently getting Materialization status of an inode using
     // getDebugStatus which walks through entire Tree of inodes, in future we
     // can add some mechanism to get materialized inode count without walking

@@ -23,7 +23,8 @@ namespace eden {
 
 /** Contains statistics about the current state of the journal */
 struct JournalStats {
-  uint64_t entryCount = 0;
+  size_t entryCount = 0;
+  size_t memoryUsage = 0;
   std::chrono::steady_clock::time_point earliestTimestamp;
   std::chrono::steady_clock::time_point latestTimestamp;
 };

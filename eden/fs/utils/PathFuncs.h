@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+
 #include <boost/operators.hpp>
 #include <glog/logging.h>
 
@@ -1726,6 +1727,13 @@ inline AbsolutePathPiece operator"" _abspath(
 }
 } // namespace path_literals
 
+/**
+ * Gets memory usage of the path inside the RelativePathBase
+ */
+size_t estimateIndirectMemoryUsage(
+    const detail::RelativePathBase<std::string>& path);
+size_t estimateIndirectMemoryUsage(
+    const detail::RelativePathBase<folly::fbstring>& path);
 } // namespace eden
 } // namespace facebook
 
