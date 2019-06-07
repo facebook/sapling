@@ -32,6 +32,21 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
       delta->toHash = delta->fromHash;
     }
 
+    if (deltaState->stats) {
+      ++(deltaState->stats->entryCount);
+      deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
+      deltaState->stats->earliestTimestamp =
+          std::min(deltaState->stats->earliestTimestamp, delta->fromTime);
+      deltaState->stats->latestTimestamp =
+          std::max(deltaState->stats->latestTimestamp, delta->toTime);
+    } else {
+      deltaState->stats = JournalStats();
+      deltaState->stats->entryCount = 1;
+      deltaState->stats->memoryUsage = delta->estimateMemoryUsage();
+      deltaState->stats->earliestTimestamp = delta->fromTime;
+      deltaState->stats->latestTimestamp = delta->toTime;
+    }
+
     deltaState->latest = JournalDeltaPtr{std::move(delta)};
   }
 
@@ -44,11 +59,6 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
 
 JournalDeltaPtr Journal::getLatest() const {
   return deltaState_.rlock()->latest;
-}
-
-void Journal::replaceJournal(std::unique_ptr<JournalDelta>&& delta) {
-  auto deltaState = deltaState_.wlock();
-  deltaState->latest = JournalDeltaPtr{std::move(delta)};
 }
 
 uint64_t Journal::registerSubscriber(SubscriberCallback&& callback) {
@@ -88,22 +98,7 @@ bool Journal::isSubscriberValid(uint64_t id) const {
 }
 
 std::optional<JournalStats> Journal::getStats() {
-  JournalStats stats;
-  auto curr = getLatest();
-  if (curr == nullptr) {
-    // return None since this is an empty journal
-    return std::nullopt;
-  }
-  stats.latestTimestamp = curr->toTime;
-  stats.earliestTimestamp = curr->fromTime;
-  while (curr != nullptr) {
-    ++stats.entryCount;
-    stats.latestTimestamp = std::max(stats.latestTimestamp, curr->toTime);
-    stats.earliestTimestamp = std::min(stats.earliestTimestamp, curr->fromTime);
-    stats.memoryUsage += curr->estimateMemoryUsage();
-    curr = curr->previous;
-  }
-  return stats;
+  return deltaState_.rlock()->stats;
 }
 } // namespace eden
 } // namespace facebook

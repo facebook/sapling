@@ -66,12 +66,6 @@ class Journal {
    * May return nullptr if there have been no changes */
   JournalDeltaPtr getLatest() const;
 
-  /** Replace the journal with a new delta.
-   * The new delta will typically be the result of JournalDelta::merge().
-   * No sanity checking is performed inside this function; the
-   * supplied delta is moved in and replaces current tip. */
-  void replaceJournal(std::unique_ptr<JournalDelta>&& delta);
-
   /** Register a subscriber.
    * A subscriber is just a callback that is called whenever the
    * journal has changed.
@@ -100,6 +94,8 @@ class Journal {
     SequenceNumber nextSequence{1};
     /** The most recently recorded entry */
     JournalDeltaPtr latest;
+    /** The stats about this Journal up to the latest delta */
+    std::optional<JournalStats> stats;
   };
   folly::Synchronized<DeltaState> deltaState_;
 
