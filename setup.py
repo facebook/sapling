@@ -1176,7 +1176,7 @@ class buildembedded(Command):
         if not self.local_bins:
             # copy .exe's from ./build/lib.win-amd64/, not from ./
             bindir = pjoin(scriptdir, "build", distutils_dir_name("scripts"))
-            sourcename = "hg.rust.exe" if iswindows else "hg.rust"
+            sourcename = "hg.exe" if iswindows else "hg.rust"
         else:
             sourcename = "hg.exe" if iswindows else "hg"
         targetname = "hg.exe" if iswindows else "hg"
