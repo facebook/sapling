@@ -1,8 +1,7 @@
 // Copyright Facebook, Inc. 2019
 
 use std::{
-    cmp, fs,
-    path::PathBuf,
+    cmp,
     sync::mpsc::channel,
     sync::{Arc, Mutex, MutexGuard},
     thread,
@@ -82,7 +81,6 @@ pub struct EdenApiCurlClient {
     multi: SyncMulti,
     base_url: Url,
     repo: String,
-    cache_path: PathBuf,
     creds: Option<ClientCreds>,
     data_batch_size: Option<usize>,
     history_batch_size: Option<usize>,
@@ -102,31 +100,15 @@ impl EdenApiCurlClient {
             None => bail!("No repo name specified"),
         };
 
-        let cache_path = match config.cache_path {
-            Some(path) => path,
-            None => bail!("No cache path specified"),
-        };
-        ensure!(
-            cache_path.is_dir(),
-            "Configured cache path {:?} is not a directory",
-            &cache_path
-        );
-
-        let client = Self {
+        Ok(Self {
             multi: SyncMulti::new(),
             base_url,
             repo,
-            cache_path,
             creds: config.creds,
             data_batch_size: config.data_batch_size,
             history_batch_size: config.history_batch_size,
             validate: config.validate,
-        };
-
-        // Create repo/packs directory in cache if it doesn't already exist.
-        fs::create_dir_all(client.pack_cache_path())?;
-
-        Ok(client)
+        })
     }
 }
 
@@ -257,10 +239,6 @@ impl EdenApi for EdenApiCurlClient {
 impl EdenApiCurlClient {
     fn repo_base_url(&self) -> Fallible<Url> {
         Ok(self.base_url.join(&format!("{}/", &self.repo))?)
-    }
-
-    fn pack_cache_path(&self) -> PathBuf {
-        self.cache_path.join(&self.repo).join("packs")
     }
 
     fn get_data(

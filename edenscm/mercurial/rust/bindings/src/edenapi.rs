@@ -36,7 +36,6 @@ py_class!(class client |py| {
     def __new__(
         _cls,
         url: &PyBytes,
-        cachepath: &PyBytes,
         repo: &PyBytes,
         creds: Option<(&PyBytes, &PyBytes)> = None,
         databatchsize: Option<usize> = None,
@@ -44,13 +43,11 @@ py_class!(class client |py| {
         validate: bool = true
     ) -> PyResult<client> {
         let url = str::from_utf8(url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-        let cachepath = local_bytes_to_path(&cachepath.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
 
         let mut config = Config::new()
             .base_url_str(url)
             .map_pyerr::<exc::RuntimeError>(py)?
-            .cache_path(cachepath)
             .repo(repo)
             .data_batch_size(databatchsize)
             .history_batch_size(historybatchsize)

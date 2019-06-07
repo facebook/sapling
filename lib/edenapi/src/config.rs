@@ -10,7 +10,6 @@ pub struct Config {
     pub(crate) base_url: Option<Url>,
     pub(crate) creds: Option<ClientCreds>,
     pub(crate) repo: Option<String>,
-    pub(crate) cache_path: Option<PathBuf>,
     pub(crate) data_batch_size: Option<usize>,
     pub(crate) history_batch_size: Option<usize>,
     pub(crate) validate: bool,
@@ -46,13 +45,6 @@ impl Config {
     /// Should correspond to the remotefilelog.reponame config item.
     pub fn repo(mut self, repo: impl ToString) -> Self {
         self.repo = Some(repo.to_string());
-        self
-    }
-
-    /// Set the path of the cache directory where packfiles are stored.
-    /// Should correspond to the remotefilelog.cachepath config item.
-    pub fn cache_path(mut self, path: impl AsRef<Path>) -> Self {
-        self.cache_path = Some(path.as_ref().to_path_buf());
         self
     }
 

@@ -9,8 +9,6 @@ from edenscm.mercurial import error, httpconnection
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.rust.bindings import edenapi
 
-from . import shallowutil
-
 
 # Set to True to manually disable HTTPS fetching.
 _disabled = False
@@ -68,7 +66,6 @@ def initclient(ui, repo):
     url = getbaseurl(ui)
     kwargs = {
         "url": url,
-        "cachepath": shallowutil.getcachepath(ui),
         "repo": repo.name,
         "creds": getcreds(ui, url),
         "databatchsize": ui.configint("edenapi", "databatchsize"),
