@@ -174,8 +174,6 @@ Run seqimport again for up to 50 changelists
   Main/x
   committing manifest
   committing changelog
-  largefile: Main/largefile, oid: 9586437c941c1df9d22f2f2775f00af95943f9de519ee478c45d56bbd002cc95
-  writing lfs metadata to sqlite
   writing metadata to sqlite
 
 Confirm Main/x is no longer executable and Main/symlink is no longer a symlink
@@ -226,7 +224,6 @@ Verify that metadata is populated in sqlite file
   2|2|* (glob)
   3|3|* (glob)
   $ sqlite3 metadata.sql "SELECT id, cl, path FROM p4_lfs_map"
-  1|3|//depot/Main/largefile
 
 End Test
   stopping the p4 server

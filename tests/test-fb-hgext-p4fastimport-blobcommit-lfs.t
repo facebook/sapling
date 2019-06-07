@@ -59,8 +59,6 @@ Sync Commit
   file: //depot/Main/largefile, src: * (glob)
   committing manifest
   committing changelog
-  largefile: Main/largefile, oid: 37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9
-  writing lfs metadata to sqlite
   importing CL2
   file: //depot/Main/a, src: * (glob)
   file: //depot/Main/largefile, src: * (glob)
@@ -69,8 +67,6 @@ Sync Commit
   Main/largefile
   committing manifest
   committing changelog
-  largefile: Main/largefile, oid: b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c
-  writing lfs metadata to sqlite
 
 
   $ cd $p4wd
@@ -101,8 +97,6 @@ Sync Commit
   file: //depot/Outside/b, src: * (glob)
   committing manifest
   committing changelog
-  largefile: Outside/anotherlargefile, oid: 9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c
-  writing lfs metadata to sqlite
 
   $ hg manifest -vr tip
   644   Main/a
@@ -124,9 +118,6 @@ Verify
 
   $ test -d .hg/store/lfs/objects
   $ sqlite3 lfs.sql "SELECT * FROM p4_lfs_map"
-  1|1|*|37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9|//depot/Main/largefile (glob)
-  2|2|*|b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c|//depot/Main/largefile (glob)
-  3|3|*|9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c|//depot/Outside/anotherlargefile (glob)
 
 End Test
 
