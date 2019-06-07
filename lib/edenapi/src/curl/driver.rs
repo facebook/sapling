@@ -17,18 +17,18 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Struct that manages a curl::Multi session, synchronously driving
 /// all of the transfers therein to completion.
-pub struct MultiDriver<H> {
-    multi: Multi,
+pub struct MultiDriver<'a, H> {
+    multi: &'a mut Multi,
     handles: RefCell<Vec<Option<Easy2Handle<H>>>>,
     progress: Option<ProgressManager>,
     num_transfers: usize,
     fail_early: bool,
 }
 
-impl<H: Handler> MultiDriver<H> {
-    pub fn with_capacity(capacity: usize) -> Self {
+impl<'a, H: Handler> MultiDriver<'a, H> {
+    pub fn with_capacity(multi: &'a mut Multi, capacity: usize) -> Self {
         Self {
-            multi: Multi::new(),
+            multi,
             handles: RefCell::new(Vec::with_capacity(capacity)),
             progress: None,
             num_transfers: 0,

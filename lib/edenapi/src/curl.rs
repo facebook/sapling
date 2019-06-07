@@ -1,11 +1,19 @@
 // Copyright Facebook, Inc. 2019
 
-use std::{cmp, fs, path::PathBuf, sync::mpsc::channel, thread, time::Instant};
+use std::{
+    cmp, fs,
+    path::PathBuf,
+    sync::mpsc::channel,
+    sync::{Arc, Mutex, MutexGuard},
+    thread,
+    time::Instant,
+};
 
 use bytes::Bytes;
 use curl::{
     self,
     easy::{Easy2, Handler, HttpVersion, List, WriteError},
+    multi::Multi,
 };
 use failure::{bail, ensure, err_msg, Fallible};
 use itertools::Itertools;
@@ -37,7 +45,41 @@ mod paths {
     pub const PREFETCH_TREES: &str = "eden/trees/prefetch";
 }
 
+/// A thread-safe wrapper around a `curl::Multi` handle.
+///
+/// Ordinarily, a `curl::Multi` handle does not implement `Send` and `Sync`
+/// because it contains a mutable pointer to the underlying C curl handle.
+/// However, accoding to curl's documentation [1]:
+///
+/// > You must never share the same handle in multiple threads. You can pass the
+/// > handles around among threads, but you must never use a single handle from
+/// > more than one thread at any given time.
+///
+/// This means that as long as we wrap the handle in a Mutex to prevent concurrent
+/// access from multiple threads, the handle can safely be shared across threads.
+/// Note that given that the underlying `curl::Multi` handle is created in `new()`
+/// and is private to the struct, the pointer contained therein can be assumed to
+/// be unique, avoiding issues with mutable pointer aliasing.
+///
+/// [1]: https://curl.haxx.se/libcurl/c/threadsafe.html
+#[derive(Clone)]
+struct SyncMulti(Arc<Mutex<Multi>>);
+
+impl SyncMulti {
+    fn new() -> Self {
+        Self(Arc::new(Mutex::new(Multi::new())))
+    }
+
+    fn lock(&self) -> MutexGuard<'_, Multi> {
+        self.0.lock().expect("curl multi handle lock poisoned")
+    }
+}
+
+unsafe impl Send for SyncMulti {}
+unsafe impl Sync for SyncMulti {}
+
 pub struct EdenApiCurlClient {
+    multi: SyncMulti,
     base_url: Url,
     repo: String,
     cache_path: PathBuf,
@@ -71,6 +113,7 @@ impl EdenApiCurlClient {
         );
 
         let client = Self {
+            multi: SyncMulti::new(),
             base_url,
             repo,
             cache_path,
@@ -155,9 +198,12 @@ impl EdenApi for EdenApiCurlClient {
             depth: max_depth,
         });
 
+        let mut multi = self.multi.lock();
+
         let mut num_responses = 0;
         let mut num_entries = 0;
         let stats = multi_request(
+            &mut multi,
             &url,
             self.creds.as_ref(),
             requests,
@@ -201,7 +247,7 @@ impl EdenApi for EdenApiCurlClient {
         let url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
         let creds = self.creds.as_ref();
         let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
-        multi_request_threaded(&url, creds, requests, progress, |res| {
+        multi_request_threaded(self.multi.clone(), &url, creds, requests, progress, |res| {
             add_data_response(store, res, self.validate)
         })
     }
@@ -242,6 +288,7 @@ impl EdenApiCurlClient {
         let mut num_responses = 0;
         let mut num_entries = 0;
         let stats = multi_request_threaded(
+            self.multi.clone(),
             &url,
             self.creds.as_ref(),
             requests,
@@ -311,7 +358,8 @@ impl Handler for Collector {
 /// CBOR payload of each respective request. Assumes that the responses are
 /// CBOR encoded, and automatically deserializes them before passing
 /// them to the given callback.
-fn multi_request<R, I, T, F>(
+fn multi_request<'a, R, I, T, F>(
+    multi: &'a mut Multi,
     url: &Url,
     creds: Option<&ClientCreds>,
     requests: I,
@@ -328,7 +376,7 @@ where
     let num_requests = requests.len();
 
     let mut progress = ProgressManager::with_capacity(num_requests);
-    let mut driver = MultiDriver::with_capacity(num_requests);
+    let mut driver = MultiDriver::with_capacity(multi, num_requests);
     driver.fail_early(true);
 
     for request in requests {
@@ -390,6 +438,7 @@ where
 /// expensive and/or blocking operations upon receiving a response
 /// without affecting the other ongoing HTTP transfers.
 fn multi_request_threaded<R, I, T, F>(
+    multi: SyncMulti,
     url: &Url,
     creds: Option<&ClientCreds>,
     requests: I,
@@ -412,7 +461,9 @@ where
     log::debug!("Spawning HTTP I/O thread");
     let (tx, rx) = channel();
     let iothread = thread::spawn(move || {
+        let mut multi = multi.lock();
         multi_request(
+            &mut multi,
             &url,
             creds.as_ref(),
             requests,
