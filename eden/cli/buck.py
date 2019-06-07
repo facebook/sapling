@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import errno
 import glob
 import os
 import subprocess
@@ -27,6 +28,24 @@ def find_buck_projects_in_repo(path: str) -> List[str]:
     return projects
 
 
+def is_buckd_running_for_path(path: str) -> bool:
+    pid_file = os.path.join(path, ".buckd", "pid")
+    try:
+        with open(pid_file, "r") as f:
+            buckd_pid = int(f.read().strip())
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return False
+        raise
+
+    # Test whether that pid is still alive
+    try:
+        os.kill(buckd_pid, 0)
+        return True
+    except OSError:
+        return False
+
+
 def stop_buckd_for_path(path: str) -> None:
     print(f"Stopping buck in {path}...")
     subprocess.run(
@@ -44,7 +63,8 @@ def stop_buckd_for_path(path: str) -> None:
 def stop_buckd_for_repo(path: str) -> None:
     """Stop the major buckd instances that are likely to be running for path"""
     for project in find_buck_projects_in_repo(path):
-        stop_buckd_for_path(project)
+        if is_buckd_running_for_path(project):
+            stop_buckd_for_path(project)
 
 
 def buck_clean_repo(path: str) -> None:
