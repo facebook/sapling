@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use actix_web::{self, Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
+use hostname::get_hostname;
 use serde::Serialize;
 use serde_cbor;
 
@@ -61,6 +62,7 @@ fn cbor_response(content: impl Serialize) -> HttpResponse {
     let content = serde_cbor::to_vec(&content).unwrap();
     HttpResponse::Ok()
         .content_type("application/cbor")
+        .header("x-served-by", get_hostname().unwrap_or_default())
         .body(Body::Binary(content.into()))
 }
 
@@ -72,9 +74,7 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } | GetBlobContent { content } => {
-                Ok(binary_response(content))
-            }
+            GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
