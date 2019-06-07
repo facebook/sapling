@@ -554,7 +554,7 @@ class mutablebasepack(versionmixin):
 
     def flush(self):
         path = self.close()
-        self.__init__(self._ui, self._packdir)
+        self.__init__(self._ui, self._packdir, version=self.VERSION)
         return path
 
     def __del__(self):

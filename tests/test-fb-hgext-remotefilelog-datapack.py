@@ -36,10 +36,13 @@ except NameError:
 
 
 class datapacktestsbase(object):
-    def __init__(self, datapackreader, paramsavailable, iscdatapack):
+    def __init__(
+        self, datapackreader, paramsavailable, iscdatapack, rustmutabledatapack
+    ):
         self.datapackreader = datapackreader
         self.iscdatapack = iscdatapack
         self.paramsavailable = paramsavailable
+        self.rustmutabledatapack = rustmutabledatapack
 
     def setUp(self):
         self.tempdirs = []
@@ -66,7 +69,10 @@ class datapacktestsbase(object):
         if packdir is None:
             packdir = self.makeTempDir()
 
-        packer = mutabledatapack(uimod.ui(), packdir, version=version)
+        if self.rustmutabledatapack:
+            packer = revisionstore.mutabledeltastore(packfilepath=packdir)
+        else:
+            packer = mutabledatapack(uimod.ui(), packdir, version=version)
 
         for args in revisions:
             filename, node, base, content = args[0:4]
@@ -76,7 +82,7 @@ class datapacktestsbase(object):
                 meta = args[4]
             packer.add(filename, node, base, content, metadata=meta)
 
-        path = packer.close()
+        path = packer.flush()
         return self.datapackreader(path)
 
     def _testAddSingle(self, content):
@@ -189,6 +195,10 @@ class datapacktestsbase(object):
             self.assertEquals(parsedmeta, origmeta)
 
     def testPackMetadataThrows(self):
+        # Rust based mutable datapack don't support versions.
+        if self.rustmutabledatapack:
+            return
+
         filename = "1"
         content = "2"
         node = self.getHash(content)
@@ -546,19 +556,19 @@ class datapacktestsbase(object):
 
 class datapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, datapack, True, False)
+        datapacktestsbase.__init__(self, datapack, True, False, False)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
 class fastdatapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, fastdatapack, False, True)
+        datapacktestsbase.__init__(self, fastdatapack, False, True, False)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
 class rustdatapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, revisionstore.datapack, False, True)
+        datapacktestsbase.__init__(self, revisionstore.datapack, False, True, True)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
