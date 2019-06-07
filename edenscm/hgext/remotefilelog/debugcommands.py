@@ -530,6 +530,26 @@ def debuggetfiles(ui, repo, **opts):
     ui.write(_("wrote datapack: %s\n") % packpath)
 
 
+def debugserialgetfiles(ui, repo, **opts):
+    edenapi.bailifdisabled(ui)
+
+    input = (line.split() for line in sys.stdin.readlines())
+    keys = [(path, node) for node, path in input]
+
+    dpack, __ = repo.fileslog.getmutablesharedpacks()
+
+    start = util.timer()
+    for key in keys:
+        stats = repo.edenapi.get_files([key], dpack)
+        ui.write(stats.to_str() + "\n")
+    end = util.timer()
+
+    ui.write(_("elapsed time: %f s\n") % (end - start))
+
+    packpath, __ = repo.fileslog._mutablesharedpacks.commit()
+    ui.write(_("wrote datapack: %s\n") % packpath)
+
+
 def debuggethistory(ui, repo, **opts):
     edenapi.bailifdisabled(ui)
 

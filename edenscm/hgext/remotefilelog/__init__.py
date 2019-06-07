@@ -1298,6 +1298,16 @@ def debuggetfiles(ui, repo, **opts):
     return debugcommands.debuggetfiles(ui, repo, **opts)
 
 
+@command("debugserialgetfiles", [], _("hg debugserialgetfiles"))
+def debugserialgetfiles(ui, repo, **opts):
+    """serially download file content from the API server
+    Read filenode/path pairs from stdin, fetch the content of each file
+    from the API server one at a time. This is useful for testing the
+    performance of serial fetching, which should ordinarily be avoided.
+    """
+    return debugcommands.debugserialgetfiles(ui, repo, **opts)
+
+
 @command(
     "debuggethistory",
     [("d", "depth", 0, _("how many history entries to fetch per file"), _("DEPTH"))],
