@@ -728,6 +728,16 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
       edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
         return edenMount->getInodeMap()->getUnloadedInodeCount();
       });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_MEMORY), [edenMount] {
+        auto stats = edenMount->getJournal().getStats();
+        return stats ? stats->memoryUsage : 0;
+      });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_ENTRIES), [edenMount] {
+        auto stats = edenMount->getJournal().getStats();
+        return stats ? stats->entryCount : 0;
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

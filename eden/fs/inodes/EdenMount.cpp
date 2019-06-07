@@ -49,6 +49,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::Future;
@@ -847,12 +848,16 @@ SharedRenameLock EdenMount::acquireSharedRenameLock() {
 }
 
 std::string EdenMount::getCounterName(CounterName name) {
-  const auto prefix = getPath().stringPiece().str();
+  const auto base = basename(getPath().stringPiece()).str();
   switch (name) {
     case CounterName::LOADED:
-      return prefix + ".loaded";
+      return base + ".loaded";
     case CounterName::UNLOADED:
-      return prefix + ".unloaded";
+      return base + ".unloaded";
+    case CounterName::JOURNAL_MEMORY:
+      return "journal." + base + ".memory";
+    case CounterName::JOURNAL_ENTRIES:
+      return "journal." + base + ".count";
   }
   EDEN_BUG() << "unknown counter name " << static_cast<int>(name);
   folly::assume_unreachable();

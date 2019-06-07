@@ -82,7 +82,15 @@ enum class CounterName {
   /**
    * Represents count of unloaded inodes in the current mount.
    */
-  UNLOADED
+  UNLOADED,
+  /**
+   * Represents the amount of memory used by deltas in the change log
+   */
+  JOURNAL_MEMORY,
+  /**
+   * Represents the number of entries in the change log
+   */
+  JOURNAL_ENTRIES
 };
 
 /**
