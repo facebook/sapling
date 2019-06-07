@@ -90,7 +90,7 @@ impl<H: Handler> MultiDriver<H> {
 
             // Check for messages; a message indicates a transfer completed (successfully or not).
             let mut should_report_progress = false;
-            let mut error = None;
+            let mut errors = Vec::new();
             self.multi.messages(|msg| {
                 let token = msg.token().unwrap();
                 log::trace!("Got message for transfer {}", token);
@@ -103,21 +103,21 @@ impl<H: Handler> MultiDriver<H> {
                         match self.take_handle(token) {
                             Ok(Some(handle)) => {
                                 if let Err(e) = callback(Ok(handle)) {
-                                    error = Some(e);
+                                    errors.push(e);
                                 }
                             }
                             Ok(None) => {
                                 log::trace!("Handle already taken");
                             }
                             Err(e) => {
-                                error = Some(e);
+                                errors.push(e);
                             }
                         }
                     }
                     Some(Err(e)) => {
                         log::trace!("Transfer {} failed: {}", token, &e);
                         if let Err(e) = callback(Err(e)) {
-                            error = Some(e);
+                            errors.push(e);
                         }
                     }
                     None => {
@@ -128,11 +128,9 @@ impl<H: Handler> MultiDriver<H> {
                 }
             });
 
-            if let Some(e) = error {
-                if self.fail_early {
-                    log::debug!("At least one transfer failed; aborting.");
-                    return Err(e);
-                }
+            if self.fail_early && !errors.is_empty() {
+                log::debug!("{} transfer(s) failed; aborting.", errors.len());
+                return Err(errors.pop().unwrap());
             }
 
             if should_report_progress {
