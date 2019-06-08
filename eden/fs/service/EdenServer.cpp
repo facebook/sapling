@@ -215,20 +215,22 @@ Future<Unit> EdenServer::unmountAll() {
     for (auto& entry : *mountPoints) {
       auto& info = entry.second;
 
-      // TODO(strager): Keep the EdenMount shared_ptr alive during the call to
-      // unmount.
-      auto future =
-          info.edenMount->unmount()
-              .thenValue([unmountFuture =
-                              info.unmountPromise.getFuture()](auto&&) mutable {
-                return std::move(unmountFuture);
-              })
-              .thenError(
-                  [path = entry.first.str()](folly::exception_wrapper&& ew) {
-                    XLOG(ERR) << "Failed to perform unmount for \"" << path
-                              << "\": " << folly::exceptionStr(ew);
-                    return makeFuture<Unit>(ew);
-                  });
+      // Note: capturing the shared_ptr<EdenMount> here in the thenTry() lambda
+      // is important to ensure that the EdenMount object cannot be destroyed
+      // before EdenMount::unmount() completes.
+      auto mount = info.edenMount;
+      auto future = mount->unmount().thenTry(
+          [mount, unmountFuture = info.unmountPromise.getFuture()](
+              auto&& result) mutable {
+            if (result.hasValue()) {
+              return std::move(unmountFuture);
+            } else {
+              XLOG(ERR) << "Failed to perform unmount for \""
+                        << mount->getPath()
+                        << "\": " << folly::exceptionStr(result.exception());
+              return makeFuture<Unit>(result.exception());
+            }
+          });
       futures.push_back(std::move(future));
     }
   }
@@ -898,10 +900,10 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
              mount = it->second.edenMount;
            }
 
-           // TODO(strager): Keep the EdenMount shared_ptr alive during the call
-           // to unmount.
+           // We capture the mount shared_ptr in the lambda to keep the
+           // EdenMount object alive during the call to unmount.
            return mount->unmount().thenValue(
-               [f = std::move(future)](auto&&) mutable {
+               [mount, f = std::move(future)](auto&&) mutable {
                  return std::move(f);
                });
          })
