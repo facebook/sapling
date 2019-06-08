@@ -147,7 +147,7 @@ impl<'a, H: Handler> MultiDriver<'a, H> {
             let timeout = self.multi.get_timeout()?.unwrap_or(DEFAULT_TIMEOUT);
             log::trace!("Waiting for I/O with timeout: {:?}", &timeout);
 
-            let num_active_transfers = self.multi.wait(&mut [], Duration::from_secs(1))?;
+            let num_active_transfers = self.multi.wait(&mut [], timeout)?;
             if num_active_transfers == 0 {
                 log::trace!("Timed out waiting for I/O; polling active transfers anyway.");
             }
