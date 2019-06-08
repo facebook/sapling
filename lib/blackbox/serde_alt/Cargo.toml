@@ -1,0 +1,7 @@
+[package]
+name = "serde_alt"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+proc_macro = true

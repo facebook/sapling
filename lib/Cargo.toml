@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "blackbox",
+    "blackbox/serde_alt",
     "bookmarkstore",
     "cliparser",
     "commitcloudsubscriber",
