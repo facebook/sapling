@@ -9,6 +9,8 @@
  */
 #pragma once
 
+#include "eden/fs/utils/Memory.h"
+
 #include <boost/operators.hpp>
 #include <glog/logging.h>
 
@@ -1730,10 +1732,11 @@ inline AbsolutePathPiece operator"" _abspath(
 /**
  * Gets memory usage of the path inside the RelativePathBase
  */
+template <typename StringType>
 size_t estimateIndirectMemoryUsage(
-    const detail::RelativePathBase<std::string>& path);
-size_t estimateIndirectMemoryUsage(
-    const detail::RelativePathBase<folly::fbstring>& path);
+    const detail::RelativePathBase<StringType>& path) {
+  return estimateIndirectMemoryUsage(path.value());
+}
 } // namespace eden
 } // namespace facebook
 

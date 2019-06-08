@@ -8,7 +8,6 @@
  *
  */
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/Memory.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -322,16 +321,6 @@ AbsolutePath expandUser(
   auto expanded =
       folly::to<std::string>(*homeDir, kDirSeparator, path.subpiece(2));
   return canonicalPath(expanded);
-}
-
-size_t estimateIndirectMemoryUsage(
-    const detail::RelativePathBase<std::string>& path) {
-  return estimateIndirectMemoryUsage(path.value());
-}
-
-size_t estimateIndirectMemoryUsage(
-    const detail::RelativePathBase<folly::fbstring>& path) {
-  return estimateIndirectMemoryUsage(path.value());
 }
 } // namespace eden
 } // namespace facebook
