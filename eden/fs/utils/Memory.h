@@ -13,7 +13,21 @@
 
 namespace facebook {
 namespace eden {
-size_t estimateIndirectMemoryUsage(const std::string& path);
-size_t estimateIndirectMemoryUsage(const folly::fbstring& path);
+template <typename StringType>
+bool isStringStorageEmbedded(const StringType& t) {
+  const void* tbegin = &t;
+  const void* tend = &t + 1;
+  return std::less_equal<const void*>{}(tbegin, t.data()) &&
+      std::less<const void*>{}(t.data(), tend);
+}
+
+template <typename StringType>
+size_t estimateIndirectMemoryUsage(const StringType& s) {
+  if (isStringStorageEmbedded(s)) {
+    return 0;
+  } else {
+    return folly::goodMallocSize(s.capacity());
+  }
+}
 } // namespace eden
 } // namespace facebook
