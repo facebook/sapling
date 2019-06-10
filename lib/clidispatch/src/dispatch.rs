@@ -18,8 +18,17 @@ fn load_config() -> ConfigSet {
     let mut config = ConfigSet::new();
     errors.extend(config.load_system());
     errors.extend(config.load_user());
-    // config.load_repo(); // TODO:  implement in configparser.rs
     // TODO: errors are ignored and should probably return a Fallible
+    config
+}
+
+fn load_repo_config(mut config: ConfigSet, current_path: &Path) -> ConfigSet {
+    let mut errors = Vec::new();
+
+    if let Some(repo_path) = find_hg_repo_root(current_path) {
+        errors.extend(config.load_hgrc(repo_path.join(".hg/hgrc"), "repository"));
+    }
+
     config
 }
 
@@ -48,6 +57,16 @@ fn override_config(
     }
 
     config
+}
+
+fn find_hg_repo_root(current_path: &Path) -> Option<&Path> {
+    if current_path.join(".hg").is_dir() {
+        Some(current_path)
+    } else if let Some(parent) = current_path.parent() {
+        find_hg_repo_root(parent)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -129,4 +148,54 @@ mod tests {
         assert_eq!(sources[0].source(), &Bytes::from("--configfile"));
     }
 
+    #[test]
+    fn test_find_repo_root_found() {
+        let dir = tempdir().unwrap();
+        let _ = fs::create_dir(dir.path().join(".hg"));
+        let path = dir.path().join("a/b/c");
+        let hg_root = find_hg_repo_root(&path);
+        assert_eq!(dir.path(), hg_root.unwrap());
+    }
+
+    #[test]
+    fn test_load_repo_config() {
+        let dir = tempdir().unwrap();
+        let _ = fs::create_dir(dir.path().join(".hg"));
+        write_file(dir.path().join(".hg/hgrc"), "[foo]\nbar=1\n[bar]\nfoo=2");
+        let config = ConfigSet::new();
+        let config = load_repo_config(config, dir.path());
+
+        assert_eq!(
+            config.sections(),
+            vec![Bytes::from("foo"), Bytes::from("bar")]
+        );
+
+        assert_eq!(config.keys("foo"), vec![Bytes::from("bar")]);
+        assert_eq!(config.keys("bar"), vec![Bytes::from("foo")]);
+
+        assert_eq!(config.get("foo", "bar"), Some(Bytes::from("1")));
+        assert_eq!(config.get("bar", "foo"), Some(Bytes::from("2")));
+
+        let sources = config.get_sources("foo", "bar");
+        assert_eq!(sources.len(), 1);
+        assert_eq!(sources[0].source(), &Bytes::from("repository"));
+    }
+
+    #[test]
+    fn test_load_repo_config_file_not_found() {
+        let dir = tempdir().unwrap();
+        let _ = fs::create_dir(dir.path().join(".hg"));
+        let config = ConfigSet::new();
+        let config = load_repo_config(config, dir.path());
+
+        assert!(config.sections().len() == 0);
+    }
+
+    #[test]
+    fn test_find_repo_root_not_found() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("a/b/c");
+        let hg_root = find_hg_repo_root(&path);
+        assert!(hg_root.is_none());
+    }
 }
