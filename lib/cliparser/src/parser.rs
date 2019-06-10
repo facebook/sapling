@@ -253,9 +253,7 @@ impl<'a> Parser<'a> {
     pub fn parse_args(&self, args: &'a Vec<String>) -> Fallible<ParseOutput> {
         let arg_vec: Vec<&'a str> = args
             .iter()
-            .skip(1)
-            .map(|arg| arg.trim())
-            .filter(|arg| !arg.is_empty())
+            .map(|string| &string[..])
             .collect();
 
         self._parse(arg_vec)
@@ -595,7 +593,6 @@ mod tests {
         let parser = Parser::new(&flags);
 
         let args = vec![
-            "hg".to_string(),
             "--number".to_string(),
             "60".to_string(),
             "--number".to_string(),
@@ -623,9 +620,7 @@ mod tests {
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec![
-            "hg", "--number", "60", "--number", "59", "-n", "3", "-n5",
-        ]);
+        let args = create_args(vec!["--number", "60", "--number", "59", "-n", "3", "-n5"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -640,7 +635,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "-qhvcPATH/TO/FILE"]);
+        let args = create_args(vec!["-qhvcPATH/TO/FILE"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -659,7 +654,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "-cqhv"]);
+        let args = create_args(vec!["-cqhv"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -678,7 +673,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "-q", "--", "-v", "--", "-h"]);
+        let args = create_args(vec!["-q", "--", "-v", "--", "-h"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -704,7 +699,7 @@ mod tests {
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--config=--config=foo.bar"]);
+        let args = create_args(vec!["--config=--config=foo.bar"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -727,7 +722,6 @@ mod tests {
         let parser = Parser::new(&flags);
 
         let args = create_args(vec![
-            "hg",
             "--config=--config=foo.bar",
             "--config",
             "-c=some.value.long",
@@ -761,7 +755,7 @@ mod tests {
         let flags = vec![flag.clone()];
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "-c=--config.prop=63"]);
+        let args = create_args(vec!["-c=--config.prop=63"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -777,7 +771,6 @@ mod tests {
         let parser = Parser::new(&flags);
 
         let args = create_args(vec![
-            "hg",
             "log",
             "--rev",
             ".",
@@ -805,7 +798,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--rev"]);
+        let args = create_args(vec!["--rev"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -834,7 +827,7 @@ mod tests {
         // target command is `hg tags -T "hg bookmark -ir {node} {tag};\n"`
         // taken from hg/tests/test-rebase-bookmarks.t
 
-        let args = create_args(vec!["hg", "tags", "-T", template_str]);
+        let args = create_args(vec!["tags", "-T", template_str]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -850,7 +843,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--rev", "test"]);
+        let args = create_args(vec!["--rev", "test"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -866,7 +859,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--config", "some value"]);
+        let args = create_args(vec!["--config", "some value"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -882,7 +875,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--rev", "test"]);
+        let args = create_args(vec!["--rev", "test"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -898,7 +891,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--rev", "test"]);
+        let args = create_args(vec!["--rev", "test"]);
 
         let result = parser.parse_args(&args).unwrap();
 
@@ -913,7 +906,7 @@ mod tests {
         let flags = Flag::from_flags(&definitions);
         let parser = Parser::new(&flags);
 
-        let args = create_args(vec!["hg", "--config="]);
+        let args = create_args(vec!["--config="]);
 
         let result = parser.parse_args(&args).unwrap();
 
