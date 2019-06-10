@@ -3,3 +3,10 @@ name = "clidispatch"
 version = "0.0.1"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2018"
+
+[dependencies]
+bytes = "0.4.10"
+configparser = { path = "../configparser" }
+
+[dev-dependencies]
+tempfile = "3.0.7"
