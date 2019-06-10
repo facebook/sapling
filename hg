@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+#
+# mercurial - scalable distributed SCM
+#
+# Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
+import os
+import sys
+
+libdir = "@LIBDIR@"
+if libdir != "@" "LIBDIR" "@":
+    # Installed as a script.
+    if not os.path.isabs(libdir):
+        libdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), libdir)
+        libdir = os.path.abspath(libdir)
+    sys.path.insert(0, libdir)
+else:
+    # Not installed as a script.
+    # Check whether the correct interpreter is used.
+    try:
+        hgdir = os.path.dirname(os.path.realpath(__file__))
+    except NameError:
+        pass
+    else:
+        envpath = os.path.join(hgdir, "build", "env")
+        if os.path.exists(envpath):
+            with open(envpath, "r") as f:
+                env = dict(l.split("=", 1) for l in f.read().splitlines() if "=" in l)
+                # Use the right interpreter.
+                python = env.get("PYTHON_SYS_EXECUTABLE")
+                if python and python != sys.executable:
+                    import subprocess
+
+                    p = subprocess.Popen([python] + sys.argv)
+                    sys.exit(p.wait())
+
+from edenscm.mercurial import entrypoint
+
+entrypoint.run(False)

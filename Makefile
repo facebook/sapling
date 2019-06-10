@@ -21,8 +21,6 @@ OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 HGDEV := 1
 export HGDEV
 
-HGNAME ?= hg
-
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
 
@@ -60,13 +58,12 @@ local:
 	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-2.7/$(HGNAME).exe $(HGNAME).exe
+	cp build/scripts-2.7/hg.rust.exe hg.exe
 	cp build/hg-python/python27.dll python27.dll
 else
-	$(RM) $(HGNAME)
-	cp build/scripts-2.7/$(HGNAME) $(HGNAME)
+	cp build/scripts-2.7/hg.rust .
 endif
-	env HGRCPATH= hg version
+	env HGRCPATH= $(PYTHON) hg version
 
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
@@ -84,9 +81,9 @@ cleanbutpackages:
 	rm -rf build/*
 	rm -rf build edenscm/mercurial/locale
 ifeq ($(OS),Windows_NT)
-	$(RM) -r hg-python $(HGNAME).exe python27.dll
+	rm -rf hg-python hg.exe python27.dll
 else
-	$(RM) $(HGNAME)
+	rm -f hg.rust
 endif
 
 clean: cleanbutpackages

@@ -22,7 +22,7 @@ Testing hghave extensibility for third party tools
   > EOF
   $ ( \
   > testrepohgenv; \
-  > $PYTHON $TESTDIR/run-tests.py --with-hg=$(which hg) $HGTEST_RUN_TESTS_PURE test-hghaveaddon.t \
+  > $PYTHON $TESTDIR/run-tests.py -l $HGTEST_RUN_TESTS_PURE test-hghaveaddon.t \
   > )
   .
   # Ran 1 tests, 0 skipped, 0 failed.

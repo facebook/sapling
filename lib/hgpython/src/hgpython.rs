@@ -19,12 +19,6 @@ const ENTRYPOINT_IN_INSTALLATION: &str = "edenscm/mercurial/entrypoint.py";
 #[cfg(target_family = "windows")]
 const ENTRYPOINT_IN_INSTALLATION: &str = "edenscm\\mercurial\\entrypoint.py";
 
-/// Standalone-style buck builds produce only .pycs, no .pys.
-#[cfg(all(target_family = "unix", feature = "buckbuild"))]
-const ENTRYPOINT_IN_INSTALLATION_PYC: &str = "edenscm/mercurial/entrypoint.pyc";
-#[cfg(all(target_family = "windows", feature = "buckbuild"))]
-const ENTRYPOINT_IN_INSTALLATION_PYC: &str = "edenscm\\mercurial\\entrypoint.pyc";
-
 /// A default path to the zipped Python/Mercurial library for the
 /// embedded case
 #[cfg(target_family = "unix")]
@@ -127,22 +121,6 @@ impl HgPython {
         path.as_ref().extension() == Some(OsStr::new("zip"))
     }
 
-    #[cfg(feature = "buckbuild")]
-    fn entry_point_in_buck_out<P: AsRef<Path>>(installation: P) -> PathBuf {
-        installation
-            .as_ref()
-            .join("hglib")
-            .join(ENTRYPOINT_IN_INSTALLATION)
-    }
-
-    #[cfg(feature = "buckbuild")]
-    fn entry_point_in_buck_out_pyc<P: AsRef<Path>>(installation: P) -> PathBuf {
-        installation
-            .as_ref()
-            .join("hglib")
-            .join(ENTRYPOINT_IN_INSTALLATION_PYC)
-    }
-
     /// Return the zipfile base of a path if run from a zipfile
     /// Example: get_zip_base('/a/b.zip/mercurial/entrypoint.py')
     /// is '/a/b.zip'
@@ -197,11 +175,6 @@ impl HgPython {
 
         // TODO: Pri 3: read the config file, which may specify the entrypoint location
 
-        #[cfg(feature = "buckbuild")]
-        candidates.push(Self::entry_point_in_buck_out(&installation_root));
-        #[cfg(feature = "buckbuild")]
-        candidates.push(Self::entry_point_in_buck_out_pyc(&installation_root));
-
         // Pri 4: a list of compile-time provided paths to check
         // Note that HGPYENTRYPOINTSEARCHPATH is in a PATH format and each item is
         // expected to end in mercurial/
@@ -211,7 +184,6 @@ impl HgPython {
             }
         }
 
-        #[cfg(not(feature = "buckbuild"))]
         // Pri 5: a list of source-level hardcoded paths to check
         vec![
             &PathBuf::from("/usr/lib64/python2.7/site-packages/"),
