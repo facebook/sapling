@@ -954,6 +954,16 @@ def extsetup(ui):
     newopts = [
         (bookcmd, ("a", "all", None, "show both remote and local bookmarks")),
         (bookcmd, ("", "remote", None, "show only remote bookmarks")),
+        (
+            bookcmd,
+            (
+                "",
+                "list-subscriptions",
+                None,
+                "show only remote bookmarks that are available locally",
+                "BOOKMARK",
+            ),
+        ),
         (pushcmd, ("t", "to", "", "push revs to this bookmark", "BOOKMARK")),
         (pushcmd, ("d", "delete", "", "delete remote bookmark", "BOOKMARK")),
         (pushcmd, ("", "create", None, "create a new remote bookmark")),
@@ -1351,6 +1361,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     rename = opts.get("rename")
     inactive = opts.get("inactive")
     remote = opts.get("remote")
+    subscriptions = opts.get("list_subscriptions")
     track = opts.get("track")
     untrack = opts.get("untrack")
 
@@ -1408,10 +1419,10 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         return ret
 
     fm = ui.formatter("bookmarks", opts)
-    if not remote:
+    if not remote and not subscriptions:
         displaylocalbookmarks(ui, repo, opts, fm)
 
-    if remote or opts.get("all"):
+    if remote or subscriptions or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
     fm.end()

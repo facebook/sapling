@@ -245,3 +245,8 @@ Set two bookmarks in selectivepulldefault, make sure both of them were pulled
   $ hg book --remote
      default/master            2:0238718db2b1
      default/thirdbook         0:1449e7934ec1
+
+Check subscriptions flag
+  $ hg book --list-subscriptions
+     default/master            2:0238718db2b1
+     default/thirdbook         0:1449e7934ec1

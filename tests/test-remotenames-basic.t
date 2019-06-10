@@ -247,8 +247,8 @@ Test loading with hggit
   $ echo "[devel]" >> $HGRCPATH
   $ echo "all-warnings=no" >> $HGRCPATH
   $ hg help bookmarks  | egrep -- '--(un){0,1}track'
-   -t --track BOOKMARK track this bookmark or remote name
-   -u --untrack        remove tracking for this bookmark
+   -t --track BOOKMARK     track this bookmark or remote name
+   -u --untrack            remove tracking for this bookmark
 
 Test json formatted bookmarks with tracking data
   $ cd ..
