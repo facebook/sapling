@@ -14,7 +14,11 @@ import unittest
 
 import hypothesis
 import hypothesis.strategies
-from eden.cli.systemd import SystemdEnvironmentFile, systemd_escape_path
+from eden.cli.systemd import (
+    SystemdEnvironmentFile,
+    escape_dbus_address,
+    systemd_escape_path,
+)
 from eden.test_support.hypothesis import fast_hypothesis_test, set_up_hypothesis
 
 
@@ -625,3 +629,38 @@ class SystemdEnvironmentFileLoadTest(unittest.TestCase):
 
     def loads(self, content: bytes) -> SystemdEnvironmentFile:
         return SystemdEnvironmentFile.loads(content)
+
+
+class EscapeDBusAddressTest(unittest.TestCase):
+    def test_escaped_empty_address_is_empty(self) -> None:
+        self.assertEqual(escape_dbus_address(b""), b"")
+
+    def test_alphabet_is_not_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b"abc"), b"abc")
+        self.assertEqual(escape_dbus_address(b"ABC"), b"ABC")
+
+    def test_digits_are_not_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b"0123456789"), b"0123456789")
+
+    def test_slashes_are_not_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b"/"), b"/")
+        self.assertEqual(escape_dbus_address(b"/path/to/bus"), b"/path/to/bus")
+        self.assertEqual(escape_dbus_address(b"\\"), b"\\")
+
+    def test_dots_and_dashes_are_not_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b".-"), b".-")
+        self.assertEqual(escape_dbus_address(b"file.txt"), b"file.txt")
+        self.assertEqual(escape_dbus_address(b"hello-world"), b"hello-world")
+
+    def test_special_address_characters_are_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b":"), b"%3a")
+        self.assertEqual(escape_dbus_address(b";"), b"%3b")
+        self.assertEqual(escape_dbus_address(b"c:\\windows\\"), b"c%3a\\windows\\")
+
+    def test_escape_characters_are_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b"%"), b"%25")
+        self.assertEqual(escape_dbus_address(b"%25"), b"%2525")
+
+    def test_whitespace_is_escaped(self) -> None:
+        self.assertEqual(escape_dbus_address(b" "), b"%20")
+        self.assertEqual(escape_dbus_address(b"\n"), b"%0a")

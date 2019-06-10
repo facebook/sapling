@@ -132,12 +132,20 @@ class SystemdTest(
             extra_args=["--", "--failDuringStartup"]
         )
         start_process.expect(
-            r"Job for fb-edenfs@.+?\.service failed because "
-            r"the control process exited with error code"
+            r"error: Starting the fb-edenfs@.+?\.service systemd service "
+            r"failed \(reason: exit-code\)"
         )
-        # TODO(strager): Remove this message. journalctl is unreliable and
-        # unhelpful for users.
-        start_process.expect_exact("journalctl")
+        self.assertNotIn(
+            "journalctl",
+            start_process.before,
+            "journalctl doesn't work and should not be mentioned",
+        )
+        remaining_output = start_process.read()
+        self.assertNotIn(
+            "journalctl",
+            remaining_output,
+            "journalctl doesn't work and should not be mentioned",
+        )
 
     def test_eden_start_reports_error_if_systemd_is_not_running(self) -> None:
         self.set_up_edenfs_systemd_service()
@@ -147,7 +155,7 @@ class SystemdTest(
 
         start_process = self.spawn_start_with_fake_edenfs()
         # TODO(strager): Improve this message.
-        start_process.expect_exact("Failed to connect to bus: Connection refused")
+        start_process.expect_exact("Could not open a bus to DBus")
 
     def test_eden_start_uses_fallback_if_systemd_environment_is_missing(self) -> None:
         self.set_up_edenfs_systemd_service()

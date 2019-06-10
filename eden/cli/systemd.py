@@ -7,11 +7,31 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import asyncio
+import contextlib
+import logging
 import os
 import pathlib
 import re
 import subprocess
+import types
 import typing
+
+
+pystemd_import_error = None
+try:
+    import pystemd
+    import pystemd.dbuslib  # pyre-ignore[21]: T32805591
+    import pystemd.systemd1.manager
+    import pystemd.systemd1.unit
+except ModuleNotFoundError as e:
+    pystemd_import_error = e
+
+
+logger = logging.getLogger(__name__)
+
+
+_T = typing.TypeVar("_T")
 
 
 def edenfs_systemd_service_name(eden_dir: pathlib.Path) -> str:
@@ -371,3 +391,360 @@ def _truncated_at_null_byte(data: bytes) -> bytes:
     if end_of_file_index == -1:
         return data
     return data[:end_of_file_index]
+
+
+# Types of parameters for D-Bus methods and signals. For details, see D-Bus'
+# documentation:
+# https://dbus.freedesktop.org/doc/dbus-specification.html#type-system
+DBusObjectPath = bytes
+DBusString = bytes
+DBusUint32 = int
+
+
+class SystemdUserBus:
+    """A communication channel with systemd.
+
+    See systemd's D-Bus documentation:
+    https://www.freedesktop.org/wiki/Software/systemd/dbus/
+    """
+
+    _cleanups: contextlib.ExitStack
+    _dbus: "pystemd.dbuslib.DBus"
+    _event_loop: asyncio.AbstractEventLoop
+    _manager: "pystemd.SDManager"
+
+    def __init__(
+        self, event_loop: asyncio.AbstractEventLoop, xdg_runtime_dir: str
+    ) -> None:
+        if pystemd_import_error is not None:
+            raise pystemd_import_error
+
+        super().__init__()
+        self._cleanups = contextlib.ExitStack()
+        self._dbus = self._get_dbus(xdg_runtime_dir)
+        self._event_loop = event_loop
+        self._manager = pystemd.systemd1.manager.Manager(bus=self._dbus)
+
+    @staticmethod
+    def _get_dbus(
+        xdg_runtime_dir: str,
+    ) -> "pystemd.dbuslib.DBus":  # pyre-ignore[11]: T32805591
+        # HACK(strager): pystemd.dbuslib.DBus(user_mode=True) fails with a
+        # connection timeout. 'SYSTEMCTL_FORCE_BUS=1 systemctl --user ...' also
+        # fails, and it seems to use the same C APIs as
+        # pystemd.dbuslib.DBus(user_mode=True). Work around the issue by doing
+        # what systemctl's internal bus_connect_user_systemd() function does
+        # [1].
+        #
+        # [1] https://github.com/systemd/systemd/blob/78a562ee4bcbc7b0e8b58b475ff656f646e95e40/src/shared/bus-util.c#L594
+        socket_path = pathlib.Path(xdg_runtime_dir) / "systemd" / "private"
+        return pystemd.dbuslib.DBusAddress(  # pyre-ignore[16]: T32805591
+            b"unix:path=" + escape_dbus_address(bytes(socket_path))
+        )
+
+    def open(self) -> None:
+        self._cleanups.enter_context(self._dbus)
+        self._manager.load()
+        self._add_to_event_loop()
+
+    def close(self) -> None:
+        self._cleanups.close()
+
+    def _add_to_event_loop(self) -> None:
+        dbus_fd = self._dbus.get_fd()
+        self._event_loop.add_reader(dbus_fd, self._process_queued_messages)
+        self._cleanups.callback(lambda: self._event_loop.remove_reader(dbus_fd))
+
+    def _process_queued_messages(self) -> None:
+        while True:
+            message = self._dbus.process()
+            if message.is_empty():
+                break
+
+    async def get_unit_active_state_async(self, unit_name: bytes) -> DBusString:
+        """Query org.freedesktop.systemd1.Unit.ActiveState.
+        """
+
+        def go() -> DBusString:
+            unit = pystemd.systemd1.unit.Unit(unit_name, bus=self._dbus)
+            unit.load()
+            active_state = _pystemd_dynamic(unit).Unit.ActiveState
+            assert isinstance(active_state, DBusString)
+            return active_state
+
+        return await self._run_in_executor_async(go)
+
+    async def get_service_result_async(self, service_name: bytes) -> DBusString:
+        """Query org.freedesktop.systemd1.Service.Result.
+        """
+
+        def go() -> DBusString:
+            unit = pystemd.systemd1.unit.Unit(service_name, bus=self._dbus)
+            unit.load()
+            result = _pystemd_dynamic(unit).Service.Result
+            assert isinstance(result, DBusString)
+            return result
+
+        return await self._run_in_executor_async(go)
+
+    async def start_service_and_wait_async(self, service_name: DBusString) -> None:
+        """Start a service, waiting for it to successfully start.
+
+        If the service or the job fails, this method raises an exception.
+        """
+        start_job = await self.start_unit_job_and_wait_until_job_completes_async(
+            service_name
+        )
+        logger.debug(f"Querying status of service {service_name!r}...")
+        (service_active_state, service_result) = await asyncio.gather(
+            self.get_unit_active_state_async(unit_name=service_name),
+            self.get_service_result_async(service_name=service_name),
+        )
+        logger.debug(
+            f"Service {service_name!r} has active state "
+            f"{service_active_state!r} and result {service_result!r}"
+        )
+        if not (
+            start_job.result == b"done"
+            and service_active_state == b"active"
+            and service_result == b"success"
+        ):
+            raise SystemdServiceFailedToStartError(
+                service_name=service_name.decode(errors="replace"),
+                start_job_result=start_job.result.decode(errors="replace"),
+                service_active_state=service_active_state.decode(errors="replace"),
+                service_result=service_result.decode(errors="replace"),
+            )
+
+    async def start_unit_job_and_wait_until_job_completes_async(
+        self, unit_name: DBusString
+    ) -> "JobRemovedSignal":
+        """Call org.freedesktop.systemd1.Manager.StartUnit and wait for the
+        returned job to complete.
+
+        If the job fails, this method does *not* raise an exception.
+        """
+        with await self.subscribe_to_job_removed_async() as job_removed_subscription:
+            logger.debug(f"Starting service {unit_name!r}...")
+            job_object_path = await self.start_unit_async(
+                name=unit_name, mode=b"replace"
+            )
+            logger.debug(f"Waiting for job {job_object_path!r} to finish...")
+            removed_job = await job_removed_subscription.wait_until_signal_async(
+                lambda removed_job: removed_job.job == job_object_path
+            )
+            logger.debug(
+                f"Job {job_object_path!r} for {unit_name!r} finished "
+                f"with result {removed_job.result!r}"
+            )
+            return removed_job
+
+    async def start_unit_async(
+        self, name: DBusString, mode: DBusString
+    ) -> DBusObjectPath:
+        """Call org.freedesktop.systemd1.Manager.StartUnit.
+        """
+
+        def go() -> DBusObjectPath:
+            path = _pystemd_dynamic(self._manager).Manager.StartUnit(name, mode)
+            assert isinstance(path, DBusObjectPath)
+            return path
+
+        return await self._run_in_executor_async(go)
+
+    async def subscribe_to_job_removed_async(
+        self
+    ) -> "SystemdSignalSubscription[JobRemovedSignal]":
+        """Subscribe to org.freedesktop.systemd1.Manager.JobRemoved.
+        """
+        subscription: SystemdSignalSubscription[
+            JobRemovedSignal
+        ] = SystemdSignalSubscription(self._manager)
+        await asyncio.gather(
+            self._subscribe_async(),
+            self._run_in_executor_async(
+                lambda: self._dbus.match_signal(
+                    sender=b"org.freedesktop.systemd1",
+                    path=b"/org/freedesktop/systemd1",
+                    interface=b"org.freedesktop.systemd1.Manager",
+                    member=b"JobRemoved",
+                    callback=self._on_job_removed,
+                    userdata=(subscription, self._event_loop),
+                )
+            ),
+        )
+        return subscription
+
+    @staticmethod
+    def _on_job_removed(
+        msg: "pystemd.dbuslib.DbusMessage",  # pyre-ignore[11]: T32805591
+        error: typing.Optional[Exception],
+        userdata: typing.Any,
+    ) -> None:
+        """Handle a org.freedesktop.systemd1.Manager.JobRemoved signal.
+        """
+        (subscription, event_loop) = userdata
+        assert isinstance(subscription, DBusSignalSubscription)
+        assert isinstance(event_loop, asyncio.AbstractEventLoop)
+
+        if error is not None:
+            event_loop.create_task(subscription.post_exception_async(error))
+            return
+
+        try:
+            msg.process_reply(False)
+            (id, job, unit, result) = msg.body
+            event_loop.create_task(
+                subscription.post_signal_async(
+                    JobRemovedSignal(id=id, job=job, unit=unit, result=result)
+                )
+            )
+        except Exception as e:
+            event_loop.create_task(subscription.post_exception_async(e))
+
+    async def _subscribe_async(self) -> None:
+        """Call org.freedesktop.systemd1.Manager.Subscribe.
+        """
+
+        def go() -> None:
+            _pystemd_dynamic(self._manager).Manager.Subscribe()
+
+        await self._run_in_executor_async(go)
+
+    async def _run_in_executor_async(self, func: typing.Callable[[], "_T"]) -> "_T":
+        return await self._event_loop.run_in_executor(executor=None, func=func)
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: typing.Optional[typing.Type[BaseException]],
+        exc_value: typing.Optional[BaseException],
+        traceback: typing.Optional[types.TracebackType],
+    ) -> None:
+        self.close()
+
+
+_DBusSignal = typing.TypeVar("_DBusSignal")
+
+
+class DBusSignalSubscription(typing.Generic[_DBusSignal]):
+    _queue: "asyncio.Queue[typing.Union[_DBusSignal, Exception]]"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._queue = asyncio.Queue()
+
+    async def post_signal_async(self, signal: _DBusSignal) -> None:
+        await self._queue.put(signal)
+
+    async def post_exception_async(self, exception: Exception) -> None:
+        await self._queue.put(exception)
+
+    async def get_next_signal_async(self) -> _DBusSignal:
+        signal_or_exception = await self._queue.get()
+        if isinstance(signal_or_exception, Exception):
+            raise signal_or_exception
+        return signal_or_exception
+
+    async def wait_until_signal_async(
+        self, predicate: typing.Callable[[_DBusSignal], bool]
+    ) -> _DBusSignal:
+        while True:
+            signal = await self.get_next_signal_async()
+            if predicate(signal):
+                return signal
+
+    def unsubscribe(self) -> None:
+        # TODO(strager): Add an API in pystemd to cancel a match_signal request.
+        logger.debug("Leaking D-Bus signal subscription")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(
+        self,
+        exc_type: typing.Optional[typing.Type[BaseException]],
+        exc_value: typing.Optional[BaseException],
+        traceback: typing.Optional[types.TracebackType],
+    ) -> None:
+        self.unsubscribe()
+
+
+class SystemdSignalSubscription(DBusSignalSubscription[_DBusSignal]):
+    _manager: "pystemd.SDManager"
+
+    def __init__(self, manager: "pystemd.SDManager") -> None:
+        super().__init__()
+        self._manager = manager
+
+    def unsubscribe(self) -> None:
+        super().unsubscribe()
+        _pystemd_dynamic(self._manager).Manager.Unsubscribe()
+
+
+class JobRemovedSignal(typing.NamedTuple):
+    """A org.freedesktop.systemd1.Manager.JobRemoved signal.
+
+    https://www.freedesktop.org/wiki/Software/systemd/dbus/#signals
+    """
+
+    id: DBusUint32
+    job: DBusObjectPath
+    unit: DBusString
+    result: DBusString
+
+
+def _pystemd_dynamic(
+    object: typing.Union[
+        "pystemd.systemd1.manager.Manager", "pystemd.systemd1.unit.Unit"
+    ]
+) -> typing.Any:
+    """Silence mypy and Pyre for the given dynamically-typed pystemd object.
+
+    TODO(strager): Add type annotations to pystemd.
+    """
+    return typing.cast(typing.Any, object)
+
+
+def escape_dbus_address(input: bytes) -> bytes:
+    """Escape a string for inclusion in DBUS_SESSION_BUS_ADDRESS.
+
+    For more details, see the D-Bus specification:
+    https://dbus.freedesktop.org/doc/dbus-specification.html#addresses
+    """
+    whitelist = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-./\\"
+
+    scanner = _Scanner(input)
+    result_pieces = []
+    while not scanner.at_eof:
+        unescaped_bytes = scanner.scan_while_any(whitelist)
+        result_pieces.append(unescaped_bytes)
+        if scanner.at_eof:
+            break
+        byte_to_escape = scanner.scan_one_byte()
+        result_pieces.append(f"%{byte_to_escape:02x}".encode())
+    return b"".join(result_pieces)
+
+
+class SystemdServiceFailedToStartError(Exception):
+    def __init__(
+        self,
+        start_job_result: str,
+        service_active_state: str,
+        service_name: str,
+        service_result: str,
+    ) -> None:
+        super().__init__()
+        self.service_active_state = service_active_state
+        self.service_name = service_name
+        self.service_result = service_result
+        self.start_job_result = start_job_result
+
+    def __str__(self) -> str:
+        return (
+            f"Starting the {self.service_name} systemd service failed "
+            f"(reason: {self.service_result})"
+        )

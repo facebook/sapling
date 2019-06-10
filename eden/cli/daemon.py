@@ -14,12 +14,16 @@ import pathlib
 import signal
 import subprocess
 import sys
-import time
-from typing import Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Dict, List, NoReturn, Optional, Tuple
 
 from .config import EdenInstance
 from .logfile import forward_log_file
-from .systemd import EdenFSSystemdServiceConfig, edenfs_systemd_service_name
+from .systemd import (
+    EdenFSSystemdServiceConfig,
+    SystemdServiceFailedToStartError,
+    SystemdUserBus,
+    edenfs_systemd_service_name,
+)
 from .util import ShutdownError, poll_until, print_stderr
 
 
@@ -240,31 +244,29 @@ def start_systemd_service(
     service_config.write_config_file()
     service_name = edenfs_systemd_service_name(instance.state_dir)
 
+    xdg_runtime_dir = _get_systemd_xdg_runtime_dir(config=instance)
+
     startup_log_path = service_config.startup_log_file_path
     startup_log_path.write_bytes(b"")
     with forward_log_file(startup_log_path, sys.stderr.buffer) as log_forwarder:
         loop = asyncio.get_event_loop()
 
-        async def start_service_async():
-            systemctl_environment = dict(os.environ)
-            systemctl_environment["XDG_RUNTIME_DIR"] = _get_systemd_xdg_runtime_dir(
-                config=instance
-            )
-            start_process = await asyncio.create_subprocess_exec(
-                "systemctl",
-                "--user",
-                "start",
-                "--",
-                service_name,
-                env=systemctl_environment,
-            )
-            return await start_process.wait()
+        async def start_service_async() -> None:
+            with SystemdUserBus(
+                event_loop=loop, xdg_runtime_dir=xdg_runtime_dir
+            ) as systemd:
+                await systemd.start_service_and_wait_async(service_name.encode())
 
-        start_task = loop.create_task(start_service_async())
-        loop.create_task(log_forwarder.poll_forever_async())
-        loop.run_until_complete(start_task)
-        log_forwarder.poll()
-        return start_task.result()
+        try:
+            start_task = loop.create_task(start_service_async())
+            loop.create_task(log_forwarder.poll_forever_async())
+            loop.run_until_complete(start_task)
+            return 0
+        except SystemdServiceFailedToStartError as e:
+            print_stderr(f"error: {e}")
+            return 1
+        finally:
+            log_forwarder.poll()
 
 
 def _get_systemd_xdg_runtime_dir(config: EdenInstance) -> str:
