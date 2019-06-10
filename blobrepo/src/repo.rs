@@ -1106,6 +1106,33 @@ impl BlobRepo {
                 let upload_fut = copy_from_fut.and_then({
                     cloned!(ctx, repo, path, change);
                     move |copy_from| {
+                        let mut p1 = p1;
+                        let mut p2 = p2;
+
+                        // Mercurial has complicated logic of finding file parents, especially
+                        // if a file was also copied/moved.
+                        // See mercurial/localrepo.py:_filecommit(). We have to replicate this
+                        // logic in Mononoke.
+                        // TODO(stash): T45618931 replicate all the cases from _filecommit()
+                        if let Some((ref copy_from_path, _)) = copy_from {
+                            if copy_from_path != &path {
+                                if p1.is_some() && p2.is_none() {
+                                    // This case can happen if a file existed in it's parent
+                                    // but it was copied over:
+                                    // ```
+                                    // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
+                                    // hg cp 2 1 --force && hg ci -m second
+                                    // # File '1' has both p1 and copy from.
+                                    // ```
+                                    // In that case Mercurial discards p1 i.e. `hg log` will
+                                    // use copy from revision as a parent. Arguably not the best
+                                    // decision, but we have to keep it.
+                                    p1 = None;
+                                    p2 = None;
+                                }
+                            }
+                        }
+
                         let upload_entry = UploadHgFileEntry {
                             upload_node_id: UploadHgNodeHash::Generate,
                             contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {

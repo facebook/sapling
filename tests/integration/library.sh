@@ -735,3 +735,59 @@ function pushrebase_replay() {
     --filesystem-bundles-storage-path "$TESTTMP" \
     --sqlite3-path "$TESTTMP/pushrebaserecording"
 }
+
+function enable_replay_verification_hook {
+
+cat >> "$TESTTMP"/replayverification.py <<EOF
+def verify_replay(ui, repo, *args, **kwargs):
+     EXP_ONTO = "EXPECTED_ONTOBOOK"
+     EXP_HEAD = "EXPECTED_REBASEDHEAD"
+
+     expected_book = kwargs.get(EXP_ONTO)
+     expected_head = kwargs.get(EXP_HEAD)
+     actual_book = kwargs.get("key")
+     actual_head = kwargs.get("new")
+     allowed_replay_books = ui.configlist("facebook", "hooks.unbundlereplaybooks", [])
+     # If there is a problem with the mononoke -> hg sync job we need a way to
+     # quickly disable the replay verification to let unsynced bundles
+     # through.
+     # Disable this hook by placing a file in the .hg directory.
+     if repo.localvfs.exists('REPLAY_BYPASS'):
+         ui.note("[ReplayVerification] Bypassing check as override file is present\n")
+         return 0
+     if expected_book is None and expected_head is None:
+         # We are allowing non-unbundle-replay pushes to go through
+         return 0
+
+     if allowed_replay_books and actual_book not in allowed_replay_books:
+         ui.warn("[ReplayVerification] only allowed to unbundlereplay on %r\n" % (allowed_replay_books, ))
+         return 1
+     expected_head = expected_head or None
+     actual_head = actual_head or None
+     if expected_book == actual_book and expected_head == actual_head:
+        ui.note("[ReplayVerification] Everything seems in order\n")
+        return 0
+
+     ui.warn("[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)\n" % (expected_book, expected_head, actual_book, actual_head))
+     return 1
+EOF
+
+cat >> "$TESTTMP"/repo_lock.py << EOF
+def run(*args, **kwargs):
+   """Repo is locked for everything except replays
+   In-process style hook."""
+   if kwargs.get("EXPECTED_ONTOBOOK"):
+       return 0
+   print "[RepoLock] Repo locked for non-unbundlereplay pushes"
+   return 1
+EOF
+
+[[ -f .hg/hgrc ]] || echo ".hg/hgrc does not exists!"
+
+cat >>.hg/hgrc <<CONFIG
+[hooks]
+prepushkey = python:$TESTTMP/replayverification.py:verify_replay
+prepushkey.lock = python:$TESTTMP/repo_lock.py:run
+CONFIG
+
+}
