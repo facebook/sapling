@@ -1,10 +1,10 @@
 // Copyright Facebook, Inc. 2019
 
-use std::{cell::RefCell, time::Duration};
+use std::{cell::RefCell, mem, time::Duration};
 
 use curl::{
     self,
-    easy::{Easy2, Handler},
+    easy::Easy2,
     multi::{Easy2Handle, Multi},
 };
 use failure::Fallible;
@@ -25,7 +25,7 @@ pub struct MultiDriver<'a, H> {
     fail_early: bool,
 }
 
-impl<'a, H: Handler> MultiDriver<'a, H> {
+impl<'a, H> MultiDriver<'a, H> {
     pub fn with_capacity(multi: &'a mut Multi, capacity: usize) -> Self {
         Self {
             multi,
@@ -164,5 +164,30 @@ impl<'a, H: Handler> MultiDriver<'a, H> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Drop all of the outstanding Easy2 handles in the Multi stack.
+    fn drop_all(&mut self) {
+        self.num_transfers = 0;
+        let mut dropped = 0;
+
+        let mut handles = self.handles.borrow_mut();
+        let handles = mem::replace(&mut *handles, Vec::with_capacity(0));
+        for handle in handles {
+            if let Some(handle) = handle {
+                let _ = self.multi.remove2(handle);
+                dropped += 1;
+            }
+        }
+
+        if dropped > 0 {
+            log::debug!("Dropped {} outstanding transfers.", dropped);
+        }
+    }
+}
+
+impl<'a, H> Drop for MultiDriver<'a, H> {
+    fn drop(&mut self) {
+        self.drop_all();
     }
 }
