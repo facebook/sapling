@@ -3,6 +3,7 @@ members = [
     "blackbox",
     "blackbox/serde_alt",
     "bookmarkstore",
+    "clidispatch",
     "cliparser",
     "commitcloudsubscriber",
     "configparser",

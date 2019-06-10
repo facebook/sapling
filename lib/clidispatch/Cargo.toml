@@ -1,0 +1,5 @@
+[package]
+name = "clidispatch"
+version = "0.0.1"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
