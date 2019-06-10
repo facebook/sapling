@@ -234,6 +234,7 @@ Changelog missing entry
   $ hg verify -q -r 1
   warning: ignoring unknown working parent c5ddb05ab828!
   abort: unknown revision '1'!
+  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ cp -R .hg/store-full/. .hg/store
 
@@ -286,6 +287,7 @@ Changelog and manifest log missing entry
   $ hg verify -q -r 1
   warning: ignoring unknown working parent c5ddb05ab828!
   abort: unknown revision '1'!
+  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ cp -R .hg/store-full/. .hg/store
 
@@ -304,6 +306,7 @@ Changelog and filelog missing entry
   $ hg verify -q -r 1
   warning: ignoring unknown working parent c5ddb05ab828!
   abort: unknown revision '1'!
+  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ cp -R .hg/store-full/. .hg/store
 

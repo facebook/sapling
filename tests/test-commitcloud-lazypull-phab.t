@@ -165,6 +165,7 @@ Test for `hg diff --since-last-submit`
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit --config extensions.commitcloud=!
   abort: unknown revision 'a8080066a666ffa51c0a171e87d5a0396ecb559a'!
+  (if a8080066a666ffa51c0a171e87d5a0396ecb559a is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit
@@ -203,6 +204,7 @@ Test for `hg diff --since-last-submit`
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -r 'lastsubmitted(.)' -T '{node} {desc}'  --config extensions.commitcloud=!
   abort: unknown revision 'a8080066a666ffa51c0a171e87d5a0396ecb559a'!
+  (if a8080066a666ffa51c0a171e87d5a0396ecb559a is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -r 'lastsubmitted(.)' -T '{node} {desc}'

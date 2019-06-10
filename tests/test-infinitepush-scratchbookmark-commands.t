@@ -135,6 +135,7 @@ Test the attempting to create a scratch bookmark on a non existing commit fails.
   $ cd ../server
   $ hg debugcreatescratchbookmark -r "aaaaaaaaaaaa" -B scratch/bookmark
   abort: unknown revision 'aaaaaaaaaaaa'!
+  (if aaaaaaaaaaaa is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 

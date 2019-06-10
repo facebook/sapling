@@ -118,6 +118,7 @@ Sync from the second client and `hg unamend` there
 
   $ hg unamend --config extensions.commitcloud=!
   abort: unknown revision '1cf4a5a0e8fc41ef1289e833ebdb22d754c080ac'!
+  (if 1cf4a5a0e8fc41ef1289e833ebdb22d754c080ac is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 

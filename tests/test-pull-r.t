@@ -64,6 +64,7 @@ Pull a missing revision:
 
   $ hg pull -qr missing ../repo
   abort: unknown revision 'missing'!
+  (if missing is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Pull multiple revisions with update:

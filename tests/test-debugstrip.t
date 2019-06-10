@@ -540,6 +540,7 @@ test hg debugstrip -B bookmark
   bookmark 'todelete' deleted
   $ hg id -ir dcbb326fdec2
   abort: unknown revision 'dcbb326fdec2'!
+  (if dcbb326fdec2 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg id -ir d62d843c9a01
   d62d843c9a01
@@ -556,9 +557,11 @@ test hg debugstrip -B bookmark
   bookmark 'multipledelete2' deleted
   $ hg id -ir e46a4836065c
   abort: unknown revision 'e46a4836065c'!
+  (if e46a4836065c is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg id -ir b4594d867745
   abort: unknown revision 'b4594d867745'!
+  (if b4594d867745 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg debugstrip -B singlenode1 -B singlenode2
   saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
@@ -566,6 +569,7 @@ test hg debugstrip -B bookmark
   bookmark 'singlenode2' deleted
   $ hg id -ir 43227190fef8
   abort: unknown revision '43227190fef8'!
+  (if 43227190fef8 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg debugstrip -B unknownbookmark
   abort: bookmark not found: 'unknownbookmark'
@@ -581,6 +585,7 @@ test hg debugstrip -B bookmark
   bookmark 'delete' deleted
   $ hg id -ir 6:2702dd0c91e7
   abort: unknown revision '2702dd0c91e7'!
+  (if 2702dd0c91e7 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg update B
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

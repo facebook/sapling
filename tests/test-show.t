@@ -24,6 +24,7 @@ Add log alias to and make sure show still works
 
   $ hg show 1
   abort: unknown revision '1'!
+  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg show 'branch(name)'
   abort: unknown revision branch(name)
@@ -70,6 +71,7 @@ Check that the command parser always treats the first argument as a revision:
 
   $ hg show two
   abort: unknown revision 'two'!
+  (if two is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg show . two
   changeset:   0:bf7b98b60f6f

@@ -185,6 +185,7 @@ check that various commands work well with filtering
   5:5601fb93a350 (draft) [tip ] add new_3_c
   $ hg log -r 6
   abort: unknown revision '6'!
+  (if 6 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg log -r 4
   abort: hidden revision '4'!

@@ -989,6 +989,7 @@ def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
     if opts.get("remote"):
         repo.__setattr__("_unblockhiddenremotenames", True)
+
     res = orig(ui, repo, *args, **opts)
     if opts.get("remote"):
         repo.__setattr__("_unblockhiddenremotenames", False)

@@ -521,6 +521,7 @@ Test resolving commits based on the strictly increasing global revision numbers.
 
   $ hg log -r 'munknown'
   abort: unknown revision 'munknown'!
+  (if munknown is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 
@@ -554,10 +555,12 @@ global revision number 4999 which should not exist as the counting starts from
 
   $ hg log -r 'm4999'
   abort: unknown revision 'm4999'!
+  (if m4999 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg log -r 'm1+m2'
   abort: unknown revision 'm1'!
+  (if m1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg log -r 'globalrev(-1)'
@@ -674,6 +677,7 @@ repository.
 
   $ getglobalrev 'm5004'
   abort: unknown revision 'm5004'!
+  (if m5004 is a remote bookmark or commit, try to 'hg pull' it first)
   
 
 

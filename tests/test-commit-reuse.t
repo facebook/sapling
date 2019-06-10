@@ -30,6 +30,7 @@ Ensure it supports nonexistant revisions:
 
   $ hg commit -M thisrevsetdoesnotexist
   abort: unknown revision 'thisrevsetdoesnotexist'!
+  (if thisrevsetdoesnotexist is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Ensure it populates the message editor:

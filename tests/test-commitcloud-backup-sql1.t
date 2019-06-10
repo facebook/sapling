@@ -39,6 +39,7 @@ Make pull and check that scratch commit is not pulled
   no changes found
   $ hg log -r scratch/book
   abort: unknown revision 'scratch/book'!
+  (if scratch/book is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Pull scratch commit from the second client

@@ -7,9 +7,11 @@ Log on empty repository: checking consistency
   $ hg log
   $ hg log -r 1
   abort: unknown revision '1'!
+  (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg log -r -1:0
   abort: unknown revision '-1'!
+  (if -1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg log -r 'branch(name)'
   $ hg log -r null -q
@@ -924,6 +926,7 @@ log -r <some unknown node id>
 
   $ hg log -r 1000000000000000000000000000000000000000
   abort: unknown revision '1000000000000000000000000000000000000000'!
+  (if 1000000000000000000000000000000000000000 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 log -k r1

@@ -177,6 +177,7 @@ Trying to update to unknown bookmark
   pulling from ssh://user@dummy/remoterepo
   pull failed: remote bookmark unknownbook not found!
   abort: unknown revision 'unknownbook'!
+  (if unknownbook is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Update to the remote bookmark from secondremote
@@ -227,6 +228,12 @@ Make sure only master bookmark is present
   $ hg pull -q
   $ hg book --remote
      default/master            2:0238718db2b1
+
+Check that log shows the hint about selective pull
+  $ hg log -r default/thirdbook
+  abort: unknown revision 'default/thirdbook'!
+  (if default/thirdbook is a remote bookmark or commit, try to 'hg pull' it first)
+  [255]
 
 Set two bookmarks in selectivepulldefault, make sure both of them were pulled
   $ cat >> .hg/hgrc << EOF

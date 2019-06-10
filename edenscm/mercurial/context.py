@@ -568,7 +568,11 @@ class changectx(basectx):
             raise _filterederror(repo, changeid)
         except IndexError:
             pass
-        raise error.RepoLookupError(_("unknown revision '%s'") % changeid)
+        raise error.RepoLookupError(
+            _("unknown revision '%s'") % changeid,
+            hint=_("if %s is a remote bookmark or commit, try to 'hg pull' it first")
+            % changeid,
+        )
 
     def __hash__(self):
         try:

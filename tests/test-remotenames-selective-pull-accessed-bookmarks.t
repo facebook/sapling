@@ -182,6 +182,7 @@ change hoist and update again
 
   $ hg up A_bookmark
   abort: unknown revision 'A_bookmark'!
+  (if A_bookmark is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark

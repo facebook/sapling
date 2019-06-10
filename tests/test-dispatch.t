@@ -119,19 +119,24 @@ Early options must come first if HGPLAIN=+strictflags is specified:
 #if no-chg
   $ HGPLAIN=+strictflags hg log -b --config='hooks.pre-log=false' default
   abort: unknown revision '--config=hooks.pre-log=false'!
+  (if --config=hooks.pre-log=false is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ HGPLAIN=+strictflags hg log -b -R. default
   abort: unknown revision '-R.'!
+  (if -R. is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ HGPLAIN=+strictflags hg log -b --cwd=. default
   abort: unknown revision '--cwd=.'!
+  (if --cwd=. is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 #endif
   $ HGPLAIN=+strictflags hg log -b --debugger default
   abort: unknown revision '--debugger'!
+  (if --debugger is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ HGPLAIN=+strictflags hg log -b --config='alias.log=!echo pwned' default
   abort: unknown revision '--config=alias.log=!echo pwned'!
+  (if --config=alias.log=!echo pwned is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ HGPLAIN=+strictflags hg log --config='hooks.pre-log=false' -b default

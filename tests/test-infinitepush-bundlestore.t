@@ -691,6 +691,7 @@ Trying to pull from bad path
   pulling from $TESTTMP/client2/badpath (glob)
   pull failed: repository $TESTTMP/client2/badpath not found
   abort: unknown revision 'c70aee6da07d7cdb9897375473690df3a8563339'!
+  (if c70aee6da07d7cdb9897375473690df3a8563339 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Strip commit and pull it using hg update with bookmark name

@@ -211,6 +211,7 @@ Catch exporting unknown revisions (especially empty revsets, see issue3353)
   [255]
   $ hg export 999
   abort: unknown revision '999'!
+  (if 999 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg export "not all()"
   abort: export requires at least one changeset

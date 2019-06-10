@@ -661,6 +661,7 @@ test bundle with # in the filename (issue2154):
   $ hg incoming '../test#bundle.hg'
   comparing with ../test
   abort: unknown revision 'bundle.hg'!
+  (if bundle.hg is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 note that percent encoding is not handled:

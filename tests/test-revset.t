@@ -315,6 +315,7 @@ names that should be caught by fallback mechanism
     (negate
       (symbol 'a')))
   abort: unknown revision '-a'!
+  (if -a is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ try é
   (symbol '\xc3\xa9')
@@ -416,6 +417,7 @@ quoting needed
   [255]
   $ log 'date'
   abort: unknown revision 'date'!
+  (if date is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ log 'date('
   hg: parse error at 5: not a prefix: end
@@ -430,9 +432,11 @@ quoting needed
   [255]
   $ log '0:date'
   abort: unknown revision 'date'!
+  (if date is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ log '::"date"'
   abort: unknown revision 'date'!
+  (if date is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
   $ hg book date -r 4
   $ log '0:date'

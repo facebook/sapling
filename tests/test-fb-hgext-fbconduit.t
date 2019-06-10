@@ -189,10 +189,12 @@ Make sure that globalrevs work
 
   $ hg up rWWW4999
   abort: unknown revision 'rWWW4999'!
+  (if rWWW4999 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg up rWWWHGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   abort: unknown revision 'rWWWHGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'!
+  (if rWWWHGaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg up -q rWWW5000
@@ -220,6 +222,7 @@ the globalrev 5000.
 
   $ hg up -q m5000
   abort: unknown revision 'm5000'!
+  (if m5000 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 - Setup the `globalrev->hash` mapping for commit with globalrev 5000.
