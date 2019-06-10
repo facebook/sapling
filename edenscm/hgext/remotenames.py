@@ -953,7 +953,7 @@ def extsetup(ui):
 
     newopts = [
         (bookcmd, ("a", "all", None, "show both remote and local bookmarks")),
-        (bookcmd, ("", "remote", None, "show only remote bookmarks")),
+        (bookcmd, ("", "remote", None, _("show only remote bookmarks (DEPRECATED)"))),
         (
             bookcmd,
             (
@@ -1422,7 +1422,11 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     if not remote and not subscriptions:
         displaylocalbookmarks(ui, repo, opts, fm)
 
-    if remote or subscriptions or opts.get("all"):
+    if _isselectivepull(ui) and remote:
+        other = _getremotepeer(ui, repo, opts)
+        remotebookmarks = other.listkeys("bookmarks")
+        _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
+    elif remote or subscriptions or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
     fm.end()
@@ -1516,6 +1520,27 @@ def displayremotebookmarks(ui, repo, opts, fm):
         fm.condwrite(
             not ui.quiet, "rev node", fmt, ctx.rev(), fm.hexfunc(node), label=tmplabel
         )
+        fm.plain("\n")
+
+
+def _getremotepeer(ui, repo, opts):
+    remotepath = opts.get("remote_path")
+    path = ui.paths.getpath(remotepath or None, default=("default"))
+
+    destpath = path.pushloc or path.loc
+    other = hg.peer(repo, opts, destpath)
+    return other
+
+
+def _showfetchedbookmarks(ui, remote, bookmarks, opts, fm):
+    remotepath = activepath(ui, remote)
+    for bmark, n in sorted(bookmarks.iteritems()):
+        fm.startitem()
+        if not ui.quiet:
+            fm.plain("   ")
+        fm.write("remotebookmark", "%s", joinremotename(remotepath, bmark))
+        pad = " " * (25 - encoding.colwidth(bmark))
+        fm.condwrite(not ui.quiet, "node", pad + " %s", n)
         fm.plain("\n")
 
 

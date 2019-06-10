@@ -69,7 +69,7 @@ Check used remote bookmarks tracking
   $ setconfig remotenames.selectivepullaccessedbookmarks=True
 
   $ hg pull -q
-  $ hg bookmarks --remote
+  $ hg book --list-subscriptions
      default/A_bookmark        2:01c036b602a8
      default/B_bookmark        3:5b252c992f6d
      default/C_bookmark        4:d91e2f962bff
@@ -119,7 +119,7 @@ Add second remote and update to first master
   > secondremote=ssh://user@dummy/secondremoterepo
   > EOF
   $ hg pull secondremote -q
-  $ hg book --remote
+  $ hg book --list-subscriptions
      default/A_bookmark        2:01c036b602a8
      default/B_bookmark        3:5b252c992f6d
      default/C_bookmark        4:d91e2f962bff
