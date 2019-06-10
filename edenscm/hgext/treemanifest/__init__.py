@@ -736,6 +736,14 @@ class basetreemanifestlog(object):
     def getmutablesharedpacks(self):
         return self._mutablesharedpacks.getmutablepack()
 
+    def _addtreeentry(
+        self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev
+    ):
+        # Not using deltas, since there aren't any other trees in
+        # this pack it could delta against.
+        dpack.add(nname, nnode, revlog.nullid, ntext)
+        hpack.add(nname, nnode, np1, np2, linknode, "", linkrev=linkrev)
+
     def _addtopack(
         self,
         ui,
@@ -765,10 +773,9 @@ class basetreemanifestlog(object):
 
         node = overridenode
         for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-            # Not using deltas, since there aren't any other trees in
-            # this pack it could delta against.
-            dpack.add(nname, nnode, revlog.nullid, ntext)
-            hpack.add(nname, nnode, np1, np2, linknode, "", linkrev=linkrev)
+            self._addtreeentry(
+                dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev
+            )
             if node is None and nname == "":
                 node = nnode
 
