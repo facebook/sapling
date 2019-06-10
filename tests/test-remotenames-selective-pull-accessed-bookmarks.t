@@ -264,6 +264,8 @@ Check selective pull setup using accessed bookmarks
      default/master            1:206754acf7d8
      secondremote/D_bookmark   6:a1b1b44a131d
      secondremote/master       5:a6b4ed81a38e
+  $ sort .hg/selectivepullenabled
+  default
 
 pulling from the secondremote
   $ hg pull secondremote
@@ -272,5 +274,7 @@ pulling from the secondremote
   $ hg book --list-subs
      default/C_bookmark        7:d65ac0c5f8c9
      default/master            1:206754acf7d8
-     secondremote/D_bookmark   6:a1b1b44a131d
      secondremote/master       5:a6b4ed81a38e
+  $ sort .hg/selectivepullenabled
+  default
+  secondremote

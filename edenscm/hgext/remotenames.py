@@ -95,6 +95,7 @@ journalremotebookmarktype = "remotebookmark"
 # name of the file that is used to mark that transition to selectivepull has
 # happened
 _selectivepullenabledfile = "selectivepullenabled"
+_selectivepullenabledfilelock = "selectivepullenabled.lock"
 _selectivepullaccessedbookmarks = "selectivepullaccessedbookmarks"
 # separate lock to update accessed bookmarks
 _selectivepullaccessedbookmarkslock = "selectivepullaccessedbookmarks.lock"
@@ -145,6 +146,35 @@ def _isselectivepull(ui):
 
 def _trackaccessedbookmarks(ui):
     return ui.configbool("remotenames", "selectivepullaccessedbookmarks")
+
+
+def _readisselectivepullenabledfile(repo):
+    try:
+        with repo.sharedvfs(_selectivepullenabledfile) as f:
+            for line in f:
+                yield line.strip()
+    except EnvironmentError as er:
+        if er.errno != errno.ENOENT:
+            raise
+        return
+
+
+def _isselectivepullenabledforremote(repo, remote):
+    for enabledremote in _readisselectivepullenabledfile(repo):
+        if enabledremote == remote:
+            return True
+    return False
+
+
+def _setselectivepullenabledforremote(repo, remote):
+    vfs = repo.sharedvfs
+    with lockmod.lock(vfs, _selectivepullenabledfilelock):
+        enabledremotes = set(_readisselectivepullenabledfile(repo))
+
+        enabledremotes.add(remote)
+        with vfs(_selectivepullenabledfile, "w", atomictemp=True) as f:
+            for renabled in enabledremotes:
+                f.write("%s\n" % renabled)
 
 
 def _getselectivepulldefaultbookmarks(ui):
@@ -242,6 +272,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
 def expull(orig, repo, remote, *args, **kwargs):
     vfs = repo.sharedvfs
 
+    path = activepath(repo.ui, remote)
     if _isselectivepull(repo.ui):
         # if selectivepull is enabled then we don't save all of the remote
         # bookmarks in remotenames file. Instead we save only bookmarks that
@@ -253,9 +284,8 @@ def expull(orig, repo, remote, *args, **kwargs):
         # "hg update REMOTE_BOOK_NAME" or "hg pull -B REMOTE_BOOK_NAME".
         # Selectivepull is helpful when server has too many remote bookmarks
         # because it may slow down clients.
-        path = activepath(repo.ui, remote)
         remotebookmarkslist = []
-        if vfs.exists(_selectivepullenabledfile):
+        if _isselectivepullenabledforremote(repo, path):
             # 'selectivepullenabled' file is used for transition between
             # non-selectivepull repo to selectivepull repo. It is used as
             # indicator to whether "non-interesting" bookmarks were removed
@@ -285,14 +315,12 @@ def expull(orig, repo, remote, *args, **kwargs):
     with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
         res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
-    if vfs.exists(_selectivepullenabledfile):
-        if not _isselectivepull(repo.ui):
+    if not _isselectivepull(repo.ui):
+        if vfs.exists(_selectivepullenabledfile):
             with repo.wlock():
                 vfs.unlink(_selectivepullenabledfile)
     else:
-        if _isselectivepull(repo.ui):
-            with repo.wlock(), vfs(_selectivepullenabledfile, "w") as f:
-                f.write("enabled")  # content doesn't matter
+        _setselectivepullenabledforremote(repo, path)
 
     if _trackaccessedbookmarks(repo.ui):
         pulledbookmarks = kwargs.get("bookmarks", [])
@@ -954,6 +982,7 @@ def extsetup(ui):
     pushcmd = extensions.wrapcommand(commands.table, "push", expushcmd)
 
     localrepo.localrepository._wlockfreeprefix.add("selectivepullaccessedbookmarks")
+    localrepo.localrepository._wlockfreeprefix.add("selectivepullenabled")
 
     if _tracking(ui):
         bookcmd[1].append(
