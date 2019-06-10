@@ -148,10 +148,22 @@ def _trackaccessedbookmarks(ui):
 
 
 def _getselectivepulldefaultbookmarks(ui):
-    default_books = ui.configlist("remotenames", "selectivepulldefault")
-    if not default_books:
-        raise error.Abort(_("no default bookmarks specified for selectivepull"))
-    return default_books
+    return ui.configlist("remotenames", "selectivepulldefault")
+
+
+def _getselectivepullinitbookmarks(repo, remote):
+    initbooks = set(_getselectivepulldefaultbookmarks(repo.ui))
+
+    vfs = repo.sharedvfs
+    accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
+    for node, nametype, remotepath, name in accessedbooks:
+        if nametype == "bookmarks" and remotepath == remote:
+            initbooks.add(name)
+
+    if not initbooks:
+        raise error.Abort(_("no bookmarks to subscribe specified for selectivepull"))
+
+    return initbooks
 
 
 def _listremotebookmarks(remote, bookmarks):
@@ -250,7 +262,7 @@ def expull(orig, repo, remote, *args, **kwargs):
             # from remotenames file.
             remotebookmarkslist = list(readbookmarknames(repo, path))
         if not remotebookmarkslist:
-            remotebookmarkslist = _getselectivepulldefaultbookmarks(repo.ui)
+            remotebookmarkslist = _getselectivepullinitbookmarks(repo, path)
 
         if kwargs.get("bookmarks"):
             remotebookmarkslist.extend(kwargs["bookmarks"])

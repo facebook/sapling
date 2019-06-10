@@ -42,7 +42,7 @@ script to verify sampling
   > }
 
 
-Create remote bookmarks
+Setup remote repos
 
   $ cd remoterepo
   $ mkcommit BASE
@@ -50,6 +50,19 @@ Create remote bookmarks
 
   $ mkcommit master
   $ hg book master
+
+  $ cd ..
+  $ hg clone -q ssh://user@dummy/remoterepo secondremoterepo
+  $ cd secondremoterepo
+  $ hg up -q 206754acf7d8
+  $ mkcommit new_master
+  $ hg book master --force
+
+  $ hg up '.^' -q
+  $ mkcommit D
+  $ hg book D_bookmark
+
+  $ cd ../remoterepo
 
   $ hg up $BASE -q
   $ mkcommit A
@@ -103,15 +116,7 @@ Check pulling unknown bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
   accessedremotenames_totalnum : 2
 
-Add second remote and update to first master
-
-  $ cd ..
-  $ hg clone -q ssh://user@dummy/remoterepo secondremoterepo
-  $ cd secondremoterepo
-  $ hg up -q 206754acf7d8
-  $ mkcommit new_master
-
-  $ hg book master --force
+Add second remote to the paths and update to the first master
 
   $ cd ../localrepo
   $ cat >> $HGRCPATH << EOF
@@ -124,6 +129,7 @@ Add second remote and update to first master
      default/B_bookmark        3:5b252c992f6d
      default/C_bookmark        4:d91e2f962bff
      default/master            1:206754acf7d8
+     secondremote/D_bookmark   6:a1b1b44a131d
      secondremote/master       5:a6b4ed81a38e
 
   $ checkaccessedbookmarks
@@ -197,3 +203,74 @@ change hoist and update again
   5b252c992f6da5179f90eda723431f54e5a9a3f5 bookmarks default/B_bookmark
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
   accessedremotenames_totalnum : 3
+
+Check selective pull setup using accessed bookmarks
+
+  $ cd ../remoterepo
+  $ mkcommit new_C
+  $ hg log -G -T "'{desc}' {bookmarks} {remotenames}"
+  @  'commit new_C' C_bookmark
+  |
+  o  'commit C'
+  |
+  | o  'commit B' B_bookmark
+  |/
+  | o  'commit A' A_bookmark
+  |/
+  | o  'commit master' master
+  |/
+  o  'commit BASE'
+  
+
+  $ cd ../secondremoterepo
+  $ hg log -G -T "'{desc}' {bookmarks} {remotenames}"
+  @  'commit D' D_bookmark
+  |
+  | o  'commit new_master' master
+  |/
+  o  'commit master'  default/master
+  |
+  o  'commit BASE'
+  
+
+  $ cd ../localrepo
+  $ setconfig remotenames.hoist=default
+
+  $ rm .hg/selectivepullaccessedbookmarks
+  $ hg up C_bookmark
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ checkaccessedbookmarks
+  d91e2f962bffb715a380162e945e6df13bf7aa3c bookmarks default/C_bookmark
+  accessedremotenames_totalnum : 1
+  $ hg book --list-subs
+     default/A_bookmark        2:01c036b602a8
+     default/B_bookmark        3:5b252c992f6d
+     default/C_bookmark        4:d91e2f962bff
+     default/master            1:206754acf7d8
+     secondremote/D_bookmark   6:a1b1b44a131d
+     secondremote/master       5:a6b4ed81a38e
+
+  $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
+  $ hg pull
+  pulling from ssh://user@dummy/remoterepo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  new changesets d65ac0c5f8c9
+  $ hg book --list-subs
+     default/C_bookmark        7:d65ac0c5f8c9
+     default/master            1:206754acf7d8
+     secondremote/D_bookmark   6:a1b1b44a131d
+     secondremote/master       5:a6b4ed81a38e
+
+pulling from the secondremote
+  $ hg pull secondremote
+  pulling from ssh://user@dummy/secondremoterepo
+  no changes found
+  $ hg book --list-subs
+     default/C_bookmark        7:d65ac0c5f8c9
+     default/master            1:206754acf7d8
+     secondremote/D_bookmark   6:a1b1b44a131d
+     secondremote/master       5:a6b4ed81a38e
