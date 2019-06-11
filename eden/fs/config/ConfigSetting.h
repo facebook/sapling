@@ -152,7 +152,7 @@ class ConfigSetting : public ConfigSettingBase {
 
   /** Get the string value for this setting. Intended for debug purposes. .*/
   std::string getStringValue() const override {
-    return folly::to<std::string>(getValue());
+    return Converter{}.toDebugString(getValue());
   }
 
   /**
@@ -169,7 +169,7 @@ class ConfigSetting : public ConfigSettingBase {
           "Convert ignored for default value");
     }
     Converter c;
-    return c(stringValue, attrMap).then([&](T&& convertResult) {
+    return c.fromString(stringValue, attrMap).then([&](T&& convertResult) {
       getSlot(newSource).emplace(std::move(convertResult));
     });
   }

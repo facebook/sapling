@@ -37,7 +37,7 @@ bool isValidAbsolutePath(folly::StringPiece path) {
 namespace facebook {
 namespace eden {
 
-Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::operator()(
+Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
     folly::StringPiece value,
     const std::map<string, string>& convData) const {
   auto sString = value.str();
@@ -74,7 +74,7 @@ Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::operator()(
   }
 }
 
-Expected<string, string> FieldConverter<string>::operator()(
+Expected<string, string> FieldConverter<string>::fromString(
     folly::StringPiece value,
     const std::map<string, string>& /* unused */) const {
   return folly::makeExpected<string, string>(value.toString());

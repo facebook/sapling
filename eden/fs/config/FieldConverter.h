@@ -37,17 +37,25 @@ class FieldConverter<AbsolutePath> {
    * method (for example $HOME value.)
    * @return the converted AbsolutePath or an error message.
    */
-  folly::Expected<AbsolutePath, std::string> operator()(
+  folly::Expected<AbsolutePath, std::string> fromString(
       folly::StringPiece value,
       const std::map<std::string, std::string>& convData) const;
+
+  std::string toDebugString(const AbsolutePath& path) const {
+    return path.value();
+  }
 };
 
 template <>
 class FieldConverter<std::string> {
  public:
-  folly::Expected<std::string, std::string> operator()(
+  folly::Expected<std::string, std::string> fromString(
       folly::StringPiece value,
       const std::map<std::string, std::string>& convData) const;
+
+  std::string toDebugString(const std::string& value) const {
+    return value;
+  }
 };
 
 /*
@@ -66,7 +74,7 @@ class FieldConverter<
    * method (for example $HOME value.)
    * @return the converted boolean or an error message.
    */
-  folly::Expected<T, std::string> operator()(
+  folly::Expected<T, std::string> fromString(
       folly::StringPiece value,
       const std::map<std::string, std::string>& /* convData */) const {
     auto result = folly::tryTo<T>(value);
@@ -75,6 +83,10 @@ class FieldConverter<
     }
     return folly::makeUnexpected<std::string>(
         folly::makeConversionError(result.error(), value).what());
+  }
+
+  std::string toDebugString(T value) const {
+    return folly::to<std::string>(value);
   }
 };
 

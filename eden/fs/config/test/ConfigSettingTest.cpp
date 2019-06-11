@@ -43,6 +43,7 @@ TEST(ConfigSettingTest, configSetStringValue) {
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), systemConfigDir);
+  EXPECT_EQ("/SYSTEM_CONFIG_SETTING", testDir.getStringValue());
 
   folly::StringPiece userConfigDir{"/USER_CONFIG_SETTING"};
   rslt =
@@ -50,6 +51,7 @@ TEST(ConfigSettingTest, configSetStringValue) {
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), userConfigDir);
+  EXPECT_EQ("/USER_CONFIG_SETTING", testDir.getStringValue());
 }
 
 TEST(ConfigSettingTest, configSetAssign) {
@@ -129,6 +131,7 @@ TEST(ConfigSettingTest, configSetEnvSubTest) {
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), "/home/bob/test_dir");
+  EXPECT_EQ("/home/bob/test_dir", testDir.getStringValue());
 
   folly::StringPiece homeUserConfigDir{"/home/${USER}/test_dir"};
   rslt = testDir.setStringValue(
@@ -136,6 +139,7 @@ TEST(ConfigSettingTest, configSetEnvSubTest) {
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), "/home/bob/test_dir");
+  EXPECT_EQ("/home/bob/test_dir", testDir.getStringValue());
 }
 
 TEST(ConfigSettingTest, configSettingIgnoreDefault) {
@@ -316,10 +320,12 @@ TEST(ConfigSettingTest, setBool) {
   checkSet(setting, true, "yes");
   checkSet(setting, true, "Y");
   checkSet(setting, true, "on");
+  EXPECT_EQ("1", setting.getStringValue());
   checkSet(setting, false, "n");
   checkSet(setting, false, "0");
   checkSet(setting, false, "false");
   checkSet(setting, false, "off");
+  EXPECT_EQ("0", setting.getStringValue());
 
   checkSetError(setting, "Empty input string", "");
   checkSetError(setting, "Invalid value for bool: \"bogus\"", "bogus");
