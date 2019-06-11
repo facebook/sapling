@@ -23,6 +23,7 @@ use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
 const LOG_CMD: &'static str = "log";
+const LIST_CMD: &'static str = "list";
 
 pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     let set = SubCommand::with_name(SET_CMD)
@@ -79,10 +80,20 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Imposes the limit on number of log records in output."),
         );
 
+    let list = SubCommand::with_name(LIST_CMD).about("list bookmarks").arg(
+        Arg::with_name("kind")
+            .long("kind")
+            .takes_value(true)
+            .possible_values(&["publishing"])
+            .required(true)
+            .help("What set of bookmarks to list"),
+    );
+
     app.about("set of commands to manipulate bookmarks")
         .subcommand(set)
         .subcommand(get)
         .subcommand(log)
+        .subcommand(list)
 }
 
 pub fn handle_command<'a>(
@@ -95,6 +106,7 @@ pub fn handle_command<'a>(
         (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, repo),
         (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, repo),
         (LOG_CMD, Some(sub_m)) => handle_log(sub_m, ctx, repo),
+        (LIST_CMD, Some(sub_m)) => handle_list(sub_m, ctx, repo),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -242,6 +254,34 @@ fn handle_log<'a>(
             .boxify(),
 
         _ => panic!("Unknown changeset-type supplied"),
+    }
+}
+
+fn handle_list<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    repo: BoxFuture<BlobRepo, Error>,
+) -> BoxFuture<(), Error> {
+    match args.value_of("kind") {
+        Some("publishing") => repo
+            .map(move |repo| {
+                repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+                    .map({
+                        cloned!(repo, ctx);
+                        move |(bookmark, bonsai_cs_id)| {
+                            repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs_id)
+                                .map(move |hg_cs_id| (bookmark, bonsai_cs_id, hg_cs_id))
+                        }
+                    })
+            })
+            .flatten_stream()
+            .buffer_unordered(100)
+            .for_each(|(bookmark, bonsai_cs_id, hg_cs_id)| {
+                println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
+                Ok(())
+            })
+            .boxify(),
+        kind => panic!("Invalid kind {:?}", kind),
     }
 }
 
