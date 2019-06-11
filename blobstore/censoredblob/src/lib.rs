@@ -11,22 +11,25 @@ use context::CoreContext;
 use failure_ext::Error;
 use futures::future;
 use futures_ext::{BoxFuture, FutureExt};
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 mod errors;
 use crate::errors::ErrorKind;
+
+mod store;
+pub use crate::store::SqlCensoredContentStore;
 
 // A wrapper for any blobstore, which provides a verification layer for the blacklisted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
 #[derive(Debug, Clone)]
 pub struct CensoredBlob {
     blobstore: Arc<dyn Blobstore>,
-    censored: Arc<HashSet<String>>,
+    censored: HashMap<String, String>,
 }
 
 impl CensoredBlob {
-    pub fn new(blobstore: Arc<dyn Blobstore>, censored: Arc<HashSet<String>>) -> Self {
+    pub fn new(blobstore: Arc<dyn Blobstore>, censored: HashMap<String, String>) -> Self {
         Self {
             blobstore,
             censored,
@@ -36,15 +39,17 @@ impl CensoredBlob {
 
 impl Blobstore for CensoredBlob {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        if !self.censored.contains(&key) {
-            self.blobstore.get(ctx, key)
-        } else {
-            future::err(ErrorKind::Censored(key).into()).boxify()
+        match self.censored.get(&key) {
+            Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
+            None => self.blobstore.get(ctx, key),
         }
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.blobstore.put(ctx, key, value)
+        match self.censored.get(&key) {
+            Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
+            None => self.blobstore.put(ctx, key, value),
+        }
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
@@ -60,8 +65,9 @@ impl Blobstore for CensoredBlob {
 mod test {
 
     use super::*;
+    use assert_matches::assert_matches;
     use context::CoreContext;
-    use maplit::hashset;
+    use maplit::hashmap;
     use memblob::EagerMemblob;
     use tokio::runtime::Runtime;
 
@@ -69,30 +75,49 @@ mod test {
     fn test_censored_key() {
         let mut rt = Runtime::new().unwrap();
 
-        let foo_key = "foo".to_string();
-        let bar_key = "bar".to_string();
+        let uncensored_key = "foo".to_string();
+        let censored_key = "bar".to_string();
+        let censored_task = "bar task".to_string();
+
         let ctx = CoreContext::test_mock();
 
         let inner = EagerMemblob::new();
+        let censored_pairs = hashmap! {
+            censored_key.clone() => censored_task.clone(),
+        };
 
-        let censored_keys = Arc::new(hashset! {bar_key.clone()});
+        let blob = CensoredBlob::new(Arc::new(inner), censored_pairs);
 
-        let blob = CensoredBlob::new(Arc::new(inner), censored_keys);
+        //Test put with blacklisted key
+        let res = rt.block_on(blob.put(
+            ctx.clone(),
+            censored_key.clone(),
+            BlobstoreBytes::from_bytes("test bar"),
+        ));
+
+        assert_matches!(
+            res.expect_err("the key should be blacklisted").downcast::<ErrorKind>(),
+            Ok(ErrorKind::Censored(_, ref task)) if task == &censored_task
+        );
 
         //Test key added to the blob
         let res = rt.block_on(blob.put(
             ctx.clone(),
-            foo_key.clone(),
+            uncensored_key.clone(),
             BlobstoreBytes::from_bytes("test foo"),
         ));
         assert!(res.is_ok(), "the key should be added successfully");
 
         // Test accessing a key which is censored
-        let res = rt.block_on(blob.get(ctx.clone(), bar_key.clone()));
-        assert!(!res.is_ok(), "the key should be censored");
+        let res = rt.block_on(blob.get(ctx.clone(), censored_key.clone()));
+
+        assert_matches!(
+            res.expect_err("the key should be censored").downcast::<ErrorKind>(),
+            Ok(ErrorKind::Censored(_, ref task)) if task == &censored_task
+        );
 
         // Test accessing a key which exists and is accesible
-        let res = rt.block_on(blob.get(ctx.clone(), foo_key.clone()));
+        let res = rt.block_on(blob.get(ctx.clone(), uncensored_key.clone()));
         assert!(res.is_ok(), "the key should be found and available");
     }
 }

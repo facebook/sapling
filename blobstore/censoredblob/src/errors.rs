@@ -8,6 +8,6 @@ use failure_ext::Fail;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "Blob {} is censored and cannot be fetched.", _0)]
-    Censored(String),
+    #[fail(display = "The blob {} is censored. \n Task/Sev: {}", _0, _1)]
+    Censored(String, String),
 }
