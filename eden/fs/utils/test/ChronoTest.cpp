@@ -59,6 +59,27 @@ TEST(Chrono, stringToDuration) {
   EXPECT_EQ(-38412010ms, stringToDuration("-9hr100m12s10ms").value());
 }
 
+TEST(Chrono, durationToString) {
+  EXPECT_EQ("1m30s", durationToString(90000ms));
+  EXPECT_EQ("1m30s", durationToString(stringToDuration("1m30s").value()));
+  EXPECT_EQ("1m30s", durationToString(stringToDuration("90s").value()));
+  EXPECT_EQ("-10ms", durationToString(-10ms));
+  EXPECT_EQ("-10h40m12s10ms", durationToString(-38412010ms));
+  EXPECT_EQ("84d", durationToString(stringToDuration("12wk").value()));
+  EXPECT_EQ("84d1ns", durationToString(stringToDuration("12wk 1ns").value()));
+  EXPECT_EQ("365d5h49m12s", durationToString(stringToDuration("1yr").value()));
+  EXPECT_EQ("0ns", durationToString(0ms));
+
+  EXPECT_EQ(
+      "-106751d23h47m16s854ms775us808ns",
+      durationToString(
+          std::chrono::nanoseconds(std::numeric_limits<int64_t>::min())));
+  EXPECT_EQ(
+      "106751d23h47m16s854ms775us807ns",
+      durationToString(
+          std::chrono::nanoseconds(std::numeric_limits<int64_t>::max())));
+}
+
 namespace {
 ChronoParseError stringToDurationError(StringPiece str) {
   auto result = stringToDuration(str);

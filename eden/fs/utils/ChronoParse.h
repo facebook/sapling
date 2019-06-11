@@ -52,5 +52,12 @@ void toAppend(ChronoParseError error, String* result) {
 FOLLY_NODISCARD folly::Expected<std::chrono::nanoseconds, ChronoParseError>
 stringToDuration(folly::StringPiece src);
 
+/**
+ * Convert a duration value to a string.
+ *
+ * The resulting string can be parsed with stringToDuration().
+ */
+std::string durationToString(std::chrono::nanoseconds duration);
+
 } // namespace eden
 } // namespace facebook

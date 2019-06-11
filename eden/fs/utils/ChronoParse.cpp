@@ -13,6 +13,7 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <string>
 #include <type_traits>
 
 #include <folly/Conv.h>
@@ -249,6 +250,55 @@ Expected<std::chrono::nanoseconds, ChronoParseError> stringToDuration(
   } else {
     return Duration{finalResult.value()};
   }
+}
+
+std::string durationToString(std::chrono::nanoseconds duration) {
+  struct SuffixInfo {
+    StringPiece suffix;
+    uintmax_t nanoseconds;
+  };
+  constexpr std::array<SuffixInfo, 6> suffixes{
+      // We currently use days as the maximum unit when converting to strings.
+      // Years and months seem slightly ambiguous: the definition settled on by
+      // C++20 isn't necessarily an obvious definition.  Weeks are unambiguous,
+      // but it still seems reasonable to use days as our max unit here.
+      SuffixInfo{"d", 24 * 60 * 60 * 1'000'000'000ULL},
+      SuffixInfo{"h", 60 * 60 * 1'000'000'000ULL},
+      SuffixInfo{"m", 60 * 1'000'000'000ULL},
+      SuffixInfo{"s", 1'000'000'000},
+      SuffixInfo{"ms", 1'000'000},
+      SuffixInfo{"us", 1'000},
+  };
+
+  if (duration.count() == 0) {
+    return "0ns";
+  }
+
+  std::string result;
+  uintmax_t value;
+  if (duration.count() < 0) {
+    result.push_back('-');
+    // Casting to unsigned before applying negation avoids potentially undefined
+    // overflow behavior when processing the smallest possible negative number.
+    // Converting a negative signed number to unsigned is well-defined and does
+    // what we want, as does applying negation to an unsigned number.
+    value = -static_cast<uintmax_t>(duration.count());
+  } else {
+    value = duration.count();
+  }
+
+  for (const auto& suffix : suffixes) {
+    if (value > suffix.nanoseconds) {
+      auto count = value / suffix.nanoseconds;
+      value = value % suffix.nanoseconds;
+      folly::toAppend(count, suffix.suffix, &result);
+    }
+  }
+  if (value > 0) {
+    folly::toAppend(value, "ns", &result);
+  }
+
+  return result;
 }
 
 } // namespace eden
