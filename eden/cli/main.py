@@ -974,6 +974,13 @@ class StartCmd(Subcmd):
             print("No Eden mount points configured.")
             return 0
 
+        # Check to see if edenfs is already running
+        if not args.takeover:
+            health_info = instance.check_health()
+            if health_info.is_healthy():
+                msg = "edenfs is already running (pid {})".format(health_info.pid)
+                raise EdenStartError(msg)
+
         if instance.should_use_experimental_systemd_mode():
             if args.foreground or args.gdb:
                 return self.start(args, instance)
@@ -983,13 +990,6 @@ class StartCmd(Subcmd):
             return self.start(args, instance)
 
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
-        # Check to see if edenfs is already running
-        if not args.takeover:
-            health_info = instance.check_health()
-            if health_info.is_healthy():
-                msg = "edenfs is already running (pid {})".format(health_info.pid)
-                raise EdenStartError(msg)
-
         daemon.exec_daemon(
             instance,
             args.daemon_binary,

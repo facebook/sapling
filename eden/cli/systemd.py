@@ -393,6 +393,26 @@ def _truncated_at_null_byte(data: bytes) -> bytes:
     return data[:end_of_file_index]
 
 
+async def print_service_status_using_systemctl_for_diagnostics_async(
+    service_name: str, xdg_runtime_dir: str
+) -> None:
+    systemctl_environment = dict(os.environ)
+    systemctl_environment["XDG_RUNTIME_DIR"] = xdg_runtime_dir
+    status_process = await asyncio.create_subprocess_exec(
+        "systemctl",
+        "--no-pager",
+        "--user",
+        "status",
+        "--",
+        service_name,
+        env=systemctl_environment,
+    )
+    _status_exit_code = await status_process.wait()
+    # Ignore the status exit code. We only run systemctl for improved
+    # diagnostics.
+    _status_exit_code
+
+
 # Types of parameters for D-Bus methods and signals. For details, see D-Bus'
 # documentation:
 # https://dbus.freedesktop.org/doc/dbus-specification.html#type-system

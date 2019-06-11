@@ -23,6 +23,7 @@ from .systemd import (
     SystemdServiceFailedToStartError,
     SystemdUserBus,
     edenfs_systemd_service_name,
+    print_service_status_using_systemctl_for_diagnostics_async,
 )
 from .util import ShutdownError, poll_until, print_stderr
 
@@ -251,17 +252,28 @@ def start_systemd_service(
     with forward_log_file(startup_log_path, sys.stderr.buffer) as log_forwarder:
         loop = asyncio.get_event_loop()
 
-        async def start_service_async() -> None:
+        async def start_service_async() -> int:
             with SystemdUserBus(
                 event_loop=loop, xdg_runtime_dir=xdg_runtime_dir
             ) as systemd:
-                await systemd.start_service_and_wait_async(service_name.encode())
+                service_name_bytes = service_name.encode()
+                active_state = await systemd.get_unit_active_state_async(
+                    service_name_bytes
+                )
+                if active_state == b"active":
+                    print_stderr("error: edenfs systemd service is already running")
+                    await print_service_status_using_systemctl_for_diagnostics_async(
+                        service_name=service_name, xdg_runtime_dir=xdg_runtime_dir
+                    )
+                    return 1
+
+                await systemd.start_service_and_wait_async(service_name_bytes)
+                return 0
 
         try:
             start_task = loop.create_task(start_service_async())
             loop.create_task(log_forwarder.poll_forever_async())
-            loop.run_until_complete(start_task)
-            return 0
+            return loop.run_until_complete(start_task)
         except SystemdServiceFailedToStartError as e:
             print_stderr(f"error: {e}")
             return 1

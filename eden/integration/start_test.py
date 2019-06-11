@@ -26,7 +26,11 @@ from .lib.edenfs_systemd import EdenFSSystemdMixin
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
-from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTestCaseMarker,
+    service_test,
+)
 from .lib.systemd import SystemdUserServiceManagerMixin
 
 
@@ -148,12 +152,36 @@ Did you mean to run "eden" instead of "edenfs"?
         self.assertMultiLineEqual(err, out.stderr.decode("utf-8", errors="replace"))
 
 
-@service_test
-class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
+class StartFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
         self.eden_dir = pathlib.Path(self.make_temporary_directory())
 
+    def spawn_start(
+        self,
+        eden_dir: typing.Optional[pathlib.Path] = None,
+        extra_args: typing.Optional[typing.Sequence[str]] = None,
+    ) -> "pexpect.spawn[str]":
+        if eden_dir is None:
+            eden_dir = self.eden_dir
+        args = (
+            ["--config-dir", str(eden_dir)]
+            + self.get_required_eden_cli_args()
+            + [
+                "start",
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
+        )
+        if extra_args:
+            args.extend(extra_args)
+        return pexpect.spawn(
+            FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
+        )
+
+
+@service_test
+class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
     def test_eden_start_launches_separate_processes_for_separate_eden_dirs(
         self
     ) -> None:
@@ -293,7 +321,6 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         self.assertEqual(str(expected), actual_config_dir, f"bad config dir: {argv}")
 
     def test_eden_start_fails_if_edenfs_is_already_running(self) -> None:
-        self.skip_if_systemd("TODO(T33122320)")
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
             start_process = self.spawn_start()
             start_process.expect_exact(f"edenfs is already running (pid {daemon_pid})")
@@ -307,27 +334,30 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         )
         self.assert_process_fails(start_process, 1)
 
-    def spawn_start(
-        self,
-        eden_dir: typing.Optional[pathlib.Path] = None,
-        extra_args: typing.Optional[typing.Sequence[str]] = None,
-    ) -> "pexpect.spawn[str]":
-        if eden_dir is None:
-            eden_dir = self.eden_dir
-        args = (
-            ["--config-dir", str(eden_dir)]
-            + self.get_required_eden_cli_args()
-            + [
-                "start",
-                "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
-            ]
-        )
-        if extra_args:
-            args.extend(extra_args)
-        return pexpect.spawn(
-            FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
-        )
+
+@service_test
+class StartWithSystemdTest(StartFakeEdenFSTestBase, SystemdServiceTestCaseMarker):
+    def test_eden_start_fails_if_service_is_running(self) -> None:
+        with self.spawn_fake_edenfs(self.eden_dir):
+            # Make fake_edenfs inaccessible and undetectable (without talking to
+            # systemd), but keep the systemd service alive.
+            (self.eden_dir / "lock").unlink()
+            (self.eden_dir / "socket").unlink()
+            health: HealthStatus = EdenInstance(
+                str(self.eden_dir), etc_eden_dir=None, home_dir=None
+            ).check_health()
+            self.assertEqual(health.status, fb_status.DEAD)
+            service = self.get_edenfs_systemd_service(eden_dir=self.eden_dir)
+            self.assertEqual(service.query_active_state(), "active")
+
+            start_process = self.spawn_start()
+            start_process.expect_exact(
+                f"error: edenfs systemd service is already running"
+            )
+            # edenfsctl should show the output of 'systemctl status'.
+            start_process.expect(r"\bfb-edenfs@.*?\.service\b")
+            start_process.expect(r"Active:[^\n]*active \(running\)")
+            self.assert_process_fails(start_process, 1)
 
 
 def run_eden_start_with_real_daemon(
