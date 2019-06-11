@@ -19,6 +19,7 @@ using folly::StringPiece;
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
+using namespace std::chrono_literals;
 
 TEST(ConfigSettingTest, initStateCheck) {
   AbsolutePath defaultDir{"/DEFAULT_DIR"};
@@ -285,7 +286,7 @@ void checkSet(
   auto setResult =
       setting.setStringValue(str, attrMap, ConfigSource::UserConfig);
   ASSERT_FALSE(setResult.hasError()) << setResult.error();
-  if (std::is_floating_point<T>::value) {
+  if constexpr (std::is_floating_point<T>::value) {
     EXPECT_FLOAT_EQ(expected, setting.getValue());
   } else {
     EXPECT_EQ(expected, setting.getValue());
@@ -360,4 +361,16 @@ TEST(ConfigSettingTest, setArithmetic) {
       floatSetting,
       "Non-whitespace character found after end of conversion: \"0.001.9\"",
       "0.001.9");
+}
+
+TEST(ConfigSettingTest, setDuration) {
+  ConfigSetting<std::chrono::nanoseconds> setting{"test:value", 5ms, nullptr};
+  EXPECT_EQ(5ms, setting.getValue());
+  checkSet(setting, 90s, "1m30s");
+  checkSet(setting, -90s, "-1m30s");
+  checkSet(setting, 42ns, "42ns");
+  checkSet(setting, 300s, "5m");
+  checkSetError(setting, "empty input string", "");
+  checkSetError(setting, "unknown duration unit specifier", "90");
+  checkSetError(setting, "non-digit character found", "bogus");
 }

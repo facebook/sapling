@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <chrono>
 #include <map>
 #include <string>
 #include <type_traits>
@@ -88,6 +89,24 @@ class FieldConverter<
   std::string toDebugString(T value) const {
     return folly::to<std::string>(value);
   }
+};
+
+/*
+ * FieldConverter implementation for nanoseconds.
+ *
+ * We could fairly easily implement this for other duration types, but we would
+ * have to decide what to do if the config specifies a more granular input
+ * value.  e.g., if we wanted to parse a config field as `std::chrono::minutes`
+ * what should we do if the value in the config file was "10s"?
+ */
+template <>
+class FieldConverter<std::chrono::nanoseconds> {
+ public:
+  folly::Expected<std::chrono::nanoseconds, std::string> fromString(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const;
+
+  std::string toDebugString(std::chrono::nanoseconds value) const;
 };
 
 } // namespace eden

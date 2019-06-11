@@ -9,6 +9,8 @@
  */
 #include "eden/fs/config/FieldConverter.h"
 
+#include "eden/fs/utils/ChronoParse.h"
+
 using folly::Expected;
 using std::string;
 
@@ -78,6 +80,22 @@ Expected<string, string> FieldConverter<string>::fromString(
     folly::StringPiece value,
     const std::map<string, string>& /* unused */) const {
   return folly::makeExpected<string, string>(value.toString());
+}
+
+Expected<std::chrono::nanoseconds, string>
+FieldConverter<std::chrono::nanoseconds>::fromString(
+    folly::StringPiece value,
+    const std::map<string, string>& /* unused */) const {
+  auto result = stringToDuration(value);
+  if (result.hasValue()) {
+    return result.value();
+  }
+  return folly::makeUnexpected(chronoParseErrorToString(result.error()).str());
+}
+
+std::string FieldConverter<std::chrono::nanoseconds>::toDebugString(
+    std::chrono::nanoseconds value) const {
+  return durationToString(value);
 }
 
 } // namespace eden
