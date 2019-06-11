@@ -479,9 +479,11 @@ def wraprepo(repo):
                     if edenapi.debug(self.ui):
                         self.ui.warn(_("fetching trees over HTTPS\n"))
                     dpack, hpack = self.manifestlog.getmutablesharedpacks()
-                    self.edenapi.prefetch_trees(
+                    stats = self.edenapi.prefetch_trees(
                         rootdir, mfnodes, basemfnodes, dpack, depth
                     )
+                    if edenapi.debug(self.ui):
+                        self.ui.warn(_("%s\n") % stats.to_str())
                     return
                 except Exception as e:
                     self.ui.warn(_("encountered error during HTTPS fetching;"))
