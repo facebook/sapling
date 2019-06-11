@@ -788,7 +788,7 @@ class fileserverclient(object):
         """Fetch file data over HTTPS using the Eden API"""
         n = len(fileids)
         s = "" if n == 1 else "s"
-        msg = _("fetching %d file%s over HTTPS") % (n, s)
+        msg = _("fetching content for %d file%s over HTTPS") % (n, s)
 
         if edenapi.debug(self.ui):
             self.ui.warn(_("%s\n") % msg)
@@ -820,7 +820,7 @@ class fileserverclient(object):
         """Fetch file history over HTTPS using the Eden API"""
         n = len(fileids)
         s = "" if n == 1 else "s"
-        msg = _("fetching %d file%s over HTTPS") % (n, s)
+        msg = _("fetching history for %d file%s over HTTPS") % (n, s)
 
         if edenapi.debug(self.ui):
             self.ui.warn(_("%s\n") % msg)
