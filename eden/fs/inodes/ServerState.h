@@ -87,13 +87,14 @@ class ServerState {
   }
 
   /**
-   * Get the EdenConfig; We check for changes in the config files, reload as
-   * necessary and return an updated EdenConfig. The update checks are
-   * throttleSeconds to kEdenConfigMinPollSeconds. If 'skipUpdate' is set, no
-   * update check is performed and the current EdenConfig is returned.
+   * Get the EdenConfig data.
+   *
+   * The config data may be reloaded from disk depending on the value of the
+   * reload parameter.
    */
-  std::shared_ptr<const EdenConfig> getEdenConfig(bool skipUpdate = false) {
-    return config_.getEdenConfig(skipUpdate);
+  std::shared_ptr<const EdenConfig> getEdenConfig(
+      ConfigReloadBehavior reload = ConfigReloadBehavior::AutoReload) {
+    return config_.getEdenConfig(reload);
   }
 
   /**

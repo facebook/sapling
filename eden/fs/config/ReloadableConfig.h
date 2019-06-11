@@ -14,6 +14,8 @@
 
 #include <folly/Synchronized.h>
 
+#include "eden/fs/config/gen-cpp2/eden_config_types.h"
+
 namespace facebook {
 namespace eden {
 
@@ -29,12 +31,13 @@ class ReloadableConfig {
   ~ReloadableConfig();
 
   /**
-   * Get the EdenConfig; We check for changes in the config files, reload as
-   * necessary and return an updated EdenConfig. The update checks are
-   * throttleSeconds to kEdenConfigMinPollSeconds. If 'skipUpdate' is set, no
-   * update check is performed and the current EdenConfig is returned.
+   * Get the EdenConfig data.
+   *
+   * The config data may be reloaded from disk depending on the value of the
+   * reload parameter.
    */
-  std::shared_ptr<const EdenConfig> getEdenConfig(bool skipUpdate = false);
+  std::shared_ptr<const EdenConfig> getEdenConfig(
+      ConfigReloadBehavior reload = ConfigReloadBehavior::AutoReload);
 
  private:
   struct ConfigState {
@@ -43,14 +46,6 @@ class ReloadableConfig {
     std::chrono::steady_clock::time_point lastCheck;
     std::shared_ptr<const EdenConfig> config;
   };
-
-  /**
-   * Check if any if system or user configuration files have changed. If so,
-   * parse and apply the changes to the EdenConfig. This method throttles
-   * update requests to once per kEdenConfigMinPollSeconds.
-   * @return the updated EdenConfig.
-   */
-  std::shared_ptr<const EdenConfig> getUpdatedEdenConfig();
 
   folly::Synchronized<ConfigState> state_;
 };

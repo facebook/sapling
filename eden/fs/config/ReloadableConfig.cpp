@@ -25,24 +25,22 @@ ReloadableConfig::ReloadableConfig(std::shared_ptr<const EdenConfig> config)
 ReloadableConfig::~ReloadableConfig() {}
 
 std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
-    bool skipUpdate) {
-  if (!skipUpdate) {
-    return getUpdatedEdenConfig();
+    ConfigReloadBehavior reload) {
+  if (reload == ConfigReloadBehavior::NoReload) {
+    return state_.rlock()->config;
   }
-  return state_.rlock()->config;
-}
 
-// TODO: Update this monitoring code to use FileChangeMonitor.
-std::shared_ptr<const EdenConfig> ReloadableConfig::getUpdatedEdenConfig() {
+  // TODO: Update this monitoring code to use FileChangeMonitor.
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  // Throttle the updates
   auto state = state_.wlock();
-  if ((now - state->lastCheck) < kEdenConfigMinPollSeconds) {
+
+  // Throttle the updates when using ConfigReloadBehavior::AutoReload
+  if (reload == ConfigReloadBehavior::AutoReload &&
+      (now - state->lastCheck) < kEdenConfigMinPollSeconds) {
     return state->config;
   }
-
-  // Update the throttle setting - to prevent thrashing.
   state->lastCheck = now;
+
   bool userConfigChanged = state->config->hasUserConfigFileChanged();
   bool systemConfigChanged = state->config->hasSystemConfigFileChanged();
   if (userConfigChanged || systemConfigChanged) {

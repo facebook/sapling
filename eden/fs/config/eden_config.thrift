@@ -24,3 +24,14 @@ enum ConfigSource {
   UserConfig = 2
   CommandLine = 3
 }
+
+enum ConfigReloadBehavior {
+  // Automatically reload the configuration file from disk if it appears to be
+  // necessary.
+  AutoReload = 0
+  // Do not reload the config from disk, and return the current cached values.
+  NoReload = 1
+  // Always attempt to reload the config from disk, even if we have recently
+  // checked to see if it was up-to-date.
+  ForceReload = 2
+}
