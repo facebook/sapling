@@ -26,6 +26,7 @@
 
 using facebook::eden::basename;
 using facebook::eden::dirname;
+using folly::checkUnixError;
 using folly::StringPiece;
 using std::string;
 using std::vector;
@@ -553,10 +554,10 @@ namespace {
 class TmpWorkingDir {
  public:
   TmpWorkingDir() {
-    chdir(pathStr.c_str());
+    checkUnixError(chdir(pathStr.c_str()), "failed to chdir");
   }
   ~TmpWorkingDir() {
-    chdir(oldDir.value().c_str());
+    checkUnixError(chdir(oldDir.value().c_str()), "failed to chdir");
   }
 
   AbsolutePath oldDir{getcwd()};
@@ -638,9 +639,9 @@ TEST(PathFuncs, realpath) {
   // Change directories to the tmp dir for the duration of this test
   auto oldDir = getcwd();
   SCOPE_EXIT {
-    chdir(oldDir.value().c_str());
+    checkUnixError(chdir(oldDir.value().c_str()), "failed to chdir");
   };
-  chdir(tmpDir.pathStr.c_str());
+  checkUnixError(chdir(tmpDir.pathStr.c_str()), "failed to chdir");
 
   // Set up some files to test with
   folly::checkUnixError(
