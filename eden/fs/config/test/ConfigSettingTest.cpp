@@ -268,3 +268,90 @@ TEST(ConfigSettingTest, configClearOverRiddenSource) {
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
   EXPECT_EQ(testDir.getValue(), defaultDir);
 }
+
+namespace {
+
+template <typename T, typename FieldConverter, typename ExpectedType = T>
+void checkSet(
+    ConfigSetting<T, FieldConverter>& setting,
+    ExpectedType expected,
+    StringPiece str) {
+  SCOPED_TRACE(str.str());
+  std::map<std::string, std::string> attrMap;
+  auto setResult =
+      setting.setStringValue(str, attrMap, ConfigSource::UserConfig);
+  ASSERT_FALSE(setResult.hasError()) << setResult.error();
+  if (std::is_floating_point<T>::value) {
+    EXPECT_FLOAT_EQ(expected, setting.getValue());
+  } else {
+    EXPECT_EQ(expected, setting.getValue());
+  }
+}
+
+template <typename T, typename FieldConverter>
+void checkSetError(
+    ConfigSetting<T, FieldConverter>& setting,
+    StringPiece expectedError,
+    StringPiece str) {
+  SCOPED_TRACE(str.str());
+  std::map<std::string, std::string> attrMap;
+  auto setResult =
+      setting.setStringValue(str, attrMap, ConfigSource::UserConfig);
+  ASSERT_TRUE(setResult.hasError());
+  EXPECT_EQ(expectedError.str(), setResult.error());
+}
+
+} // namespace
+
+TEST(ConfigSettingTest, setBool) {
+  ConfigSetting<bool> defaultTrue{"test:value2", true, nullptr};
+  EXPECT_EQ(true, defaultTrue.getValue());
+
+  ConfigSetting<bool> setting{"test:value", false, nullptr};
+  EXPECT_EQ(false, setting.getValue());
+
+  checkSet(setting, true, "true");
+  checkSet(setting, true, "1");
+  checkSet(setting, true, "y");
+  checkSet(setting, true, "yes");
+  checkSet(setting, true, "Y");
+  checkSet(setting, true, "on");
+  checkSet(setting, false, "n");
+  checkSet(setting, false, "0");
+  checkSet(setting, false, "false");
+  checkSet(setting, false, "off");
+
+  checkSetError(setting, "Empty input string", "");
+  checkSetError(setting, "Invalid value for bool: \"bogus\"", "bogus");
+  checkSetError(
+      setting,
+      "Non-whitespace character found after end of conversion: \"yes_and\"",
+      "yes_and");
+}
+
+TEST(ConfigSettingTest, setArithmetic) {
+  ConfigSetting<int> intSetting{"test:value", 1, nullptr};
+  EXPECT_EQ(1, intSetting.getValue());
+  checkSet(intSetting, 9, "9");
+  checkSet(intSetting, 1234, "1234");
+  checkSetError(intSetting, "Empty input string", "");
+  checkSetError(intSetting, "Invalid leading character: \"bogus\"", "bogus");
+  // In the future it might be nice to support parsing hexadecimal input.
+  checkSetError(
+      intSetting,
+      "Non-whitespace character found after end of conversion: \"0x15\"",
+      "0x15");
+
+  ConfigSetting<uint8_t> u8Setting{"test:value", 0, nullptr};
+  checkSet(u8Setting, 9, "9");
+  checkSetError(u8Setting, "Overflow during conversion: \"300\"", "300");
+  checkSetError(u8Setting, "Non-digit character found: \"-10\"", "-10");
+
+  ConfigSetting<float> floatSetting{"test:value", 0, nullptr};
+  checkSet(floatSetting, 123.0, "123");
+  checkSet(floatSetting, 0.001, "0.001");
+  checkSetError(
+      floatSetting,
+      "Non-whitespace character found after end of conversion: \"0.001.9\"",
+      "0.001.9");
+}

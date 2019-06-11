@@ -80,33 +80,5 @@ Expected<string, string> FieldConverter<string>::operator()(
   return folly::makeExpected<string, string>(value.toString());
 }
 
-Expected<bool, string> FieldConverter<bool>::operator()(
-    folly::StringPiece value,
-    const std::map<string, string>& /* unused */) const {
-  auto aString = value.str();
-  if (aString == "true") {
-    return true;
-  } else if (aString == "false") {
-    return false;
-  }
-  return folly::makeUnexpected<string>(folly::to<string>(
-      "Unexpected value: '", value, "'. Expected \"true\" or \"false\""));
-}
-
-Expected<uint16_t, string> FieldConverter<uint16_t>::operator()(
-    folly::StringPiece value,
-    const std::map<string, string>& /* unused */) const {
-  auto aString = value.str();
-
-  try {
-    return folly::to<uint16_t>(aString);
-  } catch (const std::exception&) {
-    return folly::makeUnexpected<string>(folly::to<string>(
-        "Unexpected value: '",
-        value,
-        ". Expected a uint16_t compatible value"));
-  }
-}
-
 } // namespace eden
 } // namespace facebook

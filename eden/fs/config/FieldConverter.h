@@ -11,6 +11,7 @@
 
 #include <map>
 #include <string>
+#include <type_traits>
 
 #include <folly/Expected.h>
 #include <folly/Range.h>
@@ -24,7 +25,7 @@ namespace eden {
  * Converters are used to convert strings into ConfigSettings. For example,
  * they are used to convert the string settings of configuration files.
  */
-template <typename T>
+template <typename T, typename Enable = void>
 class FieldConverter {};
 
 template <>
@@ -49,8 +50,15 @@ class FieldConverter<std::string> {
       const std::map<std::string, std::string>& convData) const;
 };
 
-template <>
-class FieldConverter<bool> {
+/*
+ * FieldConverter implementation for integers, floating point, and bool types
+ * using folly::to<T>(string)
+ */
+template <typename T>
+class FieldConverter<
+    T,
+    typename std::enable_if<
+        std::is_arithmetic<T>::value || std::is_same<T, bool>::value>::type> {
  public:
   /**
    * Convert the passed string piece to a boolean.
@@ -58,23 +66,16 @@ class FieldConverter<bool> {
    * method (for example $HOME value.)
    * @return the converted boolean or an error message.
    */
-  folly::Expected<bool, std::string> operator()(
+  folly::Expected<T, std::string> operator()(
       folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
-};
-
-template <>
-class FieldConverter<uint16_t> {
- public:
-  /**
-   * Convert the passed string piece to a uint16_t.
-   * @param convData is a map of conversion data that can be used by conversions
-   * method (for example $HOME value.)
-   * @return the converted value or an error message.
-   */
-  folly::Expected<uint16_t, std::string> operator()(
-      folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
+      const std::map<std::string, std::string>& /* convData */) const {
+    auto result = folly::tryTo<T>(value);
+    if (result.hasValue()) {
+      return result.value();
+    }
+    return folly::makeUnexpected<std::string>(
+        folly::makeConversionError(result.error(), value).what());
+  }
 };
 
 } // namespace eden
