@@ -21,6 +21,12 @@ from eden.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
+BACKING_DIR_STAT = mtab.MTStat(st_uid=os.getuid(), st_dev=11, st_mode=16877)
+BACKING_FILE_STAT = mtab.MTStat(st_uid=os.getuid(), st_dev=11, st_mode=33188)
+FUSE_DIR_STAT = mtab.MTStat(st_uid=os.getuid(), st_dev=12, st_mode=16877)
+FUSE_FILE_STAT = mtab.MTStat(st_uid=os.getuid(), st_dev=12, st_mode=33188)
+
+
 class FakeFsUtil(filesystem.FsUtil):
     def __init__(self) -> None:
         self.path_error: Dict[str, str] = {}
@@ -83,71 +89,39 @@ class BindMountsCheckTest(DoctorTestBase):
         )
         return fixer, out.getvalue()
 
-    def test_bind_mounts_okay(self):
+    def _make_ideal_mount_table(self) -> FakeMountTable:
         mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table.stats[self.fbsource_bind_mounts] = BACKING_DIR_STAT
+        mount_table.stats[self.edenfs_path1] = FUSE_DIR_STAT
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.client_bm1] = BACKING_DIR_STAT
+        mount_table.stats[self.client_bm2] = BACKING_DIR_STAT
+        mount_table.stats[self.client_bm3] = BACKING_DIR_STAT
 
         # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.bm1] = BACKING_DIR_STAT
+        mount_table.stats[self.bm2] = BACKING_DIR_STAT
+        mount_table.stats[self.bm3] = BACKING_DIR_STAT
+
+        return mount_table
+
+    def test_bind_mounts_okay(self):
+        mount_table = self._make_ideal_mount_table()
 
         fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     def test_bind_mounts_missing_dry_run(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
-        # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        # Bind mount paths (under eden path); these should be
+        # visible as BACKING_DIR_STAT but by reporting as
+        # FUSE_DIR_STAT we believe that they are not mounted.
+        mount_table.stats[self.bm1] = FUSE_DIR_STAT
+        mount_table.stats[self.bm2] = FUSE_DIR_STAT
+        mount_table.stats[self.bm3] = FUSE_DIR_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
@@ -170,35 +144,14 @@ Would remount bind mount at {self.edenfs_path1}/buck-out
         self.assert_results(fixer, num_problems=3)
 
     def test_bind_mounts_missing(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
-        # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        # Bind mount paths (under eden path); these should be
+        # visible as BACKING_DIR_STAT but by reporting as
+        # FUSE_DIR_STAT we believe that they are not mounted.
+        mount_table.stats[self.bm1] = FUSE_DIR_STAT
+        mount_table.stats[self.bm2] = FUSE_DIR_STAT
+        mount_table.stats[self.bm3] = FUSE_DIR_STAT
 
         mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
         mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
@@ -225,37 +178,16 @@ Remounting bind mount at {self.edenfs_path1}/buck-out...<green>fixed<reset>
         self.assert_results(fixer, num_problems=3, num_fixed_problems=3)
 
     def test_bind_mounts_missing_fail(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
-        # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        # Bind mount paths (under eden path); these should be
+        # visible as BACKING_DIR_STAT but by reporting as
+        # FUSE_DIR_STAT we believe that they are not mounted.
+        mount_table.stats[self.bm1] = FUSE_DIR_STAT
+        mount_table.stats[self.bm2] = FUSE_DIR_STAT
+        mount_table.stats[self.bm3] = FUSE_DIR_STAT
 
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-
-        # These bound mind operations will succeed.
+        # These bind mount operations will succeed.
         mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
 
         fixer, out = self.run_check(mount_table, dry_run=False)
@@ -289,12 +221,9 @@ Failed to fix problem: Command \
     def test_bind_mounts_and_dir_missing_dry_run(self):
         mount_table = FakeMountTable()
 
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table.stats[self.fbsource_bind_mounts] = BACKING_DIR_STAT
+        mount_table.stats[self.edenfs_path1] = FUSE_DIR_STAT
+
         fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
             f"""\
@@ -328,36 +257,12 @@ Would remount bind mount at {self.edenfs_path1}/buck-out
         self.assert_results(fixer, num_problems=6)
 
     def test_bind_mount_wrong_device_dry_run(self):
-        # bm1, bm2 should not have same device as edenfs
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-
-        # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        # bm1, bm2 should not have same device as edenfs
+        mount_table.stats[self.bm1] = FUSE_DIR_STAT
+        mount_table.stats[self.bm2] = FUSE_DIR_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
@@ -376,36 +281,12 @@ Would remount bind mount at {self.edenfs_path1}/fbandroid/buck-out
         self.assert_results(fixer, num_problems=2)
 
     def test_bind_mount_wrong_device(self):
-        # bm1, bm2 should not have same device as edenfs
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-
-        # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        # bm1, bm2 should not have same device as edenfs
+        mount_table.stats[self.bm1] = FUSE_DIR_STAT
+        mount_table.stats[self.bm2] = FUSE_DIR_STAT
 
         # These bound mind operations will succeed.
         mount_table.bind_mount_success_paths[self.client_bm1] = self.bm1
@@ -428,36 +309,11 @@ Remounting bind mount at {self.edenfs_path1}/fbandroid/buck-out...<green>fixed<r
         self.assert_results(fixer, num_problems=2, num_fixed_problems=2)
 
     def test_client_mount_path_not_dir(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Client bind mount paths (under .eden)
         # Note: client_bm3 is not a directory
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=33188
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.client_bm3] = BACKING_FILE_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
@@ -472,36 +328,11 @@ Please remove the file at {self.fbsource_bind_mounts}/buck-out
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def test_mount_path_not_dir(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-
-        # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Bind mount paths (under eden path)
         # Note: bm3 is not a directory
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=33188
-        )
+        mount_table.stats[self.bm3] = FUSE_FILE_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
@@ -516,29 +347,11 @@ Please remove the file at {self.edenfs_path1}/buck-out
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def test_client_bind_mounts_missing_dry_run(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        del mount_table.stats[self.client_bm1]
+        del mount_table.stats[self.client_bm3]
 
         fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
@@ -557,29 +370,11 @@ Would create directory {self.fbsource_bind_mounts}/buck-out
         self.assert_results(fixer, num_problems=2)
 
     def test_client_bind_mounts_missing(self):
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        del mount_table.stats[self.client_bm1]
+        del mount_table.stats[self.client_bm3]
 
         fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
@@ -598,32 +393,13 @@ Creating directory {self.fbsource_bind_mounts}/buck-out...<green>fixed<reset>
         self.assert_results(fixer, num_problems=2, num_fixed_problems=2)
 
     def test_client_bind_mounts_missing_fail(self):
-        mount_table = FakeMountTable()
-        fs_util = FakeFsUtil()
-
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        del mount_table.stats[self.client_bm1]
+        del mount_table.stats[self.client_bm3]
 
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-
+        fs_util = FakeFsUtil()
         fs_util.path_error[self.client_bm3] = "Failed to create directory"
 
         fixer, out = self.run_check(mount_table, dry_run=False, fs_util=fs_util)
@@ -647,22 +423,14 @@ Failed to fix problem: Failed to create directory
 
     def test_bind_mounts_and_client_dir_missing_dry_run(self):
         mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table.stats[self.fbsource_bind_mounts] = BACKING_DIR_STAT
+        mount_table.stats[self.edenfs_path1] = FUSE_DIR_STAT
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.client_bm1] = BACKING_DIR_STAT
 
         # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.bm1] = BACKING_DIR_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
@@ -690,22 +458,14 @@ Would remount bind mount at {self.edenfs_path1}/buck-out
 
     def test_bind_mounts_and_client_dir_missing(self):
         mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
+        mount_table.stats[self.fbsource_bind_mounts] = BACKING_DIR_STAT
+        mount_table.stats[self.edenfs_path1] = FUSE_DIR_STAT
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.client_bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.client_bm1] = BACKING_DIR_STAT
 
         # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table.stats[self.bm1] = BACKING_DIR_STAT
 
         # These bound mind operations will succeed.
         mount_table.bind_mount_success_paths[self.client_bm2] = self.bm2
@@ -739,32 +499,12 @@ Remounting bind mount at {self.edenfs_path1}/buck-out...<green>fixed<reset>
         # Bind mount 1 does not exist
         # Bind mount 2 has wrong device type
         # Bind mount 3 is a file instead of a directory
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=33188
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        del mount_table.stats[self.client_bm1]
+        mount_table.stats[self.client_bm2] = FUSE_DIR_STAT
+        mount_table.stats[self.client_bm3] = BACKING_FILE_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=True)
         self.assertEqual(
@@ -786,32 +526,12 @@ Please remove the file at {self.fbsource_bind_mounts}/buck-out
         # Bind mount 1 does not exist
         # Bind mount 2 has wrong device type
         # Bind mount 3 is a file instead of a directory
-        mount_table = FakeMountTable()
-        mount_table.stats[self.fbsource_bind_mounts] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        mount_table = self._make_ideal_mount_table()
 
         # Client bind mount paths (under .eden)
-        mount_table.stats[self.edenfs_path1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=12, st_mode=16877
-        )
-        mount_table.stats[self.client_bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=33188
-        )
-
-        # Bind mount paths (under eden path)
-        mount_table.stats[self.bm1] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm2] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
-        mount_table.stats[self.bm3] = mtab.MTStat(
-            st_uid=os.getuid(), st_dev=11, st_mode=16877
-        )
+        del mount_table.stats[self.client_bm1]
+        mount_table.stats[self.client_bm2] = FUSE_DIR_STAT
+        mount_table.stats[self.client_bm3] = BACKING_FILE_STAT
 
         fixer, out = self.run_check(mount_table, dry_run=False)
         self.assertEqual(
