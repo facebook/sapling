@@ -69,6 +69,7 @@ using folly::StringPiece;
 using folly::Try;
 using folly::Unit;
 using std::make_unique;
+using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -1451,5 +1452,15 @@ void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {
   XLOG(INFO) << "initiateShutdown requested, reason: " << *reason;
   server_->stop();
 }
+
+void EdenServiceHandler::getConfig(
+    EdenConfigData& result,
+    unique_ptr<GetConfigParams> params) {
+  auto state = server_->getServerState();
+  auto config = state->getEdenConfig(params->reload);
+
+  result = config->toThriftConfigData();
+}
+
 } // namespace eden
 } // namespace facebook

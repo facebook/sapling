@@ -35,3 +35,17 @@ enum ConfigReloadBehavior {
   // checked to see if it was up-to-date.
   ForceReload = 2
 }
+
+struct ConfigValue {
+  // parsedValue contains the value parsed by Eden, after performing variable
+  // substitution (${HOME}, ${USER}, etc)
+  // TODO: In the future it may be nice to add a sourceValue field that
+  // contains the original value from before variable interpolation.  We don't
+  // currently store this data after performing parsing, however.
+  1: string parsedValue
+  2: ConfigSource source
+}
+
+struct EdenConfigData {
+  1: map<string, ConfigValue> values
+}

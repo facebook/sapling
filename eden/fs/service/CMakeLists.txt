@@ -11,6 +11,7 @@ add_thrift_cpp2_library(
   SERVICES
     EdenService
   DEPENDS
+    eden_config_thrift
     fb303_thrift_cpp2
 )
 add_thrift_cpp2_library(

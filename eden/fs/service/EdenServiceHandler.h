@@ -193,6 +193,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
    */
   void initiateShutdown(std::unique_ptr<std::string> reason) override;
 
+  void getConfig(
+      EdenConfigData& result,
+      std::unique_ptr<GetConfigParams> params) override;
+
  private:
   folly::Future<Hash> getSHA1ForPath(
       folly::StringPiece mountPoint,

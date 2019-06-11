@@ -89,6 +89,12 @@ class EdenConfig : public ConfigSettingManager {
    */
   std::string toString() const;
 
+  /**
+   * Return the config data as a EdenConfigData structure that can be
+   * thrift-serialized.
+   */
+  EdenConfigData toThriftConfigData() const;
+
   /** Determine if user config has changed, fstat userConfigFile.*/
   bool hasUserConfigFileChanged() const;
 
