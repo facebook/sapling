@@ -11,6 +11,7 @@ import errno
 import logging
 import os
 import random
+import re
 import subprocess
 import sys
 from typing import List, NamedTuple, Union
@@ -105,6 +106,32 @@ class LinuxMountTable(MountTable):
         )
 
 
+def parse_macos_mount_output(contents: bytes) -> List[MountInfo]:
+    mounts = []
+    for line in contents.splitlines():
+        m = re.match(b"^(\\S+) on (.+) \\(([^,]+),.*\\)$", line)
+        if m:
+            mounts.append(
+                MountInfo(device=m.group(1), mount_point=m.group(2), vfstype=m.group(3))
+            )
+    return mounts
+
+
+class MacOSMountTable(MountTable):
+    def read(self) -> List[MountInfo]:
+        contents = subprocess.check_output(["mount"])
+        return parse_macos_mount_output(contents)
+
+    def unmount_lazy(self, mount_point: bytes) -> bool:
+        return False
+
+    def unmount_force(self, mount_point: bytes) -> bool:
+        return False
+
+    def create_bind_mount(self, source_path, dest_path) -> bool:
+        return False
+
+
 class NopMountTable(MountTable):
     def read(self) -> List[MountInfo]:
         return []
@@ -122,4 +149,6 @@ class NopMountTable(MountTable):
 def new() -> MountTable:
     if "linux" in sys.platform:
         return LinuxMountTable()
+    if sys.platform == "darwin":
+        return MacOSMountTable()
     return NopMountTable()

@@ -9,7 +9,7 @@
 
 import unittest
 
-from eden.cli import mtab
+from eden.cli.mtab import MountInfo, parse_macos_mount_output, parse_mtab
 
 
 class MTabTest(unittest.TestCase):
@@ -23,9 +23,37 @@ squashfuse_ll /mnt/xarfuse/uid-0/2c071047-ns-4026531840 fuse.squashfuse_ll rw,no
 bogus line here
 edenfs /tmp/eden_test.4rec6drf/mounts/main fuse rw,nosuid,relatime,user_id=138655,group_id=100,default_permissions,allow_other 0 0
 """
-        mount_infos = mtab.parse_mtab(contents)
+        mount_infos = parse_mtab(contents)
         self.assertEqual(3, len(mount_infos))
         one, two, three = mount_infos
         self.assertEqual("edenfs", three.device)
         self.assertEqual("/tmp/eden_test.4rec6drf/mounts/main", three.mount_point)
         self.assertEqual("fuse", three.vfstype)
+
+    def test_parse_mtab_macos(self):
+        contents = b"""\
+/dev/disk1s1 on / (apfs, local, journaled)
+devfs on /dev (devfs, local, nobrowse)
+/dev/disk1s4 on /private/var/vm (apfs, local, noexec, journaled, noatime, nobrowse)
+map -hosts on /net (autofs, nosuid, automounted, nobrowse)
+map auto_home on /home (autofs, automounted, nobrowse)
+map -fstab on /Network/Servers (autofs, automounted, nobrowse)
+eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
+"""
+        self.assertEqual(
+            [
+                MountInfo(device=b"/dev/disk1s1", mount_point=b"/", vfstype=b"apfs"),
+                MountInfo(device=b"devfs", mount_point=b"/dev", vfstype=b"devfs"),
+                MountInfo(
+                    device=b"/dev/disk1s4",
+                    mount_point=b"/private/var/vm",
+                    vfstype=b"apfs",
+                ),
+                MountInfo(
+                    device=b"eden@osxfuse0",
+                    mount_point=b"/Users/wez/fbsource",
+                    vfstype=b"osxfuse_eden",
+                ),
+            ],
+            parse_macos_mount_output(contents),
+        )
