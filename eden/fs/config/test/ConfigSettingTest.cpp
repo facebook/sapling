@@ -321,12 +321,12 @@ TEST(ConfigSettingTest, setBool) {
   checkSet(setting, true, "yes");
   checkSet(setting, true, "Y");
   checkSet(setting, true, "on");
-  EXPECT_EQ("1", setting.getStringValue());
+  EXPECT_EQ("true", setting.getStringValue());
   checkSet(setting, false, "n");
   checkSet(setting, false, "0");
   checkSet(setting, false, "false");
   checkSet(setting, false, "off");
-  EXPECT_EQ("0", setting.getStringValue());
+  EXPECT_EQ("false", setting.getStringValue());
 
   checkSetError(setting, "Empty input string", "");
   checkSetError(setting, "Invalid value for bool: \"bogus\"", "bogus");

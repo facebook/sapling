@@ -61,13 +61,11 @@ class FieldConverter<std::string> {
 
 /*
  * FieldConverter implementation for integers, floating point, and bool types
- * using folly::to<T>(string)
  */
 template <typename T>
 class FieldConverter<
     T,
-    typename std::enable_if<
-        std::is_arithmetic<T>::value || std::is_same<T, bool>::value>::type> {
+    typename std::enable_if<std::is_arithmetic<T>::value>::type> {
  public:
   /**
    * Convert the passed string piece to a boolean.
@@ -87,6 +85,9 @@ class FieldConverter<
   }
 
   std::string toDebugString(T value) const {
+    if constexpr (std::is_same<T, bool>::value) {
+      return value ? "true" : "false";
+    }
     return folly::to<std::string>(value);
   }
 };
