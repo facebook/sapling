@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import eden.thrift
 import thrift.transport
-from eden.cli.util import check_health_using_lockfile
+from eden.cli.util import EdenStartError, check_health_using_lockfile
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState
@@ -983,6 +983,13 @@ class StartCmd(Subcmd):
             return self.start(args, instance)
 
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
+        # Check to see if edenfs is already running
+        if not args.takeover:
+            health_info = instance.check_health()
+            if health_info.is_healthy():
+                msg = "edenfs is already running (pid {})".format(health_info.pid)
+                raise EdenStartError(msg)
+
         daemon.exec_daemon(
             instance,
             args.daemon_binary,

@@ -595,13 +595,6 @@ Do you want to run `eden mount %s` instead?"""
         foreground: bool = False,
     ) -> Tuple[List[str], Dict[str, str]]:
         """Get the command and environment to use to start edenfs."""
-        # Check to see if edenfs is already running
-        health_info = self.check_health()
-        if not takeover:
-            if health_info.is_healthy():
-                msg = "edenfs is already running (pid {})".format(health_info.pid)
-                raise EdenStartError(msg)
-
         if gdb and strace_file is not None:
             raise EdenStartError("cannot run eden under gdb and " "strace together")
 
