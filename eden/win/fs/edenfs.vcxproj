@@ -203,6 +203,8 @@
     <ClCompile Include="..\..\fs\tracing\EdenStats.cpp" />
     <ClCompile Include="..\..\fs\tracing\Tracing.cpp" />
     <ClCompile Include="..\..\fs\utils\Bug.cpp" />
+    <ClCompile Include="..\..\fs\utils\ChronoParse.cpp" />
+    <ClCompile Include="..\..\fs\utils\ChronoUnitInfo.cpp" />
     <ClCompile Include="..\..\fs\utils\Clock.cpp" />
     <ClCompile Include="..\..\fs\utils\FaultInjector.cpp" />
     <ClCompile Include="..\..\fs\utils\IDGen.cpp" />
@@ -294,6 +296,8 @@
     <ClInclude Include="..\..\fs\store\StoreResult.h" />
     <ClInclude Include="..\..\fs\tracing\Tracing.h" />
     <ClInclude Include="..\..\fs\utils\Bug.h" />
+    <ClInclude Include="..\..\fs\utils\ChronoParse.h" />
+    <ClInclude Include="..\..\fs\utils\ChronoUnitInfo.h" />
     <ClInclude Include="..\..\fs\utils\Clock.h" />
     <ClInclude Include="..\..\fs\utils\FaultInjector.h" />
     <ClInclude Include="..\..\fs\utils\PathFuncs.h" />

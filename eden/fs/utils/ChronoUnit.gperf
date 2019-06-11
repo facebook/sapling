@@ -1,0 +1,73 @@
+struct ChronoUnit;
+%struct-type
+%language=C++
+%define class-name ChronoUnitPerfectHash
+%readonly-tables
+%compare-strncmp
+%omit-struct-type
+%{
+/*
+ *  Copyright (c) 2019-present, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ *
+ */
+#include "eden/fs/utils/ChronoUnit.h"
+
+using facebook::eden::ChronoUnit;
+using folly::StringPiece;
+
+namespace {
+%}
+%%
+ns, 1, 1000000000
+nanosecond, 1, 1000000000
+nanoseconds, 1, 1000000000
+us, 1, 1000000
+# microseconds with a UTF-8 encoded Greek Mu character
+"\xce\xbcs", 1, 1000000
+microsecond, 1, 1000000
+microseconds, 1, 1000000
+ms, 1, 1000
+millisecond, 1, 1000
+milliseconds, 1, 1000
+s, 1, 1
+second, 1, 1
+seconds, 1, 1
+m, 60, 1
+min, 60, 1
+minute, 60, 1
+minutes, 60, 1
+h, 3600, 1
+hr, 3600, 1
+hour, 3600, 1
+hours, 3600, 1
+d, 86400, 1
+day, 86400, 1
+days, 86400, 1
+wk, 604800, 1
+week, 604800, 1
+weeks, 604800, 1
+# C++20 defines std::chrono::months as exactly 1/12 of 1 year
+mon, 2629746, 1
+month, 2629746, 1
+months, 2629746, 1
+# C++20 defines std::chrono::years as exactly 365.2425 days
+yr, 31556952, 1
+year, 31556952, 1
+years, 31556952, 1
+%%
+} // unnamed namespace
+
+namespace facebook {
+namespace eden {
+
+const ChronoUnit* FOLLY_NULLABLE lookupChronoUnitInfo(StringPiece unitName) {
+  return ChronoUnitPerfectHash::in_word_set(unitName);
+}
+
+} // namespace eden
+} // namespace facebook

@@ -146,6 +146,12 @@
     <ClCompile Include="..\..\fs\utils\Bug.cpp">
       <Filter>fs\Util</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\utils\ChronoParse.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\utils\ChronoUnitInfo.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\fs\utils\Clock.cpp">
       <Filter>fs\Util</Filter>
     </ClCompile>
@@ -410,6 +416,12 @@
       <Filter>fs\Model\Git</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\Bug.h">
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\ChronoParse.h">
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\ChronoUnitInfo.h">
       <Filter>fs\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\Clock.h">
