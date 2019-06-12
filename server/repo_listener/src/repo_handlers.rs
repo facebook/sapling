@@ -23,6 +23,7 @@ use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
+use mutable_counters::{MutableCounters, SqlMutableCounters};
 use phases::{CachingPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
@@ -42,6 +43,22 @@ pub struct RepoHandler {
     pub phases_hint: Arc<dyn Phases>,
     pub preserve_raw_bundle2: bool,
     pub pure_push_allowed: bool,
+    pub support_bundle2_listkeys: bool,
+}
+
+fn open_db_from_config<S: SqlConstructors>(
+    dbconfig: &MetadataDBConfig,
+    myrouter_port: Option<u16>,
+) -> S {
+    match dbconfig {
+        MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join(S::LABEL))
+            .expect("unable to initialize sqlite db for mutable counters"),
+
+        MetadataDBConfig::Mysql { ref db_address, .. } => S::with_myrouter(
+            &db_address,
+            myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+        ),
+    }
 }
 
 pub fn repo_handlers(
@@ -185,27 +202,35 @@ pub fn repo_handlers(
                     }
                 });
 
+                // TODO: T45466266 this should be replaced by gatekeepers
+                let support_bundle2_listkeys =
+                    open_db_from_config::<SqlMutableCounters>(&dbconfig, myrouter_port)
+                        .get_counter(
+                            ctx.clone(),
+                            repo.blobrepo().get_repoid(),
+                            "support_bundle2_listkeys",
+                        )
+                        .map(|val| val.unwrap_or(1) != 0);
+
                 ready_handle
-                    .wait_for(initial_warmup.and_then(|()| skip_index))
+                    .wait_for(
+                        initial_warmup.and_then(|()| skip_index.join(support_bundle2_listkeys)),
+                    )
                     .map({
                         cloned!(root_log);
-                        move |skip_index| {
+                        move |(skip_index, support_bundle2_listkeys)| {
                             info!(root_log, "Repo warmup for {} complete", reponame);
 
                             // initialize phases hint from the skip index
-                            let phases_hint: Arc<dyn Phases> = match dbconfig {
-                                MetadataDBConfig::LocalDB { path } => Arc::new(
-                                    SqlPhases::with_sqlite_path(path.join("phases"))
-                                        .expect("unable to initialize sqlite db for phases"),
-                                ),
-                                MetadataDBConfig::Mysql { db_address, .. } => {
-                                    let storage = Arc::new(SqlPhases::with_myrouter(
-                                        &db_address,
-                                        myrouter_port.expect(
-                                            "myrouter_port not provided for BlobRemote repo",
-                                        ),
-                                    ));
-                                    Arc::new(CachingPhases::new(storage))
+                            let phases_hint: Arc<dyn Phases> = {
+                                let db = Arc::new(open_db_from_config::<SqlPhases>(
+                                    &dbconfig,
+                                    myrouter_port,
+                                ));
+                                if let MetadataDBConfig::Mysql { .. } = dbconfig {
+                                    Arc::new(CachingPhases::new(db))
+                                } else {
+                                    db
                                 }
                             };
 
@@ -224,6 +249,7 @@ pub fn repo_handlers(
                                     phases_hint,
                                     preserve_raw_bundle2,
                                     pure_push_allowed,
+                                    support_bundle2_listkeys,
                                 },
                             )
                         }

@@ -415,7 +415,6 @@ Set the correct timestamp back
   
 Replay in a loop
   $ cd $TESTTMP
-  $ create_mutable_counters_sqlite3_db
   $ mononoke_hg_sync_loop repo-hg-3 0
   * using repo "repo" repoid RepositoryId(0) (glob)
   * preparing log entry #1 ... (glob)

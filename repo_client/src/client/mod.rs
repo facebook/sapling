@@ -154,48 +154,26 @@ fn wireprotocaps() -> Vec<String> {
     ]
 }
 
-fn bundle2caps() -> String {
-    let caps = vec![
-        ("HG20", vec![]),
-        // Note that "listkeys" is *NOT* returned as a bundle2 capability; that's because there's
-        // a race that can happen. Here's how:
-        // 1. The client does discovery to figure out which heads are missing.
-        // 2. At this point, a frequently updated bookmark (say "master") moves forward.
-        // 3. The client requests the heads discovered in step 1 + the latest value of master.
-        // 4. The server returns changesets up to those heads, plus the latest version of master.
-        //
-        // master doesn't point to a commit that will exist on the client at the end of the pull,
-        // so the client ignores it.
-        //
-        // The workaround here is to force bookmarks to be sent before discovery happens. Disabling
-        // the listkeys capabilities causes the Mercurial client to do that.
-        //
-        // A better fix might be to snapshot and maintain the bookmark state on the server at the
-        // start of discovery.
-        //
-        // The best fix here would be to change the protocol to represent bookmark pulls
-        // atomically.
-        //
-        // Some other notes:
-        // * Stock Mercurial doesn't appear to have this problem. @rain1 hasn't verified why, but
-        //   believes it's because bookmarks get loaded up into memory before discovery and then
-        //   don't get reloaded for the duration of the process. (In Mononoke, this is the
-        //   "snapshot and maintain the bookmark state" approach mentioned above.)
-        // * There's no similar race with pushes updating bookmarks, so "pushkey" is still sent
-        //   as a capability.
-        // * To repro the race, run test-bookmark-race.t with the following line enabled.
+fn bundle2caps(support_bundle2_listkeys: bool) -> String {
+    let caps = {
+        let mut caps = vec![
+            ("HG20", vec![]),
+            ("changegroup", vec!["02"]),
+            ("b2x:infinitepush", vec![]),
+            ("b2x:infinitepushscratchbookmarks", vec![]),
+            ("pushkey", vec![]),
+            ("treemanifestserver", vec!["True"]),
+            ("b2x:rebase", vec![]),
+            ("b2x:rebasepackpart", vec![]),
+            ("phases", vec!["heads"]),
+            ("obsmarkers", vec!["V1"]),
+        ];
 
-        // ("listkeys", vec![]),
-        ("changegroup", vec!["02"]),
-        ("b2x:infinitepush", vec![]),
-        ("b2x:infinitepushscratchbookmarks", vec![]),
-        ("pushkey", vec![]),
-        ("treemanifestserver", vec!["True"]),
-        ("b2x:rebase", vec![]),
-        ("b2x:rebasepackpart", vec![]),
-        ("phases", vec!["heads"]),
-        ("obsmarkers", vec!["V1"]),
-    ];
+        if support_bundle2_listkeys {
+            caps.push(("listkeys", vec![]))
+        }
+        caps
+    };
 
     let mut encodedcaps = vec![];
 
@@ -226,6 +204,14 @@ pub struct RepoClient {
     // Whether to allow non-pushrebase pushes
     pure_push_allowed: bool,
     hook_manager: Arc<HookManager>,
+    // There is a race condition in bookmarks handling in Mercurial, which needs protocol-level
+    // fixes. See `test-bookmark-race.t` for a reproducer; the issue is that between discovery
+    // and bookmark handling (listkeys), we can get new commits and a bookmark change.
+    // The client then gets a bookmark that points to a commit it does not yet have, and ignores it.
+    // We currently fix it by caching bookmarks at the beginning of discovery.
+    // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
+    cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    support_bundle2_listkeys: bool,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -331,6 +317,7 @@ impl RepoClient {
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
+        support_bundle2_listkeys: bool,
     ) -> Self {
         RepoClient {
             repo,
@@ -341,6 +328,8 @@ impl RepoClient {
             preserve_raw_bundle2,
             pure_push_allowed,
             hook_manager,
+            cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
+            support_bundle2_listkeys,
         }
     }
 
@@ -355,6 +344,52 @@ impl RepoClient {
             scuba_logger.log_with_msg("Start processing", None);
             scuba_logger
         })
+    }
+
+    fn get_pull_default_bookmarks_maybe_stale(
+        &self,
+    ) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+        let maybe_cache = self
+            .cached_pull_default_bookmarks_maybe_stale
+            .lock()
+            .expect("lock poisoned");
+
+        match *maybe_cache {
+            None => self
+                .repo
+                .blobrepo()
+                .get_pull_default_bookmarks_maybe_stale(self.ctx.clone())
+                .map(|(book, cs): (Bookmark, HgChangesetId)| {
+                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
+                    (book.into_name(), hash)
+                })
+                .collect()
+                .map({
+                    cloned!(
+                        self.cached_pull_default_bookmarks_maybe_stale,
+                        self.support_bundle2_listkeys
+                    );
+                    move |bookmarks| {
+                        let bookiter = bookmarks
+                            .into_iter()
+                            .map(|(name, value)| (Vec::from(name.to_string()), value));
+                        if support_bundle2_listkeys {
+                            let mut maybe_cache = cached_pull_default_bookmarks_maybe_stale
+                                .lock()
+                                .expect("lock poisoned");
+                            maybe_cache
+                                .get_or_insert_with(|| HashMap::from_iter(bookiter))
+                                .clone()
+                        } else {
+                            HashMap::from_iter(bookiter)
+                        }
+                    }
+                })
+                .timeout(timeout_duration())
+                .map_err(process_timeout_error)
+                .left_future(),
+            Some(ref bookmarks) => future::ok(bookmarks.clone()).right_future(),
+        }
     }
 
     fn create_bundle(&self, args: GetbundleArgs) -> Result<BoxStream<Bytes, Error>> {
@@ -391,18 +426,13 @@ impl RepoClient {
 
         // listkeys bookmarks part is added separately.
 
-        // XXX Note that listkeys is NOT returned as a bundle2 capability -- see comment in
-        // bundle2caps() for why.
-
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let items = blobrepo
-                .get_pull_default_bookmarks_maybe_stale(self.ctx.clone())
-                .map(|(book, cs): (Bookmark, HgChangesetId)| {
-                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (book.into_name().to_string(), hash)
-                });
+            let items = self
+                .get_pull_default_bookmarks_maybe_stale()
+                .map(|bookmarks| stream::iter_ok(bookmarks))
+                .flatten_stream();
             bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
         }
         // TODO(stash): handle includepattern= and excludepattern=
@@ -590,12 +620,20 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "heads");
         let mut scuba_logger = self.prepared_ctx(ops::HEADS, None).scuba().clone();
 
-        self.repo
-            .blobrepo()
-            .get_heads_maybe_stale(self.ctx.clone())
-            .collect()
-            .map(|v| v.into_iter().collect())
-            .from_err()
+        // We get all bookmarks while handling heads to fix the race demonstrated in
+        // test-bookmark-race.t - this fixes bookmarks at the moment the client starts discovery
+        // NB: Getting bookmarks is only done here to ensure that they are cached at the beginning
+        // of discovery - this function is meant to get heads only.
+        self.get_pull_default_bookmarks_maybe_stale()
+            .join(
+                self.repo
+                    .blobrepo()
+                    .get_heads_maybe_stale(self.ctx.clone())
+                    .collect()
+                    .map(|v| v.into_iter().collect())
+                    .from_err(),
+            )
+            .map(|(_, r)| r)
             .timeout(timeout_duration())
             .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::HEADS, trace_args!())
@@ -826,7 +864,10 @@ impl HgCommands for RepoClient {
 
         let mut res = HashMap::new();
         let mut caps = wireprotocaps();
-        caps.push(format!("bundle2={}", bundle2caps()));
+        caps.push(format!(
+            "bundle2={}",
+            bundle2caps(self.support_bundle2_listkeys)
+        ));
         res.insert("capabilities".to_string(), caps);
 
         let mut scuba_logger = self.prepared_ctx(ops::HELLO, None).scuba().clone();
@@ -850,22 +891,7 @@ impl HgCommands for RepoClient {
         if namespace == "bookmarks" {
             let mut scuba_logger = self.prepared_ctx(ops::LISTKEYS, None).scuba().clone();
 
-            self.repo
-                .blobrepo()
-                .get_pull_default_bookmarks_maybe_stale(self.ctx.clone())
-                .map(|(book, cs): (Bookmark, HgChangesetId)| {
-                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (book.into_name(), hash)
-                })
-                .collect()
-                .map(|bookmarks| {
-                    let bookiter = bookmarks
-                        .into_iter()
-                        .map(|(name, value)| (Vec::from(name.to_string()), value));
-                    HashMap::from_iter(bookiter)
-                })
-                .timeout(timeout_duration())
-                .map_err(process_timeout_error)
+            self.get_pull_default_bookmarks_maybe_stale()
                 .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
                     scuba_logger
@@ -962,6 +988,14 @@ impl HgCommands for RepoClient {
         let client = self.clone();
         let pure_push_allowed = self.pure_push_allowed;
         cloned!(self.hook_manager);
+
+        // Kill the saved set of bookmarks here - the unbundle may change them, and the next
+        // command in sequence will need to fetch a new set
+        let _ = self
+            .cached_pull_default_bookmarks_maybe_stale
+            .lock()
+            .expect("lock poisoned")
+            .take();
 
         self.repo
             .readonly()
