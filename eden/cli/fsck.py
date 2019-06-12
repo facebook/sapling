@@ -437,7 +437,7 @@ class FilesystemChecker:
             for entry in os.listdir(dir_path):
                 try:
                     inode_number = int(entry, 10)
-                except ValueError as ex:
+                except ValueError:
                     entry_path = os.path.join(dir_path, entry)
                     self._add_error(UnexpectedOverlayFile(entry_path))
                     continue

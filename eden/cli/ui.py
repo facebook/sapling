@@ -188,7 +188,7 @@ def get_output(io: Optional[TextIO] = None) -> Output:
         io = sys.stdout
     if not io.isatty():
         return PlainOutput(io)
-    io_buffer = getattr(io, "buffer")
+    io_buffer = getattr(io, "buffer", None)
     if io_buffer is None:
         return PlainOutput(io)
 

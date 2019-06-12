@@ -157,10 +157,10 @@ def update_ownership(metadata_path: Path, uid: int, gid: int) -> None:
             tmp_file.close()
             tmp_file = None
             os.rename(tmp_file_name, metadata_path)
-        except Exception as ex:
+        except Exception:
             try:
                 os.unlink(tmp_file_name)
-            except Exception as ex:
+            except Exception:
                 pass
             raise
         finally:
