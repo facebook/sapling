@@ -8,6 +8,10 @@ build = "build.rs"
 libc = "0.2"
 dirs = "1.0"
 
+[target.'cfg(windows)'.dependencies]
+winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}
+failure = "0.1"
+
 [dependencies.encoding]
 path = "../../lib/encoding"
 

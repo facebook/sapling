@@ -14,6 +14,11 @@ mod chg;
 #[cfg(feature = "with_chg")]
 use chg::maybe_call_chg;
 
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+use windows::disable_standard_handle_inheritability;
+
 /// Execute a command, using an embedded interpreter
 /// This function does not return
 fn call_embedded_python() {
@@ -38,6 +43,9 @@ fn main() {
             }
         }
     }
+
+    #[cfg(windows)]
+    disable_standard_handle_inheritability().unwrap();
 
     #[cfg(feature = "with_chg")]
     maybe_call_chg();
