@@ -30,7 +30,7 @@ TEST(Memory, StdStringMemoryUsage) {
     test += "p";
   }
 }
-#ifndef FOLLY_ASAN_ENABLED
+#ifndef FOLLY_LIBRARY_SANITIZE_ADDRESS
 /*
  * Test case disabled when Address Sanitation is on since SSO optimization is
  * disabled when Address Sanitation is enabled
