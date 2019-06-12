@@ -36,7 +36,7 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.thrift import EdenClient
 from hypothesis.internal.detection import is_hypothesis_test
 
-from . import edenclient, gitrepo, hgrepo, repobase, util
+from . import edenclient, gitrepo, hgrepo, repobase
 
 
 set_up_hypothesis()

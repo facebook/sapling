@@ -11,7 +11,6 @@ import os
 import pathlib
 import stat
 import tempfile
-import typing
 
 import eden.integration.lib.edenclient as edenclient
 

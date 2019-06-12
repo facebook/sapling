@@ -9,7 +9,6 @@
 
 import argparse
 import errno
-import glob
 import json
 import os
 import signal
@@ -36,7 +35,6 @@ from . import (
     filesystem,
     fsck as fsck_mod,
     mtab,
-    overlay as overlay_mod,
     process_finder,
     rage as rage_mod,
     stats as stats_mod,
@@ -78,7 +76,6 @@ def infer_client_from_cwd(instance: EdenInstance, clientname: str) -> str:
 def do_version(args: argparse.Namespace) -> int:
     instance = get_eden_instance(args)
     print("Installed: %s" % version_mod.get_installed_eden_rpm_version())
-    import eden
 
     try:
         rv = version_mod.get_running_eden_version(instance)

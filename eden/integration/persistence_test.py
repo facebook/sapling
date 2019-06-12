@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-import unittest
 from typing import Dict
 
 from .lib import testcase

@@ -7,10 +7,8 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import pathlib
-import subprocess
 
 from .lib.fake_edenfs import FakeEdenFS
-from .lib.find_executables import FindExe
 from .lib.service_test_case import (
     ManagedFakeEdenFSMixin,
     ServiceTestCaseBase,

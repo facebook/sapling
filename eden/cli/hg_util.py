@@ -16,7 +16,6 @@ from typing import BinaryIO, Dict, Tuple
 
 import eden.dirstate
 
-from . import config as config_mod
 from .config import EdenCheckout
 
 

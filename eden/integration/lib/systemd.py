@@ -9,7 +9,6 @@
 
 import abc
 import contextlib
-import errno
 import logging
 import os
 import os.path
@@ -18,7 +17,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import threading
 import types
 import typing
 

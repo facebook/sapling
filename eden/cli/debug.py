@@ -40,7 +40,6 @@ from facebook.eden.overlay.ttypes import OverlayDir
 from facebook.eden.ttypes import (
     DebugGetRawJournalParams,
     DebugJournalDelta,
-    FileDelta,
     JournalPosition,
     NoValueForKeyError,
     TimeSpec,

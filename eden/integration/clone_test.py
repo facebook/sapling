@@ -9,7 +9,6 @@
 
 import json
 import os
-import stat
 import subprocess
 import sys
 import typing
@@ -18,7 +17,6 @@ from textwrap import dedent
 from typing import Optional, Sequence, Set
 
 import pexpect
-from eden.cli import util
 from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase

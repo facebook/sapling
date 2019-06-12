@@ -10,11 +10,10 @@
 import errno
 import os
 import subprocess
-from typing import Type
 
 import __manifest__
 
-from .lib import repobase, testcase
+from .lib import testcase
 
 
 class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):

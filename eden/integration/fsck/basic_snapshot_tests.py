@@ -9,8 +9,6 @@
 
 import abc
 import binascii
-import itertools
-import os
 import stat as stat_mod
 import struct
 import typing

@@ -7,13 +7,11 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import abc
 import configparser
 import io
 import os
 import unittest
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import toml
 import toml.decoder
