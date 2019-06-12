@@ -340,12 +340,18 @@ def _lookupglobalrev(repo, grev):
             return [hgnode]
 
     matchedrevs = []
+    startrev = ui.configint("globalrevs", "startrev")
     for rev in repo.revs("reverse(all())"):
         # While using fast lookup, we have already searched the indexed commits
         # upto lastrev and therefore, we can safely say that there is no commit
         # which has the specified globalrev if we are looking at a revision
         # before the lastrev.
-        if usefastlookup and rev < lastrev:
+        #
+        # However, we may be looking for a svnrev which would be the case if the
+        # the revision we are looking for is before the startrev. We cannot bail
+        # out quickly in that case otherwise, we won't be able to answer svnrev
+        # revset queries correctly.
+        if usefastlookup and rev < lastrev and rev >= startrev:
             break
 
         if matchglobalrev(rev):
