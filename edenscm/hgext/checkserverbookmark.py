@@ -7,8 +7,6 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-import sys
-
 from edenscm.mercurial import error, hg, util
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
@@ -94,20 +92,3 @@ def checkserverbookmark(ui, **opts):
         return verifydeleted(ui, remote, name)
     else:
         return verifyexisting(ui, remote, name, hash)
-
-
-@command(
-    "^listserverbookmarks",
-    [("", "path", "", _("hg server remotepath (ssh)"), "")],
-    _("[OPTION]..."),
-    norepo=True,
-)
-def listserverbookmarks(ui, **opts):
-    """List the bookmarks for a remote server"""
-    path = opts["path"]
-    remote = getremote(ui, path)
-    serverkeys = runlistkeys(ui, remote)
-
-    for pair in serverkeys.items():
-        sys.stdout.write("%s\t%s\n" % pair)
-    sys.stdout.flush()
