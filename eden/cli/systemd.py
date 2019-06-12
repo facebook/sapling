@@ -21,6 +21,7 @@ import typing
 pystemd_import_error = None
 try:
     import pystemd
+    import pystemd.dbusexc  # pyre-ignore[21]: T32805591
     import pystemd.dbuslib  # pyre-ignore[21]: T32805591
     import pystemd.systemd1.manager
     import pystemd.systemd1.unit
@@ -747,6 +748,18 @@ def escape_dbus_address(input: bytes) -> bytes:
         byte_to_escape = scanner.scan_one_byte()
         result_pieces.append(f"%{byte_to_escape:02x}".encode())
     return b"".join(result_pieces)
+
+
+if pystemd_import_error is None:
+    SystemdConnectionRefusedError = (
+        pystemd.dbusexc.DBusConnectionRefusedError  # pyre-ignore[16]: T32805591
+    )
+    SystemdFileNotFoundError = (
+        pystemd.dbusexc.DBusFileNotFoundError  # pyre-ignore[16]: T32805591
+    )
+else:
+    SystemdConnectionRefusedError = Exception
+    SystemdFileNotFoundError = Exception
 
 
 class SystemdServiceFailedToStartError(Exception):

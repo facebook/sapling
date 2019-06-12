@@ -9,6 +9,7 @@
 
 import asyncio
 import errno
+import getpass
 import os
 import pathlib
 import signal
@@ -20,6 +21,8 @@ from .config import EdenInstance
 from .logfile import forward_log_file
 from .systemd import (
     EdenFSSystemdServiceConfig,
+    SystemdConnectionRefusedError,
+    SystemdFileNotFoundError,
     SystemdServiceFailedToStartError,
     SystemdUserBus,
     edenfs_systemd_service_name,
@@ -274,6 +277,15 @@ def start_systemd_service(
             start_task = loop.create_task(start_service_async())
             loop.create_task(log_forwarder.poll_forever_async())
             return loop.run_until_complete(start_task)
+        except (SystemdConnectionRefusedError, SystemdFileNotFoundError):
+            print_stderr(
+                f"error: The systemd user manager is not running. Run the "
+                f"following command to\n"
+                f"start it, then try again:\n"
+                f"\n"
+                f"  sudo systemctl start user@{getpass.getuser()}.service"
+            )
+            return 1
         except SystemdServiceFailedToStartError as e:
             print_stderr(f"error: {e}")
             return 1

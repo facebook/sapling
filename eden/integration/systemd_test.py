@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import pathlib
+import shutil
 import subprocess
 import sys
 import typing
@@ -147,15 +148,38 @@ class SystemdTest(
             "journalctl doesn't work and should not be mentioned",
         )
 
-    def test_eden_start_reports_error_if_systemd_is_not_running(self) -> None:
+    def test_eden_start_reports_error_if_systemd_is_dead(self) -> None:
         self.set_up_edenfs_systemd_service()
         systemd = self.systemd
         assert systemd is not None
         systemd.exit()
+        self.assertTrue(
+            (systemd.xdg_runtime_dir / "systemd" / "private").exists(),
+            "systemd's socket file should still exist",
+        )
 
+        self.spoof_user_name("testuser")
         start_process = self.spawn_start_with_fake_edenfs()
-        # TODO(strager): Improve this message.
-        start_process.expect_exact("Could not open a bus to DBus")
+        start_process.expect_exact(
+            "error: The systemd user manager is not running. Run the following "
+            "command to\r\nstart it, then try again:"
+        )
+        start_process.expect_exact("sudo systemctl start user@testuser.service")
+
+    def test_eden_start_reports_error_if_systemd_is_dead_and_cleaned_up(self) -> None:
+        self.set_up_edenfs_systemd_service()
+        systemd = self.systemd
+        assert systemd is not None
+        systemd.exit()
+        shutil.rmtree(systemd.xdg_runtime_dir)
+
+        self.spoof_user_name("testuser")
+        start_process = self.spawn_start_with_fake_edenfs()
+        start_process.expect_exact(
+            "error: The systemd user manager is not running. Run the following "
+            "command to\r\nstart it, then try again:"
+        )
+        start_process.expect_exact("sudo systemctl start user@testuser.service")
 
     def test_eden_start_uses_fallback_if_systemd_environment_is_missing(self) -> None:
         self.set_up_edenfs_systemd_service()
@@ -208,3 +232,7 @@ class SystemdTest(
         config_d.mkdir()
         with open(config_d / "systemd.toml", "w") as config_file:
             toml.dump(config, config_file)
+
+    def spoof_user_name(self, user_name: str) -> None:
+        self.set_environment_variable("LOGNAME", user_name)
+        self.set_environment_variable("USER", user_name)
