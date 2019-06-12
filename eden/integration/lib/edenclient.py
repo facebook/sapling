@@ -28,36 +28,74 @@ from .find_executables import FindExe
 
 
 class EdenFS(object):
-    """Manages an instance of the eden fuse server."""
+    """Manages an instance of the EdenFS fuse server."""
 
-    _eden_dir: str
+    _eden_dir: Path
 
     def __init__(
         self,
-        eden_dir: Optional[str] = None,
-        etc_eden_dir: Optional[str] = None,
-        home_dir: Optional[str] = None,
+        base_dir: Optional[Path] = None,
+        eden_dir: Optional[Path] = None,
+        etc_eden_dir: Optional[Path] = None,
+        home_dir: Optional[Path] = None,
         logging_settings: Optional[Dict[str, str]] = None,
         extra_args: Optional[List[str]] = None,
         storage_engine: str = "memory",
     ) -> None:
+        """
+        Construct a new EdenFS object.
+
+        By default, all of the state directories needed for the edenfs daemon will be
+        created under the directory specified by base_dir.  If base_dir is not
+        specified, a temporary directory will be created.  The temporary directory will
+        be removed when cleanup() or __exit__() is called on the EdenFS object.
+
+        Explicit locations for various state directories (eden_dir, etc_eden_dir,
+        home_dir) can also be given, if desired.  For instance, this allows an EdenFS
+        object to be created for an existing eden state directory.
+        """
+        if base_dir is None:
+            self._base_dir = Path(tempfile.mkdtemp(prefix="eden_test."))
+            self._cleanup_base_dir = True
+        else:
+            self._base_dir = base_dir
+            self._cleanup_base_dir = False
+
         if eden_dir is None:
-            self._eden_dir = tempfile.mkdtemp(prefix="eden_test.")
-            self._cleanup_eden_dir = True
+            self._eden_dir = self._base_dir / "eden"
+            self._eden_dir.mkdir(exist_ok=True)
         else:
             self._eden_dir = eden_dir
-            self._cleanup_eden_dir = False
-        self._storage_engine = storage_engine
 
-        self._process: Optional[subprocess.Popen] = None
-        self._etc_eden_dir = etc_eden_dir
-        self._home_dir = home_dir
+        if etc_eden_dir is None:
+            self._etc_eden_dir = self._base_dir / "etc_eden"
+            self._etc_eden_dir.mkdir(exist_ok=True)
+        else:
+            self._etc_eden_dir = etc_eden_dir
+
+        if home_dir is None:
+            self._home_dir = self._base_dir / "home"
+            self._home_dir.mkdir(exist_ok=True)
+        else:
+            self._home_dir = home_dir
+
+        self._storage_engine = storage_engine
         self._logging_settings = logging_settings
         self._extra_args = extra_args
 
+        self._process: Optional[subprocess.Popen] = None
+
     @property
-    def eden_dir(self) -> str:
+    def eden_dir(self) -> Path:
         return self._eden_dir
+
+    @property
+    def etc_eden_dir(self) -> Path:
+        return self._etc_eden_dir
+
+    @property
+    def home_dir(self) -> Path:
+        return self._home_dir
 
     def __enter__(self) -> "EdenFS":
         return self
@@ -71,12 +109,8 @@ class EdenFS(object):
     def cleanup(self) -> None:
         """Stop the instance and clean up its temporary directories"""
         self.kill()
-        if self._cleanup_eden_dir:
-            self.cleanup_dirs()
-
-    def cleanup_dirs(self) -> None:
-        """Remove any temporary dirs we have created."""
-        shutil.rmtree(os.fsencode(self._eden_dir), ignore_errors=True)
+        if self._cleanup_base_dir:
+            shutil.rmtree(self._base_dir, ignore_errors=True)
 
     def kill(self) -> None:
         """Stops and unmounts this instance."""
@@ -85,7 +119,7 @@ class EdenFS(object):
         self.shutdown()
 
     def get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(self._eden_dir)
+        return eden.thrift.create_thrift_client(str(self._eden_dir))
 
     def run_cmd(
         self,
@@ -142,12 +176,12 @@ class EdenFS(object):
         cmd = [
             typing.cast(str, FindExe.EDEN_CLI),  # T38947910
             "--config-dir",
-            self._eden_dir,
+            str(self._eden_dir),
+            "--etc-eden-dir",
+            str(self._etc_eden_dir),
+            "--home-dir",
+            str(self._home_dir),
         ]
-        if self._etc_eden_dir:
-            cmd += ["--etc-eden-dir", self._etc_eden_dir]
-        if self._home_dir:
-            cmd += ["--home-dir", self._home_dir]
         cmd.append(command)
         cmd.extend(args)
         return cmd
@@ -176,7 +210,7 @@ class EdenFS(object):
         assert self._process is not None
         util.wait_for_daemon_healthy(
             proc=self._process,
-            config_dir=Path(self._eden_dir),
+            config_dir=self._eden_dir,
             get_client=lambda: self.get_thrift_client(),
             timeout=timeout,
             exclude_pid=takeover_from,
@@ -322,7 +356,7 @@ class EdenFS(object):
         cmd = [
             typing.cast(str, FindExe.TAKEOVER_TOOL),  # T38947910
             "--edenDir",
-            self._eden_dir,
+            str(self._eden_dir),
         ]
         subprocess.check_call(cmd)
 

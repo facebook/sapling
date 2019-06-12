@@ -75,7 +75,9 @@ class RCTest(testcase.EdenRepoTest):
         assert repo_info is not None
 
         # Create temporary system config
-        f, path = tempfile.mkstemp(dir=self.system_config_dir, suffix=".toml")
+        system_config_dir = self.eden.etc_eden_dir / "config.d"
+        system_config_dir.mkdir(parents=True, exist_ok=True)
+        f, path = tempfile.mkstemp(dir=str(system_config_dir), suffix=".toml")
 
         # Add system_repo to system config file
         config = textwrap.dedent(

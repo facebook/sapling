@@ -10,6 +10,7 @@
 import binascii
 import hashlib
 import os
+from pathlib import Path
 
 from facebook.eden.ttypes import ScmFileStatus, SHA1Result, TimeSpec
 
@@ -58,10 +59,9 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(self.mount_path_bytes, mount.mountPoint)
         assert mount.edenClientPath is not None
         # The client path should always be inside the main eden directory
-        self.assertTrue(
-            os.fsdecode(mount.edenClientPath).startswith(self.eden.eden_dir),
-            msg="unexpected client path: %r" % mount.edenClientPath,
-        )
+        # Path.relative_to() will throw a ValueError if self.eden.eden_dir is not a
+        # directory prefix of mount.edenClientPath
+        Path(os.fsdecode(mount.edenClientPath)).relative_to(self.eden.eden_dir)
 
     def test_get_sha1(self) -> None:
         expected_sha1_for_hello = hashlib.sha1(b"hola\n").digest()

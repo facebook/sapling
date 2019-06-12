@@ -143,9 +143,10 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         call start() on it.
         """
         return edenclient.EdenFS(
-            eden_dir=str(self.eden_state_dir),
-            etc_eden_dir=str(self.etc_eden_dir),
-            home_dir=str(self.home_dir),
+            base_dir=self.transient_dir,
+            eden_dir=self.eden_state_dir,
+            etc_eden_dir=self.etc_eden_dir,
+            home_dir=self.home_dir,
             storage_engine="rocksdb",
         )
 
@@ -524,7 +525,7 @@ def unpack_into(snapshot_path: Path, output_path: Path) -> BaseSnapshot:
         snapshot = snapshot_type(output_path)
         snapshot.resume()
         return snapshot
-    except Exception as ex:
+    except Exception:
         cleanup_tmp_dir(data_dir)
         raise
 

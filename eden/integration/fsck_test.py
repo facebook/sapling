@@ -155,7 +155,7 @@ class FsckTest(testcase.EdenRepoTest):
 class FsckTestNoEdenfs(unittest.TestCase, TemporaryDirectoryMixin):
     def test_fsck_no_checkouts(self) -> None:
         tmp_dir = self.make_temporary_directory()
-        eden = edenclient.EdenFS(tmp_dir)
+        eden = edenclient.EdenFS(Path(tmp_dir))
         cmd_result = eden.run_unchecked(
             "fsck",
             stdout=subprocess.PIPE,

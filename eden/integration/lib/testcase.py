@@ -121,22 +121,6 @@ class EdenTestCase(
     def setup_eden_test(self) -> None:
         self.tmp_dir = self.make_temporary_directory()
 
-        # The home directory, to make sure eden looks at this rather than the
-        # real home directory of the user running the tests.
-        self.home_dir = os.path.join(self.tmp_dir, "homedir")
-        os.mkdir(self.home_dir)
-        self.set_environment_variable("HOME", self.home_dir)
-
-        # TODO: Make this configurable via ~/.edenrc.
-        # The eden config directory.
-        self.eden_dir = os.path.join(self.home_dir, "local/.eden")
-        os.makedirs(self.eden_dir)
-
-        self.etc_eden_dir = os.path.join(self.tmp_dir, "etc-eden")
-        os.mkdir(self.etc_eden_dir)
-        # The directory holding the system configuration files
-        self.system_config_dir = os.path.join(self.etc_eden_dir, "config.d")
-        os.mkdir(self.system_config_dir)
         # Parent directory for any git/hg repositories created during the test
         self.repos_dir = os.path.join(self.tmp_dir, "repos")
         os.mkdir(self.repos_dir)
@@ -153,18 +137,31 @@ class EdenTestCase(
 
         storage_engine = self.select_storage_engine()
         self.eden = edenclient.EdenFS(
-            self.eden_dir,
-            etc_eden_dir=self.etc_eden_dir,
-            home_dir=self.home_dir,
+            base_dir=pathlib.Path(self.tmp_dir),
             logging_settings=logging_settings,
             extra_args=extra_args,
             storage_engine=storage_engine,
         )
+        # Just to better reflect normal user environments, update $HOME
+        # to point to our test home directory for the duration of the test.
+        self.set_environment_variable("HOME", str(self.eden.home_dir))
         self.eden.start()
         self.addCleanup(self.eden.cleanup)
         self.report_time("eden daemon started")
 
         self.mount = os.path.join(self.mounts_dir, "main")
+
+    @property
+    def eden_dir(self) -> str:
+        return str(self.eden.eden_dir)
+
+    @property
+    def home_dir(self) -> str:
+        return str(self.eden.home_dir)
+
+    @property
+    def etc_eden_dir(self) -> str:
+        return str(self.eden.etc_eden_dir)
 
     @property
     def mount_path(self) -> pathlib.Path:
