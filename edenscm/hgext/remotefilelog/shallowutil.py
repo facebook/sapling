@@ -102,7 +102,7 @@ def getexperimentalcachepath(repo):
 
 
 def getindexedlogdatastorepath(repo):
-    path = getexperimentalcachepath(repo)
+    path = os.path.join(getcachepath(repo.ui), repo.name)
     return os.path.join(path, "indexedlogdatastore")
 
 
