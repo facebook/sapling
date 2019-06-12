@@ -76,10 +76,10 @@ Sync first simple push
 Sync second tricky push
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 2
-  * scm/mononoke/cmdlib/src/args.rs:642] using repo "repo" repoid RepositoryId(0) (glob)
-  * scm/mononoke/facebook/mononoke_hg_sync_job/src/main.rs:326] preparing log entry #3 ... (glob)
-  * scm/mononoke/facebook/mononoke_hg_sync_job/src/main.rs:392] successful prepare of entry #3 (glob)
-  * scm/mononoke/facebook/mononoke_hg_sync_job/src/main.rs:464] syncing log entries [3] ... (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #3 ... (glob)
+  * successful prepare of entry #3 (glob)
+  * syncing log entries [3] ... (glob)
   running "*dummyssh.par" 'user@dummy' 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
@@ -96,8 +96,8 @@ Sync second tricky push
   remote:     4e05343c7747  commit
   remote:     0d5aeb697ee7  bad commit
   unbundle replay batch item #0 successfully sent
-  * scm/mononoke/facebook/mononoke_hg_sync_job/src/main.rs:183] queue size after processing: 0 (glob)
-  * scm/mononoke/facebook/mononoke_hg_sync_job/src/main.rs:236] successful sync of entries [3] (glob)
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [3] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark -T '{node}\n'
   a1e678b3ed9a3df8ef590d407b97d88891a66778
