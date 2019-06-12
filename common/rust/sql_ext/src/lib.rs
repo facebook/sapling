@@ -7,9 +7,14 @@
 extern crate failure_ext as failure;
 extern crate sql;
 
+use failure::{format_err, Error, Result};
+use futures::{
+    future::{err, ok},
+    Future,
+};
+use futures_ext::FutureExt;
 use std::path::Path;
 
-use crate::failure::prelude::*;
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
 
 pub struct SqlConnections {
@@ -169,4 +174,26 @@ pub trait SqlConstructors: Sized {
 fn with_sqlite<T: SqlConstructors>(con: SqliteConnection) -> Result<T> {
     let con = Connection::with_sqlite(con);
     Ok(T::from_connections(con.clone(), con.clone(), con))
+}
+
+pub fn myrouter_ready(
+    db_addr_opt: Option<&str>,
+    myrouter_port_: Option<u16>,
+    repo_name_: &String,
+) -> impl Future<Item = (), Error = Error> {
+    match db_addr_opt {
+        None => ok(()).left_future(),
+        Some(db_address) => {
+            if let Some(myrouter_port_) = myrouter_port_ {
+                myrouter::wait_for_myrouter(myrouter_port_, db_address).right_future()
+            } else {
+                err(format_err!(
+                    "No port for MyRouter provided, but repo {} needs to connect do db {}",
+                    repo_name_,
+                    db_address
+                ))
+                .left_future()
+            }
+        }
+    }
 }

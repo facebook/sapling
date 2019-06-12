@@ -14,7 +14,6 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
-use sql::myrouter;
 
 use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
@@ -30,6 +29,7 @@ use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
+use sql_ext::myrouter_ready;
 
 #[derive(Clone)]
 pub struct RepoHandler {
@@ -66,17 +66,11 @@ pub fn repo_handlers(
             );
             // TODO(T37478150, luk): this is not a test use case, need to address this later
             let ctx = CoreContext::test_mock();
-            let ensure_myrouter_ready = match config.storage_config.dbconfig.get_db_address() {
-                None => future::ok(()).left_future(),
-                Some(db_address) => {
-                    let myrouter_port = try_boxfuture!(myrouter_port.ok_or_else(|| format_err!(
-                        "No port for MyRouter provided, but repo {} needs to connect do db {}",
-                        reponame,
-                        db_address
-                    )));
-                    myrouter::wait_for_myrouter(myrouter_port, db_address).right_future()
-                }
-            };
+            let ensure_myrouter_ready = myrouter_ready(
+                config.storage_config.dbconfig.get_db_address(),
+                myrouter_port,
+                &reponame,
+            );
 
             let ready_handle = ready.create_handle(reponame.clone());
 
