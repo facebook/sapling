@@ -455,7 +455,7 @@ test revlog format 0
   $ revlog-formatv0.py
   $ cd formatv0
   $ hg verify
-  abort: repo is corrupted
+  abort: repo is corrupted: 00changelog.i
   [255]
   $ cd ..
 

@@ -410,7 +410,7 @@ class revlog(object):
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0:
-            raise error.Abort(_("repo is corrupted"))
+            raise error.Abort(_("repo is corrupted: %s") % (self.indexfile,))
         elif fmt == REVLOGV1:
             if flags & ~REVLOGV1_FLAGS:
                 raise RevlogError(

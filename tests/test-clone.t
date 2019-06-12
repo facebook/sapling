@@ -566,13 +566,13 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
   $ echo foo > src/foo
   $ hg -R src add src/foo
   $ hg -R src commit -m '#0'
-  abort: repo is corrupted
+  abort: repo is corrupted: 00changelog.i
   [255]
   $ hg -R src log -q
-  abort: repo is corrupted
+  abort: repo is corrupted: 00changelog.i
   [255]
   $ hg clone -U -q src dst
-  abort: repo is corrupted
+  abort: repo is corrupted: 00changelog.i
   [255]
   $ hg -R dst log -q
   abort: repository dst not found!
