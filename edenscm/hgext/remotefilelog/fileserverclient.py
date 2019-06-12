@@ -435,10 +435,8 @@ class fileserverclient(object):
             getkeys = [file + "\0" + node for file, node in fileids]
             if fetchdata:
                 cache.getdatapack(getkeys)
-                fileslog.contentstore.markforrefresh()
             if fetchhistory:
                 cache.gethistorypack(getkeys)
-                fileslog.metadatastore.markforrefresh()
 
             # receive both data and history
             misses = []
@@ -446,8 +444,10 @@ class fileserverclient(object):
                 allmisses = set()
                 if fetchdata:
                     allmisses.update(cache.receive(prog))
+                    fileslog.contentstore.markforrefresh()
                 if fetchhistory:
                     allmisses.update(cache.receive(prog))
+                    fileslog.metadatastore.markforrefresh()
 
                 misses = map(lambda key: key.split("\0"), allmisses)
                 perftrace.tracevalue("Memcache Misses", len(misses))
