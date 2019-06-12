@@ -1,3 +1,10 @@
+# Copyright (c) 2019-present, Facebook, Inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree. An additional grant
+# of patent rights can be found in the PATENTS file in the same directory.
+
 file(GLOB UTILS_SRCS "*.cpp")
 
 if (WIN32)
@@ -5,7 +12,6 @@ if (WIN32)
     REMOVE_ITEM UTILS_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/CoverageSet.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FutureUnixSocket.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/HgCommand.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/IoFuture.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ProcessAccessLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ProcessNameCache.cpp
