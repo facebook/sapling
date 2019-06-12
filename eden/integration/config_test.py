@@ -19,12 +19,7 @@ from facebook.eden.ttypes import GetConfigParams
 from .lib import testcase
 
 
-@testcase.eden_repo_test
-class ConfigTest(testcase.EdenRepoTest):
-    def populate_repo(self) -> None:
-        self.repo.write_file("README", "readme\n")
-        self.commit1 = self.repo.commit("Initial commit.")
-
+class ConfigTest(testcase.EdenTestCase):
     def assert_config(
         self, config: EdenConfigData, name: str, value: str, source: ConfigSource
     ) -> None:
