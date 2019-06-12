@@ -71,6 +71,10 @@ Configs::
     # Name of the repository
     reponame = ''
 
+    # Server-side option. Used only if storetype=sql
+    # Whether or not to record new bundles into the forwardfillqueue table.
+    forwardfill = False
+
     # Client-side option. Used by --list-remote option. List of remote scratch
     # patterns to list if no patterns are specified.
     defaultremotepatterns = ['*']

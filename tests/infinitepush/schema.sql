@@ -32,3 +32,16 @@ CREATE TABLE `nodesmetadata` (
   `optional_json_metadata` mediumblob,
   PRIMARY KEY (`reponame`,`node`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `forwardfillerqueue` (
+  `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `bundle` VARBINARY(64) NOT NULL,
+  `reponame` VARBINARY(255) NOT NULL,
+  `slice` TINYINT(3) UNSIGNED DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `claimed_by` VARCHAR(255) NULL,
+  `claimed_at` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  KEY `queue_order` (`reponame`, `slice`, `id`),
+  KEY `claim_review` (`claimed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8

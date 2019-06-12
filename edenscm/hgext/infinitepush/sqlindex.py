@@ -80,6 +80,7 @@ class sqlindex(object):
         self.shorthasholdrevthreshold = ui.configint(
             "infinitepush", "shorthasholdrevthreshold", 60
         )
+        self.forwardfill = ui.configbool("infinitepush", "forwardfill")
 
     def sqlconnect(self):
         if self.sqlconn:
@@ -144,6 +145,12 @@ class sqlindex(object):
             "INSERT INTO bundles(bundle, reponame) VALUES " "(%s, %s)",
             params=(bundleid, self.reponame),
         )
+
+        if self.forwardfill and bundleid is not None:
+            self.sqlcursor.execute(
+                "INSERT INTO forwardfillerqueue(bundle, reponame) VALUES (%s, %s)",
+                params=(bundleid, self.reponame),
+            )
 
         # insert nodes to bundle mapping
 
