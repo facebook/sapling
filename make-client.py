@@ -58,6 +58,7 @@ def run_cmd(cmd, env=None, cwd=None):
 def generate_thrift_code(thrift_compiler, oss_dir, gen_dir):
     """ Generate python thrift clients for a couple of things """
     thrift_files = [
+        "eden/fs/config/eden_config.thrift",
         "eden/fs/service/eden.thrift",
         "common/fb303/if/fb303.thrift",
         "eden/fs/inodes/overlay/overlay.thrift",
