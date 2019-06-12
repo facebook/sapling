@@ -101,6 +101,11 @@ def getexperimentalcachepath(repo):
     return os.path.join(getcachepath(repo.ui), repo.name, "experimental")
 
 
+def getindexedlogdatastorepath(repo):
+    path = getexperimentalcachepath(repo)
+    return os.path.join(path, "indexedlogdatastore")
+
+
 def createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
     traditional revlog

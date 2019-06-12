@@ -569,8 +569,7 @@ class remotefileslog(filelog.fileslog):
         sharedmetadatastores = [spackmetadata, mutablesharedstore]
         if self.ui.configbool("remotefilelog", "fetchpacks"):
             if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
-                path = shallowutil.getexperimentalcachepath(repo)
-                path = os.path.join(path, "indexedlogdatastore")
+                path = shallowutil.getindexedlogdatastorepath(repo)
                 mask = os.umask(0o002)
                 try:
                     sharedcontentstores += [revisionstore.indexedlogdatastore(path)]

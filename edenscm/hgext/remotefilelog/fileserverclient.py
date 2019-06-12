@@ -857,8 +857,7 @@ class fileserverclient(object):
                 )
 
                 if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
-                    path = shallowutil.getexperimentalcachepath(self.repo)
-                    path = os.path.join(path, "indexedlogdatastore")
+                    path = shallowutil.getindexedlogdatastorepath(self.repo)
                     if self.ui.configbool(
                         "remotefilelog", "mirrorindexedlogwrites", True
                     ):
