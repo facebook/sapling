@@ -84,6 +84,11 @@ class ObjectStore : public IObjectStore,
   folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
 
   /**
+   * Returns the size of the contents of the blob with the given ID.
+   */
+  folly::Future<size_t> getSize(const Hash& id) const;
+
+  /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
   folly::Future<Hash> getSha1(const Hash& id) const;
