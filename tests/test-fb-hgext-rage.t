@@ -14,6 +14,8 @@
 #endif
   $ hg rage --preview | grep -o '^hg blackbox'
   hg blackbox
+  $ hg rage --preview | grep -o '^hg cloud status'
+  hg cloud status
 
 Test with shared repo
   $ cat >> $HGRCPATH << EOF

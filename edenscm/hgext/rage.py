@@ -301,6 +301,7 @@ def _makerage(ui, repo, **opts):
         ),
         ("hg blackbox -l100", lambda: hgcmd("blackbox", limit=100)),
         ("hg summary", lambda: hgcmd("summary")),
+        ("hg cloud status", lambda: hgcmd("cloud status")),
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse show", lambda: hgcmd("sparse show")),
