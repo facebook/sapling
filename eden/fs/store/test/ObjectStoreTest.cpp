@@ -25,6 +25,14 @@ class ObjectStoreTest : public ::testing::Test {
     objectStore_ = ObjectStore::create(localStore_, backingStore_);
   }
 
+  Hash putReadyBlob(folly::StringPiece data) {
+    StoredBlob* storedBlob = backingStore_->putBlob(data);
+    storedBlob->setReady();
+
+    Blob blob = storedBlob->get();
+    return blob.getHash();
+  }
+
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<ObjectStore> objectStore_;
@@ -32,15 +40,11 @@ class ObjectStoreTest : public ::testing::Test {
 
 TEST_F(ObjectStoreTest, getBlobSize) {
   folly::StringPiece data = "A";
+  Hash id = putReadyBlob(data);
 
-  StoredBlob* storedBlob = backingStore_->putBlob(data);
-  storedBlob->setReady();
-
-  Blob blob = storedBlob->get();
-  Hash id = blob.getHash();
-
+  size_t expectedSize = data.size();
   size_t size = objectStore_->getBlobSize(id).get();
-  EXPECT_EQ(data.size(), size);
+  EXPECT_EQ(expectedSize, size);
 }
 
 TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
@@ -48,6 +52,24 @@ TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
 
   EXPECT_THROW_RE(
       objectStore_->getBlobSize(id).get(),
+      std::domain_error,
+      "blob .* not found");
+}
+
+TEST_F(ObjectStoreTest, getBlobSha1) {
+  folly::StringPiece data = "A";
+  Hash id = putReadyBlob(data);
+
+  Hash expectedSha1 = Hash::sha1(data);
+  Hash sha1 = objectStore_->getBlobSha1(id).get();
+  EXPECT_EQ(expectedSha1.toString(), sha1.toString());
+}
+
+TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
+  Hash id;
+
+  EXPECT_THROW_RE(
+      objectStore_->getBlobSha1(id).get(),
       std::domain_error,
       "blob .* not found");
 }
