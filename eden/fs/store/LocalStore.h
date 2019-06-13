@@ -156,6 +156,8 @@ class LocalStore {
   folly::Future<std::optional<BlobMetadata>> getBlobMetadata(
       const Hash& id) const;
 
+  folly::Future<std::optional<size_t>> getBlobSize(const Hash& id) const;
+
   /**
    * Compute the serialized version of the tree.
    * Returns the key and the (not coalesced) serialized data.

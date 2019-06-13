@@ -128,6 +128,18 @@ folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
       });
 }
 
+folly::Future<std::optional<size_t>> LocalStore::getBlobSize(
+    const Hash& id) const {
+  return getBlobMetadata(id).thenValue(
+      [](std::optional<BlobMetadata> metadata) -> std::optional<size_t> {
+        if (metadata) {
+          return metadata->size;
+        } else {
+          return std::nullopt;
+        }
+      });
+}
+
 std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
   GitTreeSerializer serializer;
   for (auto& entry : tree->getTreeEntries()) {
