@@ -38,8 +38,6 @@ from . import (
 from ..extutil import flock, runshellcommand
 
 
-osutil = policy.importmod(r"osutil")
-
 try:
     xrange(0)
 except NameError:
@@ -376,7 +374,7 @@ def _incrementalrepack(
 ):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
-    files = osutil.listdir(packpath, stat=True)
+    files = util.listdir(packpath, stat=True)
     if shared:
         files = _deletebigpacks(repo, packpath, files)
     datapacks = _topacks(

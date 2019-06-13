@@ -20,8 +20,6 @@ from . import constants, shallowutil
 from ..extlib import litemmap
 
 
-osutil = policy.importmod(r"osutil")
-
 # The pack version supported by this implementation. This will need to be
 # rev'd whenever the byte format changes. Ex: changing the fanout prefix,
 # changing any of the int sizes, changing the delta algorithm, etc.

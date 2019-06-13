@@ -141,9 +141,9 @@ class basestore(object):
         oldfiles = set()
         otherfiles = set()
         havefilename = False
-        # osutil.listdir returns stat information which saves some rmdir/listdir
+        # util.listdir returns stat information which saves some rmdir/listdir
         # syscalls.
-        for name, mode in util.osutil.listdir(rootdir):
+        for name, mode in util.listdir(rootdir):
             if stat.S_ISDIR(mode):
                 dirpath = os.path.join(rootdir, name)
                 self._cleanupdirectory(dirpath)
