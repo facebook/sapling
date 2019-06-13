@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, State};
+use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, Path, Query, State};
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use failure::Fallible;
@@ -296,10 +296,22 @@ struct EdenGetDataParams {
     repo: String,
 }
 
+#[derive(Deserialize)]
+struct EdenGetDataQuery {
+    #[serde(default)]
+    stream: bool,
+}
+
 fn eden_get_data(
-    (state, params, body): (State<HttpServerState>, Path<EdenGetDataParams>, Bytes),
+    (state, params, query, body): (
+        State<HttpServerState>,
+        Path<EdenGetDataParams>,
+        Query<EdenGetDataQuery>,
+        Bytes,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
+    let query = query.into_inner();
     match serde_cbor::from_slice(&body) {
         Ok(request) => state
             .mononoke
@@ -307,7 +319,10 @@ fn eden_get_data(
                 prepare_fake_ctx(&state),
                 MononokeQuery {
                     repo: params.repo,
-                    kind: MononokeRepoQuery::EdenGetData(request),
+                    kind: MononokeRepoQuery::EdenGetData {
+                        request,
+                        stream: query.stream,
+                    },
                 },
             )
             .left_future(),
@@ -324,10 +339,22 @@ struct EdenGetHistoryParams {
     repo: String,
 }
 
+#[derive(Deserialize)]
+struct EdenGetHistoryQuery {
+    #[serde(default)]
+    stream: bool,
+}
+
 fn eden_get_history(
-    (state, params, body): (State<HttpServerState>, Path<EdenGetHistoryParams>, Bytes),
+    (state, params, query, body): (
+        State<HttpServerState>,
+        Path<EdenGetHistoryParams>,
+        Query<EdenGetHistoryQuery>,
+        Bytes,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
+    let query = query.into_inner();
     match serde_cbor::from_slice(&body) {
         Ok(request) => state
             .mononoke
@@ -335,7 +362,10 @@ fn eden_get_history(
                 prepare_fake_ctx(&state),
                 MononokeQuery {
                     repo: params.repo,
-                    kind: MononokeRepoQuery::EdenGetHistory(request),
+                    kind: MononokeRepoQuery::EdenGetHistory {
+                        request,
+                        stream: query.stream,
+                    },
                 },
             )
             .left_future(),
@@ -352,10 +382,22 @@ struct EdenGetTreesParams {
     repo: String,
 }
 
+#[derive(Deserialize)]
+struct EdenGetTreesQuery {
+    #[serde(default)]
+    stream: bool,
+}
+
 fn eden_get_trees(
-    (state, params, body): (State<HttpServerState>, Path<EdenGetTreesParams>, Bytes),
+    (state, params, query, body): (
+        State<HttpServerState>,
+        Path<EdenGetTreesParams>,
+        Query<EdenGetTreesQuery>,
+        Bytes,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
+    let query = query.into_inner();
     match serde_cbor::from_slice(&body) {
         Ok(request) => state
             .mononoke
@@ -363,7 +405,10 @@ fn eden_get_trees(
                 prepare_fake_ctx(&state),
                 MononokeQuery {
                     repo: params.repo,
-                    kind: MononokeRepoQuery::EdenGetTrees(request),
+                    kind: MononokeRepoQuery::EdenGetTrees {
+                        request,
+                        stream: query.stream,
+                    },
                 },
             )
             .left_future(),
@@ -380,10 +425,22 @@ struct EdenPrefetchTreesParams {
     repo: String,
 }
 
+#[derive(Deserialize)]
+struct EdenPrefetchTreesQuery {
+    #[serde(default)]
+    stream: bool,
+}
+
 fn eden_prefetch_trees(
-    (state, params, body): (State<HttpServerState>, Path<EdenPrefetchTreesParams>, Bytes),
+    (state, params, query, body): (
+        State<HttpServerState>,
+        Path<EdenPrefetchTreesParams>,
+        Query<EdenPrefetchTreesQuery>,
+        Bytes,
+    ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
     let params = params.into_inner();
+    let query = query.into_inner();
     match serde_cbor::from_slice(&body) {
         Ok(request) => state
             .mononoke
@@ -391,7 +448,10 @@ fn eden_prefetch_trees(
                 prepare_fake_ctx(&state),
                 MononokeQuery {
                     repo: params.repo,
-                    kind: MononokeRepoQuery::EdenPrefetchTrees(request),
+                    kind: MononokeRepoQuery::EdenPrefetchTrees {
+                        request,
+                        stream: query.stream,
+                    },
                 },
             )
             .left_future(),
@@ -658,25 +718,25 @@ fn main() -> Fallible<()> {
                 .resource("/eden/data", |r| {
                     r.method(http::Method::POST)
                         .with_async_config(eden_get_data, |cfg| {
-                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                            (cfg.0).3.limit(config::MAX_PAYLOAD_SIZE);
                         })
                 })
                 .resource("/eden/history", |r| {
                     r.method(http::Method::POST)
                         .with_async_config(eden_get_history, |cfg| {
-                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                            (cfg.0).3.limit(config::MAX_PAYLOAD_SIZE);
                         })
                 })
                 .resource("/eden/trees", |r| {
                     r.method(http::Method::POST)
                         .with_async_config(eden_get_trees, |cfg| {
-                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                            (cfg.0).3.limit(config::MAX_PAYLOAD_SIZE);
                         })
                 })
                 .resource("/eden/trees/prefetch", |r| {
                     r.method(http::Method::POST)
                         .with_async_config(eden_prefetch_trees, |cfg| {
-                            (cfg.0).2.limit(config::MAX_PAYLOAD_SIZE);
+                            (cfg.0).3.limit(config::MAX_PAYLOAD_SIZE);
                         })
                 })
             })

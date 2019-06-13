@@ -6,16 +6,25 @@
 
 use std::collections::BTreeMap;
 
-use actix_web::{self, Body, HttpRequest, HttpResponse, Json, Responder};
+use actix_web::{self, dev::BodyStream, Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
+use failure::Error;
+use futures::Stream;
+use futures_ext::{BoxStream, StreamExt};
 use hostname::get_hostname;
 use serde::Serialize;
 use serde_cbor;
 
-use types::api::{DataResponse, HistoryResponse};
+use types::{
+    api::{DataResponse, HistoryResponse},
+    DataEntry, RepoPathBuf, WireHistoryEntry,
+};
 
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
+
+type StreamingDataResponse = BoxStream<DataEntry, Error>;
+type StreamingHistoryResponse = BoxStream<(RepoPathBuf, WireHistoryEntry), Error>;
 
 pub enum MononokeRepoResponse {
     GetRawFile {
@@ -50,11 +59,16 @@ pub enum MononokeRepoResponse {
     EdenGetHistory(HistoryResponse),
     EdenGetTrees(DataResponse),
     EdenPrefetchTrees(DataResponse),
+    EdenGetDataStream(StreamingDataResponse),
+    EdenGetHistoryStream(StreamingHistoryResponse),
+    EdenGetTreesStream(StreamingDataResponse),
+    EdenPrefetchTreesStream(StreamingDataResponse),
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("application/octet-stream")
+        .header("x-served-by", get_hostname().unwrap_or_default())
         .body(Body::Binary(content.into()))
 }
 
@@ -64,6 +78,22 @@ fn cbor_response(content: impl Serialize) -> HttpResponse {
         .content_type("application/cbor")
         .header("x-served-by", get_hostname().unwrap_or_default())
         .body(Body::Binary(content.into()))
+}
+
+fn streaming_cbor_response<S, I>(entries: S) -> HttpResponse
+where
+    S: Stream<Item = I, Error = Error> + Send + 'static,
+    I: Serialize,
+{
+    let stream = entries
+        .and_then(|entry| Ok(serde_cbor::to_vec(&entry)?))
+        .map(Bytes::from)
+        .from_err()
+        .boxify();
+    HttpResponse::Ok()
+        .content_type("application/octet-stream")
+        .header("x-served-by", get_hostname().unwrap_or_default())
+        .body(Body::Streaming(stream as BodyStream))
 }
 
 impl Responder for MononokeRepoResponse {
@@ -93,6 +123,10 @@ impl Responder for MononokeRepoResponse {
             EdenGetHistory(response) => Ok(cbor_response(response)),
             EdenGetTrees(response) => Ok(cbor_response(response)),
             EdenPrefetchTrees(response) => Ok(cbor_response(response)),
+            EdenGetDataStream(entries) => Ok(streaming_cbor_response(entries)),
+            EdenGetHistoryStream(entries) => Ok(streaming_cbor_response(entries)),
+            EdenGetTreesStream(entries) => Ok(streaming_cbor_response(entries)),
+            EdenPrefetchTreesStream(entries) => Ok(streaming_cbor_response(entries)),
         }
     }
 }

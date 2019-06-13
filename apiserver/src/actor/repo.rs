@@ -25,7 +25,7 @@ use futures::{
     stream::iter_ok,
     Future, IntoFuture, Stream,
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use http::uri::Uri;
 use mononoke_api;
 use remotefilelog;
@@ -389,6 +389,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         keys: Vec<Key>,
+        stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let mut fetches = Vec::new();
         for key in keys {
@@ -412,12 +413,16 @@ impl MononokeRepo {
             fetches.push(fut);
         }
 
-        iter_ok(fetches)
-            .buffer_unordered(10)
-            .collect()
-            .map(|entries| MononokeRepoResponse::EdenGetData(DataResponse::new(entries)))
-            .from_err()
-            .boxify()
+        let entries = iter_ok(fetches).buffer_unordered(10);
+        if stream {
+            ok(MononokeRepoResponse::EdenGetDataStream(entries.boxify())).boxify()
+        } else {
+            entries
+                .collect()
+                .map(|entries| MononokeRepoResponse::EdenGetData(DataResponse::new(entries)))
+                .from_err()
+                .boxify()
+        }
     }
 
     fn eden_get_history(
@@ -425,6 +430,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         keys: Vec<Key>,
         depth: Option<u32>,
+        stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let mut fetches = Vec::new();
         for key in keys {
@@ -435,7 +441,6 @@ impl MononokeRepo {
 
             let fut = MPath::new(key.path.as_byte_slice())
                 .into_future()
-                .from_err()
                 .and_then(move |path| {
                     debug!(&logger, "fetching history for key: {}", &key);
                     remotefilelog::get_file_history(ctx, repo, filenode, path, depth)
@@ -450,21 +455,23 @@ impl MononokeRepo {
             fetches.push(fut);
         }
 
-        iter_ok(fetches)
-            .buffer_unordered(10)
-            .collect()
-            .map(|history| {
-                MononokeRepoResponse::EdenGetHistory(HistoryResponse::new(
-                    history.into_iter().flatten(),
-                ))
-            })
-            .boxify()
+        let entries = iter_ok(fetches).buffer_unordered(10).map(iter_ok).flatten();
+        if stream {
+            ok(MononokeRepoResponse::EdenGetHistoryStream(entries.boxify())).boxify()
+        } else {
+            entries
+                .collect()
+                .map(|entries| MononokeRepoResponse::EdenGetHistory(HistoryResponse::new(entries)))
+                .from_err()
+                .boxify()
+        }
     }
 
     fn eden_get_trees(
         &self,
         ctx: CoreContext,
         keys: Vec<Key>,
+        stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let mut fetches = Vec::new();
         for key in keys {
@@ -489,21 +496,26 @@ impl MononokeRepo {
             fetches.push(fut);
         }
 
-        iter_ok(fetches)
-            .buffer_unordered(10)
-            .collect()
-            .map(|entries| MononokeRepoResponse::EdenGetTrees(DataResponse::new(entries)))
-            .from_err()
-            .boxify()
+        let entries = iter_ok(fetches).buffer_unordered(10);
+        if stream {
+            ok(MononokeRepoResponse::EdenGetTreesStream(entries.boxify())).boxify()
+        } else {
+            entries
+                .collect()
+                .map(|entries| MononokeRepoResponse::EdenGetTrees(DataResponse::new(entries)))
+                .from_err()
+                .boxify()
+        }
     }
 
     fn eden_prefetch_trees(
         &self,
         ctx: CoreContext,
         req: TreeRequest,
+        stream: bool,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        gettreepack_entries(ctx.clone(), &self.repo, req.into())
-            .and_then(move |(entry, basepath)| {
+        let entries = gettreepack_entries(ctx.clone(), &self.repo, req.into()).and_then(
+            move |(entry, basepath)| {
                 let full_path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
                 let path_bytes = full_path
                     .map(|mpath| mpath.to_vec())
@@ -522,11 +534,21 @@ impl MononokeRepo {
                         })
                     })
                     .boxify()
-            })
-            .collect()
-            .map(|entries| MononokeRepoResponse::EdenPrefetchTrees(DataResponse::new(entries)))
-            .from_err()
+            },
+        );
+
+        if stream {
+            ok(MononokeRepoResponse::EdenPrefetchTreesStream(
+                entries.boxify(),
+            ))
             .boxify()
+        } else {
+            entries
+                .collect()
+                .map(|entries| MononokeRepoResponse::EdenPrefetchTrees(DataResponse::new(entries)))
+                .from_err()
+                .boxify()
+        }
     }
 
     pub fn send_query(
@@ -555,12 +577,19 @@ impl MononokeRepo {
                 lfs_url,
             } => self.lfs_batch(repo_name, req, lfs_url),
             UploadLargeFile { oid, body } => self.upload_large_file(ctx, oid, body),
-            EdenGetData(DataRequest { keys }) => self.eden_get_data(ctx, keys),
-            EdenGetHistory(HistoryRequest { keys, depth }) => {
-                self.eden_get_history(ctx, keys, depth)
-            }
-            EdenGetTrees(DataRequest { keys }) => self.eden_get_trees(ctx, keys),
-            EdenPrefetchTrees(req) => self.eden_prefetch_trees(ctx, req),
+            EdenGetData {
+                request: DataRequest { keys },
+                stream,
+            } => self.eden_get_data(ctx, keys, stream),
+            EdenGetHistory {
+                request: HistoryRequest { keys, depth },
+                stream,
+            } => self.eden_get_history(ctx, keys, depth, stream),
+            EdenGetTrees {
+                request: DataRequest { keys },
+                stream,
+            } => self.eden_get_trees(ctx, keys, stream),
+            EdenPrefetchTrees { request, stream } => self.eden_prefetch_trees(ctx, request, stream),
         }
     }
 }

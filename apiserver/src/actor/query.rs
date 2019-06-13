@@ -63,10 +63,22 @@ pub enum MononokeRepoQuery {
         oid: String,
         body: Bytes,
     },
-    EdenGetData(DataRequest),
-    EdenGetHistory(HistoryRequest),
-    EdenGetTrees(DataRequest),
-    EdenPrefetchTrees(TreeRequest),
+    EdenGetData {
+        request: DataRequest,
+        stream: bool,
+    },
+    EdenGetHistory {
+        request: HistoryRequest,
+        stream: bool,
+    },
+    EdenGetTrees {
+        request: DataRequest,
+        stream: bool,
+    },
+    EdenPrefetchTrees {
+        request: TreeRequest,
+        stream: bool,
+    },
 }
 
 pub struct MononokeQuery {
