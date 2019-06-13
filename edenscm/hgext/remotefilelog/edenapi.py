@@ -71,5 +71,6 @@ def initclient(ui, repo):
         "databatchsize": ui.configint("edenapi", "databatchsize"),
         "historybatchsize": ui.configint("edenapi", "historybatchsize"),
         "validate": ui.configbool("edenapi", "validate"),
+        "streaming": ui.configbool("edenapi", "streaming"),
     }
     return edenapi.client(**kwargs)

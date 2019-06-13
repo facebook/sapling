@@ -13,6 +13,7 @@ pub struct Config {
     pub(crate) data_batch_size: Option<usize>,
     pub(crate) history_batch_size: Option<usize>,
     pub(crate) validate: bool,
+    pub(crate) streaming: bool,
 }
 
 impl Config {
@@ -66,6 +67,13 @@ impl Config {
     /// received data by recomputing and comparing the filenode hash.
     pub fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;
+        self
+    }
+
+    /// Specifies whether the client should request streaming responses
+    /// from the API server for operations that support it.
+    pub fn streaming(mut self, streaming: bool) -> Self {
+        self.streaming = streaming;
         self
     }
 }

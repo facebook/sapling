@@ -40,7 +40,8 @@ py_class!(class client |py| {
         creds: Option<(&PyBytes, &PyBytes)> = None,
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
-        validate: bool = true
+        validate: bool = true,
+        streaming: bool = false
     ) -> PyResult<client> {
         let url = str::from_utf8(url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -51,7 +52,8 @@ py_class!(class client |py| {
             .repo(repo)
             .data_batch_size(databatchsize)
             .history_batch_size(historybatchsize)
-            .validate(validate);
+            .validate(validate)
+            .streaming(streaming);
 
         if let Some((cert, key)) = creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;

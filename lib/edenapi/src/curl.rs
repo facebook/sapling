@@ -26,7 +26,7 @@ use handler::Collector;
 use revisionstore::{Delta, Metadata, MutableDeltaStore, MutableHistoryStore};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
-    Key, Node, RepoPathBuf,
+    DataEntry, HistoryEntry, Key, Node, RepoPathBuf, WireHistoryEntry,
 };
 
 use crate::api::EdenApi;
@@ -87,6 +87,7 @@ pub struct EdenApiCurlClient {
     data_batch_size: Option<usize>,
     history_batch_size: Option<usize>,
     validate: bool,
+    streaming: bool,
 }
 
 // Public API.
@@ -110,6 +111,7 @@ impl EdenApiCurlClient {
             data_batch_size: config.data_batch_size,
             history_batch_size: config.history_batch_size,
             validate: config.validate,
+            streaming: config.streaming,
         })
     }
 }
@@ -169,7 +171,11 @@ impl EdenApi for EdenApiCurlClient {
     ) -> Fallible<DownloadStats> {
         log::debug!("Fetching {} files", keys.len());
 
-        let url = self.repo_base_url()?.join(paths::HISTORY)?;
+        let mut url = self.repo_base_url()?.join(paths::HISTORY)?;
+        if self.streaming {
+            url.set_query(Some("stream=true"));
+        }
+
         let batch_size = self.history_batch_size.unwrap_or(cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
@@ -186,21 +192,40 @@ impl EdenApi for EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        let stats = multi_request(
-            &mut multi,
-            &url,
-            self.creds.as_ref(),
-            requests,
-            progress,
-            |response: Vec<HistoryResponse>| {
-                num_responses += 1;
-                for entry in response.into_iter().flatten() {
-                    num_entries += 1;
-                    store.add_entry(&entry)?;
-                }
-                Ok(())
-            },
-        )?;
+        let stats = if self.streaming {
+            multi_request(
+                &mut multi,
+                &url,
+                self.creds.as_ref(),
+                requests,
+                progress,
+                |response: Vec<(RepoPathBuf, WireHistoryEntry)>| {
+                    num_responses += 1;
+                    for (path, entry) in response {
+                        num_entries += 1;
+                        let entry = HistoryEntry::from_wire(entry, path);
+                        store.add_entry(&entry)?;
+                    }
+                    Ok(())
+                },
+            )?
+        } else {
+            multi_request(
+                &mut multi,
+                &url,
+                self.creds.as_ref(),
+                requests,
+                progress,
+                |response: Vec<HistoryResponse>| {
+                    num_responses += 1;
+                    for entry in response.into_iter().flatten() {
+                        num_entries += 1;
+                        store.add_entry(&entry)?;
+                    }
+                    Ok(())
+                },
+            )?
+        };
 
         log::debug!(
             "Received {} responses with {} total entries",
@@ -228,22 +253,41 @@ impl EdenApi for EdenApiCurlClient {
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> Fallible<DownloadStats> {
-        let url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
+        let mut url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
+        if self.streaming {
+            url.set_query(Some("stream=true"));
+        }
+
         let creds = self.creds.as_ref();
         let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
-        multi_request_threaded(
-            self.multi.clone(),
-            &url,
-            creds,
-            requests,
-            progress,
-            |responses| {
-                for response in responses {
-                    add_data_response(store, response, self.validate)?;
-                }
-                Ok(())
-            },
-        )
+
+        if self.streaming {
+            multi_request_threaded(
+                self.multi.clone(),
+                &url,
+                creds,
+                requests,
+                progress,
+                |entries| {
+                    let response = DataResponse::new(entries);
+                    add_data_response(store, response, self.validate)
+                },
+            )
+        } else {
+            multi_request_threaded(
+                self.multi.clone(),
+                &url,
+                creds,
+                requests,
+                progress,
+                |responses| {
+                    for response in responses {
+                        add_data_response(store, response, self.validate)?;
+                    }
+                    Ok(())
+                },
+            )
+        }
     }
 }
 
@@ -262,7 +306,11 @@ impl EdenApiCurlClient {
     ) -> Fallible<DownloadStats> {
         log::debug!("Fetching data for {} keys", keys.len());
 
-        let url = self.repo_base_url()?.join(path)?;
+        let mut url = self.repo_base_url()?.join(path)?;
+        if self.streaming {
+            url.set_query(Some("stream=true"));
+        }
+
         let batch_size = self.data_batch_size.unwrap_or(cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
@@ -277,21 +325,37 @@ impl EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        let stats = multi_request_threaded(
-            self.multi.clone(),
-            &url,
-            self.creds.as_ref(),
-            requests,
-            progress,
-            |responses: Vec<DataResponse>| {
-                for response in responses {
+        let stats = if self.streaming {
+            multi_request_threaded(
+                self.multi.clone(),
+                &url,
+                self.creds.as_ref(),
+                requests,
+                progress,
+                |entries: Vec<DataEntry>| {
                     num_responses += 1;
-                    num_entries += response.entries.len();
-                    add_data_response(store, response, self.validate)?;
-                }
-                Ok(())
-            },
-        )?;
+                    num_entries += entries.len();
+                    let response = DataResponse::new(entries);
+                    add_data_response(store, response, self.validate)
+                },
+            )?
+        } else {
+            multi_request_threaded(
+                self.multi.clone(),
+                &url,
+                self.creds.as_ref(),
+                requests,
+                progress,
+                |responses: Vec<DataResponse>| {
+                    for response in responses {
+                        num_responses += 1;
+                        num_entries += response.entries.len();
+                        add_data_response(store, response, self.validate)?;
+                    }
+                    Ok(())
+                },
+            )?
+        };
 
         log::debug!(
             "Received {} responses with {} total entries",
