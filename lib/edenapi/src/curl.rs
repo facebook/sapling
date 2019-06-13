@@ -18,7 +18,7 @@ use failure::{bail, ensure, err_msg, Fallible};
 use itertools::Itertools;
 use log;
 use serde::{de::DeserializeOwned, Serialize};
-use serde_cbor;
+use serde_cbor::Deserializer;
 use url::Url;
 
 use driver::MultiDriver;
@@ -192,9 +192,9 @@ impl EdenApi for EdenApiCurlClient {
             self.creds.as_ref(),
             requests,
             progress,
-            |response: HistoryResponse| {
+            |response: Vec<HistoryResponse>| {
                 num_responses += 1;
-                for entry in response {
+                for entry in response.into_iter().flatten() {
                     num_entries += 1;
                     store.add_entry(&entry)?;
                 }
@@ -231,9 +231,19 @@ impl EdenApi for EdenApiCurlClient {
         let url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
         let creds = self.creds.as_ref();
         let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
-        multi_request_threaded(self.multi.clone(), &url, creds, requests, progress, |res| {
-            add_data_response(store, res, self.validate)
-        })
+        multi_request_threaded(
+            self.multi.clone(),
+            &url,
+            creds,
+            requests,
+            progress,
+            |responses| {
+                for response in responses {
+                    add_data_response(store, response, self.validate)?;
+                }
+                Ok(())
+            },
+        )
     }
 }
 
@@ -273,10 +283,13 @@ impl EdenApiCurlClient {
             self.creds.as_ref(),
             requests,
             progress,
-            |response: DataResponse| {
-                num_responses += 1;
-                num_entries += response.entries.len();
-                add_data_response(store, response, self.validate)
+            |responses: Vec<DataResponse>| {
+                for response in responses {
+                    num_responses += 1;
+                    num_entries += response.entries.len();
+                    add_data_response(store, response, self.validate)?;
+                }
+                Ok(())
             },
         )?;
 
@@ -305,7 +318,7 @@ where
     R: Serialize,
     I: IntoIterator<Item = R>,
     T: DeserializeOwned,
-    F: FnMut(T) -> Fallible<()>,
+    F: FnMut(Vec<T>) -> Fallible<()>,
 {
     let requests = requests.into_iter().collect::<Vec<_>>();
     let num_requests = requests.len();
@@ -342,7 +355,9 @@ where
             );
         }
 
-        let response = serde_cbor::from_slice::<T>(data)?;
+        let response = Deserializer::from_slice(data)
+            .into_iter()
+            .collect::<Result<Vec<T>, serde_cbor::error::Error>>()?;
         response_cb(response)
     })?;
 
@@ -384,7 +399,7 @@ where
     R: Serialize + Send + 'static,
     I: IntoIterator<Item = R>,
     T: DeserializeOwned + Send + Sync + 'static,
-    F: FnMut(T) -> Fallible<()>,
+    F: FnMut(Vec<T>) -> Fallible<()>,
 {
     // Convert arguments to owned types since these will be sent
     // to a new thread, which requires captured values to have a
@@ -403,7 +418,7 @@ where
             creds.as_ref(),
             requests,
             progress_cb,
-            |response: T| Ok(tx.send(response)?),
+            |response: Vec<T>| Ok(tx.send(response)?),
         )
     });
 
