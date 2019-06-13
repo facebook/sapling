@@ -169,6 +169,14 @@ def sync(
     # Check that Scm Service is running and a subscription exists
     subscription.SubscriptionManager(repo).checksubscription()
 
+    # log whether the sync was successful
+    with repo.wlock():
+        fp = repo.localvfs("lastsync.log", "w+")
+        if synced and not failed:
+            fp.write("Success")
+        else:
+            fp.write("Failed")
+        fp.close()
     return _maybeupdateworkingcopy(repo, startnode)
 
 

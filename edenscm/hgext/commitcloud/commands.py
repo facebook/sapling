@@ -648,7 +648,6 @@ def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
 
     with backuplock.lock(repo):
         ret = sync.sync(repo, remotepath, getconnection, cloudrefs, full, version)
-
     background.backgroundbackupother(repo, dest=dest)
     return ret
 
@@ -774,6 +773,33 @@ def backupdisable(ui, repo, **opts):
                 % (e.lockinfo.uniqueid, e.lockinfo.namespace)
             )
     return 0
+
+
+@subcmd("status")
+def cloudstatus(ui, repo, **opts):
+    """Shows information about the state of the user's workspace"""
+
+    workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        ui.write(_("You are not connected to any workspace\n"))
+        return
+
+    autosync = "ON" if background.autobackupenabled(repo) else "OFF"
+    currentsyncstate = syncstate.SyncState(repo, workspacename)
+    syncupdatetime = time.ctime(currentsyncstate.lastupdatetime)
+    if repo.localvfs.isfile("lastsync.log"):
+        state = repo.localvfs.read("lastsync.log")
+    else:
+        state = "Not logged"
+    ui.write(
+        _(
+            "Workspace: %s\n"
+            "Automatic Sync: %s\n"
+            "Last Sync: %s\n"
+            "Last Sync State: %s\n"
+        )
+        % (workspacename, autosync, syncupdatetime, state)
+    )
 
 
 @command("debugwaitbackup", [("", "timeout", "", "timeout value")])

@@ -91,11 +91,24 @@ Joining:
   (your repo is not connected to any workspace)
   (use 'hg cloud join --help' for more details)
   [255]
+
+Run cloud status before setting any workspace
+  $ hg cloud status
+  You are not connected to any workspace
+
   $ hg cloud join -w feature
   commitcloud: this repository is now connected to the 'user/test/feature' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/feature'
   commitcloud: commits synchronized
   finished in * (glob)
+
+Run cloud status after setting a workspace
+  $ hg cloud status
+  Workspace: user/test/feature
+  Automatic Sync: OFF
+  Last Sync: * (glob)
+  Last Sync State: Success
+
   $ hg cloud leave
   commitcloud: this repository is now disconnected from commit cloud
   $ hg cloud join
@@ -125,6 +138,36 @@ Joining:
   finished in * (glob)
 
   $ cd ..
+
+Run cloud status after setting workspace
+  $ cd client1
+  $ hg cloud status
+  Workspace: user/test/default
+  Automatic Sync: OFF
+  Last Sync: * (glob)
+  Last Sync State: Success
+
+Enable autosync
+  $ setconfig infinitepushbackup.autobackup=true
+
+Run cloud status after enabling autosync
+  $ hg cloud status
+  Workspace: user/test/default
+  Automatic Sync: ON
+  Last Sync: * (glob)
+  Last Sync State: Success
+
+Disable autosync
+  $ setconfig infinitepushbackup.autobackup=false
+Run cloud status after disabling autosync
+  $ hg cloud status
+  Workspace: user/test/default
+  Automatic Sync: OFF
+  Last Sync: * (glob)
+  Last Sync State: Success
+
+  $ cd ..
+
 
 Make a commit in the first client, and sync it
   $ cd client1
@@ -823,6 +866,13 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   commitcloud: failed to synchronize 2 commits
   finished in * (glob)
 
+Run cloud status after failing to synchronize
+  $ hg cloud status
+  Workspace: user/test/default
+  Automatic Sync: OFF
+  Last Sync: * (glob)
+  Last Sync State: Failed
+
   $ hg cloud check -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 not backed up
 
@@ -1209,4 +1259,3 @@ Rejoin
   |/
   o  d20a80d4def3 'base'
   
-
