@@ -532,7 +532,7 @@ folly::Future<bool> FileInode::isSameAs(
   }
 
   auto f1 = getSha1();
-  auto f2 = getMount()->getObjectStore()->getSha1(blobID);
+  auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID);
   return folly::collect(f1, f2).thenValue([](std::tuple<Hash, Hash>&& result) {
     return std::get<0>(result) == std::get<1>(result);
   });
@@ -589,7 +589,7 @@ Future<Hash> FileInode::getSha1() {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore()->getSha1(state->hash.value());
+      return getObjectStore()->getBlobSha1(state->hash.value());
     case State::MATERIALIZED_IN_OVERLAY:
       return getOverlayFileAccess(state)->getSha1(getNodeId());
   }
@@ -886,7 +886,7 @@ void FileInode::materializeNow(
   // value in the overlay for this file.
   // Since this uses state->hash we perform this before calling
   // state.setMaterialized().
-  auto blobSha1Future = getObjectStore()->getSha1(state->hash.value());
+  auto blobSha1Future = getObjectStore()->getBlobSha1(state->hash.value());
   std::optional<Hash> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = blobSha1Future.value();

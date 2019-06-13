@@ -39,7 +39,7 @@ TEST_F(ObjectStoreTest, getBlobSize) {
   Blob blob = storedBlob->get();
   Hash id = blob.getHash();
 
-  size_t size = objectStore_->getSize(id).get();
+  size_t size = objectStore_->getBlobSize(id).get();
   EXPECT_EQ(data.size(), size);
 }
 
@@ -47,5 +47,7 @@ TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
   Hash id;
 
   EXPECT_THROW_RE(
-      objectStore_->getSize(id).get(), std::domain_error, "blob .* not found");
+      objectStore_->getBlobSize(id).get(),
+      std::domain_error,
+      "blob .* not found");
 }

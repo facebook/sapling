@@ -86,12 +86,12 @@ class ObjectStore : public IObjectStore,
   /**
    * Returns the size of the contents of the blob with the given ID.
    */
-  folly::Future<size_t> getSize(const Hash& id) const;
+  folly::Future<size_t> getBlobSize(const Hash& id) const;
 
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
-  folly::Future<Hash> getSha1(const Hash& id) const;
+  folly::Future<Hash> getBlobSha1(const Hash& id) const;
 
   /**
    * Get the LocalStore used by this ObjectStore
