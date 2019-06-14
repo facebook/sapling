@@ -10,7 +10,7 @@ use cloned::cloned;
 use failure_ext::prelude::*;
 use failure_ext::{err_msg, Error, Result};
 use futures::{
-    future::{self, IntoFuture},
+    future::{self, result, IntoFuture},
     Future,
 };
 use futures_ext::{BoxFuture, FutureExt};
@@ -26,7 +26,7 @@ use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
     dummy::DummyLease, new_cachelib_blobstore_no_lease, new_memcache_blobstore, MemcacheOps,
 };
-use censoredblob::CensoredBlob;
+use censoredblob::{CensoredBlob, SqlCensoredContentStore};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
@@ -44,6 +44,7 @@ use rocksdb;
 use scuba::ScubaClient;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use std::iter::FromIterator;
 
 /// Construct a new BlobRepo with the given storage configuration. If the metadata DB is
 /// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
@@ -59,28 +60,50 @@ pub fn open_blobrepo(
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> BoxFuture<BlobRepo, Error> {
-    let blobstore = make_blobstore(
+    let uncensored_blobstore = make_blobstore(
         repoid,
         &storage_config.blobstore,
         &storage_config.dbconfig,
         myrouter_port,
     );
 
-    blobstore
-        .and_then(move |blobstore| match storage_config.dbconfig {
-            MetadataDBConfig::LocalDB { path } => new_local(logger, &path, blobstore, repoid),
-            MetadataDBConfig::Mysql {
-                db_address,
-                sharded_filenodes,
-            } => new_remote(
-                logger,
-                db_address,
-                sharded_filenodes,
-                blobstore,
-                repoid,
-                myrouter_port,
-                bookmarks_cache_ttl,
-            ),
+    let censored_blobs_store = result(match storage_config.dbconfig.clone() {
+        MetadataDBConfig::LocalDB { ref path } => {
+            SqlCensoredContentStore::with_sqlite_path(path.join("censored_contents"))
+                .map(|item| Arc::new(item))
+        }
+        MetadataDBConfig::Mysql {
+            db_address,
+            sharded_filenodes: _,
+        } => open_xdb::<SqlCensoredContentStore>(&db_address, myrouter_port),
+    });
+
+    let censored_blobs = censored_blobs_store.and_then(move |censored_store| {
+        censored_store
+            .get_all_censored_blobs()
+            .map_err(Error::from)
+            .map(HashMap::from_iter)
+    });
+
+    uncensored_blobstore
+        .join(censored_blobs)
+        .and_then(move |(uncensored_blobstore, censored_blobs)| {
+            let blobstore = Arc::new(CensoredBlob::new(uncensored_blobstore, censored_blobs));
+            match storage_config.dbconfig {
+                MetadataDBConfig::LocalDB { path } => new_local(logger, &path, blobstore, repoid),
+                MetadataDBConfig::Mysql {
+                    db_address,
+                    sharded_filenodes,
+                } => new_remote(
+                    logger,
+                    db_address,
+                    sharded_filenodes,
+                    blobstore,
+                    repoid,
+                    myrouter_port,
+                    bookmarks_cache_ttl,
+                ),
+            }
         })
         .boxify()
 }
@@ -344,7 +367,6 @@ fn new_remote(
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
-    let blobstore = CensoredBlob::new(blobstore, HashMap::new());
     let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
     let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
         ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
