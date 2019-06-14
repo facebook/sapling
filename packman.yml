@@ -11,3 +11,10 @@ packages:
           group: 'root'
           mode: '0755'
           path: 'bin/mononoke_admin'
+      buck:scm/mononoke/facebook/scripts:scripts:
+        scm/mononoke/facebook/scripts/scripts__/scripts/mononoke_exec.sh:
+          owner: 'root'
+          group: 'root'
+          mode: '0755'
+          path: 'bin/mononoke_exec'
+      par: buck:scm/mononoke/facebook/mononoke_config:mononoke_find_repo_id
