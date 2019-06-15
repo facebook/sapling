@@ -188,6 +188,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   bool removeFault(std::unique_ptr<RemoveFaultArg> fault) override;
   int64_t unblockFault(std::unique_ptr<UnblockFaultArg> info) override;
 
+  void reloadConfig() override;
+
   /**
    * A thrift client has requested that we shutdown.
    */

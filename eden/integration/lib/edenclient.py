@@ -97,6 +97,14 @@ class EdenFS(object):
     def home_dir(self) -> Path:
         return self._home_dir
 
+    @property
+    def user_rc_path(self) -> Path:
+        return self._home_dir / ".edenrc"
+
+    @property
+    def system_rc_path(self) -> Path:
+        return self._etc_eden_dir / "edenfs.rc"
+
     def __enter__(self) -> "EdenFS":
         return self
 

@@ -322,6 +322,9 @@ void EdenServer::startPeriodicTasks() {
   // Report memory usage stats once every 30 seconds
   memoryStatsTask_.updateInterval(30s);
 
+  auto config = serverState_->getReloadableConfig().getEdenConfig();
+  updatePeriodicTaskIntervals(*config);
+
 #ifndef _WIN32
   // Schedule a periodic job to unload unused inodes based on the last access
   // time. currently Eden does not have accurate timestamp tracking for inodes,
@@ -332,6 +335,15 @@ void EdenServer::startPeriodicTasks() {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 #endif
+}
+
+void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
+  // Update all periodic tasks whose interval is
+  // controlled by EdenConfig settings.
+
+  reloadConfigTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.getConfigReloadInterval()));
 }
 
 #ifndef _WIN32
@@ -1195,6 +1207,21 @@ void EdenServer::reportMemoryStats() {
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
+}
+
+void EdenServer::reloadConfig() {
+  // Get the config, forcing a reload now.
+  auto config = serverState_->getReloadableConfig().getEdenConfig(
+      ConfigReloadBehavior::ForceReload);
+
+  // Update all periodic tasks that are controlled by config settings.
+  // This should be cheap, so for now we just block on this to finish rather
+  // than returning a Future.  We could change this to return a Future if we
+  // found a reason to do so in the future.
+  mainEventBase_->runImmediatelyOrRunInEventBaseThreadAndWait(
+      [this, config = std::move(config)] {
+        updatePeriodicTaskIntervals(*config);
+      });
 }
 
 } // namespace eden

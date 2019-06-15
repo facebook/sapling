@@ -243,6 +243,7 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
       std::make_tuple("invalidateKernelInodeCache", HistConfig{}),
       std::make_tuple("getStatInfo", HistConfig{}),
       std::make_tuple("initiateShutdown", HistConfig{}),
+      std::make_tuple("reloadConfig", HistConfig{200, 0, 10000}),
   };
   for (const auto& methodConfig : methodConfigs) {
     const auto& methodName = std::get<0>(methodConfig);
@@ -1445,6 +1446,11 @@ int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
   } else {
     return injector.unblock(keyClass, keyValueRegex);
   }
+}
+
+void EdenServiceHandler::reloadConfig() {
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO);
+  server_->reloadConfig();
 }
 
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {

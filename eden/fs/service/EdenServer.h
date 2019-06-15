@@ -302,6 +302,17 @@ class EdenServer : private TakeoverHandler {
   void flushStatsNow();
 
   /**
+   * Reload the configuration files from disk.
+   *
+   * The configuration files are automatically reloaded from disk periodically
+   * (controlled by the "config:reload-interval" setting in the config file).
+   *
+   * This method can be invoked to immediately force a config reload,
+   * independently of the configured interval.
+   */
+  void reloadConfig();
+
+  /**
    * Get the main thread's EventBase.
    *
    * Callers can use this for scheduling work to be run in the main thread.
@@ -344,6 +355,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer& operator=(EdenServer const&) = delete;
 
   void startPeriodicTasks();
+  void updatePeriodicTaskIntervals(const EdenConfig& config);
 
   /**
    * Schedule a call to unloadInodes() to happen after timeout
@@ -477,6 +489,8 @@ class EdenServer : private TakeoverHandler {
    */
   folly::EventBase* mainEventBase_;
 
+  PeriodicFnTask<&EdenServer::reloadConfig> reloadConfigTask_{this,
+                                                              "reload_config"};
   PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{this,
                                                              "flush_stats"};
   PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{this,

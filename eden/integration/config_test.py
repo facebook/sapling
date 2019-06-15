@@ -7,8 +7,10 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import time
 from pathlib import Path
 
+from eden.thrift import EdenClient
 from facebook.eden.eden_config.ttypes import (
     ConfigReloadBehavior,
     ConfigSource,
@@ -88,3 +90,65 @@ ignoreFile = "{new_ignore_path}"
             self.assert_config(
                 config, "core:ignoreFile", str(new_ignore_path), ConfigSource.UserConfig
             )
+
+    def test_periodic_reload(self) -> None:
+        with self.get_thrift_client() as client:
+            self._test_periodic_reload(client)
+
+    def _test_periodic_reload(self, client: EdenClient) -> None:
+        def write_user_config(reload_interval: str) -> None:
+            config_text = f"""
+[config]
+reload-interval = "{reload_interval}"
+"""
+            self.eden.user_rc_path.write_text(config_text)
+
+        def assert_current_interval(expected: str) -> None:
+            no_reload_params = GetConfigParams(reload=ConfigReloadBehavior.NoReload)
+            config = client.getConfig(no_reload_params)
+            current_interval = config.values["config:reload-interval"].parsedValue
+            self.assertEqual(expected, current_interval)
+
+        # By default EdenFS currently automatically reloads
+        # the config every 5 minutes
+        default_interval = "5m"
+        assert_current_interval(default_interval)
+
+        # Tell EdenFS to reload the config file every 10ms
+        write_user_config("10ms")
+
+        # Make EdenFS reload the config immediately to get the new config values
+        client.reloadConfig()
+        assert_current_interval("10ms")
+
+        # Update the reload interval again to 0ms.
+        # This tells EdenFS not to auto-reload the config any more.
+        write_user_config("0ms")
+
+        # This change should be picked up automatically after ~10ms
+        # Sleep for longer than this, then verify the config was updated.
+        time.sleep(0.200)
+        assert_current_interval("0ns")
+
+        # Update the reload interval to 6ms.
+        # This shouldn't be picked up automatically, since auto-reloads are disabled
+        # right now.
+        write_user_config("6ms")
+        time.sleep(0.200)
+        assert_current_interval("0ns")
+        # Force this change to be picked up  now
+        client.reloadConfig()
+        assert_current_interval("6ms")
+
+        # Update the reload interval again.
+        # This should be picked up automatically again now that re-enabled the
+        # periodic reload interval.
+        write_user_config("7ms")
+        time.sleep(0.200)
+        assert_current_interval("7ms")
+
+        # If we put a bogus value in the config file it should be ignored,
+        # and the normal default (5 minutes) should be used.
+        write_user_config("bogus value")
+        time.sleep(0.200)
+        assert_current_interval(default_interval)

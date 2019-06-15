@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <chrono>
 #include <optional>
 
 #include <folly/dynamic.h>
@@ -133,6 +134,13 @@ class EdenConfig : public ConfigSettingManager {
   /** Type of connection used to talk to Mononoke */
   const std::string& getMononokeConnectionType() const;
 
+  /**
+   * Get how often the on-disk config information should be checked for changes.
+   */
+  std::chrono::nanoseconds getConfigReloadInterval() const {
+    return configReloadInterval_.getValue();
+  }
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -249,6 +257,11 @@ class EdenConfig : public ConfigSettingManager {
   ConfigSetting<std::string> mononokeConnectionType_{"mononoke:connection-type",
                                                      "http",
                                                      this};
+
+  ConfigSetting<std::chrono::nanoseconds> configReloadInterval_{
+      "config:reload-interval",
+      std::chrono::minutes(5),
+      this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};
