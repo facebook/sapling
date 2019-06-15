@@ -320,6 +320,13 @@ def _lookupglobalrev(repo, grev):
     changelogrevision = cl.changelogrevision
     tonode = cl.node
     ui = repo.ui
+    startrev = ui.configint("globalrevs", "startrev")
+
+    # If the globalrevs start after 0, commit with global revision 0 cannot be
+    # associated with any commit because there exists no commit corresponding to
+    # a Subversion revision 0.
+    if startrev > 0 and grev == 0:
+        return []
 
     def matchglobalrev(rev):
         commitextra = changelogrevision(rev).extra
@@ -340,7 +347,6 @@ def _lookupglobalrev(repo, grev):
             return [hgnode]
 
     matchedrevs = []
-    startrev = ui.configint("globalrevs", "startrev")
     for rev in repo.revs("reverse(all())"):
         # While using fast lookup, we have already searched the indexed commits
         # upto lastrev and therefore, we can safely say that there is no commit
