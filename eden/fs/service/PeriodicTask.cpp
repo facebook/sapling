@@ -43,6 +43,11 @@ void PeriodicTask::timeoutExpired() noexcept {
   // Since these run on the main EventBase thread we want to ensure that they
   // don't block this thread for long periods of time.
   auto duration = timer.elapsed();
+  XLOG(DBG6) << "ran periodic task " << name_ << " in "
+             << (std::chrono::duration_cast<std::chrono::microseconds>(duration)
+                     .count() /
+                 1000.0)
+             << "ms";
   if (duration > kSlowTaskLimit) {
     // Just in case some task starts frequently running slowly for some reason,
     // put some rate limiting on this log message.
