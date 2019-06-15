@@ -91,7 +91,7 @@ where
         .from_err()
         .boxify();
     HttpResponse::Ok()
-        .content_type("application/octet-stream")
+        .content_type("application/cbor")
         .header("x-served-by", get_hostname().unwrap_or_default())
         .body(Body::Streaming(stream as BodyStream))
 }
