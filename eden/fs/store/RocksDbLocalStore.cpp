@@ -509,12 +509,46 @@ void RocksDbLocalStore::put(
 
 uint64_t RocksDbLocalStore::getApproximateSize(
     LocalStore::KeySpace keySpace) const {
-  std::string rangeStorage;
-  const auto range = getFullRange(rangeStorage);
-
   uint64_t size = 0;
-  dbHandles_.db->GetApproximateSizes(
-      dbHandles_.columns[keySpace].get(), &range, 1, &size);
+
+  // kLiveSstFilesSize reports the size of all "live" sst files.
+  // This excludes sst files from older snapshot versions that RocksDB may
+  // still be holding onto.  e.g., to provide a consistent view to iterators.
+  // kTotalSstFilesSize would report the size of all sst files if we wanted to
+  // report that.
+  uint64_t sstFilesSize;
+  auto result = dbHandles_.db->GetIntProperty(
+      dbHandles_.columns[keySpace].get(),
+      rocksdb::DB::Properties::kLiveSstFilesSize,
+      &sstFilesSize);
+  if (result) {
+    size += sstFilesSize;
+  } else {
+    XLOG(WARN) << "unable to retrieve SST file size from RocksDB for key space "
+               << dbHandles_.columns[keySpace]->GetName();
+  }
+
+  // kSizeAllMemTables reports the size of the memtables.
+  // This is the in-memory space for tracking the data in *.log files that have
+  // not yet been compacted into a .sst file.
+  //
+  // We use this as a something that will hopefully roughly approximate the size
+  // of the *.log files.  In practice this generally seems to be a fair amount
+  // smaller than the on-disk *.log file size, except immediately after a
+  // compaction when there is still a couple MB of in-memory metadata despite
+  // having no uncompacted on-disk data.
+  uint64_t memtableSize;
+  result = dbHandles_.db->GetIntProperty(
+      dbHandles_.columns[keySpace].get(),
+      rocksdb::DB::Properties::kSizeAllMemTables,
+      &memtableSize);
+  if (result) {
+    size += memtableSize;
+  } else {
+    XLOG(WARN) << "unable to retrieve memtable size from RocksDB for key space "
+               << dbHandles_.columns[keySpace]->GetName();
+  }
+
   return size;
 }
 
