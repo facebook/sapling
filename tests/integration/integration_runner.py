@@ -187,7 +187,9 @@ def add_to_environ(var, target, rule_type=pathutils.BuildRuleTypes.RUST_BINARY):
 
 def get_hg_binary():
     return pathutils.get_build_rule_output_path(
-        BINARY_HG_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
+        BINARY_HG_TARGET,
+        pathutils.BuildRuleTypes.GENRULE,
+        output_name='hg/hg'
     )
 
 
