@@ -144,6 +144,7 @@ from edenscm.mercurial import (
     bundle2,
     bundlerepo,
     changegroup,
+    changelog,
     commands,
     encoding,
     error,
@@ -335,6 +336,55 @@ def uisetup(ui):
             extensions.wrapcommand(cmdtable, "prefetch", _overrideprefetch)
 
     extensions.afterloaded("remotefilelog", _wrapremotefilelog)
+
+    # Work around the chicken-egg issue that a linkrev brings by delaying adding
+    # data to the store until the changelog has been updated. This breaks the
+    # assumption that manifests are written before the changelog, but unless
+    # linknode are moved outside of the historypack entries, we have to solve
+    # the dependency loop.
+    # A similar hack is done in remotefilelog for the same reasons.
+    pendingadd = []
+
+    def addtreeentry(
+        orig, self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev=None
+    ):
+        if linkrev is not None:
+            pendingadd.append(
+                (self, dpack, hpack, nname, nnode, ntext, np1, np2, linkrev)
+            )
+        else:
+            orig(self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode)
+
+    extensions.wrapfunction(basetreemanifestlog, "_addtreeentry", addtreeentry)
+
+    def changelogadd(orig, self, *args):
+        oldlen = len(self)
+        node = orig(self, *args)
+        newlen = len(self)
+        if oldlen != newlen:
+            for oldargs in pendingadd:
+                log, dpack, hpack, nname, nnode, ntext, np1, np2, linkrev = oldargs
+                linknode = self.node(linkrev)
+                if linknode == node:
+                    log._addtreeentry(
+                        dpack, hpack, nname, nnode, ntext, np1, np2, linknode
+                    )
+                else:
+                    raise error.ProgrammingError(
+                        "pending multiple integer revisions are not supported"
+                    )
+        else:
+            # Nothing was added to the changelog, let's make sure that we don't
+            # have pending adds.
+            if len(set(x[8] for x in pendingadd)) > 1:
+                raise error.ProgrammingError(
+                    "manifest entries were added, but no matching revisions were"
+                )
+
+        del pendingadd[:]
+        return node
+
+    extensions.wrapfunction(changelog.changelog, "add", changelogadd)
 
 
 def showmanifest(orig, **args):
@@ -739,12 +789,14 @@ class basetreemanifestlog(object):
         return self._mutablesharedpacks.getmutablepack()
 
     def _addtreeentry(
-        self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev
+        self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev=None
     ):
+        if linkrev is not None:
+            raise error.ProgrammingError("linkrev cannot be added")
         # Not using deltas, since there aren't any other trees in
         # this pack it could delta against.
         dpack.add(nname, nnode, revlog.nullid, ntext)
-        hpack.add(nname, nnode, np1, np2, linknode, "", linkrev=linkrev)
+        hpack.add(nname, nnode, np1, np2, linknode, "")
 
     def _addtopack(
         self,
