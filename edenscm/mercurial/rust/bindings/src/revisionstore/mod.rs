@@ -11,13 +11,14 @@ use failure::{format_err, Error, Fallible};
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    DataPack, DataPackVersion, DataStore, Delta, HistoryPack, IndexedLogDataStore, LocalStore,
-    Metadata, MutableDataPack, MutableDeltaStore,
+    DataPack, DataPackVersion, DataStore, Delta, HistoryPack, HistoryPackVersion,
+    IndexedLogDataStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
+    MutableHistoryPack, MutableHistoryStore,
 };
 use types::Key;
 
 use crate::revisionstore::datastorepyext::{DataStorePyExt, MutableDeltaStorePyExt};
-use crate::revisionstore::historystorepyext::HistoryStorePyExt;
+use crate::revisionstore::historystorepyext::{HistoryStorePyExt, MutableHistoryStorePyExt};
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pyext::PyOptionalRefCell;
 use crate::revisionstore::pythondatastore::PythonDataStore;
@@ -44,6 +45,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<historypack>(py)?;
     m.add_class::<indexedlogdatastore>(py)?;
     m.add_class::<mutabledeltastore>(py)?;
+    m.add_class::<mutablehistorystore>(py)?;
     m.add(
         py,
         "repackdatapacks",
@@ -484,3 +486,58 @@ impl MutableDeltaStore for mutabledeltastore {
         store.flush()
     }
 }
+
+fn make_mutablehistorystore(
+    py: Python,
+    packfilepath: Option<PyBytes>,
+) -> Fallible<Box<dyn MutableHistoryStore + Send>> {
+    let packfilepath = packfilepath
+        .as_ref()
+        .map(|path| encoding::local_bytes_to_path(path.data(py)))
+        .transpose()?;
+    let store: Box<dyn MutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
+        Box::new(MutableHistoryPack::new(
+            packfilepath,
+            HistoryPackVersion::One,
+        )?)
+    } else {
+        return Err(format_err!("No packfile path passed in"));
+    };
+
+    Ok(store)
+}
+
+py_class!(pub class mutablehistorystore |py| {
+    data store: PyOptionalRefCell<Box<dyn MutableHistoryStore + Send>>;
+
+    def __new__(_cls, packfilepath: Option<PyBytes>) -> PyResult<mutablehistorystore> {
+        let store = make_mutablehistorystore(py, packfilepath).map_err(|e| to_pyerr(py, &e.into()))?;
+        mutablehistorystore::create_instance(py, PyOptionalRefCell::new(store))
+    }
+
+    def add(&self, name: &PyBytes, node: &PyBytes, p1: &PyBytes, p2: &PyBytes, linknode: &PyBytes, copyfrom: Option<&PyBytes>) -> PyResult<PyObject> {
+        let mut store = self.store(py).get_mut_value(py)?;
+        store.add_py(py, name, node, p1, p2, linknode, copyfrom)
+    }
+
+    def flush(&self) -> PyResult<PyObject> {
+        let mut store = self.store(py).get_mut_value(py)?;
+        store.flush_py(py)
+    }
+
+    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<PyObject>) -> PyResult<PyDict> {
+        let _known = known;
+        let store = self.store(py).get_value(py)?;
+        store.get_ancestors_py(py, name, node)
+    }
+
+    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+        let store = self.store(py).get_value(py)?;
+        store.get_node_info_py(py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py).get_value(py)?;
+        store.get_missing_py(py, &mut keys.iter(py)?)
+    }
+});
