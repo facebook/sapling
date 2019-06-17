@@ -69,15 +69,15 @@ class fileindex(object):
             nodepath = os.path.join(self._nodemap, node.hex())
             self._write(nodepath, bundleid)
 
-    def addbookmark(self, bookmark, node):
+    def addbookmark(self, bookmark, node, _isbackup):
         """Record a bookmark pointing to a particular node."""
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)
         self._write(bookmarkpath, node)
 
-    def addmanybookmarks(self, bookmarks):
+    def addmanybookmarks(self, bookmarks, isbackup):
         """Record the contents of the ``bookmarks`` dict as bookmarks."""
         for bookmark, node in bookmarks.items():
-            self.addbookmark(bookmark, node)
+            self.addbookmark(bookmark, node, isbackup)
 
     def deletebookmarks(self, patterns):
         """Delete all bookmarks that match any of the patterns in ``patterns``."""

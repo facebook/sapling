@@ -44,4 +44,16 @@ CREATE TABLE `forwardfillerqueue` (
   PRIMARY KEY (`id`),
   KEY `queue_order` (`reponame`, `slice`, `id`),
   KEY `claim_review` (`claimed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `replaybookmarksqueue` (
+  `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `reponame` varbinary(255) NOT NULL,
+  `bookmark` varbinary(512) NOT NULL,
+  `node` varbinary(64) NOT NULL,
+  `bookmark_hash` varbinary(64) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `synced` TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `sync_queue` (`synced`, `reponame`, `bookmark_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8

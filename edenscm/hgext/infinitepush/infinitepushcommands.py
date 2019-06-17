@@ -153,7 +153,7 @@ def debugcreatescratchbookmark(ui, repo, *args, **opts):
             )
 
         targetnode = _resolvetargetnode(repo, opts.get("rev"))
-        index.addbookmark(scratchbookmarkname, targetnode)
+        index.addbookmark(scratchbookmarkname, targetnode, False)
 
 
 @command(
@@ -183,4 +183,4 @@ def debugmovescratchbookmark(ui, repo, *args, **opts):
 
         targetnode = _resolvetargetnode(repo, opts.get("rev"))
         index.deletebookmarks([scratchbookmarkname])
-        index.addbookmark(scratchbookmarkname, targetnode)
+        index.addbookmark(scratchbookmarkname, targetnode, False)

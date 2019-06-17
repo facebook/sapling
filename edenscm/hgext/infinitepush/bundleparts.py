@@ -241,7 +241,7 @@ def bundle2scratchbookmarks(op, part):
         if todelete:
             index.deletebookmarks(todelete)
         if toinsert:
-            index.addmanybookmarks(toinsert)
+            index.addmanybookmarks(toinsert, True)
 
 
 @bundle2.parthandler(constants.scratchmutationparttype)

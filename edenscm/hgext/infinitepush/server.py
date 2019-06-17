@@ -712,7 +712,7 @@ def storebundle(op, params, bundlefile):
             if key:
                 index.addbundle(key, nodesctx)
             if bookmark and bookmarknode:
-                index.addbookmark(bookmark, bookmarknode)
+                index.addbookmark(bookmark, bookmarknode, False)
         log(
             constants.scratchbranchparttype,
             eventtype="success",

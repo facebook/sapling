@@ -72,6 +72,13 @@ forwardfill=True
 EOF
 }
 
+enablereplaybookmarks() {
+cat << EOF >> .hg/hgrc
+[infinitepush]
+replaybookmarks=True
+EOF
+}
+
 createdb() {
 mysql -h $DBHOST -P $DBPORT -u $DBUSER $DBPASSOPT -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
 mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT <<EOF
@@ -80,12 +87,13 @@ DROP TABLE IF EXISTS bookmarkstonode;
 DROP TABLE IF EXISTS bundles;
 DROP TABLE IF EXISTS nodesmetadata;
 DROP TABLE IF EXISTS forwardfillerqueue;
+DROP TABLE IF EXISTS replaybookmarksqueue;
 $(cat $TESTDIR/infinitepush/schema.sql)
 EOF
 }
 
 querysqlindex() {
-  mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" -D "$DBNAME" "$DBPASSOPT" -e "$1" 2>/dev/null
+  mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" -D "$DBNAME" "$DBPASSOPT" -e "$1"
 }
 
 setupdb() {
