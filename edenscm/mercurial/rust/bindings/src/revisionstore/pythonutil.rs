@@ -13,7 +13,7 @@ use failure::{Error, Fallible};
 
 use revisionstore::datastore::{Delta, Metadata};
 use revisionstore::error::KeyError;
-use types::{Key, Node, RepoPath};
+use types::{Key, Node, RepoPath, RepoPathBuf};
 
 use crate::revisionstore::pyerror::pyerr_to_error;
 
@@ -30,11 +30,22 @@ pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     }
 }
 
-pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<Key> {
+pub fn to_node(py: Python, node: &PyBytes) -> Node {
     let mut bytes: [u8; 20] = Default::default();
     bytes.copy_from_slice(&node.data(py)[0..20]);
-    let path = RepoPath::from_utf8(name.data(py)).map_err(|e| to_pyerr(py, &e))?;
-    Ok(Key::new(path.to_owned(), (&bytes).into()))
+    (&bytes).into()
+}
+
+pub fn to_path(py: Python, name: &PyBytes) -> PyResult<RepoPathBuf> {
+    RepoPath::from_utf8(name.data(py))
+        .map_err(|e| to_pyerr(py, &e))
+        .map(|path| path.to_owned())
+}
+
+pub fn to_key(py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<Key> {
+    let node = to_node(py, node);
+    let path = to_path(py, name)?;
+    Ok(Key::new(path, node))
 }
 
 pub fn from_key(py: Python, key: &Key) -> (PyBytes, PyBytes) {
