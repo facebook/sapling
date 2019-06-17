@@ -364,7 +364,7 @@ def _debugbundle2(ui, gen, all=None, **opts):
         if parttypes and part.type not in parttypes:
             continue
         ui.write("%s -- %s\n" % (part.type, _quasirepr(part.params)))
-        if part.type == "changegroup":
+        if part.type == "changegroup" or part.type == "b2x:rebase":
             version = part.params.get("version", "01")
             cg = changegroup.getunbundler(version, part, "UN")
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
