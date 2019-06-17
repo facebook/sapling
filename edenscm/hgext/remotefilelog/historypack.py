@@ -434,13 +434,8 @@ class mutablehistorypack(basepack.mutablebasepack):
 
     SUPPORTED_VERSIONS = [0, 1]
 
-    def __init__(self, ui, packpath, version=1, repo=None):
+    def __init__(self, ui, packpath, version=1):
         """Creates a mutable history pack for writing.
-
-        If `repo` is provided, then pack.add() can be called with
-        linkrev=REV and the linkrev will be converted to a linknode at
-        serialization time.  This allows callers to add entries without knowing
-        what the linknode is just yet.
         """
         if version != 1:
             raise ValueError("cannot create historypack version %s" % version)
@@ -449,7 +444,6 @@ class mutablehistorypack(basepack.mutablebasepack):
         self.files = {}
         self.entrylocations = {}
         self.fileentries = {}
-        self.repo = repo
 
         if version == 0:
             self.INDEXFORMAT = INDEXFORMAT0
@@ -461,38 +455,23 @@ class mutablehistorypack(basepack.mutablebasepack):
         self.NODEINDEXFORMAT = NODEINDEXFORMAT
         self.NODEINDEXENTRYLENGTH = NODEINDEXENTRYLENGTH
 
-    def add(self, filename, node, p1, p2, linknode, copyfrom, linkrev=None):
-        if linkrev is not None:
-            if self.repo is None:
-                msg = (
-                    "cannot specify a linkrev if repo was not "
-                    "provided to the mutablehistorypack"
-                )
-                raise error.ProgrammingError(msg)
-            if linknode is not None:
-                raise error.ProgrammingError(
-                    "cannot specify both linknode and " "linkrev"
-                )
-        if linknode is None and linkrev is None:
-            raise error.ProgrammingError(
-                "must specify either a linknode or a " "linkrev"
-            )
+    def add(self, filename, node, p1, p2, linknode, copyfrom):
+        if linknode is None:
+            raise error.ProgrammingError("must specify a linknode")
 
         copyfrom = copyfrom or ""
         copyfromlen = struct.pack("!H", len(copyfrom))
         entrymap = self.fileentries.setdefault(filename, {})
-        entrymap[node] = (node, p1, p2, linknode, copyfromlen, copyfrom, linkrev)
+        entrymap[node] = (node, p1, p2, linknode, copyfromlen, copyfrom)
 
     def _write(self):
-        repo = self.repo
-
         for filename in sorted(self.fileentries):
             entrymap = self.fileentries[filename]
             sectionstart = self.packfp.tell()
 
             # Write the file section content
             def parentfunc(node):
-                x, p1, p2, x, x, x, x = entrymap[node]
+                x, p1, p2, x, x, x = entrymap[node]
                 parents = []
                 if p1 != nullid:
                     parents.append(p1)
@@ -514,20 +493,7 @@ class mutablehistorypack(basepack.mutablebasepack):
             for node in sortednodes:
                 locations[node] = offset
                 value = entrymap[node]
-                node, p1, p2, linknode, copyfromlen, copyfrom, linkrev = value
-                if linkrev is not None:
-                    # repo will not be None because of the assertion in add
-                    linknode = repo.changelog.node(linkrev)
-                    if linknode == nullid:
-                        if linkrev == len(repo.changelog):
-                            # The node was probably already written in
-                            # changelog. In this case we already have the
-                            # commit and its data. So no need to write the file
-                            # node again.
-                            del entrymap[node]
-                            del locations[node]
-                            continue
-                        raise ValueError("attempting to add nullid linknode")
+                node, p1, p2, linknode, copyfromlen, copyfrom = value
                 raw = "%s%s%s%s%s%s" % (node, p1, p2, linknode, copyfromlen, copyfrom)
                 rawstrings.append(raw)
                 offset += len(raw)
@@ -630,17 +596,7 @@ class mutablehistorypack(basepack.mutablebasepack):
 
         entry = entrymap.get(node)
         if entry is not None:
-            enode, p1, p2, linknode, copyfromlen, copyfrom, linkrev = entry
-            if linkrev is not None:
-                linknode = nullid
-                if linkrev < len(self.repo.changelog):
-                    linknode = self.repo.changelog.node(linkrev)
-                if linknode == nullid:
-                    msg = (
-                        "attempting to read tree from mutablehistorypack "
-                        "that can't resolve linkrev"
-                    )
-                    raise error.ProgrammingError(msg)
+            enode, p1, p2, linknode, copyfromlen, copyfrom = entry
             return {node: (p1, p2, linknode, copyfrom)}
 
         raise KeyError((name, hex(node)))
@@ -663,9 +619,7 @@ class memhistorypack(object):
     def __init__(self):
         self.history = {}
 
-    def add(self, name, node, p1, p2, linknode, copyfrom, linkrev=None):
-        if linkrev is not None:
-            raise error.ProgrammingError("memhistorypack doesn't support " "linkrevs")
+    def add(self, name, node, p1, p2, linknode, copyfrom):
         self.history.setdefault(name, {})[node] = (p1, p2, linknode, copyfrom)
 
     def getmissing(self, keys):
