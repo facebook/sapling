@@ -32,7 +32,7 @@ pub trait MutableHistoryStore {
 }
 
 /// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.
-impl<T: HistoryStore, U: Deref<Target = T>> HistoryStore for U {
+impl<T: HistoryStore + ?Sized, U: Deref<Target = T>> HistoryStore for U {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         T::get_ancestors(self, key)
     }

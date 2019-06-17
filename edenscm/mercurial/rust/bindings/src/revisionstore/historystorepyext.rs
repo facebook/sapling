@@ -18,7 +18,7 @@ pub trait HistoryStorePyExt {
     fn get_node_info_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple>;
 }
 
-impl<T: HistoryStore> HistoryStorePyExt for T {
+impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
     fn get_ancestors_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
         let ancestors = self.get_ancestors(&key).map_err(|e| to_pyerr(py, &e))?;
