@@ -597,6 +597,7 @@ class mutablehistorypack(basepack.mutablebasepack):
         entry = entrymap.get(node)
         if entry is not None:
             enode, p1, p2, linknode, copyfromlen, copyfrom = entry
+            copyfrom = copyfrom or None
             return {node: (p1, p2, linknode, copyfrom)}
 
         raise KeyError((name, hex(node)))

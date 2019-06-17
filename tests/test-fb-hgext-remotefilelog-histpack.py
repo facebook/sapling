@@ -25,8 +25,9 @@ except NameError:
 
 
 class histpacktestsbase(object):
-    def __init__(self, historypackreader):
+    def __init__(self, historypackreader, historypackwriter):
         self.historypackreader = historypackreader
+        self.historypackwriter = historypackwriter
 
     def setUp(self):
         self.tempdirs = []
@@ -65,12 +66,12 @@ class histpacktestsbase(object):
             ]
 
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(uimod.ui(), packdir, version=1)
+        packer = self.historypackwriter(packdir)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             packer.add(filename, node, p1, p2, linknode, copyfrom)
 
-        path = packer.close()
+        path = packer.flush()
         return self.historypackreader(path)
 
     def testAddSingle(self):
@@ -272,7 +273,7 @@ class histpacktestsbase(object):
         """Tests that the data written into a mutablehistorypack can be read out
         before it has been finalized."""
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(uimod.ui(), packdir, version=1)
+        packer = self.historypackwriter(packdir)
 
         revisions = []
 
@@ -280,14 +281,14 @@ class histpacktestsbase(object):
         lastnode = nullid
         for i in range(5):
             node = self.getFakeHash()
-            revisions.append((filename, node, lastnode, nullid, nullid, ""))
+            revisions.append((filename, node, lastnode, nullid, nullid, None))
             lastnode = node
 
         filename = "bar"
         lastnode = nullid
         for i in range(5):
             node = self.getFakeHash()
-            revisions.append((filename, node, lastnode, nullid, nullid, ""))
+            revisions.append((filename, node, lastnode, nullid, nullid, None))
             lastnode = node
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
@@ -296,7 +297,7 @@ class histpacktestsbase(object):
         # Test getancestors()
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             entry = packer.getancestors(filename, node, known=None)
-            self.assertEquals(entry, {node: (p1, p2, linknode, copyfrom)})
+            self.assertEquals(entry[node], (p1, p2, linknode, copyfrom))
 
         # Test getmissing()
         missingcheck = [(revisions[0][0], revisions[0][1]), ("foo", self.getFakeHash())]
@@ -306,7 +307,11 @@ class histpacktestsbase(object):
 
 class histpacktests(histpacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        histpacktestsbase.__init__(self, historypack)
+        histpacktestsbase.__init__(
+            self,
+            historypack,
+            lambda packdir: mutablehistorypack(uimod.ui(), packdir, version=1),
+        )
         unittest.TestCase.__init__(self, *args, **kwargs)
 
     def testAddThrows(self):
@@ -321,7 +326,9 @@ class histpacktests(histpacktestsbase, unittest.TestCase):
 
 class rusthistpacktests(histpacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        histpacktestsbase.__init__(self, revisionstore.historypack)
+        histpacktestsbase.__init__(
+            self, revisionstore.historypack, revisionstore.mutablehistorystore
+        )
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 
