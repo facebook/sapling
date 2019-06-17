@@ -22,7 +22,7 @@ pub trait HistoryStore: LocalStore {
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo>;
 }
 
-pub trait MutableHistoryStore {
+pub trait MutableHistoryStore: HistoryStore {
     fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()>;
     fn flush(&mut self) -> Fallible<Option<PathBuf>>;
 

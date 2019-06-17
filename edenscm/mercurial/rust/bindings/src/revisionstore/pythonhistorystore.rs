@@ -12,7 +12,7 @@ use cpython::{
 use failure::{format_err, Fallible};
 
 use encoding::local_bytes_to_path;
-use revisionstore::MutableHistoryStore;
+use revisionstore::{Ancestors, HistoryStore, LocalStore, MutableHistoryStore};
 use types::{Key, NodeInfo};
 
 use crate::revisionstore::pyerror::pyerr_to_error;
@@ -69,6 +69,22 @@ impl PythonMutableHistoryPack {
                 py_copyfrom.into_object(),
             ],
         )
+    }
+}
+
+impl HistoryStore for PythonMutableHistoryPack {
+    fn get_ancestors(&self, _key: &Key) -> Fallible<Ancestors> {
+        unimplemented!()
+    }
+
+    fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
+        unimplemented!()
+    }
+}
+
+impl LocalStore for PythonMutableHistoryPack {
+    fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
+        unimplemented!()
     }
 }
 

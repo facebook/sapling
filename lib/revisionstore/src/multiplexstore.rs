@@ -8,7 +8,7 @@ use types::{Key, NodeInfo};
 
 use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
 use crate::error::KeyError;
-use crate::historystore::MutableHistoryStore;
+use crate::historystore::{Ancestors, HistoryStore, MutableHistoryStore};
 use crate::localstore::LocalStore;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
@@ -128,6 +128,42 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
         }
 
         Ok(None)
+    }
+}
+
+impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+        for store in self.stores.iter() {
+            let result = store.get_ancestors(key);
+            if let Ok(ancestors) = result {
+                return Ok(ancestors);
+            }
+        }
+
+        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexHistoryStore", key)).into())
+    }
+
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+        for store in self.stores.iter() {
+            let result = store.get_node_info(key);
+            if let Ok(ancestors) = result {
+                return Ok(ancestors);
+            }
+        }
+
+        Err(KeyError::new(format_err!("No Key {:?} in the MultiplexHistoryStore", key)).into())
+    }
+}
+
+impl<'a> LocalStore for MultiplexHistoryStore<'a> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let initial_keys = Ok(keys.iter().cloned().collect());
+        self.stores
+            .iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => store.get_missing(&missing_keys),
+                Err(e) => Err(e),
+            })
     }
 }
 
