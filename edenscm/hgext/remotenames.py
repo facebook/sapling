@@ -269,7 +269,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
     repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)
 
 
-def expull(orig, repo, remote, *args, **kwargs):
+def expull(orig, repo, remote, heads=None, force=False, **kwargs):
     vfs = repo.sharedvfs
 
     path = activepath(repo.ui, remote)
@@ -299,21 +299,16 @@ def expull(orig, repo, remote, *args, **kwargs):
             bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
         else:
             bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
-            heads = kwargs.get("heads") or []
-            # heads may be passed as positional args
-            if len(args) > 0:
-                if args[0]:
-                    heads = args[0]
-                args = args[1:]
+            if not heads:
+                heads = []
             for node in bookmarks.values():
                 heads.append(bin(node))
             kwargs["bookmarks"] = bookmarks.keys()
-            kwargs["heads"] = heads
     else:
         bookmarks = remote.listkeys("bookmarks")
 
     with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
-        res = orig(repo, remote, *args, **kwargs)
+        res = orig(repo, remote, heads, force, **kwargs)
     pullremotenames(repo, remote, bookmarks)
     if not _isselectivepull(repo.ui):
         if vfs.exists(_selectivepullenabledfile):
