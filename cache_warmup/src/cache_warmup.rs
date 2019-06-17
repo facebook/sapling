@@ -4,34 +4,24 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bookmarks;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-#[macro_use]
-extern crate slog;
-
-extern crate blobrepo;
-extern crate context;
-extern crate mercurial_types;
-extern crate metaconfig_types;
-extern crate revset;
-
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use futures::{Future, IntoFuture, Stream};
-use futures_ext::{spawn_future, BoxFuture, FutureExt};
+use failure::Error;
+use futures::{future, Future, IntoFuture, Stream};
+use futures_ext::{spawn_future, FutureExt};
 use mercurial_types::manifest::{Entry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
 use mercurial_types::{Changeset, HgChangesetId, HgFileNodeId, MPath, RepoPath};
 use metaconfig_types::CacheWarmupParams;
 use revset::AncestorsNodeStream;
-use slog::Logger;
+use slog::{debug, info, Logger};
+use tracing::{trace_args, Traced};
+use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 
 mod errors {
     use bookmarks::BookmarkName;
+    use failure::Fail;
     use mercurial_types::HgChangesetId;
 
     #[derive(Debug, Fail)]
@@ -43,8 +33,6 @@ mod errors {
     }
 }
 
-use crate::failure::Error;
-
 // Fetches all the manifest entries and their linknodes. Do not fetching files because
 // there can be too many of them.
 fn blobstore_and_filenodes_warmup(
@@ -52,7 +40,7 @@ fn blobstore_and_filenodes_warmup(
     repo: BlobRepo,
     revision: HgChangesetId,
     logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
     repo.get_changeset_by_changesetid(ctx.clone(), revision)
@@ -61,6 +49,7 @@ fn blobstore_and_filenodes_warmup(
             move |cs| repo.get_root_entry(cs.manifestid())
         })
         .and_then({
+            let ctx = ctx.clone();
             move |root_entry| {
                 info!(logger, "starting precaching");
                 let rootpath = None;
@@ -92,7 +81,11 @@ fn blobstore_and_filenodes_warmup(
                     })
             }
         })
-        .boxify()
+        .traced(
+            &ctx.trace(),
+            "cache_warmup::blobstore_and_filenodes",
+            trace_args! {},
+        )
 }
 
 // Iterate over first parents, and fetch them
@@ -112,14 +105,18 @@ fn changesets_warmup(
                 maybe_node.ok_or(errors::ErrorKind::BookmarkValueNotFound(start_rev).into())
             }
         })
-        .and_then(move |start_rev| {
-            AncestorsNodeStream::new(ctx, &repo.get_changeset_fetcher(), start_rev)
-                .take(cs_limit as u64)
-                .collect()
-                .map(move |_| {
-                    debug!(logger, "finished changesets warmup");
-                })
+        .and_then({
+            let ctx = ctx.clone();
+            move |start_rev| {
+                AncestorsNodeStream::new(ctx, &repo.get_changeset_fetcher(), start_rev)
+                    .take(cs_limit as u64)
+                    .collect()
+                    .map(move |_| {
+                        debug!(logger, "finished changesets warmup");
+                    })
+            }
         })
+        .traced(&ctx.trace(), "cache_warmup::changesets", trace_args! {})
 }
 
 fn do_cache_warmup(
@@ -128,11 +125,12 @@ fn do_cache_warmup(
     bookmark: BookmarkName,
     commit_limit: usize,
     logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     repo.get_bookmark(ctx.clone(), &bookmark)
         .and_then({
             let logger = logger.clone();
             let repo = repo.clone();
+            let ctx = ctx.clone();
             move |bookmark_rev| match bookmark_rev {
                 Some(bookmark_rev) => {
                     let blobstore_warmup = spawn_future(blobstore_and_filenodes_warmup(
@@ -148,13 +146,13 @@ fn do_cache_warmup(
                         commit_limit,
                         logger,
                     ));
-                    blobstore_warmup.join(cs_warmup).map(|_| ()).boxify()
+                    blobstore_warmup.join(cs_warmup).map(|_| ()).left_future()
                 }
                 None => {
                     info!(logger, "{} bookmark not found!", bookmark);
                     Err(errors::ErrorKind::BookmarkNotFound(bookmark).into())
                         .into_future()
-                        .boxify()
+                        .right_future()
                 }
             }
         })
@@ -162,7 +160,33 @@ fn do_cache_warmup(
             info!(logger, "finished initial warmup");
             ()
         })
-        .boxify()
+        .traced(&ctx.trace(), "cache_warmup", trace_args! {})
+        .map({
+            let ctx = ctx.clone();
+            move |_| {
+                tokio::spawn(future::lazy(move || {
+                    ctx.trace()
+                        .upload_to_manifold(RequestContext {
+                            bucketName: "mononoke_prod".into(),
+                            apiKey: "".into(),
+                            ..Default::default()
+                        })
+                        .then(move |upload_res| {
+                            match upload_res {
+                                Err(err) => {
+                                    info!(ctx.logger(), "warmup trace failed to upload: {:#?}", err)
+                                }
+                                Ok(()) => info!(
+                                    ctx.logger(),
+                                    "warmup trace uploaded: {}",
+                                    ctx.trace().id()
+                                ),
+                            }
+                            Ok(())
+                        })
+                }));
+            }
+        })
 }
 
 /// Fetch all manifest entries for a bookmark, and fetches up to `commit_warmup_limit`
@@ -172,7 +196,7 @@ pub fn cache_warmup(
     repo: BlobRepo,
     cache_warmup: Option<CacheWarmupParams>,
     logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     match cache_warmup {
         Some(cache_warmup) => do_cache_warmup(
             ctx,
@@ -180,7 +204,8 @@ pub fn cache_warmup(
             cache_warmup.bookmark,
             cache_warmup.commit_limit,
             logger.clone(),
-        ),
-        None => Ok(()).into_future().boxify(),
+        )
+        .left_future(),
+        None => Ok(()).into_future().right_future(),
     }
 }

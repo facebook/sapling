@@ -44,6 +44,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::str;
 use std::sync::{Arc, Mutex};
+use tracing::{trace_args, Traced};
 
 type ChangesetHooks = HashMap<String, (Arc<Hook<HookChangeset>>, HookConfig)>;
 type FileHooks = Arc<Mutex<HashMap<String, (Arc<Hook<HookFile>>, HookConfig)>>>;
@@ -318,13 +319,22 @@ impl HookManager {
             finished(Vec::new()).boxify()
         } else {
             self.run_file_hooks_for_changeset_id(
-                ctx,
+                ctx.clone(),
                 changeset_id,
                 hooks,
                 maybe_pushvars,
                 self.logger.clone(),
                 bookmark.clone(),
             )
+            .traced(
+                &ctx.trace(),
+                "run_file_hooks",
+                trace_args! {
+                    "bookmark" => bookmark.to_string(),
+                    "changeset" => changeset_id.to_hex().to_string(),
+                },
+            )
+            .boxify()
         }
     }
 

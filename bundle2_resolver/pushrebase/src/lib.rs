@@ -59,11 +59,11 @@ use mononoke_types::{
     check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
     Timestamp,
 };
-
 use revset::RangeNodeStream;
 use std::cmp::{max, Ordering};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
+use tracing::{trace_args, Traced};
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
@@ -180,7 +180,7 @@ pub fn do_pushrebase(
             }
         })
         .and_then({
-            cloned!(repo);
+            cloned!(ctx, repo);
             move |(head, root)| {
                 // Calculate client changed files only once, since they won't change
                 (
@@ -209,6 +209,7 @@ pub fn do_pushrebase(
                     })
             }
         })
+        .traced(&ctx.trace(), "do_pushrebase", trace_args!())
 }
 
 fn rebase_in_loop(

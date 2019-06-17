@@ -1518,17 +1518,8 @@ fn get_changed_manifests_stream(
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
-    let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid).traced(
-        ctx.trace(),
-        "fetch rootmf",
-        trace_args!(),
-    );
-    let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid).traced(
-        ctx.trace(),
-        "fetch baserootmf",
-        trace_args!(),
-    );
-
+    let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid);
+    let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid);
     let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(mfid));
     let root_entry_stream = stream::once(Ok((entry, rootpath.clone())));
 
@@ -1592,41 +1583,17 @@ fn fetch_treepack_part_input(
     let node = entry.get_hash().clone();
     let path = repo_path.clone();
 
-    let parents = entry.get_parents(ctx.clone()).traced(
-        ctx.trace(),
-        "fetching parents",
-        trace_args!(
-            "node" => node.to_string(),
-            "path" => path.to_string()
-        ),
-    );
+    let parents = entry.get_parents(ctx.clone());
 
-    let linknode_fut = repo
-        .get_linknode_opt(
-            ctx.clone(),
-            &repo_path,
-            HgFileNodeId::new(entry.get_hash().into_nodehash()),
-        )
-        .traced(
-            ctx.trace(),
-            "fetching linknode",
-            trace_args!(
-                "node" => node.to_string(),
-                "path" => path.to_string()
-            ),
-        );
+    let linknode_fut = repo.get_linknode_opt(
+        ctx.clone(),
+        &repo_path,
+        HgFileNodeId::new(entry.get_hash().into_nodehash()),
+    );
 
     let content_fut = entry
         .get_raw_content(ctx.clone())
-        .map(|blob| blob.into_inner())
-        .traced(
-            ctx.trace(),
-            "fetching raw content",
-            trace_args!(
-                "node" => node.to_string(),
-                "path" => path.to_string()
-            ),
-        );
+        .map(|blob| blob.into_inner());
 
     let validate_content = if validate_content {
         entry

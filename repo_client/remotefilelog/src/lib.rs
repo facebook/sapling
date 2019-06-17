@@ -28,7 +28,6 @@ use mercurial_types::{
 };
 use metaconfig_types::LfsParams;
 use mononoke_types::FileContents;
-use tracing::{trace_args, Traced};
 
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
@@ -58,8 +57,6 @@ pub fn create_remotefilelog_blob(
     lfs_params: LfsParams,
     validate_hash: bool,
 ) -> BoxFuture<Bytes, Error> {
-    let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
-
     let raw_content_bytes = get_raw_content(
         ctx.clone(),
         repo.clone(),
@@ -70,25 +67,16 @@ pub fn create_remotefilelog_blob(
     )
     .and_then(move |(raw_content, meta_key_flag)| {
         encode_remotefilelog_file_content(raw_content, meta_key_flag)
-    })
-    .traced(
-        ctx.trace(),
-        "fetching remotefilelog content",
-        trace_args.clone(),
-    );
+    });
 
     // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
     // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
     // be fetched again.
-    let prefetched_filenodes = prefetch_history(ctx.clone(), repo.clone(), path.clone()).traced(
-        ctx.trace(),
-        "prefetching file history",
-        trace_args.clone(),
-    );
+    let prefetched_filenodes = prefetch_history(ctx.clone(), repo.clone(), path.clone());
 
     let file_history_bytes = prefetched_filenodes
         .and_then({
-            cloned!(ctx, node, path, repo, trace_args);
+            cloned!(ctx, node, path, repo);
             move |prefetched_filenodes| {
                 get_file_history_using_prefetched(
                     ctx.clone(),
@@ -99,11 +87,9 @@ pub fn create_remotefilelog_blob(
                     prefetched_filenodes,
                 )
                 .collect()
-                .traced(ctx.trace(), "fetching non-prefetched history", trace_args)
             }
         })
-        .and_then(serialize_history)
-        .traced(ctx.trace(), "fetching file history", trace_args);
+        .and_then(serialize_history);
 
     raw_content_bytes
         .join(file_history_bytes)
