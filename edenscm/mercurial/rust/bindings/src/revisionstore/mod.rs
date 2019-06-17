@@ -11,11 +11,11 @@ use failure::{format_err, Error, Fallible};
 use encoding;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    DataPack, DataPackVersion, DataStore, Delta, HistoryPack, HistoryPackVersion,
-    IndexedLogDataStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
+    Ancestors, DataPack, DataPackVersion, DataStore, Delta, HistoryPack, HistoryPackVersion,
+    HistoryStore, IndexedLogDataStore, LocalStore, Metadata, MutableDataPack, MutableDeltaStore,
     MutableHistoryPack, MutableHistoryStore,
 };
-use types::Key;
+use types::{Key, NodeInfo};
 
 use crate::revisionstore::datastorepyext::{DataStorePyExt, MutableDeltaStorePyExt};
 use crate::revisionstore::historystorepyext::{HistoryStorePyExt, MutableHistoryStorePyExt};
@@ -541,3 +541,64 @@ py_class!(pub class mutablehistorystore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 });
+
+impl HistoryStore for mutablehistorystore {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_ancestors(key)
+    }
+
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_node_info(key)
+    }
+}
+
+impl LocalStore for mutablehistorystore {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let store = self
+            .store(py)
+            .get_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.get_missing(keys)
+    }
+}
+
+impl MutableHistoryStore for mutablehistorystore {
+    fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut store = self
+            .store(py)
+            .get_mut_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.add(key, info)
+    }
+
+    fn flush(&mut self) -> Fallible<Option<PathBuf>> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut store = self
+            .store(py)
+            .get_mut_value(py)
+            .map_err(|e| pyerr_to_error(py, e))?;
+        store.flush()
+    }
+}

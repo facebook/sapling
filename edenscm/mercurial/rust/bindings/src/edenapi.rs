@@ -10,10 +10,12 @@ use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use edenapi::{Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
 use encoding::local_bytes_to_path;
-use revisionstore::MutableDeltaStore;
+use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
-use crate::revisionstore::{mutabledeltastore, PythonMutableDataPack, PythonMutableHistoryPack};
+use crate::revisionstore::{
+    mutabledeltastore, mutablehistorystore, PythonMutableDataPack, PythonMutableHistoryPack,
+};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
@@ -27,6 +29,14 @@ fn get_deltastore(py: Python, store: PyObject) -> PyResult<Box<dyn MutableDeltaS
         Ok(Box::new(store))
     } else {
         Ok(Box::new(PythonMutableDataPack::new(store)?))
+    }
+}
+
+fn get_historystore(py: Python, store: PyObject) -> PyResult<Box<dyn MutableHistoryStore + Send>> {
+    if let Ok(store) = store.extract::<mutablehistorystore>(py) {
+        Ok(Box::new(store))
+    } else {
+        Ok(Box::new(PythonMutableHistoryPack::new(store)?))
     }
 }
 
@@ -107,7 +117,7 @@ py_class!(class client |py| {
             .map(|(path, node)| make_key(py, &path, &node))
             .collect::<PyResult<Vec<Key>>>()?;
 
-        let mut store = PythonMutableHistoryPack::new(store)?;
+        let mut store = get_historystore(py, store)?;
 
         let client = self.inner(py);
         let progress_fn = progress_fn.map(wrap_callback);
