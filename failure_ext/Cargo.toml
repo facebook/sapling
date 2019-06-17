@@ -4,7 +4,6 @@ version = "0.0.1"
 authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
 
 [dependencies]
-boxfnonce = "0.1.0"
 futures = "0.1.23"
 failure = "0.1.2"
 failure_derive = "0.1.2"

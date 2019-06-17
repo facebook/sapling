@@ -1,6 +1,5 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
-use boxfnonce::SendBoxFnOnce;
 use futures::{Future, Poll, Stream};
 
 use super::Chain;
@@ -70,7 +69,7 @@ pub struct ChainFuture<F, ERR>
 where
     F: Future,
 {
-    chain: Option<SendBoxFnOnce<'static, (F::Error,), Chain<ERR>>>,
+    chain: Option<Box<dyn FnOnce(F::Error) -> Chain<ERR> + Send + 'static>>,
     future: F,
 }
 
@@ -83,11 +82,13 @@ where
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.future.poll() {
-            Err(err) => Err(self
-                .chain
-                .take()
-                .expect("ChainFuture called after error completion")
-                .call(err)),
+            Err(err) => {
+                let f = self
+                    .chain
+                    .take()
+                    .expect("ChainFuture called after error completion");
+                Err(f(err))
+            }
             Ok(ok) => Ok(ok),
         }
     }
@@ -102,9 +103,7 @@ where
 
     fn chain_err(self, err: ERR) -> ChainFuture<F, ERR> {
         ChainFuture {
-            chain: Some(SendBoxFnOnce::from(move |cause| {
-                Chain::with_error(err, cause)
-            })),
+            chain: Some(Box::new(move |cause| Chain::with_error(err, cause))),
             future: self,
         }
     }
@@ -120,9 +119,7 @@ where
 
     fn chain_err(self, err: ERR) -> ChainFuture<F, ERR> {
         ChainFuture {
-            chain: Some(SendBoxFnOnce::from(move |cause| {
-                Chain::with_fail(err, cause)
-            })),
+            chain: Some(Box::new(move |cause| Chain::with_fail(err, cause))),
             future: self,
         }
     }
@@ -132,7 +129,7 @@ pub struct ChainStream<S, ERR>
 where
     S: Stream,
 {
-    chain: Option<SendBoxFnOnce<'static, (S::Error,), Chain<ERR>>>,
+    chain: Option<Box<dyn FnOnce(S::Error) -> Chain<ERR> + Send + 'static>>,
     stream: S,
 }
 
@@ -145,11 +142,13 @@ where
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.stream.poll() {
-            Err(err) => Err(self
-                .chain
-                .take()
-                .expect("ChainStream called after error completion")
-                .call(err)),
+            Err(err) => {
+                let f = self
+                    .chain
+                    .take()
+                    .expect("ChainFuture called after error completion");
+                Err(f(err))
+            }
             Ok(ok) => Ok(ok),
         }
     }
@@ -164,9 +163,7 @@ where
 
     fn chain_err(self, err: ERR) -> ChainStream<S, ERR> {
         ChainStream {
-            chain: Some(SendBoxFnOnce::from(move |cause| {
-                Chain::with_error(err, cause)
-            })),
+            chain: Some(Box::new(move |cause| Chain::with_error(err, cause))),
             stream: self,
         }
     }
@@ -182,9 +179,7 @@ where
 
     fn chain_err(self, err: ERR) -> ChainStream<S, ERR> {
         ChainStream {
-            chain: Some(SendBoxFnOnce::from(move |cause| {
-                Chain::with_fail(err, cause)
-            })),
+            chain: Some(Box::new(move |cause| Chain::with_fail(err, cause))),
             stream: self,
         }
     }
