@@ -87,7 +87,9 @@ pub struct EdenApiCurlClient {
     data_batch_size: Option<usize>,
     history_batch_size: Option<usize>,
     validate: bool,
-    streaming: bool,
+    stream_data: bool,
+    stream_history: bool,
+    stream_trees: bool,
 }
 
 // Public API.
@@ -111,7 +113,9 @@ impl EdenApiCurlClient {
             data_batch_size: config.data_batch_size,
             history_batch_size: config.history_batch_size,
             validate: config.validate,
-            streaming: config.streaming,
+            stream_data: config.stream_data,
+            stream_history: config.stream_history,
+            stream_trees: config.stream_trees,
         })
     }
 }
@@ -172,7 +176,7 @@ impl EdenApi for EdenApiCurlClient {
         log::debug!("Fetching {} files", keys.len());
 
         let mut url = self.repo_base_url()?.join(paths::HISTORY)?;
-        if self.streaming {
+        if self.stream_history {
             url.set_query(Some("stream=true"));
         }
 
@@ -192,7 +196,7 @@ impl EdenApi for EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        let stats = if self.streaming {
+        let stats = if self.stream_history {
             multi_request(
                 &mut multi,
                 &url,
@@ -254,14 +258,14 @@ impl EdenApi for EdenApiCurlClient {
         progress: Option<ProgressFn>,
     ) -> Fallible<DownloadStats> {
         let mut url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
-        if self.streaming {
+        if self.stream_trees {
             url.set_query(Some("stream=true"));
         }
 
         let creds = self.creds.as_ref();
         let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
 
-        if self.streaming {
+        if self.stream_trees {
             multi_request_threaded(
                 self.multi.clone(),
                 &url,
@@ -307,7 +311,7 @@ impl EdenApiCurlClient {
         log::debug!("Fetching data for {} keys", keys.len());
 
         let mut url = self.repo_base_url()?.join(path)?;
-        if self.streaming {
+        if self.stream_data {
             url.set_query(Some("stream=true"));
         }
 
@@ -325,7 +329,7 @@ impl EdenApiCurlClient {
 
         let mut num_responses = 0;
         let mut num_entries = 0;
-        let stats = if self.streaming {
+        let stats = if self.stream_data {
             multi_request_threaded(
                 self.multi.clone(),
                 &url,

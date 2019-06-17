@@ -51,7 +51,9 @@ py_class!(class client |py| {
         databatchsize: Option<usize> = None,
         historybatchsize: Option<usize> = None,
         validate: bool = true,
-        streaming: bool = false
+        streamdata: bool = false,
+        streamhistory: bool = false,
+        streamtrees: bool = false
     ) -> PyResult<client> {
         let url = str::from_utf8(url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let repo = str::from_utf8(repo.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
@@ -63,7 +65,9 @@ py_class!(class client |py| {
             .data_batch_size(databatchsize)
             .history_batch_size(historybatchsize)
             .validate(validate)
-            .streaming(streaming);
+            .stream_data(streamdata)
+            .stream_history(streamhistory)
+            .stream_trees(streamtrees);
 
         if let Some((cert, key)) = creds {
             let cert = local_bytes_to_path(cert.data(py)).map_pyerr::<exc::RuntimeError>(py)?;

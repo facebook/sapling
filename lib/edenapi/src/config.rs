@@ -13,7 +13,9 @@ pub struct Config {
     pub(crate) data_batch_size: Option<usize>,
     pub(crate) history_batch_size: Option<usize>,
     pub(crate) validate: bool,
-    pub(crate) streaming: bool,
+    pub(crate) stream_data: bool,
+    pub(crate) stream_history: bool,
+    pub(crate) stream_trees: bool,
 }
 
 impl Config {
@@ -71,9 +73,23 @@ impl Config {
     }
 
     /// Specifies whether the client should request streaming responses
-    /// from the API server for operations that support it.
-    pub fn streaming(mut self, streaming: bool) -> Self {
-        self.streaming = streaming;
+    /// for fetchihng data (such as file content).
+    pub fn stream_data(mut self, stream_data: bool) -> Self {
+        self.stream_data = stream_data;
+        self
+    }
+
+    /// Specifies whether the client should request streaming responses
+    /// for fetching history entries.
+    pub fn stream_history(mut self, stream_history: bool) -> Self {
+        self.stream_history = stream_history;
+        self
+    }
+
+    /// Specifies whether the client should request streaming responses
+    /// for prefetching trees.
+    pub fn stream_trees(mut self, stream_trees: bool) -> Self {
+        self.stream_trees = stream_trees;
         self
     }
 }

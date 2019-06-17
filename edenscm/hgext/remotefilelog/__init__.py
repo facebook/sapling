@@ -148,8 +148,14 @@ Configs for Eden API (HTTP data fetching):
     ``edenapi.validate`` specifies that the client should recompute and
     validate the node hash for data fetched over HTTP.
 
-    ``edenapi.streaming`` specifies that streaming fetches should be
-    used when possible.
+    ``edenapi.streamdata`` specifies that the client should request a
+    streaming response for data fetches
+
+    ``edenapi.streamhistory`` specifies that the client should request a
+    streaming response for history fetches
+
+    ``edenapi.streamtrees`` specifies that the client should request a
+    streaming response for tree fetches
 
 Eden API TLS credentials are configured using the auth section:
 
@@ -249,7 +255,9 @@ configitem("edenapi", "url", default=None)
 configitem("edenapi", "databatchsize", default=None)
 configitem("edenapi", "historybatchsize", default=None)
 configitem("edenapi", "validate", default=True)
-configitem("edenapi", "streaming", default=False)
+configitem("edenapi", "streamdata", default=False)
+configitem("edenapi", "streamhistory", default=False)
+configitem("edenapi", "streamtrees", default=False)
 
 testedwith = "ships-with-fb-hgext"
 
