@@ -45,7 +45,11 @@ class mutabledatastore(mutablebasestore):
 class mutablehistorystore(mutablebasestore):
     @staticmethod
     def makestore(repo, path):
-        return mutablehistorypack(repo.ui, path)
+        if repo.ui.configbool("format", "userustmutablestore"):
+            shallowutil.mkstickygroupdir(repo.ui, path)
+            return revisionstore.mutablehistorystore(packfilepath=path)
+        else:
+            return mutablehistorypack(repo.ui, path)
 
     def __init__(self, repo, path):
         super(mutablehistorystore, self).__init__()
