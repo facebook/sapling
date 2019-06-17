@@ -1427,6 +1427,9 @@ class ui(object):
                 stats = util.statfiles(paths)
                 deadline = time.time() - 24 * 3600 * 14
                 for path, stat in zip(paths, stats):
+                    if stat is None:
+                        continue
+
                     if stat.st_mtime < deadline:
                         os.unlink(path)
         return t

@@ -26,3 +26,8 @@ Those files will be cleaned up since they have ancient mtime:
   > print(os.listdir('.hg/edit-tmp'))
   > EOF
   ['*'] (glob)
+
+Verify that a folder in .hg/edit-tmp doesn't crash hg:
+
+  $ mkdir .hg/edit-tmp/foo
+  $ HGEDITOR=true hg commit -m 5 -e
