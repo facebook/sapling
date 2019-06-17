@@ -7,7 +7,7 @@ Avoid interference from actual test env:
 Smoke test with install
 ============
 
-  $ run-tests.py $HGTEST_RUN_TESTS_PURE -l
+  $ run-tests.py $HGTEST_RUN_TESTS_PURE --with-hg=$HGTEST_HG
   
   # Ran 0 tests, 0 skipped, 0 failed.
 

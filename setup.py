@@ -196,7 +196,13 @@ from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion
-from distutils_rust import RustExtension, RustBinary, RustVendoredCrates, BuildRustExt
+from distutils_rust import (
+    RustExtension,
+    RustBinary,
+    RustVendoredCrates,
+    BuildRustExt,
+    InstallRustExt,
+)
 import distutils
 
 havefb = os.path.exists("fb")
@@ -301,8 +307,6 @@ def chdir(nwd):
         log.debug("restore chdir: %s", cwd)
         os.chdir(cwd)
 
-
-scripts = ["hg"]
 
 # Rename hg to $HGNAME. Useful when "hg" is a wrapper calling $HGNAME (or chg).
 hgname = os.environ.get("HGNAME", "hg")
@@ -849,8 +853,10 @@ class fetchbuilddeps(Command):
 
 class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
-    # when build_py is run next.
-    sub_commands = [("build_mo", None)] + build.sub_commands
+    # when build_py is run next. Also, normally build_scripts is automatically
+    # a subcommand of build iff the `scripts` argumnent or `setup` is present
+    # Since we removed that argument, let's add the subcommand explicitly
+    sub_commands = [("build_mo", None), ("build_scripts", None)] + build.sub_commands
 
 
 class hgbuildmo(build):
@@ -987,11 +993,6 @@ class hgbuildscripts(build_scripts):
 
     def copy_scripts(self):
         build_scripts.copy_scripts(self)
-        # Rename hg to hgname
-        if hgname != "hg":
-            oldpath = os.path.join(self.build_dir, "hg")
-            newpath = os.path.join(self.build_dir, hgname)
-            os.rename(oldpath, newpath)
 
 
 class buildembedded(Command):
@@ -1175,7 +1176,7 @@ class buildembedded(Command):
         if not self.local_bins:
             # copy .exe's from ./build/lib.win-amd64/, not from ./
             bindir = pjoin(scriptdir, "build", distutils_dir_name("scripts"))
-            sourcename = "hg.rust.exe" if iswindows else "hg.rust"
+            sourcename = "hg.exe" if iswindows else "hg.rust"
         else:
             sourcename = "hg.exe" if iswindows else "hg"
         targetname = "hg.exe" if iswindows else "hg"
@@ -1527,6 +1528,7 @@ cmdclass = {
     "install_scripts": hginstallscripts,
     "build_rust_ext": BuildRustExt,
     "build_embedded": buildembedded,
+    "install_rust_ext": InstallRustExt,
 }
 
 packages = [
@@ -2185,7 +2187,7 @@ rustextbinaries = [
     RustBinary(
         "hgmain",
         manifest="exec/hgmain/Cargo.toml",
-        rename="hg.rust",
+        rename=hgname,
         features=hgmainfeatures,
     ),
     RustBinary("indexedlog_dump", manifest="exec/utils/Cargo.toml"),
@@ -2229,7 +2231,6 @@ setup(
         "Programming Language :: Python",
         "Topic :: Software Development :: Version Control",
     ],
-    scripts=scripts,
     packages=packages,
     ext_modules=extmodules,
     libraries=libraries,

@@ -7,6 +7,8 @@ from __future__ import absolute_import
 import contextlib
 import distutils
 import distutils.command.build
+import distutils.command.install
+import distutils.command.install_scripts
 import distutils.core
 import distutils.errors
 import distutils.util
@@ -395,9 +397,21 @@ replace-with = "vendored-sources"
             return {"cargo": "cargo"}
 
 
+class InstallRustExt(distutils.command.install_scripts.install_scripts):
+    description = "install Rust extensions and binaries"
+
+    def run(self):
+        if not self.skip_build:
+            self.run_command("build_rust_ext")
+        self.outfiles = self.copy_tree(self.build_dir, self.install_dir)
+
+
 distutils.dist.Distribution.rust_ext_modules = ()
 distutils.dist.Distribution.rust_ext_binaries = ()
 distutils.dist.Distribution.rust_vendored_crates = ()
 distutils.command.build.build.sub_commands.append(
     ("build_rust_ext", lambda self: bool(self.distribution.rust_ext_modules))
+)
+distutils.command.install.install.sub_commands.append(
+    ("install_rust_ext", lambda self: bool(self.distribution.rust_ext_modules))
 )
