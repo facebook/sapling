@@ -42,7 +42,8 @@ def no_db_helper():
 EPHEMERAL_DB = "USE_EPHEMERAL_DB"
 EPHEMERAL_DB_WHITELIST = {
     "test-init.t",
-    "test-lookup.t"
+    "test-lookup.t",
+    "test-mononoke-admin.t",
 }
 
 TESTDIR_PATH = "scm/mononoke/tests/integration"

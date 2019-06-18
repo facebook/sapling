@@ -42,6 +42,7 @@ use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
 use scuba::ScubaClient;
+use sql_ext::myrouter_ready;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::iter::FromIterator;
@@ -60,50 +61,56 @@ pub fn open_blobrepo(
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> BoxFuture<BlobRepo, Error> {
-    let uncensored_blobstore = make_blobstore(
-        repoid,
-        &storage_config.blobstore,
-        &storage_config.dbconfig,
-        myrouter_port,
-    );
+    myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
+        .and_then(move |()| {
+            let uncensored_blobstore = make_blobstore(
+                repoid,
+                &storage_config.blobstore,
+                &storage_config.dbconfig,
+                myrouter_port,
+            );
 
-    let censored_blobs_store = result(match storage_config.dbconfig.clone() {
-        MetadataDBConfig::LocalDB { ref path } => {
-            SqlCensoredContentStore::with_sqlite_path(path.join("censored_contents"))
-                .map(|item| Arc::new(item))
-        }
-        MetadataDBConfig::Mysql {
-            db_address,
-            sharded_filenodes: _,
-        } => open_xdb::<SqlCensoredContentStore>(&db_address, myrouter_port),
-    });
-
-    let censored_blobs = censored_blobs_store.and_then(move |censored_store| {
-        censored_store
-            .get_all_censored_blobs()
-            .map_err(Error::from)
-            .map(HashMap::from_iter)
-    });
-
-    uncensored_blobstore
-        .join(censored_blobs)
-        .and_then(move |(uncensored_blobstore, censored_blobs)| {
-            let blobstore = Arc::new(CensoredBlob::new(uncensored_blobstore, censored_blobs));
-            match storage_config.dbconfig {
-                MetadataDBConfig::LocalDB { path } => new_local(logger, &path, blobstore, repoid),
+            let censored_blobs_store = result(match storage_config.dbconfig.clone() {
+                MetadataDBConfig::LocalDB { ref path } => {
+                    SqlCensoredContentStore::with_sqlite_path(path.join("censored_contents"))
+                        .map(|item| Arc::new(item))
+                }
                 MetadataDBConfig::Mysql {
                     db_address,
-                    sharded_filenodes,
-                } => new_remote(
-                    logger,
-                    db_address,
-                    sharded_filenodes,
-                    blobstore,
-                    repoid,
-                    myrouter_port,
-                    bookmarks_cache_ttl,
-                ),
-            }
+                    sharded_filenodes: _,
+                } => open_xdb::<SqlCensoredContentStore>(&db_address, myrouter_port),
+            });
+
+            let censored_blobs = censored_blobs_store.and_then(move |censored_store| {
+                censored_store
+                    .get_all_censored_blobs()
+                    .map_err(Error::from)
+                    .map(HashMap::from_iter)
+            });
+
+            uncensored_blobstore.join(censored_blobs).and_then(
+                move |(uncensored_blobstore, censored_blobs)| {
+                    let blobstore =
+                        Arc::new(CensoredBlob::new(uncensored_blobstore, censored_blobs));
+                    match storage_config.dbconfig {
+                        MetadataDBConfig::LocalDB { path } => {
+                            new_local(logger, &path, blobstore, repoid)
+                        }
+                        MetadataDBConfig::Mysql {
+                            db_address,
+                            sharded_filenodes,
+                        } => new_remote(
+                            logger,
+                            db_address,
+                            sharded_filenodes,
+                            blobstore,
+                            repoid,
+                            myrouter_port,
+                            bookmarks_cache_ttl,
+                        ),
+                    }
+                },
+            )
         })
         .boxify()
 }
