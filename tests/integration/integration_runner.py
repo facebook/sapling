@@ -17,8 +17,33 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 import click
+
+from common.db.tests import DbDef
 from libfb.py import parutil, pathutils
 
+
+@contextlib.contextmanager
+def ephemeral_db_helper():
+    with DbDef.TestDatabaseManager(
+        prefix="mononoke_tests",
+        oncall_shortname="source_control",
+        force_ephemeral=True,
+        source_shard="xdb.mononoke_production",
+        ttl_minutes=15,  # Some Mononoke tests last this long
+    ) as test_db_manager:
+        yield {"DB_SHARD_NAME": test_db_manager.get_shard_name()}
+
+
+@contextlib.contextmanager
+def no_db_helper():
+    yield {}
+
+
+EPHEMERAL_DB = "USE_EPHEMERAL_DB"
+EPHEMERAL_DB_WHITELIST = {
+    "test-init.t",
+    "test-lookup.t"
+}
 
 TESTDIR_PATH = "scm/mononoke/tests/integration"
 
@@ -28,6 +53,7 @@ MONONOKE_ALIAS_VERIFY_TARGET = "//scm/mononoke:aliasverify"
 MONONOKE_BONSAI_VERIFY_TARGET = "//scm/mononoke:bonsai_verify"
 MONONOKE_APISERVER_TARGET = "//scm/mononoke/apiserver:apiserver"
 DUMMYSSH_TARGET = "//scm/mononoke/tests/integration:dummyssh"
+INTEGRATION_SHELL_TARGET = "//scm/mononoke/tests/integration:integration_shell"
 BINARY_HG_TARGET = "//scm/hg:hg"
 BINARY_HGPYTHON_TARGET = "//scm/hg:hgpython"
 MONONOKE_HGCLI_TARGET = "//scm/mononoke/hgcli:hgcli"
@@ -79,6 +105,8 @@ def run(
     simple_test_selector,
     keep_tmpdir,
 ):
+    db_helper = no_db_helper
+
     testdir = parutil.get_dir_path(TESTDIR_PATH)
     run_tests_dir = os.path.join(
         os.path.join(testdir, "third_party"), "hg_run_tests.py"
@@ -101,6 +129,9 @@ def run(
     if keep_tmpdir:
         args.append("--keep-tmpdir")
     args.extend(["-j", "%d" % multiprocessing.cpu_count()])
+
+    matched_tests = []
+
     if simple_test_selector is not None:
         suite, test = simple_test_selector.split(",", 1)
         if suite != "run-tests":
@@ -109,9 +140,30 @@ def run(
                 ctx,
                 param_hint="simple_test_selector",
             )
-        args.append(test)
+        matched_tests.append(test)
+
     if tests:
-        args.extend(tests)
+        matched_tests.extend(tests)
+
+    use_ephemeral_db = int(os.environ.get(EPHEMERAL_DB, 0))
+
+    if use_ephemeral_db:
+        if dry_run:
+            # We can dry-run for ephemeral tests
+            pass
+        elif len(matched_tests) <= 1:
+            # One test is allowed to use an ephemeral db. This is OK, because
+            # TestPilot actually asks us to run tests one by one.
+            db_helper = ephemeral_db_helper
+        else:
+            # Too many tests! This won't work.
+            raise click.BadParameter(
+                "%s allows at most 1 test at a time" % EPHEMERAL_DB,
+                ctx,
+                param_hint="simple_test_selector"
+            )
+
+    args.extend(matched_tests)
 
     # In --dry-run mode, the xunit output has to be written to stdout.
     # In regular (run-tests) mode, the output has to be written to the specified
@@ -158,14 +210,32 @@ def run(
             # absolute import of killdaemons etc.
             env = os.environ.copy()
             env["HGPYTHONPATH"] = os.path.join(testdir, "third_party")
-            p = subprocess.Popen(args, env=env, stderr=sys.stderr, stdout=sys.stdout)
-            p.communicate("")
-            ret = p.returncode
+
+            with db_helper() as db_helper_env:
+                env.update(db_helper_env)
+                p = subprocess.Popen(
+                    args,
+                    env=env,
+                    stderr=sys.stderr,
+                    stdout=sys.stdout
+                )
+                p.communicate("")
+                ret = p.returncode
 
         # Expose the simple_test_selector capability to TestPilot.
         with open(xunit_output, "rb") as f:
             xunit_xml = ET.parse(f)
-        xunit_xml.getroot().set("runner_capabilities", "simple_test_selector")
+
+        suite = xunit_xml.getroot()
+        suite.set("runner_capabilities", "simple_test_selector")
+
+        # Filter our non-whitelisted tests if ephemeraldb is enabled.
+        if dry_run and use_ephemeral_db:
+            for child in list(suite):
+                if child.get("name") in EPHEMERAL_DB_WHITELIST:
+                    continue
+                suite.remove(child)
+
         with open(xunit_output, "wb") as f:
             xunit_xml.write(f, xml_declaration=True)
 

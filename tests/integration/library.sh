@@ -7,6 +7,22 @@
 
 # Library routines and initial setup for Mononoke-related tests.
 
+if [[ -n "$DB_SHARD_NAME" ]]; then
+  CACHELIB_ARGS=(--cache-size-gb 1)
+  function db_config() {
+    echo "db.db_address=\"$DB_SHARD_NAME\""
+  }
+  MONONOKE_DEFAULT_START_TIMEOUT=120
+else
+  CACHELIB_ARGS=(--do-not-init-cachelib)
+  function db_config() {
+    local reponame
+    reponame="$1"
+    echo "db.local_db_path=\"$TESTTMP/$reponame\""
+  }
+  MONONOKE_DEFAULT_START_TIMEOUT=15
+fi
+
 TEST_CERTDIR="${HGTEST_CERTDIR:-$TESTDIR/certs}"
 
 function next_repo_id {
@@ -62,14 +78,14 @@ function mononoke {
   --debug \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
-   --do-not-init-cachelib >> "$TESTTMP/mononoke.out" 2>&1 &
+   "${CACHELIB_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
 
 function mononoke_hg_sync {
   $MONONOKE_HG_SYNC \
-    --do-not-init-cachelib \
+    "${CACHELIB_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
@@ -78,7 +94,7 @@ function mononoke_hg_sync {
 
 function mononoke_hg_sync_with_retry {
   $MONONOKE_HG_SYNC \
-    --do-not-init-cachelib \
+    "${CACHELIB_ARGS[@]}" \
     --base-retry-delay-ms 1 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
@@ -87,7 +103,7 @@ function mononoke_hg_sync_with_retry {
 
 function mononoke_hg_sync_with_failure_handler {
   $MONONOKE_HG_SYNC \
-    --do-not-init-cachelib \
+    "${CACHELIB_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
     --run-on-failure "$3" \
@@ -135,7 +151,7 @@ function mononoke_hg_sync_loop {
   shift
 
   $MONONOKE_HG_SYNC \
-    --do-not-init-cachelib \
+    "${CACHELIB_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config \
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
@@ -143,13 +159,13 @@ function mononoke_hg_sync_loop {
 
 function mononoke_admin {
   "$MONONOKE_ADMIN" \
-    --do-not-init-cachelib \
+    "${CACHELIB_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
 function write_stub_log_entry {
   "$WRITE_STUB_LOG_ENTRY" \
-    --do-not-init-cachelib \
+    "${CACHELIB_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
@@ -158,7 +174,9 @@ function wait_for_mononoke {
   # MONONOKE_START_TIMEOUT is set in seconds
   # Number of attempts is timeout multiplied by 10, since we
   # sleep every 0.1 seconds.
-  local attempts=$(expr ${MONONOKE_START_TIMEOUT:-15} \* 10)
+  local attempts timeout
+  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
+  attempts="$((timeout * 10))"
 
   SSLCURL="sslcurl --noproxy localhost \
                 https://localhost:$MONONOKE_SOCKET"
@@ -317,7 +335,7 @@ fi
 if [[ -v MULTIPLEXED ]]; then
 cat >> "repos/$reponame/server.toml" <<CONFIG
 [storage.blobstore]
-db.local_db_path = "$TESTTMP/$reponame"
+$(db_config "$reponame")
 blobstore_type="multiplexed"
 
     [[storage.blobstore.components]]
@@ -333,7 +351,7 @@ CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [storage.blobstore]
-db.local_db_path = "$TESTTMP/$reponame"
+$(db_config "$reponame")
 blobstore_type = "$REPOTYPE"
 path = "$TESTTMP/$reponame"
 
@@ -459,7 +477,7 @@ function blobimport {
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo_id 0 \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
-     "$input" --do-not-init-cachelib "$@" >> "$TESTTMP/blobimport.out" 2>&1
+     "$input" "${CACHELIB_ARGS[@]}" "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
@@ -486,7 +504,7 @@ function apiserver {
     --ssl-private-key "$TEST_CERTDIR/localhost.key" \
     --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
     --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    --do-not-init-cachelib >> "$TESTTMP/apiserver.out" 2>&1 &
+    "${CACHELIB_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
   export APISERVER_PID=$!
   echo "$APISERVER_PID" >> "$DAEMON_PIDS"
 }
@@ -701,7 +719,7 @@ function aliasverify() {
   mode=$1
   shift 1
   GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo_id 0 \
-     --do-not-init-cachelib \
+     "${CACHELIB_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
 }
