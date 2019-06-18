@@ -160,14 +160,6 @@ impl MononokeApp {
                     .default_value("100")
                     .help("mysql blobstore shard num"),
             )
-
-            .arg(
-                Arg::with_name("db-address")
-                    .long("db-address")
-                    .value_name("ADDRESS")
-                    .default_value("xdb.mononoke_production")
-                    .help("database address"),
-            )
             .arg(
                 Arg::with_name("filenode-shards")
                 .long("filenode-shards").value_name("SHARD_COUNT").help("number of shards to spread filenodes across")
