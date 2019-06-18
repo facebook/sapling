@@ -14,8 +14,11 @@ use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
 use context::CoreContext;
-use mercurial_types::nodehash::{HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
-use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement, Manifest, Type};
+use mercurial_types::nodehash::{HgNodeHash, NULL_HASH};
+use mercurial_types::{
+    Entry, FileType, HgBlob, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId,
+    MPathElement, Manifest, Type,
+};
 
 use blobstore::Blobstore;
 
@@ -23,15 +26,9 @@ use crate::errors::*;
 use crate::file::HgBlobEntry;
 use blob_changeset::RepoBlobstore;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Details {
-    entryid: HgEntryId,
-    flag: Type,
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
-    pub files: BTreeMap<MPathElement, Details>,
+    pub files: BTreeMap<MPathElement, HgEntryId>,
 }
 
 impl ManifestContent {
@@ -48,7 +45,7 @@ impl ManifestContent {
     // Source: mercurial/parsers.c:parse_manifest()
     //
     // NB: filenames are sequences of non-zero bytes, not strings
-    fn parse_impl(data: &[u8]) -> Result<BTreeMap<MPathElement, Details>> {
+    fn parse_impl(data: &[u8]) -> Result<BTreeMap<MPathElement, HgEntryId>> {
         let mut files = BTreeMap::new();
 
         for line in data.split(|b| *b == b'\n') {
@@ -69,9 +66,9 @@ impl ManifestContent {
             };
 
             let path = MPathElement::new(name.to_vec()).context("invalid path in manifest")?;
-            let details = Details::parse(rest)?;
+            let entry_id = parse_hg_entry(rest)?;
 
-            files.insert(path, details);
+            files.insert(path, entry_id);
         }
 
         Ok(files)
@@ -87,9 +84,9 @@ impl ManifestContent {
 pub fn fetch_raw_manifest_bytes(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
-    node_id: HgNodeHash,
+    manifest_id: HgManifestId,
 ) -> BoxFuture<HgBlob, Error> {
-    fetch_manifest_envelope(ctx, blobstore, node_id)
+    fetch_manifest_envelope(ctx, blobstore, manifest_id)
         .map(move |envelope| {
             let envelope = envelope.into_mut();
             HgBlob::from(envelope.contents)
@@ -101,11 +98,14 @@ pub fn fetch_raw_manifest_bytes(
 pub fn fetch_manifest_envelope(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
-    node_id: HgNodeHash,
+    manifest_id: HgManifestId,
 ) -> impl Future<Item = HgManifestEnvelope, Error = Error> {
-    fetch_manifest_envelope_opt(ctx, blobstore, node_id)
+    fetch_manifest_envelope_opt(ctx, blobstore, manifest_id)
         .and_then(move |envelope| {
-            let envelope = envelope.ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
+            let envelope = envelope.ok_or(ErrorKind::HgContentMissing(
+                manifest_id.into_nodehash(),
+                Type::Tree,
+            ))?;
             Ok(envelope)
         })
         .from_err()
@@ -115,9 +115,9 @@ pub fn fetch_manifest_envelope(
 pub fn fetch_manifest_envelope_opt(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,
-    node_id: HgNodeHash,
+    node_id: HgManifestId,
 ) -> impl Future<Item = Option<HgManifestEnvelope>, Error = Error> {
-    let blobstore_key = HgManifestId::new(node_id).blobstore_key();
+    let blobstore_key = node_id.blobstore_key();
     blobstore
         .get(ctx, blobstore_key.clone())
         .context("While fetching manifest envelope blob")
@@ -128,7 +128,7 @@ pub fn fetch_manifest_envelope_opt(
                 None => return Ok(None),
             };
             let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
-            if node_id != envelope.node_id() {
+            if node_id.into_nodehash() != envelope.node_id() {
                 bail_msg!(
                     "Manifest ID mismatch (requested: {}, got: {})",
                     node_id,
@@ -157,8 +157,7 @@ impl BlobManifest {
         blobstore: &RepoBlobstore,
         manifestid: HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
-        let nodehash = manifestid.clone().into_nodehash();
-        if nodehash == NULL_HASH {
+        if manifestid.clone().into_nodehash() == NULL_HASH {
             Ok(Some(BlobManifest {
                 blobstore: blobstore.clone(),
                 node_id: NULL_HASH,
@@ -170,7 +169,7 @@ impl BlobManifest {
             .into_future()
             .boxify()
         } else {
-            fetch_manifest_envelope_opt(ctx, &blobstore, manifestid.into_nodehash())
+            fetch_manifest_envelope_opt(ctx, &blobstore, manifestid)
                 .and_then({
                     let blobstore = blobstore.clone();
                     move |envelope| match envelope {
@@ -178,7 +177,10 @@ impl BlobManifest {
                         None => Ok(None),
                     }
                 })
-                .context(format!("When loading manifest {} from blobstore", nodehash))
+                .context(format!(
+                    "When loading manifest {} from blobstore",
+                    manifestid
+                ))
                 .from_err()
                 .boxify()
         }
@@ -226,12 +228,12 @@ impl BlobManifest {
 impl Manifest for BlobManifest {
     fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
         self.content.files.get(path).map({
-            move |d| {
+            move |entry_id| {
                 HgBlobEntry::new(
                     self.blobstore.clone(),
                     path.clone(),
-                    d.entryid().into_nodehash(),
-                    d.flag(),
+                    entry_id.clone().into_nodehash(),
+                    entry_id.get_type(),
                 )
                 .boxed()
             }
@@ -241,12 +243,12 @@ impl Manifest for BlobManifest {
     fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
         let list_iter = self.content.files.clone().into_iter().map({
             let blobstore = self.blobstore.clone();
-            move |(path, d)| {
+            move |(path, entry_id)| {
                 HgBlobEntry::new(
                     blobstore.clone(),
                     path,
-                    d.entryid().into_nodehash(),
-                    d.flag(),
+                    entry_id.clone().into_nodehash(),
+                    entry_id.get_type(),
                 )
                 .boxed()
             }
@@ -255,40 +257,28 @@ impl Manifest for BlobManifest {
     }
 }
 
-impl Details {
-    fn parse(data: &[u8]) -> Result<Details> {
-        ensure_msg!(data.len() >= 40, "hash too small: {:?}", data);
+fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
+    ensure_msg!(data.len() >= 40, "hash too small: {:?}", data);
 
-        let (hash, flags) = data.split_at(40);
-        let hash = str::from_utf8(hash)
-            .map_err(|err| Error::from(err))
-            .and_then(|hash| hash.parse::<HgNodeHash>())
-            .with_context(|_| format!("malformed hash: {:?}", hash))?;
-        let entryid = HgEntryId::new(hash);
+    let (hash, flags) = data.split_at(40);
+    let hash = str::from_utf8(hash)
+        .map_err(|err| Error::from(err))
+        .and_then(|hash| hash.parse::<HgNodeHash>())
+        .with_context(|_| format!("malformed hash: {:?}", hash))?;
+    ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
-        ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
+    let hg_entry_id = if flags.len() == 0 {
+        HgEntryId::File(FileType::Regular, HgFileNodeId::new(hash))
+    } else {
+        match flags[0] {
+            b'l' => HgEntryId::File(FileType::Symlink, HgFileNodeId::new(hash)),
+            b'x' => HgEntryId::File(FileType::Executable, HgFileNodeId::new(hash)),
+            b't' => HgEntryId::Manifest(HgManifestId::new(hash)),
+            unk => bail_msg!("Unknown flag {}", unk),
+        }
+    };
 
-        let flag = if flags.len() == 0 {
-            Type::File(FileType::Regular)
-        } else {
-            match flags[0] {
-                b'l' => Type::File(FileType::Symlink),
-                b'x' => Type::File(FileType::Executable),
-                b't' => Type::Tree,
-                unk => bail_msg!("Unknown flag {}", unk),
-            }
-        };
-
-        Ok(Details { entryid, flag })
-    }
-
-    pub fn entryid(&self) -> HgEntryId {
-        self.entryid
-    }
-
-    pub fn flag(&self) -> Type {
-        self.flag
-    }
+    Ok(hg_entry_id)
 }
 
 fn find<T>(haystack: &[T], needle: &T) -> Option<usize>

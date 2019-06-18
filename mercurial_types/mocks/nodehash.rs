@@ -7,7 +7,7 @@
 // Ignore deprecation of HgNodeHash::new
 #![allow(deprecated)]
 
-use mercurial_types::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;
 
@@ -80,20 +80,3 @@ pub const CS_FNID: HgFileNodeId = HgFileNodeId::new(CS_HASH);
 pub const DS_FNID: HgFileNodeId = HgFileNodeId::new(DS_HASH);
 pub const ES_FNID: HgFileNodeId = HgFileNodeId::new(ES_HASH);
 pub const FS_FNID: HgFileNodeId = HgFileNodeId::new(FS_HASH);
-
-// Definitions for entry IDs 1111...ffff
-pub const ONES_EID: HgEntryId = HgEntryId::new(ONES_HASH);
-pub const TWOS_EID: HgEntryId = HgEntryId::new(TWOS_HASH);
-pub const THREES_EID: HgEntryId = HgEntryId::new(THREES_HASH);
-pub const FOURS_EID: HgEntryId = HgEntryId::new(FOURS_HASH);
-pub const FIVES_EID: HgEntryId = HgEntryId::new(FIVES_HASH);
-pub const SIXES_EID: HgEntryId = HgEntryId::new(SIXES_HASH);
-pub const SEVENS_EID: HgEntryId = HgEntryId::new(SEVENS_HASH);
-pub const EIGHTS_EID: HgEntryId = HgEntryId::new(EIGHTS_HASH);
-pub const NINES_EID: HgEntryId = HgEntryId::new(NINES_HASH);
-pub const AS_EID: HgEntryId = HgEntryId::new(AS_HASH);
-pub const BS_EID: HgEntryId = HgEntryId::new(BS_HASH);
-pub const CS_EID: HgEntryId = HgEntryId::new(CS_HASH);
-pub const DS_EID: HgEntryId = HgEntryId::new(DS_HASH);
-pub const ES_EID: HgEntryId = HgEntryId::new(ES_HASH);
-pub const FS_EID: HgEntryId = HgEntryId::new(FS_HASH);

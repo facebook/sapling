@@ -19,7 +19,7 @@ use itertools::{EitherOrBoth, Itertools};
 use context::CoreContext;
 use futures_ext::{select_all, BoxStream, StreamExt};
 use mercurial_types::manifest::{Content, EmptyManifest};
-use mercurial_types::{Entry, HgEntryId, Manifest, Type};
+use mercurial_types::{Entry, HgFileNodeId, Manifest, Type};
 use mononoke_types::{FileType, MPath};
 
 use crate::composite::CompositeEntry;
@@ -48,7 +48,7 @@ pub fn bonsai_diff(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BonsaiDiffResult {
     /// This file was changed (was added or modified) in this changeset.
-    Changed(MPath, FileType, HgEntryId),
+    Changed(MPath, FileType, HgFileNodeId),
     /// The file was marked changed, but one of the parent file node IDs was reused. This can
     /// happen in these situations:
     ///
@@ -57,7 +57,7 @@ pub enum BonsaiDiffResult {
     ///
     /// This is separate from `Changed` because in these instances, if copy information is part
     /// of the node it wouldn't be recorded.
-    ChangedReusedId(MPath, FileType, HgEntryId),
+    ChangedReusedId(MPath, FileType, HgFileNodeId),
     /// This file was deleted in this changeset.
     Deleted(MPath),
 }
@@ -112,8 +112,8 @@ impl Ord for BonsaiDiffResult {
 // (seems like this is the easiest way to do the Ord comparisons necessary)
 #[derive(Eq, Ord, PartialEq, PartialOrd)]
 enum DiffResultCmp<'a> {
-    Changed(&'a FileType, &'a HgEntryId),
-    ChangedReusedId(&'a FileType, &'a HgEntryId),
+    Changed(&'a FileType, &'a HgFileNodeId),
+    ChangedReusedId(&'a FileType, &'a HgFileNodeId),
     Deleted,
 }
 
@@ -198,7 +198,7 @@ impl WorkingEntry {
     ) -> Option<BonsaiDiffResult> {
         match self {
             WorkingEntry::File(ft, entry) => {
-                let hash = entry.get_hash();
+                let (_, hash) = entry.get_hash().to_filenode().expect("filenode expected");
                 // Any tree entries being present indicates a file-directory conflict which must be
                 // resolved.
                 // >= 2 entries means there's a file-file conflict which must be resolved.
@@ -253,7 +253,8 @@ impl WorkingEntry {
         // the directory. That's the case where the file gets marked deleted -- no need to recurse
         // into the directory if the hash is the same.
         if let WorkingEntry::Tree(entry) = &self {
-            if composite_entry.num_trees() == 1 && composite_entry.contains_tree(entry.get_hash()) {
+            let hash = entry.get_hash().to_manifest().expect("manifest expected");
+            if composite_entry.num_trees() == 1 && composite_entry.contains_tree(hash) {
                 return stream::empty().boxify();
             }
         }

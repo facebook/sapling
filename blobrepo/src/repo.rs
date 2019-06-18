@@ -1293,13 +1293,8 @@ impl BlobRepo {
 
         self.get_manifest_by_nodeid(ctx.clone(), manifest_id)
             .and_then(move |manifest| {
-                let content_init = {
-                    future::ok(Some((
-                        Content::Tree(manifest),
-                        HgEntryId::from_manifest_id(manifest_id),
-                    )))
-                    .boxify()
-                };
+                let content_init =
+                    { future::ok(Some((Content::Tree(manifest), manifest_id.into()))).boxify() };
                 match path {
                     None => content_init,
                     Some(path) => {

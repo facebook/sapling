@@ -175,7 +175,7 @@ mod test {
     use maplit::btreemap;
     use mercurial::manifest::Details;
     use mercurial_types::manifest::Type;
-    use mercurial_types::{FileType, HgEntryId, MPath};
+    use mercurial_types::{FileType, MPath};
     use mercurial_types_mocks::nodehash::*;
 
     #[test]
@@ -267,12 +267,12 @@ mod test {
             files: btreemap! {
                 MPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
-                    HgEntryId::new(ONES_HASH),
+                    ONES_HASH,
                     Type::File(FileType::Regular),
                 ),
                 MPath::new("test_dir2/test_manifest").unwrap() =>
                 Details::new(
-                    HgEntryId::new(TWOS_HASH),
+                    TWOS_HASH,
                     Type::Tree,
                 ),
             },

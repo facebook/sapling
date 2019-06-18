@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use context::CoreContext;
 use mercurial_types::blobnode::HgParents;
 use mercurial_types::manifest::Content;
-use mercurial_types::nodehash::HgEntryId;
+use mercurial_types::nodehash::{HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
 use mononoke_types::FileContents;
 
@@ -46,8 +46,8 @@ impl MockManifest {
     ///
     /// dir_hashes is used to assign directories hashes.
     pub fn from_path_map(
-        path_map: BTreeMap<MPath, (FileType, Bytes, Option<HgEntryId>)>,
-        dir_hashes: BTreeMap<MPath, HgEntryId>,
+        path_map: BTreeMap<MPath, (FileType, Bytes, Option<HgNodeHash>)>,
+        dir_hashes: BTreeMap<MPath, HgNodeHash>,
     ) -> Result<Self> {
         // Stack of directory names and entry lists currently being built
         let mut wip: Vec<(Option<MPath>, _)> = vec![(None, BTreeMap::new())];
@@ -109,8 +109,8 @@ impl MockManifest {
     /// A generic version of `from_path_map`.
     pub fn from_path_hashes<IP, ID, P, B>(paths: IP, dir_hashes: ID) -> Result<Self>
     where
-        IP: IntoIterator<Item = (P, (FileType, B, HgEntryId))>,
-        ID: IntoIterator<Item = (P, HgEntryId)>,
+        IP: IntoIterator<Item = (P, (FileType, B, HgNodeHash))>,
+        ID: IntoIterator<Item = (P, HgNodeHash)>,
         P: AsRef<[u8]>,
         B: Into<Bytes>,
     {
@@ -153,7 +153,7 @@ impl MockManifest {
 fn finalize_dirs(
     wip: &mut Vec<(Option<MPath>, BTreeMap<MPathElement, MockEntry>)>,
     last_to_keep: usize,
-    dir_hashes: &BTreeMap<MPath, HgEntryId>,
+    dir_hashes: &BTreeMap<MPath, HgNodeHash>,
 ) -> Result<()> {
     for _ in (last_to_keep + 1)..wip.len() {
         let (dir, entries) = wip.pop().expect("wip should have at least 1 element");
@@ -200,7 +200,7 @@ pub struct MockEntry {
     name: Option<MPathElement>,
     content_factory: ContentFactory,
     ty: Option<Type>,
-    hash: Option<HgEntryId>,
+    hash: Option<HgNodeHash>,
 }
 
 impl Clone for MockEntry {
@@ -244,7 +244,7 @@ impl MockEntry {
         self.ty = Some(ty);
     }
 
-    pub fn set_hash(&mut self, hash: HgEntryId) {
+    pub fn set_hash(&mut self, hash: HgNodeHash) {
         self.hash = Some(hash);
     }
 }
@@ -266,9 +266,12 @@ impl Entry for MockEntry {
         unimplemented!();
     }
     fn get_hash(&self) -> HgEntryId {
-        match self.hash {
-            Some(hash) => hash,
-            None => panic!(
+        match (self.ty, self.hash) {
+            (Some(ty), Some(hash)) => match ty {
+                Type::File(file_type) => HgEntryId::File(file_type, HgFileNodeId::new(hash)),
+                Type::Tree => HgEntryId::Manifest(HgManifestId::new(hash)),
+            },
+            _ => panic!(
                 "hash for entry (name: '{:?}', type: '{:?}') is not set!",
                 self.name, self.ty
             ),

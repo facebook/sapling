@@ -29,12 +29,11 @@ pub struct HgBlobEntry {
     blobstore: RepoBlobstore,
     name: Option<MPathElement>,
     id: HgEntryId,
-    ty: Type,
 }
 
 impl PartialEq for HgBlobEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.id == other.id && self.ty == other.ty
+        self.name == other.name && self.id == other.id
     }
 }
 
@@ -237,8 +236,10 @@ impl HgBlobEntry {
         Self {
             blobstore,
             name: Some(name),
-            id: HgEntryId::new(nodeid),
-            ty,
+            id: match ty {
+                Type::Tree => HgEntryId::Manifest(HgManifestId::new(nodeid)),
+                Type::File(file_type) => HgEntryId::File(file_type, HgFileNodeId::new(nodeid)),
+            },
         }
     }
 
@@ -246,53 +247,47 @@ impl HgBlobEntry {
         Self {
             blobstore,
             name: None,
-            id: HgEntryId::new(manifestid.into_nodehash()),
-            ty: Type::Tree,
+            id: manifestid.into(),
         }
     }
 
     fn get_raw_content_inner(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
         let validate_hash = false;
-        match self.ty {
-            Type::Tree => fetch_raw_manifest_bytes(ctx, &self.blobstore, self.id.into_nodehash()),
-            Type::File(_) => fetch_raw_filenode_bytes(
-                ctx,
-                &self.blobstore,
-                HgFileNodeId::new(self.id.into_nodehash()),
-                validate_hash,
-            ),
+        match self.id {
+            HgEntryId::Manifest(manifest_id) => {
+                fetch_raw_manifest_bytes(ctx, &self.blobstore, manifest_id)
+            }
+            HgEntryId::File(_, filenode_id) => {
+                fetch_raw_filenode_bytes(ctx, &self.blobstore, filenode_id, validate_hash)
+            }
         }
     }
 }
 
 impl Entry for HgBlobEntry {
     fn get_type(&self) -> Type {
-        self.ty
+        self.id.get_type()
     }
 
     fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
-        match self.ty {
-            Type::Tree => {
-                fetch_manifest_envelope(ctx.clone(), &self.blobstore, self.id.into_nodehash())
+        match self.id {
+            HgEntryId::Manifest(hash) => {
+                fetch_manifest_envelope(ctx.clone(), &self.blobstore, hash)
                     .map(move |envelope| {
                         let (p1, p2) = envelope.parents();
                         HgParents::new(p1, p2)
                     })
                     .boxify()
             }
-            Type::File(_) => fetch_file_envelope(
-                ctx.clone(),
-                &self.blobstore,
-                HgFileNodeId::new(self.id.into_nodehash()),
-            )
-            .map(move |envelope| {
-                let (p1, p2) = envelope.parents();
-                HgParents::new(
-                    p1.map(HgFileNodeId::into_nodehash),
-                    p2.map(HgFileNodeId::into_nodehash),
-                )
-            })
-            .boxify(),
+            HgEntryId::File(_, hash) => fetch_file_envelope(ctx.clone(), &self.blobstore, hash)
+                .map(move |envelope| {
+                    let (p1, p2) = envelope.parents();
+                    HgParents::new(
+                        p1.map(HgFileNodeId::into_nodehash),
+                        p2.map(HgFileNodeId::into_nodehash),
+                    )
+                })
+                .boxify(),
         }
     }
 
@@ -302,58 +297,53 @@ impl Entry for HgBlobEntry {
 
     fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
         let blobstore = self.blobstore.clone();
-        match self.ty {
-            Type::Tree => {
-                BlobManifest::load(ctx, &blobstore, HgManifestId::new(self.id.into_nodehash()))
-                    .and_then({
-                        let node_id = self.id.into_nodehash();
-                        move |blob_manifest| {
-                            let manifest = blob_manifest
-                                .ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
-                            Ok(Content::Tree(manifest.boxed()))
-                        }
+        match self.id {
+            HgEntryId::Manifest(manifest_id) => BlobManifest::load(ctx, &blobstore, manifest_id)
+                .and_then({
+                    let node_id = self.id.into_nodehash();
+                    move |blob_manifest| {
+                        let manifest = blob_manifest
+                            .ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
+                        Ok(Content::Tree(manifest.boxed()))
+                    }
+                })
+                .context(format!(
+                    "While HgBlobEntry::get_content for id {}, name {:?}",
+                    self.id, self.name,
+                ))
+                .from_err()
+                .boxify(),
+            HgEntryId::File(file_type, filenode_id) => {
+                fetch_file_envelope(ctx.clone(), &blobstore, filenode_id)
+                    .and_then(move |envelope| {
+                        let envelope = envelope.into_mut();
+                        fetch_file_contents(ctx, &blobstore, envelope.content_id).map(
+                            move |contents| match file_type {
+                                FileType::Regular => Content::File(contents),
+                                FileType::Executable => Content::Executable(contents),
+                                FileType::Symlink => Content::Symlink(contents),
+                            },
+                        )
                     })
                     .context(format!(
-                        "While HgBlobEntry::get_content for id {}, name {:?}, type {:?}",
-                        self.id, self.name, self.ty
+                        "While HgBlobEntry::get_content for id {}, name {:?}",
+                        self.id, self.name
                     ))
                     .from_err()
                     .boxify()
             }
-            Type::File(ft) => fetch_file_envelope(
-                ctx.clone(),
-                &blobstore,
-                HgFileNodeId::new(self.id.into_nodehash()),
-            )
-            .and_then(move |envelope| {
-                let envelope = envelope.into_mut();
-                let file_contents_fut = fetch_file_contents(ctx, &blobstore, envelope.content_id);
-                file_contents_fut.map(move |contents| match ft {
-                    FileType::Regular => Content::File(contents),
-                    FileType::Executable => Content::Executable(contents),
-                    FileType::Symlink => Content::Symlink(contents),
-                })
-            })
-            .context(format!(
-                "While HgBlobEntry::get_content for id {}, name {:?}, type {:?}",
-                self.id, self.name, self.ty
-            ))
-            .from_err()
-            .boxify(),
         }
     }
 
     // XXX get_size should probably return a u64, not a usize
     fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
-        match self.ty {
-            Type::Tree => future::ok(None).boxify(),
-            Type::File(_) => fetch_file_envelope(
-                ctx.clone(),
-                &self.blobstore,
-                HgFileNodeId::new(self.id.into_nodehash()),
-            )
-            .map(|envelope| Some(envelope.content_size() as usize))
-            .boxify(),
+        match self.id {
+            HgEntryId::Manifest(_) => future::ok(None).boxify(),
+            HgEntryId::File(_, filenode_id) => {
+                fetch_file_envelope(ctx.clone(), &self.blobstore, filenode_id)
+                    .map(|envelope| Some(envelope.content_size() as usize))
+                    .boxify()
+            }
         }
     }
 

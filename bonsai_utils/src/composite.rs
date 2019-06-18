@@ -10,13 +10,13 @@ use crate::failure::Error;
 use futures::{future, stream, Future, Stream};
 
 use context::CoreContext;
-use mercurial_types::{manifest::Content, Entry, HgEntryId, Type};
+use mercurial_types::{manifest::Content, Entry, HgEntryId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, MPathElement};
 
 /// An entry representing composite state formed by multiple parents.
 pub struct CompositeEntry {
-    files: HashMap<(FileType, HgEntryId), Box<dyn Entry + Sync>>,
-    trees: HashMap<HgEntryId, Box<dyn Entry + Sync>>,
+    files: HashMap<(FileType, HgFileNodeId), Box<dyn Entry + Sync>>,
+    trees: HashMap<HgManifestId, Box<dyn Entry + Sync>>,
 }
 
 impl CompositeEntry {
@@ -30,9 +30,9 @@ impl CompositeEntry {
 
     #[inline]
     pub fn add_parent(&mut self, entry: Box<dyn Entry + Sync>) {
-        match entry.get_type() {
-            Type::Tree => self.trees.insert(entry.get_hash(), entry),
-            Type::File(ft) => self.files.insert((ft, entry.get_hash()), entry),
+        match entry.get_hash() {
+            HgEntryId::Manifest(mf) => self.trees.insert(mf, entry),
+            HgEntryId::File(ft, h) => self.files.insert((ft, h), entry),
         };
     }
 
@@ -42,13 +42,13 @@ impl CompositeEntry {
     }
 
     #[inline]
-    pub fn contains_file(&self, file_type: &FileType, hash: HgEntryId) -> bool {
+    pub fn contains_file(&self, file_type: &FileType, hash: HgFileNodeId) -> bool {
         self.files.contains_key(&(*file_type, hash))
     }
 
     /// Whether this composite entry contains the same hash but a different type.
     #[inline]
-    pub fn contains_file_other_type(&self, file_type: &FileType, hash: HgEntryId) -> bool {
+    pub fn contains_file_other_type(&self, file_type: &FileType, hash: HgFileNodeId) -> bool {
         file_type
             .complement()
             .iter()
@@ -57,7 +57,7 @@ impl CompositeEntry {
 
     /// Whether this composite entry contains a file with this hash but with any possible type.
     #[inline]
-    pub fn contains_file_any_type(&self, hash: HgEntryId) -> bool {
+    pub fn contains_file_any_type(&self, hash: HgFileNodeId) -> bool {
         FileType::all()
             .iter()
             .any(|ft| self.contains_file(ft, hash))
@@ -69,7 +69,7 @@ impl CompositeEntry {
     }
 
     #[inline]
-    pub fn contains_tree(&self, hash: HgEntryId) -> bool {
+    pub fn contains_tree(&self, hash: HgManifestId) -> bool {
         self.trees.contains_key(&hash)
     }
 

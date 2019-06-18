@@ -6,22 +6,25 @@
 
 //! A hash of a node (changeset, manifest or file).
 
-use std::fmt::{self, Display};
-use std::result;
-use std::str::FromStr;
-
 use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use heapsize_derive::HeapSizeOf;
+use mononoke_types::FileType;
 use quickcheck::{Arbitrary, Gen};
 use serde;
 use slog;
+use std::{
+    fmt::{self, Display},
+    result,
+    str::FromStr,
+};
 
 /// Node hash type from Mercurial's Rust code (essentially equivalent to [HgNodeHash]).
 use types::Node as HgTypesNode;
 
 use crate::errors::*;
 use crate::hash::{self, Sha1};
+use crate::manifest::Type;
 use crate::thrift;
 use crate::RepoPath;
 
@@ -403,39 +406,68 @@ impl Arbitrary for HgFileNodeId {
     }
 }
 
-/// TODO: (jsgf) T25576292 HgEntryId should be a (Type, NodeId) tuple
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
-pub struct HgEntryId(HgNodeHash);
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub enum HgEntryId {
+    File(FileType, HgFileNodeId),
+    Manifest(HgManifestId),
+}
 
 impl HgEntryId {
     pub fn into_nodehash(self) -> HgNodeHash {
-        self.0
-    }
-
-    pub const fn new(hash: HgNodeHash) -> Self {
-        HgEntryId(hash)
-    }
-
-    pub fn from_manifest_id(manifest: HgManifestId) -> Self {
-        HgEntryId::new(manifest.into_nodehash())
+        match self {
+            HgEntryId::File(_, file_hash) => file_hash.into_nodehash(),
+            HgEntryId::Manifest(manifest_hash) => manifest_hash.into_nodehash(),
+        }
     }
 
     #[inline]
     pub fn to_hex(&self) -> AsciiString {
-        self.0.to_hex()
+        match self {
+            HgEntryId::File(_, filenode_id) => filenode_id.to_hex(),
+            HgEntryId::Manifest(manifest_id) => manifest_id.to_hex(),
+        }
+    }
+
+    #[inline]
+    pub fn to_filenode(&self) -> Option<(FileType, HgFileNodeId)> {
+        match self {
+            HgEntryId::File(file_type, filenode_id) => Some((*file_type, *filenode_id)),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn to_manifest(&self) -> Option<HgManifestId> {
+        match self {
+            HgEntryId::Manifest(manifest_id) => Some(*manifest_id),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn get_type(&self) -> Type {
+        match self {
+            HgEntryId::File(file_type, _) => Type::File(*file_type),
+            HgEntryId::Manifest(_) => Type::Tree,
+        }
+    }
+}
+
+impl From<HgManifestId> for HgEntryId {
+    fn from(manifest_id: HgManifestId) -> Self {
+        HgEntryId::Manifest(manifest_id)
+    }
+}
+
+impl From<(FileType, HgFileNodeId)> for HgEntryId {
+    fn from((file_type, filenode_id): (FileType, HgFileNodeId)) -> Self {
+        HgEntryId::File(file_type, filenode_id)
     }
 }
 
 impl Display for HgEntryId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(fmt)
-    }
-}
-
-impl Arbitrary for HgEntryId {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        HgEntryId(HgNodeHash::arbitrary(g))
+        (*self).into_nodehash().fmt(fmt)
     }
 }
 

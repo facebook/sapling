@@ -6,31 +6,17 @@
 
 #![deny(warnings)]
 
-extern crate futures;
-#[macro_use]
-extern crate pretty_assertions;
-
-extern crate async_unit;
-
-extern crate bonsai_utils;
-extern crate context;
-extern crate mercurial_types;
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-
-mod fixtures;
-
-use futures::{Future, Stream};
-
 use async_unit::tokio_unit_test;
-
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use context::CoreContext;
-use mercurial_types::{Entry, HgEntryId};
+use futures::{Future, Stream};
+use mercurial_types::{Entry, HgFileNodeId};
 use mercurial_types_mocks::manifest::{MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash::*;
 use mononoke_types::{path::check_pcf, FileType, MPath, RepoPath};
+use pretty_assertions::assert_eq;
 
+mod fixtures;
 use crate::fixtures::ManifestFixture;
 
 #[test]
@@ -45,13 +31,13 @@ fn diff_basic() {
             deleted("dir1/file-to-dir"),
             // dir1/file-to-dir/foobar *is* a result, because it has changed and its parent is
             // deleted.
-            changed("dir1/file-to-dir/foobar", FileType::Symlink, THREES_EID),
-            changed("dir1/foo", FileType::Regular, THREES_EID),
+            changed("dir1/file-to-dir/foobar", FileType::Symlink, THREES_FNID),
+            changed("dir1/foo", FileType::Regular, THREES_FNID),
             deleted("dir2/bar"),
-            changed("dir2/dir-to-file", FileType::Executable, DS_EID),
+            changed("dir2/dir-to-file", FileType::Executable, DS_FNID),
             // dir2/dir-to-file/foo is *not* a result, because its parent is marked changed
-            changed_reused_id("dir2/only-file-type", FileType::Executable, ONES_EID),
-            changed("dir2/quux", FileType::Symlink, FOURS_EID),
+            changed_reused_id("dir2/only-file-type", FileType::Executable, ONES_FNID),
+            changed("dir2/quux", FileType::Symlink, FOURS_FNID),
         ];
 
         assert_eq!(diff, expected_diff);
@@ -96,11 +82,11 @@ fn diff_merge1() {
             // same contents.
             //
             // This ID was reused from parent2.
-            changed_reused_id("dir1/foo", FileType::Regular, THREES_EID),
+            changed_reused_id("dir1/foo", FileType::Regular, THREES_FNID),
             deleted("dir2/bar"),
             // This ID was reused from parent2.
-            changed_reused_id("dir2/dir-to-file", FileType::Executable, DS_EID),
-            changed_reused_id("dir2/only-file-type", FileType::Executable, ONES_EID),
+            changed_reused_id("dir2/dir-to-file", FileType::Executable, DS_FNID),
+            changed_reused_id("dir2/only-file-type", FileType::Executable, ONES_FNID),
             // dir2/quux is not a result because it isn't present in p1 and is present in p2, so
             // the version from p2 is implicitly chosen.
         ];
@@ -140,12 +126,12 @@ fn compute_diff(
     paths
 }
 
-fn changed(path: impl AsRef<[u8]>, ft: FileType, hash: HgEntryId) -> BonsaiDiffResult {
+fn changed(path: impl AsRef<[u8]>, ft: FileType, hash: HgFileNodeId) -> BonsaiDiffResult {
     let path = MPath::new(path).expect("valid path");
     BonsaiDiffResult::Changed(path, ft, hash)
 }
 
-fn changed_reused_id(path: impl AsRef<[u8]>, ft: FileType, hash: HgEntryId) -> BonsaiDiffResult {
+fn changed_reused_id(path: impl AsRef<[u8]>, ft: FileType, hash: HgFileNodeId) -> BonsaiDiffResult {
     let path = MPath::new(path).expect("valid path");
     BonsaiDiffResult::ChangedReusedId(path, ft, hash)
 }

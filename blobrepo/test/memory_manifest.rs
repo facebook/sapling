@@ -20,7 +20,7 @@ use blobrepo::HgBlobEntry;
 use context::CoreContext;
 use fixtures::many_files_dirs;
 use mercurial_types::{
-    nodehash::HgEntryId, Entry, FileType, HgManifestId, HgNodeHash, MPath, MPathElement, Type,
+    Entry, FileType, HgFileNodeId, HgManifestId, HgNodeHash, MPath, MPathElement, Type,
 };
 use mercurial_types_mocks::nodehash;
 use mononoke_types::RepoPath;
@@ -584,7 +584,7 @@ fn merge_manifests() {
             {
                 assert_eq!(
                     blob.get_hash(),
-                    HgEntryId::new(nodehash::ONES_HASH),
+                    (FileType::Regular, HgFileNodeId::new(nodehash::ONES_HASH)).into(),
                     "Wrong hash for shared"
                 );
             } else {
@@ -595,7 +595,7 @@ fn merge_manifests() {
             {
                 assert_eq!(
                     blob.get_hash(),
-                    HgEntryId::new(nodehash::ONES_HASH),
+                    (FileType::Regular, HgFileNodeId::new(nodehash::ONES_HASH)).into(),
                     "Wrong hash for base"
                 );
             } else {
@@ -606,7 +606,7 @@ fn merge_manifests() {
             {
                 assert_eq!(
                     blob.get_hash(),
-                    HgEntryId::new(nodehash::TWOS_HASH),
+                    (FileType::Regular, HgFileNodeId::new(nodehash::TWOS_HASH)).into(),
                     "Wrong hash for other"
                 );
             } else {

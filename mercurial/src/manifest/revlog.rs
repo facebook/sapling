@@ -18,7 +18,8 @@ use crate::errors::*;
 use crate::file;
 use mercurial_types::manifest::Type;
 use mercurial_types::{
-    FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath,
+    FileType, HgBlob, HgBlobNode, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
+    MPath, MPathElement, RepoPath,
 };
 use mononoke_types::FileContents;
 
@@ -26,7 +27,7 @@ use crate::RevlogRepo;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
-    entryid: HgEntryId,
+    hash: HgNodeHash,
     flag: Type,
 }
 
@@ -200,8 +201,8 @@ impl RevlogManifest {
 }
 
 impl Details {
-    pub fn new(entryid: HgEntryId, flag: Type) -> Self {
-        Self { entryid, flag }
+    pub fn new(hash: HgNodeHash, flag: Type) -> Self {
+        Self { hash, flag }
     }
 
     fn parse(data: &[u8]) -> Result<Details> {
@@ -212,7 +213,6 @@ impl Details {
             .map_err(|err| Error::from(err))
             .and_then(|hash| hash.parse::<HgNodeHash>())
             .with_context(|_| format!("malformed hash: {:?}", hash))?;
-        let entryid = HgEntryId::new(hash);
 
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
@@ -227,20 +227,18 @@ impl Details {
             }
         };
 
-        Ok(Details { entryid, flag })
+        Ok(Details { hash, flag })
     }
 
     fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        write!(
-            out,
-            "{}{}",
-            self.entryid.into_nodehash(),
-            self.flag.manifest_suffix()
-        )
+        write!(out, "{}{}", self.hash, self.flag.manifest_suffix())
     }
 
     pub fn entryid(&self) -> HgEntryId {
-        self.entryid
+        match self.flag {
+            Type::File(file_type) => HgEntryId::File(file_type, HgFileNodeId::new(self.hash)),
+            Type::Tree => HgEntryId::Manifest(HgManifestId::new(self.hash)),
+        }
     }
 
     pub fn flag(&self) -> Type {
@@ -419,7 +417,7 @@ impl RevlogEntry {
     }
 
     pub fn get_hash(&self) -> HgEntryId {
-        self.details.entryid
+        self.details.entryid()
     }
 
     pub fn get_name(&self) -> Option<&MPathElement> {
@@ -491,9 +489,7 @@ mod test {
                 let expect = vec![(
                     MPath::new(b"hello123").unwrap(),
                     Details {
-                        entryid: HgEntryId::new(
-                            "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
-                        ),
+                        hash: "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
                         flag: Type::File(FileType::Symlink),
                     },
                 )];

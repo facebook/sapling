@@ -25,7 +25,7 @@ use mercurial_types::manifest_utils::{
     recursive_entry_stream, ChangedEntry, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
     NoopPruner, Pruner, VisitedPruner,
 };
-use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
+use mercurial_types::nodehash::{HgChangesetId, HgNodeHash};
 use mercurial_types::{
     Changeset, Entry, FileType, MPath, MPathElement, Manifest, RepoPath, Type, NULL_HASH,
 };
@@ -45,12 +45,12 @@ fn get_root_manifest(
     repo.get_manifest_by_nodeid(ctx, manifestid).wait().unwrap()
 }
 
-fn get_hash(c: char) -> HgEntryId {
+fn get_hash(c: char) -> HgNodeHash {
     let hash: String = repeat(c).take(40).collect();
-    HgEntryId::new(HgNodeHash::from_str(&hash).unwrap())
+    HgNodeHash::from_str(&hash).unwrap()
 }
 
-fn get_entry(ty: Type, hash: HgEntryId, path: RepoPath) -> Box<Entry + Sync> {
+fn get_entry(ty: Type, hash: HgNodeHash, path: RepoPath) -> Box<Entry + Sync> {
     let content_factory: ContentFactory = Arc::new(|| -> Content {
         panic!("should not be called");
     });
@@ -923,8 +923,8 @@ fn test_visited_pruner_different_files_same_hash() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
         let paths = btreemap! {
-            "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
-            "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
+            "foo1" => (FileType::Regular, "content", NULL_HASH),
+            "foo2" => (FileType::Symlink, "content", NULL_HASH),
         };
         let root_manifest =
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
@@ -952,8 +952,8 @@ fn test_file_pruner() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
         let paths = btreemap! {
-            "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
-            "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
+            "foo1" => (FileType::Regular, "content", NULL_HASH),
+            "foo2" => (FileType::Symlink, "content", NULL_HASH),
         };
         let root_manifest =
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
@@ -981,8 +981,8 @@ fn test_deleted_pruner() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let ctx = CoreContext::test_mock();
         let paths = btreemap! {
-            "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
-            "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
+            "foo1" => (FileType::Regular, "content", NULL_HASH),
+            "foo2" => (FileType::Symlink, "content", NULL_HASH),
         };
         let root_manifest =
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
