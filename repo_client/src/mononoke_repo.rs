@@ -15,6 +15,7 @@ use metaconfig_types::{
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
+use sql_ext::SqlConstructors;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
 use streaming_clone::SqlStreamingChunksFetcher;
@@ -113,10 +114,14 @@ impl MononokeRepo {
 pub fn streaming_clone(
     blobrepo: BlobRepo,
     db_address: &str,
-    myrouter_port: u16,
+    myrouter_port: Option<u16>,
     repoid: RepositoryId,
 ) -> Result<SqlStreamingCloneConfig> {
-    let fetcher = SqlStreamingChunksFetcher::with_myrouter(db_address, myrouter_port);
+    let fetcher = match myrouter_port {
+        Some(port) => SqlStreamingChunksFetcher::with_myrouter(&db_address, port),
+        None => SqlStreamingChunksFetcher::with_raw_xdb_tier(&db_address)?,
+    };
+
     let streaming_clone = SqlStreamingCloneConfig {
         fetcher,
         blobstore: blobrepo.get_blobstore(),

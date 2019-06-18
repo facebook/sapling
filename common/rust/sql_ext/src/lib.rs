@@ -7,11 +7,8 @@
 extern crate failure_ext as failure;
 extern crate sql;
 
-use failure::{format_err, Error, Result};
-use futures::{
-    future::{err, ok},
-    Future,
-};
+use failure::{Error, Result};
+use futures::{future::ok, Future};
 use futures_ext::FutureExt;
 use std::path::Path;
 
@@ -178,21 +175,16 @@ fn with_sqlite<T: SqlConstructors>(con: SqliteConnection) -> Result<T> {
 
 pub fn myrouter_ready(
     db_addr_opt: Option<&str>,
-    myrouter_port_: Option<u16>,
-    repo_name_: &String,
+    myrouter_port: Option<u16>,
 ) -> impl Future<Item = (), Error = Error> {
     match db_addr_opt {
-        None => ok(()).left_future(),
+        None => ok(()).left_future(), // No DB required: we can skip myrouter.
         Some(db_address) => {
-            if let Some(myrouter_port_) = myrouter_port_ {
-                myrouter::wait_for_myrouter(myrouter_port_, db_address).right_future()
+            if let Some(myrouter_port) = myrouter_port {
+                myrouter::wait_for_myrouter(myrouter_port, db_address).right_future()
             } else {
-                err(format_err!(
-                    "No port for MyRouter provided, but repo {} needs to connect do db {}",
-                    repo_name_,
-                    db_address
-                ))
-                .left_future()
+                // Myrouter was not enabled: we don't need to wait for it.
+                ok(()).left_future()
             }
         }
     }

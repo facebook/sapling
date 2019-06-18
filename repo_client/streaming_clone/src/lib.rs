@@ -16,6 +16,7 @@ use failure::{Error, Fail};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::Connection;
+use sql_ext::SqlConstructors;
 
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -59,16 +60,23 @@ queries! {
     }
 }
 
-impl SqlStreamingChunksFetcher {
-    pub fn with_myrouter(tier: impl ToString, port: u16) -> Self {
-        let mut builder = Connection::myrouter_builder();
-        builder.tier(tier).port(port);
+impl SqlConstructors for SqlStreamingChunksFetcher {
+    const LABEL: &'static str = "streaming-chunks";
 
-        let read_connection = builder.build_read_only();
-
+    fn from_connections(
+        _write_connection: Connection,
+        read_connection: Connection,
+        _read_master_connection: Connection,
+    ) -> Self {
         Self { read_connection }
     }
 
+    fn get_up_query() -> &'static str {
+        ""
+    }
+}
+
+impl SqlStreamingChunksFetcher {
     pub fn fetch_changelog(
         &self,
         ctx: CoreContext,

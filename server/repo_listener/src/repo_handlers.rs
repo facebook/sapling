@@ -24,13 +24,13 @@ use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use metaconfig_types::{MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use phases::{CachingPhases, Phases, SqlConstructors, SqlPhases};
+use phases::{CachingPhases, Phases, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
-use sql_ext::myrouter_ready;
+use sql_ext::{myrouter_ready, SqlConstructors};
 
 #[derive(Clone)]
 pub struct RepoHandler {
@@ -49,15 +49,13 @@ pub struct RepoHandler {
 fn open_db_from_config<S: SqlConstructors>(
     dbconfig: &MetadataDBConfig,
     myrouter_port: Option<u16>,
-) -> S {
+) -> Result<S> {
     match dbconfig {
-        MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join(S::LABEL))
-            .expect("unable to initialize sqlite db for mutable counters"),
-
-        MetadataDBConfig::Mysql { ref db_address, .. } => S::with_myrouter(
-            &db_address,
-            myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
-        ),
+        MetadataDBConfig::LocalDB { ref path } => S::with_sqlite_path(path.join(S::LABEL)),
+        MetadataDBConfig::Mysql { ref db_address, .. } => match myrouter_port {
+            Some(port) => Ok(S::with_myrouter(&db_address, port)),
+            None => S::with_raw_xdb_tier(&db_address),
+        },
     }
 }
 
@@ -86,7 +84,6 @@ pub fn repo_handlers(
             let ensure_myrouter_ready = myrouter_ready(
                 config.storage_config.dbconfig.get_db_address(),
                 myrouter_port,
-                &reponame,
             );
 
             let ready_handle = ready.create_handle(reponame.clone());
@@ -123,7 +120,7 @@ pub fn repo_handlers(
                         Some(try_boxfuture!(streaming_clone(
                             blobrepo.clone(),
                             &db_address,
-                            myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                            myrouter_port,
                             repoid
                         )))
                     } else {
@@ -203,41 +200,45 @@ pub fn repo_handlers(
                 });
 
                 // TODO: T45466266 this should be replaced by gatekeepers
-                let support_bundle2_listkeys =
-                    open_db_from_config::<SqlMutableCounters>(&dbconfig, myrouter_port)
-                        .get_counter(
-                            ctx.clone(),
-                            repo.blobrepo().get_repoid(),
-                            "support_bundle2_listkeys",
-                        )
-                        .map(|val| val.unwrap_or(1) != 0);
+                let support_bundle2_listkeys = try_boxfuture!(open_db_from_config::<
+                    SqlMutableCounters,
+                >(
+                    &dbconfig, myrouter_port
+                ))
+                .get_counter(
+                    ctx.clone(),
+                    repo.blobrepo().get_repoid(),
+                    "support_bundle2_listkeys",
+                )
+                .map(|val| val.unwrap_or(1) != 0);
 
                 ready_handle
                     .wait_for(
                         initial_warmup.and_then(|()| skip_index.join(support_bundle2_listkeys)),
                     )
-                    .map({
+                    .and_then({
                         cloned!(root_log);
                         move |(skip_index, support_bundle2_listkeys)| {
                             info!(root_log, "Repo warmup for {} complete", reponame);
 
                             // initialize phases hint from the skip index
-                            let phases_hint: Arc<dyn Phases> = {
-                                let db = Arc::new(open_db_from_config::<SqlPhases>(
-                                    &dbconfig,
-                                    myrouter_port,
-                                ));
-                                if let MetadataDBConfig::Mysql { .. } = dbconfig {
-                                    Arc::new(CachingPhases::new(db))
-                                } else {
-                                    db
-                                }
-                            };
+                            let phases_hint =
+                                open_db_from_config::<SqlPhases>(&dbconfig, myrouter_port).map(
+                                    |db| -> Arc<dyn Phases> {
+                                        let db = Arc::new(db);
+
+                                        if let MetadataDBConfig::Mysql { .. } = dbconfig {
+                                            Arc::new(CachingPhases::new(db))
+                                        } else {
+                                            db
+                                        }
+                                    },
+                                );
 
                             // initialize lca hint from the skip index
                             let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skip_index;
 
-                            (
+                            Ok((
                                 reponame,
                                 RepoHandler {
                                     logger: listen_log,
@@ -246,12 +247,12 @@ pub fn repo_handlers(
                                     repo,
                                     hash_validation_percentage,
                                     lca_hint,
-                                    phases_hint,
+                                    phases_hint: phases_hint?,
                                     preserve_raw_bundle2,
                                     pure_push_allowed,
                                     support_bundle2_listkeys,
                                 },
-                            )
+                            ))
                         }
                     })
                     .boxify()
