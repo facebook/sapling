@@ -179,7 +179,7 @@ Expect error with a suggestive explanation (the last commit contains a censored 
   remote:     The blob repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
   remote:      Task/Sev: task
   abort: error downloading file contents:
-  'connection closed early for filename b and node 1e88685f5ddec574a34c70af492f95b6debc8741'
+  'connection closed early for filename * and node *' (glob)
   [255]
 
   $ tglogpnr
@@ -280,7 +280,7 @@ Expect error with a suggestive explanation (the commit contains a censored file)
   remote:     The blob repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
   remote:      Task/Sev: task
   abort: error downloading file contents:
-  'connection closed early for filename b and node 1e88685f5ddec574a34c70af492f95b6debc8741'
+  'connection closed early for filename * and node *' (glob)
   [255]
 
 Expect success (no blob in this commit is blacklisted)
