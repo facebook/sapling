@@ -280,6 +280,7 @@ Use the same code here as in the actual opsfiles hook
   remote: rollback completed
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
   creating a peer took: * (glob)
@@ -307,6 +308,7 @@ Use the same code here as in the actual opsfiles hook
   remote: rollback completed
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
   creating a peer took: * (glob)
@@ -334,6 +336,7 @@ Use the same code here as in the actual opsfiles hook
   remote: rollback completed
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
   creating a peer took: * (glob)
@@ -383,6 +386,7 @@ Now bookmark is not blocked
   remote: rollback completed
   replay failed: error:pushkey
   unbundle replay batch item #0 failed
+  * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
   creating a peer took: * (glob)
@@ -670,6 +674,7 @@ Test further sync
   part message: conflicting changes in:
       pushcommit
   unbundle replay batch item #0 failed
+  * sync failed. Invalidating process (glob)
   * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   connected to * (glob)
   creating a peer took: * (glob)
