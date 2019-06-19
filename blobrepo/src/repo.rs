@@ -32,11 +32,15 @@ use context::CoreContext;
 use failure_ext::{bail_err, prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
-use futures::stream::{FuturesUnordered, Stream};
+use futures::stream::{self, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt};
+use futures_ext::{
+    bounded_traversal::bounded_traversal, spawn_future, try_boxfuture, BoxFuture, BoxStream,
+    FutureExt,
+};
 use futures_stats::{FutureStats, Timed};
+use lock_ext::LockExt;
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
@@ -53,10 +57,12 @@ use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{trace, Logger};
 use stats::{define_stats, Histogram, Timeseries};
-use std::collections::HashMap;
-use std::convert::From;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    convert::From,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 use time_ext::DurationExt;
 use tracing::{trace_args, EventId, Traced};
 use uuid::Uuid;
@@ -1018,19 +1024,21 @@ impl BlobRepo {
         self.filenodes.clone()
     }
 
-    pub fn store_file_change_or_reuse(
+    fn store_file_change(
         &self,
         ctx: CoreContext,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
         path: &MPath,
-        change: Option<&FileChange>,
-    ) -> impl Future<Item = Option<(HgBlobEntry, Option<IncompleteFilenodeInfo>)>, Error = Error>
+        change: &FileChange,
+        copy_from: Option<(MPath, HgFileNodeId)>,
+    ) -> impl Future<Item = (HgBlobEntry, Option<IncompleteFilenodeInfo>), Error = Error> + Send
     {
+        assert!(change.copy_from().is_some() == copy_from.is_some());
         // we can reuse same HgFileNodeId if we have only one parent with same
         // file content but different type (Regular|Executable)
-        match (p1, p2, change) {
-            (Some(parent), None, Some(change)) | (None, Some(parent), Some(change)) => {
+        match (p1, p2) {
+            (Some(parent), None) | (None, Some(parent)) => {
                 let store = self.get_blobstore();
                 cloned!(ctx, change, path);
                 fetch_file_envelope(ctx.clone(), &store, parent)
@@ -1057,112 +1065,65 @@ impl BlobRepo {
         }
         .and_then({
             let repo = self.clone();
-            let change = change.cloned();
-            let path = path.clone();
-
+            cloned!(path, change);
             move |maybe_entry| match maybe_entry {
-                None => repo
-                    .store_file_change(ctx, p1, p2, &path, change.as_ref())
-                    .right_future(),
-                _ => future::ok(maybe_entry).left_future(),
-            }
-        })
-    }
+                Some(entry) => future::ok(entry).left_future(),
+                None => {
+                    let mut p1 = p1;
+                    let mut p2 = p2;
 
-    pub fn store_file_change(
-        &self,
-        ctx: CoreContext,
-        p1: Option<HgFileNodeId>,
-        p2: Option<HgFileNodeId>,
-        path: &MPath,
-        change: Option<&FileChange>,
-    ) -> impl Future<Item = Option<(HgBlobEntry, Option<IncompleteFilenodeInfo>)>, Error = Error> + Send
-    {
-        let repo = self.clone();
-        match change {
-            None => future::ok(None).left_future(),
-            Some(change) => {
-                let copy_from_fut = match change.copy_from() {
-                    None => future::ok(None).left_future(),
-                    Some((path, bcs_id)) => self
-                        .get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |cs_id| repo.get_changeset_by_changesetid(ctx, cs_id)
-                        })
-                        .and_then({
-                            cloned!(ctx, repo, path);
-                            move |cs| repo.find_file_in_manifest(ctx, &path, cs.manifestid())
-                        })
-                        .and_then({
-                            cloned!(path);
-                            move |res| match res {
-                                Some((_, node_id)) => Ok(Some((path, node_id))),
-                                None => Err(ErrorKind::PathNotFound(path).into()),
-                            }
-                        })
-                        .right_future(),
-                };
-                let upload_fut = copy_from_fut.and_then({
-                    cloned!(ctx, repo, path, change);
-                    move |copy_from| {
-                        let mut p1 = p1;
-                        let mut p2 = p2;
-
-                        // Mercurial has complicated logic of finding file parents, especially
-                        // if a file was also copied/moved.
-                        // See mercurial/localrepo.py:_filecommit(). We have to replicate this
-                        // logic in Mononoke.
-                        // TODO(stash): T45618931 replicate all the cases from _filecommit()
-                        if let Some((ref copy_from_path, _)) = copy_from {
-                            if copy_from_path != &path {
-                                if p1.is_some() && p2.is_none() {
-                                    // This case can happen if a file existed in it's parent
-                                    // but it was copied over:
-                                    // ```
-                                    // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
-                                    // hg cp 2 1 --force && hg ci -m second
-                                    // # File '1' has both p1 and copy from.
-                                    // ```
-                                    // In that case Mercurial discards p1 i.e. `hg log` will
-                                    // use copy from revision as a parent. Arguably not the best
-                                    // decision, but we have to keep it.
-                                    p1 = None;
-                                    p2 = None;
-                                }
+                    // Mercurial has complicated logic of finding file parents, especially
+                    // if a file was also copied/moved.
+                    // See mercurial/localrepo.py:_filecommit(). We have to replicate this
+                    // logic in Mononoke.
+                    // TODO(stash): T45618931 replicate all the cases from _filecommit()
+                    if let Some((ref copy_from_path, _)) = copy_from {
+                        if copy_from_path != &path {
+                            if p1.is_some() && p2.is_none() {
+                                // This case can happen if a file existed in it's parent
+                                // but it was copied over:
+                                // ```
+                                // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
+                                // hg cp 2 1 --force && hg ci -m second
+                                // # File '1' has both p1 and copy from.
+                                // ```
+                                // In that case Mercurial discards p1 i.e. `hg log` will
+                                // use copy from revision as a parent. Arguably not the best
+                                // decision, but we have to keep it.
+                                p1 = None;
+                                p2 = None;
                             }
                         }
-
-                        let upload_entry = UploadHgFileEntry {
-                            upload_node_id: UploadHgNodeHash::Generate,
-                            contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-                                id: change.content_id(),
-                                copy_from: copy_from.clone(),
-                            }),
-                            file_type: change.file_type(),
-                            p1,
-                            p2,
-                            path: path.clone(),
-                        };
-                        let upload_fut = match upload_entry.upload(ctx, &repo) {
-                            Ok((_, upload_fut)) => upload_fut.map(move |(entry, _)| {
-                                let node_info = IncompleteFilenodeInfo {
-                                    path: RepoPath::FilePath(path),
-                                    filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
-                                    p1,
-                                    p2,
-                                    copyfrom: copy_from.map(|(p, h)| (RepoPath::FilePath(p), h)),
-                                };
-                                Some((entry, Some(node_info)))
-                            }),
-                            Err(err) => return future::err(err).left_future(),
-                        };
-                        upload_fut.right_future()
                     }
-                });
-                upload_fut.right_future()
+
+                    let upload_entry = UploadHgFileEntry {
+                        upload_node_id: UploadHgNodeHash::Generate,
+                        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
+                            id: change.content_id(),
+                            copy_from: copy_from.clone(),
+                        }),
+                        file_type: change.file_type(),
+                        p1,
+                        p2,
+                        path: path.clone(),
+                    };
+                    let upload_fut = match upload_entry.upload(ctx, &repo) {
+                        Ok((_, upload_fut)) => upload_fut.map(move |(entry, _)| {
+                            let node_info = IncompleteFilenodeInfo {
+                                path: RepoPath::FilePath(path),
+                                filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
+                                p1,
+                                p2,
+                                copyfrom: copy_from.map(|(p, h)| (RepoPath::FilePath(p), h)),
+                            };
+                            (entry, Some(node_info))
+                        }),
+                        Err(err) => return future::err(err).left_future(),
+                    };
+                    upload_fut.right_future()
+                }
             }
-        }
+        })
     }
 
     /// Check if adding a single path to manifest would cause case-conflict
@@ -1333,6 +1294,113 @@ impl BlobRepo {
         })
     }
 
+    /// Find files in manifest
+    ///
+    /// This function correctly handles conflicting paths too.
+    pub fn find_files_in_manifest(
+        &self,
+        ctx: CoreContext,
+        manifest_id: HgManifestId,
+        paths: impl IntoIterator<Item = MPath>,
+    ) -> impl Future<Item = HashMap<MPath, HgFileNodeId>, Error = Error> {
+        // Mutable file tree representation which can be easily populated
+        // Note: `children` and `is_file` fields are not exclusive, that is
+        //       is_file might be true and children is not empty.
+        struct QueryTreeMut {
+            children: HashMap<MPathElement, QueryTreeMut>,
+            is_file: bool,
+        }
+
+        impl QueryTreeMut {
+            fn new() -> Self {
+                Self {
+                    children: HashMap::new(),
+                    is_file: false,
+                }
+            }
+
+            fn insert_path(&mut self, path: MPath) {
+                let mut node = path.into_iter().fold(self, |tree, element| {
+                    tree.children
+                        .entry(element)
+                        .or_insert_with(QueryTreeMut::new)
+                });
+                node.is_file = true;
+            }
+
+            fn from_paths(paths: impl IntoIterator<Item = MPath>) -> Self {
+                let mut tree = Self::new();
+                paths.into_iter().for_each(|path| tree.insert_path(path));
+                tree
+            }
+        }
+
+        // Immutable file tree representation which is cheaply copyable
+        struct QueryTree {
+            children: HashMap<MPathElement, Arc<QueryTree>>,
+            is_file: bool,
+        }
+
+        impl From<QueryTreeMut> for Arc<QueryTree> {
+            fn from(tree: QueryTreeMut) -> Self {
+                Arc::new(QueryTree {
+                    children: tree
+                        .children
+                        .into_iter()
+                        .map(|(element, tree)| (element, tree.into()))
+                        .collect(),
+                    is_file: tree.is_file,
+                })
+            }
+        }
+
+        let query_tree: Arc<QueryTree> = QueryTreeMut::from_paths(paths).into();
+        let output = Arc::new(Mutex::new(HashMap::new()));
+        bounded_traversal(
+            1024,
+            (query_tree, manifest_id, None),
+            {
+                let repo = self.clone();
+                cloned!(output);
+                move |(query_tree, manifest_id, path)| {
+                    cloned!(query_tree, path, output);
+                    repo.get_manifest_by_nodeid(ctx.clone(), *manifest_id)
+                        .map(move |manifest| {
+                            query_tree
+                                .children
+                                .iter()
+                                .filter_map(|(element, child)| {
+                                    let path = MPath::join_opt_element(path.as_ref(), element);
+                                    manifest.lookup(element).and_then(|entry| {
+                                        match &entry.get_type() {
+                                            Type::File(_) => {
+                                                if child.is_file {
+                                                    let filenode_id = HgFileNodeId::new(
+                                                        entry.get_hash().into_nodehash(),
+                                                    );
+                                                    output.with(|output| {
+                                                        output.insert(path, filenode_id)
+                                                    });
+                                                }
+                                                None
+                                            }
+                                            Type::Tree => Some((
+                                                child.clone(),
+                                                HgManifestId::new(entry.get_hash().into_nodehash()),
+                                                Some(path),
+                                            )),
+                                        }
+                                    })
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                }
+            },
+            |_, _| Ok(()),
+        )
+        .map(move |_| output.with(|output| std::mem::replace(output, HashMap::new())))
+    }
+
     pub fn get_manifest_from_bonsai(
         &self,
         ctx: CoreContext,
@@ -1340,84 +1408,173 @@ impl BlobRepo {
         manifest_p1: Option<HgManifestId>,
         manifest_p2: Option<HgManifestId>,
     ) -> BoxFuture<(HgManifestId, IncompleteFilenodes), Error> {
-        let p1 = manifest_p1.map(|id| id.into_nodehash());
-        let p2 = manifest_p2.map(|id| id.into_nodehash());
-        MemoryRootManifest::new(
-            ctx.clone(),
-            self.clone(),
-            IncompleteFilenodes::new(),
-            p1,
-            p2,
-        )
-        .and_then({
-            let repo = self.clone();
-            move |memory_manifest| {
-                let memory_manifest = Arc::new(memory_manifest);
-                let incomplete_filenodes = memory_manifest.get_incomplete_filenodes();
-                let mut futures = Vec::new();
+        let repo = self.clone();
+        let event_id = EventId::new();
+        let incomplete_filenodes = IncompleteFilenodes::new();
 
-                for (path, entry) in bcs.file_changes() {
-                    cloned!(path, memory_manifest, incomplete_filenodes);
-                    let p1 = manifest_p1
-                        .map(|manifest| {
-                            repo.find_file_in_manifest(ctx.clone(), &path, manifest)
-                                .map(|o| o.map(|(_, x)| x))
-                        })
-                        .into_future();
-                    let p2 = manifest_p2
-                        .map(|manifest| {
-                            repo.find_file_in_manifest(ctx.clone(), &path, manifest)
-                                .map(|o| o.map(|(_, x)| x))
-                        })
-                        .into_future();
-                    let future = (p1, p2)
-                        .into_future()
-                        .and_then({
-                            let entry = entry.cloned();
-                            cloned!(ctx, repo, path);
-                            move |(p1, p2)| {
-                                repo.store_file_change_or_reuse(
-                                    ctx,
-                                    p1.and_then(|x| x),
-                                    p2.and_then(|x| x),
-                                    &path,
-                                    entry.as_ref(),
-                                )
-                            }
-                        })
-                        .and_then({
+        let (p1, p2) = {
+            let mut parents = bcs.parents();
+            let p1 = parents.next();
+            let p2 = parents.next();
+            assert!(
+                parents.next().is_none(),
+                "mercurial only supports two parents"
+            );
+            (p1, p2)
+        };
+        // paths *modified* by changeset or *copied from parents*
+        let mut p1_paths = Vec::new();
+        let mut p2_paths = Vec::new();
+        for (path, file_change) in bcs.file_changes() {
+            if let Some(file_change) = file_change {
+                if let Some((copy_path, bcsid)) = file_change.copy_from() {
+                    if Some(bcsid) == p1.as_ref() {
+                        p1_paths.push(copy_path.clone());
+                    }
+                    if Some(bcsid) == p2.as_ref() {
+                        p2_paths.push(copy_path.clone());
+                    }
+                };
+                p1_paths.push(path.clone());
+                p2_paths.push(path.clone());
+            }
+        }
+
+        let store_file_changes = (
+            manifest_p1
+                .map(|manifest_p1| {
+                    self.find_files_in_manifest(ctx.clone(), manifest_p1, p1_paths)
+                        .left_future()
+                })
+                .unwrap_or_else(|| future::ok(HashMap::new()).right_future()),
+            manifest_p2
+                .map(|manifest_p2| {
+                    self.find_files_in_manifest(ctx.clone(), manifest_p2, p2_paths)
+                        .left_future()
+                })
+                .unwrap_or_else(|| future::ok(HashMap::new()).right_future()),
+        )
+            .into_future()
+            .traced_with_id(
+                &ctx.trace(),
+                "generate_hg_manifest::traverse_parents",
+                trace_args! {},
+                event_id,
+            )
+            .and_then({
+                cloned!(ctx, repo, incomplete_filenodes);
+                move |(p1s, p2s)| {
+                    let file_changes: Vec<_> = bcs
+                        .file_changes()
+                        .map(|(path, file_change)| (path.clone(), file_change.cloned()))
+                        .collect();
+                    stream::iter_ok(file_changes)
+                        .map({
                             cloned!(ctx);
-                            move |entry| match entry {
-                                None => memory_manifest.change_entry(ctx, &path, None),
-                                Some((entry, node_infos)) => {
-                                    for node_info in node_infos {
-                                        incomplete_filenodes.add(node_info);
-                                    }
-                                    memory_manifest.change_entry(ctx, &path, Some(entry))
+                            move |(path, file_change)| match file_change {
+                                None => future::ok((path, None)).left_future(),
+                                Some(file_change) => {
+                                    let copy_from =
+                                        file_change.copy_from().and_then(|(copy_path, bcsid)| {
+                                            if Some(bcsid) == p1.as_ref() {
+                                                p1s.get(copy_path)
+                                                    .map(|id| (copy_path.clone(), *id))
+                                            } else if Some(bcsid) == p2.as_ref() {
+                                                p2s.get(copy_path)
+                                                    .map(|id| (copy_path.clone(), *id))
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                    repo.store_file_change(
+                                        ctx.clone(),
+                                        p1s.get(&path).cloned(),
+                                        p2s.get(&path).cloned(),
+                                        &path,
+                                        &file_change,
+                                        copy_from,
+                                    )
+                                    .map({
+                                        cloned!(incomplete_filenodes);
+                                        move |(entry, node_infos)| {
+                                            for node_info in node_infos {
+                                                incomplete_filenodes.add(node_info);
+                                            }
+                                            (path, Some(entry))
+                                        }
+                                    })
+                                    .right_future()
                                 }
                             }
-                        });
-                    futures.push(future);
+                        })
+                        .buffer_unordered(100)
+                        .collect()
+                        .traced_with_id(
+                            &ctx.trace(),
+                            "generate_hg_manifest::store_file_changes",
+                            trace_args! {},
+                            event_id,
+                        )
                 }
+            });
 
-                future::join_all(futures)
-                    .and_then({
-                        cloned!(ctx, memory_manifest);
-                        move |_| memory_manifest.resolve_trivial_conflicts(ctx)
-                    })
-                    .and_then(move |_| memory_manifest.save(ctx))
-                    .map({
-                        cloned!(incomplete_filenodes);
-                        move |m| {
-                            (
-                                HgManifestId::new(m.get_hash().into_nodehash()),
-                                incomplete_filenodes,
-                            )
-                        }
-                    })
+        let create_manifest = {
+            cloned!(ctx, repo, incomplete_filenodes);
+            move |changes| {
+                MemoryRootManifest::new(
+                    ctx.clone(),
+                    repo.clone(),
+                    incomplete_filenodes,
+                    manifest_p1.map(|id| id.into_nodehash()),
+                    manifest_p2.map(|id| id.into_nodehash()),
+                )
+                .map(Arc::new)
+                .and_then({
+                    cloned!(ctx);
+                    move |memory_manifest| {
+                        stream::iter_ok(changes)
+                            .map({
+                                cloned!(ctx, memory_manifest);
+                                move |(path, entry)| {
+                                    memory_manifest.change_entry(ctx.clone(), &path, entry)
+                                }
+                            })
+                            .buffer_unordered(100)
+                            .for_each(|_| Ok(()))
+                            .and_then({
+                                cloned!(ctx, memory_manifest);
+                                move |_| memory_manifest.resolve_trivial_conflicts(ctx)
+                            })
+                            .and_then(move |_| memory_manifest.save(ctx))
+                    }
+                })
+                .traced_with_id(
+                    &ctx.trace(),
+                    "generate_hg_manifest::create_manifest",
+                    trace_args! {},
+                    event_id,
+                )
             }
-        })
-        .boxify()
+        };
+
+        store_file_changes
+            .and_then(create_manifest)
+            .map({
+                cloned!(incomplete_filenodes);
+                move |m| {
+                    (
+                        HgManifestId::new(m.get_hash().into_nodehash()),
+                        incomplete_filenodes,
+                    )
+                }
+            })
+            .traced_with_id(
+                &ctx.trace(),
+                "generate_hg_manifest",
+                trace_args! {},
+                event_id,
+            )
+            .boxify()
     }
 
     pub fn get_hg_from_bonsai_changeset(
@@ -1581,6 +1738,11 @@ impl BlobRepo {
                         .boxify()
                 }
             })
+            .traced(
+                &ctx.trace(),
+                "generate_hg_chengeset",
+                trace_args! {"changeset" => bcs_id.to_hex().to_string()},
+            )
             .timed(move |stats, _| {
                 STATS::generate_hg_from_bonsai_single_latency_ms
                     .add_value(stats.completion_time.as_millis_unchecked() as i64);
@@ -1635,6 +1797,11 @@ impl BlobRepo {
                                     .collect();
 
                                 repo.take_hg_generation_lease(ctx.clone(), bcs_id.clone())
+                                    .traced(
+                                        &ctx.trace(),
+                                        "create_hg_from_bonsai::wait_for_lease",
+                                        trace_args! {},
+                                    )
                                     .and_then(move |maybe_hg_cs_id| {
                                         match maybe_hg_cs_id {
                                             Some(hg_cs_id) => {
@@ -1657,6 +1824,11 @@ impl BlobRepo {
                         })
                     }
                 })
+                .traced(
+                    &ctx.trace(),
+                    "create_hg_from_bonsai",
+                    trace_args! { "changeset" => bcs_id.to_hex().to_string() },
+                )
                 .boxify()
         }
 

@@ -27,9 +27,13 @@ use mononoke_types::{
 };
 use prefixblob::PrefixBlobstore;
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::marker::PhantomData;
-use std::sync::Arc;
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    iter::FromIterator,
+    marker::PhantomData,
+    sync::Arc,
+};
+use tokio::runtime::Runtime;
 
 mod memory_manifest;
 mod utils;
@@ -760,6 +764,46 @@ fn make_file_change(
     let content_size = content.len() as u64;
     repo.unittest_store(ctx, FileContents::new_bytes(content.as_ref()))
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
+}
+
+#[test]
+fn test_find_files_in_manifest() -> Result<(), Error> {
+    let make_paths =
+        |paths: &[&str]| -> Result<HashSet<_>, _> { paths.into_iter().map(MPath::new).collect() };
+
+    let mut rt = Runtime::new()?;
+    let ctx = CoreContext::test_mock();
+    let repo = many_files_dirs::getrepo(None);
+
+    let mf = rt
+        .block_on(repo.get_changeset_by_changesetid(
+            ctx.clone(),
+            HgChangesetId::new(string_to_nodehash(
+                "d261bc7900818dea7c86935b3fb17a33b2e3a6b4",
+            )),
+        ))?
+        .manifestid();
+    let paths = make_paths(&[
+        "1",
+        "1/bla/bla",
+        "3",
+        "dir3/bla/bla",
+        "dir1/subdir1/subsubdir1/file_1",
+        "dir1/subdir1/subsubdir2/file_1",
+        "dir1/subdir1/subsubdir2/file_2",
+        "dir1/subdir1",
+    ])?;
+    let files = rt.block_on(repo.find_files_in_manifest(ctx, mf, paths))?;
+    assert_eq!(
+        HashSet::from_iter(files.keys().cloned()),
+        make_paths(&[
+            "1",
+            "dir1/subdir1/subsubdir1/file_1",
+            "dir1/subdir1/subsubdir2/file_1",
+            "dir1/subdir1/subsubdir2/file_2",
+        ])?
+    );
+    Ok(())
 }
 
 #[test]
