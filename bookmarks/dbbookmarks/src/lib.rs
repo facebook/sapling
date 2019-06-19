@@ -96,6 +96,7 @@ queries! {
 
     write AddBookmarkLog(
         values: (
+            id: u64,
             repo_id: RepositoryId,
             name: BookmarkName,
             from_changeset_id: Option<ChangesetId>,
@@ -106,7 +107,7 @@ queries! {
     ) {
         none,
         "INSERT INTO bookmarks_update_log
-         (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp)
+         (id, repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp)
          VALUES {values}"
     }
 
@@ -160,6 +161,10 @@ queries! {
         ORDER BY id DESC
         LIMIT 1
         "
+    }
+
+    read FindMaxBookmarkLogId() -> (Option<u64>) {
+        "SELECT MAX(id) FROM bookmarks_update_log"
     }
 
     read CountFurtherBookmarkLogEntriesWithoutReason(min_id: u64, repo_id: RepositoryId, reason: BookmarkUpdateReason) -> (u64) {
@@ -611,6 +616,27 @@ impl SqlBookmarksTransaction {
         }
     }
 
+    fn find_next_update_log_id(
+        sql_transaction: SqlTransaction,
+    ) -> impl Future<Item = (SqlTransaction, u64), Error = Error> {
+        return FindMaxBookmarkLogId::query_with_transaction(sql_transaction).and_then(
+            |(sql_transaction, max_id_entries)| {
+                let next_id = 1 + match &max_id_entries[..] {
+                    [(None,)] => 0,
+                    [(Some(max_existing),)] => *max_existing,
+                    // TODO (ikostia): consider panicking here
+                    _ => {
+                        return future::err(format_err!(
+                            "Should be impossible. FindMaxBookmarkLogId returned not a single entry: {:?}",
+                            max_id_entries
+                        ))
+                    }
+                };
+                future::ok((sql_transaction, next_id))
+            },
+        );
+    }
+
     fn log_bookmark_moves(
         repo_id: RepositoryId,
         timestamp: Timestamp,
@@ -624,34 +650,35 @@ impl SqlBookmarksTransaction {
         >,
         sql_transaction: SqlTransaction,
     ) -> impl Future<Item = SqlTransaction, Error = Error> {
-        loop_fn(
-            (moves.into_iter(), sql_transaction),
-            move |(mut moves, sql_transaction)| match moves.next() {
-                Some((bookmark, (from_changeset_id, to_changeset_id, reason))) => {
-                    let row = vec![(
-                        &repo_id,
-                        &bookmark,
-                        &from_changeset_id,
-                        &to_changeset_id,
-                        &reason,
-                        &timestamp,
-                    )];
-                    let reason = reason.clone();
-                    AddBookmarkLog::query_with_transaction(sql_transaction, &row[..])
-                        .and_then(move |(sql_transaction, query_result)| {
-                            if let Some(id) = query_result.last_insert_id() {
-                                Self::log_bundle_replay_data(id, reason, sql_transaction)
-                                    .map(move |sql_transaction| (moves, sql_transaction))
-                                    .left_future()
-                            } else {
-                                future::err(err_msg("failed to insert bookmark log entry"))
-                                    .right_future()
-                            }
-                        })
-                        .map(Loop::Continue)
-                        .left_future()
-                }
-                None => future::ok(Loop::Break(sql_transaction)).right_future(),
+        Self::find_next_update_log_id(sql_transaction).and_then(
+            move |(sql_transaction, next_id)| {
+                loop_fn(
+                    (moves.into_iter(), next_id, sql_transaction),
+                    move |(mut moves, next_id, sql_transaction)| match moves.next() {
+                        Some((bookmark, (from_changeset_id, to_changeset_id, reason))) => {
+                            let row = vec![(
+                                &next_id,
+                                &repo_id,
+                                &bookmark,
+                                &from_changeset_id,
+                                &to_changeset_id,
+                                &reason,
+                                &timestamp,
+                            )];
+                            let reason = reason.clone();
+                            AddBookmarkLog::query_with_transaction(sql_transaction, &row[..])
+                                .and_then(move |(sql_transaction, _query_result)| {
+                                    Self::log_bundle_replay_data(next_id, reason, sql_transaction)
+                                        .map(move |sql_transaction| {
+                                            (moves, next_id + 1, sql_transaction)
+                                        })
+                                })
+                                .map(Loop::Continue)
+                                .left_future()
+                        }
+                        None => future::ok(Loop::Break(sql_transaction)).right_future(),
+                    },
+                )
             },
         )
     }
