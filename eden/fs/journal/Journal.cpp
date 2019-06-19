@@ -12,6 +12,56 @@
 namespace facebook {
 namespace eden {
 
+void Journal::recordCreated(RelativePathPiece fileName) {
+  addDelta(std::make_unique<JournalDelta>(fileName, JournalDelta::CREATED));
+}
+
+void Journal::recordRemoved(RelativePathPiece fileName) {
+  addDelta(std::make_unique<JournalDelta>(fileName, JournalDelta::REMOVED));
+}
+
+void Journal::recordChanged(RelativePathPiece fileName) {
+  addDelta(std::make_unique<JournalDelta>(fileName, JournalDelta::CHANGED));
+}
+
+void Journal::recordRenamed(
+    RelativePathPiece oldName,
+    RelativePathPiece newName) {
+  addDelta(
+      std::make_unique<JournalDelta>(oldName, newName, JournalDelta::RENAMED));
+}
+
+void Journal::recordReplaced(
+    RelativePathPiece oldName,
+    RelativePathPiece newName) {
+  addDelta(
+      std::make_unique<JournalDelta>(oldName, newName, JournalDelta::REPLACED));
+}
+
+void Journal::recordHashUpdate(Hash toHash) {
+  auto delta = std::make_unique<JournalDelta>();
+  delta->toHash = toHash;
+  addDelta(std::move(delta));
+}
+
+void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
+  auto delta = std::make_unique<JournalDelta>();
+  delta->fromHash = fromHash;
+  delta->toHash = toHash;
+  addDelta(std::move(delta));
+}
+
+void Journal::recordUncleanPaths(
+    Hash fromHash,
+    Hash toHash,
+    std::unordered_set<RelativePath>&& uncleanPaths) {
+  auto delta = std::make_unique<JournalDelta>();
+  delta->fromHash = fromHash;
+  delta->toHash = toHash;
+  delta->uncleanPaths = std::move(uncleanPaths);
+  addDelta(std::move(delta));
+}
+
 void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
   {
     auto deltaState = deltaState_.wlock();

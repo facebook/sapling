@@ -919,8 +919,7 @@ FileInodePtr TreeInode::createImpl(
   invalidateFuseEntryCacheIfRequired(name);
   invalidateFuseInodeCacheIfRequired();
 
-  getMount()->getJournal().addDelta(
-      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
+  getMount()->getJournal().recordCreated(targetName);
 
   return inode;
 }
@@ -1074,8 +1073,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
   invalidateFuseEntryCacheIfRequired(name);
   invalidateFuseInodeCacheIfRequired();
-  getMount()->getJournal().addDelta(
-      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
+  getMount()->getJournal().recordCreated(targetName);
 
   return newChild;
 }
@@ -1145,8 +1143,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   if (errnoValue == 0) {
     // We successfully removed the child.
     // Record the change in the journal.
-    getMount()->getJournal().addDelta(
-        std::make_unique<JournalDelta>(targetName, JournalDelta::REMOVED));
+    getMount()->getJournal().recordRemoved(targetName);
 
     return folly::unit;
   }
@@ -1596,15 +1593,11 @@ Future<Unit> TreeInode::doRename(
   auto destPath = destParent->getPath();
   if (srcPath.has_value() && destPath.has_value()) {
     if (destChildExists) {
-      getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-          srcPath.value() + srcName,
-          destPath.value() + destName,
-          JournalDelta::REPLACE));
+      getMount()->getJournal().recordReplaced(
+          srcPath.value() + srcName, destPath.value() + destName);
     } else {
-      getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-          srcPath.value() + srcName,
-          destPath.value() + destName,
-          JournalDelta::RENAME));
+      getMount()->getJournal().recordRenamed(
+          srcPath.value() + srcName, destPath.value() + destName);
     }
   }
 

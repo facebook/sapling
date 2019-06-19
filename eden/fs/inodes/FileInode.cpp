@@ -759,8 +759,7 @@ size_t FileInode::writeImpl(
 
   auto myname = getPath();
   if (myname.has_value()) {
-    getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-        std::move(myname.value()), JournalDelta::CHANGED));
+    getMount()->getJournal().recordChanged(std::move(myname.value()));
   }
 
   return xfer;

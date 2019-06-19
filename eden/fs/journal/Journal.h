@@ -57,10 +57,39 @@ class Journal {
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
 
-  /** Add a delta to the journal
-   * The delta will have a new sequence number and timestamp
-   * applied. */
-  void addDelta(std::unique_ptr<JournalDelta>&& delta);
+  void recordCreated(RelativePathPiece fileName);
+  void recordRemoved(RelativePathPiece fileName);
+  void recordChanged(RelativePathPiece fileName);
+
+  /**
+   * "Renamed" means that that newName was created as a result of the mv(1).
+   */
+  void recordRenamed(RelativePathPiece oldName, RelativePathPiece newName);
+
+  /**
+   * "Replaced" means that that newName was overwritten by oldName as a result
+   * of the mv(1).
+   */
+  void recordReplaced(RelativePathPiece oldName, RelativePathPiece newName);
+
+  /**
+   * Creates a journal delta that updates the hash to this new hash
+   */
+  void recordHashUpdate(Hash toHash);
+
+  /**
+   * Creates a journal delta that updates the hash from fromHash to toHash
+   */
+  void recordHashUpdate(Hash fromHash, Hash toHash);
+
+  /**
+   * Creates a journal delta that updates the hash from fromHash to toHash and
+   * also sets uncleanPaths
+   */
+  void recordUncleanPaths(
+      Hash fromHash,
+      Hash toHash,
+      std::unordered_set<RelativePath>&& uncleanPaths);
 
   /** Get a shared, immutable reference to the tip of the journal.
    * May return nullptr if there have been no changes */
@@ -88,6 +117,12 @@ class Journal {
   std::optional<JournalStats> getStats();
 
  private:
+  /** Add a delta to the journal.
+   * The delta will have a new sequence number and timestamp
+   * applied.
+   */
+  void addDelta(std::unique_ptr<JournalDelta>&& delta);
+
   struct DeltaState {
     /** The sequence number that we'll use for the next entry
      * that we link into the chain */

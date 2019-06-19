@@ -380,8 +380,7 @@ const Clock& InodeBase::getClock() const {
 void InodeBase::updateJournal() {
   auto path = getPath();
   if (path.has_value()) {
-    getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-        std::move(path.value()), JournalDelta::CHANGED));
+    getMount()->getJournal().recordChanged(std::move(path.value()));
   }
 }
 } // namespace eden

@@ -50,8 +50,8 @@ class JournalDelta {
   enum Created { CREATED };
   enum Removed { REMOVED };
   enum Changed { CHANGED };
-  enum Renamed { RENAME };
-  enum Replaced { REPLACE };
+  enum Renamed { RENAMED };
+  enum Replaced { REPLACED };
   JournalDelta() = default;
   JournalDelta(JournalDelta&&) = delete;
   JournalDelta& operator=(JournalDelta&&) = delete;

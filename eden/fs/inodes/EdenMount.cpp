@@ -90,7 +90,7 @@ const PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
 class EdenMount::JournalDiffCallback : public InodeDiffCallback {
  public:
   explicit JournalDiffCallback()
-      : data_{folly::in_place, make_unique<JournalDelta>()} {}
+      : data_{folly::in_place, std::unordered_set<RelativePath>()} {}
 
   void ignoredFile(RelativePathPiece) override {}
 
@@ -99,13 +99,13 @@ class EdenMount::JournalDiffCallback : public InodeDiffCallback {
   void removedFile(
       RelativePathPiece path,
       const TreeEntry& /* sourceControlEntry */) override {
-    data_.wlock()->journalDelta->uncleanPaths.insert(path.copy());
+    data_.wlock()->uncleanPaths.insert(path.copy());
   }
 
   void modifiedFile(
       RelativePathPiece path,
       const TreeEntry& /* sourceControlEntry */) override {
-    data_.wlock()->journalDelta->uncleanPaths.insert(path.copy());
+    data_.wlock()->uncleanPaths.insert(path.copy());
   }
 
   void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
@@ -133,21 +133,21 @@ class EdenMount::JournalDiffCallback : public InodeDiffCallback {
         .ensure([diffContext = std::move(diffContext)]() {});
   }
 
-  /** moves the JournalDelta information out of this diff callback instance,
+  /** moves the Unclean Path information out of this diff callback instance,
    * rendering it invalid */
-  std::unique_ptr<JournalDelta> stealJournalDelta() {
-    std::unique_ptr<JournalDelta> result;
-    std::swap(result, data_.wlock()->journalDelta);
+  std::unordered_set<RelativePath> stealUncleanPaths() {
+    std::unordered_set<RelativePath> result;
+    std::swap(result, data_.wlock()->uncleanPaths);
 
     return result;
   }
 
  private:
   struct Data {
-    explicit Data(unique_ptr<JournalDelta>&& journalDelta)
-        : journalDelta(std::move(journalDelta)) {}
+    explicit Data(std::unordered_set<RelativePath>&& unclean)
+        : uncleanPaths(std::move(unclean)) {}
 
-    unique_ptr<JournalDelta> journalDelta;
+    std::unordered_set<RelativePath> uncleanPaths;
   };
   folly::Synchronized<Data> data_;
 };
@@ -218,9 +218,7 @@ folly::Future<folly::Unit> EdenMount::initialize(
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
         // snapshot id forward through subsequent journal entries.
-        auto delta = std::make_unique<JournalDelta>();
-        delta->toHash = parents.parent1();
-        journal_.addDelta(std::move(delta));
+        journal_.recordHashUpdate(parents.parent1());
 
         // Initialize the overlay.
         // This must be performed before we do any operations that may allocate
@@ -734,10 +732,9 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // either been unclean before it started, or different between the
         // two trees.  Therefore the JournalDelta already includes information
         // that these files changed.
-        auto journalDelta = journalDiffCallback->stealJournalDelta();
-        journalDelta->fromHash = oldParents.parent1();
-        journalDelta->toHash = snapshotHash;
-        journal_.addDelta(std::move(journalDelta));
+        auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
+        journal_.recordUncleanPaths(
+            oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
 
         return std::move(conflicts);
       });
@@ -820,10 +817,7 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   config_->setParentCommits(parents);
   parentsLock->parents.setParents(parents);
 
-  auto journalDelta = make_unique<JournalDelta>();
-  journalDelta->fromHash = oldParents.parent1();
-  journalDelta->toHash = parents.parent1();
-  journal_.addDelta(std::move(journalDelta));
+  journal_.recordHashUpdate(oldParents.parent1(), parents.parent1());
 }
 
 struct timespec EdenMount::getLastCheckoutTime() const {

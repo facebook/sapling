@@ -18,9 +18,7 @@ TEST(Journal, merges_chained_deltas) {
   Journal journal;
 
   // Make an initial entry.
-  auto delta =
-      std::make_unique<JournalDelta>("foo/bar"_relpath, JournalDelta::CHANGED);
-  journal.addDelta(std::move(delta));
+  journal.recordChanged("foo/bar"_relpath);
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
@@ -29,8 +27,7 @@ TEST(Journal, merges_chained_deltas) {
   EXPECT_EQ(nullptr, latest->previous);
 
   // Add a second entry.
-  delta = std::make_unique<JournalDelta>("baz"_relpath, JournalDelta::CHANGED);
-  journal.addDelta(std::move(delta));
+  journal.recordChanged("baz"_relpath);
 
   // Sanity check that the latest information matches.
   latest = journal.getLatest();
@@ -77,17 +74,11 @@ TEST(Journal, mergeRemoveCreateUpdate) {
   Journal journal;
 
   // Remove test.txt
-  auto delta =
-      std::make_unique<JournalDelta>("test.txt"_relpath, JournalDelta::REMOVED);
-  journal.addDelta(std::move(delta));
+  journal.recordRemoved("test.txt"_relpath);
   // Create test.txt
-  delta =
-      std::make_unique<JournalDelta>("test.txt"_relpath, JournalDelta::CREATED);
-  journal.addDelta(std::move(delta));
+  journal.recordCreated("test.txt"_relpath);
   // Modify test.txt
-  delta =
-      std::make_unique<JournalDelta>("test.txt"_relpath, JournalDelta::CHANGED);
-  journal.addDelta(std::move(delta));
+  journal.recordChanged("test.txt"_relpath);
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
@@ -159,9 +150,7 @@ TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
 #endif
       ;
   for (size_t i = 0; i < N; ++i) {
-    auto delta = std::make_unique<JournalDelta>(
-        "foo/bar"_relpath, JournalDelta::CHANGED);
-    journal.addDelta(std::move(delta));
+    journal.recordChanged("foo/bar"_relpath);
   }
 }
 
@@ -175,8 +164,7 @@ TEST(Journal, empty_journal_returns_none_for_stats) {
 TEST(Journal, basic_journal_stats) {
   Journal journal;
   // Journal with 1 entry
-  journal.addDelta(std::make_unique<JournalDelta>(
-      "test.txt"_relpath, JournalDelta::REMOVED));
+  journal.recordRemoved("test.txt"_relpath);
   auto from1 = journal.getLatest()->fromTime;
   auto to1 = journal.getLatest()->toTime;
   auto stats = journal.getStats();
@@ -186,8 +174,7 @@ TEST(Journal, basic_journal_stats) {
   ASSERT_EQ(to1, stats->latestTimestamp);
 
   // Journal with 2 entries
-  journal.addDelta(std::make_unique<JournalDelta>(
-      "test.txt"_relpath, JournalDelta::CREATED));
+  journal.recordCreated("test.txt"_relpath);
   stats = journal.getStats();
   auto to2 = journal.getLatest()->toTime;
   ASSERT_TRUE(stats.has_value());
@@ -202,11 +189,9 @@ TEST(Journal, memory_usage) {
   uint64_t prevMem = stats ? stats->memoryUsage : 0;
   for (int i = 0; i < 10; i++) {
     if (i % 2 == 0) {
-      journal.addDelta(std::make_unique<JournalDelta>(
-          "test.txt"_relpath, JournalDelta::CREATED));
+      journal.recordCreated("test.txt"_relpath);
     } else {
-      journal.addDelta(std::make_unique<JournalDelta>(
-          "test.txt"_relpath, JournalDelta::REMOVED));
+      journal.recordRemoved("test.txt"_relpath);
     }
     stats = journal.getStats();
     uint64_t newMem = stats ? stats->memoryUsage : 0;
