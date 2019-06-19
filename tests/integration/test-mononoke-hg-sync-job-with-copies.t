@@ -157,3 +157,61 @@ Push of a merge with a copy
     fromcopylocal
   A notinfirstparent
   A remotecopied
+
+Merge when one filenode is ancestor of another
+  $ cd $TESTTMP/client-push
+
+  $ hg up -q master_bookmark
+  $ STARTCOMMIT=$(hg log -r tip -T '{node}')
+  $ echo 1 >> 1
+  $ hg ci -m 'some commit'
+  $ hgmn push -r . --to master_bookmark -q
+
+  $ hg up -q $STARTCOMMIT
+  $ echo 1 > ancestorscase
+  $ hg addremove -q && hg ci -m initial
+  $ STARTCOMMIT=$(hg log -r tip -T '{node}')
+
+  $ echo 2 > ancestorscase
+  $ hg addremove -q && hg ci -m firstparent
+  $ FIRSTPARENT=$(hg log -r tip -T '{node}')
+
+  $ hg up -q $STARTCOMMIT
+  $ echo 1 > somefile
+  $ hg addremove -q && hg ci -m secondparent
+  $ SECONDPARENT=$(hg log -r tip -T '{node}')
+  $ hg up -q $FIRSTPARENT
+  $ hg merge -q $SECONDPARENT
+  $ hg ci -m 'ancestors'
+  $ hgmn push -r . --to master_bookmark -q
+  $ hg log -r tip
+  changeset:   18:83581fc6568a
+  tag:         tip
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
+  parent:      17:e8569a9ce348
+  parent:      16:b34dc1eaf12c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     ancestors
+  
+  $ hgmn st --change tip -C
+  M ancestorscase
+  A somefile
+
+  $ cd $TESTTMP
+  $ mononoke_hg_sync repo-hg 4 &> /dev/null
+  $ mononoke_hg_sync repo-hg 5 2>&1 |  grep ReplayVerification
+  remote: [ReplayVerification] Expected: (master_bookmark, 83581fc6568afb36a68d6f3cbfe7c044bdd96457). Actual: (master_bookmark, 47ca0804bacb6c708912e22a9a15b1198adb389b)
+  remote: [ReplayVerification] Expected: (master_bookmark, 83581fc6568afb36a68d6f3cbfe7c044bdd96457). Actual: (master_bookmark, 47ca0804bacb6c708912e22a9a15b1198adb389b)
+  $ cd $TESTTMP/repo-hg
+  $ hg log -r tip
+  changeset:   8:b5281d1ea881
+  bookmark:    master_bookmark
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     some commit
+  
+  $ hg st --change tip -C
+  M 1
