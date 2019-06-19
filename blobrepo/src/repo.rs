@@ -647,6 +647,23 @@ impl BlobRepo {
             .boxify()
     }
 
+    pub fn get_content_by_entryid(
+        &self,
+        ctx: CoreContext,
+        entry_id: HgEntryId,
+    ) -> impl Future<Item = Content, Error = Error> {
+        match entry_id {
+            HgEntryId::File(file_type, filenode_id) => self
+                .get_file_content(ctx, filenode_id)
+                .map(move |content| Content::new_file(file_type, content))
+                .left_future(),
+            HgEntryId::Manifest(manifest_id) => self
+                .get_manifest_by_nodeid(ctx, manifest_id)
+                .map(Content::Tree)
+                .right_future(),
+        }
+    }
+
     pub fn get_root_entry(&self, manifestid: HgManifestId) -> HgBlobEntry {
         STATS::get_root_entry.add_value(1);
         HgBlobEntry::new_root(self.blobstore.clone(), manifestid)
@@ -1146,25 +1163,20 @@ impl BlobRepo {
                 loop_fn(
                     (None, mf, path.into_iter()),
                     move |(cur_path, mf, mut elements): (Option<MPath>, _, _)| {
-                        let next_element = elements.next();
-                        if let None = next_element {
-                            return future::ok(Loop::Break(false)).boxify();
-                        }
-                        let element = next_element.unwrap();
+                        let element = match elements.next() {
+                            None => return future::ok(Loop::Break(false)).boxify(),
+                            Some(element) => element,
+                        };
 
                         match mf.lookup(&element) {
                             Some(entry) => {
                                 let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
-                                // avoid fetching file content
-                                match entry.get_type() {
-                                    Type::File(_) => future::ok(Loop::Break(false)).boxify(),
-                                    Type::Tree => entry
-                                        .get_content(ctx.clone())
-                                        .map(move |content| match content {
-                                            Content::Tree(mf) => {
-                                                Loop::Continue((Some(cur_path), mf, elements))
-                                            }
-                                            _ => Loop::Break(false),
+                                match entry.get_hash() {
+                                    HgEntryId::File(..) => future::ok(Loop::Break(false)).boxify(),
+                                    HgEntryId::Manifest(manifest_id) => repo
+                                        .get_manifest_by_nodeid(ctx.clone(), manifest_id)
+                                        .map(move |mf| {
+                                            Loop::Continue((Some(cur_path), mf, elements))
                                         })
                                         .boxify(),
                                 }
@@ -1185,7 +1197,7 @@ impl BlobRepo {
                                     match (&element_utf8, String::from_utf8(basename.to_bytes())) {
                                         (Ok(ref element), Ok(ref basename)) => {
                                             if basename.to_lowercase() == element.to_lowercase() {
-                                                potential_conflicts.push(path);
+                                                potential_conflicts.extend(path);
                                             }
                                         }
                                         _ => (),
@@ -1195,76 +1207,17 @@ impl BlobRepo {
                                 // For each potential conflict we need to check if it's present in
                                 // child manifest. If it is, then we've got a conflict, otherwise
                                 // this has been deleted and it's no longer a conflict.
-                                let mut check_futs = vec![];
-                                for fullpath in potential_conflicts {
-                                    let check_fut = repo
-                                        .find_path_in_manifest(
-                                            ctx.clone(),
-                                            fullpath,
-                                            child_mf_id.clone(),
-                                        )
-                                        .map(|content_and_node| content_and_node.is_some());
-                                    check_futs.push(check_fut);
-                                }
-
-                                future::join_all(check_futs.into_iter())
-                                    .map(|potential_conflicts| {
-                                        let has_case_conflict =
-                                            potential_conflicts.iter().any(|val| *val);
-                                        Loop::Break(has_case_conflict)
-                                    })
-                                    .boxify()
+                                repo.find_entries_in_manifest(
+                                    ctx.clone(),
+                                    child_mf_id,
+                                    potential_conflicts,
+                                )
+                                .map(|entries| Loop::Break(!entries.is_empty()))
+                                .boxify()
                             }
                         }
                     },
                 )
-            })
-    }
-
-    pub fn find_path_in_manifest(
-        &self,
-        ctx: CoreContext,
-        path: Option<MPath>,
-        manifest_id: HgManifestId,
-    ) -> impl Future<Item = Option<(Content, HgEntryId)>, Error = Error> + Send {
-        // single fold step, converts path elemnt in content to content, if any
-        fn find_content_in_content(
-            ctx: CoreContext,
-            content: BoxFuture<Option<(Content, HgEntryId)>, Error>,
-            path_element: MPathElement,
-        ) -> BoxFuture<Option<(Content, HgEntryId)>, Error> {
-            content
-                .and_then(move |content_and_node| match content_and_node {
-                    None => future::ok(None).left_future(),
-                    Some((Content::Tree(manifest), _)) => match manifest.lookup(&path_element) {
-                        None => future::ok(None).left_future(),
-                        Some(entry) => {
-                            let hash = entry.get_hash();
-                            entry
-                                .get_content(ctx)
-                                .map(move |content| (content, hash))
-                                .map(Some)
-                                .right_future()
-                        }
-                    },
-                    Some(_) => future::ok(None).left_future(),
-                })
-                .boxify()
-        }
-
-        self.get_manifest_by_nodeid(ctx.clone(), manifest_id)
-            .and_then(move |manifest| {
-                let content_init =
-                    { future::ok(Some((Content::Tree(manifest), manifest_id.into()))).boxify() };
-                match path {
-                    None => content_init,
-                    Some(path) => {
-                        path.into_iter()
-                            .fold(content_init, move |content, path_element| {
-                                find_content_in_content(ctx.clone(), content, path_element)
-                            })
-                    }
-                }
             })
     }
 
@@ -1277,19 +1230,41 @@ impl BlobRepo {
         manifest_id: HgManifestId,
         paths: impl IntoIterator<Item = MPath>,
     ) -> impl Future<Item = HashMap<MPath, HgFileNodeId>, Error = Error> {
+        self.find_entries_in_manifest(ctx, manifest_id, paths)
+            .map(|path_to_entry| {
+                path_to_entry
+                    .into_iter()
+                    .filter_map(|(path, entry_id)| {
+                        entry_id
+                            .to_filenode()
+                            .map(move |(_file_type, filenode_id)| (path, filenode_id))
+                    })
+                    .collect()
+            })
+    }
+
+    /// Find entries matching any of the paths privided in manifest
+    ///
+    /// This function correctly handles conflicting paths too.
+    pub fn find_entries_in_manifest(
+        &self,
+        ctx: CoreContext,
+        manifest_id: HgManifestId,
+        paths: impl IntoIterator<Item = MPath>,
+    ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
         // Mutable file tree representation which can be easily populated
-        // Note: `children` and `is_file` fields are not exclusive, that is
-        //       is_file might be true and children is not empty.
+        // Note: `children` and `selected` fields are not exclusive, that is
+        //       selected might be true and children is not empty.
         struct QueryTreeMut {
             children: HashMap<MPathElement, QueryTreeMut>,
-            is_file: bool,
+            selected: bool,
         }
 
         impl QueryTreeMut {
             fn new() -> Self {
                 Self {
                     children: HashMap::new(),
-                    is_file: false,
+                    selected: false,
                 }
             }
 
@@ -1299,7 +1274,7 @@ impl BlobRepo {
                         .entry(element)
                         .or_insert_with(QueryTreeMut::new)
                 });
-                node.is_file = true;
+                node.selected = true;
             }
 
             fn from_paths(paths: impl IntoIterator<Item = MPath>) -> Self {
@@ -1312,7 +1287,7 @@ impl BlobRepo {
         // Immutable file tree representation which is cheaply copyable
         struct QueryTree {
             children: HashMap<MPathElement, Arc<QueryTree>>,
-            is_file: bool,
+            selected: bool,
         }
 
         impl From<QueryTreeMut> for Arc<QueryTree> {
@@ -1323,7 +1298,7 @@ impl BlobRepo {
                         .into_iter()
                         .map(|(element, tree)| (element, tree.into()))
                         .collect(),
-                    is_file: tree.is_file,
+                    selected: tree.selected,
                 })
             }
         }
@@ -1346,24 +1321,15 @@ impl BlobRepo {
                                 .filter_map(|(element, child)| {
                                     let path = MPath::join_opt_element(path.as_ref(), element);
                                     manifest.lookup(element).and_then(|entry| {
-                                        match &entry.get_type() {
-                                            Type::File(_) => {
-                                                if child.is_file {
-                                                    let filenode_id = HgFileNodeId::new(
-                                                        entry.get_hash().into_nodehash(),
-                                                    );
-                                                    output.with(|output| {
-                                                        output.insert(path, filenode_id)
-                                                    });
-                                                }
-                                                None
-                                            }
-                                            Type::Tree => Some((
-                                                child.clone(),
-                                                HgManifestId::new(entry.get_hash().into_nodehash()),
-                                                Some(path),
-                                            )),
+                                        let entry_id = entry.get_hash();
+                                        if child.selected {
+                                            output.with(|output| {
+                                                output.insert(path.clone(), entry_id)
+                                            });
                                         }
+                                        entry_id.to_manifest().map(|manifest_id| {
+                                            (child.clone(), manifest_id, Some(path))
+                                        })
                                     })
                                 })
                                 .collect::<Vec<_>>()

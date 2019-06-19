@@ -9,7 +9,8 @@
 pub mod errors;
 
 use failure::Error;
-use futures::Future;
+use futures::{future, Future};
+use futures_ext::FutureExt;
 
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
@@ -28,19 +29,22 @@ pub fn get_content_by_path(
     path: Option<MPath>,
 ) -> impl Future<Item = Content, Error = Error> {
     repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
-        .from_err()
         .and_then({
-            cloned!(ctx, path);
-            move |changeset| repo.find_path_in_manifest(ctx, path, changeset.manifestid())
+            cloned!(repo, ctx);
+            move |changeset| match path {
+                None => future::ok(changeset.manifestid().into()).left_future(),
+                Some(path) => repo
+                    .find_entries_in_manifest(ctx, changeset.manifestid(), vec![path.clone()])
+                    .and_then(move |entries| {
+                        entries
+                            .get(&path)
+                            .copied()
+                            .ok_or_else(|| ErrorKind::NotFound(path.to_string()).into())
+                    })
+                    .right_future(),
+            }
         })
-        .and_then(|content| {
-            content
-                .ok_or_else(move || {
-                    ErrorKind::NotFound(path.map(|p| p.to_string()).unwrap_or("/".to_string()))
-                        .into()
-                })
-                .map(|(content, _)| content)
-        })
+        .and_then(move |entry_id| repo.get_content_by_entryid(ctx, entry_id))
 }
 
 pub fn get_changeset_by_bookmark(

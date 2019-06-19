@@ -20,6 +20,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::Timeseries;
+use tracing::{trace_args, Traced};
 
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -674,17 +675,17 @@ pub fn check_case_conflicts(
         .and_then({
             cloned!(ctx);
             move |(child_mf, parent_mf)| {
-                compute_files_with_status(ctx, &child_mf, parent_mf.as_ref(), |change| {
-                    match change.status {
-                        EntryStatus::Added(entry) => {
-                            if entry.get_type() == manifest::Type::Tree {
-                                None
-                            } else {
-                                MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
-                            }
+                compute_files_with_status(ctx, &child_mf, parent_mf.as_ref(), |change| match change
+                    .status
+                {
+                    EntryStatus::Added(entry) => {
+                        if entry.get_type() == manifest::Type::Tree {
+                            None
+                        } else {
+                            MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
                         }
-                        _ => None,
                     }
+                    _ => None,
                 })
             }
         })
@@ -694,35 +695,48 @@ pub fn check_case_conflicts(
                 None => Ok(added_files),
             },
         )
-        .and_then(move |added_files| match parent_root_mf {
-            Some(parent_root_mf) => {
-                let mut case_conflict_checks = stream::FuturesUnordered::new();
-                for f in added_files {
-                    case_conflict_checks.push(
-                        repo.check_case_conflict_in_manifest(
-                            ctx.clone(),
-                            parent_root_mf,
-                            child_root_mf,
-                            f.clone(),
-                        )
-                        .map(move |add_conflict| (add_conflict, f)),
-                    );
-                }
+        .and_then({
+            cloned!(ctx);
+            move |added_files| match parent_root_mf {
+                Some(parent_root_mf) => {
+                    let mut case_conflict_checks = stream::FuturesUnordered::new();
+                    for f in added_files {
+                        case_conflict_checks.push(
+                            repo.check_case_conflict_in_manifest(
+                                ctx.clone(),
+                                parent_root_mf,
+                                child_root_mf,
+                                f.clone(),
+                            )
+                            .map(move |add_conflict| (add_conflict, f)),
+                        );
+                    }
 
-                case_conflict_checks
-                    .collect()
-                    .and_then(|results| {
-                        let maybe_conflict =
-                            results.into_iter().find(|(add_conflict, _f)| *add_conflict);
-                        match maybe_conflict {
-                            Some((_, path)) => Err(ErrorKind::CaseConflict(path).into()),
-                            None => Ok(()),
-                        }
-                    })
-                    .left_future()
+                    case_conflict_checks
+                        .collect()
+                        .and_then(|results| {
+                            let maybe_conflict =
+                                results.into_iter().find(|(add_conflict, _f)| *add_conflict);
+                            match maybe_conflict {
+                                Some((_, path)) => Err(ErrorKind::CaseConflict(path).into()),
+                                None => Ok(()),
+                            }
+                        })
+                        .left_future()
+                }
+                None => Ok(()).into_future().right_future(),
             }
-            None => Ok(()).into_future().right_future(),
         })
+        .traced(
+            ctx.trace(),
+            "check_case_conflicts",
+            trace_args! {
+                "child_manifest_id" => child_root_mf.to_string(),
+                "parent_manifest_id" => parent_root_mf
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| "null".to_string()),
+            },
+        )
 }
 
 fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {
