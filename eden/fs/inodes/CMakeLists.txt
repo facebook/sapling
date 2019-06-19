@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 if (WIN32)
   # We should try detaching ServerState from the inodes
   # so that we don't need to make the Windows code depend

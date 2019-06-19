@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 file(GLOB UTILS_TEST_SRCS "*Test.cpp")
 add_executable(
   eden_utils_test

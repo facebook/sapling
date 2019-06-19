@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # FIXME: need to pull in proxygen for this
 file(GLOB STORE_MONONOKE_SRCS "*.cpp")
 
