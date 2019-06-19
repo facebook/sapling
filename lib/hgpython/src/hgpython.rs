@@ -5,7 +5,7 @@ use crate::python::{
     py_set_program_name, py_set_python_home,
 };
 use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
-use encoding::{osstring_to_local_cstring, path_to_local_bytes, path_to_local_cstring};
+use encoding::{osstring_to_local_cstring, path_to_local_bytes};
 use std;
 use std::ffi::{CString, OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -83,7 +83,7 @@ impl HgPython {
         let env = BuildEnv::new();
         let entry_point = Self::find_hg_py_entry_point(&installation_root);
         let embedded = Self::is_embedded(&entry_point);
-        Self::setup_python(&installation_root, &entry_point, embedded, &env);
+        Self::setup_python(&installation_root, embedded, &env);
 
         HgPython {
             embedded,
@@ -93,7 +93,7 @@ impl HgPython {
 
     /// Setup everything related to the python interpreter
     /// used by Mercurial
-    fn setup_python(installation_root: &Path, entry_point: &Path, embedded: bool, env: &BuildEnv) {
+    fn setup_python(installation_root: &Path, embedded: bool, env: &BuildEnv) {
         if embedded {
             // In an embedded case, we don't need the site.py logic, as
             // we don't need any filesystem discovery: we know the location
@@ -106,11 +106,10 @@ impl HgPython {
             py_set_python_home(&hgpython);
         }
 
-        let mut args = Self::args_to_local_cstrings();
+        let args = Self::args_to_local_cstrings();
         let executable_name = args[0].clone();
         py_set_program_name(executable_name);
         py_initialize();
-        args[0] = path_to_local_cstring(&entry_point);
         py_set_argv(args);
         py_init_threads();
     }
