@@ -84,9 +84,17 @@ class BackupState(object):
     @util.propertycache
     def backedup(self):
         unfi = self.repo.unfiltered()
-        return set(unfi.nodes("draft() & ::%ln", self.heads))
+        hasnode = unfi.changelog.hasnode
+        heads = [head for head in self.heads if hasnode(head)]
+        return set(unfi.nodes("draft() & ::%ln", heads))
 
-    def update(self, newnodes):
+    def _write(self, f):
+        f.write("%s\n" % FORMAT_VERSION)
+        f.write("%s\n" % self.remotepath)
+        for h in self.heads:
+            f.write("%s\n" % nodemod.hex(h))
+
+    def update(self, newnodes, tr=None):
         unfi = self.repo.unfiltered()
         # The new backed up heads are the heads of all commits we already knew
         # were backed up plus the newly backed up commits.
@@ -96,10 +104,15 @@ class BackupState(object):
             )
         )
 
-        with self.repo.sharedvfs.open(self.filename, "w", atomictemp=True) as f:
-            f.write("%s\n" % FORMAT_VERSION)
-            f.write("%s\n" % self.remotepath)
-            for h in self.heads:
-                f.write("%s\n" % nodemod.hex(h))
+        if tr is not None:
+            tr.addfilegenerator(
+                "commitcloudbackedupheads",
+                (self.filename,),
+                self._write,
+                location="shared",
+            )
+        else:
+            with self.repo.sharedvfs.open(self.filename, "w", atomictemp=True) as f:
+                self._write(f)
 
         util.clearcachedproperty(self, "backedup")

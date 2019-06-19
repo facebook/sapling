@@ -115,7 +115,7 @@ def sync(
     if cloudrefs is None:
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
 
-    with repo.wlock(), repo.lock(), repo.transaction("cloudsync"):
+    with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
 
         if origheads != _getheads(repo) or origbookmarks != _getbookmarks(repo):
             # Another transaction changed the repository while we were backing
@@ -131,7 +131,7 @@ def sync(
             # Apply any changes from the cloud to the local repo.
             if cloudrefs.version != fetchversion:
                 _applycloudchanges(
-                    repo, remotepath, lastsyncstate, cloudrefs, maxage, state
+                    repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr
                 )
 
             # Check if any omissions are now included in the repo
@@ -229,7 +229,7 @@ def _maybeupdateworkingcopy(repo, currentnode):
     return 0
 
 
-def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state):
+def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr):
     pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
 
     try:
@@ -283,45 +283,47 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     backuplock.progresspulling(repo, [nodemod.bin(node) for node in newheads])
 
-    with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
-        if newheads:
-            # Disable pulling of bookmarks.
-            def _pullbookmarks(orig, pullop):
-                pass
+    if newheads:
+        # Disable pulling of bookmarks.
+        def _pullbookmarks(orig, pullop):
+            pass
 
-            # Disable pulling of obsmarkers.
-            def _pullobsolete(orig, pullop):
-                pass
+        # Disable pulling of obsmarkers.
+        def _pullobsolete(orig, pullop):
+            pass
 
-            # Disable pulling of remotenames.
-            def _pullremotenames(orig, repo, remote, bookmarks):
-                pass
+        # Disable pulling of remotenames.
+        def _pullremotenames(orig, repo, remote, bookmarks):
+            pass
 
-            # Partition the heads into groups we can pull together.
-            headgroups = _partitionheads(newheads, cloudrefs.headdates)
+        # Partition the heads into groups we can pull together.
+        headgroups = _partitionheads(newheads, cloudrefs.headdates)
 
-            with extensions.wrappedfunction(
-                exchange, "_pullobsolete", _pullobsolete
-            ), extensions.wrappedfunction(
-                exchange, "_pullbookmarks", _pullbookmarks
-            ), extensions.wrappedfunction(
-                remotenames, "pullremotenames", _pullremotenames
-            ) if remotenames else util.nullcontextmanager():
-                with progress.bar(
-                    repo.ui, _("pulling from commit cloud"), total=len(headgroups)
-                ) as prog:
-                    for index, headgroup in enumerate(headgroups):
-                        headgroupstr = " ".join([head[:12] for head in headgroup])
-                        repo.ui.status(_("pulling %s\n") % headgroupstr)
-                        prog.value = (index, headgroupstr)
-                        pullopts["rev"] = headgroup
-                        pullcmd(repo.ui, repo, remotepath, **pullopts)
-        omittedbookmarks.extend(
-            _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
-        )
-        _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
-        if newvisibleheads is not None:
-            visibility.setvisibleheads(repo, [nodemod.bin(n) for n in newvisibleheads])
+        with extensions.wrappedfunction(
+            exchange, "_pullobsolete", _pullobsolete
+        ), extensions.wrappedfunction(
+            exchange, "_pullbookmarks", _pullbookmarks
+        ), extensions.wrappedfunction(
+            remotenames, "pullremotenames", _pullremotenames
+        ) if remotenames else util.nullcontextmanager():
+            with progress.bar(
+                repo.ui, _("pulling from commit cloud"), total=len(headgroups)
+            ) as prog:
+                for index, headgroup in enumerate(headgroups):
+                    headgroupstr = " ".join([head[:12] for head in headgroup])
+                    repo.ui.status(_("pulling %s\n") % headgroupstr)
+                    prog.value = (index, headgroupstr)
+                    pullopts["rev"] = headgroup
+                    pullcmd(repo.ui, repo, remotepath, **pullopts)
+
+    omittedbookmarks.extend(
+        _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
+    )
+
+    _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
+
+    if newvisibleheads is not None:
+        visibility.setvisibleheads(repo, [nodemod.bin(n) for n in newvisibleheads])
 
     # Obsmarker sharing is unreliable.  Some of the commits that should now
     # be visible might be hidden still, and some commits that should be
@@ -379,7 +381,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     # Also update backup state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
-    state.update([nodemod.bin(head) for head in newheads])
+    state.update([nodemod.bin(head) for head in newheads], tr)
 
 
 def _partitionheads(heads, headdates, sizelimit=4, spanlimit=86400):
