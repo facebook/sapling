@@ -206,12 +206,8 @@ fn make_blobstore(
                     .get_db_address()
                     .ok_or_else(|| err_msg("remote db address is not specified"))
                     .and_then(move |dbaddr| {
-                        let sync_queue = match myrouter_port {
-                            Some(port) => {
-                                Arc::new(SqlBlobstoreSyncQueue::with_myrouter(dbaddr, port))
-                            }
-                            None => Arc::new(SqlBlobstoreSyncQueue::with_raw_xdb_tier(dbaddr)?),
-                        };
+                        let sync_queue =
+                            Arc::new(SqlBlobstoreSyncQueue::with_xdb(dbaddr, myrouter_port)?);
                         Ok(sync_queue)
                     })
                     .into_future()
@@ -303,12 +299,8 @@ fn new_filenodes(
             let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into())?;
             (shard_map, conn)
         }
-        (None, Some(port)) => {
-            let conn = SqlFilenodes::with_myrouter(&db_address, port);
-            (db_address.clone(), conn)
-        }
-        (None, None) => {
-            let conn = SqlFilenodes::with_raw_xdb_tier(&db_address)?;
+        (None, port) => {
+            let conn = SqlFilenodes::with_xdb(&db_address, port)?;
             (db_address.clone(), conn)
         }
     };
@@ -355,11 +347,7 @@ fn new_local(
 }
 
 fn open_xdb<T: SqlConstructors>(addr: &str, myrouter_port: Option<u16>) -> Result<Arc<T>> {
-    let ret = if let Some(myrouter_port) = myrouter_port {
-        T::with_myrouter(addr, myrouter_port)
-    } else {
-        T::with_raw_xdb_tier(addr)?
-    };
+    let ret = T::with_xdb(addr, myrouter_port)?;
     Ok(Arc::new(ret))
 }
 

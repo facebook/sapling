@@ -153,6 +153,13 @@ pub trait SqlConstructors: Sized {
         ))
     }
 
+    fn with_xdb(tier: impl ToString, port: Option<u16>) -> Result<Self> {
+        match port {
+            Some(myrouter_port) => Ok(Self::with_myrouter(tier, myrouter_port)),
+            None => Self::with_raw_xdb_tier(tier),
+        }
+    }
+
     fn with_sqlite_in_memory() -> Result<Self> {
         let con = SqliteConnection::open_in_memory()?;
         con.execute_batch(Self::get_up_query())?;

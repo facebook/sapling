@@ -297,10 +297,7 @@ where
     match &config.storage_config.dbconfig {
         MetadataDBConfig::LocalDB { path } => T::with_sqlite_path(path.join(name)),
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            match parse_myrouter_port(matches) {
-                Some(myrouter_port) => Ok(T::with_myrouter(&db_address, myrouter_port)),
-                None => T::with_raw_xdb_tier(&db_address),
-            }
+            T::with_xdb(&db_address, parse_myrouter_port(matches))
         }
         MetadataDBConfig::Mysql { .. } => Err(err_msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",
