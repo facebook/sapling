@@ -14,7 +14,7 @@
 using namespace facebook::eden;
 using ::testing::UnorderedElementsAre;
 
-TEST(Journal, merges_chained_deltas) {
+TEST(Journal, accumulate_range_all_changes) {
   Journal journal;
 
   // Make an initial entry.
@@ -35,42 +35,29 @@ TEST(Journal, merges_chained_deltas) {
   EXPECT_EQ(2, latest->fromSequence);
   EXPECT_EQ(1, latest->previous->toSequence);
 
-  // Check basic merge implementation.
-  auto merged = latest->merge();
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(1, merged->fromSequence);
-  EXPECT_EQ(2, merged->toSequence);
-  EXPECT_EQ(2, merged->changedFilesInOverlay.size());
-  EXPECT_EQ(nullptr, merged->previous);
-
-  // Let's try with some limits.
+  // Check basic sum implementation.
+  auto summed = journal.accumulateRange();
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(1, summed->fromSequence);
+  EXPECT_EQ(2, summed->toSequence);
+  EXPECT_EQ(2, summed->changedFilesInOverlay.size());
 
   // First just report the most recent item.
-  merged = latest->merge(2);
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(2, merged->fromSequence);
-  EXPECT_EQ(2, merged->toSequence);
-  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
-  EXPECT_NE(nullptr, merged->previous);
-
-  // Prune off sequence==1
-  merged = latest->merge(2, true);
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(2, merged->fromSequence);
-  EXPECT_EQ(2, merged->toSequence);
-  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
-  EXPECT_EQ(nullptr, merged->previous);
+  summed = journal.accumulateRange(2);
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(2, summed->fromSequence);
+  EXPECT_EQ(2, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
 
   // Merge the first two entries.
-  merged = latest->merge(1);
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(1, merged->fromSequence);
-  EXPECT_EQ(2, merged->toSequence);
-  EXPECT_EQ(2, merged->changedFilesInOverlay.size());
-  EXPECT_EQ(nullptr, merged->previous);
+  summed = journal.accumulateRange(1);
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(1, summed->fromSequence);
+  EXPECT_EQ(2, summed->toSequence);
+  EXPECT_EQ(2, summed->changedFilesInOverlay.size());
 }
 
-TEST(Journal, mergeRemoveCreateUpdate) {
+TEST(Journal, accumulateRangeRemoveCreateUpdate) {
   Journal journal;
 
   // Remove test.txt
@@ -85,59 +72,59 @@ TEST(Journal, mergeRemoveCreateUpdate) {
   EXPECT_EQ(3, latest->toSequence);
   EXPECT_EQ(3, latest->fromSequence);
 
-  // The merged data should report test.txt as changed
-  auto merged = latest->merge();
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(1, merged->fromSequence);
-  EXPECT_EQ(3, merged->toSequence);
-  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
-  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  // The summed data should report test.txt as changed
+  auto summed = journal.accumulateRange();
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(1, summed->fromSequence);
+  EXPECT_EQ(3, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 
   // Test merging only partway back
-  merged = latest->merge(3);
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(3, merged->fromSequence);
-  EXPECT_EQ(3, merged->toSequence);
-  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
-  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  summed = journal.accumulateRange(3);
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(3, summed->fromSequence);
+  EXPECT_EQ(3, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 
-  merged = latest->merge(2);
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(2, merged->fromSequence);
-  EXPECT_EQ(3, merged->toSequence);
-  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
-  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  summed = journal.accumulateRange(2);
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(2, summed->fromSequence);
+  EXPECT_EQ(3, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
   EXPECT_EQ(
       false,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 
-  merged = latest->merge(1);
-  ASSERT_NE(nullptr, merged);
-  EXPECT_EQ(1, merged->fromSequence);
-  EXPECT_EQ(3, merged->toSequence);
-  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
-  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  summed = journal.accumulateRange(1);
+  ASSERT_NE(nullptr, summed);
+  EXPECT_EQ(1, summed->fromSequence);
+  EXPECT_EQ(3, summed->toSequence);
+  EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+  ASSERT_EQ(1, summed->changedFilesInOverlay.count(RelativePath{"test.txt"}));
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
   EXPECT_EQ(
       true,
-      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
+      summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 }
 
 TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {

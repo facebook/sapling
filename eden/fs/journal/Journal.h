@@ -116,6 +116,16 @@ class Journal {
    * that contains valid JournalStats if the Journal is non-empty*/
   std::optional<JournalStats> getStats();
 
+  /** Gets the sum of the modifications done by the deltas with Sequence
+   * Numbers >= limitSequence, if the limitSequence is further back than the
+   * Journal remembers isTruncated will be set on the JournalDeltaSum
+   * The default limit value is 0 which is never assigned by the Journal
+   * and thus indicates that all deltas should be summed.
+   * If the limitSequence means that no deltas will match, returns nullptr.
+   * */
+  std::unique_ptr<JournalDeltaRange> accumulateRange(
+      SequenceNumber limitSequence = 0) const;
+
  private:
   /** Add a delta to the journal.
    * The delta will have a new sequence number and timestamp

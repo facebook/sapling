@@ -39,20 +39,20 @@ TEST_F(JournalUpdateTest, moveFileRename) {
   mount_.addFile("new_file.txt", "");
   mount_.move("new_file.txt", "new_file2.txt");
 
-  auto mergedDelta = journal.getLatest()->merge(testStart);
+  auto summedDelta = journal.accumulateRange(testStart);
 
   auto oldPath = RelativePath{"new_file.txt"};
   auto newPath = RelativePath{"new_file2.txt"};
 
-  ASSERT_EQ(1, mergedDelta->changedFilesInOverlay.count(oldPath));
-  ASSERT_EQ(1, mergedDelta->changedFilesInOverlay.count(newPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(oldPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(newPath));
 
-  EXPECT_FALSE(mergedDelta->changedFilesInOverlay[oldPath].existedBefore);
-  EXPECT_FALSE(mergedDelta->changedFilesInOverlay[oldPath].existedAfter);
-  EXPECT_FALSE(mergedDelta->changedFilesInOverlay[newPath].existedBefore);
-  EXPECT_TRUE(mergedDelta->changedFilesInOverlay[newPath].existedAfter);
+  EXPECT_FALSE(summedDelta->changedFilesInOverlay[oldPath].existedBefore);
+  EXPECT_FALSE(summedDelta->changedFilesInOverlay[oldPath].existedAfter);
+  EXPECT_FALSE(summedDelta->changedFilesInOverlay[newPath].existedBefore);
+  EXPECT_TRUE(summedDelta->changedFilesInOverlay[newPath].existedAfter);
 
-  EXPECT_EQ(mergedDelta->uncleanPaths, std::unordered_set<RelativePath>{});
+  EXPECT_EQ(summedDelta->uncleanPaths, std::unordered_set<RelativePath>{});
 }
 
 TEST_F(JournalUpdateTest, moveFileReplace) {
@@ -63,18 +63,18 @@ TEST_F(JournalUpdateTest, moveFileReplace) {
   mount_.move("new_file.txt", "existing_file.txt");
   mount_.deleteFile("existing_file.txt");
 
-  auto mergedDelta = journal.getLatest()->merge(testStart);
+  auto summedDelta = journal.accumulateRange(testStart);
 
   auto oldPath = RelativePath{"existing_file.txt"};
   auto newPath = RelativePath{"new_file.txt"};
 
-  ASSERT_EQ(1, mergedDelta->changedFilesInOverlay.count(oldPath));
-  ASSERT_EQ(1, mergedDelta->changedFilesInOverlay.count(newPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(oldPath));
+  ASSERT_EQ(1, summedDelta->changedFilesInOverlay.count(newPath));
 
-  EXPECT_TRUE(mergedDelta->changedFilesInOverlay[oldPath].existedBefore);
-  EXPECT_FALSE(mergedDelta->changedFilesInOverlay[oldPath].existedAfter);
-  EXPECT_FALSE(mergedDelta->changedFilesInOverlay[newPath].existedBefore);
-  EXPECT_FALSE(mergedDelta->changedFilesInOverlay[newPath].existedAfter);
+  EXPECT_TRUE(summedDelta->changedFilesInOverlay[oldPath].existedBefore);
+  EXPECT_FALSE(summedDelta->changedFilesInOverlay[oldPath].existedAfter);
+  EXPECT_FALSE(summedDelta->changedFilesInOverlay[newPath].existedBefore);
+  EXPECT_FALSE(summedDelta->changedFilesInOverlay[newPath].existedAfter);
 
-  EXPECT_EQ(mergedDelta->uncleanPaths, std::unordered_set<RelativePath>{});
+  EXPECT_EQ(summedDelta->uncleanPaths, std::unordered_set<RelativePath>{});
 }

@@ -13,20 +13,6 @@
 namespace facebook {
 namespace eden {
 
-namespace {
-folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
-  if (ci.existedBefore && !ci.existedAfter) {
-    return "Removed";
-  } else if (!ci.existedBefore && ci.existedAfter) {
-    return "Created";
-  } else if (ci.existedBefore && ci.existedAfter) {
-    return "Changed";
-  } else {
-    return "Ghost";
-  }
-}
-} // namespace
-
 JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Created)
     : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{false, true}}} {}
 
@@ -61,91 +47,13 @@ JournalDelta::~JournalDelta() {
   }
 }
 
-std::unique_ptr<JournalDelta> JournalDelta::merge(
-    SequenceNumber limitSequence,
-    bool pruneAfterLimit) const {
-  if (toSequence < limitSequence) {
-    return nullptr;
-  }
-
-  const JournalDelta* current = this;
-
-  auto result = std::make_unique<JournalDelta>();
-
-  result->toSequence = current->toSequence;
-  result->toTime = current->toTime;
-  result->fromHash = fromHash;
-  result->toHash = toHash;
-
-  while (current) {
-    if (current->toSequence < limitSequence) {
-      break;
-    }
-
-    // Capture the lower bound.
-    result->fromSequence = current->fromSequence;
-    result->fromTime = current->fromTime;
-    result->fromHash = current->fromHash;
-
-    // Merge the unclean status list
-    result->uncleanPaths.insert(
-        current->uncleanPaths.begin(), current->uncleanPaths.end());
-
-    for (auto& entry : current->changedFilesInOverlay) {
-      auto& name = entry.first;
-      auto& currentInfo = entry.second;
-      auto* resultInfo = folly::get_ptr(result->changedFilesInOverlay, name);
-      if (!resultInfo) {
-        result->changedFilesInOverlay.emplace(name, currentInfo);
-      } else {
-        if (resultInfo->existedBefore != currentInfo.existedAfter) {
-          auto event1 = eventCharacterizationFor(currentInfo);
-          auto event2 = eventCharacterizationFor(*resultInfo);
-          XLOG(ERR) << "Journal for " << name << " holds invalid " << event1
-                    << ", " << event2 << " sequence";
-        }
-
-        resultInfo->existedBefore = currentInfo.existedBefore;
-      }
-    }
-
-    // Continue the chain, but not if the caller requested that
-    // we prune it out.
-    if (!pruneAfterLimit) {
-      result->previous = current->previous;
-    }
-
-    current = current->previous.get();
-  }
-
-  return result;
-}
-
 size_t JournalDelta::estimateMemoryUsage() const {
   size_t mem = folly::goodMallocSize(sizeof(JournalDelta));
-  /* NOTE: The following code assumes an unordered_map (and similarly an
-   * unordered_set) is separated into an array of buckets, each one being
-   * a chain of nodes containing a next pointer, a key-value pair, and a stored
-   * hash
+  /* NOTE: The following code assumes an unordered_set is separated into an
+   * array of buckets, each one being a chain of nodes containing a next
+   * pointer, a key-value pair, and a stored hash
    */
   // Calculate Memory For Nodes in Each Bucket (Pointer to element and next)
-  size_t map_elem_size = folly::goodMallocSize(
-      sizeof(void*) + sizeof(decltype(changedFilesInOverlay)::value_type) +
-      sizeof(size_t));
-  for (unsigned long i = 0; i < changedFilesInOverlay.bucket_count(); ++i) {
-    mem += map_elem_size * changedFilesInOverlay.bucket_size(i);
-  }
-
-  // Calculate Memory Usage of Bucket List
-  mem += folly::goodMallocSize(
-      sizeof(void*) * changedFilesInOverlay.bucket_count());
-
-  // Calculate Memory Usage used indirectly by paths used as keys
-  for (auto& [path, change_info] : changedFilesInOverlay) {
-    mem += estimateIndirectMemoryUsage(path);
-  }
-
-  // Calculate Memory For Nodes in Each Bucket (similar to above)
   size_t set_elem_size = folly::goodMallocSize(
       sizeof(void*) + sizeof(decltype(uncleanPaths)::value_type) +
       sizeof(size_t));

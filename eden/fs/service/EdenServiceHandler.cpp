@@ -558,7 +558,6 @@ void EdenServiceHandler::getFilesChangedSince(
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
-  auto delta = edenMount->getJournal().getLatest();
 
   if (fromPosition->mountGeneration !=
       static_cast<ssize_t>(edenMount->getMountGeneration())) {
@@ -569,22 +568,29 @@ void EdenServiceHandler::getFilesChangedSince(
         "You need to compute a new basis for delta queries.");
   }
 
-  out.toPosition.sequenceNumber = delta->toSequence;
-  out.toPosition.snapshotHash = thriftHash(delta->toHash);
+  // The +1 is because the core merge stops at the item prior to
+  // its limitSequence parameter and we want the changes *since*
+  // the provided sequence number.
+  auto summed =
+      edenMount->getJournal().accumulateRange(fromPosition->sequenceNumber + 1);
+
+  // We set the default toPosition to be where we where if summed is null
+  out.toPosition.sequenceNumber = fromPosition->sequenceNumber;
+  out.toPosition.snapshotHash = fromPosition->snapshotHash;
   out.toPosition.mountGeneration = edenMount->getMountGeneration();
 
   out.fromPosition = out.toPosition;
 
-  // The +1 is because the core merge stops at the item prior to
-  // its limitSequence parameter and we want the changes *since*
-  // the provided sequence number.
-  auto merged = delta->merge(fromPosition->sequenceNumber + 1, true);
-  if (merged) {
-    out.fromPosition.sequenceNumber = merged->fromSequence;
-    out.fromPosition.snapshotHash = thriftHash(merged->fromHash);
+  if (summed) {
+    out.toPosition.sequenceNumber = summed->toSequence;
+    out.toPosition.snapshotHash = thriftHash(summed->toHash);
+    out.toPosition.mountGeneration = edenMount->getMountGeneration();
+
+    out.fromPosition.sequenceNumber = summed->fromSequence;
+    out.fromPosition.snapshotHash = thriftHash(summed->fromHash);
     out.fromPosition.mountGeneration = out.toPosition.mountGeneration;
 
-    for (const auto& entry : merged->changedFilesInOverlay) {
+    for (const auto& entry : summed->changedFilesInOverlay) {
       auto& path = entry.first;
       auto& changeInfo = entry.second;
       if (changeInfo.isNew()) {
@@ -594,7 +600,7 @@ void EdenServiceHandler::getFilesChangedSince(
       }
     }
 
-    for (auto& path : merged->uncleanPaths) {
+    for (auto& path : summed->uncleanPaths) {
       out.uncleanPaths.emplace_back(path.stringPiece().str());
     }
   }

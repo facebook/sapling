@@ -8,6 +8,7 @@
  *
  */
 #include "Journal.h"
+#include <folly/logging/xlog.h>
 
 namespace facebook {
 namespace eden {
@@ -149,6 +150,74 @@ bool Journal::isSubscriberValid(uint64_t id) const {
 
 std::optional<JournalStats> Journal::getStats() {
   return deltaState_.rlock()->stats;
+}
+
+namespace {
+folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
+  if (ci.existedBefore && !ci.existedAfter) {
+    return "Removed";
+  } else if (!ci.existedBefore && ci.existedAfter) {
+    return "Created";
+  } else if (ci.existedBefore && ci.existedAfter) {
+    return "Changed";
+  } else {
+    return "Ghost";
+  }
+}
+} // namespace
+
+std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
+    SequenceNumber limitSequence) const {
+  auto result = std::make_unique<JournalDeltaRange>();
+  {
+    auto deltaState = deltaState_.rlock();
+    if (deltaState->latest->toSequence < limitSequence) {
+      return nullptr;
+    }
+
+    const JournalDelta* current = deltaState->latest.get();
+
+    result->toSequence = current->toSequence;
+    result->toTime = current->toTime;
+    result->fromHash = current->fromHash;
+    result->toHash = current->toHash;
+
+    while (current) {
+      if (current->toSequence < limitSequence) {
+        break;
+      }
+
+      // Capture the lower bound.
+      result->fromSequence = current->fromSequence;
+      result->fromTime = current->fromTime;
+      result->fromHash = current->fromHash;
+
+      // Merge the unclean status list
+      result->uncleanPaths.insert(
+          current->uncleanPaths.begin(), current->uncleanPaths.end());
+
+      for (auto& entry : current->changedFilesInOverlay) {
+        auto& name = entry.first;
+        auto& currentInfo = entry.second;
+        auto* resultInfo = folly::get_ptr(result->changedFilesInOverlay, name);
+        if (!resultInfo) {
+          result->changedFilesInOverlay.emplace(name, currentInfo);
+        } else {
+          if (resultInfo->existedBefore != currentInfo.existedAfter) {
+            auto event1 = eventCharacterizationFor(currentInfo);
+            auto event2 = eventCharacterizationFor(*resultInfo);
+            XLOG(ERR) << "Journal for " << name << " holds invalid " << event1
+                      << ", " << event2 << " sequence";
+          }
+
+          resultInfo->existedBefore = currentInfo.existedBefore;
+        }
+      }
+
+      current = current->previous.get();
+    }
+  }
+  return result;
 }
 } // namespace eden
 } // namespace facebook
