@@ -24,7 +24,7 @@ https://facebook.github.io/watchman/docs/scm-query.html.
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import extensions, filemerge, merge, registrar
+from edenscm.mercurial import extensions, filemerge, merge, perftrace, registrar
 from edenscm.mercurial.i18n import _
 
 from ..extlib import watchmanclient
@@ -85,13 +85,15 @@ def reposetup(ui, repo):
                 if origrelease:
                     origrelease()
                 if l.stateupdate:
-                    l.stateupdate.exit()
+                    with perftrace.trace("Watchman State Exit"):
+                        l.stateupdate.exit()
                     l.stateupdate = None
 
             try:
                 l.stateupdate = None
                 l.stateupdate = watchmanclient.state_update(self, name="hg.transaction")
-                l.stateupdate.enter()
+                with perftrace.trace("Watchman State Enter"):
+                    l.stateupdate.enter()
                 l.releasefn = staterelease
             except Exception as e:
                 # Swallow any errors; fire and forget
