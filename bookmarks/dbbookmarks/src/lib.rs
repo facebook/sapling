@@ -542,6 +542,19 @@ impl Bookmarks for SqlBookmarks {
     }
 }
 
+#[derive(Debug)]
+enum BookmarkTransactionError {
+    // The transaction modifying bookmarks tables should be retried
+    RetryableError(Error),
+    // Transacton was rolled back, we consider this a logic error,
+    // which may prompt retry higher in the stack. This can happen
+    // for example if some other bookmark update won the race and
+    // the entire pushrebase needs to be retried
+    LogicError,
+    // Something unexpected went wrong
+    Other(Error),
+}
+
 struct SqlBookmarksTransaction {
     write_connection: Connection,
     repo_id: RepositoryId,
@@ -801,7 +814,7 @@ impl Transaction for SqlBookmarksTransaction {
 
         write_connection
             .start_transaction()
-            .map_err(Some)
+            .map_err(BookmarkTransactionError::Other)
             .and_then(move |transaction| {
                 let force_set: Vec<_> = force_sets.clone().into_iter().collect();
                 let mut ref_rows = Vec::new();
@@ -810,7 +823,8 @@ impl Transaction for SqlBookmarksTransaction {
                     ref_rows.push((&repo_id, &force_set[idx].0, to_changeset_id));
                 }
 
-                ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..]).map_err(Some)
+                ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..])
+                    .map_err(BookmarkTransactionError::Other)
             })
             .and_then(move |(transaction, _)| {
                 let mut ref_rows = Vec::new();
@@ -833,12 +847,12 @@ impl Transaction for SqlBookmarksTransaction {
                 let rows_to_insert = ref_rows.len() as u64;
                 InsertBookmarks::query_with_transaction(transaction, &ref_rows[..]).then(
                     move |res| match res {
-                        Err(err) => Err(Some(err)),
+                        Err(err) => Err(BookmarkTransactionError::Other(err)),
                         Ok((transaction, result)) => {
                             if result.affected_rows() == rows_to_insert {
                                 Ok(transaction)
                             } else {
-                                Err(None)
+                                Err(BookmarkTransactionError::LogicError)
                             }
                         }
                     },
@@ -877,12 +891,12 @@ impl Transaction for SqlBookmarksTransaction {
                                 .then({
                                     let new_cs = new_cs.clone();
                                     move |res| match res {
-                                        Err(err) => Err(Some(err)),
+                                        Err(err) => Err(BookmarkTransactionError::Other(err)),
                                         Ok((transaction, result)) => {
                                             if result.get(0).map(|b| b.0) == Some(new_cs) {
                                                 Ok((transaction, updates))
                                             } else {
-                                                Err(None)
+                                                Err(BookmarkTransactionError::LogicError)
                                             }
                                         }
                                     }
@@ -901,12 +915,12 @@ impl Transaction for SqlBookmarksTransaction {
                                 &new_cs,
                             )
                             .then(move |res| match res {
-                                Err(err) => Err(Some(err)),
+                                Err(err) => Err(BookmarkTransactionError::Other(err)),
                                 Ok((transaction, result)) => {
                                     if result.affected_rows() == 1 {
                                         Ok((transaction, updates))
                                     } else {
-                                        Err(None)
+                                        Err(BookmarkTransactionError::LogicError)
                                     }
                                 }
                             })
@@ -924,7 +938,7 @@ impl Transaction for SqlBookmarksTransaction {
                         Some((name, _reason)) => {
                             DeleteBookmark::query_with_transaction(transaction, &repo_id, &name)
                                 .then(move |res| match res {
-                                    Err(err) => Err(Some(err)),
+                                    Err(err) => Err(BookmarkTransactionError::Other(err)),
                                     Ok((transaction, _)) => Ok((transaction, deletes)),
                                 })
                                 .map(Loop::Continue)
@@ -946,12 +960,12 @@ impl Transaction for SqlBookmarksTransaction {
                                 &old_cs,
                             )
                             .then(move |res| match res {
-                                Err(err) => Err(Some(err)),
+                                Err(err) => Err(BookmarkTransactionError::Other(err)),
                                 Ok((transaction, result)) => {
                                     if result.affected_rows() == 1 {
                                         Ok((transaction, deletes))
                                     } else {
-                                        Err(None)
+                                        Err(BookmarkTransactionError::LogicError)
                                     }
                                 }
                             })
@@ -964,12 +978,15 @@ impl Transaction for SqlBookmarksTransaction {
             })
             .and_then(move |transaction| {
                 Self::log_bookmark_moves(repo_id, Timestamp::now(), log_rows, transaction)
-                    .map_err(Some)
+                    .map_err(BookmarkTransactionError::RetryableError)
             })
             .then(|result| match result {
                 Ok(transaction) => transaction.commit().and_then(|()| Ok(true)).left_future(),
-                Err(None) => Ok(false).into_future().right_future(),
-                Err(Some(err)) => Err(err).into_future().right_future(),
+                Err(BookmarkTransactionError::LogicError) => Ok(false).into_future().right_future(),
+                Err(BookmarkTransactionError::Other(err)) => Err(err).into_future().right_future(),
+                Err(BookmarkTransactionError::RetryableError(err)) => {
+                    Err(err).into_future().right_future()
+                }
             })
             .boxify()
     }
