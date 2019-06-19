@@ -37,6 +37,14 @@ define_stats! {
     list_publishing_by_prefix: timeseries(RATE, SUM),
     list_publishing_by_prefix_maybe_stale: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
+    bookmarks_update_log_insert_success: timeseries(RATE, SUM),
+    bookmarks_update_log_insert_success_attempt_count: timeseries(RATE, AVG, SUM),
+    bookmarks_insert_retryable_error: timeseries(RATE, SUM),
+    bookmarks_insert_retryable_error_attempt_count: timeseries(RATE, AVG, SUM),
+    bookmarks_insert_logic_error: timeseries(RATE, SUM),
+    bookmarks_insert_logic_error_attempt_count: timeseries(RATE, AVG, SUM),
+    bookmarks_insert_other_error: timeseries(RATE, SUM),
+    bookmarks_insert_other_error_attempt_count: timeseries(RATE, AVG, SUM),
 }
 
 #[derive(Clone)]
@@ -1058,15 +1066,39 @@ impl Transaction for SqlBookmarksTransaction {
 
         commit_fut
             .then(|result| match result {
-                // We treat RetryableError here the same as Other, because we've already tried
-                // our best to resolve it by retries, and failed. Another option would be to
-                // treat it as LogicError and expect pushrebase code to retry, however in
-                // order for pushrebase code to have some materially different effect, the
-                // error must've happened on some different query, not bookmark update log insert.
-                Ok((transaction, _)) => transaction.commit().and_then(|()| Ok(true)).left_future(),
-                Err((BookmarkTransactionError::LogicError, _)) => Ok(false).into_future().right_future(),
-                Err((BookmarkTransactionError::Other(err), _))
-                | Err((BookmarkTransactionError::RetryableError(err), _)) => {
+                Ok((transaction, attempts)) => {
+                    STATS::bookmarks_update_log_insert_success.add_value(1);
+                    STATS::bookmarks_update_log_insert_success_attempt_count
+                        .add_value(attempts as i64);
+                    transaction.commit().and_then(|()| Ok(true)).left_future()
+                }
+                Err((BookmarkTransactionError::LogicError, attempts)) => {
+                    // Logic error signifies that the transaction was rolled
+                    // back, which likely means that bookmark has moved since
+                    // our pushrebase finished. We need to retry the pushrebase
+                    // Attempt count means one more than the number of `RetryableError`
+                    // we hit before seeing this.
+                    STATS::bookmarks_insert_logic_error.add_value(1);
+                    STATS::bookmarks_insert_logic_error_attempt_count.add_value(attempts as i64);
+                    Ok(false).into_future().right_future()
+                }
+                Err((BookmarkTransactionError::RetryableError(err), attempts)) => {
+                    // Attempt count for `RetryableError` should always be equal
+                    // to the MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT, and hitting
+                    // this error here basically means that this number of attempts
+                    // was not enough, or the error was misclassified
+                    STATS::bookmarks_insert_retryable_error.add_value(1);
+                    STATS::bookmarks_insert_retryable_error_attempt_count
+                        .add_value(attempts as i64);
+                    Err(err).into_future().right_future()
+                }
+                Err((BookmarkTransactionError::Other(err), attempts)) => {
+                    // `Other` error captures what we consider an "infrastructure"
+                    // error, e.g. xdb went down during this transaction.
+                    // Attempt count > 1 means the before we hit this error,
+                    // we hit `RetryableError` a attempt count - 1 times.
+                    STATS::bookmarks_insert_other_error.add_value(1);
+                    STATS::bookmarks_insert_other_error_attempt_count.add_value(attempts as i64);
                     Err(err).into_future().right_future()
                 }
             })
