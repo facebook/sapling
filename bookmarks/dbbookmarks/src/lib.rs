@@ -26,6 +26,7 @@ use stats::{define_stats, Timeseries};
 use std::collections::HashMap;
 
 const DEFAULT_MAX: u64 = std::u64::MAX;
+const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks";
@@ -556,9 +557,8 @@ enum BookmarkTransactionError {
     Other(Error),
 }
 
-#[allow(dead_code)]
 type RetryAttempt = usize;
-#[allow(dead_code)]
+
 fn conditional_retry_without_delay<V, Fut, RetryableFunc, DecisionFunc>(
     func: RetryableFunc,
     should_retry: DecisionFunc,
@@ -728,7 +728,7 @@ impl SqlBookmarksTransaction {
     }
 
     fn attempt_commit(
-        write_connection: &Connection,
+        write_connection: Connection,
         repo_id: RepositoryId,
         force_sets: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
         creates: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
@@ -1033,27 +1033,44 @@ impl Transaction for SqlBookmarksTransaction {
             log_rows.insert(bookmark, (Some(from_cs_id), None, reason));
         }
 
-        Self::attempt_commit(
-            &write_connection,
-            repo_id,
-            force_sets,
-            creates,
-            sets,
-            force_deletes,
-            deletes,
-            infinitepush_sets,
-            infinitepush_creates,
-            log_rows,
-        )
-        .then(|result| match result {
-            Ok(transaction) => transaction.commit().and_then(|()| Ok(true)).left_future(),
-            Err(BookmarkTransactionError::LogicError) => Ok(false).into_future().right_future(),
-            Err(BookmarkTransactionError::Other(err)) => Err(err).into_future().right_future(),
-            Err(BookmarkTransactionError::RetryableError(err)) => {
-                Err(err).into_future().right_future()
-            }
-        })
-        .boxify()
+        let commit_fut = conditional_retry_without_delay(
+            move |_attempt| {
+                Self::attempt_commit(
+                    write_connection.clone(),
+                    repo_id,
+                    force_sets.clone(),
+                    creates.clone(),
+                    sets.clone(),
+                    force_deletes.clone(),
+                    deletes.clone(),
+                    infinitepush_sets.clone(),
+                    infinitepush_creates.clone(),
+                    log_rows.clone(),
+                )
+            },
+            |err, attempt| match err {
+                BookmarkTransactionError::RetryableError(_) => {
+                    attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT
+                }
+                _ => false,
+            },
+        );
+
+        commit_fut
+            .then(|result| match result {
+                // We treat RetryableError here the same as Other, because we've already tried
+                // our best to resolve it by retries, and failed. Another option would be to
+                // treat it as LogicError and expect pushrebase code to retry, however in
+                // order for pushrebase code to have some materially different effect, the
+                // error must've happened on some different query, not bookmark update log insert.
+                Ok((transaction, _)) => transaction.commit().and_then(|()| Ok(true)).left_future(),
+                Err((BookmarkTransactionError::LogicError, _)) => Ok(false).into_future().right_future(),
+                Err((BookmarkTransactionError::Other(err), _))
+                | Err((BookmarkTransactionError::RetryableError(err), _)) => {
+                    Err(err).into_future().right_future()
+                }
+            })
+            .boxify()
     }
 }
 
