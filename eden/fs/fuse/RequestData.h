@@ -36,8 +36,8 @@ class RequestData : public folly::RequestData {
   static const std::string kKey;
   RequestData(const RequestData&) = delete;
   RequestData& operator=(const RequestData&) = delete;
-  RequestData(RequestData&&) = default;
-  RequestData& operator=(RequestData&&) = default;
+  RequestData(RequestData&&) = delete;
+  RequestData& operator=(RequestData&&) = delete;
   explicit RequestData(
       FuseChannel* channel,
       const fuse_in_header& fuseHeader,

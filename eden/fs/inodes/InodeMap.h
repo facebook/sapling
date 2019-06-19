@@ -106,8 +106,8 @@ class InodeMap {
   explicit InodeMap(EdenMount* mount);
   virtual ~InodeMap();
 
-  InodeMap(InodeMap&&) = default;
-  InodeMap& operator=(InodeMap&&) = default;
+  InodeMap(InodeMap&&) = delete;
+  InodeMap& operator=(InodeMap&&) = delete;
 
   /**
    * Initialize the InodeMap

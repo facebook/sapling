@@ -117,8 +117,8 @@ namespace /* anonymous namespace for helper functions */ {
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
-  ThriftLogHelper(ThriftLogHelper&&) = default;
-  ThriftLogHelper& operator=(ThriftLogHelper&&) = default;
+  ThriftLogHelper(ThriftLogHelper&&) = delete;
+  ThriftLogHelper& operator=(ThriftLogHelper&&) = delete;
 
   template <typename... Args>
   ThriftLogHelper(

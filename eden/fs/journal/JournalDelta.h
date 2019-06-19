@@ -53,8 +53,8 @@ class JournalDelta {
   enum Renamed { RENAME };
   enum Replaced { REPLACE };
   JournalDelta() = default;
-  JournalDelta(JournalDelta&&) = default;
-  JournalDelta& operator=(JournalDelta&&) = default;
+  JournalDelta(JournalDelta&&) = delete;
+  JournalDelta& operator=(JournalDelta&&) = delete;
   JournalDelta(const JournalDelta&) = delete;
   JournalDelta& operator=(const JournalDelta&) = delete;
   JournalDelta(RelativePathPiece fileName, Created);
