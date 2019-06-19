@@ -101,3 +101,59 @@ Sync second tricky push
   $ cd repo-hg
   $ hg log -r master_bookmark -T '{node}\n'
   a1e678b3ed9a3df8ef590d407b97d88891a66778
+
+Push of a merge with a copy
+  $ cd $TESTTMP/client-push
+
+  $ hg up -q 0
+  $ echo 1 > fromcopyremote
+  $ echo 1 > notinfirstparent
+  $ hg addremove -q && hg ci -m tomerge
+  $ COMMIT=$(hg log -r tip -T '{node}')
+
+  $ hg up -q master_bookmark
+  $ echo 1 > fromcopylocal
+  $ hg addremove -q && hg ci -m mergeinto
+  $ hg merge -q $COMMIT
+  $ hg cp fromcopyremote remotecopied
+  $ hg cp fromcopylocal localcopied
+  $ echo 2 > notinfirstparent
+  $ hg ci -m 'copied'
+  $ hgmn push -r . --to master_bookmark -q
+  $ hg log -r tip
+  changeset:   9:bc6bfc6ac632
+  tag:         tip
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
+  parent:      8:af1639811192
+  parent:      7:21ecc753c272
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     copied
+  
+  $ hgmn st --change tip -C
+  A fromcopyremote
+  A localcopied
+    fromcopylocal
+  A notinfirstparent
+  A remotecopied
+
+  $ cd $TESTTMP
+  $ mononoke_hg_sync repo-hg 3 &> /dev/null
+  $ cd $TESTTMP/repo-hg
+  $ hg log -r tip
+  changeset:   7:bc6bfc6ac632
+  bookmark:    master_bookmark
+  tag:         tip
+  parent:      6:af1639811192
+  parent:      5:21ecc753c272
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     copied
+  
+  $ hg st --change tip -C
+  A fromcopyremote
+  A localcopied
+    fromcopylocal
+  A notinfirstparent
+  A remotecopied
