@@ -10,6 +10,7 @@ use bookmarks::{
     Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness, Transaction,
 };
+use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{bail_msg, err_msg, format_err, Error, Result};
 use futures::{
@@ -555,6 +556,36 @@ enum BookmarkTransactionError {
     Other(Error),
 }
 
+#[allow(dead_code)]
+type RetryAttempt = usize;
+#[allow(dead_code)]
+fn conditional_retry_without_delay<V, Fut, RetryableFunc, DecisionFunc>(
+    func: RetryableFunc,
+    should_retry: DecisionFunc,
+) -> impl Future<Item = (V, RetryAttempt), Error = (BookmarkTransactionError, RetryAttempt)>
+where
+    V: Send + 'static,
+    Fut: Future<Item = V, Error = BookmarkTransactionError>,
+    RetryableFunc: Fn(RetryAttempt) -> Fut + Send + 'static,
+    DecisionFunc: Fn(&BookmarkTransactionError, RetryAttempt) -> bool + Send + 'static + Clone,
+{
+    loop_fn(1, move |attempt| {
+        func(attempt)
+            .and_then(move |res| Ok(Loop::Break(Ok((res, attempt)))))
+            .or_else({
+                cloned!(should_retry);
+                move |err| {
+                    if should_retry(&err, attempt) {
+                        Ok(Loop::Continue(attempt + 1)).into_future()
+                    } else {
+                        Ok(Loop::Break(Err((err, attempt)))).into_future()
+                    }
+                }
+            })
+    })
+    .flatten()
+}
+
 struct SqlBookmarksTransaction {
     write_connection: Connection,
     repo_id: RepositoryId,
@@ -1026,6 +1057,34 @@ mod test {
     use std::collections::HashSet;
     use std::iter::FromIterator;
     use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_conditional_retry_without_delay() {
+        let mut rt = Runtime::new().unwrap();
+
+        let fn_to_retry = move |attempt| {
+            if attempt < 3 {
+                future::err(BookmarkTransactionError::RetryableError(err_msg(
+                    "fails on initial attempts",
+                )))
+            } else {
+                future::ok(())
+            }
+        };
+
+        let should_succeed =
+            conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 4);
+        let (_res, attempts) = rt
+            .block_on(should_succeed)
+            .expect("retries failed, but should've succeeded");
+        assert_eq!(attempts, 3);
+
+        let should_fail = conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 1);
+        let (_err, attempts) = rt
+            .block_on(should_fail)
+            .expect_err("retries shouldn't have been performed");
+        assert_eq!(attempts, 1);
+    }
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
         BookmarkName::new(book.to_string()).unwrap()
