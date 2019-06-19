@@ -188,13 +188,21 @@ fn get_copy_info(
                             join_all(parents_bonsai_and_mfs.map({
                                 cloned!(ctx, repopath);
                                 move |(bonsai_parent, parent_mf)| {
-                                    repo.find_file_in_manifest(ctx.clone(), &repopath, parent_mf)
-                                        .map(move |res| match res {
-                                            Some((_, node)) if node == copyfromnode => {
+                                    repo.find_files_in_manifest(
+                                        ctx.clone(),
+                                        parent_mf,
+                                        vec![repopath.clone()],
+                                    )
+                                    .map({
+                                        cloned!(repopath);
+                                        move |res| {
+                                            if res.get(&repopath).copied() == Some(copyfromnode) {
                                                 Some(bonsai_parent)
+                                            } else {
+                                                None
                                             }
-                                            _ => None,
-                                        })
+                                        }
+                                    })
                                 }
                             }))
                             .map(move |res| (res, repopath))

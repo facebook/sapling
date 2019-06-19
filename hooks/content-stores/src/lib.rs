@@ -13,7 +13,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
-use futures::{finished, Future, Stream};
+use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{ChangedFileType, ChangesetStore, FileContentStore};
 use mercurial_types::manifest_utils::{self, EntryStatus};
@@ -33,18 +33,6 @@ pub struct BlobRepoChangesetStore {
     pub repo: BlobRepo,
 }
 
-fn find_file_in_repo(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    changesetid: HgChangesetId,
-    path: MPath,
-) -> impl Future<Item = Option<(FileType, HgFileNodeId)>, Error = Error> {
-    repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
-        .and_then(move |changeset| {
-            repo.find_file_in_manifest(ctx, &path, changeset.manifestid().clone())
-        })
-}
-
 impl FileContentStore for BlobRepoFileContentStore {
     fn get_file_content(
         &self,
@@ -52,15 +40,23 @@ impl FileContentStore for BlobRepoFileContentStore {
         changesetid: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<Bytes>, Error> {
-        find_file_in_repo(ctx.clone(), self.repo.clone(), changesetid, path)
+        self.repo
+            .get_changeset_by_changesetid(ctx.clone(), changesetid)
+            .and_then({
+                cloned!(self.repo, ctx);
+                move |changeset| {
+                    repo.find_files_in_manifest(ctx, changeset.manifestid(), vec![path.clone()])
+                        .map(move |fs| fs.get(&path).copied())
+                }
+            })
             .and_then({
                 cloned!(self.repo);
                 move |opt| match opt {
-                    Some((_, hash)) => repo
+                    Some(hash) => repo
                         .get_file_content(ctx, hash)
                         .map(|FileContents::Bytes(bytes)| Some(bytes))
                         .left_future(),
-                    None => finished(None).right_future(),
+                    None => future::ok(None).right_future(),
                 }
             })
             .boxify()
@@ -121,7 +117,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
                                 move |p1| repo.get_manifest_by_nodeid(ctx, p1.manifestid())
                             })
                             .left_future(),
-                        None => finished(get_empty_manifest()).right_future(),
+                        None => future::ok(get_empty_manifest()).right_future(),
                     };
                     (mf, p_mf)
                 }

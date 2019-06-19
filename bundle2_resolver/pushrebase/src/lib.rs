@@ -1835,9 +1835,11 @@ mod tests {
                 .wait()
                 .unwrap();
             let root_1_id = repo
-                .find_file_in_manifest(ctx.clone(), &path_1, root_cs.manifestid())
+                .find_files_in_manifest(ctx.clone(), root_cs.manifestid(), vec![path_1.clone()])
                 .wait()
                 .unwrap()
+                .get(&path_1)
+                .copied()
                 .unwrap();
 
             // crate filechange with with same content as "1" but set executable bit
@@ -1912,14 +1914,16 @@ mod tests {
                 .wait()
                 .unwrap();
             let result_1_id = repo
-                .find_file_in_manifest(ctx.clone(), &path_1, result_cs.manifestid())
+                .find_files_in_manifest(ctx.clone(), result_cs.manifestid(), vec![path_1.clone()])
                 .wait()
                 .unwrap()
+                .get(&path_1)
+                .copied()
                 .unwrap();
 
             // `result_1_id` should be equal to `root_1_id`, because executable flag
             // is not a part of file envelope
-            assert_eq!(root_1_id.1, result_1_id.1);
+            assert_eq!(root_1_id, result_1_id);
         })
     }
 

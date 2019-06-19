@@ -1268,32 +1268,6 @@ impl BlobRepo {
             })
     }
 
-    pub fn find_file_in_manifest(
-        &self,
-        ctx: CoreContext,
-        path: &MPath,
-        manifest: HgManifestId,
-    ) -> impl Future<Item = Option<(FileType, HgFileNodeId)>, Error = Error> + Send {
-        let (dirname, basename) = path.split_dirname();
-        self.find_path_in_manifest(ctx, dirname, manifest).map({
-            let basename = basename.clone();
-            move |content_and_node| match content_and_node {
-                None => None,
-                Some((Content::Tree(manifest), _)) => match manifest.lookup(&basename) {
-                    None => None,
-                    Some(entry) => {
-                        if let Type::File(t) = entry.get_type() {
-                            Some((t, HgFileNodeId::new(entry.get_hash().into_nodehash())))
-                        } else {
-                            None
-                        }
-                    }
-                },
-                Some(_) => None,
-            }
-        })
-    }
-
     /// Find files in manifest
     ///
     /// This function correctly handles conflicting paths too.
