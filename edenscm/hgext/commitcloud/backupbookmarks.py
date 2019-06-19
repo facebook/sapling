@@ -11,7 +11,7 @@ import os
 import re
 import socket
 
-from edenscm.mercurial import encoding, error, node as nodemod, phases, util
+from edenscm.mercurial import encoding, error, node as nodemod, perftrace, phases, util
 from edenscm.mercurial.i18n import _
 
 from . import dependencies
@@ -108,6 +108,7 @@ def _writelocalbackupstate(repo, remotepath, heads, bookmarks):
         json.dump(state, f)
 
 
+@perftrace.tracefunc("Push Commit Cloud Backup Bookmarks")
 def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
     """
     Push a backup bundle to the server that updates the infinitepush backup
@@ -124,15 +125,17 @@ def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
     )
     # Get the heads of visible draft commits that are already backed up,
     # including commits made visible by bookmarks.
-    revset = "heads((draft() & ::((draft() - obsolete() - hidden()) + bookmark())) & (draft() & ::%ln))"
-    heads = [nodemod.hex(head) for head in unfi.nodes(revset, backupstate.heads)]
+    with perftrace.trace("Compute Heads"):
+        revset = "heads((draft() & ::((draft() - obsolete() - hidden()) + bookmark())) & (draft() & ::%ln))"
+        heads = [nodemod.hex(head) for head in unfi.nodes(revset, backupstate.heads)]
     # Get the bookmarks that point to ancestors of backed up draft commits or
     # to commits that are public.
-    bookmarks = {}
-    for name, node in repo._bookmarks.iteritems():
-        ctx = repo[node]
-        if ctx.rev() in ancestors or ctx.phase() == phases.public:
-            bookmarks[name] = ctx.hex()
+    with perftrace.trace("Compute Bookmarks"):
+        bookmarks = {}
+        for name, node in repo._bookmarks.iteritems():
+            ctx = repo[node]
+            if ctx.rev() in ancestors or ctx.phase() == phases.public:
+                bookmarks[name] = ctx.hex()
 
     infinitepushbookmarks = {}
     prefix = _backupbookmarkprefix(repo)
@@ -193,7 +196,7 @@ def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
         return
 
     # Push a bundle containing the new bookmarks to the server.
-    with getconnection() as conn:
+    with perftrace.trace("Push Backup Bookmark Bundle"), getconnection() as conn:
         dependencies.infinitepush.pushbackupbundle(
             repo.ui, repo, conn.peer, None, infinitepushbookmarks
         )

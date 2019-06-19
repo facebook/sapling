@@ -17,6 +17,7 @@ from edenscm.mercurial import (
     hintutil,
     node as nodemod,
     obsolete,
+    perftrace,
     progress,
     util,
     visibility,
@@ -56,6 +57,7 @@ def _getbookmarks(repo):
     return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
 
 
+@perftrace.tracefunc("Cloud Sync")
 def sync(
     repo, remotepath, getconnection, cloudrefs=None, full=False, cloudversion=None
 ):
@@ -229,6 +231,7 @@ def _maybeupdateworkingcopy(repo, currentnode):
     return 0
 
 
+@perftrace.tracefunc("Apply Cloud Changes")
 def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr):
     pullcmd, pullopts = ccutil.getcommandandoptions("^pull")
 
@@ -540,6 +543,7 @@ def _mergeobsmarkers(repo, tr, obsmarkers):
         repo.filteredrevcache.clear()
 
 
+@perftrace.tracefunc("Check Omissions")
 def _checkomissions(repo, remotepath, lastsyncstate):
     """check omissions are still not available locally
 
@@ -580,6 +584,7 @@ def _checkomissions(repo, remotepath, lastsyncstate):
             repo._bookmarks.applychanges(repo, tr, changes)
 
 
+@perftrace.tracefunc("Submit Local Changes")
 def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, serv):
     localheads = _getheads(repo)
     localbookmarks = _getbookmarks(repo)

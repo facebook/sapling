@@ -5,12 +5,13 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import node as nodemod, smartset
+from edenscm.mercurial import node as nodemod, perftrace, smartset
 from edenscm.mercurial.i18n import _, _n
 
 from . import backuplock, dependencies
 
 
+@perftrace.tracefunc("Backup Draft Commits to Commit Cloud")
 def backup(repo, backupstate, remotepath, getconnection, revs=None):
     """backs up the given revisions to commit cloud
 
@@ -96,9 +97,13 @@ def backup(repo, backupstate, remotepath, getconnection, revs=None):
         "(draft() & ::%ld) - (draft() & ::%ln)", heads, backupstate.heads
     )
     backuplock.progressbackingup(repo, list(backingup))
-    newheads, failedheads = dependencies.infinitepush.pushbackupbundlestacks(
-        repo.ui, unfi, getconnection, [nodemod.hex(n) for n in unfi.nodes("%ld", heads)]
-    )
+    with perftrace.trace("Push Backup Bundles"):
+        newheads, failedheads = dependencies.infinitepush.pushbackupbundlestacks(
+            repo.ui,
+            unfi,
+            getconnection,
+            [nodemod.hex(n) for n in unfi.nodes("%ld", heads)],
+        )
 
     # The commits that got backed up are all the ancestors of the new backup
     # heads, minus any commits that were already backed up at the start.

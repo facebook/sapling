@@ -13,7 +13,7 @@ import socket
 import ssl
 import time
 
-from edenscm.mercurial import error, util
+from edenscm.mercurial import error, perftrace, util
 from edenscm.mercurial.i18n import _
 
 from . import baseservice, error as ccerror
@@ -194,6 +194,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         if e:
             raise ccerror.ServiceError(self.ui, str(e))
 
+    @perftrace.tracefunc("Check Commit Cloud Authentication")
     def check(self):
         # send a check request.  Currently this is an empty 'get_references'
         # request, which asks for the latest version of workspace '' for repo
@@ -210,6 +211,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         if "error" in response:
             raise ccerror.ServiceError(self.ui, response["error"])
 
+    @perftrace.tracefunc("Get Commit Cloud References")
     def getreferences(self, reponame, workspace, baseversion):
         self.ui.debug("sending 'get_references' request\n", component="commitcloud")
 
@@ -255,6 +257,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
         return self._makereferences(response["ref"])
 
+    @perftrace.tracefunc("Update Commit Cloud References")
     def updatereferences(
         self,
         reponame,
@@ -319,6 +322,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         return True, baseservice.References(newversion, None, None, None, None)
 
+    @perftrace.tracefunc("Get Commit Cloud Smartlog")
     def getsmartlog(self, reponame, workspace, repo):
 
         self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
