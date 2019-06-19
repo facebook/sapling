@@ -12,7 +12,7 @@ import os
 import sys
 
 
-def run(binaryexecution):
+def run():
     # entrypoint is in mercurial/ dir, while we want 'from mercurial import ...',
     # 'from hgext import ...' and 'from hgdemandimport import ...' to work
     # so we are adding their parent directory to be the first item of sys.path
@@ -52,10 +52,6 @@ def run(binaryexecution):
         ipypath = os.path.join(libdir, "build", "IPython.zip")
     if ipypath not in sys.path and os.path.exists(ipypath):
         sys.path.insert(0, ipypath)
-
-    from edenscm.mercurial import executionmodel
-
-    executionmodel.setbinaryexecution(binaryexecution)
 
     if (
         sys.argv[1:5] == ["serve", "--cmdserver", "chgunix2", "--address"]

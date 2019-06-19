@@ -22,7 +22,7 @@ import sys
 import tempfile
 import unicodedata
 
-from . import encoding, error, executionmodel, fscap, pycompat
+from . import encoding, error, fscap, pycompat
 from .cext import osutil
 from .i18n import _
 
@@ -951,10 +951,6 @@ def spawndetached(args):
 
 
 def gethgcmd():
-    # in case this is called from a Rust binary, the fist element of sys.argv
-    # is entrypoint.py, which is not executable
-    if executionmodel.executedfrombinary:
-        return [sys.executable]
     return sys.argv[:1]
 
 

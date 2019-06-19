@@ -4,7 +4,7 @@ use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
     py_set_program_name, py_set_python_home,
 };
-use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
+use cpython::{exc, NoArgs, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
 use encoding::{osstring_to_local_cstring, path_to_local_bytes};
 use std;
 use std::ffi::{CString, OsStr, OsString};
@@ -273,7 +273,7 @@ impl HgPython {
     pub fn run_py(&self, py: Python<'_>) -> PyResult<()> {
         self.adjust_path(py)?;
         let entry_point_mod = py.import(HGPYENTRYPOINT_MOD)?;
-        entry_point_mod.call(py, "run", (py.True(),), None)?;
+        entry_point_mod.call(py, "run", NoArgs, None)?;
         Ok(())
     }
 
