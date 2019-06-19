@@ -1,11 +1,9 @@
 #!/bin/bash
 #
-# Copyright (c) 2016-present, Facebook, Inc.
-# All rights reserved.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree. An additional grant
-# of patent rights can be found in the PATENTS file in the same directory.
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 ALL_EDENFS_MOUNTS=$(grep -e '^edenfs' /proc/mounts | awk '{print $2}')
 for n in $ALL_EDENFS_MOUNTS; do
