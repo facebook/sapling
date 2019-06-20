@@ -461,17 +461,10 @@ std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
 
 Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
   HgProxyHash pathInfo(localStore_, id, "importTree");
-  folly::stop_watch<std::chrono::milliseconds> watch;
-  auto fut = importTreeImpl(
+  return importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
       id,
       pathInfo.path());
-  return std::move(fut).thenValue(
-      [stats = stats_, watch = std::move(watch)](auto tree) {
-        stats->getHgBackingStoreStatsForCurrentThread()
-            .hgBackingStoreGetTree.addValue(watch.elapsed().count());
-        return tree;
-      });
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
@@ -494,6 +487,9 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     return makeFuture(std::move(tree));
   }
 
+  std::vector<Future<unique_ptr<Tree>>> futures;
+
+  folly::stop_watch<std::chrono::milliseconds> watch;
   auto mononoke = getMononoke();
   if (mononoke) {
     // ask Mononoke API Server first because it has more metadata available
@@ -501,61 +497,80 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     // can save us from materializing so many file contents later to compute
     // size and hash information.
     XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
-    folly::stop_watch<std::chrono::milliseconds> watch;
 
     RelativePath ownedPath(path);
-    return mononoke->getTree(manifestNode)
-        .via(serverThreadPool_)
-        .thenTry([stats = stats_,
-                  edenTreeID,
-                  ownedPath,
-                  watch,
-                  writeBatch =
-                      localStore_->beginWrite()](auto mononokeTreeTry) mutable {
-          auto& mononokeTree = mononokeTreeTry.value();
-          std::vector<TreeEntry> entries;
+    futures.push_back(
+        mononoke->getTree(manifestNode)
+            .via(serverThreadPool_)
+            .thenValue([stats = stats_,
+                        watch,
+                        edenTreeID,
+                        ownedPath,
+                        writeBatch = localStore_->beginWrite()](
+                           auto mononokeTree) mutable {
+              std::vector<TreeEntry> entries;
 
-          for (const auto& entry : mononokeTree->getTreeEntries()) {
-            auto blobHash = entry.getHash();
-            auto entryName = entry.getName();
-            auto proxyHash = HgProxyHash::store(
-                ownedPath + entryName, blobHash, writeBatch.get());
+              for (const auto& entry : mononokeTree->getTreeEntries()) {
+                auto blobHash = entry.getHash();
+                auto entryName = entry.getName();
+                auto proxyHash = HgProxyHash::store(
+                    ownedPath + entryName, blobHash, writeBatch.get());
 
-            entries.emplace_back(
-                proxyHash, entryName.stringPiece(), entry.getType());
+                entries.emplace_back(
+                    proxyHash, entryName.stringPiece(), entry.getType());
 
-            if (entry.getContentSha1() && entry.getSize()) {
-              BlobMetadata metadata{*entry.getContentSha1(), *entry.getSize()};
+                if (entry.getContentSha1() && entry.getSize()) {
+                  BlobMetadata metadata{*entry.getContentSha1(),
+                                        *entry.getSize()};
 
-              SerializedBlobMetadata metadataBytes(metadata);
-              auto hashSlice = proxyHash.getBytes();
+                  SerializedBlobMetadata metadataBytes(metadata);
+                  auto hashSlice = proxyHash.getBytes();
+                  writeBatch->put(
+                      KeySpace::BlobMetaDataFamily,
+                      hashSlice,
+                      metadataBytes.slice());
+                }
+              }
+
+              auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
+              auto serialized = LocalStore::serializeTree(tree.get());
               writeBatch->put(
-                  KeySpace::BlobMetaDataFamily,
-                  hashSlice,
-                  metadataBytes.slice());
-            }
-          }
+                  KeySpace::TreeFamily,
+                  edenTreeID,
+                  serialized.second.coalesce());
+              writeBatch->flush();
 
-          auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-          auto serialized = LocalStore::serializeTree(tree.get());
-          writeBatch->put(
-              KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-          auto count = watch.elapsed().count();
-          stats->getHgBackingStoreStatsForCurrentThread()
-              .mononokeBackingStoreGetTree.addValue(count);
-          writeBatch->flush();
-          return makeFuture(std::move(tree));
-        })
-        .thenError([this, manifestNode, edenTreeID, ownedPath](
-                       const folly::exception_wrapper& ex) mutable {
-          XLOG(WARN) << "got exception from Mononoke backing store: "
-                     << ex.what();
-          return fetchTreeFromHgCacheOrImporter(
-              manifestNode, edenTreeID, std::move(ownedPath));
-        });
+              auto& currentThreadStats =
+                  stats->getHgBackingStoreStatsForCurrentThread();
+              currentThreadStats.mononokeBackingStoreGetTree.addValue(
+                  watch.elapsed().count());
+
+              return makeFuture(std::move(tree));
+            })
+            .thenError(
+                [manifestNode](const folly::exception_wrapper& ex) mutable {
+                  XLOG(WARN)
+                      << "got exception from Mononoke backing store: "
+                      << ex.what() << " while importing tree " << manifestNode;
+                  return folly::makeFuture<unique_ptr<Tree>>(ex);
+                }));
   }
 
-  return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy());
+  futures.push_back(
+      fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
+          .thenValue([stats = stats_, watch](auto&& result) {
+            auto& currentThreadStats =
+                stats->getHgBackingStoreStatsForCurrentThread();
+            currentThreadStats.hgBackingStoreGetTree.addValue(
+                watch.elapsed().count());
+            return std::move(result);
+          }));
+
+  return folly::collectAnyWithoutException(futures)
+      .via(serverThreadPool_)
+      .thenValue([size = futures.size()](auto&& result) {
+        return std::move(result.second);
+      });
 }
 
 folly::Future<std::unique_ptr<Tree>>
