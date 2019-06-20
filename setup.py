@@ -54,27 +54,6 @@ def ensureenv():
 ensureenv()
 
 
-supportedpy = "~= 2.7"
-if os.environ.get("HGALLOWPYTHON3", ""):
-    # Mercurial will never work on Python 3 before 3.5 due to a lack
-    # of % formatting on bytestrings, and can't work on 3.6.0 or 3.6.1
-    # due to a bug in % formatting in bytestrings.
-    #
-    # TODO: when we actually work on Python 3, use this string as the
-    # actual supportedpy string.
-    supportedpy = ",".join(
-        [
-            ">=2.7",
-            "!=3.0.*",
-            "!=3.1.*",
-            "!=3.2.*",
-            "!=3.3.*",
-            "!=3.4.*",
-            "!=3.6.0",
-            "!=3.6.1",
-        ]
-    )
-
 import platform
 
 if sys.version_info[0] >= 3:
@@ -171,14 +150,7 @@ else:
 ispypy = "PyPy" in sys.version
 
 
-# We have issues with setuptools on some platforms and builders. Until
-# those are resolved, setuptools is opt-in except for platforms where
-# we don't have issues.
-issetuptools = os.name == "nt" or "FORCE_SETUPTOOLS" in os.environ
-if issetuptools:
-    from setuptools import setup
-else:
-    from distutils.core import setup
+from distutils.core import setup
 from distutils import log
 from distutils.ccompiler import new_compiler
 from distutils.core import Command, Extension
@@ -2030,11 +2002,6 @@ for parent, dirs, files in os.walk(templatesdir):
 assert isinstance(version, bytes)
 setupversion = version.decode("ascii")
 
-extra = {}
-
-if issetuptools:
-    extra["python_requires"] = supportedpy
-
 if os.name == "nt":
     # Windows binary file versions for exe/dll files must have the
     # form W.X.Y.Z, where W,X,Y,Z are numbers in the range 0..65535
@@ -2240,5 +2207,4 @@ setup(
             "welcome": "contrib/macosx/Welcome.html",
         }
     },
-    **extra
 )
