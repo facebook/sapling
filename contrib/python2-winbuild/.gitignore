@@ -2,3 +2,4 @@ Bin/
 DebugSymbols/
 Include/
 libs/
+*.zip
