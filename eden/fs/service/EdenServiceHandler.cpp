@@ -451,7 +451,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
   auto latest = edenMount->getJournal().getLatest();
 
   out.mountGeneration = edenMount->getMountGeneration();
-  out.sequenceNumber = latest->toSequence;
+  out.sequenceNumber = latest->sequenceID;
   out.snapshotHash = thriftHash(latest->toHash);
 #else
   NOT_IMPLEMENTED();
@@ -532,7 +532,7 @@ EdenServiceHandler::subscribeStreamTemporary(
       JournalPosition pos;
 
       auto delta = journal.getLatest();
-      pos.sequenceNumber = delta->toSequence;
+      pos.sequenceNumber = delta->sequenceID;
       pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
       pos.mountGeneration = mount->getMountGeneration();
       stream->publisher.next(pos);
@@ -609,19 +609,19 @@ void EdenServiceHandler::getFilesChangedSince(
 namespace {
 /**
  * Starting from the provided delta, walks the chain backwards until it finds
- * the delta whose [fromSequence, toSequence] range includes `target`.
+ * the delta whose sequenceID is `target`.
  */
 const JournalDelta* FOLLY_NULLABLE
 findJournalDelta(const JournalDelta* delta, Journal::SequenceNumber target) {
 #ifndef _WIN32
   // If the tip of the delta chain precedes the target, then do not bother to
   // search.
-  if (delta == nullptr || delta->toSequence < target) {
+  if (delta == nullptr || delta->sequenceID < target) {
     return nullptr;
   }
 
   while (delta) {
-    if (delta->fromSequence <= target && target <= delta->toSequence) {
+    if (target == delta->sequenceID) {
       return delta;
     }
     delta = delta->previous.get();
@@ -666,24 +666,26 @@ void EdenServiceHandler::debugGetRawJournal(
   auto current = toPos;
   auto fromPos = params->fromPosition.sequenceNumber;
   while (current) {
-    if (static_cast<ssize_t>(current->toSequence) < fromPos) {
+    if (static_cast<ssize_t>(current->sequenceID) < fromPos) {
       break;
     }
 
     DebugJournalDelta delta;
     JournalPosition fromPosition;
     fromPosition.set_mountGeneration(mountGeneration);
-    fromPosition.set_sequenceNumber(current->fromSequence);
+    fromPosition.set_sequenceNumber(current->sequenceID);
     fromPosition.set_snapshotHash(thriftHash(current->fromHash));
     delta.set_fromPosition(fromPosition);
 
     JournalPosition toPosition;
     toPosition.set_mountGeneration(mountGeneration);
-    toPosition.set_sequenceNumber(current->toSequence);
+    toPosition.set_sequenceNumber(current->sequenceID);
     toPosition.set_snapshotHash(thriftHash(current->toHash));
     delta.set_toPosition(toPosition);
 
-    for (const auto& entry : current->changedFilesInOverlay) {
+    auto changedFilesInOverlay = current->getChangedFilesInOverlay();
+
+    for (const auto& entry : changedFilesInOverlay) {
       auto& path = entry.first;
       auto& changeInfo = entry.second;
 

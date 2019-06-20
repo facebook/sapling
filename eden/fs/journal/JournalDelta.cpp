@@ -11,27 +11,41 @@ namespace facebook {
 namespace eden {
 
 JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Created)
-    : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{false, true}}} {}
+    : path1{fileName.copy()},
+      info1{PathChangeInfo{false, true}},
+      isPath1Valid{true} {}
 
 JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Removed)
-    : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{true, false}}} {}
+    : path1{fileName.copy()},
+      info1{PathChangeInfo{true, false}},
+      isPath1Valid{true} {}
 
 JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Changed)
-    : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{true, true}}} {}
+    : path1{fileName.copy()},
+      info1{PathChangeInfo{true, true}},
+      isPath1Valid{true} {}
 
 JournalDelta::JournalDelta(
     RelativePathPiece oldName,
     RelativePathPiece newName,
     JournalDelta::Renamed)
-    : changedFilesInOverlay{{oldName.copy(), PathChangeInfo{true, false}},
-                            {newName.copy(), PathChangeInfo{false, true}}} {}
+    : path1{oldName.copy()},
+      path2{newName.copy()},
+      info1{PathChangeInfo{true, false}},
+      info2{PathChangeInfo{false, true}},
+      isPath1Valid{true},
+      isPath2Valid{true} {}
 
 JournalDelta::JournalDelta(
     RelativePathPiece oldName,
     RelativePathPiece newName,
     JournalDelta::Replaced)
-    : changedFilesInOverlay{{oldName.copy(), PathChangeInfo{true, false}},
-                            {newName.copy(), PathChangeInfo{true, true}}} {}
+    : path1{oldName.copy()},
+      path2{newName.copy()},
+      info1{PathChangeInfo{true, false}},
+      info2{PathChangeInfo{true, true}},
+      isPath1Valid{true},
+      isPath2Valid{true} {}
 
 JournalDelta::~JournalDelta() {
   // O(1) stack space destruction of the delta chain.
@@ -50,6 +64,13 @@ size_t JournalDelta::estimateMemoryUsage() const {
    * array of buckets, each one being a chain of nodes containing a next
    * pointer, a key-value pair, and a stored hash
    */
+  if (isPath1Valid) {
+    mem += facebook::eden::estimateIndirectMemoryUsage(path1);
+  }
+  if (isPath2Valid) {
+    mem += facebook::eden::estimateIndirectMemoryUsage(path2);
+  }
+
   // Calculate Memory For Nodes in Each Bucket (Pointer to element and next)
   size_t set_elem_size = folly::goodMallocSize(
       sizeof(void*) + sizeof(decltype(uncleanPaths)::value_type) +
@@ -83,5 +104,18 @@ bool JournalDelta::isUnique() const noexcept {
   return 1 == refCount_.load(std::memory_order_acquire);
 }
 
+std::unordered_map<RelativePath, PathChangeInfo>
+JournalDelta::getChangedFilesInOverlay() const {
+  std::unordered_map<RelativePath, PathChangeInfo> changedFilesInOverlay;
+  if (isPath1Valid) {
+    changedFilesInOverlay[path1] = info1;
+  }
+  if (isPath2Valid) {
+    changedFilesInOverlay[path2] = info2;
+  }
+  return changedFilesInOverlay;
+}
+
 } // namespace eden
+
 } // namespace facebook

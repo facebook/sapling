@@ -116,7 +116,7 @@ void StreamingSubscriber::journalUpdated() {
   JournalPosition pos;
 
   auto delta = journal.getLatest();
-  pos.sequenceNumber = delta->toSequence;
+  pos.sequenceNumber = delta->sequenceID;
   pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
   pos.mountGeneration = edenMount->getMountGeneration();
 

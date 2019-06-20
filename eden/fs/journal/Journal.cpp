@@ -64,11 +64,9 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
   {
     auto deltaState = deltaState_.wlock();
 
-    delta->toSequence = deltaState->nextSequence++;
-    delta->fromSequence = delta->toSequence;
+    delta->sequenceID = deltaState->nextSequence++;
 
-    delta->toTime = std::chrono::steady_clock::now();
-    delta->fromTime = delta->toTime;
+    delta->time = std::chrono::steady_clock::now();
 
     delta->previous = deltaState->latest;
 
@@ -84,15 +82,15 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
       ++(deltaState->stats->entryCount);
       deltaState->stats->memoryUsage += delta->estimateMemoryUsage();
       deltaState->stats->earliestTimestamp =
-          std::min(deltaState->stats->earliestTimestamp, delta->fromTime);
+          std::min(deltaState->stats->earliestTimestamp, delta->time);
       deltaState->stats->latestTimestamp =
-          std::max(deltaState->stats->latestTimestamp, delta->toTime);
+          std::max(deltaState->stats->latestTimestamp, delta->time);
     } else {
       deltaState->stats = JournalStats();
       deltaState->stats->entryCount = 1;
       deltaState->stats->memoryUsage = delta->estimateMemoryUsage();
-      deltaState->stats->earliestTimestamp = delta->fromTime;
-      deltaState->stats->latestTimestamp = delta->toTime;
+      deltaState->stats->earliestTimestamp = delta->time;
+      deltaState->stats->latestTimestamp = delta->time;
     }
 
     deltaState->latest = JournalDeltaPtr{std::move(delta)};
@@ -168,32 +166,34 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   auto result = std::make_unique<JournalDeltaRange>();
   {
     auto deltaState = deltaState_.rlock();
-    if (deltaState->latest->toSequence < limitSequence) {
+    if (deltaState->latest->sequenceID < limitSequence) {
       return nullptr;
     }
 
     const JournalDelta* current = deltaState->latest.get();
 
-    result->toSequence = current->toSequence;
-    result->toTime = current->toTime;
+    result->toSequence = current->sequenceID;
+    result->toTime = current->time;
     result->fromHash = current->fromHash;
     result->toHash = current->toHash;
 
     while (current) {
-      if (current->toSequence < limitSequence) {
+      if (current->sequenceID < limitSequence) {
         break;
       }
 
       // Capture the lower bound.
-      result->fromSequence = current->fromSequence;
-      result->fromTime = current->fromTime;
+      result->fromSequence = current->sequenceID;
+      result->fromTime = current->time;
       result->fromHash = current->fromHash;
 
       // Merge the unclean status list
       result->uncleanPaths.insert(
           current->uncleanPaths.begin(), current->uncleanPaths.end());
 
-      for (auto& entry : current->changedFilesInOverlay) {
+      auto changedFilesInOverlay = current->getChangedFilesInOverlay();
+
+      for (auto& entry : changedFilesInOverlay) {
         auto& name = entry.first;
         auto& currentInfo = entry.second;
         auto* resultInfo = folly::get_ptr(result->changedFilesInOverlay, name);

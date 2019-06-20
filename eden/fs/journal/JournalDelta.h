@@ -73,14 +73,10 @@ class JournalDelta {
 
   /** the prior delta and its chain */
   JournalDeltaPtr previous;
-  /** The current sequence range.
-   * This is a range to accommodate merging a range into a single entry. */
-  SequenceNumber fromSequence;
-  SequenceNumber toSequence;
-  /** The time at which the change was recorded.
-   * This is a range to accommodate merging a range into a single entry. */
-  std::chrono::steady_clock::time_point fromTime;
-  std::chrono::steady_clock::time_point toTime;
+  /** The ID of this Delta in the Journal */
+  SequenceNumber sequenceID;
+  /** The time at which the change was recorded. */
+  std::chrono::steady_clock::time_point time;
 
   /** The snapshot hash that we started and ended up on.
    * This will often be the same unless we perform a checkout or make
@@ -88,11 +84,17 @@ class JournalDelta {
   Hash fromHash;
   Hash toHash;
 
-  /**
-   * The set of files that changed in the overlay in this update, including
-   * some information about the changes.
-   */
-  std::unordered_map<RelativePath, PathChangeInfo> changedFilesInOverlay;
+  /** Which of these paths actually contain information */
+  RelativePath path1;
+  RelativePath path2;
+  PathChangeInfo info1;
+  PathChangeInfo info2;
+  bool isPath1Valid = false;
+  bool isPath2Valid = false;
+
+  std::unordered_map<RelativePath, PathChangeInfo> getChangedFilesInOverlay()
+      const;
+
   /** The set of files that had differing status across a checkout or
    * some other operation that changes the snapshot hash */
   std::unordered_set<RelativePath> uncleanPaths;
