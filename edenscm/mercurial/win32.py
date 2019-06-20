@@ -32,6 +32,7 @@ _LPCSTR = _LPSTR = ctypes.c_char_p
 _HANDLE = ctypes.c_void_p
 _HWND = _HANDLE
 _PCCERT_CONTEXT = ctypes.c_void_p
+_PCCERT_CHAIN_CONTEXT = ctypes.c_void_p
 _MAX_PATH = wintypes.MAX_PATH
 
 _INVALID_HANDLE_VALUE = _HANDLE(-1).value
@@ -229,6 +230,9 @@ _crypt32.CertGetCertificateChain.argtypes = [
     ctypes.c_void_p,  # PCCERT_CHAIN_CONTEXT *
 ]
 _crypt32.CertGetCertificateChain.restype = _BOOL
+
+_crypt32.CertFreeCertificateChain.argtypes = [_PCCERT_CHAIN_CONTEXT]
+_crypt32.CertFreeCertificateChain.restype = None
 
 _crypt32.CertFreeCertificateContext.argtypes = [_PCCERT_CONTEXT]
 _crypt32.CertFreeCertificateContext.restype = _BOOL
