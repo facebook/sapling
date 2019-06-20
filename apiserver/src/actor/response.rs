@@ -12,7 +12,7 @@ use failure::Error;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 use hostname::get_hostname;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_cbor;
 
 use types::{
@@ -26,6 +26,8 @@ use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
 type StreamingDataResponse = BoxStream<DataEntry, Error>;
 type StreamingHistoryResponse = BoxStream<(RepoPathBuf, WireHistoryEntry), Error>;
 
+// WARNING: Do not re-arrange the order of this enum.
+#[derive(Serialize, Deserialize)]
 pub enum MononokeRepoResponse {
     GetRawFile {
         content: Bytes,
@@ -34,7 +36,7 @@ pub enum MononokeRepoResponse {
         content: Bytes,
     },
     ListDirectory {
-        files: Box<dyn Iterator<Item = Entry> + Send>,
+        files: Vec<Entry>,
     },
     GetTree {
         files: Vec<EntryWithSizeAndContentHash>,
@@ -55,13 +57,23 @@ pub enum MononokeRepoResponse {
         response: BatchResponse,
     },
     UploadLargeFile {},
+
+    // NOTE: Please add serializable responses before this line
+    #[serde(skip)]
     EdenGetData(DataResponse),
+    #[serde(skip)]
     EdenGetHistory(HistoryResponse),
+    #[serde(skip)]
     EdenGetTrees(DataResponse),
+    #[serde(skip)]
     EdenPrefetchTrees(DataResponse),
+    #[serde(skip)]
     EdenGetDataStream(StreamingDataResponse),
+    #[serde(skip)]
     EdenGetHistoryStream(StreamingHistoryResponse),
+    #[serde(skip)]
     EdenGetTreesStream(StreamingDataResponse),
+    #[serde(skip)]
     EdenPrefetchTreesStream(StreamingDataResponse),
 }
 
@@ -105,7 +117,7 @@ impl Responder for MononokeRepoResponse {
 
         match self {
             GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
-            ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
+            ListDirectory { files } => Json(files).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
             GetBranches { branches } => Json(branches).respond_to(req),

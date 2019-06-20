@@ -281,7 +281,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             })
             .and_then(|resp: MononokeRepoResponse| match resp {
                 MononokeRepoResponse::ListDirectory { files } => Ok(MononokeDirectory {
-                    files: files.map(|f| f.into()).collect(),
+                    files: files.into_iter().map(|f| f.into()).collect(),
                 }),
                 _ => Err(ErrorKind::InternalError(err_msg(
                     "Actor returned wrong response type to query".to_string(),

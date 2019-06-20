@@ -257,7 +257,7 @@ impl MononokeRepo {
                     .filter_map(|entry| -> Option<Entry> { entry.try_into().ok() })
             })
             .map(|files| MononokeRepoResponse::ListDirectory {
-                files: Box::new(files),
+                files: files.collect(),
             })
             .from_err()
             .boxify()

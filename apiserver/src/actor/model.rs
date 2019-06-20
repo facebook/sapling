@@ -16,7 +16,7 @@ use abomonation_derive::Abomonation;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use failure::{err_msg, Error};
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 
 use apiserver_thrift::types::{
     MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
@@ -31,7 +31,7 @@ use mercurial_types::manifest::Content;
 use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
 use mononoke_types::RepositoryId;
 
-#[derive(Abomonation, Clone, Serialize)]
+#[derive(Abomonation, Clone, Serialize, Deserialize)]
 pub enum FileType {
     #[serde(rename = "file")]
     File,
@@ -79,7 +79,7 @@ impl From<Entry> for MononokeFile {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Entry {
     name: String,
     #[serde(rename = "type")]
@@ -103,7 +103,7 @@ impl TryFrom<Box<dyn HgEntry + Sync>> for Entry {
     }
 }
 
-#[derive(Abomonation, Clone, Serialize)]
+#[derive(Abomonation, Clone, Serialize, Deserialize)]
 pub struct EntryWithSizeAndContentHash {
     name: String,
     #[serde(rename = "type")]
@@ -168,12 +168,10 @@ impl EntryWithSizeAndContentHash {
                 future.map(|entry| Some(entry)).boxify()
             })
             .and_then(move |entry| entry.ok_or(err_msg(format!("Entry {} not found", hash))))
-            .map(|entry| {
-                EntryWithSizeAndContentHash {
-                    name,
-                    ttype,
-                    ..entry
-                }
+            .map(|entry| EntryWithSizeAndContentHash {
+                name,
+                ttype,
+                ..entry
             })
             .boxify()
         } else {
@@ -194,7 +192,7 @@ impl From<EntryWithSizeAndContentHash> for MononokeFile {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Changeset {
     commit_hash: String,
     manifest: String,
