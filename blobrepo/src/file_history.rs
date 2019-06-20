@@ -41,7 +41,7 @@ pub fn get_file_history(
 
 /// Prefetch and cache filenode information. Performing these fetches in bulk upfront
 /// prevents an excessive number of DB roundtrips when constructing file history.
-pub fn prefetch_history(
+fn prefetch_history(
     ctx: CoreContext,
     repo: BlobRepo,
     path: MPath,
@@ -57,7 +57,7 @@ pub fn prefetch_history(
 
 /// Get the history of the file at the specified path, using the given
 /// prefetched history map as a cache to speed up the operation.
-pub fn get_file_history_using_prefetched(
+fn get_file_history_using_prefetched(
     ctx: CoreContext,
     repo: BlobRepo,
     startnode: HgFileNodeId,

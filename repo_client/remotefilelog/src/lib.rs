@@ -12,10 +12,7 @@ use std::{
 };
 
 use blobrepo::{
-    file_history::{
-        get_file_history, get_file_history_using_prefetched, get_maybe_draft_filenode,
-        prefetch_history,
-    },
+    file_history::{get_file_history, get_maybe_draft_filenode},
     BlobRepo,
 };
 use bytes::{Bytes, BytesMut};
@@ -69,26 +66,8 @@ pub fn create_remotefilelog_blob(
         encode_remotefilelog_file_content(raw_content, meta_key_flag)
     });
 
-    // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
-    // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
-    // be fetched again.
-    let prefetched_filenodes = prefetch_history(ctx.clone(), repo.clone(), path.clone());
-
-    let file_history_bytes = prefetched_filenodes
-        .and_then({
-            cloned!(ctx, node, path, repo);
-            move |prefetched_filenodes| {
-                get_file_history_using_prefetched(
-                    ctx.clone(),
-                    repo,
-                    node,
-                    path,
-                    None,
-                    prefetched_filenodes,
-                )
-                .collect()
-            }
-        })
+    let file_history_bytes = get_file_history(ctx, repo, node, path, None)
+        .collect()
         .and_then(serialize_history);
 
     raw_content_bytes
