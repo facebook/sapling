@@ -2,10 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use failure::ensure;
 use url::Url;
 
-use crate::errors::ApiResult;
+use crate::errors::{ApiErrorKind, ApiResult};
 
 #[derive(Default)]
 pub struct Config {
@@ -111,18 +110,14 @@ pub struct ClientCreds {
 impl ClientCreds {
     pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> ApiResult<Self> {
         let certs = certs.as_ref().to_path_buf();
-        ensure!(
-            certs.is_file(),
-            "Client certificate does not exist: {:?}",
-            &certs
-        );
+        if !certs.is_file() {
+            return Err(ApiErrorKind::BadCreds(certs).into());
+        }
 
         let key = key.as_ref().to_path_buf();
-        ensure!(
-            key.is_file(),
-            "Client private key does not exist: {:?}",
-            &key
-        );
+        if !key.is_file() {
+            return Err(ApiErrorKind::BadCreds(key).into());
+        }
 
         Ok(Self { certs, key })
     }

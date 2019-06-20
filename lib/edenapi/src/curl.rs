@@ -14,7 +14,7 @@ use curl::{
     easy::{Easy2, Handler, HttpVersion, List},
     multi::Multi,
 };
-use failure::{bail, ensure, err_msg};
+use failure::{format_err, ResultExt};
 use itertools::Itertools;
 use log;
 use serde::{de::DeserializeOwned, Serialize};
@@ -31,7 +31,7 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::errors::ApiResult;
+use crate::errors::{ApiErrorKind, ApiResult};
 use crate::progress::{ProgressFn, ProgressManager};
 use crate::stats::DownloadStats;
 
@@ -98,12 +98,12 @@ impl EdenApiCurlClient {
     pub fn new(config: Config) -> ApiResult<Self> {
         let base_url = match config.base_url {
             Some(url) => url,
-            None => bail!("No base URL specified"),
+            None => Err(ApiErrorKind::BadConfig("No base URL specified".into()))?,
         };
 
         let repo = match config.repo {
             Some(repo) => repo,
-            None => bail!("No repo name specified"),
+            None => Err(ApiErrorKind::BadConfig("No repo name specified".into()))?,
         };
 
         Ok(Self {
@@ -131,14 +131,15 @@ impl EdenApi for EdenApiCurlClient {
         handle.perform()?;
 
         let code = handle.response_code()?;
-        ensure!(code == 200, "Received HTTP status code {}", code);
+        let msg = String::from_utf8_lossy(&handle.get_ref().data()).into_owned();
 
-        let response = String::from_utf8_lossy(&handle.get_ref().data());
-        ensure!(
-            response == "I_AM_ALIVE",
-            "Unexpected response: {:?}",
-            &response
-        );
+        if code != 200 {
+            return Err(ApiErrorKind::Http { code, msg }.into());
+        }
+
+        if msg != "I_AM_ALIVE" {
+            Err(format_err!("Unexpected response: {:?}", &msg).context(ApiErrorKind::BadResponse))?;
+        }
 
         Ok(())
     }
@@ -152,10 +153,13 @@ impl EdenApi for EdenApiCurlClient {
         handle.perform()?;
 
         let code = handle.response_code()?;
-        ensure!(code == 200, "Received HTTP status code {}", code);
+        let msg = String::from_utf8_lossy(&handle.get_ref().data()).into_owned();
 
-        let response = String::from_utf8(handle.get_ref().data().to_vec())?;
-        Ok(response)
+        if code != 200 {
+            return Err(ApiErrorKind::Http { code, msg }.into());
+        }
+
+        Ok(msg)
     }
 
     fn get_files(
@@ -209,7 +213,7 @@ impl EdenApi for EdenApiCurlClient {
                     for (path, entry) in response {
                         num_entries += 1;
                         let entry = HistoryEntry::from_wire(entry, path);
-                        store.add_entry(&entry)?;
+                        store.add_entry(&entry).context(ApiErrorKind::Store)?;
                     }
                     Ok(())
                 },
@@ -225,7 +229,7 @@ impl EdenApi for EdenApiCurlClient {
                     num_responses += 1;
                     for entry in response.into_iter().flatten() {
                         num_entries += 1;
-                        store.add_entry(&entry)?;
+                        store.add_entry(&entry).context(ApiErrorKind::Store)?;
                     }
                     Ok(())
                 },
@@ -416,12 +420,8 @@ where
         let data = easy.get_ref().data();
 
         if code >= 400 {
-            let msg = String::from_utf8_lossy(data);
-            bail!(
-                "Received HTTP status code {} with response: {:?}",
-                code,
-                msg
-            );
+            let msg = String::from_utf8_lossy(data).into_owned();
+            Err(ApiErrorKind::Http { code, msg })?;
         }
 
         let response = Deserializer::from_slice(data)
@@ -487,7 +487,11 @@ where
             creds.as_ref(),
             requests,
             progress_cb,
-            |response: Vec<T>| Ok(tx.send(response)?),
+            |response: Vec<T>| {
+                Ok(tx
+                    .send(response)
+                    .map_err(|_| "Failed to send received data to main thread")?)
+            },
         )
     });
 
@@ -495,9 +499,7 @@ where
         response_cb(response)?;
     }
 
-    iothread
-        .join()
-        .map_err(|_| err_msg("I/O thread panicked"))?
+    iothread.join().map_err(|_| "I/O thread panicked")?
 }
 
 /// Configure a new curl::Easy2 handle with appropriate default settings.
@@ -542,7 +544,7 @@ fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> ApiResult<
         base: None,
         key,
     };
-    store.add(&delta, &metadata)?;
+    store.add(&delta, &metadata).context(ApiErrorKind::Store)?;
     Ok(())
 }
 
@@ -552,7 +554,7 @@ fn add_data_response(
     validate: bool,
 ) -> ApiResult<()> {
     for entry in response {
-        let data = entry.data(validate)?;
+        let data = entry.data(validate).context(ApiErrorKind::BadResponse)?;
         add_delta(store, entry.key().clone(), data)?;
     }
     Ok(())
