@@ -1,0 +1,141 @@
+From 06c66f6f509b85d7986d43c6196f7040ad34a19d Mon Sep 17 00:00:00 2001
+From: Kostia Balytskyi <ikostia@fb.com>
+Date: Sun, 2 Jun 2019 20:15:55 +0100
+Subject: [PATCH 1/7] windows_builds: increase the MAXPATHLEN constant and
+ start using it
+
+Summary:
+`MAX_PATH` is defined by the Windows headers to be 259 or so. This is
+explicitly a backwards-compatibility constant, modern applications
+should not use it, kernel does not care.
+
+Now, Facebook Mercurial for Windows is long-paths-aware, meaning that
+any native Filesystem API call would not complain about any long paths.
+However, Python is a different beast. Being friendly and careful, it
+takes the `MAX_PATH` limitation quite seriously and uses this
+constant in a few places, thus artificially limiting the length of
+paths it understands. The `osdefs.h` looks like just the place where
+Python introduces its own `MAXPATHLEN` to deal with things like this.
+It does not quite go far enough, so `posixmodule` (which guess what -
+is also resposible for `import nt`) does not use it. Let's fix it
+and start using newly increased `MAXPATHLEN` all over the place.
+
+What can go wrong?
+@opt-out-review
+---
+ Include/osdefs.h      |  5 +++++
+ Modules/posixmodule.c | 28 ++++++++++++++--------------
+ 2 files changed, 19 insertions(+), 14 deletions(-)
+
+diff --git a/Include/osdefs.h b/Include/osdefs.h
+index 77af9237546..fc28fb5d930 100644
+--- a/Include/osdefs.h
++++ b/Include/osdefs.h
+@@ -23,6 +23,11 @@ extern "C" {
+ #endif
+ #endif
+ 
++/* Facebook-specific: our Python on Windows understands long paths */
++#if defined(MS_WINDOWS)
++#define MAXPATHLEN 1024
++#endif
++
+ #ifdef RISCOS
+ #define SEP '.'
+ #define MAXPATHLEN 256
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index 7a1a6945c10..f7558eb644f 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -956,18 +956,18 @@ win32_1str(PyObject* args, char* func,
+ static BOOL __stdcall
+ win32_chdir(LPCSTR path)
+ {
+-    char new_path[MAX_PATH+1];
++    char new_path[MAXPATHLEN+1];
+     int result;
+     char env[4] = "=x:";
+ 
+     if(!SetCurrentDirectoryA(path))
+         return FALSE;
+-    result = GetCurrentDirectoryA(MAX_PATH+1, new_path);
++    result = GetCurrentDirectoryA(MAXPATHLEN+1, new_path);
+     if (!result)
+         return FALSE;
+     /* In the ANSI API, there should not be any paths longer
+-       than MAX_PATH. */
+-    assert(result <= MAX_PATH+1);
++       than MAXPATHLEN. */
++    assert(result <= MAXPATHLEN+1);
+     if (strncmp(new_path, "\\\\", 2) == 0 ||
+         strncmp(new_path, "//", 2) == 0)
+         /* UNC path, nothing to do. */
+@@ -977,21 +977,21 @@ win32_chdir(LPCSTR path)
+ }
+ 
+ /* The Unicode version differs from the ANSI version
+-   since the current directory might exceed MAX_PATH characters */
++   since the current directory might exceed MAXPATHLEN characters */
+ static BOOL __stdcall
+ win32_wchdir(LPCWSTR path)
+ {
+-    wchar_t _new_path[MAX_PATH+1], *new_path = _new_path;
++    wchar_t _new_path[MAXPATHLEN+1], *new_path = _new_path;
+     int result;
+     wchar_t env[4] = L"=x:";
+     int is_unc_like_path;
+ 
+     if(!SetCurrentDirectoryW(path))
+         return FALSE;
+-    result = GetCurrentDirectoryW(MAX_PATH+1, new_path);
++    result = GetCurrentDirectoryW(MAXPATHLEN+1, new_path);
+     if (!result)
+         return FALSE;
+-    if (result > MAX_PATH+1) {
++    if (result > MAXPATHLEN+1) {
+         new_path = malloc(result * sizeof(wchar_t));
+         if (!new_path) {
+             SetLastError(ERROR_OUTOFMEMORY);
+@@ -2295,9 +2295,9 @@ posix_listdir(PyObject *self, PyObject *args)
+     HANDLE hFindFile;
+     BOOL result;
+     WIN32_FIND_DATA FileData;
+-    char namebuf[MAX_PATH+5]; /* Overallocate for \\*.*\0 */
++    char namebuf[MAXPATHLEN+5]; /* Overallocate for \\*.*\0 */
+     char *bufptr = namebuf;
+-    Py_ssize_t len = sizeof(namebuf)-5; /* only claim to have space for MAX_PATH */
++    Py_ssize_t len = sizeof(namebuf)-5; /* only claim to have space for MAXPATHLEN */
+ 
+     Py_UNICODE *wpath;
+     if (PyArg_ParseTuple(args, "u:listdir", &wpath)) {
+@@ -2608,15 +2608,15 @@ static PyObject *
+ posix__getfullpathname(PyObject *self, PyObject *args)
+ {
+     /* assume encoded strings won't more than double no of chars */
+-    char inbuf[MAX_PATH*2];
++    char inbuf[MAXPATHLEN*2];
+     char *inbufp = inbuf;
+     Py_ssize_t insize = sizeof(inbuf);
+-    char outbuf[MAX_PATH*2];
++    char outbuf[MAXPATHLEN*2];
+     char *temp;
+ 
+     Py_UNICODE *wpath;
+     if (PyArg_ParseTuple(args, "u|:_getfullpathname", &wpath)) {
+-        Py_UNICODE woutbuf[MAX_PATH*2], *woutbufp = woutbuf;
++        Py_UNICODE woutbuf[MAXPATHLEN*2], *woutbufp = woutbuf;
+         Py_UNICODE *wtemp;
+         DWORD result;
+         PyObject *v;
+@@ -5421,7 +5421,7 @@ _PyPopenCreateProcess(char *cmdstring,
+              * Oh gag, we're on Win9x or using COMMAND.COM. Use
+              * the workaround listed in KB: Q150956
+              */
+-            char modulepath[_MAX_PATH];
++            char modulepath[MAXPATHLEN];
+             struct stat statinfo;
+             GetModuleFileName(NULL, modulepath, sizeof(modulepath));
+             for (x = i = 0; modulepath[i]; i++)
+-- 
+2.14.1.windows.1
+
