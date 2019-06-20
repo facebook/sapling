@@ -257,7 +257,7 @@ fn prefetch_history(
     repo: BlobRepo,
     path: MPath,
 ) -> impl Future<Item = HashMap<HgFileNodeId, FilenodeInfo>, Error = Error> {
-    repo.get_all_filenodes(ctx, RepoPath::FilePath(path))
+    repo.get_all_filenodes_maybe_stale(ctx, RepoPath::FilePath(path))
         .map(|filenodes| {
             filenodes
                 .into_iter()

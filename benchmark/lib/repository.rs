@@ -212,7 +212,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         .boxify()
     }
 
-    fn get_all_filenodes(
+    fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
@@ -220,7 +220,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         delay(
             self.get_dist,
-            self.inner.get_all_filenodes(ctx, path, repo_id),
+            self.inner.get_all_filenodes_maybe_stale(ctx, path, repo_id),
         )
         .boxify()
     }

@@ -127,7 +127,7 @@ pub trait Filenodes: Send + Sync {
         repo_id: RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error>;
 
-    fn get_all_filenodes(
+    fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: &RepoPath,

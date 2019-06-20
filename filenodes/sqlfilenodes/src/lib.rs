@@ -330,7 +330,7 @@ impl Filenodes for SqlFilenodes {
             .boxify()
     }
 
-    fn get_all_filenodes(
+    fn get_all_filenodes_maybe_stale(
         &self,
         _ctx: CoreContext,
         path: &RepoPath,

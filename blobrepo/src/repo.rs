@@ -845,13 +845,14 @@ impl BlobRepo {
             })
     }
 
-    pub fn get_all_filenodes(
+    pub fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: RepoPath,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::get_all_filenodes.add_value(1);
-        self.filenodes.get_all_filenodes(ctx, &path, self.repoid)
+        self.filenodes
+            .get_all_filenodes_maybe_stale(ctx, &path, self.repoid)
     }
 
     pub fn get_bonsai_from_hg(

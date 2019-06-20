@@ -170,7 +170,7 @@ fn assert_all_filenodes(
     expected: &Vec<FilenodeInfo>,
 ) {
     let res = filenodes
-        .get_all_filenodes(ctx, path, repo_id)
+        .get_all_filenodes_maybe_stale(ctx, path, repo_id)
         .wait()
         .expect("error while fetching filenode");
     assert_eq!(&res, expected);
@@ -513,7 +513,7 @@ macro_rules! filenodes_tests {
             }
 
             #[test]
-            fn get_all_filenodes() {
+            fn get_all_filenodes_maybe_stale() {
                 async_unit::tokio_unit_test(|| -> Result<_, !> {
                     let ctx = CoreContext::test_mock();
                     let filenodes = &$create_db();

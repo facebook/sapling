@@ -184,17 +184,8 @@ Merge when one filenode is ancestor of another
   $ hg merge -q $SECONDPARENT
   $ hg ci -m 'ancestors'
   $ hgmn push -r . --to master_bookmark -q
-  $ hg log -r tip
-  changeset:   18:83581fc6568a
-  tag:         tip
-  bookmark:    default/master_bookmark
-  hoistedname: master_bookmark
-  parent:      17:e8569a9ce348
-  parent:      16:b34dc1eaf12c
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     ancestors
-  
+  $ hg log -r tip -T '{node}\n'
+  83581fc6568afb36a68d6f3cbfe7c044bdd96457
   $ hgmn st --change tip -C
   M ancestorscase
   A somefile

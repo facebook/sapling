@@ -140,7 +140,7 @@ impl Filenodes for CachingFilenodes {
         })
     }
 
-    fn get_all_filenodes(
+    fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
@@ -168,7 +168,7 @@ impl Filenodes for CachingFilenodes {
             }
 
             filenodes
-                .get_all_filenodes(ctx, &path, repo_id)
+                .get_all_filenodes_maybe_stale(ctx, &path, repo_id)
                 .inspect(move |all_filenodes| {
                     schedule_fill_all_filenodes_memcache(
                         all_filenodes,
