@@ -419,7 +419,7 @@ mod test {
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
-                    "d0b4845e349f338361208f170ec13120080da37f",
+                    "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
                 ),
             )
             .boxify();
@@ -431,7 +431,7 @@ mod test {
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
-                        "d0b4845e349f338361208f170ec13120080da37f",
+                        "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
                     ),
                     string_to_bonsai(
                         ctx.clone(),
@@ -462,7 +462,7 @@ mod test {
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
-                    "d0b4845e349f338361208f170ec13120080da37f",
+                    "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
                 ),
             )
             .boxify();
@@ -474,7 +474,7 @@ mod test {
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
-                        "d0b4845e349f338361208f170ec13120080da37f",
+                        "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
                     ),
                     string_to_bonsai(
                         ctx.clone(),

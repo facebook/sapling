@@ -930,7 +930,7 @@ mod test {
             let merge_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
-                "d0b4845e349f338361208f170ec13120080da37f",
+                "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
             );
             let sli = SkiplistIndex::new();
             sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), merge_node, 100)
@@ -1048,7 +1048,7 @@ mod test {
             let _merge_node = string_to_bonsai(
                 ctx.clone(),
                 &repo,
-                "d0b4845e349f338361208f170ec13120080da37f",
+                "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
             );
             let sli = SkiplistIndex::new();
 
@@ -1745,7 +1745,7 @@ mod test {
         let merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "d0b4845e349f338361208f170ec13120080da37f",
+            "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
         );
 
         // This test tries to advance the merge node forward.
@@ -1906,7 +1906,7 @@ mod test {
         let merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "d0b4845e349f338361208f170ec13120080da37f",
+            "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
         );
 
         // This test partially indexes the top few of the graph.

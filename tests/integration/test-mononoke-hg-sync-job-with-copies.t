@@ -131,6 +131,7 @@ Push of a merge with a copy
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     copied
   
+
   $ hgmn st --change tip -C
   A fromcopyremote
   A localcopied
@@ -151,6 +152,7 @@ Push of a merge with a copy
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     copied
   
+
   $ hg st --change tip -C
   A fromcopyremote
   A localcopied
@@ -162,12 +164,15 @@ Merge when one filenode is ancestor of another
   $ cd $TESTTMP/client-push
 
   $ hg up -q master_bookmark
-  $ STARTCOMMIT=$(hg log -r tip -T '{node}')
+  $ INITIALCOMMIT=$(hg log -r tip -T '{node}')
   $ echo 1 >> 1
   $ hg ci -m 'some commit'
   $ hgmn push -r . --to master_bookmark -q
 
-  $ hg up -q $STARTCOMMIT
+Make 4 commits arranged in a diamond shape
+"ancestorscase" file is created in the start commit,
+modified in one of the merged parents and in the merge commit itself
+  $ hg up -q $INITIALCOMMIT
   $ echo 1 > ancestorscase
   $ hg addremove -q && hg ci -m initial
   $ STARTCOMMIT=$(hg log -r tip -T '{node}')
@@ -182,27 +187,56 @@ Merge when one filenode is ancestor of another
   $ SECONDPARENT=$(hg log -r tip -T '{node}')
   $ hg up -q $FIRSTPARENT
   $ hg merge -q $SECONDPARENT
+  $ echo 3 > ancestorscase
   $ hg ci -m 'ancestors'
   $ hgmn push -r . --to master_bookmark -q
   $ hg log -r tip -T '{node}\n'
-  83581fc6568afb36a68d6f3cbfe7c044bdd96457
+  aca179fa10740cb530e81a2d0ada525c2026ca2c
   $ hgmn st --change tip -C
   M ancestorscase
   A somefile
 
+
+Second diamond push, this time "ancestorscase2" is modified in the second
+parent 
+
+  $ hg up -q master_bookmark
+  $ INITIALCOMMIT=$(hg log -r tip -T '{node}')
+  $ echo 1 >> 1
+  $ hg ci -m 'some commit'
+  $ hgmn push -r . --to master_bookmark -q
+
+  $ hg up -q $INITIALCOMMIT
+  $ echo 1 > ancestorscase2
+  $ hg addremove -q && hg ci -m initial
+  $ STARTCOMMIT=$(hg log -r tip -T '{node}')
+
+  $ echo 1 > somefile2
+  $ hg addremove -q && hg ci -m firstparent
+  $ FIRSTPARENT=$(hg log -r tip -T '{node}')
+
+  $ hg up -q $STARTCOMMIT
+  $ echo 2 > ancestorscase2
+  $ hg addremove -q && hg ci -m secondparent
+  $ SECONDPARENT=$(hg log -r tip -T '{node}')
+  $ hg up -q $FIRSTPARENT
+  $ hg merge -q $SECONDPARENT
+  $ echo 3 > ancestorscase2
+  $ hg ci -m 'ancestors'
+  $ hgmn push -r . --to master_bookmark -q
+  $ hg log -r tip -T '{node}\n'
+  b4e3aff8dd1842190c0d0cfbf180ea5190d1211e
+
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 4 &> /dev/null
-  $ mononoke_hg_sync repo-hg 5 2>&1 |  grep ReplayVerification
-  remote: [ReplayVerification] Expected: (master_bookmark, 83581fc6568afb36a68d6f3cbfe7c044bdd96457). Actual: (master_bookmark, 47ca0804bacb6c708912e22a9a15b1198adb389b)
-  remote: [ReplayVerification] Expected: (master_bookmark, 83581fc6568afb36a68d6f3cbfe7c044bdd96457). Actual: (master_bookmark, 47ca0804bacb6c708912e22a9a15b1198adb389b)
+Sync first "diamond" push
+  $ mononoke_hg_sync repo-hg 5 2>&1 | grep ReplayVerification
+  [1]
+
+  $ mononoke_hg_sync repo-hg 6 &> /dev/null
+Sync second "diamond" push
+  $ mononoke_hg_sync repo-hg 7 2>&1 | grep ReplayVerification
+  [1]
   $ cd $TESTTMP/repo-hg
-  $ hg log -r tip
-  changeset:   8:b5281d1ea881
-  bookmark:    master_bookmark
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     some commit
-  
-  $ hg st --change tip -C
-  M 1
+  $ hg log -r tip -T '{node}\n'
+  b4e3aff8dd1842190c0d0cfbf180ea5190d1211e

@@ -24,6 +24,55 @@ pub enum ErrorKind {
     InconsistentCopyInfo(RepoPath, RepoPath),
 }
 
+pub enum FilenodesRelatedResult {
+    Unrelated,
+    FirstAncestorOfSecond,
+    SecondAncestorOfFirst,
+}
+
+/// Checks if one filenode is ancestor of another
+pub fn check_if_related(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    filenode_a: HgFileNodeId,
+    filenode_b: HgFileNodeId,
+    path: MPath,
+) -> impl Future<Item = FilenodesRelatedResult, Error = Error> {
+    get_file_history(
+        ctx.clone(),
+        repo.clone(),
+        filenode_a.clone(),
+        path.clone(),
+        None,
+    )
+    .collect()
+    .join(
+        get_file_history(
+            ctx.clone(),
+            repo.clone(),
+            filenode_b.clone(),
+            path.clone(),
+            None,
+        )
+        .collect(),
+    )
+    .map(move |(history_a, history_b)| {
+        if history_a
+            .iter()
+            .any(|entry| entry.filenode() == &filenode_b)
+        {
+            FilenodesRelatedResult::SecondAncestorOfFirst
+        } else if history_b
+            .iter()
+            .any(|entry| entry.filenode() == &filenode_a)
+        {
+            FilenodesRelatedResult::FirstAncestorOfSecond
+        } else {
+            FilenodesRelatedResult::Unrelated
+        }
+    })
+}
+
 /// Get the history of the file corresponding to the given filenode and path.
 pub fn get_file_history(
     ctx: CoreContext,

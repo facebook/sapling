@@ -1087,58 +1087,82 @@ impl BlobRepo {
             move |maybe_entry| match maybe_entry {
                 Some(entry) => future::ok(entry).left_future(),
                 None => {
-                    let mut p1 = p1;
-                    let mut p2 = p2;
-
                     // Mercurial has complicated logic of finding file parents, especially
                     // if a file was also copied/moved.
                     // See mercurial/localrepo.py:_filecommit(). We have to replicate this
                     // logic in Mononoke.
                     // TODO(stash): T45618931 replicate all the cases from _filecommit()
-                    if let Some((ref copy_from_path, _)) = copy_from {
-                        if copy_from_path != &path {
-                            if p1.is_some() && p2.is_none() {
-                                // This case can happen if a file existed in it's parent
-                                // but it was copied over:
-                                // ```
-                                // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
-                                // hg cp 2 1 --force && hg ci -m second
-                                // # File '1' has both p1 and copy from.
-                                // ```
-                                // In that case Mercurial discards p1 i.e. `hg log` will
-                                // use copy from revision as a parent. Arguably not the best
-                                // decision, but we have to keep it.
-                                p1 = None;
-                                p2 = None;
-                            }
-                        }
-                    }
 
-                    let upload_entry = UploadHgFileEntry {
-                        upload_node_id: UploadHgNodeHash::Generate,
-                        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-                            id: change.content_id(),
-                            copy_from: copy_from.clone(),
-                        }),
-                        file_type: change.file_type(),
-                        p1,
-                        p2,
-                        path: path.clone(),
+
+                    let parents_fut = if let Some((ref copy_from_path, _)) = copy_from {
+                        if copy_from_path != &path && p1.is_some() && p2.is_none() {
+                            // This case can happen if a file existed in it's parent
+                            // but it was copied over:
+                            // ```
+                            // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
+                            // hg cp 2 1 --force && hg ci -m second
+                            // # File '1' has both p1 and copy from.
+                            // ```
+                            // In that case Mercurial discards p1 i.e. `hg log` will
+                            // use copy from revision as a parent. Arguably not the best
+                            // decision, but we have to keep it.
+                            ok((None, None)).left_future()
+                        } else {
+                            ok((p1, p2)).left_future()
+                        }
+                    } else if p1.is_none() {
+                        ok((p2, None)).left_future()
+                    } else if p2.is_some() {
+                        crate::file_history::check_if_related(
+                            ctx.clone(),
+                            repo.clone(),
+                            p1.unwrap(),
+                            p2.unwrap(),
+                            path.clone(),
+                        )
+                        .map(move |res| {
+                            use crate::file_history::FilenodesRelatedResult::*;
+
+                            match res {
+                                Unrelated => (p1, p2),
+                                FirstAncestorOfSecond => (p2, None),
+                                SecondAncestorOfFirst => (p1, None),
+                            }
+                        })
+                        .right_future()
+                    } else {
+                        ok((p1, p2)).left_future()
                     };
-                    let upload_fut = match upload_entry.upload(ctx, &repo) {
-                        Ok((_, upload_fut)) => upload_fut.map(move |(entry, _)| {
-                            let node_info = IncompleteFilenodeInfo {
-                                path: RepoPath::FilePath(path),
-                                filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
+
+                    parents_fut
+                        .and_then({
+                            move |(p1, p2)| {
+                            let upload_entry = UploadHgFileEntry {
+                                upload_node_id: UploadHgNodeHash::Generate,
+                                contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
+                                    id: change.content_id(),
+                                    copy_from: copy_from.clone(),
+                                }),
+                                file_type: change.file_type(),
                                 p1,
                                 p2,
-                                copyfrom: copy_from.map(|(p, h)| (RepoPath::FilePath(p), h)),
+                                path: path.clone(),
                             };
-                            (entry, Some(node_info))
-                        }),
-                        Err(err) => return future::err(err).left_future(),
-                    };
-                    upload_fut.right_future()
+                            match upload_entry.upload(ctx, &repo) {
+                                Ok((_, upload_fut)) => upload_fut.map(move |(entry, _)| {
+                                    let node_info = IncompleteFilenodeInfo {
+                                        path: RepoPath::FilePath(path),
+                                        filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
+                                        p1,
+                                        p2,
+                                        copyfrom: copy_from.map(|(p, h)| (RepoPath::FilePath(p), h)),
+                                    };
+                                    (entry, Some(node_info))
+                                }).left_future(),
+                                Err(err) => return future::err(err).right_future(),
+                            }
+                        }})
+                        .right_future()
                 }
             }
         })
