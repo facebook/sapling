@@ -1,0 +1,521 @@
+From 7116db1effadcdc2e06caffd7248351e5858a184 Mon Sep 17 00:00:00 2001
+From: Jun Wu <quark@fb.com>
+Date: Thu, 13 Jun 2019 16:05:51 -0700
+Subject: [PATCH 5/7] PC: aggressively simplify sys.path
+
+Our Windows build is ABI incompatible with the official Python due to a
+different version of MSVC is used (The official Python uses MSVC 2010).
+That means this Python interpreter cannot import native modules compiled
+for the official Python, or vice-versa.
+
+Therefore it makes sense to just avoid putting potentially problematic
+paths in `sys.path`, including:
+
+- User-defined PYTHONPATH/PYTHONHOME environment variables.
+- Some paths in Windows registry.
+
+This diff aggressively removes sources of `sys.path` so it will only
+contain 2 entries:
+
+- zip path (with "dll" in "pythonXY.dll" replaced by "zip")
+- arg0 path (exe path)
+
+That will also sastify our distribution needs - pure modules go to
+`.zip`, and native modules go to (exe path).
+---
+ PC/getpathp.c      | 363 ++---------------------------------------------------
+ PC/pyconfig.h      |   2 +-
+ Python/pythonrun.c |   4 +-
+ Python/sysmodule.c |   2 +-
+ 4 files changed, 12 insertions(+), 359 deletions(-)
+
+diff --git a/PC/getpathp.c b/PC/getpathp.c
+index 461f9fc5451..96bff350820 100644
+--- a/PC/getpathp.c
++++ b/PC/getpathp.c
+@@ -3,53 +3,13 @@
+ /* Used by DOS, OS/2, Windows 3.1, Windows 95/98, Windows NT. */
+ 
+ /* ----------------------------------------------------------------
+-   PATH RULES FOR WINDOWS:
++   PATH RULES FOR WINDOWS (GREATLY SIMPLIFIED):
+    This describes how sys.path is formed on Windows.  It describes the
+    functionality, not the implementation (ie, the order in which these
+    are actually fetched is different)
+ 
+-   * Python always adds an empty entry at the start, which corresponds
+-     to the current directory.
+-
+-   * If the PYTHONPATH env. var. exists, its entries are added next.
+-
+-   * We look in the registry for "application paths" - that is, sub-keys
+-     under the main PythonPath registry key.  These are added next (the
+-     order of sub-key processing is undefined).
+-     HKEY_CURRENT_USER is searched and added first.
+-     HKEY_LOCAL_MACHINE is searched and added next.
+-     (Note that all known installers only use HKLM, so HKCU is typically
+-     empty)
+-
+-   * We attempt to locate the "Python Home" - if the PYTHONHOME env var
+-     is set, we believe it.  Otherwise, we use the path of our host .EXE's
+-     to try and locate our "landmark" (lib\\os.py) and deduce our home.
+-     - If we DO have a Python Home: The relevant sub-directories (Lib,
+-       plat-win, lib-tk, etc) are based on the Python Home
+-     - If we DO NOT have a Python Home, the core Python Path is
+-       loaded from the registry.  This is the main PythonPath key,
+-       and both HKLM and HKCU are combined to form the path)
+-
+-   * Iff - we can not locate the Python Home, have not had a PYTHONPATH
+-     specified, and can't locate any Registry entries (ie, we have _nothing_
+-     we can assume is a good path), a default path with relative entries is
+-     used (eg. .\Lib;.\plat-win, etc)
+-
+-
+-  The end result of all this is:
+-  * When running python.exe, or any other .exe in the main Python directory
+-    (either an installed version, or directly from the PCbuild directory),
+-    the core path is deduced, and the core paths in the registry are
+-    ignored.  Other "application paths" in the registry are always read.
+-
+-  * When Python is hosted in another exe (different directory, embedded via
+-    COM, etc), the Python Home will not be deduced, so the core path from
+-    the registry is used.  Other "application paths" in the registry are
+-    always read.
+-
+-  * If Python can't find its home and there is no registry (eg, frozen
+-    exe, some very strange installation setup) you get a path with
+-    some default, but relative, paths.
++   * <pythonXY.dll directory>/pythonXY.zip (XY = 27 for Python 2.7)
++   * <main exe directory>
+ 
+    ---------------------------------------------------------------- */
+ 
+@@ -207,163 +167,6 @@ search_for_prefix(char *argv0_path, char *landmark)
+ extern const char *PyWin_DLLVersionString;
+ 
+ 
+-/* Load a PYTHONPATH value from the registry.
+-   Load from either HKEY_LOCAL_MACHINE or HKEY_CURRENT_USER.
+-
+-   Works in both Unicode and 8bit environments.  Only uses the
+-   Ex family of functions so it also works with Windows CE.
+-
+-   Returns NULL, or a pointer that should be freed.
+-
+-   XXX - this code is pretty strange, as it used to also
+-   work on Win16, where the buffer sizes werent available
+-   in advance.  It could be simplied now Win16/Win32s is dead!
+-*/
+-
+-static char *
+-getpythonregpath(HKEY keyBase, int skipcore)
+-{
+-    HKEY newKey = 0;
+-    DWORD dataSize = 0;
+-    DWORD numKeys = 0;
+-    LONG rc;
+-    char *retval = NULL;
+-    TCHAR *dataBuf = NULL;
+-    static const TCHAR keyPrefix[] = _T("Software\\Python\\PythonCore\\");
+-    static const TCHAR keySuffix[] = _T("\\PythonPath");
+-    size_t versionLen;
+-    DWORD index;
+-    TCHAR *keyBuf = NULL;
+-    TCHAR *keyBufPtr;
+-    TCHAR **ppPaths = NULL;
+-
+-    /* Tried to use sysget("winver") but here is too early :-( */
+-    versionLen = _tcslen(PyWin_DLLVersionString);
+-    /* Space for all the chars, plus one \0 */
+-    keyBuf = keyBufPtr = malloc(sizeof(keyPrefix) +
+-                                sizeof(TCHAR)*(versionLen-1) +
+-                                sizeof(keySuffix));
+-    if (keyBuf==NULL) goto done;
+-
+-    memcpy(keyBufPtr, keyPrefix, sizeof(keyPrefix)-sizeof(TCHAR));
+-    keyBufPtr += sizeof(keyPrefix)/sizeof(TCHAR) - 1;
+-    memcpy(keyBufPtr, PyWin_DLLVersionString, versionLen * sizeof(TCHAR));
+-    keyBufPtr += versionLen;
+-    /* NULL comes with this one! */
+-    memcpy(keyBufPtr, keySuffix, sizeof(keySuffix));
+-    /* Open the root Python key */
+-    rc=RegOpenKeyEx(keyBase,
+-                    keyBuf, /* subkey */
+-            0, /* reserved */
+-            KEY_READ,
+-            &newKey);
+-    if (rc!=ERROR_SUCCESS) goto done;
+-    /* Find out how big our core buffer is, and how many subkeys we have */
+-    rc = RegQueryInfoKey(newKey, NULL, NULL, NULL, &numKeys, NULL, NULL,
+-                    NULL, NULL, &dataSize, NULL, NULL);
+-    if (rc!=ERROR_SUCCESS) goto done;
+-    if (skipcore) dataSize = 0; /* Only count core ones if we want them! */
+-    /* Allocate a temp array of char buffers, so we only need to loop
+-       reading the registry once
+-    */
+-    ppPaths = malloc( sizeof(TCHAR *) * numKeys );
+-    if (ppPaths==NULL) goto done;
+-    memset(ppPaths, 0, sizeof(TCHAR *) * numKeys);
+-    /* Loop over all subkeys, allocating a temp sub-buffer. */
+-    for(index=0;index<numKeys;index++) {
+-        TCHAR keyBuf[MAX_PATH+1];
+-        HKEY subKey = 0;
+-        DWORD reqdSize = MAX_PATH+1;
+-        /* Get the sub-key name */
+-        DWORD rc = RegEnumKeyEx(newKey, index, keyBuf, &reqdSize,
+-                                NULL, NULL, NULL, NULL );
+-        if (rc!=ERROR_SUCCESS) goto done;
+-        /* Open the sub-key */
+-        rc=RegOpenKeyEx(newKey,
+-                                        keyBuf, /* subkey */
+-                        0, /* reserved */
+-                        KEY_READ,
+-                        &subKey);
+-        if (rc!=ERROR_SUCCESS) goto done;
+-        /* Find the value of the buffer size, malloc, then read it */
+-        RegQueryValueEx(subKey, NULL, 0, NULL, NULL, &reqdSize);
+-        if (reqdSize) {
+-            ppPaths[index] = malloc(reqdSize);
+-            if (ppPaths[index]) {
+-                RegQueryValueEx(subKey, NULL, 0, NULL,
+-                                (LPBYTE)ppPaths[index],
+-                                &reqdSize);
+-                dataSize += reqdSize + 1; /* 1 for the ";" */
+-            }
+-        }
+-        RegCloseKey(subKey);
+-    }
+-
+-    /* return null if no path to return */
+-    if (dataSize == 0) goto done;
+-
+-    /* original datasize from RegQueryInfo doesn't include the \0 */
+-    dataBuf = malloc((dataSize+1) * sizeof(TCHAR));
+-    if (dataBuf) {
+-        TCHAR *szCur = dataBuf;
+-        DWORD reqdSize = dataSize;
+-        /* Copy our collected strings */
+-        for (index=0;index<numKeys;index++) {
+-            if (index > 0) {
+-                *(szCur++) = _T(';');
+-                dataSize--;
+-            }
+-            if (ppPaths[index]) {
+-                Py_ssize_t len = _tcslen(ppPaths[index]);
+-                _tcsncpy(szCur, ppPaths[index], len);
+-                szCur += len;
+-                assert(dataSize > (DWORD)len);
+-                dataSize -= (DWORD)len;
+-            }
+-        }
+-        if (skipcore)
+-            *szCur = '\0';
+-        else {
+-            /* If we have no values, we dont need a ';' */
+-            if (numKeys) {
+-                *(szCur++) = _T(';');
+-                dataSize--;
+-            }
+-            /* Now append the core path entries -
+-               this will include the NULL
+-            */
+-            rc = RegQueryValueEx(newKey, NULL, 0, NULL,
+-                                 (LPBYTE)szCur, &dataSize);
+-        }
+-        /* And set the result - caller must free
+-           If MBCS, it is fine as is.  If Unicode, allocate new
+-           buffer and convert.
+-        */
+-#ifdef UNICODE
+-        retval = (char *)malloc(reqdSize+1);
+-        if (retval)
+-            WideCharToMultiByte(CP_ACP, 0,
+-                            dataBuf, -1, /* source */
+-                    retval, reqdSize+1, /* dest */
+-                    NULL, NULL);
+-        free(dataBuf);
+-#else
+-        retval = dataBuf;
+-#endif
+-    }
+-done:
+-    /* Loop freeing my temp buffers */
+-    if (ppPaths) {
+-        for(index=0;index<numKeys;index++)
+-            if (ppPaths[index]) free(ppPaths[index]);
+-        free(ppPaths);
+-    }
+-    if (newKey)
+-        RegCloseKey(newKey);
+-    if (keyBuf)
+-        free(keyBuf);
+-    return retval;
+-}
+ #endif /* Py_ENABLE_SHARED */
+ #endif /* MS_WINDOWS */
+ 
+@@ -465,13 +268,8 @@ calculate_path(void)
+     char argv0_path[MAXPATHLEN+1];
+     char *buf;
+     size_t bufsz;
+-    char *pythonhome = Py_GetPythonHome();
+-    char *envpath = Py_GETENV("PYTHONPATH");
+ 
+ #ifdef MS_WINDOWS
+-    int skiphome, skipdefault;
+-    char *machinepath = NULL;
+-    char *userpath = NULL;
+     char zip_path[MAXPATHLEN+1];
+     size_t len;
+ #endif
+@@ -480,18 +278,6 @@ calculate_path(void)
+     /* progpath guaranteed \0 terminated in MAXPATH+1 bytes. */
+     strcpy(argv0_path, progpath);
+     reduce(argv0_path);
+-    if (pythonhome == NULL || *pythonhome == '\0') {
+-        if (search_for_prefix(argv0_path, LANDMARK))
+-            pythonhome = prefix;
+-        else
+-            pythonhome = NULL;
+-    }
+-    else
+-        strncpy(prefix, pythonhome, MAXPATHLEN);
+-
+-    if (envpath && *envpath == '\0')
+-        envpath = NULL;
+-
+ 
+ #ifdef MS_WINDOWS
+     /* Calculate zip archive path */
+@@ -509,175 +295,42 @@ calculate_path(void)
+     else {
+         zip_path[0] = 0;
+     }
+-
+-    skiphome = pythonhome==NULL ? 0 : 1;
+-#ifdef Py_ENABLE_SHARED
+-    machinepath = getpythonregpath(HKEY_LOCAL_MACHINE, skiphome);
+-    userpath = getpythonregpath(HKEY_CURRENT_USER, skiphome);
+-#endif
+-    /* We only use the default relative PYTHONPATH if we havent
+-       anything better to use! */
+-    skipdefault = envpath!=NULL || pythonhome!=NULL || \
+-                  machinepath!=NULL || userpath!=NULL;
+ #endif
+ 
+     /* We need to construct a path from the following parts.
+-       (1) the PYTHONPATH environment variable, if set;
+-       (2) for Win32, the zip archive file path;
+-       (3) for Win32, the machinepath and userpath, if set;
+-       (4) the PYTHONPATH config macro, with the leading "."
+-           of each component replaced with pythonhome, if set;
+-       (5) the directory containing the executable (argv0_path).
+-       The length calculation calculates #4 first.
+-       Extra rules:
+-       - If PYTHONHOME is set (in any way) item (3) is ignored.
+-       - If registry values are used, (4) and (5) are ignored.
++       (1) the zip archive file path;
++       (2) the directory containing the executable (argv0_path).
+     */
+ 
+     /* Calculate size of return buffer */
+-    if (pythonhome != NULL) {
+-        char *p;
+-        bufsz = 1;
+-        for (p = PYTHONPATH; *p; p++) {
+-            if (*p == DELIM)
+-                bufsz++; /* number of DELIM plus one */
+-        }
+-        bufsz *= strlen(pythonhome);
+-    }
+-    else
+-        bufsz = 0;
+-    bufsz += strlen(PYTHONPATH) + 1;
+-    bufsz += strlen(argv0_path) + 1;
++    bufsz = strlen(argv0_path) + 1;
+ #ifdef MS_WINDOWS
+-    if (userpath)
+-        bufsz += strlen(userpath) + 1;
+-    if (machinepath)
+-        bufsz += strlen(machinepath) + 1;
+     bufsz += strlen(zip_path) + 1;
+ #endif
+-    if (envpath != NULL)
+-        bufsz += strlen(envpath) + 1;
+ 
+     module_search_path = buf = malloc(bufsz);
+     if (buf == NULL) {
+         /* We can't exit, so print a warning and limp along */
+         fprintf(stderr, "Can't malloc dynamic PYTHONPATH.\n");
+-        if (envpath) {
+-            fprintf(stderr, "Using environment $PYTHONPATH.\n");
+-            module_search_path = envpath;
+-        }
+-        else {
++        {
+             fprintf(stderr, "Using default static path.\n");
+-            module_search_path = PYTHONPATH;
++            module_search_path = "";
+         }
+-#ifdef MS_WINDOWS
+-        if (machinepath)
+-            free(machinepath);
+-        if (userpath)
+-            free(userpath);
+-#endif /* MS_WINDOWS */
+         return;
+     }
+ 
+-    if (envpath) {
+-        strcpy(buf, envpath);
+-        buf = strchr(buf, '\0');
+-        *buf++ = DELIM;
+-    }
+ #ifdef MS_WINDOWS
+     if (zip_path[0]) {
+         strcpy(buf, zip_path);
+         buf = strchr(buf, '\0');
+         *buf++ = DELIM;
+     }
+-    if (userpath) {
+-        strcpy(buf, userpath);
+-        buf = strchr(buf, '\0');
+-        *buf++ = DELIM;
+-        free(userpath);
+-    }
+-    if (machinepath) {
+-        strcpy(buf, machinepath);
+-        buf = strchr(buf, '\0');
+-        *buf++ = DELIM;
+-        free(machinepath);
+-    }
+-    if (pythonhome == NULL) {
+-        if (!skipdefault) {
+-            strcpy(buf, PYTHONPATH);
+-            buf = strchr(buf, '\0');
+-        }
+-    }
+-#else
+-    if (pythonhome == NULL) {
+-        strcpy(buf, PYTHONPATH);
+-        buf = strchr(buf, '\0');
+-    }
+ #endif /* MS_WINDOWS */
+-    else {
+-        char *p = PYTHONPATH;
+-        char *q;
+-        size_t n;
+-        for (;;) {
+-            q = strchr(p, DELIM);
+-            if (q == NULL)
+-                n = strlen(p);
+-            else
+-                n = q-p;
+-            if (p[0] == '.' && is_sep(p[1])) {
+-                strcpy(buf, pythonhome);
+-                buf = strchr(buf, '\0');
+-                p++;
+-                n--;
+-            }
+-            strncpy(buf, p, n);
+-            buf += n;
+-            if (q == NULL)
+-                break;
+-            *buf++ = DELIM;
+-            p = q+1;
+-        }
+-    }
+     if (argv0_path) {
+-        *buf++ = DELIM;
+         strcpy(buf, argv0_path);
+         buf = strchr(buf, '\0');
+     }
+     *buf = '\0';
+-    /* Now to pull one last hack/trick.  If sys.prefix is
+-       empty, then try and find it somewhere on the paths
+-       we calculated.  We scan backwards, as our general policy
+-       is that Python core directories are at the *end* of
+-       sys.path.  We assume that our "lib" directory is
+-       on the path, and that our 'prefix' directory is
+-       the parent of that.
+-    */
+-    if (*prefix=='\0') {
+-        char lookBuf[MAXPATHLEN+1];
+-        char *look = buf - 1; /* 'buf' is at the end of the buffer */
+-        while (1) {
+-            Py_ssize_t nchars;
+-            char *lookEnd = look;
+-            /* 'look' will end up one character before the
+-               start of the path in question - even if this
+-               is one character before the start of the buffer
+-            */
+-            while (look >= module_search_path && *look != DELIM)
+-                look--;
+-            nchars = lookEnd-look;
+-            strncpy(lookBuf, look+1, nchars);
+-            lookBuf[nchars] = '\0';
+-            /* Up one level to the parent */
+-            reduce(lookBuf);
+-            if (search_for_prefix(lookBuf, LANDMARK)) {
+-                break;
+-            }
+-            /* If we are out of paths to search - give up */
+-            if (look < module_search_path)
+-                break;
+-            look--;
+-        }
+-    }
+ }
+ 
+ 
+diff --git a/PC/pyconfig.h b/PC/pyconfig.h
+index 5fa63987931..15a8aae5861 100644
+--- a/PC/pyconfig.h
++++ b/PC/pyconfig.h
+@@ -80,7 +80,7 @@ WIN32 is still required for the locale module.
+ #define MS_WIN32 /* only support win32 and greater. */
+ #define MS_WINDOWS
+ #ifndef PYTHONPATH
+-#	define PYTHONPATH ".\\DLLs;.\\lib;.\\lib\\plat-win;.\\lib\\lib-tk"
++#	define PYTHONPATH ""
+ #endif
+ #define NT_THREADS
+ #define WITH_THREAD
+diff --git a/Python/pythonrun.c b/Python/pythonrun.c
+index 2c9f55fbd1d..e559048f147 100644
+--- a/Python/pythonrun.c
++++ b/Python/pythonrun.c
+@@ -69,7 +69,7 @@ int Py_DebugFlag; /* Needed by parser.c */
+ int Py_VerboseFlag; /* Needed by import.c */
+ int Py_InteractiveFlag; /* Needed by Py_FdIsInteractive() below */
+ int Py_InspectFlag; /* Needed to determine whether to exit at SystemExit */
+-int Py_NoSiteFlag; /* Suppress 'import site' */
++int Py_NoSiteFlag = 1; /* Suppress 'import site' */
+ int Py_BytesWarningFlag; /* Warn on str(bytes) and str(buffer) */
+ int Py_DontWriteBytecodeFlag; /* Suppress writing bytecode files (*.py[co]) */
+ int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c: deprecated */
+@@ -80,7 +80,7 @@ int Py_IgnoreEnvironmentFlag; /* e.g. PYTHONPATH, PYTHONHOME */
+   on the command line, and is used in 2.2 by ceval.c to make all "/" divisions
+   true divisions (which they will be in 2.3). */
+ int _Py_QnewFlag = 0;
+-int Py_NoUserSiteDirectory = 0; /* for -s and site.py */
++int Py_NoUserSiteDirectory = 1; /* for -s and site.py */
+ int Py_HashRandomizationFlag = 0; /* for -R and PYTHONHASHSEED */
+ 
+ 
+diff --git a/Python/sysmodule.c b/Python/sysmodule.c
+index fdb7af2f5f6..85619dfa056 100644
+--- a/Python/sysmodule.c
++++ b/Python/sysmodule.c
+@@ -1722,7 +1722,7 @@ PySys_SetArgvEx(int argc, char **argv, int updatepath)
+ void
+ PySys_SetArgv(int argc, char **argv)
+ {
+-    PySys_SetArgvEx(argc, argv, 1);
++    PySys_SetArgvEx(argc, argv, 0);
+ }
+ 
+ 
+-- 
+2.14.1.windows.1
+
