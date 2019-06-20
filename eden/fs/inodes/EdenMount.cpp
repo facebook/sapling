@@ -17,9 +17,6 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 #include <gflags/gflags.h>
-#ifndef _WIN32
-#include <folly/Subprocess.h>
-#endif
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
