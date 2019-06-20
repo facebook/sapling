@@ -194,7 +194,7 @@ from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
 from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
-from distutils.sysconfig import get_python_inc, get_config_var
+from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
 from distutils_rust import (
     RustExtension,
@@ -1244,13 +1244,6 @@ class hgbuildpy(build_py):
 
                 exts.append(osutilbuild.ffi.distutils_extension())
             self.distribution.ext_modules = exts
-        else:
-            h = os.path.join(get_python_inc(), "Python.h")
-            if not os.path.exists(h):
-                raise SystemExit(
-                    "Python headers are required to build "
-                    "Mercurial but weren't found in %s" % h
-                )
 
     def run(self):
         basepath = os.path.join(self.build_lib, "edenscm/mercurial")
