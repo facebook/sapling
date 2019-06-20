@@ -18,6 +18,7 @@ use slog::{debug, info, Logger};
 
 use metaconfig_parser::RepoConfigs;
 
+use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 
 mod lfs;
@@ -33,6 +34,8 @@ pub use self::response::MononokeRepoResponse;
 
 pub struct Mononoke {
     repos: HashMap<String, MononokeRepo>,
+    #[allow(dead_code)]
+    cache: Option<CacheManager>,
 }
 
 impl Mononoke {
@@ -41,6 +44,7 @@ impl Mononoke {
         config: RepoConfigs,
         myrouter_port: Option<u16>,
         with_skiplist: bool,
+        cache: Option<CacheManager>,
     ) -> impl Future<Item = Self, Error = Error> {
         join_all(
             config
@@ -63,6 +67,7 @@ impl Mononoke {
         )
         .map(move |repos| Self {
             repos: repos.into_iter().collect(),
+            cache,
         })
     }
 

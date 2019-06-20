@@ -33,6 +33,7 @@ use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 
 mod actor;
+mod cache;
 mod errors;
 mod from_string;
 mod middleware;
@@ -41,6 +42,7 @@ mod thrift;
 use crate::actor::{
     BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
 };
+use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 use crate::middleware::ScubaMiddleware;
 
@@ -556,7 +558,8 @@ fn main() -> Fallible<()> {
                 .long("ssl-ticket-seeds")
                 .value_name("PATH")
                 .help("path to the ssl ticket seeds"),
-        );
+        )
+        .arg(Arg::with_name("with-cache").long("with-cache"));
 
     let app = cmdlib::args::add_myrouter_args(app);
     let matches =
@@ -573,6 +576,7 @@ fn main() -> Fallible<()> {
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
     let with_skiplist = !matches.is_present("without-skiplist");
+    let with_cache = matches.is_present("with-cache");
     let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
 
     let address = format!("{}:{}", host, port);
@@ -638,11 +642,19 @@ fn main() -> Fallible<()> {
 
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
+
+    let cache = if with_cache {
+        Some(CacheManager::new())
+    } else {
+        None
+    };
+
     let mononoke = runtime.block_on(Mononoke::new(
         mononoke_logger.clone(),
         repo_configs,
         myrouter_port,
         with_skiplist,
+        cache,
     ))?;
     let mononoke = Arc::new(mononoke);
 
