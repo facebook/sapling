@@ -658,7 +658,7 @@ class FsckCmd(Subcmd):
                 return self.EXIT_WARNINGS
             return self.EXIT_ERRORS
 
-    def _report_error(self, args: argparse.Namespace, error: fsck_mod.Error) -> None:
+    def _report_error(self, args: argparse.Namespace, error: "fsck_mod.Error") -> None:
         print(f"{fsck_mod.ErrorLevel.get_label(error.level)}: {error}")
         if args.verbose:
             details = error.detailed_description()
