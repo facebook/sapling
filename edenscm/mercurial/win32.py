@@ -62,6 +62,9 @@ class _FILETIME(ctypes.Structure):
     _fields_ = [("dwLowDateTime", _DWORD), ("dwHighDateTime", _DWORD)]
 
 
+_LPFILETIME = ctypes.POINTER(_FILETIME)
+
+
 class _BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
     _fields_ = [
         ("dwFileAttributes", _DWORD),
@@ -324,6 +327,15 @@ _kernel32.SetConsoleMode.restype = _BOOL
 
 _kernel32.GetConsoleMode.argtypes = [_HANDLE, ctypes.c_void_p]
 _kernel32.GetConsoleMode.restype = _BOOL
+
+_kernel32.GetProcessTimes.argtypes = [
+    _HANDLE,
+    _LPFILETIME,
+    _LPFILETIME,
+    _LPFILETIME,
+    _LPFILETIME,
+]
+_kernel32.GetProcessTimes.restype = _BOOL
 
 _kernel32.GetStdHandle.argtypes = [_DWORD]
 _kernel32.GetStdHandle.restype = _HANDLE
