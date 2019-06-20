@@ -865,7 +865,7 @@ class DebugJournalCmd(Subcmd):
 
         with instance.get_thrift_client() as client:
             to_position = client.getCurrentJournalPosition(bytes(checkout.path))
-            from_sequence = max(to_position.sequenceNumber - args.limit, 0)
+            from_sequence = max(to_position.sequenceNumber - args.limit + 1, 0)
             from_position = JournalPosition(
                 mountGeneration=to_position.mountGeneration,
                 sequenceNumber=from_sequence,
