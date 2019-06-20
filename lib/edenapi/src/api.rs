@@ -1,10 +1,9 @@
 // Copyright Facebook, Inc. 2019
 
-use failure::Fallible;
-
 use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::{Key, Node, RepoPathBuf};
 
+use crate::errors::ApiResult;
 use crate::progress::ProgressFn;
 use crate::stats::DownloadStats;
 
@@ -12,10 +11,10 @@ pub trait EdenApi: Send + Sync {
     /// Hit the API server's /health_check endpoint.
     /// Returns Ok(()) if the expected response is received, or an Error otherwise
     /// (e.g., if there was a connection problem or an unexpected repsonse).
-    fn health_check(&self) -> Fallible<()>;
+    fn health_check(&self) -> ApiResult<()>;
 
     /// Get the hostname of the API server.
-    fn hostname(&self) -> Fallible<String>;
+    fn hostname(&self) -> ApiResult<String>;
 
     /// Fetch the content of the specified files from the API server and write
     /// them to the store. Optionally takes a callback to report progress.
@@ -27,7 +26,7 @@ pub trait EdenApi: Send + Sync {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats>;
+    ) -> ApiResult<DownloadStats>;
 
     /// Fetch the history of the specified files from the API server and write
     /// them to the store.  Optionally takes a callback to report progress.
@@ -40,7 +39,7 @@ pub trait EdenApi: Send + Sync {
         store: &mut MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats>;
+    ) -> ApiResult<DownloadStats>;
 
     /// Fetch the specified trees from the API server and write them to the store.
     /// Optionally takes a callback to report progress.
@@ -52,7 +51,7 @@ pub trait EdenApi: Send + Sync {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats>;
+    ) -> ApiResult<DownloadStats>;
 
     /// Fetch trees from the server in a manner similar to Mercurial's
     /// "gettreepack" wire protocol command. Intended to be used by
@@ -65,7 +64,7 @@ pub trait EdenApi: Send + Sync {
         depth: Option<usize>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats>;
+    ) -> ApiResult<DownloadStats>;
 }
 
 // Statically ensure that the EdenApi trait is object safe using

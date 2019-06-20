@@ -7,8 +7,8 @@ use curl::{
     easy::Easy2,
     multi::{Easy2Handle, Multi},
 };
-use failure::Fallible;
 
+use crate::errors::ApiResult;
 use crate::progress::ProgressManager;
 
 /// Timeout for a single iteration of waiting for activity
@@ -45,7 +45,7 @@ impl<'a, H> MultiDriver<'a, H> {
     }
 
     /// Add an Easy2 handle to the Multi stack.
-    pub fn add(&mut self, easy: Easy2<H>) -> Fallible<()> {
+    pub fn add(&mut self, easy: Easy2<H>) -> ApiResult<()> {
         // Assign a token to this Easy2 handle so we can correlate messages
         // for this handle with the corresponding Easy2Handle while the
         // Easy2 is owned by the Multi handle.
@@ -70,9 +70,9 @@ impl<'a, H> MultiDriver<'a, H> {
     ///
     /// The caller-supplied callback will be called whenever a transfer
     /// completes, successfully or otherwise.
-    pub fn perform<F>(&mut self, mut callback: F) -> Fallible<()>
+    pub fn perform<F>(&mut self, mut callback: F) -> ApiResult<()>
     where
-        F: FnMut(Result<Easy2<H>, curl::Error>) -> Fallible<()>,
+        F: FnMut(Result<Easy2<H>, curl::Error>) -> ApiResult<()>,
     {
         let mut in_progress = self.num_transfers;
         let mut i = 0;
@@ -156,7 +156,7 @@ impl<'a, H> MultiDriver<'a, H> {
         Ok(())
     }
 
-    fn take_handle(&self, index: usize) -> Fallible<Option<Easy2<H>>> {
+    fn take_handle(&self, index: usize) -> ApiResult<Option<Easy2<H>>> {
         let mut handles = self.handles.borrow_mut();
         if let Some(handle) = handles[index].take() {
             let easy = self.multi.remove2(handle)?;

@@ -2,8 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
-use failure::{ensure, Fallible};
+use failure::ensure;
 use url::Url;
+
+use crate::errors::ApiResult;
 
 #[derive(Default)]
 pub struct Config {
@@ -31,7 +33,7 @@ impl Config {
 
     /// Parse an arbitrary string as the base URL.
     /// Fails if the string is not a valid URL.
-    pub fn base_url_str(self, url: &str) -> Fallible<Self> {
+    pub fn base_url_str(self, url: &str) -> ApiResult<Self> {
         let url = Url::parse(url)?;
         Ok(self.base_url(url))
     }
@@ -39,7 +41,11 @@ impl Config {
     /// Set client credentials by providing paths to a PEM encoded X.509 client certificate
     /// and a PEM encoded private key. These credentials are used for TLS mutual authentication;
     /// if not set, mutual authentication will not be used.
-    pub fn client_creds(mut self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn client_creds(
+        mut self,
+        cert: impl AsRef<Path>,
+        key: impl AsRef<Path>,
+    ) -> ApiResult<Self> {
         self.creds = Some(ClientCreds::new(cert, key)?);
         Ok(self)
     }
@@ -103,7 +109,7 @@ pub struct ClientCreds {
 }
 
 impl ClientCreds {
-    pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
+    pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> ApiResult<Self> {
         let certs = certs.as_ref().to_path_buf();
         ensure!(
             certs.is_file(),

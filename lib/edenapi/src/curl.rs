@@ -14,7 +14,7 @@ use curl::{
     easy::{Easy2, Handler, HttpVersion, List},
     multi::Multi,
 };
-use failure::{bail, ensure, err_msg, Fallible};
+use failure::{bail, ensure, err_msg};
 use itertools::Itertools;
 use log;
 use serde::{de::DeserializeOwned, Serialize};
@@ -31,6 +31,7 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
+use crate::errors::ApiResult;
 use crate::progress::{ProgressFn, ProgressManager};
 use crate::stats::DownloadStats;
 
@@ -94,7 +95,7 @@ pub struct EdenApiCurlClient {
 
 // Public API.
 impl EdenApiCurlClient {
-    pub fn new(config: Config) -> Fallible<Self> {
+    pub fn new(config: Config) -> ApiResult<Self> {
         let base_url = match config.base_url {
             Some(url) => url,
             None => bail!("No base URL specified"),
@@ -121,7 +122,7 @@ impl EdenApiCurlClient {
 }
 
 impl EdenApi for EdenApiCurlClient {
-    fn health_check(&self) -> Fallible<()> {
+    fn health_check(&self) -> ApiResult<()> {
         let handler = Collector::new();
         let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         let url = self.base_url.join(paths::HEALTH_CHECK)?;
@@ -142,7 +143,7 @@ impl EdenApi for EdenApiCurlClient {
         Ok(())
     }
 
-    fn hostname(&self) -> Fallible<String> {
+    fn hostname(&self) -> ApiResult<String> {
         let handler = Collector::new();
         let mut handle = new_easy_handle(self.creds.as_ref(), handler)?;
         let url = self.base_url.join(paths::HOSTNAME)?;
@@ -162,7 +163,7 @@ impl EdenApi for EdenApiCurlClient {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats> {
+    ) -> ApiResult<DownloadStats> {
         self.get_data(paths::DATA, keys, store, progress)
     }
 
@@ -172,7 +173,7 @@ impl EdenApi for EdenApiCurlClient {
         store: &mut MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats> {
+    ) -> ApiResult<DownloadStats> {
         log::debug!("Fetching {} files", keys.len());
 
         let mut url = self.repo_base_url()?.join(paths::HISTORY)?;
@@ -244,7 +245,7 @@ impl EdenApi for EdenApiCurlClient {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats> {
+    ) -> ApiResult<DownloadStats> {
         self.get_data(paths::TREES, keys, store, progress)
     }
 
@@ -256,7 +257,7 @@ impl EdenApi for EdenApiCurlClient {
         depth: Option<usize>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats> {
+    ) -> ApiResult<DownloadStats> {
         let mut url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
         if self.stream_trees {
             url.set_query(Some("stream=true"));
@@ -297,7 +298,7 @@ impl EdenApi for EdenApiCurlClient {
 
 // Private methods.
 impl EdenApiCurlClient {
-    fn repo_base_url(&self) -> Fallible<Url> {
+    fn repo_base_url(&self) -> ApiResult<Url> {
         Ok(self.base_url.join(&format!("{}/", &self.repo))?)
     }
 
@@ -307,7 +308,7 @@ impl EdenApiCurlClient {
         keys: Vec<Key>,
         store: &mut MutableDeltaStore,
         progress: Option<ProgressFn>,
-    ) -> Fallible<DownloadStats> {
+    ) -> ApiResult<DownloadStats> {
         log::debug!("Fetching data for {} keys", keys.len());
 
         let mut url = self.repo_base_url()?.join(path)?;
@@ -381,12 +382,12 @@ fn multi_request<'a, R, I, T, F>(
     requests: I,
     progress_cb: Option<ProgressFn>,
     mut response_cb: F,
-) -> Fallible<DownloadStats>
+) -> ApiResult<DownloadStats>
 where
     R: Serialize,
     I: IntoIterator<Item = R>,
     T: DeserializeOwned,
-    F: FnMut(Vec<T>) -> Fallible<()>,
+    F: FnMut(Vec<T>) -> ApiResult<()>,
 {
     let requests = requests.into_iter().collect::<Vec<_>>();
     let num_requests = requests.len();
@@ -462,12 +463,12 @@ fn multi_request_threaded<R, I, T, F>(
     requests: I,
     progress_cb: Option<ProgressFn>,
     mut response_cb: F,
-) -> Fallible<DownloadStats>
+) -> ApiResult<DownloadStats>
 where
     R: Serialize + Send + 'static,
     I: IntoIterator<Item = R>,
     T: DeserializeOwned + Send + Sync + 'static,
-    F: FnMut(Vec<T>) -> Fallible<()>,
+    F: FnMut(Vec<T>) -> ApiResult<()>,
 {
     // Convert arguments to owned types since these will be sent
     // to a new thread, which requires captured values to have a
@@ -500,7 +501,7 @@ where
 }
 
 /// Configure a new curl::Easy2 handle with appropriate default settings.
-fn new_easy_handle<H: Handler>(creds: Option<&ClientCreds>, handler: H) -> Fallible<Easy2<H>> {
+fn new_easy_handle<H: Handler>(creds: Option<&ClientCreds>, handler: H) -> ApiResult<Easy2<H>> {
     let mut handle = Easy2::new(handler);
     if let Some(ClientCreds { ref certs, ref key }) = creds {
         handle.ssl_cert(certs)?;
@@ -513,7 +514,11 @@ fn new_easy_handle<H: Handler>(creds: Option<&ClientCreds>, handler: H) -> Falli
 
 /// Configure the given Easy2 handle to perform a POST request.
 /// The given payload will be serialized as CBOR and used as the request body.
-fn prepare_cbor_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &R) -> Fallible<()> {
+fn prepare_cbor_post<H, R: Serialize>(
+    easy: &mut Easy2<H>,
+    url: &Url,
+    request: &R,
+) -> ApiResult<()> {
     let payload = serde_cbor::to_vec(&request)?;
 
     easy.url(url.as_str())?;
@@ -527,7 +532,7 @@ fn prepare_cbor_post<H, R: Serialize>(easy: &mut Easy2<H>, url: &Url, request: &
     Ok(())
 }
 
-fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> Fallible<()> {
+fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> ApiResult<()> {
     let metadata = Metadata {
         size: Some(data.len() as u64),
         flags: None,
@@ -545,7 +550,7 @@ fn add_data_response(
     store: &mut MutableDeltaStore,
     response: DataResponse,
     validate: bool,
-) -> Fallible<()> {
+) -> ApiResult<()> {
     for entry in response {
         let data = entry.data(validate)?;
         add_delta(store, entry.key().clone(), data)?;
