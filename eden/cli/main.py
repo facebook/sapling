@@ -27,11 +27,9 @@ from fb303.ttypes import fb_status
 from . import (
     buck,
     config as config_mod,
-    daemon,
     debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
-    fsck as fsck_mod,
     mtab,
     process_finder,
     rage as rage_mod,
@@ -47,6 +45,10 @@ from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
+
+
+if os.name != "nt":
+    from . import daemon, fsck as fsck_mod
 
 
 subcmd = subcmd_mod.Decorator()
