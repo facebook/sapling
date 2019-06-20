@@ -821,7 +821,7 @@ def _getmanifest(op, rev):
         m = rev.manifest()
     else:
         store = repo.manifestlog.datastore
-        from ..extlib import cstore
+        from edenscmnative import cstore
 
         m = cstore.treemanifest(store, rev.manifestnode())
         if store.getmissing([("", rev.manifestnode())]):

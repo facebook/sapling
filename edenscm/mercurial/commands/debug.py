@@ -1450,7 +1450,7 @@ def debuginstall(ui, **opts):
     if policy.policy in ("c", "allow"):
         err = None
         try:
-            from ..cext import base85, bdiff, mpatch, osutil
+            from edenscmnative import base85, bdiff, mpatch, osutil
 
             dir(bdiff), dir(mpatch), dir(base85), dir(osutil)  # quiet pyflakes
         except Exception as inst:

@@ -4,7 +4,7 @@
 # GNU General Public License version 2 or any later version.
 
 from edenscm.mercurial.node import hex
-from edenscm.mercurial.rust.bindings import revisionstore
+from edenscmnative.bindings import revisionstore
 
 from . import shallowutil
 from .datapack import mutabledatapack

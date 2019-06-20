@@ -11,10 +11,9 @@ import heapq
 import os
 import time
 
-from edenscm.hgext.extlib import cstore
 from edenscm.mercurial import error, manifest, mdiff, revlog, util
+from edenscmnative import cfastmanifest, cstore
 
-from ..extlib import cfastmanifest
 from .constants import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES
 from .metrics import metricscollector
 

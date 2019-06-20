@@ -29,7 +29,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscm.mercurial.rust.bindings import nodemap
+from edenscmnative.bindings import nodemap
 from overlay import overlayrepo
 
 

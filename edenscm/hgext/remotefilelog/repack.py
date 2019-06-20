@@ -24,7 +24,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
-from edenscm.mercurial.rust.bindings import revisionstore
+from edenscmnative.bindings import revisionstore
 
 from . import (
     constants,

@@ -11,8 +11,9 @@ import re
 import struct
 import zlib
 
+from edenscmnative import xdiff
+
 from . import error, policy, pycompat, util
-from .cext import xdiff
 from .i18n import _
 
 

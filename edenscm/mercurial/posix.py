@@ -22,8 +22,9 @@ import sys
 import tempfile
 import unicodedata
 
+from edenscmnative import osutil
+
 from . import encoding, error, fscap, pycompat
-from .cext import osutil
 from .i18n import _
 
 

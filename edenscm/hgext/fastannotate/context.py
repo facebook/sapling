@@ -22,9 +22,9 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _
+from edenscmnative import linelog as linelogmod
 
 from . import error as faerror, revmap as revmapmod
-from ..extlib import linelog as linelogmod
 
 
 # given path, get filelog, cached

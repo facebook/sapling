@@ -28,7 +28,7 @@ from __future__ import absolute_import
 
 import sre_constants
 
-from . import _re2
+from edenscmnative import _re2
 
 
 __all__ = [

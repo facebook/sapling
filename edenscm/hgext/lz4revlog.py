@@ -31,7 +31,7 @@ from __future__ import absolute_import
 
 from edenscm.mercurial import error, extensions, localrepo, revlog, util
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.rust.bindings import lz4
+from edenscmnative.bindings import lz4
 
 
 testedwith = "3.9.1"

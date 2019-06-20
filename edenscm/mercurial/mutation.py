@@ -9,9 +9,10 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 
+from edenscmnative.bindings import mutationstore
+
 from . import error, node as nodemod, perftrace, phases, repoview, util
 from .i18n import _
-from .rust.bindings import mutationstore
 
 
 ORIGIN_COMMIT = mutationstore.ORIGIN_COMMIT

@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 from edenscm.mercurial import error, httpconnection
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.rust.bindings import edenapi
+from edenscmnative.bindings import edenapi
 
 
 # Set to True to manually disable HTTPS fetching.

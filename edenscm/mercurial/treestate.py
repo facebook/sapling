@@ -10,9 +10,10 @@ from __future__ import absolute_import
 import errno
 import uuid
 
+from edenscmnative.bindings import treestate
+
 from . import error, node, txnutil, util
 from .i18n import _
-from .rust.bindings import treestate
 
 
 # header after the first 40 bytes of dirstate.

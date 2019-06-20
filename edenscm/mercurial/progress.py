@@ -12,9 +12,10 @@ import errno
 import threading
 import time
 
+from edenscmnative import threading as rustthreading
+
 from . import encoding, util
 from .i18n import _
-from .rust import threading as rustthreading
 
 
 def spacejoin(*args):

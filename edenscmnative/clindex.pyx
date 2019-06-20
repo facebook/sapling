@@ -42,14 +42,13 @@ from edenscm.mercurial import (
     vfs as vfsmod,
 )
 
-from edenscm.mercurial.cext import parsers
 from edenscm.mercurial.node import (
     hex,
     nullhex,
     nullid,
 )
 
-from edenscmnative import indexes
+from . import indexes, parsers
 indexes.nodemap.emptyindexbuffer() # force demandimport to load indexes
 
 configtable = {}

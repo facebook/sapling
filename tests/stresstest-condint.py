@@ -20,7 +20,7 @@ def importrustthreading():
     if not "TESTTMP" in os.environ:
         # Make this directly runnable
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from edenscm.mercurial.rust import threading as rustthreading
+    from edenscmnative import threading as rustthreading
 
     return rustthreading
 

@@ -1161,7 +1161,7 @@ static PyObject* bser_load(PyObject* self, PyObject* args, PyObject* kw) {
     return NULL;
   }
 
-  load = PyImport_ImportModule("pywatchman.load");
+  load = PyImport_ImportModule("edenscm.hgext.extlib.pywatchman.load");
   if (load == NULL) {
     return NULL;
   }

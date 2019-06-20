@@ -82,7 +82,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
+from edenscmnative.bindings import nodemap as nodemapmod
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked
@@ -430,7 +430,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
         lastrev = globalrevmap.lastrev
         repolen = len(unfi)
         with progress.bar(ui, _("indexing"), _("revs"), repolen - lastrev) as prog:
-            for rev in xrange(lastrev, repolen):
+            for rev in xrange(lastrev, repolen):  # noqa: F821
                 commitdata = clrevision(rev)
                 grev = _getglobalrev(ui, commitdata.extra)
                 if grev:

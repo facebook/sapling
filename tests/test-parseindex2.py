@@ -122,9 +122,7 @@ def importparsers(hexversion):
     # The file parsers.c inspects sys.hexversion to determine the version
     # of the currently-running Python interpreter, so we monkey-patch
     # sys.hexversion to simulate using different versions.
-    code = (
-        "import sys; sys.hexversion=%s; " "import edenscm.mercurial.cext.parsers" % hexversion
-    )
+    code = "import sys; sys.hexversion=%s; import edenscmnative.parsers" % hexversion
     cmd = 'python -c "%s"' % code
     # We need to do these tests inside a subprocess because parser.c's
     # version-checking code happens inside the module init function, and

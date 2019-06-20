@@ -15,6 +15,8 @@ import stat
 import sys
 import tempfile
 
+from edenscmnative import osutil
+
 from . import encoding, error, policy, pycompat, win32
 from .i18n import _
 
@@ -26,7 +28,6 @@ try:
 except ImportError:
     import winreg
 
-osutil = policy.importmod(r"osutil")
 
 executablepath = win32.executablepath
 getmaxrss = win32.getmaxmemoryusage

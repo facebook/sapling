@@ -8,7 +8,7 @@ import unittest
 
 import silenttestrunner
 from edenscm.mercurial import node
-from edenscm.mercurial.rust.bindings import bookmarkstore
+from edenscmnative.bindings import bookmarkstore
 
 
 class bookmarkstoretests(unittest.TestCase):

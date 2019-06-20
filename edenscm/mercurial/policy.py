@@ -61,8 +61,13 @@ else:
 
 def _importfrom(pkgname, modname):
     # from .<pkgname> import <modname> (where . is looked through this module)
+    level = 1  # relative import (relative to ".")
+    if pkgname == "cext":
+        # ".cext" was moved to "edenscmnative"
+        pkgname = "edenscmnative"
+        level = 0  # use absolute import
     fakelocals = {}
-    pkg = __import__(pkgname, globals(), fakelocals, [modname], level=1)
+    pkg = __import__(pkgname, globals(), fakelocals, [modname], level=level)
     try:
         fakelocals[modname] = mod = getattr(pkg, modname)
     except AttributeError:

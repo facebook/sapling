@@ -10,9 +10,9 @@ import errno
 import os
 
 from edenscm.mercurial import encoding, error, extensions, revlog, scmutil, util
+from edenscmnative import cfastmanifest
 
 from . import concurrency, constants
-from ..extlib import cfastmanifest
 from .implementation import CacheFullException, fastmanifestcache
 from .metrics import metricscollector
 

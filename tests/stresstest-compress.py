@@ -12,7 +12,7 @@ import struct
 import timeit
 
 import lz4 as pylz4
-from edenscm.mercurial.rust.bindings import lz4 as rustlz4
+from edenscmnative.bindings import lz4 as rustlz4
 
 
 def roundtrip(size=None):

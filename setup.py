@@ -916,7 +916,7 @@ class hgbuildext(build_ext):
         re2path = "build/re2-2018-04-01"
         self.extensions.append(
             Extension(
-                "edenscm.mercurial.thirdparty.pyre2._re2",
+                "edenscmnative._re2",
                 sources=[
                     "edenscm/mercurial/thirdparty/pyre2/_re2.cc",
                     os.path.join(re2path, "re2/bitstate.cc"),
@@ -1116,7 +1116,7 @@ class buildembedded(Command):
         if not self.local_bins:
             # copy .pyd's from ./build/lib.win-amd64/, not from ./
             parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
-        hgdirs = ["edenscm"]
+        hgdirs = ["edenscm", "edenscmnative"]
         for hgdir in hgdirs:
             fulldir = pjoin(parentdir, hgdir)
             for dirpath, dirnames, filenames in os.walk(fulldir):
@@ -1198,6 +1198,7 @@ class buildembedded(Command):
             copy_to(source, target)
 
     def run(self):
+        raise RuntimeError("This is temporarily broken")
         embdir = pjoin(scriptdir, "build", "embedded")
         libdir = pjoin(embdir, "lib")
         tozip = pjoin(embdir, "_tozip")
@@ -1561,7 +1562,6 @@ packages = [
     "edenscm.hgext.remotefilelog",
     "edenscm.hgext.treemanifest",
     "edenscm.mercurial",
-    "edenscm.mercurial.cext",
     "edenscm.mercurial.cffi",
     "edenscm.mercurial.commands",
     "edenscm.mercurial.hgweb",
@@ -1571,6 +1571,7 @@ packages = [
     "edenscm.mercurial.thirdparty",
     "edenscm.mercurial.thirdparty.attr",
     "edenscm.mercurial.thirdparty.pyre2",
+    "edenscmnative",
 ]
 
 if havefb:
@@ -1690,31 +1691,31 @@ if sys.platform == "darwin":
 
 extmodules = [
     Extension(
-        "edenscm.mercurial.cext.base85",
+        "edenscmnative.base85",
         ["edenscm/mercurial/cext/base85.c"],
         include_dirs=include_dirs,
         depends=common_depends,
     ),
     Extension(
-        "edenscm.mercurial.cext.bdiff",
+        "edenscmnative.bdiff",
         ["edenscm/mercurial/bdiff.c", "edenscm/mercurial/cext/bdiff.c"],
         include_dirs=include_dirs,
         depends=common_depends + ["edenscm/mercurial/bdiff.h"],
     ),
     Extension(
-        "edenscm.mercurial.cext.diffhelpers",
+        "edenscmnative.diffhelpers",
         ["edenscm/mercurial/cext/diffhelpers.c"],
         include_dirs=include_dirs,
         depends=common_depends,
     ),
     Extension(
-        "edenscm.mercurial.cext.mpatch",
+        "edenscmnative.mpatch",
         ["edenscm/mercurial/mpatch.c", "edenscm/mercurial/cext/mpatch.c"],
         include_dirs=include_dirs,
         depends=common_depends + ["edenscm/mercurial/mpatch.h"],
     ),
     Extension(
-        "edenscm.mercurial.cext.parsers",
+        "edenscmnative.parsers",
         [
             "edenscm/mercurial/cext/charencode.c",
             "edenscm/mercurial/cext/dirs.c",
@@ -1727,7 +1728,7 @@ extmodules = [
         depends=common_depends + ["edenscm/mercurial/cext/charencode.h"],
     ),
     Extension(
-        "edenscm.mercurial.cext.osutil",
+        "edenscmnative.osutil",
         ["edenscm/mercurial/cext/osutil.c"],
         include_dirs=include_dirs,
         extra_compile_args=osutil_cflags,
@@ -1735,7 +1736,7 @@ extmodules = [
         depends=common_depends,
     ),
     Extension(
-        "edenscm.mercurial.cext.xdiff",
+        "edenscmnative.xdiff",
         sources=[
             "lib/third-party/xdiff/xdiffi.c",
             "lib/third-party/xdiff/xprepare.c",
@@ -1754,12 +1755,9 @@ extmodules = [
             "lib/third-party/xdiff/xutils.h",
         ],
     ),
+    Extension("edenscmnative.bser", ["edenscm/hgext/extlib/pywatchman/bser.c"]),
     Extension(
-        "edenscm.hgext.extlib.pywatchman.bser",
-        ["edenscm/hgext/extlib/pywatchman/bser.c"],
-    ),
-    Extension(
-        "edenscm.hgext.extlib.cstore",
+        "edenscmnative.cstore",
         sources=[
             "edenscm/hgext/extlib/cstore/datapackstore.cpp",
             "edenscm/hgext/extlib/cstore/deltachain.cpp",
@@ -1796,7 +1794,7 @@ extmodules = [
         extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
     ),
     Extension(
-        "edenscm.hgext.extlib.cfastmanifest",
+        "edenscmnative.cfastmanifest",
         sources=[
             "edenscm/hgext/extlib/cfastmanifest.c",
             "edenscm/hgext/extlib/cfastmanifest/bsearch.c",
@@ -1853,29 +1851,29 @@ cythonopts = {"unraisable_tracebacks": False, "c_string_type": "bytes"}
 extmodules += cythonize(
     [
         Extension(
-            "edenscm.hgext.clindex",
-            sources=["edenscm/hgext/clindex.pyx"],
+            "edenscmnative.clindex",
+            sources=["edenscmnative/clindex.pyx"],
             extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
-            "edenscm.hgext.extlib.litemmap",
-            sources=["edenscm/hgext/extlib/litemmap.pyx"],
+            "edenscmnative.litemmap",
+            sources=["edenscmnative/litemmap.pyx"],
             extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
-            "edenscm.hgext.patchrmdir",
-            sources=["edenscm/hgext/patchrmdir.pyx"],
+            "edenscmnative.patchrmdir",
+            sources=["edenscmnative/patchrmdir.pyx"],
             extra_compile_args=filter(None, [PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
-            "edenscm.hgext.traceprof",
-            sources=["edenscm/hgext/traceprof.pyx"],
+            "edenscmnative.traceprof",
+            sources=["edenscmnative/traceprof.pyx"],
             include_dirs=include_dirs,
             extra_compile_args=filter(None, [STDCPP11, PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
-            "edenscm.hgext.extlib.linelog",
-            sources=["edenscm/hgext/extlib/linelog.pyx"],
+            "edenscmnative.linelog",
+            sources=["edenscmnative/linelog.pyx"],
             include_dirs=include_dirs,
             extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
         ),
@@ -2154,17 +2152,17 @@ if havefb:
 rustextmodules = [
     RustExtension(
         "bindings",
-        package="edenscm.mercurial.rust",
+        package="edenscmnative",
         manifest="edenscm/mercurial/rust/bindings/Cargo.toml",
     ),
     RustExtension(
         "indexes",
-        package="edenscm.hgext.extlib",
+        package="edenscmnative",
         manifest="edenscm/hgext/extlib/indexes/Cargo.toml",
     ),
     RustExtension(
         "threading",
-        package="edenscm.mercurial.rust",
+        package="edenscmnative",
         manifest="edenscm/mercurial/rust/threading/Cargo.toml",
     ),
 ]

@@ -783,7 +783,7 @@ def poststatustreestate(wctx, status):
         else:
             # Remove ignored files from treestate
             ignore = dirstate._ignore
-            from edenscm.mercurial.rust.bindings import treestate
+            from edenscmnative.bindings import treestate
 
             repo.ui.debug("stop tracking ignored files\n")
             for path in dirstate._map._tree.walk(

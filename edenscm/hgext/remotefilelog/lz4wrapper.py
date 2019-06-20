@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial.rust.bindings import lz4
+from edenscmnative.bindings import lz4
 
 
 lz4compress = lz4.compress

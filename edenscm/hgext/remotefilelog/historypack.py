@@ -10,7 +10,7 @@ import struct
 
 from edenscm.mercurial import error, util
 from edenscm.mercurial.node import hex, nullid
-from edenscm.mercurial.rust.bindings import revisionstore
+from edenscmnative.bindings import revisionstore
 
 from . import basepack, constants, shallowutil
 

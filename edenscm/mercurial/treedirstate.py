@@ -15,9 +15,10 @@ import string
 import struct
 import time
 
+from edenscmnative.bindings import treestate as rusttreestate
+
 from . import error, node, pycompat, treestate, txnutil, util
 from .i18n import _
-from .rust.bindings import treestate as rusttreestate
 
 
 dirstateheader = b"########################treedirstate####"

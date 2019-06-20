@@ -289,6 +289,7 @@ Test extension help:
        cleanobsstore
        clienttelemetry
                      provide information about the client in server telemetry
+       clindex       (no help text available)
        clonebundles  advertise pre-generated bundles to seed clones
        commitcloud   back up and sync changesets via the cloud
        convert       import revisions from foreign VCS repositories into
@@ -349,6 +350,7 @@ Test extension help:
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
        ownercheck    prevent operations on repos not owned by the current user
        p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
+       patchrmdir    (no help text available)
        perfsuite     (no help text available)
        phabdiff      (no help text available)
        phabstatus    (no help text available)
@@ -378,6 +380,7 @@ Test extension help:
        sshaskpass    ssh-askpass implementation that works with chg
        stablerev     provide a way to expose the "stable" commit via a revset
        stat          (no help text available)
+       traceprof     (no help text available)
        treemanifest
        tweakdefaults
                      user friendly defaults

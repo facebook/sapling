@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import random
 import sys
 
-from edenscm.hgext.extlib import linelog
+from edenscmnative import linelog
 
 
 randint = random.randint

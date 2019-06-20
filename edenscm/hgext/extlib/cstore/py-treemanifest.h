@@ -784,7 +784,7 @@ static void treemanifest_dealloc(py_treemanifest* self) {
 }
 
 static std::shared_ptr<Store> convert_pystore(PythonObj storeObj) {
-  PythonObj cstoreModule = PyImport_ImportModule("edenscm.hgext.extlib.cstore");
+  PythonObj cstoreModule = PyImport_ImportModule("edenscmnative.cstore");
   PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
 
   // If it's a cstore, we'll use it directly instead of through python.
@@ -1154,7 +1154,7 @@ treemanifest_flags(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
 }
 
 static PyObject* treemanifest_copy(py_treemanifest* self) {
-  PythonObj module = PyImport_ImportModule("edenscm.hgext.extlib.cstore");
+  PythonObj module = PyImport_ImportModule("edenscmnative.cstore");
   PythonObj treetype = module.getattr("treemanifest");
   py_treemanifest* copy =
       PyObject_New(py_treemanifest, (PyTypeObject*)(PyObject*)treetype);

@@ -171,8 +171,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
+from edenscmnative import cstore
 
-from ..extlib import cstore
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     edenapi,
@@ -195,8 +195,6 @@ from ..remotefilelog.repack import (
     domaintenancerepack,
 )
 
-
-osutil = policy.importmod(r"osutil")
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -2509,7 +2507,7 @@ def serverrepack(repo, incremental=False, options=None):
     revlogstore = manifestrevlogstore(repo)
 
     try:
-        files = osutil.listdir(packpath, stat=True)
+        files = util.listdir(packpath, stat=True)
     except OSError:
         files = []
 

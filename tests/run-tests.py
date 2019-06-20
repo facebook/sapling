@@ -85,7 +85,7 @@ except (ImportError, AttributeError):
     shellquote = pipes.quote
 
 try:
-    from edenscm.mercurial.rust.threading import Condition as RLock
+    from edenscmnative.threading import Condition as RLock
 except ImportError:
     RLock = threading.RLock
 

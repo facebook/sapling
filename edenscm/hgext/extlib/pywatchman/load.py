@@ -31,11 +31,7 @@ from __future__ import absolute_import, division, print_function
 
 import ctypes
 
-
-try:
-    from . import bser
-except ImportError:
-    from . import pybser as bser
+from edenscmnative import bser
 
 
 EMPTY_HEADER = b"\x00\x01\x05\x00\x00\x00\x00"

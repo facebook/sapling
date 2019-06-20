@@ -4058,7 +4058,7 @@ class _zstdengine(compressionengine):
         # Not all installs have the zstd module available. So defer importing
         # until first access.
         try:
-            from .rust.bindings import zstd
+            from edenscmnative.bindings import zstd
 
             # Force delayed import.
             zstd.decode_all

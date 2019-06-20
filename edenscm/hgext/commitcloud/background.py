@@ -44,9 +44,6 @@ from edenscm.mercurial.i18n import _
 from . import util as ccutil, workspace
 
 
-osutil = policy.importmod(r"osutil")
-
-
 def extsetup(ui):
     extensions.wrapfunction(dispatch, "runcommand", _runcommand)
     extensions.wrapfunction(localrepo.localrepository, "transaction", _transaction)
@@ -259,7 +256,7 @@ def _getlogfilename(logdir, username, reponame):
 
 def _removeoldlogfiles(userlogdir, reponame):
     existinglogfiles = []
-    for entry in osutil.listdir(userlogdir):
+    for entry in util.listdir(userlogdir):
         filename = entry[0]
         fullpath = os.path.join(userlogdir, filename)
         if filename.startswith(reponame) and os.path.isfile(fullpath):

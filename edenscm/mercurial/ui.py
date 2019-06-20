@@ -22,6 +22,8 @@ import tempfile
 import time
 import traceback
 
+from edenscmnative.bindings import configparser
+
 from . import (
     color,
     configitems,
@@ -38,7 +40,6 @@ from . import (
 )
 from .i18n import _
 from .node import hex
-from .rust.bindings import configparser
 
 
 urlreq = util.urlreq

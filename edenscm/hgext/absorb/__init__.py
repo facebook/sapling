@@ -47,8 +47,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _, _n
-
-from ..extlib import linelog
+from edenscmnative import linelog
 
 
 testedwith = "ships-with-fb-hgext"

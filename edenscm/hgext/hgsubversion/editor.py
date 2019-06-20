@@ -9,9 +9,9 @@ import sys
 import tempfile
 
 from edenscm.mercurial import match as matchmod, node, revlog, util as hgutil
+from edenscmnative import cstore
 
 from . import svnexternals, svnwrap, util
-from ..extlib import cstore
 
 
 class EditingError(Exception):

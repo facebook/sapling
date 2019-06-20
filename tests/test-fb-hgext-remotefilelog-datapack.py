@@ -26,7 +26,7 @@ from edenscm.hgext.remotefilelog.datapack import (
     mutabledatapack,
 )
 from edenscm.mercurial.node import nullid
-from edenscm.mercurial.rust.bindings import revisionstore
+from edenscmnative.bindings import revisionstore
 
 
 try:

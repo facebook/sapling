@@ -51,7 +51,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.error import LookupError
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
-from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
+from edenscmnative.bindings import nodemap as nodemapmod
 from git_handler import GitHandler
 
 

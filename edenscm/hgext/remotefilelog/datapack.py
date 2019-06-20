@@ -11,7 +11,7 @@ import struct
 from edenscm.mercurial import error, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
-from edenscm.mercurial.rust.bindings import revisionstore
+from edenscmnative.bindings import revisionstore
 
 from . import basepack, constants, shallowutil
 from .lz4wrapper import lz4compress, lz4decompress
@@ -23,7 +23,7 @@ except NameError:
     xrange = range
 
 try:
-    from ..extlib import cstore
+    from edenscmnative import cstore
 
     cstore.datapack
 except ImportError:

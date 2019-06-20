@@ -36,19 +36,9 @@ import socket
 import subprocess
 import time
 
-from . import capabilities, compat, encoding, load
+from edenscmnative import bser
 
-
-# Sometimes it's really hard to get Python extensions to compile,
-# so fall back to a pure Python implementation.
-try:
-    from . import bser
-
-    # Demandimport causes modules to be loaded lazily. Force the load now
-    # so that we can fall back on pybser if bser doesn't exist
-    bser.pdu_info
-except ImportError:
-    from . import pybser as bser
+from . import capabilities, compat, encoding, load  # noqa: F401
 
 
 if os.name == "nt":
