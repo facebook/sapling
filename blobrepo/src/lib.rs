@@ -15,6 +15,7 @@
 pub mod alias;
 mod bonsai_generation;
 mod file;
+pub mod file_history;
 mod manifest;
 mod memory_manifest;
 mod repo;

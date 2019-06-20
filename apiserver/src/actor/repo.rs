@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
+use blobrepo::{file_history::get_file_history, get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
@@ -28,7 +28,6 @@ use futures::{
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use http::uri::Uri;
 use mononoke_api;
-use remotefilelog;
 use repo_client::gettreepack_entries;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, Logger};
@@ -443,7 +442,7 @@ impl MononokeRepo {
                 .into_future()
                 .and_then(move |path| {
                     debug!(&logger, "fetching history for key: {}", &key);
-                    remotefilelog::get_file_history(ctx, repo, filenode, path, depth)
+                    get_file_history(ctx, repo, filenode, path, depth)
                         .and_then(move |entry| {
                             let entry = WireHistoryEntry::try_from(entry)?;
                             Ok((key.path.clone(), entry))
