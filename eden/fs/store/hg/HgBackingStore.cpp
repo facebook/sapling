@@ -461,28 +461,23 @@ std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
 
 Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
   HgProxyHash pathInfo(localStore_, id, "importTree");
-  std::shared_ptr<LocalStore::WriteBatch> writeBatch(localStore_->beginWrite());
   folly::stop_watch<std::chrono::milliseconds> watch;
   auto fut = importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
       id,
-      pathInfo.path(),
-      writeBatch);
-  return std::move(fut).thenValue([stats = stats_,
-                                   batch = std::move(writeBatch),
-                                   watch = std::move(watch)](auto tree) {
-    batch->flush();
-    stats->getHgBackingStoreStatsForCurrentThread()
-        .hgBackingStoreGetTree.addValue(watch.elapsed().count());
-    return tree;
-  });
+      pathInfo.path());
+  return std::move(fut).thenValue(
+      [stats = stats_, watch = std::move(watch)](auto tree) {
+        stats->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreGetTree.addValue(watch.elapsed().count());
+        return tree;
+      });
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
-    RelativePathPiece path,
-    std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
+    RelativePathPiece path) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -492,8 +487,10 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   if (path.empty() && manifestNode == kZeroHash) {
     auto tree = make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
     auto serialized = LocalStore::serializeTree(tree.get());
+    auto writeBatch = localStore_->beginWrite();
     writeBatch->put(
         KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+    writeBatch->flush();
     return makeFuture(std::move(tree));
   }
 
@@ -509,8 +506,12 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     RelativePath ownedPath(path);
     return mononoke->getTree(manifestNode)
         .via(serverThreadPool_)
-        .thenTry([stats = stats_, edenTreeID, ownedPath, writeBatch, watch](
-                     auto mononokeTreeTry) mutable {
+        .thenTry([stats = stats_,
+                  edenTreeID,
+                  ownedPath,
+                  watch,
+                  writeBatch =
+                      localStore_->beginWrite()](auto mononokeTreeTry) mutable {
           auto& mononokeTree = mononokeTreeTry.value();
           std::vector<TreeEntry> entries;
 
@@ -542,30 +543,27 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
           auto count = watch.elapsed().count();
           stats->getHgBackingStoreStatsForCurrentThread()
               .mononokeBackingStoreGetTree.addValue(count);
+          writeBatch->flush();
           return makeFuture(std::move(tree));
         })
-        .thenError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
+        .thenError([this, manifestNode, edenTreeID, ownedPath](
                        const folly::exception_wrapper& ex) mutable {
           XLOG(WARN) << "got exception from Mononoke backing store: "
                      << ex.what();
           return fetchTreeFromHgCacheOrImporter(
-              manifestNode,
-              edenTreeID,
-              std::move(ownedPath),
-              std::move(writeBatch));
+              manifestNode, edenTreeID, std::move(ownedPath));
         });
   }
 
-  return fetchTreeFromHgCacheOrImporter(
-      manifestNode, edenTreeID, path.copy(), writeBatch);
+  return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy());
 }
 
 folly::Future<std::unique_ptr<Tree>>
 HgBackingStore::fetchTreeFromHgCacheOrImporter(
     Hash manifestNode,
     Hash edenTreeID,
-    RelativePath path,
-    std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
+    RelativePath path) {
+  auto writeBatch = localStore_->beginWrite();
   try {
     auto content = unionStoreGetWithRefresh(
         *unionStore_->wlock(), path.stringPiece(), manifestNode);
@@ -702,6 +700,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
   auto serialized = LocalStore::serializeTree(tree.get());
   writeBatch->put(
       KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+  writeBatch->flush();
   return tree;
 }
 
@@ -719,12 +718,9 @@ folly::Future<Hash> HgBackingStore::importTreeManifest(const Hash& commitId) {
         // Record that we are at the root for this node
         RelativePathPiece path{};
         auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-        std::shared_ptr<LocalStore::WriteBatch> writeBatch(
-            localStore_->beginWrite());
-        auto futTree =
-            importTreeImpl(manifestNode, proxyInfo.first, path, writeBatch);
+        auto futTree = importTreeImpl(manifestNode, proxyInfo.first, path);
         return std::move(futTree).thenValue(
-            [batch = std::move(writeBatch),
+            [batch = localStore_->beginWrite(),
              info = std::move(proxyInfo)](auto tree) {
               // Only write the proxy hash value for this once we've imported
               // the root.
@@ -770,16 +766,15 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
           stats->getHgBackingStoreStatsForCurrentThread()
               .mononokeBackingStoreGetBlob.addValue(count);
         })
-        .thenError([this,
-                    id,
-                    path = hgInfo.path().copy(),
-                    revHash = revHashCopy](const folly::exception_wrapper& ex) {
-          XLOG(ERR) << "Error while fetching file contents of '" << path
-                    << "', " << revHash.toString()
-                    << " from mononoke: " << ex.what()
-                    << ", fall back to import helper.";
-          return getBlobFromHgImporter(id);
-        });
+        .thenError(
+            [this, id, path = hgInfo.path().copy(), revHash = revHashCopy](
+                const folly::exception_wrapper& ex) {
+              XLOG(ERR) << "Error while fetching file contents of '" << path
+                        << "', " << revHash.toString()
+                        << " from mononoke: " << ex.what()
+                        << ", fall back to import helper.";
+              return getBlobFromHgImporter(id);
+            });
   }
 
   return getBlobFromHgImporter(id);

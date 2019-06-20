@@ -163,13 +163,11 @@ class HgBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
       const Hash& manifestNode,
       const Hash& edenTreeID,
-      RelativePathPiece path,
-      std::shared_ptr<LocalStore::WriteBatch> writeBatch);
+      RelativePathPiece path);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
       Hash manifestNode,
       Hash edenTreeID,
-      RelativePath path,
-      std::shared_ptr<LocalStore::WriteBatch> writeBatch);
+      RelativePath path);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromImporter(
       Hash manifestNode,
       Hash edenTreeID,
