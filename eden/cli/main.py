@@ -51,6 +51,22 @@ from .util import ShutdownError, print_stderr
 
 subcmd = subcmd_mod.Decorator()
 
+# For a non-unix system (like Windows), we will define our own error codes.
+try:
+    EX_OK = os.EX_OK
+except AttributeError:  # On a non-unix system
+    EX_OK = 0
+
+try:
+    EX_OSFILE = os.EX_OSFILE
+except AttributeError:  # On a non-unix system
+    EX_OSFILE = 2
+
+try:
+    EX_SOFTWARE = os.EX_SOFTWARE
+except AttributeError:  # On a non-unix system
+    EX_SOFTWARE = 3
+
 
 def infer_client_from_cwd(instance: EdenInstance, clientname: str) -> str:
     if clientname:
@@ -1458,7 +1474,7 @@ def check_for_stale_working_directory() -> Optional[int]:
             f"error: unable to determine current working directory: {ex}",
             file=sys.stderr,
         )
-        return os.EX_OSFILE
+        return EX_OSFILE
 
     # See if we can figure out what the current working directory should be
     # based on the $PWD environment variable that is normally set by most shells.
@@ -1481,7 +1497,7 @@ mount point from a previous Eden daemon instance.
 Please run "cd / && cd -" to update your shell's working directory."""
     if not can_continue:
         print(f"Error: {msg}", file=sys.stderr)
-        return os.EX_OSFILE
+        return EX_OSFILE
 
     print(f"Warning: {msg}", file=sys.stderr)
     doctor_mod.working_directory_was_stale = True
@@ -1502,12 +1518,12 @@ def main() -> int:
         return do_version(args)
     if getattr(args, "func", None) is None:
         parser.print_help()
-        return os.EX_OK
+        return EX_OK
     try:
         return_code: int = args.func(args)
     except subcmd_mod.CmdError as ex:
         print(f"error: {ex}", file=sys.stderr)
-        return os.EX_SOFTWARE
+        return EX_SOFTWARE
     return return_code
 
 
