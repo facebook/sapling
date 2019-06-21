@@ -185,7 +185,7 @@ impl MemoryManifestEntry {
     ) -> impl Future<Item = HgBlobEntry, Error = Error> {
         let unfold = {
             cloned!(ctx, blobstore);
-            move |(path, entry): &(RepoPath, Self)| match entry {
+            move |(path, entry): &mut (RepoPath, Self)| match entry {
                 MemoryManifestEntry::Blob(_) => future::ok(Vec::new()).left_future(),
                 MemoryManifestEntry::Conflict(_) => {
                     future::err(ErrorKind::UnresolvedConflicts.into()).left_future()

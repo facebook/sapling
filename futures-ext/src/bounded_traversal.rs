@@ -36,7 +36,7 @@ pub fn bounded_traversal<In, Out, Unfold, UFut, Fold, FFut>(
     fold: Fold,
 ) -> impl Future<Item = Out, Error = UFut::Error>
 where
-    Unfold: FnMut(&In) -> UFut,
+    Unfold: FnMut(&mut In) -> UFut,
     UFut: IntoFuture,
     UFut::Item: IntoIterator<Item = In>,
     Fold: FnMut(In, Iter<Out>) -> FFut,
@@ -78,7 +78,7 @@ where
 
 impl<In, Out, Unfold, UFut, Fold, FFut> BoundedTraversal<In, Out, Unfold, UFut, Fold, FFut>
 where
-    Unfold: FnMut(&In) -> UFut,
+    Unfold: FnMut(&mut In) -> UFut,
     UFut: IntoFuture,
     UFut::Item: IntoIterator<Item = In>,
     Fold: FnMut(In, Iter<Out>) -> FFut,
@@ -104,12 +104,12 @@ where
         this
     }
 
-    fn enqueue_unfold(&mut self, parent: NodeLocation, value: In) {
+    fn enqueue_unfold(&mut self, parent: NodeLocation, mut value: In) {
         // allocate index
         self.execution_tree_index = NodeIndex(self.execution_tree_index.0 + 1);
         let node_index = self.execution_tree_index;
         // create future
-        let future = (self.unfold)(&value).into_future();
+        let future = (self.unfold)(&mut value).into_future();
         // allocate execution node
         self.execution_tree.insert(
             node_index,
@@ -192,7 +192,7 @@ where
 impl<In, Out, Unfold, UFut, Fold, FFut> Future
     for BoundedTraversal<In, Out, Unfold, UFut, Fold, FFut>
 where
-    Unfold: FnMut(&In) -> UFut,
+    Unfold: FnMut(&mut In) -> UFut,
     UFut: IntoFuture,
     UFut::Item: IntoIterator<Item = In>,
     Fold: FnMut(In, Iter<Out>) -> FFut,

@@ -60,6 +60,7 @@ use stats::{define_stats, Histogram, Timeseries};
 use std::{
     collections::HashMap,
     convert::From,
+    mem,
     str::FromStr,
     sync::{Arc, Mutex},
 };
@@ -1277,15 +1278,14 @@ impl BlobRepo {
         manifest_id: HgManifestId,
         paths: impl IntoIterator<Item = MPath>,
     ) -> impl Future<Item = HashMap<MPath, HgEntryId>, Error = Error> {
-        // Mutable file tree representation which can be easily populated
         // Note: `children` and `selected` fields are not exclusive, that is
         //       selected might be true and children is not empty.
-        struct QueryTreeMut {
-            children: HashMap<MPathElement, QueryTreeMut>,
+        struct QueryTree {
+            children: HashMap<MPathElement, QueryTree>,
             selected: bool,
         }
 
-        impl QueryTreeMut {
+        impl QueryTree {
             fn new() -> Self {
                 Self {
                     children: HashMap::new(),
@@ -1295,9 +1295,7 @@ impl BlobRepo {
 
             fn insert_path(&mut self, path: MPath) {
                 let mut node = path.into_iter().fold(self, |tree, element| {
-                    tree.children
-                        .entry(element)
-                        .or_insert_with(QueryTreeMut::new)
+                    tree.children.entry(element).or_insert_with(QueryTree::new)
                 });
                 node.selected = true;
             }
@@ -1309,52 +1307,32 @@ impl BlobRepo {
             }
         }
 
-        // Immutable file tree representation which is cheaply copyable
-        struct QueryTree {
-            children: HashMap<MPathElement, Arc<QueryTree>>,
-            selected: bool,
-        }
-
-        impl From<QueryTreeMut> for Arc<QueryTree> {
-            fn from(tree: QueryTreeMut) -> Self {
-                Arc::new(QueryTree {
-                    children: tree
-                        .children
-                        .into_iter()
-                        .map(|(element, tree)| (element, tree.into()))
-                        .collect(),
-                    selected: tree.selected,
-                })
-            }
-        }
-
-        let query_tree: Arc<QueryTree> = QueryTreeMut::from_paths(paths).into();
         let output = Arc::new(Mutex::new(HashMap::new()));
         bounded_traversal(
             1024,
-            (query_tree, manifest_id, None),
+            (QueryTree::from_paths(paths), manifest_id, None),
             {
                 let repo = self.clone();
                 cloned!(output);
                 move |(query_tree, manifest_id, path)| {
-                    cloned!(query_tree, path, output);
+                    let children = mem::replace(&mut query_tree.children, HashMap::new());
+                    cloned!(path, output);
                     repo.get_manifest_by_nodeid(ctx.clone(), *manifest_id)
                         .map(move |manifest| {
-                            query_tree
-                                .children
-                                .iter()
+                            children
+                                .into_iter()
                                 .filter_map(|(element, child)| {
-                                    let path = MPath::join_opt_element(path.as_ref(), element);
-                                    manifest.lookup(element).and_then(|entry| {
+                                    let path = MPath::join_opt_element(path.as_ref(), &element);
+                                    manifest.lookup(&element).and_then(|entry| {
                                         let entry_id = entry.get_hash();
                                         if child.selected {
                                             output.with(|output| {
                                                 output.insert(path.clone(), entry_id)
                                             });
                                         }
-                                        entry_id.to_manifest().map(|manifest_id| {
-                                            (child.clone(), manifest_id, Some(path))
-                                        })
+                                        entry_id
+                                            .to_manifest()
+                                            .map(|manifest_id| (child, manifest_id, Some(path)))
                                     })
                                 })
                                 .collect::<Vec<_>>()
@@ -1363,7 +1341,7 @@ impl BlobRepo {
             },
             |_, _| Ok(()),
         )
-        .map(move |_| output.with(|output| std::mem::replace(output, HashMap::new())))
+        .map(move |_| output.with(|output| mem::replace(output, HashMap::new())))
     }
 
     pub fn get_manifest_from_bonsai(
