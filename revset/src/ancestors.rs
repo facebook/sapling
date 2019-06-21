@@ -298,7 +298,7 @@ mod test {
             let nodestream = AncestorsNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                string_to_bonsai(&repo, "dd993aab2bed7276e17c88470286ba8459ba6d94)"),
+                string_to_bonsai(&repo, "dd993aab2bed7276e17c88470286ba8459ba6d94"),
             )
             .boxify();
 

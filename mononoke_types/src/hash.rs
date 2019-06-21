@@ -13,6 +13,7 @@ use ascii::{AsciiStr, AsciiString};
 use blake2::digest::{Input, VariableOutput};
 use blake2::VarBlake2b;
 use failure_ext::bail_err;
+use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
@@ -46,8 +47,6 @@ use crate::thrift;
     HeapSizeOf
 )]
 pub struct Blake2([u8; 32]);
-
-const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 impl Blake2 {
     /// Construct a `Blake2` from an array of 32 bytes containing a
@@ -94,11 +93,11 @@ impl Blake2 {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v = Vec::with_capacity(64);
-        for &byte in self.as_ref() {
-            v.push(HEX_CHARS[(byte >> 4) as usize]);
-            v.push(HEX_CHARS[(byte & 0xf) as usize]);
-        }
+        let mut v = vec![0; 64];
+
+        // This can only panic if buffer size of Vec isn't correct, which would be
+        // a programming error.
+        hex_encode(self.as_ref(), &mut v).expect("failed to hex encode");
 
         unsafe {
             // A hex string is always a pure ASCII string.
@@ -155,22 +154,17 @@ impl FromStr for Blake2 {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        if s.len() < 64 {
+        if s.len() != 64 {
             bail_err!(ErrorKind::InvalidBlake2Input(
-                "need at least 64 hex digits".into()
+                "need exactly 64 hex digits".into()
             ));
         }
 
         let mut ret = Blake2([0; 32]);
-
-        for idx in 0..ret.0.len() {
-            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
-                Ok(v) => v,
-                Err(_) => bail_err!(ErrorKind::InvalidBlake2Input("bad digit".into())),
-            };
+        match hex_decode(s.as_bytes(), &mut ret.0) {
+            Ok(_) => Ok(ret),
+            Err(_) => bail_err!(ErrorKind::InvalidBlake2Input("bad hex character".into())),
         }
-
-        Ok(ret)
     }
 }
 
@@ -233,11 +227,11 @@ impl Sha256 {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v = Vec::with_capacity(64);
-        for &byte in self.as_ref() {
-            v.push(HEX_CHARS[(byte >> 4) as usize]);
-            v.push(HEX_CHARS[(byte & 0xf) as usize]);
-        }
+        let mut v = vec![0; 64];
+
+        // This can only panic if buffer size of Vec isn't correct, which would be
+        // a programming error.
+        hex_encode(self.as_ref(), &mut v).expect("failed to hex encode");
 
         unsafe {
             // A hex string is always a pure ASCII string.
@@ -262,15 +256,10 @@ impl FromStr for Sha256 {
         }
 
         let mut ret = Sha256([0; 32]);
-
-        for idx in 0..ret.0.len() {
-            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
-                Ok(v) => v,
-                Err(_) => bail_err!(ErrorKind::InvalidSha256Input("bad digit".into())),
-            };
+        match hex_decode(s.as_bytes(), &mut ret.0) {
+            Ok(_) => Ok(ret),
+            Err(_) => bail_err!(ErrorKind::InvalidSha256Input("bad hex character".into())),
         }
-
-        Ok(ret)
     }
 }
 

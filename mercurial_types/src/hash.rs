@@ -11,6 +11,7 @@ use abomonation_derive::Abomonation;
 use ascii::{AsciiStr, AsciiString};
 use crypto::{digest::Digest, sha1};
 use failure_ext::bail_err;
+use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
@@ -27,8 +28,6 @@ pub const NULL: Sha1 = Sha1([0; 20]);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf, Abomonation)]
 pub struct Sha1([u8; 20]);
-
-const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 impl Sha1 {
     /// Construct a `Sha1` from an array of 20 bytes containing a
@@ -77,11 +76,11 @@ impl Sha1 {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v = Vec::with_capacity(40);
-        for &byte in self.as_ref() {
-            v.push(HEX_CHARS[(byte >> 4) as usize]);
-            v.push(HEX_CHARS[(byte & 0xf) as usize]);
-        }
+        let mut v = vec![0; 40];
+
+        // This can only panic if buffer size of Vec isn't correct, which would be
+        // a programming error.
+        hex_encode(self.as_ref(), &mut v).expect("failed to hex encode");
 
         unsafe {
             // A hex string is always a pure ASCII string.
@@ -123,22 +122,17 @@ impl FromStr for Sha1 {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Sha1> {
-        if s.len() < 40 {
+        if s.len() != 40 {
             bail_err!(ErrorKind::InvalidSha1Input(
-                "need at least 40 hex digits".into()
+                "need exactly 40 hex digits".into()
             ));
         }
 
         let mut ret = Sha1([0; 20]);
-
-        for idx in 0..ret.0.len() {
-            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
-                Ok(v) => v,
-                Err(_) => bail_err!(ErrorKind::InvalidSha1Input("bad digit".into())),
-            }
+        match hex_decode(s.as_bytes(), &mut ret.0) {
+            Ok(_) => Ok(ret),
+            Err(_) => bail_err!(ErrorKind::InvalidSha1Input("bad hex character".into())),
         }
-
-        Ok(ret)
     }
 }
 
