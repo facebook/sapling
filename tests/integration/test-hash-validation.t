@@ -81,7 +81,7 @@ Prefetch should fail with corruption error
   remote:         ),
   remote:     }
   abort: error downloading file contents:
-  'connection closed early for filename A and node 005d992c5dcf32993668f7cede29d296c494a5d9'
+  'connection closed early for filename * and node *' (glob)
   [255]
 
 Same for getpackv1
