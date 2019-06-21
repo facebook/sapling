@@ -236,5 +236,10 @@ BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
 LocalStore::WriteBatch::~WriteBatch() {}
 LocalStore::~LocalStore() {}
 
+void LocalStore::periodicManagementTask(const EdenConfig& /* config */) {
+  // Individual store subclasses can provide their own implementations for
+  // periodic management.
+}
+
 } // namespace eden
 } // namespace facebook

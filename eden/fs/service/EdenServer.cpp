@@ -342,6 +342,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   reloadConfigTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.getConfigReloadInterval()));
+
+  localStoreTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.getLocalStoreManagementInterval()));
 }
 
 #ifndef _WIN32
@@ -1207,6 +1211,12 @@ void EdenServer::reportMemoryStats() {
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
+}
+
+void EdenServer::manageLocalStore() {
+  auto config = serverState_->getReloadableConfig().getEdenConfig(
+      ConfigReloadBehavior::NoReload);
+  localStore_->periodicManagementTask(*config);
 }
 
 void EdenServer::reloadConfig() {

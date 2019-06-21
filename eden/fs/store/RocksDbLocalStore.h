@@ -6,6 +6,7 @@
  */
 #pragma once
 #include <folly/CppAttributes.h>
+#include <folly/Synchronized.h>
 
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/LocalStore.h"
@@ -56,10 +57,28 @@ class RocksDbLocalStore : public LocalStore {
   // specified key space.
   uint64_t getApproximateSize(KeySpace keySpace) const;
 
+  void periodicManagementTask(const EdenConfig& config) override;
+
  private:
+  struct AutoGCState {
+    bool inProgress_{false};
+    std::chrono::steady_clock::time_point startTime_;
+  };
+
+  /**
+   * Publish fb303 counters.
+   * Returns the approximate size of all ephemeral column families.
+   */
+  size_t publishStats();
+
+  void triggerAutoGC();
+  void autoGCFinished(bool successful);
+
+  const std::string statsPrefix_{"local_store."};
   FaultInjector& faultInjector_;
   RocksHandles dbHandles_;
   mutable UnboundedQueueExecutor ioPool_;
+  folly::Synchronized<AutoGCState> autoGCState_;
 };
 
 } // namespace eden

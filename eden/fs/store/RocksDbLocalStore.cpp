@@ -10,6 +10,7 @@
 
 #include <folly/Format.h>
 #include <folly/String.h>
+#include <folly/container/Enumerate.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -20,6 +21,8 @@
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
 
+#include "common/stats/ServiceData.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/KeySpaces.h"
@@ -249,7 +252,11 @@ RocksDbLocalStore::RocksDbLocalStore(
     RocksDBOpenMode mode)
     : faultInjector_(*faultInjector),
       dbHandles_(openDB(pathToRocksDb, mode)),
-      ioPool_(12, "RocksLocalStore") {}
+      ioPool_(12, "RocksLocalStore") {
+  // Publish fb303 stats once when we first open the DB.
+  // These will be kept up-to-date later by the periodicManagementTask() call.
+  publishStats();
+}
 
 RocksDbLocalStore::~RocksDbLocalStore() {
 #ifdef FOLLY_SANITIZE_ADDRESS
@@ -547,6 +554,110 @@ uint64_t RocksDbLocalStore::getApproximateSize(
   }
 
   return size;
+}
+
+void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
+  // Compute and publish the stats
+  auto ephemeralSize = publishStats();
+
+  // If the ephemeral size is more than the configured limit,
+  // trigger garbage collection.
+  auto ephemeralLimit = config.getLocalStoreEphemeralSizeLimit();
+  if (ephemeralLimit > 0 && ephemeralSize > ephemeralLimit) {
+    XLOG(INFO) << "scheduling automatic local store garbage collection: "
+               << "ephemeral data size " << ephemeralSize
+               << " exceeds limit of " << ephemeralLimit;
+    triggerAutoGC();
+  }
+}
+
+size_t RocksDbLocalStore::publishStats() {
+  size_t ephemeralSize = 0;
+  size_t persistentSize = 0;
+  for (const auto& iter : folly::enumerate(kKeySpaceRecords)) {
+    auto size =
+        getApproximateSize(static_cast<LocalStore::KeySpace>(iter.index));
+    fbData->setCounter(
+        folly::to<string>(statsPrefix_, iter->name, ".size"), size);
+    if (iter->persistence == Persistence::Ephemeral) {
+      ephemeralSize += size;
+    } else {
+      persistentSize += size;
+    }
+  }
+
+  fbData->setCounter(
+      folly::to<string>(statsPrefix_, "ephemeral.total_size"), ephemeralSize);
+  fbData->setCounter(
+      folly::to<string>(statsPrefix_, "persistent.total_size"), persistentSize);
+
+  return ephemeralSize;
+}
+
+// In the future it would perhaps be nicer to move the triggerAutoGC()
+// logic up into the LocalStore base class.  However, for now it is more
+// convenient to be able to use RocksDbLocalStore's ioPool_ to schedule the
+// work.  We could use the EdenServer's main thread pool from the LocalStore
+// code, but the gc operation can take a significant amount of time, and it
+// seems unfortunate to tie up one of the main pool threads for potentially
+// multiple minutes.
+void RocksDbLocalStore::triggerAutoGC() {
+  {
+    auto state = autoGCState_.wlock();
+    if (state->inProgress_) {
+      XLOG(WARN) << "skipping local store garbage collection: "
+                    "another GC job is still running";
+      fbData->incrementCounter(
+          folly::to<string>(statsPrefix_, "auto_gc.schedule_failure"));
+      return;
+    }
+    fbData->setCounter(folly::to<string>(statsPrefix_, "auto_gc.running"), 1);
+
+    fbData->incrementCounter(
+        folly::to<string>(statsPrefix_, "auto_gc.schedule_count"));
+    state->startTime_ = std::chrono::steady_clock::now();
+    state->inProgress_ = true;
+  }
+
+  ioPool_.add([store = std::static_pointer_cast<RocksDbLocalStore>(
+                   shared_from_this())] {
+    try {
+      store->clearCachesAndCompactAll();
+    } catch (const std::exception& ex) {
+      XLOG(ERR) << "error during automatic local store garbage collection: "
+                << folly::exceptionStr(ex);
+      store->autoGCFinished(/*successful=*/false);
+      return;
+    }
+    store->autoGCFinished(/*successful=*/true);
+  });
+}
+
+void RocksDbLocalStore::autoGCFinished(bool successful) {
+  auto state = autoGCState_.wlock();
+  state->inProgress_ = false;
+
+  auto endTime = std::chrono::steady_clock::now();
+  auto duration = endTime - state->startTime_;
+  auto durationMS =
+      std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+  fbData->setCounter(folly::to<string>(statsPrefix_, "auto_gc.running"), 0);
+  fbData->setCounter(
+      folly::to<string>(statsPrefix_, "auto_gc.last_run"), time(nullptr));
+  fbData->setCounter(
+      folly::to<string>(statsPrefix_, "auto_gc.last_run_succeeded"),
+      successful ? 1 : 0);
+  fbData->setCounter(
+      folly::to<string>(statsPrefix_, "auto_gc.last_duration_ms"), durationMS);
+
+  if (successful) {
+    fbData->incrementCounter(
+        folly::to<string>(statsPrefix_, "auto_gc.success"));
+  } else {
+    fbData->incrementCounter(
+        folly::to<string>(statsPrefix_, "auto_gc.failure"));
+  }
 }
 
 } // namespace eden

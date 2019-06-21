@@ -424,6 +424,10 @@ class EdenServer : private TakeoverHandler {
   // Report memory usage statistics to ServiceData.
   void reportMemoryStats();
 
+  // Compute stats for the local store and perform garbage collection if
+  // necessary
+  void manageLocalStore();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -492,6 +496,8 @@ class EdenServer : private TakeoverHandler {
                                                              "flush_stats"};
   PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{this,
                                                                   "mem_stats"};
+  PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{this,
+                                                                "local_store"};
 };
 } // namespace eden
 } // namespace facebook

@@ -138,6 +138,24 @@ class EdenConfig : public ConfigSettingManager {
     return configReloadInterval_.getValue();
   }
 
+  /**
+   * Get how often to compute stats and perform garbage collection management
+   * for the LocalStore.
+   */
+  std::chrono::nanoseconds getLocalStoreManagementInterval() const {
+    return localStoreManagementInterval_.getValue();
+  }
+
+  /**
+   * Get the size limit for ephemeral sections of the local store.
+   *
+   * Automatic garbage collection will be triggered when the size exceeds this
+   * threshold.
+   */
+  size_t getLocalStoreEphemeralSizeLimit() const {
+    return localStoreEphemeralSizeLimit_.getValue();
+  }
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -258,6 +276,14 @@ class EdenConfig : public ConfigSettingManager {
   ConfigSetting<std::chrono::nanoseconds> configReloadInterval_{
       "config:reload-interval",
       std::chrono::minutes(5),
+      this};
+  ConfigSetting<std::chrono::nanoseconds> localStoreManagementInterval_{
+      "store:stats-interval",
+      std::chrono::minutes(1),
+      this};
+  ConfigSetting<size_t> localStoreEphemeralSizeLimit_{
+      "store:ephemeral-size-limit",
+      20'000'000'000,
       this};
 
   struct stat systemConfigFileStat_ = {};

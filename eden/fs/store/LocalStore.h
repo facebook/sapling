@@ -21,6 +21,7 @@ namespace facebook {
 namespace eden {
 
 class Blob;
+class EdenConfig;
 class Hash;
 class StoreResult;
 class Tree;
@@ -42,7 +43,7 @@ class Tree;
  * LocalStore is thread-safe, and can be used from multiple threads without
  * requiring the caller to perform locking around accesses to the LocalStore.
  */
-class LocalStore {
+class LocalStore : public std::enable_shared_from_this<LocalStore> {
  public:
   virtual ~LocalStore();
   explicit LocalStore() noexcept;
@@ -267,6 +268,8 @@ class LocalStore {
    * destruction either.
    */
   virtual std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) = 0;
+
+  virtual void periodicManagementTask(const EdenConfig& config);
 };
 } // namespace eden
 } // namespace facebook

@@ -466,6 +466,63 @@ def get_store_latency(counters: DiagInfoCounters, store: str) -> Table2D:
     return table
 
 
+@stats_cmd("local_store", "Show information about the local store data size")
+class LocalStoreCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        # (name, ephemeral)
+        column_families = [
+            ("blob", True),
+            ("blobmeta", True),
+            ("hgcommit2tree", True),
+            ("tree", False),
+            ("hgproxyhash", False),
+        ]
+
+        out = sys.stdout
+        stats_print.write_heading("EdenFS Local Store Stats", out)
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
+            counters = client.getRegexCounters("local_store\\..*")
+
+        columns = ("Table", "Ephemeral?", "Size")
+        fmt = "{:<16} {:>10} {:>15}\n"
+        out.write(fmt.format(*columns))
+        out.write(f"-------------------------------------------\n")
+        for name, ephemeral in column_families:
+            size = stats_print.format_size(counters.get(f"local_store.{name}.size", 0))
+            out.write(fmt.format(name, "Y" if ephemeral else "N", size))
+
+        ephemeral_size = stats_print.format_size(
+            counters.get("local_store.ephemeral.total_size", 0)
+        )
+        persistent_size = stats_print.format_size(
+            counters.get("local_store.persistent.total_size", 0)
+        )
+        out.write("\n")
+        out.write(f"Total Ephemeral Size:  {ephemeral_size:>20}\n")
+        out.write(f"Total Persistent Size: {persistent_size:>20}\n")
+        out.write("\n")
+
+        out.write("Automatic Garbage Collection Data:\n")
+        out.write(f"-------------------------------------------\n")
+        auto_gc_running = bool(counters.get("local_store.auto_gc.running", 0))
+        out.write(f"Auto-GC In Progress:      {'Y' if auto_gc_running else 'N'}\n")
+        auto_gc_success = counters.get("local_store.auto_gc.success", 0)
+        out.write(f"Successful Auto-GC Runs:  {auto_gc_success}\n")
+        auto_gc_failure = counters.get("local_store.auto_gc.failure", 0)
+        out.write(f"Failed Auto-GC Runs:      {auto_gc_failure}\n")
+        last_gc_success = counters.get("local_store.auto_gc.last_run_succeeded", None)
+        if last_gc_success is not None:
+            last_gc_ms = counters.get("local_store.auto_gc.last_duration_ms", 0)
+            last_gc_sec = last_gc_ms / 1000
+
+            last_result_str = "Success" if last_gc_success == 1 else "Failure"
+            out.write(f"Last Auto-GC Result:      {last_result_str}\n")
+            out.write(f"Last Auto-GC Duration:    {last_gc_sec:.03f}s\n")
+
+        return 0
+
+
 class StatsCmd(Subcmd):
     NAME = "stats"
     HELP = "Prints statistics information for eden"
