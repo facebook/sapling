@@ -24,6 +24,7 @@ const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
 const LOG_CMD: &'static str = "log";
 const LIST_CMD: &'static str = "list";
+const DEL_CMD: &'static str = "delete";
 
 pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     let set = SubCommand::with_name(SET_CMD)
@@ -89,11 +90,20 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("What set of bookmarks to list"),
     );
 
+    let del = SubCommand::with_name(DEL_CMD)
+        .about("delete bookmark")
+        .args_from_usage(
+            r#"
+            <BOOKMARK_NAME>        'bookmark to delete'
+            "#,
+        );
+
     app.about("set of commands to manipulate bookmarks")
         .subcommand(set)
         .subcommand(get)
         .subcommand(log)
         .subcommand(list)
+        .subcommand(del)
 }
 
 pub fn handle_command<'a>(
@@ -107,6 +117,7 @@ pub fn handle_command<'a>(
         (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, repo),
         (LOG_CMD, Some(sub_m)) => handle_log(sub_m, ctx, repo),
         (LIST_CMD, Some(sub_m)) => handle_list(sub_m, ctx, repo),
+        (DEL_CMD, Some(sub_m)) => handle_delete(sub_m, ctx, repo),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -304,6 +315,21 @@ fn handle_set<'a>(
             ));
             transaction.commit().map(|_| ()).from_err().boxify()
         })
+    })
+    .boxify()
+}
+
+fn handle_delete<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    repo: BoxFuture<BlobRepo, Error>,
+) -> BoxFuture<(), Error> {
+    let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
+    let bookmark = BookmarkName::new(bookmark_name).unwrap();
+    repo.and_then(move |repo| {
+        let mut transaction = repo.update_bookmark_transaction(ctx);
+        try_boxfuture!(transaction.force_delete(&bookmark, BookmarkUpdateReason::ManualMove));
+        transaction.commit().map(|_| ()).from_err().boxify()
     })
     .boxify()
 }

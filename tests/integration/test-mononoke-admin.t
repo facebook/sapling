@@ -32,3 +32,14 @@ blobimport them into Mononoke storage and start Mononoke
 
   $ mononoke_admin bookmarks log master_bookmark 2>&1 | grep master_bookmark
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+
+  $ mononoke_admin bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>/dev/null
+
+  $ mononoke_admin bookmarks list --kind publishing 2> /dev/null
+  master_bookmark	c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd	26805aba1e600a82e93661149f2313866a221a7b
+  another_bookmark	c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd	26805aba1e600a82e93661149f2313866a221a7b
+
+  $ mononoke_admin bookmarks delete master_bookmark 2> /dev/null
+
+  $ mononoke_admin bookmarks list --kind publishing 2> /dev/null
+  another_bookmark	c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd	26805aba1e600a82e93661149f2313866a221a7b
