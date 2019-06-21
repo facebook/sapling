@@ -9,6 +9,7 @@
 #include <folly/Conv.h>
 #include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
+#include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Access.h>
@@ -114,8 +115,15 @@ namespace /* anonymous namespace for helper functions */ {
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
-  ThriftLogHelper(ThriftLogHelper&&) = delete;
+  FOLLY_PUSH_WARNING
+  FOLLY_CLANG_DISABLE_WARNING("-Wunused-member-function")
+  // Older versions of MSVC (19.13.26129.0) don't perform copy elision
+  // as required by C++17, and require a move constructor to be defined for this
+  // class.
+  ThriftLogHelper(ThriftLogHelper&&) = default;
+  // However, this class is not move-assignable.
   ThriftLogHelper& operator=(ThriftLogHelper&&) = delete;
+  FOLLY_POP_WARNING
 
   template <typename... Args>
   ThriftLogHelper(
@@ -169,7 +177,7 @@ class ThriftLogHelper {
   folly::StringPiece itcFileName_;
   uint32_t itcLineNumber_;
   folly::LogLevel level_;
-  const folly::Logger& itcLogger_;
+  folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
   bool wrapperExecuted_ = false;
 };
