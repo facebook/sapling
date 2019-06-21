@@ -2768,6 +2768,17 @@ def savetimes(outputdir, result):
         pass
 
 
+def xunit_time(t):
+    # The TestPilot documentation says to follow the JUnit spec, which says time
+    # should be in seconds, but that's not quite what TestPilot actually does
+    # (see D2822375: it expects the time in milliseconds). There's other code at
+    # Facebook that relies on the TESTPILOT_PROCESS to identify if we're running
+    # tests, so it should be reasonably safe (albeit hacky) to rely on this.
+    if os.environ.get("TESTPILOT_PROCESS"):
+        t = t * 1000
+    return "%.3f" % t
+
+
 class TextTestRunner(unittest.TextTestRunner):
     """Custom unittest test runner that uses appropriate settings."""
 
@@ -2939,14 +2950,14 @@ class TextTestRunner(unittest.TextTestRunner):
             t.setAttribute("name", tc.name)
             tctime = timesd.get(tc.name)
             if tctime is not None:
-                t.setAttribute("time", "%.3f" % tctime)
+                t.setAttribute("time", xunit_time(tctime))
             s.appendChild(t)
         for tc, err in sorted(result.faildata.items()):
             t = doc.createElement("testcase")
             t.setAttribute("name", tc)
             tctime = timesd.get(tc)
             if tctime is not None:
-                t.setAttribute("time", "%.3f" % tctime)
+                t.setAttribute("time", xunit_time(tctime))
             # createCDATASection expects a unicode or it will
             # convert using default conversion rules, which will
             # fail if string isn't ASCII.
