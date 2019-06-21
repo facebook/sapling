@@ -31,7 +31,7 @@ pub use datetime::{DateTime, Timestamp};
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
 pub use generation::Generation;
-pub use path::{check_case_conflicts, MPath, MPathElement, RepoPath};
+pub use path::{check_case_conflicts, MPath, MPathElement, RepoPath, RepoPathCached};
 pub use rawbundle2::RawBundle2;
 pub use repo::RepositoryId;
 pub use typed_hash::{ChangesetId, ContentId, MononokeId, RawBundle2Id};

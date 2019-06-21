@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use bytes::Bytes;
 use std::cmp;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
@@ -24,7 +25,7 @@ fn fsencode_dir_impl<'a, Iter>(dotencode: bool, iter: Iter) -> PathBuf
 where
     Iter: Iterator<Item = &'a MPathElement>,
 {
-    iter.map(|p| fsencode_filter(direncode(p.as_bytes()), dotencode))
+    iter.map(|p| fsencode_filter(direncode(p.as_ref()), dotencode))
         .collect()
 }
 
@@ -40,12 +41,12 @@ pub fn fncache_fsencode(elements: &[MPathElement], dotencode: bool) -> PathBuf {
     let mut ret: PathBuf = fsencode_dir_impl(dotencode, path.clone());
 
     if let Some(basename) = file {
-        ret.push(fsencode_filter(basename.as_bytes(), dotencode));
+        ret.push(fsencode_filter(basename.as_ref(), dotencode));
         let os_str: &OsStr = ret.as_ref();
         if os_str.as_bytes().len() > MAXSTOREPATHLEN {
             hashencode(
                 path.map(|elem| elem.to_bytes()).collect(),
-                basename.as_bytes(),
+                basename.as_ref(),
                 dotencode,
             )
         } else {
@@ -68,14 +69,13 @@ pub fn simple_fsencode(elements: &[MPathElement]) -> PathBuf {
     if let Some(basename) = file {
         let encoded_directory: PathBuf = directory_elements
             .map(|elem| {
-                let encoded_element = fnencode(direncode(elem.as_bytes()), false);
+                let encoded_element = fnencode(direncode(elem.as_ref()), false);
                 String::from_utf8(encoded_element).expect("bad utf8")
             })
             .collect();
 
-        let encoded_basename = PathBuf::from(
-            String::from_utf8(fnencode(basename.as_bytes(), false)).expect("bad utf8"),
-        );
+        let encoded_basename =
+            PathBuf::from(String::from_utf8(fnencode(basename.as_ref(), false)).expect("bad utf8"));
         encoded_directory.join(encoded_basename)
     } else {
         PathBuf::new()
@@ -270,7 +270,7 @@ fn get_extension(basename: &[u8]) -> &[u8] {
 /// assert_eq!(hashed_file(&dirs, Some(file)), Sha1::from(&b"asdf/asdf/file.txt"[..]));
 ///
 /// ```
-fn hashed_file(dirs: &Vec<Vec<u8>>, file: &[u8]) -> Sha1 {
+fn hashed_file(dirs: &Vec<Bytes>, file: &[u8]) -> Sha1 {
     let mut elements: Vec<_> = dirs.iter().map(|elem| direncode(&elem)).collect();
     elements.push(Vec::from(file));
 
@@ -283,7 +283,7 @@ fn hashed_file(dirs: &Vec<Vec<u8>>, file: &[u8]) -> Sha1 {
 /// also contains sha-1 hash of the initial file.
 /// Each path element is encoded to avoid file name collisions, and they are combined
 /// in such way that resulting path is shorter than MAXSTOREPATHLEN.
-fn hashencode(dirs: Vec<Vec<u8>>, file: &[u8], dotencode: bool) -> PathBuf {
+fn hashencode(dirs: Vec<Bytes>, file: &[u8], dotencode: bool) -> PathBuf {
     let sha1 = hashed_file(&dirs, file);
 
     let mut parts = dirs
@@ -480,7 +480,7 @@ mod test {
 
     #[test]
     fn test_hashed_file() {
-        let dirs = vec![Vec::from(&b"asdf"[..]), Vec::from("asdf")];
+        let dirs = vec![Bytes::from(&b"asdf"[..]), Bytes::from("asdf")];
         let file = b"file.txt";
         assert_eq!(
             hashed_file(&dirs, file),

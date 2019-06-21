@@ -1208,7 +1208,7 @@ impl BlobRepo {
                                 }
                             }
                             None => {
-                                let element_utf8 = String::from_utf8(element.to_bytes());
+                                let element_utf8 = String::from_utf8(Vec::from(element.as_ref()));
                                 let mut potential_conflicts = vec![];
                                 // Find all entries in the manifests that can potentially be a conflict.
                                 // Entry can potentially be a conflict if its lowercased version
@@ -1220,7 +1220,7 @@ impl BlobRepo {
                                         .expect("Non-root entry has empty basename");
                                     let path =
                                         MPath::join_element_opt(cur_path.as_ref(), Some(basename));
-                                    match (&element_utf8, String::from_utf8(basename.to_bytes())) {
+                                    match (&element_utf8, std::str::from_utf8(basename.as_ref())) {
                                         (Ok(ref element), Ok(ref basename)) => {
                                             if basename.to_lowercase() == element.to_lowercase() {
                                                 potential_conflicts.extend(path);

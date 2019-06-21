@@ -225,7 +225,7 @@ impl MemoryManifestEntry {
                                 child
                                     .get_name()
                                     .expect("root manifest is never part of other manifest")
-                                    .as_bytes(),
+                                    .as_ref(),
                             );
                             write!(
                                 &mut manifest,

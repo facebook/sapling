@@ -829,7 +829,7 @@ fn test_get_manifest_from_bonsai() {
                     .map(|ms| {
                         ms.list()
                             .map(|e| {
-                                let name = e.get_name().unwrap().as_bytes().to_owned();
+                                let name = e.get_name().unwrap().as_ref().to_owned();
                                 (String::from_utf8(name).unwrap(), e)
                             })
                             .collect::<HashMap<_, _>>()

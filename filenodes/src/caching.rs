@@ -4,13 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::Duration;
-
-use crate::failure::{Error, Result};
 use cachelib::{get_cached_or_fill, LruCachePool};
+use cloned::cloned;
 use context::CoreContext;
+use failure_ext::{Error, Result};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
@@ -18,11 +15,12 @@ use mercurial_types::{HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
 use rand::random;
 use rust_thrift::compact_protocol;
-use stats::{Histogram, Timeseries};
+use stats::{define_stats, Histogram, Timeseries};
+use std::{collections::HashSet, convert::TryFrom, sync::Arc, time::Duration};
 use tokio;
 
 use super::thrift::{MC_CODEVER, MC_SITEVER};
-use crate::{blake2_path_hash, thrift, FilenodeInfo, Filenodes};
+use crate::{blake2_path_hash, thrift, FilenodeInfo, FilenodeInfoCached, Filenodes};
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -118,7 +116,7 @@ impl Filenodes for CachingFilenodes {
             .then({
                 cloned!(filenode_id, path, repo_id);
                 move |res| match res {
-                    Ok(filenode) => future::ok(Some(filenode)).left_future(),
+                    Ok(filenode) => future::ok(Some(filenode.into())).left_future(),
                     Err(()) => filenodes
                         .get_filenode(ctx, &path, filenode_id, repo_id)
                         .inspect(move |maybefilenode| {
@@ -133,11 +131,14 @@ impl Filenodes for CachingFilenodes {
                                 )
                             }
                         })
+                        .map(|info| info.map(FilenodeInfoCached::from))
                         .right_future(),
                 }
             })
             .boxify()
         })
+        .and_then(|info| info.map(FilenodeInfo::try_from).transpose())
+        .boxify()
     }
 
     fn get_all_filenodes_maybe_stale(

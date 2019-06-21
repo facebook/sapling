@@ -16,6 +16,7 @@ use std::slice::Iter;
 use abomonation_derive::Abomonation;
 use asyncmemo::Weight;
 use bincode;
+use bytes::Bytes;
 use failure_ext::{bail_err, bail_msg, chain::*, err_msg};
 use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
@@ -27,11 +28,6 @@ use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::*;
 use crate::thrift;
 
-lazy_static! {
-    pub static ref DOT: MPathElement = MPathElement(b".".to_vec());
-    pub static ref DOTDOT: MPathElement = MPathElement(b"..".to_vec());
-}
-
 impl Weight for RepoPath {
     fn get_weight(&self) -> usize {
         self.heap_size_of_children() + mem::size_of::<Self>()
@@ -40,23 +36,47 @@ impl Weight for RepoPath {
 
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
-#[derive(
-    Abomonation,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    HeapSizeOf,
-    Serialize,
-    Deserialize
-)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf, Serialize, Deserialize)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
     // constructed.
     RootPath,
     DirectoryPath(MPath),
     FilePath(MPath),
+}
+
+// Cacheable instance of RepoPath that can be used inside cachelib
+#[derive(Abomonation, Clone, PartialEq, Eq, Hash)]
+pub enum RepoPathCached {
+    RootPath,
+    DirectoryPath(Vec<u8>),
+    FilePath(Vec<u8>),
+}
+
+impl From<RepoPath> for RepoPathCached {
+    fn from(path: RepoPath) -> Self {
+        match path {
+            RepoPath::RootPath => RepoPathCached::RootPath,
+            RepoPath::DirectoryPath(path) => RepoPathCached::DirectoryPath(path.to_vec()),
+            RepoPath::FilePath(path) => RepoPathCached::FilePath(path.to_vec()),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a RepoPathCached> for RepoPath {
+    type Error = Error;
+
+    fn try_from(path: &'a RepoPathCached) -> Result<Self> {
+        match path {
+            RepoPathCached::RootPath => Ok(RepoPath::RootPath),
+            RepoPathCached::DirectoryPath(path) => {
+                MPath::try_from(path.as_slice()).map(RepoPath::DirectoryPath)
+            }
+            RepoPathCached::FilePath(path) => {
+                MPath::try_from(path.as_slice()).map(RepoPath::FilePath)
+            }
+        }
+    }
 }
 
 impl RepoPath {
@@ -205,15 +225,14 @@ impl<'a> From<&'a RepoPath> for RepoPath {
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format
 /// assumes they cannot contain zero bytes. The bytes are not necessarily utf-8
 /// and so cannot be converted into a string (or - strictly speaking - be displayed).
-#[derive(Abomonation, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
-#[derive(Serialize, Deserialize)]
-pub struct MPathElement(Vec<u8>);
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct MPathElement(Bytes);
 
 impl MPathElement {
     #[inline]
     pub fn new(element: Vec<u8>) -> Result<MPathElement> {
         Self::verify(&element)?;
-        Ok(MPathElement(element))
+        Ok(MPathElement(Bytes::from(element)))
     }
 
     #[inline]
@@ -222,7 +241,7 @@ impl MPathElement {
             "MPathElement".into(),
             "invalid path element".into(),
         ))?;
-        Ok(MPathElement(element.0))
+        Ok(MPathElement(Bytes::from(element.0)))
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -263,27 +282,31 @@ impl MPathElement {
     }
 
     #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-
-    #[inline]
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.0.clone()
-    }
-
-    pub fn extend(&mut self, toappend: &[u8]) {
-        self.0.extend(toappend.iter());
-    }
-
-    #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
     #[inline]
+    pub fn to_bytes(&self) -> Bytes {
+        self.0.clone()
+    }
+
+    #[inline]
     pub(crate) fn into_thrift(self) -> thrift::MPathElement {
-        thrift::MPathElement(self.0)
+        thrift::MPathElement(Vec::from(self.as_ref()))
+    }
+}
+
+impl HeapSizeOf for MPathElement {
+    fn heap_size_of_children(&self) -> usize {
+        self.len()
+    }
+}
+
+impl AsRef<[u8]> for MPathElement {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }
 
@@ -298,7 +321,7 @@ impl From<MPathElement> for MPath {
 /// A path or filename within Mononoke (typically within manifests or changegroups).
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
-#[derive(Abomonation, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 #[derive(Serialize, Deserialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,
@@ -655,7 +678,7 @@ impl Arbitrary for MPathElement {
             let c = g.choose(&COMPONENT_CHARS[..]).unwrap();
             element.push(*c);
         }
-        MPathElement(element)
+        MPathElement(Bytes::from(element))
     }
 }
 
@@ -755,7 +778,7 @@ impl CaseConflictTrie {
                     return child.add(iter);
                 }
 
-                if let Ok(ref element) = String::from_utf8(element.to_bytes()) {
+                if let Ok(ref element) = String::from_utf8(Vec::from(element.as_ref())) {
                     let element_lower = element.to_lowercase();
                     if self.lowercase.contains(&element_lower) {
                         return false;
@@ -786,7 +809,7 @@ impl CaseConflictTrie {
                 };
                 if remove {
                     self.children.remove(&element);
-                    if let Ok(ref element) = String::from_utf8(element.to_bytes()) {
+                    if let Ok(ref element) = String::from_utf8(Vec::from(element.as_ref())) {
                         self.lowercase.remove(&element.to_lowercase());
                     }
                 }
@@ -879,13 +902,13 @@ mod test {
             let result = MPath::verify(&p.to_vec()).is_ok();
             result && p.elements
                 .iter()
-                .map(|elem| MPathElement::verify(&elem.as_bytes()))
+                .map(|elem| MPathElement::verify(&elem.as_ref()))
                 .all(|res| res.is_ok())
         }
 
         /// Verify that MPathElement instances generated by quickcheck are valid.
         fn pathelement_gen(p: MPathElement) -> bool {
-            MPathElement::verify(p.as_bytes()).is_ok()
+            MPathElement::verify(p.as_ref()).is_ok()
         }
 
         fn elements_to_path(elements: Vec<MPathElement>) -> TestResult {
@@ -894,7 +917,7 @@ mod test {
             }
 
             let joined = elements.iter().map(|elem| elem.0.clone())
-                .collect::<Vec<Vec<u8>>>()
+                .collect::<Vec<Bytes>>()
                 .join(&b'/');
             let expected_len = joined.len();
             let path = MPath::new(joined).unwrap();

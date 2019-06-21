@@ -93,7 +93,7 @@ impl TryFrom<Box<dyn HgEntry + Sync>> for Entry {
     fn try_from(entry: Box<dyn HgEntry + Sync>) -> Result<Entry, Self::Error> {
         let name = entry
             .get_name()
-            .map(|name| name.to_bytes())
+            .map(|name| Vec::from(name.as_ref()))
             .unwrap_or_else(|| Vec::new());
         let name = String::from_utf8(name)?;
         let ttype = entry.get_type().into();
@@ -129,7 +129,7 @@ impl EntryWithSizeAndContentHash {
             .map(|name| name.to_bytes())
             .ok_or_else(|| err_msg("HgEntry has no name!?")));
         // FIXME: json cannot represent non-UTF8 file names
-        let name = try_boxfuture!(String::from_utf8(name));
+        let name = try_boxfuture!(String::from_utf8(Vec::from(name.as_ref())));
         let ttype: FileType = entry.get_type().into();
         let hash = entry.get_hash().to_hex();
 

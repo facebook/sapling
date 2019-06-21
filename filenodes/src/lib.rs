@@ -6,39 +6,17 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate abomonation_derive;
-extern crate cachelib;
-#[macro_use]
-extern crate cloned;
-extern crate context;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate memcache;
-extern crate mononoke_types;
-#[cfg_attr(test, macro_use)]
-extern crate quickcheck;
-extern crate rand;
-extern crate rust_thrift;
-#[macro_use]
-extern crate stats;
-extern crate tokio;
-
-extern crate filenodes_if;
-extern crate futures_ext;
-extern crate mercurial_types;
-
-mod caching;
-
-use crate::failure::{Error, Result};
+pub use crate::caching::CachingFilenodes;
+use abomonation_derive::Abomonation;
 use context::CoreContext;
+use failure_ext::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
-use mononoke_types::{hash, RepositoryId};
+use mononoke_types::{hash, RepoPathCached, RepositoryId};
 use quickcheck::{Arbitrary, Gen};
+use std::convert::TryFrom;
 
-pub use crate::caching::CachingFilenodes;
-
+mod caching;
 mod thrift {
     pub use filenodes_if::*;
 }
@@ -49,7 +27,7 @@ pub fn blake2_path_hash(data: &Vec<u8>) -> hash::Blake2 {
     hash_content.finish()
 }
 
-#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
     pub path: RepoPath,
     pub filenode: HgFileNodeId,
@@ -57,6 +35,67 @@ pub struct FilenodeInfo {
     pub p2: Option<HgFileNodeId>,
     pub copyfrom: Option<(RepoPath, HgFileNodeId)>,
     pub linknode: HgChangesetId,
+}
+
+#[derive(Abomonation, Clone)]
+pub struct FilenodeInfoCached {
+    pub path: RepoPathCached,
+    pub filenode: HgFileNodeId,
+    pub p1: Option<HgFileNodeId>,
+    pub p2: Option<HgFileNodeId>,
+    pub copyfrom: Option<(RepoPathCached, HgFileNodeId)>,
+    pub linknode: HgChangesetId,
+}
+
+impl From<FilenodeInfo> for FilenodeInfoCached {
+    fn from(info: FilenodeInfo) -> Self {
+        let FilenodeInfo {
+            path,
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        } = info;
+        let path = path.into();
+        let copyfrom = copyfrom.map(|(path, filenode_id)| (path.into(), filenode_id));
+        FilenodeInfoCached {
+            path,
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        }
+    }
+}
+
+impl TryFrom<FilenodeInfoCached> for FilenodeInfo {
+    type Error = Error;
+
+    fn try_from(info: FilenodeInfoCached) -> Result<Self> {
+        let FilenodeInfoCached {
+            path,
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        } = info;
+        let path = RepoPath::try_from(&path)?;
+        let copyfrom = match copyfrom {
+            None => None,
+            Some((path, filenode_id)) => Some((RepoPath::try_from(&path)?, filenode_id)),
+        };
+        Ok(FilenodeInfo {
+            path,
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        })
+    }
 }
 
 impl FilenodeInfo {
@@ -138,6 +177,7 @@ pub trait Filenodes: Send + Sync {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::quickcheck;
 
     quickcheck! {
         fn filenodes_info_thrift_roundtrip(obj: FilenodeInfo) -> bool {

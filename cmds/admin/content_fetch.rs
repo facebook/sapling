@@ -60,7 +60,7 @@ pub fn subcommand_content_fetch(
                     }
                     for entry in entries {
                         let mut basename = String::from_utf8_lossy(
-                            entry.get_name().expect("empty basename found").as_bytes(),
+                            entry.get_name().expect("empty basename found").as_ref(),
                         )
                         .to_string();
                         for _ in basename.len()..longest_len {

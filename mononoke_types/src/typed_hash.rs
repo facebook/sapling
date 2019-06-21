@@ -90,7 +90,6 @@ macro_rules! impl_typed_hash {
                 }
             }
 
-            /// This is private because the outside should treat this ID as opaque.
             pub(crate) fn from_byte_array(arr: [u8; 32]) -> Self {
                 $typed(Blake2::from_byte_array(arr))
             }

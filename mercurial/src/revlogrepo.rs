@@ -321,21 +321,22 @@ impl RevlogRepo {
     /// path is the path to the revlog files, but without the .i or .d extensions
     fn init_revlog_from_path(&self, path: MPath) -> Result<Revlog> {
         let mut elements: Vec<MPathElement> = path.into_iter().collect();
-        let mut basename = elements.pop().ok_or_else(|| {
+        let basename = elements.pop().ok_or_else(|| {
             format_err!("empty path provided to RevlogRepo::init_revlog_from_path")
         })?;
 
         let index_path = {
-            let mut basename = basename.clone();
+            let mut basename = Vec::from(basename.as_ref());
             basename.extend(b".i");
-            elements.push(basename);
+            elements.push(MPathElement::new(basename)?);
             self.fsencode_path(&elements)
         };
         elements.pop();
 
         let data_path = {
+            let mut basename = Vec::from(basename.as_ref());
             basename.extend(b".d");
-            elements.push(basename);
+            elements.push(MPathElement::new(basename)?);
             self.fsencode_path(&elements)
         };
 
