@@ -99,6 +99,13 @@ def mcget(key, ui):
     value = None
     while True:
         char = mcroutersocket.recv(1)
+
+        # No data was received, potentially due to a closed connection, let's
+        # consider this a cache-miss and return.
+        # XXX: We may want to raise an exception instead.
+        if char == "":
+            break
+
         if char != "\r":
             meta.append(char)
         else:
@@ -109,6 +116,10 @@ def mcget(key, ui):
             _, key, flags, sz = "".join(meta).strip().split(" ")
             value = mcroutersocket.recv(int(sz))
             mcroutersocket.recv(7)  # throw away \r\nEND\r\n
+
+            if len(value) != int(sz):
+                return None
+
             break
     return value
 
@@ -135,6 +146,12 @@ def mcset(key, value, ui):
     data = []
     while True:
         char = mcroutersocket.recv(1)
+
+        # No data was received, potentially due to a closed connection, let's
+        # just return.
+        if char == "":
+            return False
+
         if char not in "\r\n":
             data.append(char)
         else:
