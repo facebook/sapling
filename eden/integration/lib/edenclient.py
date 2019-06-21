@@ -502,6 +502,7 @@ class EdenCommandError(subprocess.CalledProcessError):
 
 
 _can_run_eden: Optional[bool] = None
+_can_run_sudo: Optional[bool] = None
 
 
 def can_run_eden() -> bool:
@@ -530,10 +531,18 @@ def _compute_can_run_eden() -> bool:
     # The daemon must either be setuid root, or we must have sudo priviliges.
     # Typically for the tests the daemon process is not setuid root,
     # so check if we have are able to run things under sudo.
-    return _can_run_sudo()
+    return can_run_sudo()
 
 
-def _can_run_sudo() -> bool:
+def can_run_sudo() -> bool:
+    global _can_run_sudo
+    if _can_run_sudo is None:
+        _can_run_sudo = _compute_can_run_sudo()
+
+    return _can_run_sudo
+
+
+def _compute_can_run_sudo() -> bool:
     cmd = ["/usr/bin/sudo", "-E", "/bin/true"]
     with open("/dev/null", "r") as dev_null:
         # Close stdout, stderr, and stdin, and call setsid() to make

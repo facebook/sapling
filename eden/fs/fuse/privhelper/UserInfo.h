@@ -107,6 +107,8 @@ class UserInfo {
    */
   void initHomedir(PasswdEntry* pwd = nullptr);
 
+  void restoreEnvironmentAfterSudo();
+
   // 65534 is commonly used for the "nobody" UID/GID.
   // This isn't universal, however, it still seems like a safer default
   // to use than root.

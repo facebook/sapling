@@ -135,6 +135,18 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def DROP_PRIVS(self) -> str:
+        return self._find_exe(
+            "drop_privs",
+            env="EDENFS_DROP_PRIVS",
+            candidates=[
+                os.path.join(
+                    self.BUCK_OUT, "gen/eden/fs/fuse/privhelper/test/drop_privs"
+                )
+            ],
+        )
+
+    @cached_property
     def GIT(self) -> str:
         git = distutils.spawn.find_executable(
             "git.real"

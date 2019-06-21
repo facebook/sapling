@@ -8,6 +8,7 @@
 
 #include <folly/Exception.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Stdlib.h>
 #include <grp.h>
 #include <pwd.h>
 #ifdef __linux__
@@ -82,7 +83,39 @@ void UserInfo::dropPrivileges() {
   checkUnixError(rc, "failed to mark process dumpable");
 #endif
 
+  // If we started under sudo, update the environment to restore $USER
+  // and drop the $SUDO_* variables.
+  restoreEnvironmentAfterSudo();
+
   dropToBasicSELinuxPrivileges();
+}
+
+void UserInfo::restoreEnvironmentAfterSudo() {
+  // Skip updating the environment if we do not appear to have
+  // been started by sudo.
+  //
+  // Updating the environment is not thread-safe, so let's avoid it if we can.
+  // Ideally we should always be dropping privileges before any other threads
+  // exist that might be checking environment variables, but it seems better to
+  // avoid updating it if possible.
+  if (getenv("SUDO_UID") == nullptr) {
+    return;
+  }
+
+  // Update the $USER environment variable.  This is important so that any
+  // subprocesses we spawn (such as "hg debugedenimporthelper") see the correct
+  // $USER value.
+  setenv("USER", username_.c_str(), 1);
+  // sudo also sets the USERNAME and LOGNAME environment variables.
+  // Update these as well.
+  setenv("USERNAME", username_.c_str(), 1);
+  setenv("LOGNAME", username_.c_str(), 1);
+
+  // Clear out the other SUDO_* variables for good measure.
+  unsetenv("SUDO_USER");
+  unsetenv("SUDO_UID");
+  unsetenv("SUDO_GID");
+  unsetenv("SUDO_COMMAND");
 }
 
 EffectiveUserScope::EffectiveUserScope(const UserInfo& userInfo)
