@@ -30,7 +30,11 @@ from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_est
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
-DEFAULT_ETC_EDEN_DIR = "/etc/eden"
+if os.name == "nt":
+    DEFAULT_ETC_EDEN_DIR = "C:/tools/eden/config"
+else:
+    DEFAULT_ETC_EDEN_DIR = "/etc/eden"
+
 # These are INI files that hold config data.
 # CONFIG_DOT_D is relative to DEFAULT_ETC_EDEN_DIR, or whatever the
 # effective value is for that path
