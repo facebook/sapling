@@ -375,7 +375,9 @@ void EdenConfig::loadConfig(
     parseAndApplyConfigFile(configFd, path, configSource);
   }
   SCOPE_EXIT {
-    close(configFd);
+    if (configFd >= 0) {
+      close(configFd);
+    }
   };
 }
 
