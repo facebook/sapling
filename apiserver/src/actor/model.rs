@@ -22,7 +22,7 @@ use apiserver_thrift::types::{
     MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
 };
 use blobrepo::HgBlobChangeset;
-use cachelib::{get_cached_or_fill, LruCachePool};
+use cachelib::{get_cached_or_fill, VolatileLruCachePool};
 use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
@@ -122,7 +122,7 @@ impl EntryWithSizeAndContentHash {
         ctx: CoreContext,
         repoid: RepositoryId,
         entry: Box<dyn HgEntry + Sync>,
-        cache: Option<LruCachePool>,
+        cache: Option<VolatileLruCachePool>,
     ) -> BoxFuture<Self, Error> {
         let name = try_boxfuture!(entry
             .get_name()

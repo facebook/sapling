@@ -10,19 +10,19 @@ use std::sync::atomic::Ordering;
 
 use crate::failure::prelude::*;
 use crate::mock_store::MockStore;
-use cachelib::{get_cached, set_cached, Abomonation, LruCachePool};
+use cachelib::{get_cached, set_cached, Abomonation, VolatileLruCachePool};
 
 use crate::CachelibKey;
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
-    Real(LruCachePool),
+    Real(VolatileLruCachePool),
     #[allow(dead_code)]
     Mock(MockStore<T>),
 }
 
-impl<T> From<LruCachePool> for CachelibHandler<T> {
-    fn from(cache: LruCachePool) -> Self {
+impl<T> From<VolatileLruCachePool> for CachelibHandler<T> {
+    fn from(cache: VolatileLruCachePool) -> Self {
         CachelibHandler::Real(cache)
     }
 }

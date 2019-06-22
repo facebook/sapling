@@ -58,7 +58,7 @@ fn get_keygen() -> KeyGen {
 }
 
 impl CachingChangesets {
-    pub fn new(changesets: Arc<Changesets>, cache_pool: cachelib::LruCachePool) -> Self {
+    pub fn new(changesets: Arc<Changesets>, cache_pool: cachelib::VolatileLruCachePool) -> Self {
         Self {
             changesets,
             cachelib: cache_pool.into(),

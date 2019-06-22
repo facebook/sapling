@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cachelib::{get_cached_or_fill, LruCachePool};
+use cachelib::{get_cached_or_fill, VolatileLruCachePool};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Error, Result};
@@ -51,7 +51,7 @@ struct PathHash(String);
 
 pub struct CachingFilenodes {
     filenodes: Arc<dyn Filenodes>,
-    cache_pool: LruCachePool,
+    cache_pool: VolatileLruCachePool,
     memcache: MemcacheClient,
     keygen: KeyGen,
 }
@@ -59,7 +59,7 @@ pub struct CachingFilenodes {
 impl CachingFilenodes {
     pub fn new(
         filenodes: Arc<dyn Filenodes>,
-        cache_pool: LruCachePool,
+        cache_pool: VolatileLruCachePool,
         backing_store_name: impl ToString,
         backing_store_params: impl ToString,
     ) -> Self {

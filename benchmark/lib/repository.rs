@@ -73,7 +73,9 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
         ));
         Arc::new(CachingFilenodes::new(
             filenodes,
-            cachelib::get_pool("filenodes").ok_or(err_msg("no cache pool"))?,
+            cachelib::get_volatile_pool("filenodes")
+                .unwrap()
+                .ok_or(err_msg("no cache pool"))?,
             "filenodes",
             "",
         ))
@@ -87,7 +89,9 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
         ));
         Arc::new(CachingChangesets::new(
             changesets,
-            cachelib::get_pool("changesets").ok_or(err_msg("no cache pool"))?,
+            cachelib::get_volatile_pool("changesets")
+                .unwrap()
+                .ok_or(err_msg("no cache pool"))?,
         ))
     };
 
@@ -99,7 +103,9 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
         ));
         Arc::new(CachingBonsaiHgMapping::new(
             mapping,
-            cachelib::get_pool("bonsai_hg_mapping").ok_or(err_msg("no cache pool"))?,
+            cachelib::get_volatile_pool("bonsai_hg_mapping")
+                .unwrap()
+                .ok_or(err_msg("no cache pool"))?,
         ))
     };
 

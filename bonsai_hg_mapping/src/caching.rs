@@ -8,7 +8,7 @@ use super::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use crate::errors::Error;
 use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
-use cachelib::LruCachePool;
+use cachelib::VolatileLruCachePool;
 use caching_ext::{
     CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult, MemcacheHandler,
 };
@@ -61,7 +61,7 @@ pub struct CachingBonsaiHgMapping {
 }
 
 impl CachingBonsaiHgMapping {
-    pub fn new(mapping: Arc<dyn BonsaiHgMapping>, cache_pool: LruCachePool) -> Self {
+    pub fn new(mapping: Arc<dyn BonsaiHgMapping>, cache_pool: VolatileLruCachePool) -> Self {
         Self {
             mapping,
             cache_pool: cache_pool.into(),

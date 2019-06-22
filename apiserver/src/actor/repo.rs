@@ -15,7 +15,7 @@ use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
-use cachelib::LruCachePool;
+use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -57,7 +57,7 @@ pub struct MononokeRepo {
     repo: BlobRepo,
     logger: Logger,
     skiplist_index: Arc<SkiplistIndex>,
-    sha1_cache: Option<LruCachePool>,
+    sha1_cache: Option<VolatileLruCachePool>,
 }
 
 impl MononokeRepo {
@@ -80,46 +80,50 @@ impl MononokeRepo {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = RepositoryId::new(config.repoid);
-        let sha1_cache = cachelib::get_pool("content-sha1");
-        open_blobrepo(
-            logger.clone(),
-            config.storage_config.clone(),
-            repoid,
-            myrouter_port,
-            config.bookmarks_cache_ttl,
-        )
-        .map(move |repo| {
-            let skiplist_index = {
-                if !with_skiplist {
-                    ok(Arc::new(SkiplistIndex::new())).right_future()
-                } else {
-                    match skiplist_index_blobstore_key.clone() {
-                        Some(skiplist_index_blobstore_key) => repo
-                            .get_blobstore()
-                            .get(ctx.clone(), skiplist_index_blobstore_key)
-                            .and_then(|maybebytes| {
-                                let map = match maybebytes {
-                                    Some(bytes) => {
-                                        let bytes = bytes.into_bytes();
-                                        try_boxfuture!(deserialize_skiplist_map(bytes))
-                                    }
-                                    None => HashMap::new(),
-                                };
-                                ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
-                            })
-                            .left_future(),
-                        None => ok(Arc::new(SkiplistIndex::new())).right_future(),
-                    }
-                }
-            };
-            skiplist_index.map(|skiplist_index| Self {
-                repo,
-                logger,
-                skiplist_index,
-                sha1_cache,
+        cachelib::get_volatile_pool("content-sha1")
+            .into_future()
+            .and_then(move |sha1_cache| {
+                open_blobrepo(
+                    logger.clone(),
+                    config.storage_config.clone(),
+                    repoid,
+                    myrouter_port,
+                    config.bookmarks_cache_ttl,
+                )
+                .map(move |repo| {
+                    let skiplist_index = {
+                        if !with_skiplist {
+                            ok(Arc::new(SkiplistIndex::new())).right_future()
+                        } else {
+                            match skiplist_index_blobstore_key.clone() {
+                                Some(skiplist_index_blobstore_key) => repo
+                                    .get_blobstore()
+                                    .get(ctx.clone(), skiplist_index_blobstore_key)
+                                    .and_then(|maybebytes| {
+                                        let map = match maybebytes {
+                                            Some(bytes) => {
+                                                let bytes = bytes.into_bytes();
+                                                try_boxfuture!(deserialize_skiplist_map(bytes))
+                                            }
+                                            None => HashMap::new(),
+                                        };
+                                        ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map)))
+                                            .boxify()
+                                    })
+                                    .left_future(),
+                                None => ok(Arc::new(SkiplistIndex::new())).right_future(),
+                            }
+                        }
+                    };
+                    skiplist_index.map(|skiplist_index| Self {
+                        repo,
+                        logger,
+                        skiplist_index,
+                        sha1_cache,
+                    })
+                })
             })
-        })
-        .flatten()
+            .flatten()
     }
 
     fn get_hgchangesetid_from_revision(

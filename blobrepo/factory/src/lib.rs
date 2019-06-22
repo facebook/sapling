@@ -307,9 +307,9 @@ fn new_filenodes(
 
     let filenodes = CachingFilenodes::new(
         Arc::new(filenodes),
-        cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
-            "filenodes".to_string(),
-        )))?,
+        cachelib::get_volatile_pool("filenodes")?.ok_or(Error::from(
+            ErrorKind::MissingCachePool("filenodes".to_string()),
+        ))?,
         "sqlfilenodes",
         &tier,
     );
@@ -387,7 +387,7 @@ fn new_remote(
     };
 
     let changesets = open_xdb::<SqlChangesets>(&db_address, myrouter_port)?;
-    let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
+    let changesets_cache_pool = cachelib::get_volatile_pool("changesets")?.ok_or(Error::from(
         ErrorKind::MissingCachePool("changesets".to_string()),
     ))?;
     let changesets = CachingChangesets::new(changesets, changesets_cache_pool.clone());
@@ -396,9 +396,9 @@ fn new_remote(
     let bonsai_hg_mapping = open_xdb::<SqlBonsaiHgMapping>(&db_address, myrouter_port)?;
     let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
         bonsai_hg_mapping,
-        cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(ErrorKind::MissingCachePool(
-            "bonsai_hg_mapping".to_string(),
-        )))?,
+        cachelib::get_volatile_pool("bonsai_hg_mapping")?.ok_or(Error::from(
+            ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
+        ))?,
     );
 
     let changeset_fetcher_factory = {

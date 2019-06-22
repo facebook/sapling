@@ -536,24 +536,24 @@ pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
     // Give each cache 5% of the available space, bar the blob cache which gets everything left
     // over. We can adjust this with data.
     let available_space = cachelib::get_available_space()?;
-    cachelib::get_or_create_pool(
+    cachelib::get_or_create_volatile_pool(
         "blobstore-presence",
         settings.presence_cache_size.unwrap_or(available_space / 20),
     )?;
 
-    cachelib::get_or_create_pool(
+    cachelib::get_or_create_volatile_pool(
         "changesets",
         settings
             .changesets_cache_size
             .unwrap_or(available_space / 20),
     )?;
-    cachelib::get_or_create_pool(
+    cachelib::get_or_create_volatile_pool(
         "filenodes",
         settings
             .filenodes_cache_size
             .unwrap_or(available_space / 20),
     )?;
-    cachelib::get_or_create_pool(
+    cachelib::get_or_create_volatile_pool(
         "bonsai_hg_mapping",
         settings
             .idmapping_cache_size
@@ -561,7 +561,7 @@ pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
     )?;
 
     if settings.with_content_sha1_cache {
-        cachelib::get_or_create_pool(
+        cachelib::get_or_create_volatile_pool(
             "content-sha1",
             settings
                 .content_sha1_cache_size
@@ -569,7 +569,7 @@ pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
         )?;
     }
 
-    cachelib::get_or_create_pool(
+    cachelib::get_or_create_volatile_pool(
         "blobstore-blobs",
         settings
             .blob_cache_size
