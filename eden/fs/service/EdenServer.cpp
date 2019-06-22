@@ -317,9 +317,10 @@ void EdenServer::startPeriodicTasks() {
   // the time series & histogram buckets
   flushStatsTask_.updateInterval(1s, /*splay=*/false);
 
+#ifndef _WIN32
   // Report memory usage stats once every 30 seconds
   memoryStatsTask_.updateInterval(30s);
-
+#endif
   auto config = serverState_->getReloadableConfig().getEdenConfig();
   updatePeriodicTaskIntervals(*config);
 
