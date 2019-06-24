@@ -93,11 +93,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       int32_t uid,
       int32_t gid) override;
 
-  void async_tm_subscribe(
-      std::unique_ptr<apache::thrift::StreamingHandlerCallback<
-          std::unique_ptr<JournalPosition>>> callback,
-      std::unique_ptr<std::string> mountPoint) override;
-
 #ifndef _WIN32
   apache::thrift::Stream<JournalPosition> subscribeStreamTemporary(
       std::unique_ptr<std::string> mountPoint) override;

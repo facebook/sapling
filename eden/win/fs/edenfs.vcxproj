@@ -185,7 +185,6 @@
     <ClCompile Include="..\..\fs\service\EdenServiceHandler.cpp" />
     <ClCompile Include="..\..\fs\service\EdenStateDir.cpp" />
     <ClCompile Include="..\..\fs\service\PeriodicTask.cpp" />
-    <ClCompile Include="..\..\fs\service\StreamingSubscriber.cpp" />
     <ClCompile Include="..\..\fs\sqlite\Sqlite.cpp" />
     <ClCompile Include="..\..\fs\store\BlobCache.cpp" />
     <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp" />
@@ -277,7 +276,6 @@
     <ClInclude Include="..\..\fs\service\EdenServiceHandler.h" />
     <ClInclude Include="..\..\fs\service\EdenStateDir.h" />
     <ClInclude Include="..\..\fs\service\PeriodicTask.h" />
-    <ClInclude Include="..\..\fs\service\StreamingSubscriber.h" />
     <ClInclude Include="..\..\fs\sqlite\Sqlite.h" />
     <ClInclude Include="..\..\fs\store\BackingStore.h" />
     <ClInclude Include="..\..\fs\store\BlobCache.h" />

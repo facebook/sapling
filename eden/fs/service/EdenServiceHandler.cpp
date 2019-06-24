@@ -48,7 +48,6 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServer.h"
-#include "eden/fs/service/StreamingSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
@@ -461,21 +460,6 @@ void EdenServiceHandler::getCurrentJournalPosition(
   out.mountGeneration = edenMount->getMountGeneration();
   out.sequenceNumber = latest->sequenceID;
   out.snapshotHash = thriftHash(latest->toHash);
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
-}
-
-void EdenServiceHandler::async_tm_subscribe(
-    std::unique_ptr<apache::thrift::StreamingHandlerCallback<
-        std::unique_ptr<JournalPosition>>> callback,
-    std::unique_ptr<std::string> mountPoint) {
-#ifndef _WIN32
-  auto edenMount = server_->getMount(*mountPoint);
-
-  // StreamingSubscriber manages the subscription lifetime and releases itself
-  // as appropriate.
-  StreamingSubscriber::subscribe(std::move(callback), std::move(edenMount));
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

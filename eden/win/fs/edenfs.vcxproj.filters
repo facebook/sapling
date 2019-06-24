@@ -212,9 +212,6 @@
     <ClCompile Include="..\..\fs\service\EdenServiceHandler.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\fs\service\StreamingSubscriber.cpp">
-      <Filter>fs\Service</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\fs\journal\Journal.cpp">
       <Filter>fs\Journal</Filter>
     </ClCompile>
@@ -491,9 +488,6 @@
       <Filter>fs\Config</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\service\EdenServiceHandler.h">
-      <Filter>fs\Service</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\fs\service\StreamingSubscriber.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\journal\Journal.h">
