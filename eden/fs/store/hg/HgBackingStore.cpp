@@ -15,6 +15,7 @@
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
+#include <folly/small_vector.h>
 #include <folly/stop_watch.h>
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/eden-config.h"
@@ -487,7 +488,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     return makeFuture(std::move(tree));
   }
 
-  std::vector<Future<unique_ptr<Tree>>> futures;
+  folly::small_vector<Future<unique_ptr<Tree>>, 2> futures;
 
   folly::stop_watch<std::chrono::milliseconds> watch;
   auto mononoke = getMononoke();
@@ -568,7 +569,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   return folly::collectAnyWithoutException(futures)
       .via(serverThreadPool_)
-      .thenValue([size = futures.size()](auto&& result) {
+      .thenValue([](std::pair<size_t, unique_ptr<Tree>>&& result) {
         return std::move(result.second);
       });
 }
@@ -769,30 +770,43 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
     }
   }
 
+  folly::small_vector<Future<unique_ptr<Blob>>, 2> futures;
+  folly::stop_watch<std::chrono::milliseconds> watch;
+
   auto mononoke = getMononoke();
   if (mononoke) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
-    folly::stop_watch<std::chrono::milliseconds> watch;
     auto revHashCopy = hgInfo.revHash();
-    return mononoke->getBlob(revHashCopy)
-        .ensure([stats = stats_, watch = std::move(watch)]() {
-          auto count = watch.elapsed().count();
-          stats->getHgBackingStoreStatsForCurrentThread()
-              .mononokeBackingStoreGetBlob.addValue(count);
-        })
-        .thenError(
-            [this, id, path = hgInfo.path().copy(), revHash = revHashCopy](
-                const folly::exception_wrapper& ex) {
-              XLOG(ERR) << "Error while fetching file contents of '" << path
-                        << "', " << revHash.toString()
-                        << " from mononoke: " << ex.what()
-                        << ", fall back to import helper.";
-              return getBlobFromHgImporter(id);
-            });
+    futures.push_back(
+        mononoke->getBlob(revHashCopy)
+            .thenValue([stats = stats_, watch](auto&& blob) {
+              stats->getHgBackingStoreStatsForCurrentThread()
+                  .mononokeBackingStoreGetBlob.addValue(
+                      watch.elapsed().count());
+              return std::move(blob);
+            })
+            .thenError([path = hgInfo.path().copy(), revHash = revHashCopy](
+                           const folly::exception_wrapper& ex) {
+              XLOG(WARN) << "Error while fetching file contents of '" << path
+                         << "', " << revHash.toString()
+                         << " from mononoke: " << ex.what();
+              return folly::makeFuture<unique_ptr<Blob>>(ex);
+            }));
   }
 
-  return getBlobFromHgImporter(id);
+  futures.push_back(
+      getBlobFromHgImporter(id).thenValue([stats = stats_, watch](auto&& blob) {
+        stats->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
+        return std::move(blob);
+      }));
+
+  return folly::collectAnyWithoutException(futures)
+      .via(serverThreadPool_)
+      .thenValue([](std::pair<size_t, unique_ptr<Blob>>&& result) {
+        return std::move(result.second);
+      });
 }
 
 Future<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(

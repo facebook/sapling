@@ -85,8 +85,8 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after.get("store.hg.get_file.count", 0),
-            counters_before.get("store.hg.get_file.count", 0) + 1,
+            counters_after.get("store.hg.get_blob.count", 0),
+            counters_before.get("store.hg.get_blob.count", 0) + 1,
             f"Reading {path} should increment store.hg.get_file.count",
         )
 

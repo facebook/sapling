@@ -148,6 +148,7 @@ class FuseThreadStats : public EdenThreadStatsBase {
  */
 class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  public:
+  Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_blob")};
   Histogram hgBackingStoreGetTree{createHistogram("store.hg.get_tree")};
   Histogram mononokeBackingStoreGetTree{
       createHistogram("store.mononoke.get_tree")};
@@ -161,8 +162,6 @@ class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgImporterThreadStats : public EdenThreadStatsBase {
  public:
-  Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_file")};
-
 #if defined(EDEN_HAVE_STATS)
   Timeseries catFile{createTimeseries("hg_importer.cat_file")};
   Timeseries fetchTree{createTimeseries("hg_importer.fetch_tree")};
