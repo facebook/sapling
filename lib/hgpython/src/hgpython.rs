@@ -2,7 +2,7 @@
 use crate::python::{
     py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_program_name,
 };
-use cpython::{exc, NoArgs, ObjectProtocol, PyResult, Python};
+use cpython::{exc, NoArgs, ObjectProtocol, PyResult, Python, PythonObject};
 use encoding::osstring_to_local_cstring;
 use std;
 use std::ffi::CString;
@@ -54,31 +54,16 @@ impl HgPython {
             //    Python's behavior in this case is to print a traceback and to
             //    return 1.
             Err(mut err) => {
-                let is_system_exit = {
-                    (&mut err)
-                        .instance(py)
-                        .extract::<exc::SystemExit>(py)
-                        .is_ok()
-                };
-                let exit_code = {
-                    let err = &mut err;
-                    let inst = err.instance(py);
-                    if is_system_exit {
-                        match inst.getattr(py, "code") {
-                            Ok(code) => code.extract::<i32>(py).unwrap(),
-                            Err(_) => 255,
-                        }
-                    } else {
-                        // Return value 1 is consistent with the Python interpreter.
-                        // ex. `python -c "raise RuntimeError()"`
-                        1
+                if let Ok(system_exit) = err.instance(py).extract::<exc::SystemExit>(py) {
+                    match system_exit.as_object().getattr(py, "code") {
+                        Ok(code) => code.extract::<i32>(py).unwrap(),
+                        Err(_) => 255,
                     }
-                };
-                if !is_system_exit {
+                } else {
                     // Print a traceback
                     err.print(py);
+                    1
                 }
-                exit_code
             }
             Ok(()) => 0,
         }
