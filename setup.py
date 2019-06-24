@@ -1926,13 +1926,6 @@ for root in ("mercurial/templates",):
             packagedata["edenscm"].append(f)
 
 
-datafiles = [("", ["CONTRIBUTING", "CONTRIBUTORS"])]
-templatesdir = "edenscm/mercurial/templates"
-for parent, dirs, files in os.walk(templatesdir):
-    dirfiles = [os.path.join(parent, fn) for fn in files]
-    datafiles.append((os.path.join("templates", parent), dirfiles))
-
-
 # distutils expects version to be str/unicode. Converting it to
 # unicode on Python 2 still works because it won't contain any
 # non-ascii bytes and will be implicitly converted back to bytes
@@ -2132,7 +2125,6 @@ setup(
     rust_vendored_crates=rustvendoredcrates,
     rust_ext_modules=rustextmodules,
     rust_ext_binaries=rustextbinaries,
-    data_files=datafiles,
     package_data=packagedata,
     cmdclass=cmdclass,
     distclass=hgdist,
