@@ -18,9 +18,6 @@ def run():
     libdir = os.path.dirname(os.path.dirname(filedir))
 
     from edenscm import hgdemandimport
-
-    hgdemandimport.tryenableembedded()
-
     from edenscm.mercurial import encoding
 
     if encoding.environ.get("HGUNICODEPEDANTRY", False):

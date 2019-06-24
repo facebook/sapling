@@ -17,8 +17,6 @@ import contextlib
 import os
 import sys
 
-from .embeddedimport import tryenableembedded
-
 
 if sys.version_info[0] >= 3:
     from . import demandimportpy3 as demandimport
