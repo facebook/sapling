@@ -81,8 +81,17 @@ impl MononokeRepo {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let repoid = RepositoryId::new(config.repoid);
-        cachelib::get_volatile_pool("content-sha1")
-            .into_future()
+
+        // NOTE: Even if caching *is* enabled, this might yield a None cache if content-sha1
+        // caching is not enabled (this is controlled by the --with-content-sha1-cache flag).
+        let sha1_cache = match caching {
+            Caching::Enabled => cachelib::get_volatile_pool("content-sha1")
+                .into_future()
+                .left_future(),
+            Caching::Disabled => Ok(None).into_future().right_future(),
+        };
+
+        sha1_cache
             .and_then(move |sha1_cache| {
                 open_blobrepo(
                     logger.clone(),
