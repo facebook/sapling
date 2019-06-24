@@ -29,7 +29,6 @@ use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use slog::{debug, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
-use sql::myrouter;
 use std::fmt;
 use std::fs::File;
 use std::io;
@@ -85,13 +84,11 @@ fn main() -> Result<()> {
 
     let caching = cmdlib::args::init_cachelib(&matches);
 
-    let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
-
     let blobrepo = open_blobrepo(
         logger.clone(),
         config.storage_config.clone(),
         RepositoryId::new(config.repoid),
-        myrouter_port,
+        cmdlib::args::parse_myrouter_port(&matches),
         caching,
         config.bookmarks_cache_ttl,
     );
@@ -106,7 +103,7 @@ fn main() -> Result<()> {
 
     let manifold_client = ManifoldHttpClient::new(id, rc)?;
 
-    let tailer_fut = blobrepo.and_then({
+    let fut = blobrepo.and_then({
         cloned!(logger, config);
         move |blobrepo| {
             // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
@@ -180,13 +177,6 @@ fn main() -> Result<()> {
                 })
         }
     });
-
-    let fut = match (myrouter_port, config.get_db_address()) {
-        (Some(port), Some(db_addr)) => myrouter::wait_for_myrouter(port, db_addr)
-            .and_then(|_| tailer_fut)
-            .left_future(),
-        _ => tailer_fut.right_future(),
-    };
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(fut)

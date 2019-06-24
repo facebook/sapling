@@ -31,7 +31,7 @@ use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
-use sql_ext::{myrouter_ready, SqlConstructors};
+use sql_ext::SqlConstructors;
 
 #[derive(Clone)]
 pub struct RepoHandler {
@@ -83,11 +83,6 @@ pub fn repo_handlers(
             );
             // TODO(T37478150, luk): this is not a test use case, need to address this later
             let ctx = CoreContext::test_mock();
-
-            let ensure_myrouter_ready = myrouter_ready(
-                config.storage_config.dbconfig.get_db_address(),
-                myrouter_port,
-            );
 
             let ready_handle = ready.create_handle(reponame.clone());
 
@@ -193,16 +188,14 @@ pub fn repo_handlers(
                     ..
                 } = config;
 
-                // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
-                let initial_warmup = ensure_myrouter_ready.and_then({
-                    cloned!(ctx, reponame, listen_log);
-                    let blobrepo = repo.blobrepo().clone();
-                    move |()| {
-                        cache_warmup(ctx, blobrepo, cache_warmup_params, listen_log)
-                            .chain_err(format!("while warming up cache for repo: {}", reponame))
-                            .from_err()
-                    }
-                });
+                let initial_warmup = cache_warmup(
+                    ctx.clone(),
+                    repo.blobrepo().clone(),
+                    cache_warmup_params,
+                    listen_log.clone(),
+                )
+                .chain_err(format!("while warming up cache for repo: {}", reponame))
+                .from_err();
 
                 // TODO: T45466266 this should be replaced by gatekeepers
                 let support_bundle2_listkeys = try_boxfuture!(open_db_from_config::<
