@@ -86,6 +86,7 @@ pub enum SingleRequest {
     Getfiles,
     StreamOutShallow,
     GetpackV1,
+    GetpackV2,
 }
 
 impl SingleRequest {
@@ -108,6 +109,7 @@ impl SingleRequest {
             &SingleRequest::Getfiles => "getfiles",
             &SingleRequest::StreamOutShallow => "stream_out_shallow",
             &SingleRequest::GetpackV1 => "getpackv1",
+            &SingleRequest::GetpackV2 => "getpackv2",
             &SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
         }
     }
@@ -224,6 +226,7 @@ pub enum SingleResponse {
     Getfiles(Bytes),
     StreamOutShallow(Bytes),
     Getpackv1(Bytes),
+    Getpackv2(Bytes),
 }
 
 impl SingleResponse {
@@ -233,7 +236,7 @@ impl SingleResponse {
 
         match self {
             &Getbundle(_) | &ReadyForStream | &Unbundle(_) | &Gettreepack(_)
-            | &StreamOutShallow(_) | &Getpackv1(_) => true,
+            | &StreamOutShallow(_) | &Getpackv1(_) | &Getpackv2(_) => true,
             _ => false,
         }
     }

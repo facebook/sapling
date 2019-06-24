@@ -221,6 +221,7 @@ pub struct DataEntry {
     pub node: HgNodeHash,
     pub delta_base: HgNodeHash,
     pub delta: Delta,
+    pub version: u8,
 }
 
 impl DataEntry {
@@ -235,6 +236,13 @@ impl DataEntry {
         // delta base: HgNodeHash (20 bytes) -- NULL_HASH if full text
         // delta len: u64 (8 bytes)
         // delta: Delta (<delta len> bytes)
+        // On v2:
+        // metadata len: u32 (4 bytes)
+        // metadata: [metadata item, ...] (<metadata len> bytes)
+        // metadata item:
+        //  metadata key: u8 (1 byte)
+        //  metadata value len: u16 (2 bytes)
+        //  metadata value: Bytes (<metadata value len> bytes)
         // ---
         // There's a bit of a wart in the current format: if delta base is NULL_HASH, instead of
         // storing a delta with start = 0 and end = 0, we store the full text directly. This
@@ -259,6 +267,7 @@ impl DataEntry {
             node,
             delta_base,
             delta,
+            version: 1,
         }))
     }
 
@@ -281,6 +290,13 @@ impl DataEntry {
         } else {
             buf.put_u64_be(delta::encoded_len(&self.delta) as u64);
             delta::encode_delta(&self.delta, buf);
+        }
+
+        if self.version == 2 {
+            // Since Mononoke doesn't support LFS, we don't need to send any metadata over the
+            // wire.
+            // TODO: LFS support
+            buf.put_u32_be(0);
         }
         Ok(())
     }
@@ -421,6 +437,7 @@ mod test {
                 node: BS_HASH,
                 delta_base,
                 delta,
+                version: 1,
             };
             let result = entry.verify();
             if is_valid {

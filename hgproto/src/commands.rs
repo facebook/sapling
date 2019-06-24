@@ -273,6 +273,18 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                         .boxify(),
                     instream,
                 )
+            },
+            SingleRequest::GetpackV2 => {
+                let (reqs, instream) =
+                    decode_getfiles_arg_stream(instream, || Getpackv1ArgDecoder::new());
+                (
+                    hgcmds
+                        .getpackv2(reqs)
+                        .map(SingleResponse::Getpackv2)
+                        .map_err(self::Error::into)
+                        .boxify(),
+                    instream,
+                )
             }
         }
     }
@@ -725,6 +737,13 @@ pub trait HgCommands {
         _params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getpackv1".into()).into())).boxify()
+    }
+
+    fn getpackv2(
+        &self,
+        _params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+    ) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("getpackv2".into()).into())).boxify()
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore

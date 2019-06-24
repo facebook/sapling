@@ -175,6 +175,7 @@ where
                 node: input.node,
                 delta_base: NULL_HASH,
                 delta: Delta::new_fulltext(input.content.to_vec()),
+                version: 1,
             });
 
             iter_ok(vec![history_meta, history, data_meta, data].into_iter())

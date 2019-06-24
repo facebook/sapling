@@ -610,6 +610,7 @@ fn parse_with_params(
         | command!("getfiles", Getfiles, parse_params, {})
         | call!(parse_command, "stream_out_shallow", parse_params, 0+1, |_kv| Ok(StreamOutShallow))
         | command_star!("getpackv1", GetpackV1, parse_params, {})
+        | command_star!("getpackv2", GetpackV2, parse_params, {})
     )
 }
 

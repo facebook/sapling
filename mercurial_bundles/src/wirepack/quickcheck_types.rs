@@ -147,6 +147,7 @@ impl Arbitrary for DataEntry {
             node: HgNodeHash::arbitrary(g),
             delta_base,
             delta,
+            version: 1,
         }
     }
 
@@ -158,6 +159,7 @@ impl Arbitrary for DataEntry {
             node,
             delta_base,
             delta,
+            version: 1,
         }))
     }
 }

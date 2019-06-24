@@ -170,6 +170,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
         StreamOutShallow(res) => res,
 
         Getpackv1(res) => res,
+        Getpackv2(res) => res,
 
         r => panic!("Response for {:?} unimplemented", r),
     }

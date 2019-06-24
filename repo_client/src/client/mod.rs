@@ -84,7 +84,7 @@ mod ops {
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
     pub static GETFILES: &str = "getfiles";
-    pub static GETPACKV1: &str = "getpackv1";
+    pub static GETPACK: &str = "getpack";
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
@@ -474,6 +474,167 @@ impl RepoClient {
         part.into_future()
             .map(move |part| create_bundle_stream(vec![part], compression))
             .flatten_stream()
+            .boxify()
+    }
+
+    fn getpack(
+        &self,
+        params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+        version: u8,
+    ) -> BoxStream<Bytes, Error> {
+        info!(self.ctx.logger(), "{}v{}", ops::GETPACK, version);
+        let mut wireproto_logger = self.wireproto_logger(ops::GETPACK, None);
+
+        // We buffer all parameters in memory so that we can log them.
+        // That shouldn't be a problem because requests are quite small
+        let getpack_params = Arc::new(Mutex::new(vec![]));
+        let ctx = self.ctx.clone();
+        let repo = self.repo.blobrepo().clone();
+
+        let validate_hash =
+            rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
+        let getpack_buffer_size = 500;
+        // Let's fetch the whole request before responding.
+        // That's prevents deadlocks, because hg client doesn't start reading the response
+        // before all the arguments were sent.
+        let s = params
+            .collect()
+            .map(|v| stream::iter_ok(v.into_iter()))
+            .flatten_stream()
+            .map({
+                cloned!(ctx, getpack_params, repo);
+                move |(path, filenodes)| {
+                    {
+                        let mut getpack_params = getpack_params.lock().unwrap();
+                        getpack_params.push((path.clone(), filenodes.clone()));
+                    }
+                    let mut sizes_futs = vec![];
+                    for filenode in filenodes.iter() {
+                        let f = repo.get_file_size(ctx.clone(), *filenode);
+                        sizes_futs.push(f);
+                    }
+
+                    let contents: Vec<_> = filenodes
+                        .iter()
+                        .map(|filenode| {
+                            repo.get_raw_hg_content(ctx.clone(), *filenode, validate_hash)
+                                .map({
+                                    cloned!(filenode);
+                                    move |content| (filenode, content.into_inner())
+                                })
+                        })
+                        .collect();
+
+                    let history_fut = get_unordered_file_history_for_multiple_nodes(
+                        ctx.clone(),
+                        repo.clone(),
+                        filenodes.into_iter().collect(),
+                        &path,
+                    )
+                    .collect();
+
+                    let contents_fut = future::join_all(contents.into_iter())
+                        .join(history_fut)
+                        .map(move |(contents, history)| (path, contents, history))
+                        .boxify();
+
+                    future::join_all(sizes_futs.into_iter())
+                        .map(move |filenode_sizes| (contents_fut, filenode_sizes.into_iter().sum()))
+                }
+            })
+            .buffered(getpack_buffer_size);
+
+        let params = BufferedParams {
+            weight_limit: 100_000_000,
+            buffer_size: getpack_buffer_size,
+        };
+        let s = s
+            .buffered_weight_limited(params)
+            .whole_stream_timeout(getfiles_timeout_duration())
+            .map_err(process_stream_timeout_error)
+            .map({
+                cloned!(ctx);
+                move |(path, contents, history)| {
+                    let mut res = vec![wirepack::Part::HistoryMeta {
+                        path: RepoPath::FilePath(path.clone()),
+                        entry_count: history.len() as u32,
+                    }];
+
+                    let history = history.into_iter().map(|history_entry| {
+                        let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
+                            history_entry.parents(),
+                            history_entry.copyfrom().as_ref(),
+                        );
+
+                        wirepack::Part::History(wirepack::HistoryEntry {
+                            node: history_entry.filenode().into_nodehash(),
+                            p1: p1.into_nodehash(),
+                            p2: p2.into_nodehash(),
+                            linknode: history_entry.linknode().into_nodehash(),
+                            copy_from: copy_from.cloned().map(RepoPath::FilePath),
+                        })
+                    });
+                    res.extend(history);
+
+                    res.push(wirepack::Part::DataMeta {
+                        path: RepoPath::FilePath(path),
+                        entry_count: contents.len() as u32,
+                    });
+                    for (filenode, content) in contents {
+                        let content = content.to_vec();
+                        ctx.perf_counters()
+                            .set_max_counter("getpack_max_file_size", content.len() as i64);
+                        res.push(wirepack::Part::Data(wirepack::DataEntry {
+                            node: filenode.into_nodehash(),
+                            delta_base: NULL_HASH,
+                            delta: Delta::new_fulltext(content),
+                            version,
+                        }));
+                    }
+                    stream::iter_ok(res.into_iter())
+                }
+            })
+            .flatten()
+            .chain(stream::once(Ok(wirepack::Part::End)));
+
+        wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
+            .and_then(|chunk| chunk.into_bytes())
+            .inspect({
+                cloned!(self.ctx);
+                move |bytes| {
+                    let len = bytes.len() as i64;
+                    ctx.perf_counters()
+                        .add_to_counter("getpack_response_size", len);
+                }
+            })
+            .timed({
+                cloned!(self.ctx);
+                move |stats, _| {
+                    let encoded_params = {
+                        let getpack_params = getpack_params.lock().unwrap();
+                        let mut encoded_params = vec![];
+                        for (path, filenodes) in getpack_params.iter() {
+                            let mut encoded_filenodes = vec![];
+                            for filenode in filenodes {
+                                encoded_filenodes.push(format!("{}", filenode));
+                            }
+                            encoded_params.push((
+                                String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                encoded_filenodes,
+                            ));
+                        }
+                        encoded_params
+                    };
+
+                    ctx.perf_counters()
+                        .add_to_counter("getpack_num_files", encoded_params.len() as i64);
+
+                    wireproto_logger.set_args(Some(json! {encoded_params}));
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
+                    Ok(())
+                }
+            })
             .boxify()
     }
 
@@ -1289,159 +1450,15 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "{}", ops::GETPACKV1);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETPACKV1, None);
+        self.getpack(params, 1)
+    }
 
-        // We buffer all parameters in memory so that we can log them.
-        // That shouldn't be a problem because requests are quite small
-        let getpackv1_params = Arc::new(Mutex::new(vec![]));
-        let ctx = self.ctx.clone();
-        let repo = self.repo.blobrepo().clone();
-
-        let validate_hash =
-            rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
-        let getpackv1_buffer_size = 500;
-        // Let's fetch the whole request before responding.
-        // That's prevents deadlocks, because hg client doesn't start reading the response
-        // before all the arguments were sent.
-        let s = params
-            .collect()
-            .map(|v| stream::iter_ok(v.into_iter()))
-            .flatten_stream()
-            .map({
-                cloned!(ctx, getpackv1_params, repo);
-                move |(path, filenodes)| {
-                    {
-                        let mut getpackv1_params = getpackv1_params.lock().unwrap();
-                        getpackv1_params.push((path.clone(), filenodes.clone()));
-                    }
-                    let mut sizes_futs = vec![];
-                    for filenode in filenodes.iter() {
-                        let f = repo.get_file_size(ctx.clone(), *filenode);
-                        sizes_futs.push(f);
-                    }
-
-                    let contents: Vec<_> = filenodes
-                        .iter()
-                        .map(|filenode| {
-                            repo.get_raw_hg_content(ctx.clone(), *filenode, validate_hash)
-                                .map({
-                                    cloned!(filenode);
-                                    move |content| (filenode, content.into_inner())
-                                })
-                        })
-                        .collect();
-
-                    let history_fut = get_unordered_file_history_for_multiple_nodes(
-                        ctx.clone(),
-                        repo.clone(),
-                        filenodes.into_iter().collect(),
-                        &path,
-                    )
-                    .collect();
-
-                    let contents_fut = future::join_all(contents.into_iter())
-                        .join(history_fut)
-                        .map(move |(contents, history)| (path, contents, history))
-                        .boxify();
-
-                    future::join_all(sizes_futs.into_iter())
-                        .map(move |filenode_sizes| (contents_fut, filenode_sizes.into_iter().sum()))
-                }
-            })
-            .buffered(getpackv1_buffer_size);
-
-        let params = BufferedParams {
-            weight_limit: 100_000_000,
-            buffer_size: getpackv1_buffer_size,
-        };
-        let s = s
-            .buffered_weight_limited(params)
-            .whole_stream_timeout(getfiles_timeout_duration())
-            .map_err(process_stream_timeout_error)
-            .map({
-                cloned!(ctx);
-                move |(path, contents, history)| {
-                    let mut res = vec![wirepack::Part::HistoryMeta {
-                        path: RepoPath::FilePath(path.clone()),
-                        entry_count: history.len() as u32,
-                    }];
-
-                    let history = history.into_iter().map(|history_entry| {
-                        let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
-                            history_entry.parents(),
-                            history_entry.copyfrom().as_ref(),
-                        );
-
-                        wirepack::Part::History(wirepack::HistoryEntry {
-                            node: history_entry.filenode().into_nodehash(),
-                            p1: p1.into_nodehash(),
-                            p2: p2.into_nodehash(),
-                            linknode: history_entry.linknode().into_nodehash(),
-                            copy_from: copy_from.cloned().map(RepoPath::FilePath),
-                        })
-                    });
-                    res.extend(history);
-
-                    res.push(wirepack::Part::DataMeta {
-                        path: RepoPath::FilePath(path),
-                        entry_count: contents.len() as u32,
-                    });
-                    for (filenode, content) in contents {
-                        let content = content.to_vec();
-                        ctx.perf_counters()
-                            .set_max_counter("getpackv1_max_file_size", content.len() as i64);
-                        res.push(wirepack::Part::Data(wirepack::DataEntry {
-                            node: filenode.into_nodehash(),
-                            delta_base: NULL_HASH,
-                            delta: Delta::new_fulltext(content),
-                        }));
-                    }
-                    stream::iter_ok(res.into_iter())
-                }
-            })
-            .flatten()
-            .chain(stream::once(Ok(wirepack::Part::End)));
-
-        wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
-            .and_then(|chunk| chunk.into_bytes())
-            .inspect({
-                cloned!(self.ctx);
-                move |bytes| {
-                    let len = bytes.len() as i64;
-                    ctx.perf_counters()
-                        .add_to_counter("getpackv1_response_size", len);
-                }
-            })
-            .timed({
-                cloned!(self.ctx);
-                move |stats, _| {
-                    let encoded_params = {
-                        let getpackv1_params = getpackv1_params.lock().unwrap();
-                        let mut encoded_params = vec![];
-                        for (path, filenodes) in getpackv1_params.iter() {
-                            let mut encoded_filenodes = vec![];
-                            for filenode in filenodes {
-                                encoded_filenodes.push(format!("{}", filenode));
-                            }
-                            encoded_params.push((
-                                String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                encoded_filenodes,
-                            ));
-                        }
-                        encoded_params
-                    };
-
-                    ctx.perf_counters()
-                        .add_to_counter("getpackv1_num_files", encoded_params.len() as i64);
-
-                    wireproto_logger.set_args(Some(json! {encoded_params}));
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
-                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
-                    Ok(())
-                }
-            })
-            .boxify()
+    // @wireprotocommand('getpackv2')
+    fn getpackv2(
+        &self,
+        params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+    ) -> BoxStream<Bytes, Error> {
+        self.getpack(params, 2)
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore
