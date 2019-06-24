@@ -1900,9 +1900,16 @@ def _registerbundle2parts():
         """
         repo = op.repo
 
-        version = part.params.get("version")
-        if version != "1":
-            raise error.Abort(_("unknown treegroup bundle2 part version: %s") % version)
+        versionstr = part.params.get("version")
+        try:
+            version = int(versionstr)
+        except ValueError:
+            version = 0
+
+        if version < 1 or version > 2:
+            raise error.Abort(
+                _("unknown treegroup bundle2 part version: %s") % versionstr
+            )
 
         category = part.params.get("category", "")
         if category != PACK_CATEGORY:
@@ -1924,7 +1931,7 @@ def _registerbundle2parts():
                     _("cannot push only trees to a hybrid server " "without pushrebase")
                 )
             data = part.read()
-            wirepackstore = wirepack.wirepackstore(data)
+            wirepackstore = wirepack.wirepackstore(data, version=version)
             datastore = unioncontentstore(wirepackstore, mfl.datastore)
             tr = op.gettransaction()
 
@@ -1948,7 +1955,7 @@ def _registerbundle2parts():
             dpack, hpack = mfl._getmutablelocalpacks()
 
         receivedhistory, receiveddata = wirepack.receivepack(
-            repo.ui, part, dpack, hpack
+            repo.ui, part, dpack, hpack, version=version
         )
 
         op.records.add(RECEIVEDNODE_RECORD, receiveddata)
@@ -2051,7 +2058,14 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     # createtreepackpart is used to form bundles for normal pushes and pulls, so
     # we always pass depth=max here.
     packstream = generatepackstream(
-        repo, rootdir, mfnodes, basemfnodes, directories, TREE_DEPTH_MAX, linknodefixup
+        repo,
+        rootdir,
+        mfnodes,
+        basemfnodes,
+        directories,
+        TREE_DEPTH_MAX,
+        linknodefixup,
+        version=1,
     )
     part = bundle2.bundlepart(partname, data=packstream)
     part.addparam("version", "1")
@@ -2216,7 +2230,7 @@ def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     try:
         bundler = bundle2.bundle20(repo.ui)
         packstream = generatepackstream(
-            repo, rootdir, mfnodes, basemfnodes, directories, depth
+            repo, rootdir, mfnodes, basemfnodes, directories, depth, version=1
         )
         part = bundler.newpart(TREEGROUP_PARTTYPE2, data=packstream)
         part.addparam("version", "1")
@@ -2235,7 +2249,14 @@ def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth):
 
 
 def generatepackstream(
-    repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup=None
+    repo,
+    rootdir,
+    mfnodes,
+    basemfnodes,
+    directories,
+    depth,
+    linknodefixup=None,
+    version=1,
 ):
     """
     All size/len/counts are network order unsigned ints.
@@ -2286,12 +2307,12 @@ def generatepackstream(
         raise shallowutil.MissingNodesError(missing, "tree nodes missing on server")
 
     return _generatepackstream(
-        repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup
+        repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup, version
     )
 
 
 def _generatepackstream(
-    repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup
+    repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup, version
 ):
     """A simple helper function for generatepackstream. This helper is a
     generator, while the main function is not, so we can execute the
@@ -2343,7 +2364,7 @@ def _generatepackstream(
             rootlinknode = linknodemap.get(node)
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data
-            data = [(subnode, nullid, subtext)]
+            data = [(subnode, nullid, subtext, 0)]
 
             # Append history
             # Only append first history for now, since the entire manifest
@@ -2354,7 +2375,7 @@ def _generatepackstream(
                 linknode = rootlinknode
             history = [(subnode, p1node, p2node, linknode, copyfrom)]
 
-            for chunk in wirepack.sendpackpart(subname, history, data):
+            for chunk in wirepack.sendpackpart(subname, history, data, version=version):
                 yield chunk
 
     yield wirepack.closepart()

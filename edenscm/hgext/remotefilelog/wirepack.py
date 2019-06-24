@@ -15,7 +15,7 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
 from . import constants, shallowutil
-from .shallowutil import readexactly, readpath, readunpack
+from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, readunpack
 
 
 try:
@@ -24,7 +24,7 @@ except NameError:
     xrange = range
 
 
-def sendpackpart(filename, history, data):
+def sendpackpart(filename, history, data, version=1):
     """A wirepack is formatted as follows:
 
     wirepack = <filename len: 2 byte unsigned int><filename>
@@ -62,17 +62,29 @@ def sendpackpart(filename, history, data):
     # Serialize and send data
     yield struct.pack("!I", len(data))
 
-    # TODO: support datapack metadata
-    for node, deltabase, delta in data:
+    for node, deltabase, delta, revlogflags in data:
         deltalen = struct.pack("!Q", len(delta))
-        yield "%s%s%s%s" % (node, deltabase, deltalen, delta)
+        if version == 1:
+            yield "%s%s%s%s" % (node, deltabase, deltalen, delta)
+        elif version == 2:
+            assert deltabase == nullid
+            rawdata = "%s%s%s%s" % (node, deltabase, deltalen, delta)
+            metadata = {
+                constants.METAKEYFLAG: revlogflags,
+                constants.METAKEYSIZE: len(delta),
+            }
+            metadata = buildpackmeta(metadata)
+            rawdata += struct.pack("!I", len(metadata)) + metadata
+            yield rawdata
+        else:
+            raise RuntimeError("Unsupported version %d", version)
 
 
 def closepart():
     return "\0" * 10
 
 
-def receivepack(ui, fh, dpack, hpack):
+def receivepack(ui, fh, dpack, hpack, version=1):
     receiveddata = []
     receivedhistory = []
 
@@ -90,8 +102,8 @@ def receivepack(ui, fh, dpack, hpack):
                 count += 1
                 size += len(filename) + len(node) + sum(len(x or "") for x in value)
 
-            for node, deltabase, delta in readdeltas(fh):
-                dpack.add(filename, node, deltabase, delta)
+            for node, deltabase, delta, metadata in readdeltas(fh, version=version):
+                dpack.add(filename, node, deltabase, delta, metadata=metadata)
                 receiveddata.append((filename, node))
                 count += 1
                 size += len(filename) + len(node) + len(deltabase) + len(delta)
@@ -116,20 +128,26 @@ def readhistory(fh):
         yield entry
 
 
-def readdeltas(fh):
+def readdeltas(fh, version=1):
     count = readunpack(fh, "!I")[0]
     for i in xrange(count):
         node, deltabase, deltalen = readunpack(fh, "!20s20sQ")
         delta = readexactly(fh, deltalen)
-        yield (node, deltabase, delta)
+        if version == 1:
+            yield (node, deltabase, delta, None)
+        elif version == 2:
+            metalen, = readunpack(fh, "!I")
+            meta = readexactly(fh, metalen)
+            metadata = parsepackmeta(meta)
+            yield (node, deltabase, delta, metadata)
 
 
 class wirepackstore(object):
-    def __init__(self, wirepack):
+    def __init__(self, wirepack, version=1):
         self._data = {}
         self._history = {}
         fh = StringIO(wirepack)
-        self._load(fh)
+        self._load(fh, version)
 
     def __iter__(self):
         for key in self._data:
@@ -139,15 +157,17 @@ class wirepackstore(object):
         raise RuntimeError("must use getdeltachain with wirepackstore")
 
     def getdeltachain(self, name, node):
-        delta, deltabase = self._data[(name, node)]
+        delta, deltabase, metadata = self._data[(name, node)]
         return [(name, node, name, deltabase, delta)]
 
     def getmeta(self, name, node):
         try:
-            size = len(self._data[(name, node)])
+            delta, deltabase, metadata = self._data[(name, node)]
+            if metadata is not None:
+                return metadata
         except KeyError:
             raise KeyError((name, hex(node)))
-        return {constants.METAKEYFLAG: "", constants.METAKEYSIZE: size}
+        return {constants.METAKEYFLAG: "", constants.METAKEYSIZE: len(delta)}
 
     def getancestors(self, name, node, known=None):
         if known is None:
@@ -198,7 +218,7 @@ class wirepackstore(object):
 
         return missing
 
-    def _load(self, fh):
+    def _load(self, fh, version):
         data = self._data
         history = self._history
         while True:
@@ -211,8 +231,8 @@ class wirepackstore(object):
                 history[(filename, node)] = value[1:]
                 count += 1
 
-            for node, deltabase, delta in readdeltas(fh):
-                data[(filename, node)] = (delta, deltabase)
+            for node, deltabase, delta, metadata in readdeltas(fh, version=version):
+                data[(filename, node)] = (delta, deltabase, metadata)
                 count += 1
 
             if count == 0 and filename == "":

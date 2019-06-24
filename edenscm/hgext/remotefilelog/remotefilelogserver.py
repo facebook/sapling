@@ -63,7 +63,8 @@ def onetimesetup(ui):
     wireproto.commands["getflogheads"] = (getflogheads, "path")
     wireproto.commands["getfiles"] = (getfiles, "")
     wireproto.commands["getfile"] = (getfile, "file node")
-    wireproto.commands["getpackv1"] = (getpack, "*")
+    wireproto.commands["getpackv1"] = (getpackv1, "*")
+    wireproto.commands["getpackv2"] = (getpackv2, "*")
 
     class streamstate(object):
         match = None
@@ -489,7 +490,15 @@ def gcserver(ui, repo):
                     os.remove(filepath)
 
 
-def getpack(repo, proto, args):
+def getpackv1(repo, proto, args):
+    return getpack(repo, proto, args, version=1)
+
+
+def getpackv2(repo, proto, args):
+    return getpack(repo, proto, args, version=2)
+
+
+def getpack(repo, proto, args, version=1):
     """A server api for requesting a pack of file information.
     """
     if shallowrepo.requirement in repo.requirements:
@@ -513,6 +522,16 @@ def getpack(repo, proto, args):
         deltas = <count: 4 byte>[<delta entry>,...]
         deltaentry = <node: 20 byte><deltabase: 20 byte>
                      <delta len: 8 byte><delta>
+                     <metadata>
+
+        if version == 1:
+            metadata = <nothing>
+        elif version == 2:
+            metadata = <meta len: 4 bytes><metadata-list>
+            metadata-list = [<metadata-item>, ...]
+            metadata-item = <metadata-key: 1 byte>
+                            <metadata-value len: 2 byte unsigned>
+                            <metadata-value>
         """
         files = _receivepackrequest(proto.fin)
 
@@ -537,9 +556,11 @@ def getpack(repo, proto, args):
                 history.append((node, p1node, p2node, linknode, copyfrom))
 
             # Scan and send deltas
-            chain = _getdeltachain(fl, nodes)
+            chain = _getdeltachain(fl, nodes, version)
 
-            for chunk in wirepack.sendpackpart(filename, history, chain):
+            for chunk in wirepack.sendpackpart(
+                filename, history, chain, version=version
+            ):
                 yield chunk
 
         yield wirepack.closepart()
@@ -571,7 +592,7 @@ def _receivepackrequest(stream):
     return files
 
 
-def _getdeltachain(fl, nodes):
+def _getdeltachain(fl, nodes, version):
     """Collect the full-text for all the given nodes.
     """
     chain = []
@@ -583,11 +604,14 @@ def _getdeltachain(fl, nodes):
         if cur in seen:
             continue
 
-        start, length, size, base, linkrev, p1, p2, node = fl.index[cur]
+        revlogflags = fl.flags(cur)
+        if version == 1 or revlogflags == 0:
+            delta = fl.revision(cur)
+        else:
+            delta = fl.revision(cur, raw=True)
 
-        delta = fl.revision(cur)
         basenode = nullid
-        chain.append((node, basenode, delta))
+        chain.append((node, basenode, delta, revlogflags))
         seen.add(cur)
 
     chain.reverse()

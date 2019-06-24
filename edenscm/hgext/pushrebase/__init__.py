@@ -1044,15 +1044,20 @@ def resolveonto(repo, ontoarg):
 def packparthandler(op, part):
     repo = op.repo
 
-    version = part.params.get("version")
-    if version != "1":
-        raise error.Abort(_("unknown rebasepack bundle2 part version: %s") % version)
+    versionstr = part.params.get("version")
+    try:
+        version = int(versionstr)
+    except ValueError:
+        version = 0
+
+    if version < 1 or version > 2:
+        raise error.Abort(_("unknown rebasepack bundle2 part version: %s") % versionstr)
 
     temppackpath = tempfile.mkdtemp()
     op.records.add("tempdirs", temppackpath)
     with mutablestores.mutabledatastore(repo, temppackpath) as dpack:
         with mutablestores.mutablehistorystore(repo, temppackpath) as hpack:
-            wirepack.receivepack(repo.ui, part, dpack, hpack)
+            wirepack.receivepack(repo.ui, part, dpack, hpack, version=version)
     op.records.add("temp%spackdir" % part.params.get("category", ""), temppackpath)
     # TODO: clean up
 

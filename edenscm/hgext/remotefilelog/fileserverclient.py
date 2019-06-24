@@ -719,8 +719,10 @@ class fileserverclient(object):
                 self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
                 self.ui.metrics.gauge("ssh_getpack_calls", 1)
 
+                getpackversion = self.ui.configint("remotefilelog", "getpackversion")
+
                 remote = conn.peer
-                remote._callstream("getpackv1")
+                remote._callstream("getpackv%d" % getpackversion)
 
                 self._sendpackrequest(remote, fileids)
 
@@ -728,7 +730,7 @@ class fileserverclient(object):
 
                 dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
                 receiveddata, receivedhistory = wirepack.receivepack(
-                    self.repo.ui, pipei, dpack, hpack
+                    self.repo.ui, pipei, dpack, hpack, version=getpackversion
                 )
 
                 rcvd = len(receiveddata)

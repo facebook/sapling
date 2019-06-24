@@ -112,6 +112,9 @@ Configs:
     ``remotefilelog.manifestlimit`` limit the size of the manifest cache to this size.
     Manifests will be removed from oldest to newest during repack.
 
+    ``remotefilelog.getpackversion`` version of the "getpack" wire protocol.
+    Starting with 2, LFS blobs are supported.
+
     ``format.userustdatapack`` switches to using the rust data pack
     implementation.
 
@@ -247,6 +250,7 @@ configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
 configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
+configitem("remotefilelog", "getpackversion", default=1)
 
 # Config items for HTTP data fetching.
 configitem("edenapi", "enabled", default=False)
