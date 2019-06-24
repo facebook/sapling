@@ -1,6 +1,7 @@
 [package]
 name = "tester"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 hg_watchman_client = { version = "0.1.0", path = "../" }
