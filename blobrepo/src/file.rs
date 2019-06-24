@@ -13,7 +13,7 @@ use blob_changeset::RepoBlobstore;
 use blobstore::Blobstore;
 use context::CoreContext;
 use failure_ext::{bail_err, bail_msg, Error, FutureFailureErrorExt};
-use futures::future::{self, Future};
+use futures::future::{self, lazy, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial::file;
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
@@ -297,23 +297,31 @@ impl Entry for HgBlobEntry {
 
     fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
         let blobstore = self.blobstore.clone();
+
+        let id = self.id.clone();
+        let name = self.name.clone();
+        // Note: do not remove `lazy(|| ...)` below! It helps with memory usage on serving
+        // gettreepack requests.
         match self.id {
-            HgEntryId::Manifest(manifest_id) => BlobManifest::load(ctx, &blobstore, manifest_id)
-                .and_then({
-                    let node_id = self.id.into_nodehash();
-                    move |blob_manifest| {
-                        let manifest = blob_manifest
-                            .ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
-                        Ok(Content::Tree(manifest.boxed()))
-                    }
-                })
-                .context(format!(
-                    "While HgBlobEntry::get_content for id {}, name {:?}",
-                    self.id, self.name,
-                ))
-                .from_err()
-                .boxify(),
-            HgEntryId::File(file_type, filenode_id) => {
+            HgEntryId::Manifest(manifest_id) => lazy(move || {
+                BlobManifest::load(ctx, &blobstore, manifest_id)
+                    .and_then({
+                        move |blob_manifest| {
+                            let manifest = blob_manifest.ok_or(ErrorKind::HgContentMissing(
+                                id.into_nodehash(),
+                                Type::Tree,
+                            ))?;
+                            Ok(Content::Tree(manifest.boxed()))
+                        }
+                    })
+                    .context(format!(
+                        "While HgBlobEntry::get_content for id {}, name {:?}",
+                        id, name,
+                    ))
+                    .from_err()
+            })
+            .boxify(),
+            HgEntryId::File(file_type, filenode_id) => lazy(move || {
                 fetch_file_envelope(ctx.clone(), &blobstore, filenode_id)
                     .and_then(move |envelope| {
                         let envelope = envelope.into_mut();
@@ -327,11 +335,11 @@ impl Entry for HgBlobEntry {
                     })
                     .context(format!(
                         "While HgBlobEntry::get_content for id {}, name {:?}",
-                        self.id, self.name
+                        id, name
                     ))
                     .from_err()
-                    .boxify()
-            }
+            })
+            .boxify(),
         }
     }
 
