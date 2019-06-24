@@ -8,7 +8,10 @@ use std::str;
 use cpython::*;
 
 use cpython_failure::ResultPyErrExt;
-use edenapi::{Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn, ProgressStats};
+use edenapi::{
+    ApiError, ApiErrorKind, Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn,
+    ProgressStats,
+};
 use encoding::local_bytes_to_path;
 use revisionstore::{MutableDeltaStore, MutableHistoryStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
@@ -16,6 +19,20 @@ use types::{Key, Node, RepoPath, RepoPathBuf};
 use crate::revisionstore::{
     mutabledeltastore, mutablehistorystore, PythonMutableDataPack, PythonMutableHistoryPack,
 };
+
+mod exceptions {
+    use super::*;
+
+    py_exception!(edenapi, CredsError);
+    py_exception!(edenapi, ConfigError);
+    py_exception!(edenapi, ResponseError);
+    py_exception!(edenapi, CurlError);
+    py_exception!(edenapi, HttpError);
+    py_exception!(edenapi, SerializationError);
+    py_exception!(edenapi, StoreError);
+    py_exception!(edenapi, TlsError);
+    py_exception!(edenapi, UrlError);
+}
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
@@ -80,13 +97,11 @@ py_class!(class client |py| {
     }
 
     def health_check(&self) -> PyResult<PyObject> {
-        self.inner(py).health_check()
-            .map(|()| py.None())
-            .map_pyerr::<exc::RuntimeError>(py)
+        Ok(self.inner(py).health_check().map(|()| py.None()).map_err(|e| into_exception(py, e))?)
     }
 
     def hostname(&self) -> PyResult<String> {
-        self.inner(py).hostname().map_pyerr::<exc::RuntimeError>(py)
+        Ok(self.inner(py).hostname().map_err(|e| into_exception(py, e))?)
     }
 
     def get_files(
@@ -105,7 +120,7 @@ py_class!(class client |py| {
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
             client.get_files(keys, &mut store, progress_fn)
-        }).map_pyerr::<exc::RuntimeError>(py)?;
+        }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
     }
@@ -127,7 +142,7 @@ py_class!(class client |py| {
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
             client.get_history(keys, &mut store, depth, progress_fn)
-        }).map_pyerr::<exc::RuntimeError>(py)?;
+        }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
     }
@@ -148,7 +163,7 @@ py_class!(class client |py| {
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
             client.get_trees(keys, &mut store, progress_fn)
-        }).map_pyerr::<exc::RuntimeError>(py)?;
+        }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
     }
@@ -178,7 +193,7 @@ py_class!(class client |py| {
         let progress_fn = progress_fn.map(wrap_callback);
         let stats = py.allow_threads(move || {
             client.prefetch_trees(rootdir, mfnodes, basemfnodes, depth, &mut store, progress_fn)
-        }).map_pyerr::<exc::RuntimeError>(py)?;
+        }).map_err(|e| into_exception(py, e))?;
 
         downloadstats::create_instance(py, stats)
     }
@@ -247,4 +262,23 @@ fn wrap_callback(callback: PyObject) -> ProgressFn {
         let py = gil.python();
         let _ = callback.call(py, stats.as_tuple(), None);
     })
+}
+
+fn into_exception(py: Python, error: ApiError) -> PyErr {
+    use exceptions::*;
+    use ApiErrorKind::*;
+
+    let msg = format!("{}", &error);
+    match error.kind() {
+        &BadCreds(..) => PyErr::new::<CredsError, _>(py, msg),
+        &BadConfig(..) => PyErr::new::<ConfigError, _>(py, msg),
+        &BadResponse => PyErr::new::<ResponseError, _>(py, msg),
+        &Curl => PyErr::new::<CurlError, _>(py, msg),
+        &Http { .. } => PyErr::new::<HttpError, _>(py, msg),
+        &Serialization => PyErr::new::<SerializationError, _>(py, msg),
+        &Store => PyErr::new::<StoreError, _>(py, msg),
+        &Url => PyErr::new::<UrlError, _>(py, msg),
+        &Tls => PyErr::new::<TlsError, _>(py, msg),
+        &Other(..) => PyErr::new::<exc::RuntimeError, _>(py, msg),
+    }
 }
