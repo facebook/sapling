@@ -29,7 +29,7 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid
 
 from . import constants, edenapi, shallowutil, wirepack
@@ -787,11 +787,17 @@ class fileserverclient(object):
     def _httpfetchdata(self, fileids, dpack):
         """Fetch file data over HTTPS using the Eden API"""
         n = len(fileids)
-        s = "" if n == 1 else "s"
-        msg = _("fetching content for %d file%s over HTTPS") % (n, s)
+        msg = (
+            _n(
+                "fetching content for %d file over HTTPS",
+                "fetching content for %d files over HTTPS",
+                n,
+            )
+            % n
+        )
 
         if edenapi.debug(self.ui):
-            self.ui.warn(_("%s\n") % msg)
+            self.ui.warn(("%s\n") % msg)
 
         self.ui.metrics.gauge("http_getfiles_revs", n)
         self.ui.metrics.gauge("http_getfiles_calls", 1)
@@ -819,11 +825,17 @@ class fileserverclient(object):
     def _httpfetchhistory(self, fileids, hpack, depth=None):
         """Fetch file history over HTTPS using the Eden API"""
         n = len(fileids)
-        s = "" if n == 1 else "s"
-        msg = _("fetching history for %d file%s over HTTPS") % (n, s)
+        msg = (
+            _n(
+                "fetching history for %d file over HTTPS",
+                "fetching history for %d files over HTTPS",
+                n,
+            )
+            % n
+        )
 
         if edenapi.debug(self.ui):
-            self.ui.warn(_("%s\n") % msg)
+            self.ui.warn(("%s\n") % msg)
 
         self.ui.metrics.gauge("http_gethistory_revs", n)
         self.ui.metrics.gauge("http_gethistory_calls", 1)
