@@ -7,7 +7,6 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-
 mod monitoring;
 
 use clap::{App, ArgMatches};
@@ -96,9 +95,9 @@ fn main() {
 
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
-    cmdlib::args::init_cachelib(&matches);
-
     fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
+        let caching = cmdlib::args::init_cachelib(&matches);
+
         info!(root_log, "Starting up");
 
         let stats_aggregation = stats::schedule_stats_aggregation()
@@ -123,8 +122,6 @@ fn main() {
             ca_pem,
         };
 
-        let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
-
         let mut acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
             .expect("failed to build tls acceptor");
         acceptor = secure_utils::fb_tls::tls_acceptor_builder(
@@ -132,12 +129,14 @@ fn main() {
             ssl.clone(),
             acceptor,
             ticket_seed,
-        ).expect("failed to build fb_tls acceptor");
+        )
+        .expect("failed to build fb_tls acceptor");
 
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
             config.common,
             config.repos.into_iter(),
-            myrouter_port,
+            cmdlib::args::parse_myrouter_port(&matches),
+            caching,
             root_log,
             matches
                 .value_of("listening-host-port")

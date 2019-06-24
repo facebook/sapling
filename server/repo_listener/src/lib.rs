@@ -69,6 +69,7 @@ mod errors;
 mod repo_handlers;
 mod request_handler;
 
+use blobrepo_factory::Caching;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
@@ -85,6 +86,7 @@ pub fn create_repo_listeners(
     common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
+    caching: Caching,
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
@@ -95,7 +97,7 @@ pub fn create_repo_listeners(
     let mut ready = ready_state::ReadyStateBuilder::new();
 
     (
-        repo_handlers(repos, myrouter_port, &root_log, &mut ready)
+        repo_handlers(repos, myrouter_port, caching, &root_log, &mut ready)
             .and_then(move |handlers| {
                 connection_acceptor(
                     common_config,

@@ -11,7 +11,7 @@ use std::{
 };
 
 use blobrepo::{file_history::get_file_history, get_sha256_alias, get_sha256_alias_key, BlobRepo};
-use blobrepo_factory::open_blobrepo;
+use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
@@ -65,6 +65,7 @@ impl MononokeRepo {
         logger: Logger,
         config: RepoConfig,
         myrouter_port: Option<u16>,
+        caching: Caching,
         with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
         let ctx = CoreContext::new(
@@ -88,6 +89,7 @@ impl MononokeRepo {
                     config.storage_config.clone(),
                     repoid,
                     myrouter_port,
+                    caching,
                     config.bookmarks_cache_ttl,
                 )
                 .map(move |repo| {

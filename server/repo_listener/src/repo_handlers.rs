@@ -15,7 +15,7 @@ use futures::{
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
-use blobrepo_factory::open_blobrepo;
+use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
@@ -63,6 +63,7 @@ fn open_db_from_config<S: SqlConstructors>(
 pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
+    caching: Caching,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
@@ -82,6 +83,7 @@ pub fn repo_handlers(
             );
             // TODO(T37478150, luk): this is not a test use case, need to address this later
             let ctx = CoreContext::test_mock();
+
             let ensure_myrouter_ready = myrouter_ready(
                 config.storage_config.dbconfig.get_db_address(),
                 myrouter_port,
@@ -97,6 +99,7 @@ pub fn repo_handlers(
                 config.storage_config.clone(),
                 repoid,
                 myrouter_port,
+                caching,
                 config.bookmarks_cache_ttl,
             )
             .and_then(move |blobrepo| {

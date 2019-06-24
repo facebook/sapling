@@ -83,7 +83,7 @@ fn main() -> Result<()> {
         excludes.extend(changesets);
     }
 
-    cmdlib::args::init_cachelib(&matches);
+    let caching = cmdlib::args::init_cachelib(&matches);
 
     let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
 
@@ -92,6 +92,7 @@ fn main() -> Result<()> {
         config.storage_config.clone(),
         RepositoryId::new(config.repoid),
         myrouter_port,
+        caching,
         config.bookmarks_cache_ttl,
     );
 

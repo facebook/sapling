@@ -8,20 +8,20 @@
 # Library routines and initial setup for Mononoke-related tests.
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
-  CACHELIB_ARGS=(--cache-size-gb 1)
   function db_config() {
     echo "db.db_address=\"$DB_SHARD_NAME\""
   }
-  MONONOKE_DEFAULT_START_TIMEOUT=120
+  MONONOKE_DEFAULT_START_TIMEOUT=60
 else
-  CACHELIB_ARGS=(--do-not-init-cachelib)
   function db_config() {
     local reponame
     reponame="$1"
     echo "db.local_db_path=\"$TESTTMP/$reponame\""
   }
-  MONONOKE_DEFAULT_START_TIMEOUT=15
+MONONOKE_DEFAULT_START_TIMEOUT=15
 fi
+
+CACHING_ARGS=(--skip-caching)
 
 TEST_CERTDIR="${HGTEST_CERTDIR:-$TESTDIR/certs}"
 
@@ -78,14 +78,14 @@ function mononoke {
   --debug \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
-   "${CACHELIB_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
+   "${CACHING_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
 
 function mononoke_hg_sync {
   $MONONOKE_HG_SYNC \
-    "${CACHELIB_ARGS[@]}" \
+    "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
@@ -94,7 +94,7 @@ function mononoke_hg_sync {
 
 function mononoke_hg_sync_with_retry {
   $MONONOKE_HG_SYNC \
-    "${CACHELIB_ARGS[@]}" \
+    "${CACHING_ARGS[@]}" \
     --base-retry-delay-ms 1 \
     --mononoke-config-path mononoke-config  \
     --verify-server-bookmark-on-failure \
@@ -103,7 +103,7 @@ function mononoke_hg_sync_with_retry {
 
 function mononoke_hg_sync_with_failure_handler {
   $MONONOKE_HG_SYNC \
-    "${CACHELIB_ARGS[@]}" \
+    "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
     --run-on-failure "$3" \
@@ -151,7 +151,7 @@ function mononoke_hg_sync_loop {
   shift
 
   $MONONOKE_HG_SYNC \
-    "${CACHELIB_ARGS[@]}" \
+    "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config \
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
@@ -159,13 +159,13 @@ function mononoke_hg_sync_loop {
 
 function mononoke_admin {
   "$MONONOKE_ADMIN" \
-    "${CACHELIB_ARGS[@]}" \
+    "${CACHING_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
 function write_stub_log_entry {
   "$WRITE_STUB_LOG_ENTRY" \
-    "${CACHELIB_ARGS[@]}" \
+    "${CACHING_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
@@ -477,7 +477,7 @@ function blobimport {
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo_id 0 \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
-     "$input" "${CACHELIB_ARGS[@]}" "$@" >> "$TESTTMP/blobimport.out" 2>&1
+     "$input" "${CACHING_ARGS[@]}" "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
@@ -488,7 +488,7 @@ function blobimport {
 
 function bonsai_verify {
   GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo_id 0 \
-  --mononoke-config-path "$TESTTMP/mononoke-config" "$@"
+  --mononoke-config-path "$TESTTMP/mononoke-config" "${CACHING_ARGS[@]}" "$@"
 }
 
 function setup_no_ssl_apiserver {
@@ -504,14 +504,15 @@ function apiserver {
     --ssl-private-key "$TEST_CERTDIR/localhost.key" \
     --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
     --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    "${CACHELIB_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
+    "${CACHING_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
   export APISERVER_PID=$!
   echo "$APISERVER_PID" >> "$DAEMON_PIDS"
 }
 
 function no_ssl_apiserver {
   $MONONOKE_APISERVER "$@" \
-   --mononoke-config-path "$TESTTMP/mononoke-config" >> "$TESTTMP/apiserver.out" 2>&1 &
+   --mononoke-config-path "$TESTTMP/mononoke-config" \
+   "${CACHING_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
@@ -719,7 +720,7 @@ function aliasverify() {
   mode=$1
   shift 1
   GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo_id 0 \
-     "${CACHELIB_ARGS[@]}" \
+     "${CACHING_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
 }
@@ -751,7 +752,8 @@ function pushrebase_replay() {
     --repoid 0 \
     --bundle-provider filesystem \
     --filesystem-bundles-storage-path "$TESTTMP" \
-    --sqlite3-path "$TESTTMP/pushrebaserecording"
+    --sqlite3-path "$TESTTMP/pushrebaserecording" \
+    "${CACHING_ARGS[@]}"
 }
 
 function enable_replay_verification_hook {

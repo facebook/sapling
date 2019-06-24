@@ -564,7 +564,7 @@ fn main() -> Fallible<()> {
     let app = cmdlib::args::add_myrouter_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
-    cmdlib::args::init_cachelib(&matches);
+    let caching = cmdlib::args::init_cachelib(&matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
@@ -577,7 +577,6 @@ fn main() -> Fallible<()> {
     let with_scuba = matches.is_present("with-scuba");
     let with_skiplist = !matches.is_present("without-skiplist");
     let with_cache = matches.is_present("with-cache");
-    let myrouter_port = cmdlib::args::parse_myrouter_port(&matches);
 
     let address = format!("{}:{}", host, port);
 
@@ -652,7 +651,8 @@ fn main() -> Fallible<()> {
     let mononoke = runtime.block_on(Mononoke::new(
         mononoke_logger.clone(),
         repo_configs,
-        myrouter_port,
+        cmdlib::args::parse_myrouter_port(&matches),
+        caching,
         with_skiplist,
         cache,
     ))?;

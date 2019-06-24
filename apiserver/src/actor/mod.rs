@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use blobrepo_factory::Caching;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -43,6 +44,7 @@ impl Mononoke {
         logger: Logger,
         config: RepoConfigs,
         myrouter_port: Option<u16>,
+        caching: Caching,
         with_skiplist: bool,
         cache: Option<CacheManager>,
     ) -> impl Future<Item = Self, Error = Error> {
@@ -56,11 +58,17 @@ impl Mononoke {
                         cloned!(logger);
                         lazy(move || {
                             info!(logger, "Initializing repo: {}", &name);
-                            MononokeRepo::new(logger.clone(), config, myrouter_port, with_skiplist)
-                                .map(move |repo| {
-                                    debug!(logger, "Initialized {}", &name);
-                                    (name, repo)
-                                })
+                            MononokeRepo::new(
+                                logger.clone(),
+                                config,
+                                myrouter_port,
+                                caching,
+                                with_skiplist,
+                            )
+                            .map(move |repo| {
+                                debug!(logger, "Initialized {}", &name);
+                                (name, repo)
+                            })
                         })
                     }
                 }),

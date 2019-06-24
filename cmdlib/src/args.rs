@@ -34,7 +34,7 @@ use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::open_blobrepo;
+use blobrepo_factory::{open_blobrepo, Caching};
 use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
@@ -311,7 +311,7 @@ pub fn create_repo<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    open_repo_internal(logger, matches, true)
+    open_repo_internal(logger, matches, true, parse_caching(matches))
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
@@ -320,7 +320,7 @@ pub fn open_repo<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    open_repo_internal(logger, matches, false)
+    open_repo_internal(logger, matches, false, parse_caching(matches))
 }
 
 pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
@@ -387,7 +387,7 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     ))
     .args_from_usage(
         r#"
-        --do-not-init-cachelib 'do not init cachelib (useful for tests)'
+        --skip-caching 'do not init cachelib and disable caches (useful for tests)'
         "#,
     )
     .args(&cache_args)
@@ -425,44 +425,53 @@ impl Default for CachelibSettings {
     }
 }
 
-// TODO: (jsgf) T32777804 make the dependency between cachelib and blobrepo more visible
-pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
-    if matches.is_present("do-not-init-cachelib") {
-        return;
+fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
+    if matches.is_present("skip-caching") {
+        Caching::Disabled
+    } else {
+        Caching::Enabled
+    }
+}
+
+pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) -> Caching {
+    let caching = parse_caching(matches);
+
+    if let Caching::Enabled = caching {
+        let mut settings = CachelibSettings::default();
+        if let Some(cache_size) = matches.value_of("cache-size-gb") {
+            settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
+        }
+        if let Some(max_process_size) = matches.value_of("max-process-size") {
+            settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
+        }
+        if let Some(min_process_size) = matches.value_of("min-process-size") {
+            settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
+        }
+        settings.use_tupperware_shrinker = matches.is_present("use-tupperware-shrinker");
+        if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
+            settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
+        }
+        if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
+            settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
+        }
+        if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
+            settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
+        }
+        if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
+            settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
+        }
+        settings.with_content_sha1_cache = matches.is_present("with-content-sha1-cache");
+        if let Some(content_sha1_cache_size) = matches.value_of("content-sha1-cache-size") {
+            settings.content_sha1_cache_size = Some(content_sha1_cache_size.parse().unwrap());
+        }
+        if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
+            settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
+        }
+
+        init_cachelib_from_settings(settings).unwrap();
     }
 
-    let mut settings = CachelibSettings::default();
-    if let Some(cache_size) = matches.value_of("cache-size-gb") {
-        settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
-    }
-    if let Some(max_process_size) = matches.value_of("max-process-size") {
-        settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
-    }
-    if let Some(min_process_size) = matches.value_of("min-process-size") {
-        settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
-    }
-    settings.use_tupperware_shrinker = matches.is_present("use-tupperware-shrinker");
-    if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
-        settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
-    }
-    if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
-        settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
-    }
-    if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
-        settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
-    }
-    if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
-        settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
-    }
-    settings.with_content_sha1_cache = matches.is_present("with-content-sha1-cache");
-    if let Some(content_sha1_cache_size) = matches.value_of("content-sha1-cache-size") {
-        settings.content_sha1_cache_size = Some(content_sha1_cache_size.parse().unwrap());
-    }
-    if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
-        settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
-    }
-
-    init_cachelib_from_settings(settings).unwrap();
+    caching
 }
 
 pub fn init_cachelib_from_settings(settings: CachelibSettings) -> Result<()> {
@@ -624,6 +633,7 @@ fn open_repo_internal<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
     create: bool,
+    caching: Caching,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let repo_id = get_repo_id(matches);
 
@@ -668,6 +678,7 @@ fn open_repo_internal<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
+
     repo_id
         .into_future()
         .and_then(move |repo_id| {
@@ -676,6 +687,7 @@ fn open_repo_internal<'a>(
                 config.storage_config,
                 repo_id,
                 myrouter_port,
+                caching,
                 config.bookmarks_cache_ttl,
             )
         })

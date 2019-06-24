@@ -4,13 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use cloned::cloned;
 use failure_ext::prelude::*;
-use failure_ext::{err_msg, Error, Result};
+use failure_ext::{Error, Result};
 use futures::{
-    future::{self, result, IntoFuture},
+    future::{self, IntoFuture},
     Future,
 };
 use futures_ext::{BoxFuture, FutureExt};
@@ -47,6 +47,101 @@ use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::iter::FromIterator;
 
+#[derive(Copy, Clone)]
+pub enum Caching {
+    Enabled,
+    Disabled,
+}
+
+trait SqlFactory: Send + Sync {
+    /// Open an arbitrary struct implementing SqlConstructors
+    fn open<T: SqlConstructors>(&self) -> Result<Arc<T>>;
+
+    /// Open SqlFilenodes, and return a tier name and the struct.
+    fn open_filenodes(&self) -> Result<(String, Arc<SqlFilenodes>)>;
+}
+
+struct XdbFactory {
+    db_address: String,
+    myrouter_port: Option<u16>,
+    sharded_filenodes: Option<ShardedFilenodesParams>,
+}
+
+impl XdbFactory {
+    fn new(
+        db_address: String,
+        myrouter_port: Option<u16>,
+        sharded_filenodes: Option<ShardedFilenodesParams>,
+    ) -> Self {
+        XdbFactory {
+            db_address,
+            myrouter_port,
+            sharded_filenodes,
+        }
+    }
+}
+
+impl SqlFactory for XdbFactory {
+    fn open<T: SqlConstructors>(&self) -> Result<Arc<T>> {
+        Ok(Arc::new(T::with_xdb(
+            self.db_address.clone(),
+            self.myrouter_port,
+        )?))
+    }
+
+    fn open_filenodes(&self) -> Result<(String, Arc<SqlFilenodes>)> {
+        let (tier, filenodes) = match (self.sharded_filenodes.clone(), self.myrouter_port) {
+            (
+                Some(ShardedFilenodesParams {
+                    shard_map,
+                    shard_num,
+                }),
+                Some(port),
+            ) => {
+                let conn = SqlFilenodes::with_sharded_myrouter(&shard_map, port, shard_num.into())?;
+                (shard_map, Arc::new(conn))
+            }
+            (
+                Some(ShardedFilenodesParams {
+                    shard_map,
+                    shard_num,
+                }),
+                None,
+            ) => {
+                let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into())?;
+                (shard_map, Arc::new(conn))
+            }
+            (None, port) => {
+                let conn = SqlFilenodes::with_xdb(self.db_address.clone(), port)?;
+                (self.db_address.clone(), Arc::new(conn))
+            }
+        };
+
+        Ok((tier, filenodes))
+    }
+}
+
+struct SqliteFactory {
+    path: PathBuf,
+}
+
+impl SqliteFactory {
+    fn new(path: PathBuf) -> Self {
+        SqliteFactory { path }
+    }
+}
+
+impl SqlFactory for SqliteFactory {
+    fn open<T: SqlConstructors>(&self) -> Result<Arc<T>> {
+        Ok(Arc::new(T::with_sqlite_path(self.path.join(T::LABEL))?))
+    }
+
+    fn open_filenodes(&self) -> Result<(String, Arc<SqlFilenodes>)> {
+        let filenodes: Arc<SqlFilenodes> = self.open()?;
+        Ok(("sqlite".to_string(), filenodes))
+    }
+}
+
 /// Construct a new BlobRepo with the given storage configuration. If the metadata DB is
 /// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
 /// it's assumed to be a test configuration.
@@ -59,68 +154,80 @@ pub fn open_blobrepo(
     storage_config: StorageConfig,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
+    caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> BoxFuture<BlobRepo, Error> {
     myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
-        .and_then(move |()| {
-            let uncensored_blobstore = make_blobstore(
+        .and_then(move |()| match storage_config.dbconfig {
+            MetadataDBConfig::LocalDB { path } => do_open_blobrepo(
+                logger,
+                SqliteFactory::new(path),
+                storage_config.blobstore,
+                caching,
                 repoid,
-                &storage_config.blobstore,
-                &storage_config.dbconfig,
                 myrouter_port,
-            );
-
-            let censored_blobs_store = result(match storage_config.dbconfig.clone() {
-                MetadataDBConfig::LocalDB { ref path } => {
-                    SqlCensoredContentStore::with_sqlite_path(path.join("censored_contents"))
-                        .map(|item| Arc::new(item))
-                }
-                MetadataDBConfig::Mysql {
-                    db_address,
-                    sharded_filenodes: _,
-                } => open_xdb::<SqlCensoredContentStore>(&db_address, myrouter_port),
-            });
-
-            let censored_blobs = censored_blobs_store.and_then(move |censored_store| {
-                censored_store
-                    .get_all_censored_blobs()
-                    .map_err(Error::from)
-                    .map(HashMap::from_iter)
-            });
-
-            uncensored_blobstore.join(censored_blobs).and_then(
-                move |(uncensored_blobstore, censored_blobs)| {
-                    let blobstore =
-                        Arc::new(CensoredBlob::new(uncensored_blobstore, censored_blobs));
-                    match storage_config.dbconfig {
-                        MetadataDBConfig::LocalDB { path } => {
-                            new_local(logger, &path, blobstore, repoid)
-                        }
-                        MetadataDBConfig::Mysql {
-                            db_address,
-                            sharded_filenodes,
-                        } => new_remote(
-                            logger,
-                            db_address,
-                            sharded_filenodes,
-                            blobstore,
-                            repoid,
-                            myrouter_port,
-                            bookmarks_cache_ttl,
-                        ),
-                    }
-                },
+                bookmarks_cache_ttl,
             )
+            .left_future(),
+            MetadataDBConfig::Mysql {
+                db_address,
+                sharded_filenodes,
+            } => do_open_blobrepo(
+                logger,
+                XdbFactory::new(db_address, myrouter_port, sharded_filenodes),
+                storage_config.blobstore,
+                caching,
+                repoid,
+                myrouter_port,
+                bookmarks_cache_ttl,
+            )
+            .right_future(),
         })
         .boxify()
 }
 
+fn do_open_blobrepo<T: SqlFactory>(
+    logger: slog::Logger,
+    sql_factory: T,
+    blobconfig: BlobConfig,
+    caching: Caching,
+    repoid: RepositoryId,
+    myrouter_port: Option<u16>,
+    bookmarks_cache_ttl: Option<Duration>,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    let uncensored_blobstore = make_blobstore(repoid, &blobconfig, &sql_factory, myrouter_port);
+
+    let censored_blobs_store: Result<Arc<SqlCensoredContentStore>> = sql_factory.open();
+
+    let censored_blobs = censored_blobs_store
+        .into_future()
+        .and_then(move |censored_store| {
+            censored_store
+                .get_all_censored_blobs()
+                .map_err(Error::from)
+                .map(HashMap::from_iter)
+        });
+
+    uncensored_blobstore.join(censored_blobs).and_then(
+        move |(uncensored_blobstore, censored_blobs)| {
+            let blobstore = Arc::new(CensoredBlob::new(uncensored_blobstore, censored_blobs));
+
+            match caching {
+                Caching::Disabled => new_development(logger, &sql_factory, blobstore, repoid),
+                Caching::Enabled => {
+                    new_production(logger, &sql_factory, blobstore, repoid, bookmarks_cache_ttl)
+                }
+            }
+        },
+    )
+}
+
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
-fn make_blobstore(
+fn make_blobstore<T: SqlFactory>(
     repoid: RepositoryId,
     blobconfig: &BlobConfig,
-    dbconfig: &MetadataDBConfig,
+    sql_factory: &T,
     myrouter_port: Option<u16>,
 ) -> BoxFuture<Arc<Blobstore>, Error> {
     use BlobConfig::*;
@@ -191,41 +298,21 @@ fn make_blobstore(
             scuba_table,
             blobstores,
         } => {
-            let queue = if dbconfig.is_local() {
-                dbconfig
-                    .get_local_address()
-                    .ok_or_else(|| err_msg("Local db path is not specified"))
-                    .and_then(|path| {
-                        Ok(Arc::new(SqlBlobstoreSyncQueue::with_sqlite_path(
-                            path.join("blobstore_sync_queue"),
-                        )?))
-                    })
-                    .into_future()
-            } else {
-                dbconfig
-                    .get_db_address()
-                    .ok_or_else(|| err_msg("remote db address is not specified"))
-                    .and_then(move |dbaddr| {
-                        let sync_queue =
-                            Arc::new(SqlBlobstoreSyncQueue::with_xdb(dbaddr, myrouter_port)?);
-                        Ok(sync_queue)
-                    })
-                    .into_future()
-            };
+            let queue: Result<Arc<SqlBlobstoreSyncQueue>> = sql_factory.open();
 
             let components: Vec<_> = blobstores
                 .iter()
                 .map({
-                    cloned!(dbconfig);
                     move |(blobstoreid, config)| {
                         cloned!(blobstoreid);
-                        make_blobstore(repoid, config, &dbconfig, myrouter_port)
+                        make_blobstore(repoid, config, sql_factory, myrouter_port)
                             .map({ move |store| (blobstoreid, store) })
                     }
                 })
                 .collect();
 
             queue
+                .into_future()
                 .and_then({
                     cloned!(scuba_table);
                     move |queue| {
@@ -273,93 +360,46 @@ pub fn new_memblob_empty(
     ))
 }
 
-fn new_filenodes(
-    db_address: &String,
-    sharded_filenodes: Option<ShardedFilenodesParams>,
-    myrouter_port: Option<u16>,
-) -> Result<CachingFilenodes> {
-    let (tier, filenodes) = match (sharded_filenodes, myrouter_port) {
-        (
-            Some(ShardedFilenodesParams {
-                shard_map,
-                shard_num,
-            }),
-            Some(port),
-        ) => {
-            let conn = SqlFilenodes::with_sharded_myrouter(&shard_map, port, shard_num.into())?;
-            (shard_map, conn)
-        }
-        (
-            Some(ShardedFilenodesParams {
-                shard_map,
-                shard_num,
-            }),
-            None,
-        ) => {
-            let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into())?;
-            (shard_map, conn)
-        }
-        (None, port) => {
-            let conn = SqlFilenodes::with_xdb(&db_address, port)?;
-            (db_address.clone(), conn)
-        }
-    };
-
-    let filenodes = CachingFilenodes::new(
-        Arc::new(filenodes),
-        cachelib::get_volatile_pool("filenodes")?.ok_or(Error::from(
-            ErrorKind::MissingCachePool("filenodes".to_string()),
-        ))?,
-        "sqlfilenodes",
-        &tier,
-    );
-
-    Ok(filenodes)
-}
-
 /// Create a new BlobRepo with purely local state. (Well, it could be a remote blobstore, but
 /// that would be weird to use with a local metadata db.)
-fn new_local(
+fn new_development<T: SqlFactory>(
     logger: Logger,
-    dbpath: &Path,
+    sql_factory: &T,
     blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
 ) -> Result<BlobRepo> {
-    let bookmarks = SqlBookmarks::with_sqlite_path(dbpath.join("bookmarks"))
+    let bookmarks: Arc<SqlBookmarks> = sql_factory
+        .open()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-    let filenodes = SqlFilenodes::with_sqlite_path(dbpath.join("filenodes"))
+    let filenodes: Arc<SqlFilenodes> = sql_factory
+        .open()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-    let changesets = SqlChangesets::with_sqlite_path(dbpath.join("changesets"))
+    let changesets: Arc<SqlChangesets> = sql_factory
+        .open()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-    let bonsai_hg_mapping = SqlBonsaiHgMapping::with_sqlite_path(dbpath.join("bonsai_hg_mapping"))
+    let bonsai_hg_mapping: Arc<SqlBonsaiHgMapping> = sql_factory
+        .open()
         .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
 
     Ok(BlobRepo::new(
         logger,
-        Arc::new(bookmarks),
+        bookmarks,
         blobstore,
-        Arc::new(filenodes),
-        Arc::new(changesets),
-        Arc::new(bonsai_hg_mapping),
+        filenodes,
+        changesets,
+        bonsai_hg_mapping,
         repoid,
         Arc::new(DummyLease {}),
     ))
 }
 
-fn open_xdb<T: SqlConstructors>(addr: &str, myrouter_port: Option<u16>) -> Result<Arc<T>> {
-    let ret = T::with_xdb(addr, myrouter_port)?;
-    Ok(Arc::new(ret))
-}
-
 /// If the DB is remote then set up for a full production configuration.
 /// In theory this could be with a local blobstore, but that would just be weird.
-fn new_remote(
+fn new_production<T: SqlFactory>(
     logger: Logger,
-    db_address: String,
-    sharded_filenodes: Option<ShardedFilenodesParams>,
+    sql_factory: &T,
     blobstore: Arc<Blobstore>,
     repoid: RepositoryId,
-    myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
     let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
@@ -375,10 +415,16 @@ fn new_remote(
         presence_pool,
     ));
 
-    let filenodes = new_filenodes(&db_address, sharded_filenodes, myrouter_port)?;
+    let filenodes_pool = cachelib::get_volatile_pool("filenodes")?.ok_or(Error::from(
+        ErrorKind::MissingCachePool("filenodes".to_string()),
+    ))?;
+    let (filenodes_tier, filenodes): (String, Arc<SqlFilenodes>) = sql_factory.open_filenodes()?;
+
+    let filenodes =
+        CachingFilenodes::new(filenodes, filenodes_pool, "sqlfilenodes", &filenodes_tier);
 
     let bookmarks: Arc<dyn Bookmarks> = {
-        let bookmarks = open_xdb::<SqlBookmarks>(&db_address, myrouter_port)?;
+        let bookmarks: Arc<SqlBookmarks> = sql_factory.open()?;
         if let Some(ttl) = bookmarks_cache_ttl {
             Arc::new(CachedBookmarks::new(bookmarks, ttl))
         } else {
@@ -386,14 +432,14 @@ fn new_remote(
         }
     };
 
-    let changesets = open_xdb::<SqlChangesets>(&db_address, myrouter_port)?;
+    let changesets: Arc<SqlChangesets> = sql_factory.open()?;
     let changesets_cache_pool = cachelib::get_volatile_pool("changesets")?.ok_or(Error::from(
         ErrorKind::MissingCachePool("changesets".to_string()),
     ))?;
     let changesets = CachingChangesets::new(changesets, changesets_cache_pool.clone());
     let changesets = Arc::new(changesets);
 
-    let bonsai_hg_mapping = open_xdb::<SqlBonsaiHgMapping>(&db_address, myrouter_port)?;
+    let bonsai_hg_mapping: Arc<SqlBonsaiHgMapping> = sql_factory.open()?;
     let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
         bonsai_hg_mapping,
         cachelib::get_volatile_pool("bonsai_hg_mapping")?.ok_or(Error::from(
