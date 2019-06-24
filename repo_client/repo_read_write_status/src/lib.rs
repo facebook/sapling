@@ -11,6 +11,7 @@ use futures::future::{err, ok};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::{queries, Connection};
+use sql_ext::SqlConstructors;
 
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
@@ -80,59 +81,88 @@ queries! {
 }
 
 #[derive(Clone)]
+pub struct SqlRepoReadWriteStatus {
+    write_connection: Connection,
+    read_connection: Connection,
+}
+
+impl SqlConstructors for SqlRepoReadWriteStatus {
+    const LABEL: &'static str = "repo-lock";
+
+    fn from_connections(
+        write_connection: Connection,
+        read_connection: Connection,
+        _read_master_connection: Connection,
+    ) -> Self {
+        Self {
+            write_connection,
+            read_connection,
+        }
+    }
+
+    fn get_up_query() -> &'static str {
+        include_str!("../../schemas/sqlite-repo-lock.sql")
+    }
+}
+
+impl SqlRepoReadWriteStatus {
+    fn query_read_write_state(
+        &self,
+        repo_name: &String,
+    ) -> impl Future<Item = Option<(HgMononokeReadWrite, Option<String>)>, Error = Error> {
+        GetReadWriteStatus::query(&self.read_connection, &repo_name)
+            .map(|rows| rows.into_iter().next())
+    }
+
+    fn set_state(
+        &self,
+        repo_name: &String,
+        state: &HgMononokeReadWrite,
+        reason: &String,
+    ) -> impl Future<Item = bool, Error = Error> {
+        SetReadWriteStatus::query(&self.write_connection, &[(&repo_name, &state, &reason)])
+            .map(|res| res.affected_rows() > 0)
+    }
+}
+
+#[derive(Clone)]
 pub struct RepoReadWriteFetcher {
-    read_connection: Option<Connection>,
-    write_connection: Option<Connection>,
+    sql_repo_read_write_status: Option<SqlRepoReadWriteStatus>,
     readonly_config: RepoReadOnly,
     repo_name: String,
 }
 
 impl RepoReadWriteFetcher {
-    pub fn with_myrouter(
+    pub fn new(
+        sql_repo_read_write_status: Option<SqlRepoReadWriteStatus>,
         readonly_config: RepoReadOnly,
         repo_name: String,
-        tier: impl ToString,
-        port: u16,
     ) -> Self {
-        let mut builder = Connection::myrouter_builder();
-        builder.tier(tier).port(port);
-
         Self {
-            read_connection: Some(builder.build_read_only()),
-            write_connection: Some(builder.build_read_write()),
+            sql_repo_read_write_status,
             readonly_config,
             repo_name,
         }
     }
 
-    pub fn new(readonly_config: RepoReadOnly, repo_name: String) -> Self {
-        Self {
-            readonly_config,
-            repo_name,
-            read_connection: None,
-            write_connection: None,
-        }
-    }
-
-    fn query_read_write_state(&self) -> BoxFuture<RepoReadOnly, Error> {
-        GetReadWriteStatus::query(&self.read_connection.clone().unwrap(), &self.repo_name)
-            .map(|rows| {
-                match rows.into_iter().next() {
-                    Some(row) => match row {
-                        (HgMononokeReadWrite::MononokeWrite, _) => RepoReadOnly::ReadWrite,
-                        (_, reason) => {
-                            RepoReadOnly::ReadOnly(reason.unwrap_or_else(|| DB_MSG.to_string()))
-                        }
-                    },
-                    // The repo state hasn't been initialised yet, so let's be cautious.
+    fn query_read_write_state(&self) -> impl Future<Item = RepoReadOnly, Error = Error> {
+        match &self.sql_repo_read_write_status {
+            Some(status) => status
+                .query_read_write_state(&self.repo_name)
+                .map(|item| match item {
+                    Some((HgMononokeReadWrite::MononokeWrite, _)) => RepoReadOnly::ReadWrite,
+                    Some((_, reason)) => {
+                        RepoReadOnly::ReadOnly(reason.unwrap_or_else(|| DB_MSG.to_string()))
+                    }
                     None => RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string()),
-                }
-            })
-            .boxify()
+                })
+                .left_future(),
+            None => ok(RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string())).right_future(),
+        }
     }
 
     pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
-        if self.read_connection.is_some() {
+        if self.sql_repo_read_write_status.is_some() {
             match self.readonly_config {
                 RepoReadOnly::ReadOnly(ref reason) => {
                     ok(RepoReadOnly::ReadOnly(reason.clone())).boxify()
@@ -146,34 +176,29 @@ impl RepoReadWriteFetcher {
 
     fn set_state(
         &self,
-        state: HgMononokeReadWrite,
-        reason: String,
+        state: &HgMononokeReadWrite,
+        reason: &String,
     ) -> impl Future<Item = bool, Error = Error> {
-        match &self.write_connection {
-            Some(connection) => {
-                SetReadWriteStatus::query(&connection, &[(&self.repo_name, &state, &reason)])
-                    .map(|res| res.affected_rows() > 0)
-                    .left_future()
-            }
+        match &self.sql_repo_read_write_status {
+            Some(status) => status
+                .set_state(&self.repo_name, &state, &reason)
+                .left_future(),
             None => err(err_msg("db name is not specified")).right_future(),
         }
     }
 
     pub fn set_mononoke_read_write(
         &self,
-        reason: String,
+        reason: &String,
     ) -> impl Future<Item = bool, Error = Error> {
-        self.set_state(HgMononokeReadWrite::MononokeWrite, reason)
+        self.set_state(&HgMononokeReadWrite::MononokeWrite, &reason)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure_ext::Result;
-    use metaconfig_types::RepoReadOnly;
     use metaconfig_types::RepoReadOnly::*;
-    use sql::rusqlite::Connection as SqliteConnection;
 
     static CONFIG_MSG: &str = "Set by config option";
 
@@ -191,30 +216,10 @@ mod test {
         }
     }
 
-    impl RepoReadWriteFetcher {
-        pub fn with_sqlite(readonly_config: RepoReadOnly, repo_name: String) -> Result<Self> {
-            let sqlite_con = SqliteConnection::open_in_memory()?;
-            sqlite_con.execute_batch(include_str!("../../schemas/sqlite-repo-lock.sql"))?;
-            let read_con = Connection::with_sqlite(sqlite_con);
-            let write_con = read_con.clone();
-
-            Ok(Self {
-                readonly_config,
-                repo_name,
-                read_connection: Some(read_con),
-                write_connection: Some(write_con),
-            })
-        }
-
-        pub fn get_connection(&self) -> Option<Connection> {
-            self.read_connection.clone()
-        }
-    }
-
     #[test]
     fn test_readonly_config_no_sqlite() {
         let fetcher =
-            RepoReadWriteFetcher::new(ReadOnly(CONFIG_MSG.to_string()), "repo".to_string());
+            RepoReadWriteFetcher::new(None, ReadOnly(CONFIG_MSG.to_string()), "repo".to_string());
         assert_eq!(
             fetcher.readonly().wait().unwrap(),
             ReadOnly(CONFIG_MSG.to_string())
@@ -223,15 +228,18 @@ mod test {
 
     #[test]
     fn test_readwrite_config_no_sqlite() {
-        let fetcher = RepoReadWriteFetcher::new(ReadWrite, "repo".to_string());
+        let fetcher = RepoReadWriteFetcher::new(None, ReadWrite, "repo".to_string());
         assert_eq!(fetcher.readonly().wait().unwrap(), ReadWrite);
     }
 
     #[test]
     fn test_readonly_config_with_sqlite() {
-        let fetcher =
-            RepoReadWriteFetcher::with_sqlite(ReadOnly(CONFIG_MSG.to_string()), "repo".to_string())
-                .unwrap();
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadOnly(CONFIG_MSG.to_string()),
+            "repo".to_string(),
+        );
         assert_eq!(
             fetcher.readonly().wait().unwrap(),
             ReadOnly(CONFIG_MSG.to_string())
@@ -240,7 +248,12 @@ mod test {
 
     #[test]
     fn test_readwrite_with_sqlite() {
-        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            "repo".to_string(),
+        );
         // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
         assert_eq!(
             fetcher.readonly().wait().unwrap(),
@@ -248,7 +261,11 @@ mod test {
         );
 
         InsertState::query(
-            &fetcher.get_connection().unwrap(),
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
             &[("repo", &HgMononokeReadWrite::MononokeWrite)],
         )
         .wait()
@@ -257,7 +274,11 @@ mod test {
         assert_eq!(fetcher.readonly().wait().unwrap(), ReadWrite);
 
         InsertState::query(
-            &fetcher.get_connection().unwrap(),
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
             &[("repo", &HgMononokeReadWrite::HgWrite)],
         )
         .wait()
@@ -271,10 +292,19 @@ mod test {
 
     #[test]
     fn test_readwrite_with_sqlite_and_reason() {
-        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            "repo".to_string(),
+        );
 
         InsertStateWithReason::query(
-            &fetcher.get_connection().unwrap(),
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
             &[("repo", &HgMononokeReadWrite::HgWrite, "reason123")],
         )
         .wait()
@@ -288,7 +318,12 @@ mod test {
 
     #[test]
     fn test_readwrite_with_sqlite_other_repo() {
-        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            "repo".to_string(),
+        );
         // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
         assert_eq!(
             fetcher.readonly().wait().unwrap(),
@@ -296,7 +331,11 @@ mod test {
         );
 
         InsertState::query(
-            &fetcher.get_connection().unwrap(),
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
             &[("other_repo", &HgMononokeReadWrite::MononokeWrite)],
         )
         .wait()
@@ -308,7 +347,11 @@ mod test {
         );
 
         InsertState::query(
-            &fetcher.get_connection().unwrap(),
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
             &[("repo", &HgMononokeReadWrite::MononokeWrite)],
         )
         .wait()
@@ -319,7 +362,12 @@ mod test {
 
     #[test]
     fn test_write() {
-        let fetcher = RepoReadWriteFetcher::with_sqlite(ReadWrite, "repo".to_string()).unwrap();
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            "repo".to_string(),
+        );
         // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
         assert_eq!(
             fetcher.readonly().wait().unwrap(),
@@ -327,7 +375,7 @@ mod test {
         );
 
         fetcher
-            .set_mononoke_read_write("repo is locked".to_string())
+            .set_mononoke_read_write(&"repo is locked".to_string())
             .wait()
             .unwrap();
         assert_eq!(fetcher.readonly().wait().unwrap(), ReadWrite);

@@ -28,6 +28,7 @@ use phases::{CachingPhases, Phases, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo, RepoReadWriteFetcher};
+use repo_read_write_status::SqlRepoReadWriteStatus;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 use sql_ext::{myrouter_ready, SqlConstructors};
@@ -129,14 +130,15 @@ pub fn repo_handlers(
 
                 // XXX Fixme - put write_lock_db_address into storage_config.dbconfig?
                 let read_write_fetcher = if let Some(addr) = config.write_lock_db_address {
-                    RepoReadWriteFetcher::with_myrouter(
+                    let sql_repo_read_write_status =
+                        SqlRepoReadWriteStatus::with_xdb(addr.clone(), myrouter_port).unwrap();
+                    RepoReadWriteFetcher::new(
+                        Some(sql_repo_read_write_status),
                         config.readonly.clone(),
                         reponame.clone(),
-                        addr.clone(),
-                        myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
                     )
                 } else {
-                    RepoReadWriteFetcher::new(config.readonly.clone(), reponame.clone())
+                    RepoReadWriteFetcher::new(None, config.readonly.clone(), reponame.clone())
                 };
 
                 let repo = MononokeRepo::new(
