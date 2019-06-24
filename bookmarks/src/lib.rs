@@ -149,6 +149,10 @@ impl BookmarkName {
         self.bookmark.clone().into()
     }
 
+    pub fn into_string(self) -> String {
+        self.bookmark.into()
+    }
+
     pub fn as_str(&self) -> &str {
         self.bookmark.as_str()
     }

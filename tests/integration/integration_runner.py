@@ -44,6 +44,7 @@ EPHEMERAL_DB_WHITELIST = {
     "test-init.t",
     "test-lookup.t",
     "test-mononoke-admin.t",
+    "test-bookmarks-filler.t",
 }
 
 TESTDIR_PATH = "scm/mononoke/tests/integration"
@@ -64,6 +65,10 @@ PUSHREBASE_REPLAY_TARGET = "//scm/mononoke/facebook/pushrebase_replay:pushrebase
 VERIFY_INTEGRITY_TARGET = "//security/source_control:verify_integrity"
 MONONOKE_HG_SYNC_TARGET = (
     "//scm/mononoke/facebook/mononoke_hg_sync_job:mononoke_hg_sync_job"
+)
+MONONOKE_BOOKMARKS_FILLER_TARGET = (
+    "//scm/mononoke/facebook/mononoke_commitcloud_bookmarks_filler"
+    ":mononoke_commitcloud_bookmarks_filler"
 )
 WRITE_STUB_LOG_ENTRY_TARGET = (
     "//scm/mononoke/tests/write_stub_log_entry:write_stub_log_entry"
@@ -185,6 +190,7 @@ def run(
         "FACEBOOK_HOOKS", FACEBOOK_HOOKS_TARGET, pathutils.BuildRuleTypes.FILEGROUP
     )
     add_to_environ("MONONOKE_HG_SYNC", MONONOKE_HG_SYNC_TARGET)
+    add_to_environ("MONONOKE_BOOKMARKS_FILLER", MONONOKE_BOOKMARKS_FILLER_TARGET)
     add_to_environ("WRITE_STUB_LOG_ENTRY", WRITE_STUB_LOG_ENTRY_TARGET)
     add_to_environ(
         "PUSHREBASE_REPLAY",

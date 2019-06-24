@@ -111,6 +111,23 @@ function mononoke_hg_sync_with_failure_handler {
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 
+function mononoke_bookmarks_filler {
+  local sql_source sql_name
+
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    sql_source="xdb"
+    sql_name="$DB_SHARD_NAME"
+  else
+    sql_source="sqlite"
+    sql_name="${TESTTMP}/replaybookmarksqueue"
+  fi
+
+  "$MONONOKE_BOOKMARKS_FILLER" \
+    "${CACHING_ARGS[@]}" \
+    --mononoke-config-path mononoke-config  \
+    "$@" "$sql_source" "$sql_name"
+}
+
 function create_mutable_counters_sqlite3_db {
   cat >> "$TESTTMP"/mutable_counters.sql <<SQL
   CREATE TABLE mutable_counters (
@@ -741,7 +758,8 @@ function pushrebase_replay() {
 
   REPLAY_CA_PEM="$TEST_CERTDIR/root-ca.crt" \
   THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
-  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" $PUSHREBASE_REPLAY \
+  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
+  "$PUSHREBASE_REPLAY" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --reponame repo \
     --hgcli "$MONONOKE_HGCLI" \
@@ -810,4 +828,50 @@ prepushkey = python:$TESTTMP/replayverification.py:verify_replay
 prepushkey.lock = python:$TESTTMP/repo_lock.py:run
 CONFIG
 
+}
+
+# We only have one testing shard available, which is patterned off of the
+# Mononoke DB. However, we don't have this particular table in there (since
+# we're connecting to commit cloud for it). Note that we have to silence output
+# from the db tool: it's a bit chatty in unpredictable ways.
+function create_replaybookmarks_table() {
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    db -w "$DB_SHARD_NAME" 2>/dev/null  <<EOF
+    CREATE TABLE replaybookmarksqueue (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  reponame varbinary(255) NOT NULL,
+  bookmark varbinary(512) NOT NULL,
+  node varbinary(64) NOT NULL,
+  bookmark_hash varbinary(64) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  synced TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY sync_queue (synced, reponame, bookmark_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+EOF
+else
+  # We don't actually create any DB here, replaybookmarks will create it for it
+  # when it opens a SQLite DB in this directory.
+  mkdir "$TESTTMP/replaybookmarksqueue"
+fi
+}
+
+function insert_replaybookmarks_entry() {
+  local repo bookmark
+  repo="$1"
+  bookmark="$2"
+  node="$3"
+
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    # See above for why we have to redirect this output to /dev/null
+    db -w "$DB_SHARD_NAME" 2>/dev/null <<EOF
+      INSERT INTO replaybookmarksqueue (reponame, bookmark, node, bookmark_hash)
+      VALUES ('$repo', '$bookmark', '$node', '$bookmark');
+EOF
+  else
+    sqlite3 "$TESTTMP/replaybookmarksqueue/replaybookmarksqueue" <<EOF
+      INSERT INTO replaybookmarksqueue (reponame, bookmark, node, bookmark_hash)
+      VALUES (CAST('$repo' AS BLOB), '$bookmark', '$node', '$bookmark');
+EOF
+fi
 }
