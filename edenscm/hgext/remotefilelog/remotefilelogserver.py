@@ -537,7 +537,7 @@ def getpack(repo, proto, args):
                 history.append((node, p1node, p2node, linknode, copyfrom))
 
             # Scan and send deltas
-            chain = _getdeltachain(fl, nodes, -1)
+            chain = _getdeltachain(fl, nodes)
 
             for chunk in wirepack.sendpackpart(filename, history, chain):
                 yield chunk
@@ -571,45 +571,24 @@ def _receivepackrequest(stream):
     return files
 
 
-def _getdeltachain(fl, nodes, stophint):
-    """Produces a chain of deltas that includes each of the given nodes.
-
-    `stophint` - The changeset rev number to stop at. If it's set to >= 0, we
-    will return not only the deltas for the requested nodes, but also all
-    necessary deltas in their delta chains, as long as the deltas have link revs
-    >= the stophint. This allows us to return an approximately minimal delta
-    chain when the user performs a pull. If `stophint` is set to -1, all nodes
-    will return full texts.  """
+def _getdeltachain(fl, nodes):
+    """Collect the full-text for all the given nodes.
+    """
     chain = []
 
     seen = set()
     for node in nodes:
         startrev = fl.rev(node)
         cur = startrev
-        while True:
-            if cur in seen:
-                break
-            start, length, size, base, linkrev, p1, p2, node = fl.index[cur]
-            if linkrev < stophint and cur != startrev:
-                break
+        if cur in seen:
+            continue
 
-            # Return a full text if:
-            # - the caller requested it (via stophint == -1)
-            # - the revlog chain has ended (via base==null or base==node)
-            # - p1 is null, which can mean a copy in some situations
-            if stophint == -1 or base == nullrev or base == cur or p1 == nullrev:
-                delta = fl.revision(cur)
-                base = nullrev
-            else:
-                delta = fl._chunk(cur)
+        start, length, size, base, linkrev, p1, p2, node = fl.index[cur]
 
-            basenode = fl.node(base)
-            chain.append((node, basenode, delta))
-            seen.add(cur)
-
-            if base == nullrev:
-                break
-            cur = base
+        delta = fl.revision(cur)
+        basenode = nullid
+        chain.append((node, basenode, delta))
+        seen.add(cur)
 
     chain.reverse()
     return chain
