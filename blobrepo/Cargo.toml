@@ -3,6 +3,7 @@ name = "blobrepo"
 version = "0.0.1"
 authors = ["Facebook"]
 license = "GPLv2+"
+edition = "2018"
 
 [dependencies]
 bincode = "1.0.0"
