@@ -22,5 +22,3 @@ path = "../../lib/hgpython"
 buildinfo = []
 default = []
 with_chg = []
-hgdev = ["hgpython/hgdev"]
-buckbuild = ["hgpython/buckbuild"]

@@ -3,9 +3,6 @@
 
 Setup
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
-
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"

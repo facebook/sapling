@@ -651,7 +651,7 @@ class asset(object):
                 f.extractall(destpath)
         elif srcpath.endswith(".zip") or srcpath.endswith(".whl"):
             with zipfile.ZipFile(srcpath, "r") as f:
-                # Same as above. Strip the destdir name if all entries ahve it.
+                # Same as above. Strip the destdir name if all entries have it.
                 prefix = destdir + "/"
                 if all((name + "/").startswith(prefix) for name in f.namelist()):
                     destpath = os.path.dirname(destpath)
@@ -1042,36 +1042,6 @@ class buildembedded(Command):
                     targetpath = os.path.join(target_dir, compfilename)
                     py_compile.compile(relative_source_path, targetpath)
 
-    def _process_python_install(self, dirforpycs):
-        """Py-Compile all of the files in python installation and
-        copy results to `dirforpycs`"""
-        interp_dir = os.path.realpath(pjoin(sys.executable, ".."))
-
-        def good_path_item(pitem):
-            if not os.path.exists(pitem):
-                return False
-            if not os.path.isdir(item):
-                return False
-            if samepath(pitem, scriptdir):
-                return False
-            if samepath(pitem, interp_dir):
-                return False
-            return True
-
-        for item in sys.path:
-            if not good_path_item(item):
-                continue
-            skipdirs = []
-            for other in sys.path:
-                if other != item and other.startswith(item):
-                    skipdirs.append(relpath(other, item))
-            # hardcoded list of things we want to skip
-            skipdirs.extend(["test", "tests", "lib2to3", "py2exe"])
-            if "cython" in item.lower():
-                skipdirs.append("Demos")
-            skipdirs = set(skipdir + os.path.sep for skipdir in skipdirs)
-            self._process_dir(item, "", skipdirs, dirforpycs)
-
     def _process_hg_source(self, dirforpycs):
         """Py-Compile all of the Mercurial Python files and copy
         results to `dirforpycs`"""
@@ -1080,55 +1050,19 @@ class buildembedded(Command):
             self._process_dir(d, p, set(), dirforpycs)
 
     def _process_hg_exts(self, dirforexts):
-        """Prepare Mercurail Python extensions to be used by EmbeddedImporter
+        """Prepare Mercurail native Python extensions
 
-        Since all of the Mercurial extensions are in packages, we know to
-        just rename the .pyd/.so files into `path.to.module.pyd`"""
+        This just copies edenscmnative/ to the destination."""
         parentdir = scriptdir
         if not self.local_bins:
             # copy .pyd's from ./build/lib.win-amd64/, not from ./
             parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
-        hgdirs = ["edenscm", "edenscmnative"]
-        for hgdir in hgdirs:
-            fulldir = pjoin(parentdir, hgdir)
-            for dirpath, dirnames, filenames in os.walk(fulldir):
-                for filename in filenames:
-                    if not self._is_ext_file(filename):
-                        continue
-                    # Mercurial exts are in packages, so rename the files
-                    # mercurial/cext/osutil.pyd => mercurial.cext.osutil.pyd
-                    newfilename = relpath(pjoin(dirpath, filename), parentdir)
-                    newfilename = newfilename.replace(os.path.sep, ".")
-                    log.debug("copying %s from %s" % (dirpath, filename))
-                    copy_to(
-                        os.path.join(dirpath, filename),
-                        os.path.join(dirforexts, newfilename),
-                    )
+        copy_to(pjoin(parentdir, "edenscmnative"), pjoin(dirforexts, "edenscmnative"))
 
-    def _process_py_exts(self, dirforexts):
-        """Prepare Python extensions to be used by EmbeddedImporter
-
-        Unlike Mercurial files, we can't be sure about native extensions
-        from the Python installation. Most of them are standalone modules
-        (like lz4, all of the standard python .pyds/.sos), so we err on
-        this side. If we learn about third-party packaged native
-        extensions, we'll have to hardcode them here"""
-        for item in sys.path:
-            if not os.path.exists(item) or not os.path.isdir(item):
-                continue
-            for filename in os.listdir(item):
-                if not self._is_ext_file(filename):
-                    continue
-                copy_to(pjoin(item, filename), pjoin(dirforexts, filename))
-
-    def _zip_pyc_files(self, zipname, dirtozip):
-        """Create a zip archive of all the .pyc files"""
-        with zipfile.ZipFile(zipname, "a") as z:
-            for dirpath, dirnames, filenames in os.walk(dirtozip):
-                for filename in filenames:
-                    fullfname = pjoin(dirpath, filename)
-                    relname = fullfname[len(dirtozip) + 1 :]
-                    z.write(fullfname, relname)
+    def _zip_pyc_files(self, zipname):
+        """Modify a zip archive to include edenscm .pyc files"""
+        with zipfile.PyZipFile(zipname, "a") as z:
+            z.writepy(pjoin(scriptdir, "edenscm"))
 
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
@@ -1141,6 +1075,11 @@ class buildembedded(Command):
             pylibpath = ctypes.util.find_library(pylib)
         log.debug("Python dynamic library is copied from: %s" % pylibpath)
         copy_to(pylibpath, pjoin(dirtocopy, os.path.basename(pylibpath)))
+        # Copy python27.zip
+        pyzipname = pylib + ".zip"
+        pyzippath = os.path.realpath(pjoin(sys.executable, "..", pyzipname))
+        if os.path.exists(pyzippath):
+            copy_to(pyzippath, pjoin(dirtocopy, pyzipname))
 
     def _copy_hg_exe(self, dirtocopy):
         """Copy main mercurial executable which would load the embedded Python"""
@@ -1157,42 +1096,27 @@ class buildembedded(Command):
 
     def _copy_other(self, dirtocopy):
         """Copy misc files, which aren't main hg codebase"""
-        tocopy = {
-            "CONTRIBUTING": "CONTRIBUTING",
-            "CONTRIBUTORS": "CONTRIBUTORS",
-            "contrib": "contrib",
-            pjoin("edenscm/mercurial", "templates"): "edenscm/templates",
-            pjoin("edenscm/mercurial", "help"): "edenscm/help",
-        }
+        tocopy = {"contrib/editmergeps.ps1": "contrib/editmergeps.ps1"}
         for sname, tname in tocopy.items():
             source = pjoin(scriptdir, sname)
             target = pjoin(dirtocopy, tname)
             copy_to(source, target)
 
     def run(self):
-        raise RuntimeError("This is temporarily broken")
         embdir = pjoin(scriptdir, "build", "embedded")
-        libdir = pjoin(embdir, "lib")
-        tozip = pjoin(embdir, "_tozip")
         ensureempty(embdir)
-        ensureexists(libdir)
-        ensureexists(tozip)
-        self._process_python_install(tozip)
-        self._process_hg_source(tozip)
-        self._process_hg_exts(libdir)
-        self._process_py_exts(libdir)
+        ensureexists(embdir)
+        self._process_hg_exts(embdir)
 
-        # Use the IPython.zip as a start and add new things to it.
-        buildpyzip(self.distribution).run()
-        oldzippath = pjoin(builddir, "IPython.zip")
-        zippath = pjoin(libdir, "library.zip")
-        copy_to(oldzippath, zippath)
-        self._zip_pyc_files(zippath, tozip)
-        rmtree(tozip)
         # On Windows, Python shared library has to live at the same level
         # as the main project binary, since this is the location which
         # has the first priority in dynamic linker search path.
         self._copy_py_lib(embdir)
+
+        # Build everything into python27.zip, which is in the default sys.path.
+        zippath = pjoin(embdir, "python27.zip")
+        buildpyzip(self.distribution).run(appendzippath=zippath)
+        self._zip_pyc_files(zippath)
         self._copy_hg_exe(embdir)
         self._copy_other(embdir)
 
@@ -1265,14 +1189,20 @@ class buildpyzip(Command):
     def finalize_options(self):
         pass
 
-    def run(self):
+    def run(self, appendzippath=None):
+        """If appendzippath is not None, files will be appended to the given
+        path. Otherwise, zippath will be a default path and recreated.
+        """
         fetchbuilddeps(self.distribution).run()
 
         # Directories of IPython dependencies
         depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.pyassets]
 
+        if appendzippath is None:
+            zippath = pjoin(builddir, "IPython.zip")
+        else:
+            zippath = appendzippath
         # Perform a mtime check so we can skip building if possible
-        zippath = pjoin(builddir, "IPython.zip")
         if os.path.exists(zippath):
             depmtime = max(os.stat(d).st_mtime for d in depdirs)
             zipmtime = os.stat(zippath).st_mtime
@@ -1281,11 +1211,12 @@ class buildpyzip(Command):
 
         # Compile all (pure Python) IPython dependencies and zip them into
         # IPython.zip
-        tryunlink(zippath)
+        if not appendzippath:
+            tryunlink(zippath)
         # Special case: pexpect/_async.py is Python 3 only. Delete it so
         # writepy won't try to compile it and fail.
         tryunlink(pjoin(builddir, "pexpect-4.6.0-py2.py3-none-any/pexpect/_async.py"))
-        with zipfile.PyZipFile(zippath, "w") as f:
+        with zipfile.PyZipFile(zippath, "a") as f:
             for asset in fetchbuilddeps.pyassets:
                 # writepy only scans directories if it is a Python package
                 # (ex. with __init__.py). Therefore scan the top-level
@@ -1720,7 +1651,11 @@ extmodules = [
             "lib/third-party/xdiff/xutils.h",
         ],
     ),
-    Extension("edenscmnative.bser", ["edenscm/hgext/extlib/pywatchman/bser.c"]),
+    Extension(
+        "edenscmnative.bser",
+        sources=["edenscm/hgext/extlib/pywatchman/bser.c"],
+        include_dirs=include_dirs,
+    ),
     Extension(
         "edenscmnative.cstore",
         sources=[
@@ -1818,16 +1753,19 @@ extmodules += cythonize(
         Extension(
             "edenscmnative.clindex",
             sources=["edenscmnative/clindex.pyx"],
+            include_dirs=include_dirs,
             extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
             "edenscmnative.litemmap",
             sources=["edenscmnative/litemmap.pyx"],
+            include_dirs=include_dirs,
             extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
             "edenscmnative.patchrmdir",
             sources=["edenscmnative/patchrmdir.pyx"],
+            include_dirs=include_dirs,
             extra_compile_args=filter(None, [PRODUCEDEBUGSYMBOLS]),
         ),
         Extension(
@@ -2133,7 +2071,6 @@ hgmainfeatures = (
             None,
             [
                 "buildinfo" if needbuildinfo else None,
-                "hgdev" if os.environ.get("HGDEV") else None,
                 "with_chg" if not iswindows else None,
             ],
         )

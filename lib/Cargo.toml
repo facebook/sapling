@@ -13,6 +13,7 @@ members = [
     "drawdag",
     "edenapi",
     "encoding",
+    "hgpython",
     "hg_watchman_client",
     "indexedlog",
     "lz4-pyframe",

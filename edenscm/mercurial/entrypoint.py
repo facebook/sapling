@@ -13,20 +13,9 @@ import sys
 
 
 def run():
-    # entrypoint is in mercurial/ dir, while we want 'from mercurial import ...',
-    # 'from hgext import ...' and 'from hgdemandimport import ...' to work
-    # so we are adding their parent directory to be the first item of sys.path
     # Do not follow symlinks (ex. do not use "realpath"). It breaks buck build.
     filedir = os.path.dirname(os.path.abspath(__file__))
     libdir = os.path.dirname(os.path.dirname(filedir))
-    if sys.path[0] != libdir:
-        sys.path.insert(0, libdir)
-
-    for element in list(sys.path):
-        if os.path.realpath(filedir) == os.path.realpath(element):
-            # the directory of entrypoint.py is mercurial/
-            # and it should not be present in sys.path, as we use absolute_import
-            sys.path.remove(element)
 
     from edenscm import hgdemandimport
 
@@ -80,4 +69,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run(True)
+    run()

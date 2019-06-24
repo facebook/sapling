@@ -16,10 +16,3 @@ features = ["python27-sys"]
 
 [dependencies.python27-sys]
 version = "0.2"
-
-[features]
-default = []
-# hgdev lets hgpython know that the crate is build to be used
-# in the development environment
-hgdev = []
-buckbuild = []

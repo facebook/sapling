@@ -1,4 +1,4 @@
-#require test-repo
+#require test-repo normal-layout
 
   $ . "$TESTDIR/helpers-testrepo.sh"
 

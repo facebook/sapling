@@ -18,9 +18,6 @@ export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
-HGDEV := 1
-export HGDEV
-
 HGNAME ?= hg
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
@@ -61,7 +58,6 @@ local:
 	  build_mo
 ifeq ($(OS),Windows_NT)
 	cp build/scripts-2.7/$(HGNAME).exe $(HGNAME).exe
-	cp build/hg-python/python27.dll python27.dll
 else
 	$(RM) $(HGNAME)
 	cp build/scripts-2.7/$(HGNAME) $(HGNAME)
