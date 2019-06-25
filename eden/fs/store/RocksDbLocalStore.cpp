@@ -33,6 +33,7 @@ using facebook::eden::Hash;
 using folly::ByteRange;
 using folly::IOBuf;
 using folly::StringPiece;
+using folly::Synchronized;
 using folly::io::Cursor;
 using rocksdb::FlushOptions;
 using rocksdb::ReadOptions;
@@ -126,11 +127,13 @@ class RocksDbWriteBatch : public LocalStore::WriteBatch {
   void flush() override;
   ~RocksDbWriteBatch() override;
   // Use LocalStore::beginWrite() to create a write batch
-  RocksDbWriteBatch(RocksHandles& dbHandles, size_t bufferSize);
+  RocksDbWriteBatch(
+      Synchronized<RocksHandles>::RLockedPtr&& dbHandles,
+      size_t bufferSize);
 
   void flushIfNeeded();
 
-  RocksHandles& dbHandles_;
+  folly::Synchronized<RocksHandles>::RLockedPtr lockedDB_;
   rocksdb::WriteBatch writeBatch_;
   size_t bufSize_;
 };
@@ -144,7 +147,7 @@ void RocksDbWriteBatch::flush() {
   XLOG(DBG5) << "Flushing " << pending << " entries with data size of "
              << writeBatch_.GetDataSize();
 
-  auto status = dbHandles_.db->Write(WriteOptions(), &writeBatch_);
+  auto status = lockedDB_->db->Write(WriteOptions(), &writeBatch_);
   XLOG(DBG5) << "... Flushed";
 
   if (!status.ok()) {
@@ -163,9 +166,11 @@ void RocksDbWriteBatch::flushIfNeeded() {
   }
 }
 
-RocksDbWriteBatch::RocksDbWriteBatch(RocksHandles& dbHandles, size_t bufSize)
+RocksDbWriteBatch::RocksDbWriteBatch(
+    Synchronized<RocksHandles>::RLockedPtr&& dbHandles,
+    size_t bufSize)
     : LocalStore::WriteBatch(),
-      dbHandles_(dbHandles),
+      lockedDB_(std::move(dbHandles)),
       writeBatch_(bufSize),
       bufSize_(bufSize) {}
 
@@ -181,7 +186,7 @@ void RocksDbWriteBatch::put(
     folly::ByteRange key,
     folly::ByteRange value) {
   writeBatch_.Put(
-      dbHandles_.columns[keySpace].get(),
+      lockedDB_->columns[keySpace].get(),
       _createSlice(key),
       _createSlice(value));
 
@@ -201,7 +206,7 @@ void RocksDbWriteBatch::put(
   auto keySlice = _createSlice(key);
   SliceParts keyParts(&keySlice, 1);
   writeBatch_.Put(
-      dbHandles_.columns[keySpace].get(),
+      lockedDB_->columns[keySpace].get(),
       keyParts,
       SliceParts(slices.data(), slices.size()));
 
@@ -251,30 +256,23 @@ RocksDbLocalStore::RocksDbLocalStore(
     FaultInjector* faultInjector,
     RocksDBOpenMode mode)
     : faultInjector_(*faultInjector),
-      dbHandles_(openDB(pathToRocksDb, mode)),
-      ioPool_(12, "RocksLocalStore") {
+      ioPool_(12, "RocksLocalStore"),
+      dbHandles_(folly::in_place, openDB(pathToRocksDb, mode)) {
   // Publish fb303 stats once when we first open the DB.
   // These will be kept up-to-date later by the periodicManagementTask() call.
   publishStats();
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {
-#ifdef FOLLY_SANITIZE_ADDRESS
-  // RocksDB has some race conditions around setting up and tearing down
-  // the threads that it uses to maintain the database.  This manifests
-  // in our test harness, particularly in a test where we quickly mount
-  // and then unmount.  We see this as an abort with the message:
-  // "pthread lock: Invalid Argument".
-  // My assumption is that we're shutting things down before rocks has
-  // completed initializing.  This sleep call is present in the destructor
-  // to make it more likely that rocks is past that critical point and
-  // so that we can shutdown successfully.
-  /* sleep override */ sleep(1);
-#endif
+  close();
 }
 
 void RocksDbLocalStore::close() {
-  dbHandles_.close();
+  // Acquire dbHandles_ in write-lock mode.
+  // Since any other access to the DB acquires a read lock this will block until
+  // all current DB operations are complete.
+  auto handles = dbHandles_.wlock();
+  handles->close();
 }
 
 void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
@@ -295,9 +293,10 @@ void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
 }
 
 void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
-  auto columnFamily = dbHandles_.columns[keySpace].get();
+  auto handles = getHandles();
+  auto columnFamily = handles->columns[keySpace].get();
   std::unique_ptr<rocksdb::Iterator> it{
-      dbHandles_.db->NewIterator(ReadOptions(), columnFamily)};
+      handles->db->NewIterator(ReadOptions(), columnFamily)};
   XLOG(DBG2) << "clearing column family \"" << columnFamily->GetName() << "\"";
   std::string rangeStorage;
   const auto fullRange = getFullRange(rangeStorage);
@@ -306,7 +305,7 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   // Since we are deleting everything in this column family this should
   // effectively delete everything.
   auto status = DeleteFilesInRange(
-      dbHandles_.db.get(), columnFamily, &fullRange.start, &fullRange.limit);
+      handles->db.get(), columnFamily, &fullRange.start, &fullRange.limit);
   if (!status.ok()) {
     throw RocksException::build(
         status,
@@ -319,7 +318,7 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   // everything in the range (but it probably will in our case since we are
   // intending to delete everything).
   const WriteOptions writeOptions;
-  status = dbHandles_.db->DeleteRange(
+  status = handles->db->DeleteRange(
       writeOptions, columnFamily, fullRange.start, fullRange.limit);
   if (!status.ok()) {
     throw RocksException::build(
@@ -331,12 +330,13 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
 }
 
 void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
+  auto handles = getHandles();
   auto options = rocksdb::CompactRangeOptions{};
   options.allow_write_stall = true;
-  auto columnFamily = dbHandles_.columns[keySpace].get();
+  auto columnFamily = handles->columns[keySpace].get();
   XLOG(DBG2) << "compacting column family \"" << columnFamily->GetName()
              << "\"";
-  auto status = dbHandles_.db->CompactRange(
+  auto status = handles->db->CompactRange(
       options, columnFamily, /*begin=*/nullptr, /*end=*/nullptr);
   if (!status.ok()) {
     throw RocksException::build(
@@ -349,10 +349,11 @@ void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
 
 StoreResult RocksDbLocalStore::get(LocalStore::KeySpace keySpace, ByteRange key)
     const {
+  auto handles = getHandles();
   string value;
-  auto status = dbHandles_.db->Get(
+  auto status = handles->db->Get(
       ReadOptions(),
-      dbHandles_.columns[keySpace].get(),
+      handles->columns[keySpace].get(),
       _createSlice(key),
       &value);
   if (!status.ok()) {
@@ -416,16 +417,19 @@ RocksDbLocalStore::getBatch(
         faultInjector_.checkAsync("local store get batch", "")
             .via(&ioPool_)
             .thenValue(
-                [this, keySpace, keys = std::move(batch)](folly::Unit&&) {
+                [store = getSharedFromThis(),
+                 keySpace,
+                 keys = std::move(batch)](folly::Unit&&) {
                   XLOG(DBG3) << __func__ << " starting to actually do work";
+                  auto handles = store->getHandles();
                   std::vector<Slice> keySlices;
                   std::vector<std::string> values;
                   std::vector<rocksdb::ColumnFamilyHandle*> columns;
                   for (auto& key : *keys) {
                     keySlices.emplace_back(key);
-                    columns.emplace_back(dbHandles_.columns[keySpace].get());
+                    columns.emplace_back(handles->columns[keySpace].get());
                   }
-                  auto statuses = dbHandles_.db->MultiGet(
+                  auto statuses = handles->db->MultiGet(
                       ReadOptions(), columns, keySlices, &values);
 
                   std::vector<StoreResult> results;
@@ -474,9 +478,10 @@ bool RocksDbLocalStore::hasKey(
     LocalStore::KeySpace keySpace,
     folly::ByteRange key) const {
   string value;
-  auto status = dbHandles_.db->Get(
+  auto handles = getHandles();
+  auto status = handles->db->Get(
       ReadOptions(),
-      dbHandles_.columns[keySpace].get(),
+      handles->columns[keySpace].get(),
       _createSlice(key),
       &value);
   if (!status.ok()) {
@@ -497,22 +502,24 @@ bool RocksDbLocalStore::hasKey(
 
 std::unique_ptr<LocalStore::WriteBatch> RocksDbLocalStore::beginWrite(
     size_t bufSize) {
-  return std::make_unique<RocksDbWriteBatch>(dbHandles_, bufSize);
+  return std::make_unique<RocksDbWriteBatch>(getHandles(), bufSize);
 }
 
 void RocksDbLocalStore::put(
     LocalStore::KeySpace keySpace,
     folly::ByteRange key,
     folly::ByteRange value) {
-  dbHandles_.db->Put(
+  auto handles = getHandles();
+  handles->db->Put(
       WriteOptions(),
-      dbHandles_.columns[keySpace].get(),
+      handles->columns[keySpace].get(),
       _createSlice(key),
       _createSlice(value));
 }
 
 uint64_t RocksDbLocalStore::getApproximateSize(
     LocalStore::KeySpace keySpace) const {
+  auto handles = getHandles();
   uint64_t size = 0;
 
   // kLiveSstFilesSize reports the size of all "live" sst files.
@@ -521,15 +528,15 @@ uint64_t RocksDbLocalStore::getApproximateSize(
   // kTotalSstFilesSize would report the size of all sst files if we wanted to
   // report that.
   uint64_t sstFilesSize;
-  auto result = dbHandles_.db->GetIntProperty(
-      dbHandles_.columns[keySpace].get(),
+  auto result = handles->db->GetIntProperty(
+      handles->columns[keySpace].get(),
       rocksdb::DB::Properties::kLiveSstFilesSize,
       &sstFilesSize);
   if (result) {
     size += sstFilesSize;
   } else {
     XLOG(WARN) << "unable to retrieve SST file size from RocksDB for key space "
-               << dbHandles_.columns[keySpace]->GetName();
+               << handles->columns[keySpace]->GetName();
   }
 
   // kSizeAllMemTables reports the size of the memtables.
@@ -542,15 +549,15 @@ uint64_t RocksDbLocalStore::getApproximateSize(
   // compaction when there is still a couple MB of in-memory metadata despite
   // having no uncompacted on-disk data.
   uint64_t memtableSize;
-  result = dbHandles_.db->GetIntProperty(
-      dbHandles_.columns[keySpace].get(),
+  result = handles->db->GetIntProperty(
+      handles->columns[keySpace].get(),
       rocksdb::DB::Properties::kSizeAllMemTables,
       &memtableSize);
   if (result) {
     size += memtableSize;
   } else {
     XLOG(WARN) << "unable to retrieve memtable size from RocksDB for key space "
-               << dbHandles_.columns[keySpace]->GetName();
+               << handles->columns[keySpace]->GetName();
   }
 
   return size;
@@ -619,8 +626,7 @@ void RocksDbLocalStore::triggerAutoGC() {
     state->inProgress_ = true;
   }
 
-  ioPool_.add([store = std::static_pointer_cast<RocksDbLocalStore>(
-                   shared_from_this())] {
+  ioPool_.add([store = getSharedFromThis()] {
     try {
       store->clearCachesAndCompactAll();
     } catch (const std::exception& ex) {
@@ -658,6 +664,14 @@ void RocksDbLocalStore::autoGCFinished(bool successful) {
     fbData->incrementCounter(
         folly::to<string>(statsPrefix_, "auto_gc.failure"));
   }
+}
+
+void RocksDbLocalStore::throwStoreClosedError() const {
+  // It might be nicer to throw an EdenError exception here.
+  // At the moment we don't simply due to library dependency ordering in the
+  // CMake-based build.  We should ideally restructure the CMake-based build to
+  // more closely match our Buck-based library configuration.
+  throw std::runtime_error("the RocksDB local store is already closed");
 }
 
 } // namespace eden

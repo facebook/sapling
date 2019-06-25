@@ -54,6 +54,9 @@ struct RocksHandles {
       const rocksdb::Options& options,
       const std::vector<rocksdb::ColumnFamilyDescriptor>& columnDescriptors);
 
+  RocksHandles(RocksHandles&&) = default;
+  RocksHandles& operator=(RocksHandles&&) = default;
+
   void close();
 };
 } // namespace eden

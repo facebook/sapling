@@ -652,6 +652,13 @@ void EdenServer::performCleanup() {
     mainEventBase_->loopOnce();
   }
   std::move(shutdownFuture).get();
+
+  // Explicitly close the LocalStore
+  // Since we have a shared_ptr to it, other parts of the code can theoretically
+  // still maintain a reference to it after the EdenServer is destroyed.
+  // We want to ensure that it is really closed and no subsequent I/O can happen
+  // to it after the EdenServer is shut down and the main Eden lock is released.
+  localStore_->close();
 }
 
 #ifndef _WIN32
@@ -665,12 +672,11 @@ Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
         // lock, and we need to close it to release its lock before the new
         // edenfs process tries to open it.
         backingStores_.wlock()->clear();
-        // Explicit close the LocalStore before we reset our pointer, to
-        // ensure we release the RocksDB lock.  Since this is managed with a
-        // shared_ptr it is somewhat hard to confirm if we really have the
-        // last reference to it.
+        // Explicit close the LocalStore to ensure we release the RocksDB lock.
+        // Note that simply resetting the localStore_ pointer is insufficient,
+        // since there may still be other outstanding reference counts to the
+        // object.
         localStore_->close();
-        localStore_.reset();
 
         // Stop the privhelper process.
         shutdownPrivhelper();

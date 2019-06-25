@@ -60,6 +60,30 @@ class RocksDbLocalStore : public LocalStore {
   void periodicManagementTask(const EdenConfig& config) override;
 
  private:
+  /**
+   * Get a pointer to the RocksHandles object in order to perform an I/O
+   * operation.
+   *
+   * Note that even though this acquires a read-lock, write operations to the
+   * DB may still be performed.  The lock exists to prevent the DB from being
+   * closed while the I/O operation is in progress.
+   */
+  folly::Synchronized<RocksHandles>::RLockedPtr getHandles() const {
+    auto handles = dbHandles_.rlock();
+    if (!handles->db) {
+      throwStoreClosedError();
+    }
+    return handles;
+  }
+  [[noreturn]] void throwStoreClosedError() const;
+  std::shared_ptr<RocksDbLocalStore> getSharedFromThis() {
+    return std::static_pointer_cast<RocksDbLocalStore>(shared_from_this());
+  }
+  std::shared_ptr<const RocksDbLocalStore> getSharedFromThis() const {
+    return std::static_pointer_cast<const RocksDbLocalStore>(
+        shared_from_this());
+  }
+
   struct AutoGCState {
     bool inProgress_{false};
     std::chrono::steady_clock::time_point startTime_;
@@ -76,9 +100,9 @@ class RocksDbLocalStore : public LocalStore {
 
   const std::string statsPrefix_{"local_store."};
   FaultInjector& faultInjector_;
-  RocksHandles dbHandles_;
   mutable UnboundedQueueExecutor ioPool_;
   folly::Synchronized<AutoGCState> autoGCState_;
+  folly::Synchronized<RocksHandles> dbHandles_;
 };
 
 } // namespace eden
