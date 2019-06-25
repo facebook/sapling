@@ -30,7 +30,7 @@ def bailifdisabled(ui):
         raise error.Abort(_("HTTPS data fetching is disabled"))
 
 
-def getbaseurl(ui):
+def _getbaseurl(ui):
     """Get the base URL of the API server."""
     url = ui.config("edenapi", "url")
     if url is None:
@@ -38,7 +38,7 @@ def getbaseurl(ui):
     return url
 
 
-def getcreds(ui, url):
+def _getcreds(ui, url):
     """Get the TLS mutual authentication credentials for the given URL."""
     res = httpconnection.readauthforuri(ui, url, None)
     if res is None:
@@ -49,7 +49,7 @@ def getcreds(ui, url):
     return (auth["cert"], auth["key"])
 
 
-def logconfig(ui):
+def _logconfig(ui):
     """Log various HTTPS fetching config values for debugging."""
     ui.log(
         "edenapi",
@@ -60,14 +60,14 @@ def logconfig(ui):
     )
 
 
-def initclient(ui, repo):
+def _initclient(ui, repo):
     """Initialize a new Eden API client using the user's config."""
-    logconfig(ui)
-    url = getbaseurl(ui)
+    _logconfig(ui)
+    url = _getbaseurl(ui)
     kwargs = {
         "url": url,
         "repo": repo.name,
-        "creds": getcreds(ui, url),
+        "creds": _getcreds(ui, url),
         "databatchsize": ui.configint("edenapi", "databatchsize"),
         "historybatchsize": ui.configint("edenapi", "historybatchsize"),
         "validate": ui.configbool("edenapi", "validate"),
@@ -76,3 +76,20 @@ def initclient(ui, repo):
         "streamtrees": ui.configbool("edenapi", "streamtrees"),
     }
     return edenapi.client(**kwargs)
+
+
+class pyclient(object):
+    def __init__(self, ui, repo):
+        self._rustclient = _initclient(ui, repo)
+        self._ui = ui
+
+    def __getattr__(self, name):
+        method = getattr(self._rustclient, name)
+
+        def wrapped(*args, **kwargs):
+            try:
+                return method(*args, **kwargs)
+            except Exception as e:
+                raise e
+
+        return wrapped
