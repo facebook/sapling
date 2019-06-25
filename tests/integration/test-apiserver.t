@@ -1,5 +1,5 @@
   $ CACHEDIR=$PWD/cachepath
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup config repo
   $ setup_common_config
@@ -55,8 +55,8 @@ starts api server
   $ APISERVER_PORT=$(get_free_socket)
   $ apiserver -H "[::1]" -p $APISERVER_PORT
   $ wait_for_apiserver
-  $ function sslcurl() { curl --silent --cert "$TESTDIR/certs/localhost.crt" --cacert "$TESTDIR/certs/root-ca.crt" --key "$TESTDIR/certs/localhost.key" "$@"; }
-  $ function s_client() { openssl s_client -connect $APIHOST -CAfile "$TESTDIR/certs/root-ca.crt" -cert "$TESTDIR/certs/localhost.crt" -key "$TESTDIR/certs/localhost.key" -ign_eof "$@"; }
+  $ function sslcurl() { curl --silent --cert "${TEST_CERTDIR}/localhost.crt" --cacert "${TEST_CERTDIR}/root-ca.crt" --key "${TEST_CERTDIR}/localhost.key" "$@"; }
+  $ function s_client() { openssl s_client -connect $APIHOST -CAfile "${TEST_CERTDIR}/root-ca.crt" -cert "${TEST_CERTDIR}/localhost.crt" -key "${TEST_CERTDIR}/localhost.key" -ign_eof "$@"; }
 
 ping test
   $ sslcurl -i $APISERVER/health_check | grep -iv "date"

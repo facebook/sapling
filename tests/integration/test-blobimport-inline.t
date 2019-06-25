@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 # setup repo, usegeneraldelta flag = false for forcing inline flag for file
 # forcing running algo for inline revlof parsing

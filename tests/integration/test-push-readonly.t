@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
   $ export READ_ONLY_REPO=1
@@ -50,7 +50,7 @@ create new commit in repo2 and check that push fails
 
   $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
   pushing to ssh://user@dummy/repo
-  running *dummyssh.par 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
+  running * 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)

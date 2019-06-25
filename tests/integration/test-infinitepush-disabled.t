@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration 
   $ setup_common_config

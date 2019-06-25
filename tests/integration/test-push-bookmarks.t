@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
   $ export ONLY_FAST_FORWARD_BOOKMARK="master_bookmark"

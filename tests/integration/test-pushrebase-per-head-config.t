@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 Setup
 

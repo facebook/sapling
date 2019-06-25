@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
   $ export PUSHREBASE_REWRITE_DATES=1

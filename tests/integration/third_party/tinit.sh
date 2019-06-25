@@ -1,1 +1,0 @@
-../../../../hg/tests/tinit.sh

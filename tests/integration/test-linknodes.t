@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 define an extension that reveals when Mercurial is fixing up linkrevs
 

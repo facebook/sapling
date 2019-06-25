@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
 
@@ -227,7 +227,7 @@ push to Mononoke
 
   $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
   pushing to ssh://user@dummy/repo
-  running *dummyssh.par 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
+  running * 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
   sending hello command
   sending between command
   remote: * (glob)

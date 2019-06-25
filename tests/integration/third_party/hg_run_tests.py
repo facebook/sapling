@@ -1,1 +1,0 @@
-../../../../hg/tests/run-tests.py

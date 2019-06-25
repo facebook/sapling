@@ -18,12 +18,11 @@ else
     reponame="$1"
     echo "db.local_db_path=\"$TESTTMP/$reponame\""
   }
-MONONOKE_DEFAULT_START_TIMEOUT=15
+  MONONOKE_DEFAULT_START_TIMEOUT=15
 fi
 
 CACHING_ARGS=(--skip-caching)
-
-TEST_CERTDIR="${HGTEST_CERTDIR:-$TESTDIR/certs}"
+TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
 function next_repo_id {
     if [[ -e "$TESTTMP/mononoke-config/last_id" ]] ; then
@@ -656,7 +655,8 @@ EOF
 
 # Does all the setup necessary for hook tests
 function hook_test_setup() {
-  . "$TESTDIR"/library.sh
+  # shellcheck source=fbcode/scm/mononoke/tests/integration/library.sh
+  . "${TEST_FIXTURES}/library.sh"
 
   setup_mononoke_config
   cd "$TESTTMP/mononoke-config" || exit 1

@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
   $ INFINITE_PUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config

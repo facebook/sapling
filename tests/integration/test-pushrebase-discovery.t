@@ -5,7 +5,7 @@ returns true for a draft commit and client runs `hg push -r HASH --to BOOK`,
 then hg client logic may decide to just move a bookmark instead of running the
 actual pushrebase.
 
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
   $ setup_common_config

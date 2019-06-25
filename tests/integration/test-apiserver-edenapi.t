@@ -1,5 +1,5 @@
   $ CACHEDIR=$PWD/cachepath
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 Set up local hgrc and Mononoke config repo
   $ setup_common_config

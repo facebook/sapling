@@ -1,9 +1,9 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
 
   $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob:files
-  $ cp "$TESTDIR/pushrebase_replay.bundle" "$TESTTMP/handle"
+  $ cp "$TEST_FIXTURES/pushrebase_replay.bundle" "$TESTTMP/handle"
   $ create_pushrebaserecording_sqlite3_db
   $ init_pushrebaserecording_sqlite3_db
   $ cd $TESTTMP
@@ -80,7 +80,7 @@ Sync second tricky push
   * preparing log entry #3 ... (glob)
   * successful prepare of entry #3 (glob)
   * syncing log entries [3] ... (glob)
-  running "*dummyssh.par" 'user@dummy' 'hg -R repo-hg serve --stdio' (glob)
+  running * 'user@dummy' 'hg -R repo-hg serve --stdio' (glob)
   sending hello command
   sending between command
   remote: 570

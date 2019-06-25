@@ -1,4 +1,4 @@
-  $ . $TESTDIR/library.sh
+  $ . "${TEST_FIXTURES}/library.sh"
 
 # setup repo, usefncache flag for forcing algo encoding run
   $ hg init repo-hg --config format.usefncache=False
