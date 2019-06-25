@@ -14,6 +14,9 @@ using ::testing::UnorderedElementsAre;
 TEST(Journal, accumulate_range_all_changes) {
   Journal journal;
 
+  // Empty journals have no rang to accumulate over
+  EXPECT_EQ(nullptr, journal.accumulateRange());
+
   // Make an initial entry.
   journal.recordChanged("foo/bar"_relpath);
 

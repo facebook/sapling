@@ -161,16 +161,25 @@ folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
 }
 } // namespace
 
+std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() const {
+  return accumulateRange(0);
+}
+
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     SequenceNumber limitSequence) const {
   auto result = std::make_unique<JournalDeltaRange>();
   {
     auto deltaState = deltaState_.rlock();
-    if (deltaState->latest->sequenceID < limitSequence) {
+
+    const JournalDelta* current = deltaState->latest.get();
+
+    if (!current) {
       return nullptr;
     }
 
-    const JournalDelta* current = deltaState->latest.get();
+    if (current->sequenceID < limitSequence) {
+      return nullptr;
+    }
 
     result->toSequence = current->sequenceID;
     result->toTime = current->time;

@@ -121,7 +121,8 @@ class Journal {
    * If the limitSequence means that no deltas will match, returns nullptr.
    * */
   std::unique_ptr<JournalDeltaRange> accumulateRange(
-      SequenceNumber limitSequence = 0) const;
+      SequenceNumber limitSequence) const;
+  std::unique_ptr<JournalDeltaRange> accumulateRange() const;
 
  private:
   /** Add a delta to the journal.
