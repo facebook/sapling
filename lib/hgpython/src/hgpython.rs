@@ -4,7 +4,7 @@ use crate::python::{
 };
 use cpython::{exc, NoArgs, ObjectProtocol, PyResult, Python, PythonObject};
 use encoding::osstring_to_local_cstring;
-use std;
+use std::env;
 use std::ffi::CString;
 
 const HGPYENTRYPOINT_MOD: &str = "edenscm.mercurial.entrypoint";
@@ -26,7 +26,23 @@ impl HgPython {
     }
 
     fn args_to_local_cstrings() -> Vec<CString> {
-        std::env::args_os()
+        // Replace args[0] with the absolute current_exe path. This workarounds
+        // an issue in libpython sys.path handling.
+        //
+        // More context: Usually, argv[0] is either:
+        // - a relative path to the executable, like "hg", or "./hg". It can be
+        //   translated to an absolute path using the PATH environment variable
+        //   and the current workdir.
+        // - an absolute path to the executable, like "/bin/hg".
+        //
+        // When running as local build, we expect libpython to add the
+        // "executable path" to sys.path. However, libpython seems pretty dumb
+        // if argv[0] is a relative path, and it's not in the current workdir
+        // (in other words, libpython seems to ignore PATH). Therefore, give
+        // it some hint by passing the absolute path resolved by the Rust stdlib.
+        Some(env::current_exe().unwrap().into_os_string())
+            .into_iter()
+            .chain(env::args_os().skip(1))
             .map(|x| osstring_to_local_cstring(&x))
             .collect()
     }
