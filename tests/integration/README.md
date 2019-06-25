@@ -14,8 +14,9 @@ Use:
 buck run scm/mononoke/tests/integration:integration_runner -- TEST
 ```
 
-But! Keep reading. There are better ways to run the tests if you're going to be
-iterating on something.
+But! Keep reading: there are faster ways to run the tests if you're going to be
+iterating on something. You might as well read on while you wait for that build
+to complete.
 
 
 ## Running Tests Incrementally: a better way
