@@ -44,8 +44,8 @@
   $ rm -rf push
   $ clearcache
 
-  $ find $TESTTMP/dummy-remote/
-  $TESTTMP/dummy-remote/
+  $ find $TESTTMP/dummy-remote | sort
+  $TESTTMP/dummy-remote
   $TESTTMP/dummy-remote/80
   $TESTTMP/dummy-remote/80/2935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
 
