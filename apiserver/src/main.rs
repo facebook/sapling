@@ -643,7 +643,7 @@ fn main() -> Fallible<()> {
     let sys = actix::System::new("mononoke-apiserver");
 
     let cache = if with_cache {
-        Some(CacheManager::new())
+        Some(CacheManager::new()?)
     } else {
         None
     };

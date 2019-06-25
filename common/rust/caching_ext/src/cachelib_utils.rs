@@ -62,14 +62,14 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
             .collect()
     }
 
-    fn get_cached(&self, key: &String) -> Result<Option<T>> {
+    pub fn get_cached(&self, key: &String) -> Result<Option<T>> {
         match self {
             CachelibHandler::Real(ref cache) => get_cached(cache, key),
             CachelibHandler::Mock(store) => Ok(store.get(key)),
         }
     }
 
-    fn set_cached(&self, key: &String, value: &T) -> Result<bool> {
+    pub fn set_cached(&self, key: &String, value: &T) -> Result<bool> {
         match self {
             CachelibHandler::Real(ref cache) => set_cached(cache, key, value),
             CachelibHandler::Mock(store) => {
