@@ -66,7 +66,9 @@ if cmdargv[:2] == ["hg", "-R"] and cmdargv[3:] == ["serve", "--stdio"]:
     hgcmd = subprocess.list2cmdline(cmdargv)
 
 if "hgcli" in hgcmd:
-    certdir = os.environ.get("HGTEST_CERTDIR", os.environ.get("TESTDIR", "") + "/certs")
+    certdir = os.environ.get("HGTEST_CERTDIR") or os.environ.get("TEST_CERTS")
+    if certdir is None:
+        raise ValueError("No cert dir")
     cert = os.path.join(certdir, "localhost.crt")
     capem = os.path.join(certdir, "root-ca.crt")
     privatekey = os.path.join(certdir, "localhost.key")
