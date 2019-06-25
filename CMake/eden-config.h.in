@@ -7,6 +7,7 @@
 #pragma once
 
 #define EDEN_VERSION "${PACKAGE_VERSION}"
+#define EDEN_ETC_EDEN_DIR "${ETC_EDEN_DIR}"
 
 #cmakedefine EDEN_HAVE_ROCKSDB
 #cmakedefine EDEN_HAVE_SELINUX
@@ -15,3 +16,4 @@
 #cmakedefine EDEN_HAVE_CURL
 #cmakedefine EDEN_WIN_NOMONONOKE
 #cmakedefine EDEN_WIN_NO_RUST_DATAPACK
+

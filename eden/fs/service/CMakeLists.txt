@@ -26,7 +26,6 @@ file(GLOB SERVICE_SRCS "*.cpp")
 if (WIN32)
   list(
     REMOVE_ITEM SERVICE_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/EdenInit.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/EdenMain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PrettyPrinters.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/StartupLogger.cpp

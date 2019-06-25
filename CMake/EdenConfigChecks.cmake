@@ -76,3 +76,13 @@ set(EDEN_WIN_NOMONONOKE ON)
 
 # TODO(strager): Support systemd in the opensource build.
 set(EDEN_HAVE_SYSTEMD OFF)
+
+if (WIN32)
+  set(DEFAULT_ETC_EDEN_DIR "C:/tools/eden/config")
+else()
+  set(DEFAULT_ETC_EDEN_DIR "/etc/eden")
+endif()
+set(
+  ETC_EDEN_DIR "${DEFAULT_ETC_EDEN_DIR}" CACHE STRING
+  "The directory for system-wide EdenFS configuration files."
+)

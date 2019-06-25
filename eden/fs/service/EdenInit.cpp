@@ -10,6 +10,7 @@
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -19,7 +20,7 @@ DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
-    "/etc/eden",
+    EDEN_ETC_EDEN_DIR,
     "The directory holding all system configuration files");
 
 namespace {

@@ -15,10 +15,8 @@
 #include "eden/fs/tracing/EdenStats.h"
 #ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
-#include "eden/fs/win/utils/UserInfo.h" // @manual
-#else
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #endif
+#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/utils/PathFuncs.h"
 

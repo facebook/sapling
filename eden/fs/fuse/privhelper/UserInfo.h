@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 #pragma once
-
+#ifdef _WIN32
+#include "eden/fs/win/utils/UserInfo.h" // @manual
+#else
 #include <gtest/gtest_prod.h>
 #include <sys/types.h>
 
@@ -147,3 +149,4 @@ struct EffectiveUserScope {
 };
 } // namespace eden
 } // namespace facebook
+#endif
