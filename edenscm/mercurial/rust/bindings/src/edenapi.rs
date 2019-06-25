@@ -38,6 +38,24 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<client>(py)?;
+
+    {
+        use exceptions::*;
+        m.add(py, "CredsError", CredsError::type_object(py))?;
+        m.add(py, "ConfigError", ConfigError::type_object(py))?;
+        m.add(py, "ResponseError", ResponseError::type_object(py))?;
+        m.add(py, "CurlError", CurlError::type_object(py))?;
+        m.add(py, "HttpError", HttpError::type_object(py))?;
+        m.add(
+            py,
+            "SerializationError",
+            SerializationError::type_object(py),
+        )?;
+        m.add(py, "StoreError", StoreError::type_object(py))?;
+        m.add(py, "TlsError", TlsError::type_object(py))?;
+        m.add(py, "UrlError", UrlError::type_object(py))?;
+    }
+
     Ok(m)
 }
 
