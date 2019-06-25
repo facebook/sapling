@@ -22,7 +22,6 @@ use apiserver_thrift::types::{
     MononokeChangeset, MononokeFile, MononokeFileType, MononokeNodeHash, MononokeTreeHash,
 };
 use blobrepo::HgBlobChangeset;
-use cachelib::{get_cached_or_fill, VolatileLruCachePool};
 use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
@@ -30,6 +29,8 @@ use mercurial_types::hash::Sha1;
 use mercurial_types::manifest::Content;
 use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
 use mononoke_types::RepositoryId;
+
+use crate::cache::CacheManager;
 
 #[derive(Abomonation, Clone, Serialize, Deserialize)]
 pub enum FileType {
@@ -44,11 +45,11 @@ pub enum FileType {
 }
 
 impl From<Type> for FileType {
-    fn from(ttype: Type) -> FileType {
+    fn from(r#type: Type) -> FileType {
         use mononoke_types::FileType as MononokeFileType;
 
-        match ttype {
-            Type::File(ttype) => match ttype {
+        match r#type {
+            Type::File(r#type) => match r#type {
                 MononokeFileType::Regular => FileType::File,
                 MononokeFileType::Executable => FileType::Executable,
                 MononokeFileType::Symlink => FileType::Symlink,
@@ -73,7 +74,7 @@ impl From<Entry> for MononokeFile {
     fn from(entry: Entry) -> Self {
         Self {
             name: entry.name,
-            file_type: entry.ttype.into(),
+            file_type: entry.r#type.into(),
             ..Default::default()
         }
     }
@@ -82,8 +83,7 @@ impl From<Entry> for MononokeFile {
 #[derive(Serialize, Deserialize)]
 pub struct Entry {
     name: String,
-    #[serde(rename = "type")]
-    ttype: FileType,
+    r#type: FileType,
     hash: String,
 }
 
@@ -96,18 +96,17 @@ impl TryFrom<Box<dyn HgEntry + Sync>> for Entry {
             .map(|name| Vec::from(name.as_ref()))
             .unwrap_or_else(|| Vec::new());
         let name = String::from_utf8(name)?;
-        let ttype = entry.get_type().into();
+        let r#type = entry.get_type().into();
         let hash = entry.get_hash().to_string();
 
-        Ok(Entry { name, ttype, hash })
+        Ok(Entry { name, r#type, hash })
     }
 }
 
 #[derive(Abomonation, Clone, Serialize, Deserialize)]
 pub struct EntryWithSizeAndContentHash {
     name: String,
-    #[serde(rename = "type")]
-    ttype: FileType,
+    r#type: FileType,
     hash: String,
     size: Option<usize>,
     content_sha1: Option<String>,
@@ -115,14 +114,14 @@ pub struct EntryWithSizeAndContentHash {
 
 impl EntryWithSizeAndContentHash {
     fn get_cache_key(repoid: RepositoryId, hash: &str) -> String {
-        format!("{}:{}", repoid.prefix(), hash)
+        format!("repo{}:{}", repoid.id(), hash)
     }
 
     pub fn materialize_future(
         ctx: CoreContext,
         repoid: RepositoryId,
         entry: Box<dyn HgEntry + Sync>,
-        cache: Option<VolatileLruCachePool>,
+        cache: Option<CacheManager>,
     ) -> BoxFuture<Self, Error> {
         let name = try_boxfuture!(entry
             .get_name()
@@ -130,14 +129,14 @@ impl EntryWithSizeAndContentHash {
             .ok_or_else(|| err_msg("HgEntry has no name!?")));
         // FIXME: json cannot represent non-UTF8 file names
         let name = try_boxfuture!(String::from_utf8(Vec::from(name.as_ref())));
-        let ttype: FileType = entry.get_type().into();
+        let r#type: FileType = entry.get_type().into();
         let hash = entry.get_hash().to_hex();
 
         let cache_key = Self::get_cache_key(repoid, hash.as_str());
 
         // this future computes SHA1 based on content
         let future = spawn_future(entry.get_content(ctx).and_then({
-            cloned!(name, ttype, hash);
+            cloned!(name, r#type, hash);
             move |content| {
                 let size = match &content {
                     Content::File(contents)
@@ -147,7 +146,7 @@ impl EntryWithSizeAndContentHash {
                 };
                 Ok(EntryWithSizeAndContentHash {
                     name,
-                    ttype,
+                    r#type,
                     hash: hash.to_string(),
                     size,
                     content_sha1: match content {
@@ -164,16 +163,16 @@ impl EntryWithSizeAndContentHash {
         }));
 
         if let Some(cache) = cache {
-            get_cached_or_fill(&cache, cache_key, || {
-                future.map(|entry| Some(entry)).boxify()
-            })
-            .and_then(move |entry| entry.ok_or(err_msg(format!("Entry {} not found", hash))))
-            .map(|entry| EntryWithSizeAndContentHash {
-                name,
-                ttype,
-                ..entry
-            })
-            .boxify()
+            cache
+                .get_or_fill(cache_key, future.map(|entry| Some(entry)).from_err())
+                .from_err()
+                .and_then(move |entry| entry.ok_or(err_msg(format!("Entry {} not found", hash))))
+                .map(|entry| EntryWithSizeAndContentHash {
+                    name,
+                    r#type,
+                    ..entry
+                })
+                .boxify()
         } else {
             future.boxify()
         }
@@ -184,7 +183,7 @@ impl From<EntryWithSizeAndContentHash> for MononokeFile {
     fn from(entry: EntryWithSizeAndContentHash) -> Self {
         Self {
             name: entry.name,
-            file_type: entry.ttype.into(),
+            file_type: entry.r#type.into(),
             hash: MononokeNodeHash { hash: entry.hash },
             size: entry.size.map(|size| size as i64),
             content_sha1: entry.content_sha1,

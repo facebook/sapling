@@ -35,8 +35,6 @@ pub use self::response::MononokeRepoResponse;
 
 pub struct Mononoke {
     repos: HashMap<String, MononokeRepo>,
-    #[allow(dead_code)]
-    cache: Option<CacheManager>,
 }
 
 impl Mononoke {
@@ -44,9 +42,9 @@ impl Mononoke {
         logger: Logger,
         config: RepoConfigs,
         myrouter_port: Option<u16>,
-        caching: Caching,
-        with_skiplist: bool,
         cache: Option<CacheManager>,
+        with_cachelib: Caching,
+        with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
         join_all(
             config
@@ -55,14 +53,15 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        cloned!(logger);
+                        cloned!(logger, cache);
                         lazy(move || {
                             info!(logger, "Initializing repo: {}", &name);
                             MononokeRepo::new(
                                 logger.clone(),
                                 config,
                                 myrouter_port,
-                                caching,
+                                cache,
+                                with_cachelib,
                                 with_skiplist,
                             )
                             .map(move |repo| {
@@ -75,7 +74,6 @@ impl Mononoke {
         )
         .map(move |repos| Self {
             repos: repos.into_iter().collect(),
-            cache,
         })
     }
 

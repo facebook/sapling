@@ -19,6 +19,7 @@ use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
 
+use blobrepo_factory::Caching;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
 use panichandler::Fate;
@@ -558,13 +559,12 @@ fn main() -> Fallible<()> {
                 .long("ssl-ticket-seeds")
                 .value_name("PATH")
                 .help("path to the ssl ticket seeds"),
-        )
-        .arg(Arg::with_name("with-cache").long("with-cache"));
+        );
 
     let app = cmdlib::args::add_myrouter_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
-    let caching = cmdlib::args::init_cachelib(&matches);
+    let with_cachelib = cmdlib::args::init_cachelib(&matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
@@ -576,7 +576,7 @@ fn main() -> Fallible<()> {
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
     let with_skiplist = !matches.is_present("without-skiplist");
-    let with_cache = matches.is_present("with-cache");
+    let with_cache = matches.is_present("with-content-sha1-cache");
 
     let address = format!("{}:{}", host, port);
 
@@ -642,7 +642,7 @@ fn main() -> Fallible<()> {
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
 
-    let cache = if with_cache {
+    let cache = if with_cache && with_cachelib == Caching::Enabled {
         Some(CacheManager::new()?)
     } else {
         None
@@ -652,9 +652,9 @@ fn main() -> Fallible<()> {
         mononoke_logger.clone(),
         repo_configs,
         cmdlib::args::parse_myrouter_port(&matches),
-        caching,
-        with_skiplist,
         cache,
+        with_cachelib,
+        with_skiplist,
     ))?;
     let mononoke = Arc::new(mononoke);
 

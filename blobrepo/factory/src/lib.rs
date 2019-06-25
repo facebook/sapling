@@ -47,7 +47,7 @@ use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::iter::FromIterator;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Caching {
     Enabled,
     Disabled,

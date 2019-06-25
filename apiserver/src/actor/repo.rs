@@ -15,7 +15,6 @@ use blobrepo_factory::{open_blobrepo, Caching};
 use blobstore::Blobstore;
 use bookmarks::{Bookmark, BookmarkName};
 use bytes::Bytes;
-use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use failure::Error;
@@ -46,6 +45,7 @@ use mononoke_types::{FileContents, MPath, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 
+use crate::cache::CacheManager;
 use crate::errors::ErrorKind;
 use crate::from_string as FS;
 
@@ -57,7 +57,7 @@ pub struct MononokeRepo {
     repo: BlobRepo,
     logger: Logger,
     skiplist_index: Arc<SkiplistIndex>,
-    sha1_cache: Option<VolatileLruCachePool>,
+    cache: Option<CacheManager>,
 }
 
 impl MononokeRepo {
@@ -65,7 +65,8 @@ impl MononokeRepo {
         logger: Logger,
         config: RepoConfig,
         myrouter_port: Option<u16>,
-        caching: Caching,
+        cache: Option<CacheManager>,
+        with_cachelib: Caching,
         with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
         let ctx = CoreContext::new(
@@ -82,59 +83,46 @@ impl MononokeRepo {
 
         let repoid = RepositoryId::new(config.repoid);
 
-        // NOTE: Even if caching *is* enabled, this might yield a None cache if content-sha1
-        // caching is not enabled (this is controlled by the --with-content-sha1-cache flag).
-        let sha1_cache = match caching {
-            Caching::Enabled => cachelib::get_volatile_pool("content-sha1")
-                .into_future()
-                .left_future(),
-            Caching::Disabled => Ok(None).into_future().right_future(),
-        };
-
-        sha1_cache
-            .and_then(move |sha1_cache| {
-                open_blobrepo(
-                    logger.clone(),
-                    config.storage_config.clone(),
-                    repoid,
-                    myrouter_port,
-                    caching,
-                    config.bookmarks_cache_ttl,
-                )
-                .map(move |repo| {
-                    let skiplist_index = {
-                        if !with_skiplist {
-                            ok(Arc::new(SkiplistIndex::new())).right_future()
-                        } else {
-                            match skiplist_index_blobstore_key.clone() {
-                                Some(skiplist_index_blobstore_key) => repo
-                                    .get_blobstore()
-                                    .get(ctx.clone(), skiplist_index_blobstore_key)
-                                    .and_then(|maybebytes| {
-                                        let map = match maybebytes {
-                                            Some(bytes) => {
-                                                let bytes = bytes.into_bytes();
-                                                try_boxfuture!(deserialize_skiplist_map(bytes))
-                                            }
-                                            None => HashMap::new(),
-                                        };
-                                        ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map)))
-                                            .boxify()
-                                    })
-                                    .left_future(),
-                                None => ok(Arc::new(SkiplistIndex::new())).right_future(),
-                            }
-                        }
-                    };
-                    skiplist_index.map(|skiplist_index| Self {
-                        repo,
-                        logger,
-                        skiplist_index,
-                        sha1_cache,
-                    })
-                })
+        open_blobrepo(
+            logger.clone(),
+            config.storage_config.clone(),
+            repoid,
+            myrouter_port,
+            with_cachelib,
+            config.bookmarks_cache_ttl,
+        )
+        .map(move |repo| {
+            let skiplist_index = {
+                if !with_skiplist {
+                    ok(Arc::new(SkiplistIndex::new())).right_future()
+                } else {
+                    match skiplist_index_blobstore_key.clone() {
+                        Some(skiplist_index_blobstore_key) => repo
+                            .get_blobstore()
+                            .get(ctx.clone(), skiplist_index_blobstore_key)
+                            .and_then(|maybebytes| {
+                                let map = match maybebytes {
+                                    Some(bytes) => {
+                                        let bytes = bytes.into_bytes();
+                                        try_boxfuture!(deserialize_skiplist_map(bytes))
+                                    }
+                                    None => HashMap::new(),
+                                };
+                                ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
+                            })
+                            .left_future(),
+                        None => ok(Arc::new(SkiplistIndex::new())).right_future(),
+                    }
+                }
+            };
+            skiplist_index.map(|skiplist_index| Self {
+                repo,
+                logger,
+                skiplist_index,
+                cache,
             })
-            .flatten()
+        })
+        .flatten()
     }
 
     fn get_hgchangesetid_from_revision(
@@ -289,14 +277,14 @@ impl MononokeRepo {
         self.repo
             .get_manifest_by_nodeid(ctx.clone(), treemanifestid)
             .map({
-                cloned!(self.sha1_cache);
+                cloned!(self.cache);
                 move |tree| {
                     join_all(tree.list().map(move |entry| {
                         EntryWithSizeAndContentHash::materialize_future(
                             ctx.clone(),
                             repoid.clone(),
                             entry,
-                            sha1_cache.clone(),
+                            cache.clone(),
                         )
                     }))
                 }

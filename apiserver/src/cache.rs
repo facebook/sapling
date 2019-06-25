@@ -80,7 +80,6 @@ impl CacheManager {
         self.memcache.set(key, value)
     }
 
-    #[allow(dead_code)]
     pub fn get_or_fill<
         RES: Future<Item = ITEM, Error = ErrorKind> + Send + 'static,
         ITEM: serde::Serialize + serde::de::DeserializeOwned + Send + 'static,
