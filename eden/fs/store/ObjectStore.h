@@ -9,6 +9,7 @@
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
+
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
@@ -83,7 +84,7 @@ class ObjectStore : public IObjectStore,
   /**
    * Returns the size of the contents of the blob with the given ID.
    */
-  folly::Future<size_t> getBlobSize(const Hash& id) const;
+  folly::Future<uint64_t> getBlobSize(const Hash& id) const;
 
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
@@ -113,7 +114,7 @@ class ObjectStore : public IObjectStore,
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
 
-  static constexpr size_t kMetadataCacheSize = 1000000;
+  static constexpr size_t kCacheSize = 1000000;
 
   /**
    * During status and checkout, it's common to look up the SHA-1 for a given
@@ -146,5 +147,6 @@ class ObjectStore : public IObjectStore,
    */
   std::shared_ptr<BackingStore> backingStore_;
 };
+
 } // namespace eden
 } // namespace facebook

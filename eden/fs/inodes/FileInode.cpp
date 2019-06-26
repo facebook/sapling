@@ -609,15 +609,14 @@ folly::Future<struct stat> FileInode::stat() {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       CHECK(state->hash.has_value());
-      // While getBlobMetadata will sometimes need to fetch a blob to compute
-      // the size and SHA-1, if it's already known, use the cached metadata to
-      // look up the size. This is especially a win after restarting Eden -
-      // metadata can be loaded from the local cache more cheaply than
-      // deserializing an entire blob.
+      // While getBlobSize will sometimes need to fetch a blob to compute the
+      // size, if it's already known, return the cached size. This is especially
+      // a win after restarting Eden - size can be loaded from the local cache
+      // more cheaply than deserializing an entire blob.
       return getObjectStore()
-          ->getBlobMetadata(*state->hash)
-          .thenValue([st](const BlobMetadata& metadata) mutable {
-            st.st_size = metadata.size;
+          ->getBlobSize(*state->hash)
+          .thenValue([st](const uint64_t size) mutable {
+            st.st_size = size;
             updateBlockCount(st);
             return st;
           });

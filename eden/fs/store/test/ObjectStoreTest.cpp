@@ -13,6 +13,7 @@
 #include "eden/fs/testharness/StoredObject.h"
 
 using namespace facebook::eden;
+using namespace folly::string_piece_literals;
 
 class ObjectStoreTest : public ::testing::Test {
  protected:
@@ -35,8 +36,22 @@ class ObjectStoreTest : public ::testing::Test {
   std::shared_ptr<ObjectStore> objectStore_;
 };
 
-TEST_F(ObjectStoreTest, getBlobSize) {
-  folly::StringPiece data = "A";
+TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
+  auto data = "A"_sp;
+  Hash id = putReadyBlob(data);
+
+  // Get blob size from backing store, caches in local store
+  objectStore_->getBlobSize(id);
+  // Clear backing store
+  objectStore_ = ObjectStore::create(localStore_, nullptr);
+
+  size_t expectedSize = data.size();
+  size_t size = objectStore_->getBlobSize(id).get();
+  EXPECT_EQ(expectedSize, size);
+}
+
+TEST_F(ObjectStoreTest, getBlobSizeFromBackingStore) {
+  auto data = "A"_sp;
   Hash id = putReadyBlob(data);
 
   size_t expectedSize = data.size();
@@ -54,7 +69,7 @@ TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
 }
 
 TEST_F(ObjectStoreTest, getBlobSha1) {
-  folly::StringPiece data = "A";
+  auto data = "A"_sp;
   Hash id = putReadyBlob(data);
 
   Hash expectedSha1 = Hash::sha1(data);

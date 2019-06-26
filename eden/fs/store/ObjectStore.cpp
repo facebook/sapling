@@ -37,7 +37,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
 ObjectStore::ObjectStore(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore)
-    : metadataCache_{folly::in_place, kMetadataCacheSize},
+    : metadataCache_{folly::in_place, kCacheSize},
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)} {}
 
@@ -176,21 +176,40 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         return self->backingStore_->getBlob(id).thenValue(
             [self, id](std::unique_ptr<Blob> blob) {
               if (!blob) {
-                // TODO: Perhaps we should do some short-term negative caching?
                 throw std::domain_error(
                     folly::to<string>("blob ", id.toString(), " not found"));
               }
 
               auto metadata = self->localStore_->putBlob(id, blob.get());
               self->metadataCache_.wlock()->set(id, metadata);
-              return metadata;
+              return makeFuture(metadata);
             });
       });
 }
 
-Future<size_t> ObjectStore::getBlobSize(const Hash& id) const {
-  return getBlobMetadata(id).thenValue(
-      [](const BlobMetadata& metadata) { return metadata.size; });
+Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
+  // Check local store
+  auto self = shared_from_this();
+  return self->localStore_->getBlobSize(id).thenValue(
+      [self, id](std::optional<uint64_t> size) {
+        if (size) {
+          return makeFuture(*size);
+        }
+
+        // Check backing store for blob
+        return self->backingStore_->getBlob(id).thenValue(
+            [self, id](std::unique_ptr<Blob> blob) {
+              if (blob) {
+                uint64_t size = blob.get()->getSize();
+                self->localStore_->putBlobWithoutMetadata(id, blob.get());
+                self->localStore_->putBlobSize(id, size);
+                return makeFuture(size);
+              } else {
+                throw std::domain_error(
+                    folly::to<string>("blob ", id.toString(), " not found"));
+              }
+            });
+      });
 }
 
 Future<Hash> ObjectStore::getBlobSha1(const Hash& id) const {

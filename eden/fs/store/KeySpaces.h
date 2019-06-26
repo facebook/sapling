@@ -17,6 +17,7 @@ static constexpr std::
             LocalStore::KeySpaceRecord{LocalStore::BlobFamily,
                                        LocalStore::Persistence::Ephemeral,
                                        "blob"},
+
             LocalStore::KeySpaceRecord{
                 LocalStore::BlobMetaDataFamily,
                 LocalStore::Persistence::Ephemeral,
@@ -38,7 +39,11 @@ static constexpr std::
 
             LocalStore::KeySpaceRecord{LocalStore::HgCommitToTreeFamily,
                                        LocalStore::Persistence::Ephemeral,
-                                       "hgcommit2tree"}};
+                                       "hgcommit2tree"},
+
+            LocalStore::KeySpaceRecord{LocalStore::BlobSizeFamily,
+                                       LocalStore::Persistence::Ephemeral,
+                                       "blobsize"}};
 
 } // namespace eden
 } // namespace facebook

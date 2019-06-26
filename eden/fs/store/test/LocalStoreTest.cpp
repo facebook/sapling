@@ -11,6 +11,10 @@
 namespace {
 
 using namespace facebook::eden;
+using namespace folly::string_piece_literals;
+using namespace std::chrono_literals;
+
+using folly::StringPiece;
 
 LocalStoreImplResult makeMemoryLocalStore(FaultInjector*) {
   return {std::nullopt, std::make_unique<MemoryLocalStore>()};
@@ -24,10 +28,7 @@ LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
 }
 
 TEST_P(LocalStoreTest, testReadAndWriteBlob) {
-  using folly::StringPiece;
-  using namespace std::chrono_literals;
-
-  Hash hash("3a8f8eb91101860fd8484154885838bf322964d0");
+  Hash hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
 
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
   auto buf =
@@ -57,33 +58,30 @@ TEST_P(LocalStoreTest, testReadNonexistent) {
   EXPECT_FALSE(retreivedMetadata.has_value());
 }
 
-TEST_P(LocalStoreTest, getBlobSize) {
-  folly::StringPiece data = "A";
+TEST_P(LocalStoreTest, putAndGetBlobSize) {
+  auto data = "A"_sp;
   Hash id = Hash::sha1(data);
 
-  Blob blob = Blob(id, data);
-  store_->putBlob(id, &blob);
+  store_->putBlobSize(id, data.size());
+
+  std::optional<size_t> size = store_->getBlobSize(id).get();
+  ASSERT_TRUE(size.has_value());
 
   size_t expectedSize = data.size();
-  std::optional<size_t> size = store_->getBlobSize(id).get();
-
-  EXPECT_TRUE(size.has_value());
-  EXPECT_EQ(expectedSize, size.value());
+  EXPECT_EQ(expectedSize, *size);
 }
 
 TEST_P(LocalStoreTest, getBlobSizeNotFound) {
   Hash id;
   std::optional<size_t> size = store_->getBlobSize(id).get();
-
-  EXPECT_EQ(size, std::nullopt);
+  ASSERT_FALSE(size.has_value());
 }
 
 TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   using folly::unhexlify;
   using std::string;
-  using namespace std::chrono_literals;
 
-  Hash hash(folly::StringPiece{"8e073e366ed82de6465d1209d3f07da7eebabb93"});
+  Hash hash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   auto gitTreeObject = folly::to<string>(
       string("tree 424\x00", 9),
@@ -122,7 +120,7 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
       unhexlify("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
   store_->put(
-      KeySpace::TreeFamily, hash.getBytes(), folly::StringPiece{gitTreeObject});
+      KeySpace::TreeFamily, hash.getBytes(), StringPiece{gitTreeObject});
   auto tree = store_->getTree(hash).get(10s);
   EXPECT_EQ(Hash("8e073e366ed82de6465d1209d3f07da7eebabb93"), tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());
@@ -142,7 +140,7 @@ TEST_P(LocalStoreTest, testGetResult) {
   EXPECT_FALSE(store_->get(KeySpace::BlobFamily, key1).isValid());
   EXPECT_FALSE(store_->get(KeySpace::BlobFamily, key2).isValid());
 
-  store_->put(KeySpace::BlobFamily, key1, StringPiece{"hello world"});
+  store_->put(KeySpace::BlobFamily, key1, "hello world"_sp);
   auto result1 = store_->get(KeySpace::BlobFamily, key1);
   ASSERT_TRUE(result1.isValid());
   EXPECT_EQ("hello world", result1.piece());
@@ -153,8 +151,6 @@ TEST_P(LocalStoreTest, testGetResult) {
 }
 
 TEST_P(LocalStoreTest, testMultipleBlobWriters) {
-  using namespace std::chrono_literals;
-
   StringPiece key1_1 = "foo";
   StringPiece key1_2 = "bar";
 
@@ -168,19 +164,19 @@ TEST_P(LocalStoreTest, testMultipleBlobWriters) {
   StringPiece key3_2 = "damage";
 
   auto batch1 = store_->beginWrite(8192);
-  batch1->put(KeySpace::BlobFamily, key1_1, StringPiece{"hello world1_1"});
-  batch1->put(KeySpace::BlobFamily, key1_2, StringPiece{"hello world1_2"});
+  batch1->put(KeySpace::BlobFamily, key1_1, "hello world1_1"_sp);
+  batch1->put(KeySpace::BlobFamily, key1_2, "hello world1_2"_sp);
 
   auto batch2 = store_->beginWrite(1024);
-  batch2->put(KeySpace::BlobFamily, key2_1, StringPiece{"hello world2_1"});
-  batch2->put(KeySpace::BlobFamily, key2_2, StringPiece{"hello world2_2"});
+  batch2->put(KeySpace::BlobFamily, key2_1, "hello world2_1"_sp);
+  batch2->put(KeySpace::BlobFamily, key2_2, "hello world2_2"_sp);
 
   auto batch3 = store_->beginWrite();
-  batch3->put(KeySpace::BlobFamily, key3_1, StringPiece{"hello world3_1"});
-  batch3->put(KeySpace::BlobFamily, key3_2, StringPiece{"hello world3_2"});
+  batch3->put(KeySpace::BlobFamily, key3_1, "hello world3_1"_sp);
+  batch3->put(KeySpace::BlobFamily, key3_2, "hello world3_2"_sp);
 
-  batch1->put(KeySpace::BlobFamily, key1_3, StringPiece{"hello world1_3"});
-  batch1->put(KeySpace::BlobFamily, key1_4, StringPiece{"hello world1_4"});
+  batch1->put(KeySpace::BlobFamily, key1_3, "hello world1_3"_sp);
+  batch1->put(KeySpace::BlobFamily, key1_4, "hello world1_4"_sp);
 
   batch1->flush();
   batch2->flush();
@@ -203,8 +199,6 @@ TEST_P(LocalStoreTest, testMultipleBlobWriters) {
 }
 
 TEST_P(LocalStoreTest, testClearKeySpace) {
-  using namespace folly::string_piece_literals;
-
   store_->put(KeySpace::BlobFamily, "key1"_sp, "blob1"_sp);
   store_->put(KeySpace::BlobFamily, "key2"_sp, "blob2"_sp);
   store_->put(KeySpace::TreeFamily, "tree"_sp, "treeContents"_sp);
