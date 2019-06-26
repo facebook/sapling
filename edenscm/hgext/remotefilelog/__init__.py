@@ -115,12 +115,6 @@ Configs:
     ``remotefilelog.getpackversion`` version of the "getpack" wire protocol.
     Starting with 2, LFS blobs are supported.
 
-    ``format.userustdatapack`` switches to using the rust data pack
-    implementation.
-
-    ``format.userusthistorypack`` switches to using the rust history pack
-    implementation.
-
     ``format.userustmutablestore`` switches to using the rust mutable stores.
 
     ``treemanifest.blocksendflat`` causes an exception to be thrown if the

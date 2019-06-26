@@ -36,13 +36,8 @@ except NameError:
 
 
 class datapacktestsbase(object):
-    def __init__(
-        self, datapackreader, paramsavailable, iscdatapack, rustmutabledatapack
-    ):
+    def __init__(self, datapackreader):
         self.datapackreader = datapackreader
-        self.iscdatapack = iscdatapack
-        self.paramsavailable = paramsavailable
-        self.rustmutabledatapack = rustmutabledatapack
 
     def setUp(self):
         self.tempdirs = []
@@ -69,10 +64,7 @@ class datapacktestsbase(object):
         if packdir is None:
             packdir = self.makeTempDir()
 
-        if self.rustmutabledatapack:
-            packer = revisionstore.mutabledeltastore(packfilepath=packdir)
-        else:
-            packer = mutabledatapack(uimod.ui(), packdir, version=version)
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         for args in revisions:
             filename, node, base, content = args[0:4]
@@ -93,8 +85,6 @@ class datapacktestsbase(object):
 
         revisions = [(filename, node, nullid, content)]
         pack = self.createPack(revisions)
-        if self.paramsavailable:
-            self.assertEquals(pack.params.fanoutprefix, SMALLFANOUTPREFIX)
 
         chain = pack.getdeltachain(filename, node)
         self.assertEquals(content, chain[0][4])
@@ -194,22 +184,6 @@ class datapacktestsbase(object):
                 del origmeta[constants.METAKEYFLAG]
             self.assertEquals(parsedmeta, origmeta)
 
-    def testPackMetadataThrows(self):
-        # Rust based mutable datapack don't support versions.
-        if self.rustmutabledatapack:
-            return
-
-        filename = "1"
-        content = "2"
-        node = self.getHash(content)
-        meta = {constants.METAKEYFLAG: 3}
-        revisions = [(filename, node, nullid, content, meta)]
-        try:
-            self.createPack(revisions, version=0)
-            self.assertTrue(False, "should throw if metadata is not supported")
-        except RuntimeError:
-            pass
-
     def testGetMissing(self):
         """Test the getmissing() api.
         """
@@ -280,8 +254,6 @@ class datapacktestsbase(object):
             revisions.append((filename, node, nullid, content))
 
         pack = self.createPack(revisions)
-        if self.paramsavailable:
-            self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
 
         for (filename, node), content in blobs.iteritems():
             actualcontent = pack.getdeltachain(filename, node)[0][4]
@@ -294,10 +266,7 @@ class datapacktestsbase(object):
         packdir = self.makeTempDir()
         deltachains = []
 
-        if self.iscdatapack:
-            numpacks = 200
-        else:
-            numpacks = 10
+        numpacks = 200
         revisionsperpack = 100
 
         for i in range(numpacks):
@@ -315,7 +284,7 @@ class datapacktestsbase(object):
             # Ensures that we are not keeping everything in the cache.
             DEFAULTCACHESIZE = numpacks / 2
 
-        store = testdatapackstore(uimod.ui(), packdir, self.iscdatapack)
+        store = testdatapackstore(uimod.ui(), packdir)
 
         random.shuffle(deltachains)
         for randomchain in deltachains:
@@ -357,7 +326,7 @@ class datapacktestsbase(object):
             def getpack(self, path):
                 return packreader(path)
 
-        store = testdatapackstore(uimod.ui(), packdir, self.iscdatapack)
+        store = testdatapackstore(uimod.ui(), packdir)
 
         # The first refresh should populate all the packfiles.
         store.refresh()
@@ -378,13 +347,6 @@ class datapacktestsbase(object):
 
     def testCorruptPackHandling(self):
         """Test that the pack store deletes corrupt packs."""
-        # There's a bug in cdatapack right now that causes it to return bad data
-        # even if the pack is corrupt. Since we're not getting an exception, we
-        # can't detect the corruption and remediate. Let's wait for the rust
-        # implementation to deprecate the C implementation then this will be
-        # easier to fix.
-        if self.iscdatapack:
-            return
 
         packdir = self.makeTempDir()
         deltachains = []
@@ -411,7 +373,7 @@ class datapacktestsbase(object):
             deltachains.append(chain)
 
         ui = uimod.ui()
-        store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, deletecorruptpacks=True)
 
         key = (deltachains[0][0][0], deltachains[0][0][1])
         # Count packs
@@ -429,7 +391,7 @@ class datapacktestsbase(object):
         # Re-create the store. Otherwise the behavior is kind of "undefined"
         # because the size of mmap-ed memory isn't truncated automatically,
         # and is filled by 0.
-        store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, deletecorruptpacks=True)
 
         # Look for key again
         try:
@@ -455,7 +417,7 @@ class datapacktestsbase(object):
         # Load the packs
         origpackcount = len(os.listdir(packdir))
         ui.pushbuffer(error=True)
-        store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, deletecorruptpacks=True)
         # Constructing the store doesn't load the packfiles, these are loaded
         # on demand, and thus the detection of bad packfiles only happen then.
         # Let's force a refresh to make sure the bad pack files are deleted.
@@ -554,21 +516,9 @@ class datapacktestsbase(object):
         raise RuntimeError("perf test always fails")
 
 
-class datapacktests(datapacktestsbase, unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, datapack, True, False, False)
-        unittest.TestCase.__init__(self, *args, **kwargs)
-
-
-class fastdatapacktests(datapacktestsbase, unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, fastdatapack, False, True, False)
-        unittest.TestCase.__init__(self, *args, **kwargs)
-
-
 class rustdatapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, revisionstore.datapack, False, True, True)
+        datapacktestsbase.__init__(self, revisionstore.datapack)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 

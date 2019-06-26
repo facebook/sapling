@@ -50,17 +50,13 @@ class historypackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(self, ui, path, deletecorruptpacks=False, userusthistorypack=False):
-        self.userusthistorypack = userusthistorypack
+    def __init__(self, ui, path, deletecorruptpacks=False):
         super(historypackstore, self).__init__(
             ui, path, deletecorruptpacks=deletecorruptpacks
         )
 
     def getpack(self, path):
-        if self.userusthistorypack:
-            return revisionstore.historypack(path)
-        else:
-            return historypack(path)
+        return revisionstore.historypack(path)
 
     def getancestors(self, name, node, known=None):
         def func(pack):

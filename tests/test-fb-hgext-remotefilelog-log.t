@@ -115,10 +115,8 @@ Log on a file via -fr
   1
 
 Trace renames
-- Enable local packs and rust history packs to test a bug involving tracking
-- renames across packs.
+- Enable local packs to test a bug involving tracking renames across packs.
   $ setconfig remotefilelog.packlocaldata=True remotefilelog.localdatarepack=True
-  $ setconfig format.userusthistorypack=True
   $ echo >> x
   $ hg commit -m "Edit x"
   $ hg mv x z

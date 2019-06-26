@@ -2,8 +2,6 @@
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH <<EOF
-  > [format]
-  > userustdatapack=True
   > [remotefilelog]
   > fetchpacks=True
   > EOF

@@ -2,11 +2,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [format]
-  > userustdatapack=True
-  > EOF
-
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF

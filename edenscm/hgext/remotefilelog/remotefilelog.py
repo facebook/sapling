@@ -632,17 +632,10 @@ class remotefileslog(filelog.fileslog):
 
         def makepackstore(datastores, historystores, packpath, deletecorrupt=False):
             packcontentstore = datapackstore(
-                repo.ui,
-                packpath,
-                usecdatapack=repo.ui.configbool("remotefilelog", "fastdatapack"),
-                userustdatapack=repo.ui.configbool("format", "userustdatapack"),
-                deletecorruptpacks=deletecorrupt,
+                repo.ui, packpath, deletecorruptpacks=deletecorrupt
             )
             packmetadatastore = historypackstore(
-                repo.ui,
-                packpath,
-                userusthistorypack=repo.ui.configbool("format", "userusthistorypack"),
-                deletecorruptpacks=deletecorrupt,
+                repo.ui, packpath, deletecorruptpacks=deletecorrupt
             )
             datastores.append(packcontentstore)
             historystores.append(packmetadatastore)

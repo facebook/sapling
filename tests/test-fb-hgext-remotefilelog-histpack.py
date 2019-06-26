@@ -305,25 +305,6 @@ class histpacktestsbase(object):
         self.assertEquals(missing, missingcheck[1:])
 
 
-class histpacktests(histpacktestsbase, unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        histpacktestsbase.__init__(
-            self,
-            historypack,
-            lambda packdir: mutablehistorypack(uimod.ui(), packdir, version=1),
-        )
-        unittest.TestCase.__init__(self, *args, **kwargs)
-
-    def testAddThrows(self):
-        pack = self.createPack()
-
-        try:
-            pack.add("filename", nullid, nullid, nullid, nullid, None)
-            self.assertTrue(False, "historypack.add should throw")
-        except RuntimeError:
-            pass
-
-
 class rusthistpacktests(histpacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
         histpacktestsbase.__init__(

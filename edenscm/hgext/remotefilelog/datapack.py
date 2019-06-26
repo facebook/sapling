@@ -43,27 +43,13 @@ class datapackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(
-        self,
-        ui,
-        path,
-        usecdatapack=False,
-        deletecorruptpacks=False,
-        userustdatapack=False,
-    ):
-        self.usecdatapack = usecdatapack
-        self.userustdatapack = userustdatapack
+    def __init__(self, ui, path, deletecorruptpacks=False):
         super(datapackstore, self).__init__(
             ui, path, deletecorruptpacks=deletecorruptpacks
         )
 
     def getpack(self, path):
-        if self.userustdatapack:
-            return revisionstore.datapack(path)
-        elif self.usecdatapack:
-            return fastdatapack(path)
-        else:
-            return datapack(path)
+        return revisionstore.datapack(path)
 
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with datapackstore")

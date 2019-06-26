@@ -1139,7 +1139,8 @@ class repackledger(object):
         return value
 
     def addcreated(self, value):
-        self.created.add(value)
+        if value is not None:
+            self.created.add(value)
 
     def setlocation(self, location=None):
         if self.prog is not None:
