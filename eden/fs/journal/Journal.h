@@ -14,6 +14,8 @@
 #include <optional>
 #include <unordered_map>
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 
 namespace facebook {
 namespace eden {
@@ -124,6 +126,15 @@ class Journal {
       SequenceNumber limitSequence) const;
   std::unique_ptr<JournalDeltaRange> accumulateRange() const;
 
+  /** Gets a vector of the modifications (newer deltas having lower indices)
+   * done by the latest 'limit' deltas, if the
+   * beginning of the journal is reached before 'limit' number of deltas are
+   * reached then it will just return what had been currently found.
+   * */
+  std::vector<DebugJournalDelta> getDebugRawJournalInfo(
+      size_t limit,
+      long mountGeneration) const;
+
  private:
   /** Add a delta to the journal.
    * The delta will have a new sequence number and timestamp
@@ -146,6 +157,16 @@ class Journal {
     SubscriberId nextSubscriberId{1};
     std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
   };
+
+  /** Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
+   * is not nullopt then checks at most 'lengthLimit' entries) and runs
+   * deltaActor on each entry encountered.
+   * */
+  template <class Func>
+  void forEachDelta(
+      SequenceNumber from,
+      std::optional<size_t> lengthLimit,
+      Func&& deltaCallback) const;
 
   folly::Synchronized<SubscriberState> subscriberState_;
 };

@@ -635,51 +635,8 @@ void EdenServiceHandler::debugGetRawJournal(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, params->mountPoint);
   auto edenMount = server_->getMount(params->mountPoint);
   auto mountGeneration = static_cast<ssize_t>(edenMount->getMountGeneration());
-  auto latest = edenMount->getJournal().getLatest();
-  auto toPos = latest.get();
-  auto current = toPos;
-  if (params->limit < 0) {
-    throw newEdenError(EINVAL, "limit must be non-negative");
-  }
-  auto limit = static_cast<Journal::SequenceNumber>(params->limit);
-  auto fromPos = limit <= toPos->sequenceID ? toPos->sequenceID - limit : 0;
-  while (current) {
-    if (current->sequenceID <= fromPos) {
-      break;
-    }
-
-    DebugJournalDelta delta;
-    JournalPosition fromPosition;
-    fromPosition.set_mountGeneration(mountGeneration);
-    fromPosition.set_sequenceNumber(current->sequenceID);
-    fromPosition.set_snapshotHash(thriftHash(current->fromHash));
-    delta.set_fromPosition(fromPosition);
-
-    JournalPosition toPosition;
-    toPosition.set_mountGeneration(mountGeneration);
-    toPosition.set_sequenceNumber(current->sequenceID);
-    toPosition.set_snapshotHash(thriftHash(current->toHash));
-    delta.set_toPosition(toPosition);
-
-    auto changedFilesInOverlay = current->getChangedFilesInOverlay();
-
-    for (const auto& entry : changedFilesInOverlay) {
-      auto& path = entry.first;
-      auto& changeInfo = entry.second;
-
-      DebugPathChangeInfo debugChangeInfo;
-      debugChangeInfo.existedBefore = changeInfo.existedBefore;
-      debugChangeInfo.existedAfter = changeInfo.existedAfter;
-      delta.changedPaths.emplace(path.stringPiece().str(), debugChangeInfo);
-    }
-
-    for (auto& path : current->uncleanPaths) {
-      delta.uncleanPaths.emplace(path.stringPiece().str());
-    }
-
-    out.allDeltas.push_back(delta);
-    current = current->previous.get();
-  }
+  out.allDeltas = edenMount->getJournal().getDebugRawJournalInfo(
+      static_cast<size_t>(params->limit), mountGeneration);
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

@@ -166,64 +166,108 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() const {
 }
 
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
-    SequenceNumber limitSequence) const {
-  auto result = std::make_unique<JournalDeltaRange>();
-  {
-    auto deltaState = deltaState_.rlock();
-
-    const JournalDelta* current = deltaState->latest.get();
-
-    if (!current) {
-      return nullptr;
-    }
-
-    if (current->sequenceID < limitSequence) {
-      return nullptr;
-    }
-
-    result->toSequence = current->sequenceID;
-    result->toTime = current->time;
-    result->fromHash = current->fromHash;
-    result->toHash = current->toHash;
-
-    while (current) {
-      if (current->sequenceID < limitSequence) {
-        break;
-      }
-
-      // Capture the lower bound.
-      result->fromSequence = current->sequenceID;
-      result->fromTime = current->time;
-      result->fromHash = current->fromHash;
-
-      // Merge the unclean status list
-      result->uncleanPaths.insert(
-          current->uncleanPaths.begin(), current->uncleanPaths.end());
-
-      auto changedFilesInOverlay = current->getChangedFilesInOverlay();
-
-      for (auto& entry : changedFilesInOverlay) {
-        auto& name = entry.first;
-        auto& currentInfo = entry.second;
-        auto* resultInfo = folly::get_ptr(result->changedFilesInOverlay, name);
-        if (!resultInfo) {
-          result->changedFilesInOverlay.emplace(name, currentInfo);
-        } else {
-          if (resultInfo->existedBefore != currentInfo.existedAfter) {
-            auto event1 = eventCharacterizationFor(currentInfo);
-            auto event2 = eventCharacterizationFor(*resultInfo);
-            XLOG(ERR) << "Journal for " << name << " holds invalid " << event1
-                      << ", " << event2 << " sequence";
-          }
-
-          resultInfo->existedBefore = currentInfo.existedBefore;
+    SequenceNumber from) const {
+  std::unique_ptr<JournalDeltaRange> result = nullptr;
+  forEachDelta(
+      from, std::nullopt, [&result](const JournalDelta& current) -> void {
+        if (!result) {
+          result = std::make_unique<JournalDeltaRange>();
+          result->toSequence = current.sequenceID;
+          result->toTime = current.time;
+          result->toHash = current.toHash;
         }
-      }
+        // Capture the lower bound.
+        result->fromSequence = current.sequenceID;
+        result->fromTime = current.time;
+        result->fromHash = current.fromHash;
 
-      current = current->previous.get();
-    }
-  }
+        // Merge the unclean status list
+        result->uncleanPaths.insert(
+            current.uncleanPaths.begin(), current.uncleanPaths.end());
+
+        for (auto& entry : current.getChangedFilesInOverlay()) {
+          auto& name = entry.first;
+          auto& currentInfo = entry.second;
+          auto* resultInfo =
+              folly::get_ptr(result->changedFilesInOverlay, name);
+          if (!resultInfo) {
+            result->changedFilesInOverlay.emplace(name, currentInfo);
+          } else {
+            if (resultInfo->existedBefore != currentInfo.existedAfter) {
+              auto event1 = eventCharacterizationFor(currentInfo);
+              auto event2 = eventCharacterizationFor(*resultInfo);
+              XLOG(ERR) << "Journal for " << name << " holds invalid " << event1
+                        << ", " << event2 << " sequence";
+            }
+
+            resultInfo->existedBefore = currentInfo.existedBefore;
+          }
+        }
+      });
   return result;
+}
+
+std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
+    size_t limit,
+    long mountGeneration) const {
+  auto result = std::vector<DebugJournalDelta>();
+  forEachDelta(
+      0,
+      std::optional(limit),
+      [mountGeneration, &result](const JournalDelta& current) -> void {
+        DebugJournalDelta delta;
+        JournalPosition fromPosition;
+        fromPosition.set_mountGeneration(mountGeneration);
+        fromPosition.set_sequenceNumber(current.sequenceID);
+        fromPosition.set_snapshotHash(thriftHash(current.fromHash));
+        delta.set_fromPosition(fromPosition);
+
+        JournalPosition toPosition;
+        toPosition.set_mountGeneration(mountGeneration);
+        toPosition.set_sequenceNumber(current.sequenceID);
+        toPosition.set_snapshotHash(thriftHash(current.toHash));
+        delta.set_toPosition(toPosition);
+
+        for (const auto& entry : current.getChangedFilesInOverlay()) {
+          auto& path = entry.first;
+          auto& changeInfo = entry.second;
+
+          DebugPathChangeInfo debugChangeInfo;
+          debugChangeInfo.existedBefore = changeInfo.existedBefore;
+          debugChangeInfo.existedAfter = changeInfo.existedAfter;
+          delta.changedPaths.emplace(path.stringPiece().str(), debugChangeInfo);
+        }
+
+        for (auto& path : current.uncleanPaths) {
+          delta.uncleanPaths.emplace(path.stringPiece().str());
+        }
+
+        result.push_back(delta);
+      });
+  return result;
+}
+
+// Func: void(const JournalDelta&)
+template <class Func>
+void Journal::forEachDelta(
+    SequenceNumber from,
+    std::optional<size_t> lengthLimit,
+    Func&& deltaCallback) const {
+  auto deltaState = deltaState_.rlock();
+  const JournalDelta* current = deltaState->latest.get();
+
+  size_t iters = 0;
+  while (current) {
+    if (current->sequenceID < from) {
+      break;
+    }
+    if (lengthLimit && iters >= lengthLimit.value()) {
+      break;
+    }
+    deltaCallback(*current);
+    ++iters;
+    current = current->previous.get();
+  }
 }
 } // namespace eden
 } // namespace facebook

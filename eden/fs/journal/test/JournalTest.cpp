@@ -124,6 +124,46 @@ TEST(Journal, accumulateRangeRemoveCreateUpdate) {
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 }
 
+TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
+  Journal journal;
+
+  // Remove test.txt
+  journal.recordRemoved("test.txt"_relpath);
+  // Create test.txt
+  journal.recordCreated("test.txt"_relpath);
+  // Modify test.txt
+  journal.recordChanged("test.txt"_relpath);
+
+  long mountGen = 333;
+
+  auto debugDeltas = journal.getDebugRawJournalInfo(3, mountGen);
+  ASSERT_EQ(3, debugDeltas.size());
+
+  // Debug Raw Journal Info returns info from newest->latest
+  EXPECT_TRUE(debugDeltas[0].changedPaths["test.txt"].existedBefore);
+  EXPECT_TRUE(debugDeltas[0].changedPaths["test.txt"].existedAfter);
+  EXPECT_EQ(debugDeltas[0].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[0].fromPosition.sequenceNumber, 3);
+  EXPECT_FALSE(debugDeltas[1].changedPaths["test.txt"].existedBefore);
+  EXPECT_TRUE(debugDeltas[1].changedPaths["test.txt"].existedAfter);
+  EXPECT_EQ(debugDeltas[1].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[1].fromPosition.sequenceNumber, 2);
+  EXPECT_TRUE(debugDeltas[2].changedPaths["test.txt"].existedBefore);
+  EXPECT_FALSE(debugDeltas[2].changedPaths["test.txt"].existedAfter);
+  EXPECT_EQ(debugDeltas[2].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[2].fromPosition.sequenceNumber, 1);
+
+  debugDeltas = journal.getDebugRawJournalInfo(1, mountGen);
+  ASSERT_EQ(1, debugDeltas.size());
+  EXPECT_TRUE(debugDeltas[0].changedPaths["test.txt"].existedBefore);
+  EXPECT_TRUE(debugDeltas[0].changedPaths["test.txt"].existedAfter);
+  EXPECT_EQ(debugDeltas[0].fromPosition.mountGeneration, mountGen);
+  EXPECT_EQ(debugDeltas[0].fromPosition.sequenceNumber, 3);
+
+  debugDeltas = journal.getDebugRawJournalInfo(0, mountGen);
+  ASSERT_EQ(0, debugDeltas.size());
+}
+
 TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
   Journal journal;
   size_t N =
