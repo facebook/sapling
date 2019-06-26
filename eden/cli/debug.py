@@ -38,7 +38,7 @@ from facebook.eden.overlay.ttypes import OverlayDir
 from facebook.eden.ttypes import (
     DebugGetRawJournalParams,
     DebugJournalDelta,
-    JournalPosition,
+    EdenError,
     NoValueForKeyError,
     TimeSpec,
     TreeInodeDebugInfo,
@@ -864,20 +864,14 @@ class DebugJournalCmd(Subcmd):
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
 
         with instance.get_thrift_client() as client:
-            to_position = client.getCurrentJournalPosition(bytes(checkout.path))
-            from_sequence = max(to_position.sequenceNumber - args.limit + 1, 0)
-            from_position = JournalPosition(
-                mountGeneration=to_position.mountGeneration,
-                sequenceNumber=from_sequence,
-                snapshotHash=b"",
-            )
-
             params = DebugGetRawJournalParams(
-                mountPoint=bytes(checkout.path),
-                fromPosition=from_position,
-                toPosition=to_position,
+                mountPoint=bytes(checkout.path), limit=args.limit
             )
-            raw_journal = client.debugGetRawJournal(params)
+            try:
+                raw_journal = client.debugGetRawJournal(params)
+            except EdenError as err:
+                print(err, file=sys.stderr)
+                return 1
             if args.pattern:
                 flags = re.IGNORECASE if args.ignore_case else 0
                 bytes_pattern = args.pattern.encode("utf-8")

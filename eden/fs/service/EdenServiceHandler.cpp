@@ -628,67 +628,23 @@ void EdenServiceHandler::getFilesChangedSince(
 #endif
 }
 
-namespace {
-/**
- * Starting from the provided delta, walks the chain backwards until it finds
- * the delta whose sequenceID is `target`.
- */
-const JournalDelta* FOLLY_NULLABLE
-findJournalDelta(const JournalDelta* delta, Journal::SequenceNumber target) {
-#ifndef _WIN32
-  // If the tip of the delta chain precedes the target, then do not bother to
-  // search.
-  if (delta == nullptr || delta->sequenceID < target) {
-    return nullptr;
-  }
-
-  while (delta) {
-    if (target == delta->sequenceID) {
-      return delta;
-    }
-    delta = delta->previous.get();
-  }
-  return nullptr;
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
-}
-} // namespace
-
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, params->mountPoint);
   auto edenMount = server_->getMount(params->mountPoint);
-
-  auto mountGeneration = params->fromPosition.mountGeneration;
-  if (mountGeneration !=
-      static_cast<ssize_t>(edenMount->getMountGeneration())) {
-    throw newEdenError(
-        ERANGE,
-        "fromPosition.mountGeneration does not match the current "
-        "mountGeneration.  "
-        "You need to compute a new basis for delta queries.");
-  }
-
+  auto mountGeneration = static_cast<ssize_t>(edenMount->getMountGeneration());
   auto latest = edenMount->getJournal().getLatest();
-
-  // Walk the journal until we find toPosition.
-  auto toPos =
-      findJournalDelta(latest.get(), params->toPosition.sequenceNumber);
-  if (toPos == nullptr) {
-    throw newEdenError(
-        "no JournalDelta found for toPosition.sequenceNumber ",
-        params->toPosition.sequenceNumber);
-  }
-
-  // Walk the journal until we find a JournalDelta that preceeds fromPosition,
-  // or the beginning of the chain, whichever comes first.
+  auto toPos = latest.get();
   auto current = toPos;
-  auto fromPos = params->fromPosition.sequenceNumber;
+  if (params->limit < 0) {
+    throw newEdenError(EINVAL, "limit must be non-negative");
+  }
+  auto limit = static_cast<Journal::SequenceNumber>(params->limit);
+  auto fromPos = limit <= toPos->sequenceID ? toPos->sequenceID - limit : 0;
   while (current) {
-    if (static_cast<ssize_t>(current->sequenceID) < fromPos) {
+    if (current->sequenceID <= fromPos) {
       break;
     }
 
