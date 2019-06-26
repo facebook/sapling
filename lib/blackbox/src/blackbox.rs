@@ -3,11 +3,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use super::match_pattern;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::cell::Cell;
 use std::fs;
 use std::io::Cursor;
@@ -47,6 +49,11 @@ pub struct Entry<T> {
 
     // Prevent constructing `Entry` directly.
     phantom: (),
+}
+
+/// Convert to JSON Value for pattern matching.
+pub trait ToValue {
+    fn to_value(&self) -> Value;
 }
 
 /// Specify how to filter entries. Input of [`Blackbox::find_by`].
@@ -184,8 +191,15 @@ impl Blackbox {
 
     /// Filter entries. Newest first.
     ///
+    /// - `filter` is backed by indexes.
+    /// - `pattern` requires an expensive linear scan.
+    ///
     /// Entries that cannot be read or deserialized are ignored silently.
-    pub fn filter<'a, 'b: 'a, T: Deserialize<'a>>(&'b self, filter: Filter) -> Vec<Entry<T>> {
+    pub fn filter<'a, 'b: 'a, T: Deserialize<'a> + ToValue>(
+        &'b self,
+        filter: Filter,
+        pattern: Option<Value>,
+    ) -> Vec<Entry<T>> {
         // API: Consider returning an iterator to get some laziness.
         let index_id = filter.index_id();
         let (start, end) = filter.index_range();
@@ -198,6 +212,13 @@ impl Blackbox {
                         for next in entries {
                             if let Ok(bytes) = next {
                                 if let Some(entry) = Entry::from_slice(bytes) {
+                                    if let Some(ref pattern) = pattern {
+                                        let data: &T = &entry.data;
+                                        let value = data.to_value();
+                                        if !match_pattern(&value, pattern) {
+                                            continue;
+                                        }
+                                    }
                                     result.push(entry)
                                 }
                             }
@@ -322,6 +343,12 @@ mod tests {
         B(String),
     }
 
+    impl ToValue for Event {
+        fn to_value(&self) -> Value {
+            serde_json::to_value(self).unwrap()
+        }
+    }
+
     #[test]
     fn test_basic() {
         let time_start = SystemTime::now();
@@ -343,15 +370,18 @@ mod tests {
         // Test find by session id (pid if no conflict).
         let pid = unsafe { libc::getpid() } as u32;
         assert_eq!(
-            blackbox.filter::<Event>(Filter::SessionId(pid)).len(),
+            blackbox.filter::<Event>(Filter::SessionId(pid), None).len(),
             events.len()
         );
 
         // Test find by time range.
-        let entries = blackbox.filter::<Event>((time_start..=time_end).into());
+        let entries = blackbox.filter::<Event>((time_start..=time_end).into(), None);
 
         // The time range covers everything, so it should match "find all".
-        assert_eq!(blackbox.filter::<Event>(Filter::Nop).len(), entries.len());
+        assert_eq!(
+            blackbox.filter::<Event>(Filter::Nop, None).len(),
+            entries.len()
+        );
         assert_eq!(entries.len(), events.len() * session_count);
         assert_eq!(
             entries
@@ -373,8 +403,14 @@ mod tests {
 
         // Check logging with multiple blackboxes.
         let blackbox = BlackboxOptions::new().open(&dir.path().join("2")).unwrap();
-        assert_eq!(blackbox.filter::<Event>(Filter::SessionId(pid)).len(), 1);
-        assert_eq!(blackbox.filter::<Event>(Filter::Nop).len(), entries.len());
+        assert_eq!(
+            blackbox.filter::<Event>(Filter::SessionId(pid), None).len(),
+            1
+        );
+        assert_eq!(
+            blackbox.filter::<Event>(Filter::Nop, None).len(),
+            entries.len()
+        );
     }
 
     #[cfg(unix)]
@@ -388,7 +424,7 @@ mod tests {
             blackbox.log(event);
         }
 
-        let entries = blackbox.filter::<Event>(Filter::Nop);
+        let entries = blackbox.filter::<Event>(Filter::Nop, None);
         assert_eq!(entries.len(), events.len());
 
         // Corrupt log
@@ -399,7 +435,7 @@ mod tests {
             corrupt(&log_path, *bytes);
 
             // The other entries can still be read without errors.
-            let entries = blackbox.filter::<Event>(Filter::Nop);
+            let entries = blackbox.filter::<Event>(Filter::Nop, None);
             assert_eq!(entries.len(), events.len() - corrupted_count);
             assert!(entries
                 .iter()
@@ -416,7 +452,7 @@ mod tests {
         // Requires a reload of the blackbox so the in-memory checksum table
         // gets updated.
         let blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
-        let entries = blackbox.filter::<Event>(Filter::Nop);
+        let entries = blackbox.filter::<Event>(Filter::Nop, None);
 
         // Loading this Log would trigger a rewrite.
         // TODO: Add some auto-recovery logic to the indexes on `Log`.

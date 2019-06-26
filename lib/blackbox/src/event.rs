@@ -11,13 +11,13 @@
 //! This module assumes that all events are known here. There are no external
 //! types of events that are outside this module.
 
+use super::ToValue;
 use failure::Fallible;
 use serde_alt::serde_alt;
 use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fmt;
-
-pub use serde_json::Value;
 
 // Most serde attributes are used extensively to reduce the space usage.
 //
@@ -337,9 +337,11 @@ impl Event {
     pub fn from_json(json: &str) -> Fallible<Self> {
         Ok(serde_json::from_str(json)?)
     }
+}
 
+impl ToValue for Event {
     /// Convert to human-friendly [`serde_json::Value`].
-    pub fn to_value(&self) -> Value {
+    fn to_value(&self) -> Value {
         // This value is using the "rename" field, suitable for storage, but
         // bad for human consumption.
         let value = serde_json::to_value(self).unwrap();
