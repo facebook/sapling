@@ -82,7 +82,7 @@ Non store repo:
   $ echo foo > tst.d/foo
   $ hg ci -Amfoo
   adding tst.d/foo
-  $ find .hg | sort
+  $ find .hg | sort | grep -v blackbox
   .hg
   .hg/00changelog.i
   .hg/00manifest.i
@@ -114,7 +114,7 @@ Non fncache repo:
   $ echo foo > tst.d/Foo
   $ hg ci -Amfoo
   adding tst.d/Foo
-  $ find .hg | sort
+  $ find .hg | sort | grep -v blackbox
   .hg
   .hg/00changelog.i
   .hg/checkoutidentifier

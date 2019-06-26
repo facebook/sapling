@@ -27,6 +27,8 @@ just in case somebody has a strange $TMPDIR
   >         allnames.append(name)
   > allnames.sort()
   > for name in allnames:
+  >     if 'blackbox' in name:
+  >         continue
   >     suffix = name in isdir and '/' or ''
   >     print('%05o %s%s' % (os.lstat(name).st_mode & 0o7777, name, suffix))
   > EOF

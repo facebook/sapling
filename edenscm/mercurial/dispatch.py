@@ -20,6 +20,7 @@ import time
 import traceback
 
 from . import (
+    blackbox,
     cmdutil,
     color,
     commands,
@@ -425,6 +426,7 @@ def dispatch(req):
             ui.log(
                 "metrics", pformat({"metrics": metrics}, width=1024), **ui.metrics.stats
             )
+        blackbox.sync()
 
     # by registering this exit handler here, we guarantee that it runs
     # after other exithandlers, like the killpager one
@@ -1378,6 +1380,7 @@ def _dispatch(req):
                         )
                         if not repo.local():
                             raise error.Abort(_("repository '%s' is not local") % path)
+                        _initblackbox(req, repo, func.cmdtype)
                         repo.ui.setconfig("bundle", "mainreporoot", repo.root, "repo")
                     except error.RequirementError:
                         raise
@@ -1425,6 +1428,35 @@ def _dispatch(req):
             if repo:
                 repo.dirstate.loginfo(ui, "post")
             return ret
+
+
+def _initblackbox(req, repo, cmdtype):
+    """Initialize the native blackbox logging at the shared repo path.
+
+    This might choose to disable logging if the blackbox extension is disabled
+    via '--config=extensions.blackbox=!' or '--config=blackbox.track=', and
+    the command is read-only. (In other words, read-write commands will always
+    be logged)
+    """
+    # See "class command" in registrar.py for valid command types.
+    # Enforce blackbox logging for non-readonly commands, so if an automation
+    # runs commands like `hg commit --config extensions.blackbox=!`, we still
+    # log it.
+    if cmdtype == "readonly":
+        config = req.earlyoptions["config"]
+        if "extensions.blackbox=!" in config or "blackbox.track=" in config:
+            # Explicitly disabled via command line. Do not initialize blackbox.
+            return
+
+    # Create the log in sharedvfs.
+    path = repo.sharedvfs.join("blackbox", "v1")
+    size = repo.ui.configbytes("blackbox", "maxsize")
+    count = repo.ui.configint("blackbox", "maxfiles")
+    try:
+        blackbox.init(path, count, size)
+    except IOError:
+        # Likely permission errors. Not fatal.
+        pass
 
 
 def _runcommand(ui, options, cmd, cmdfunc):

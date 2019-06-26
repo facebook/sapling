@@ -21,6 +21,7 @@ Check the basic files created:
 
   $ ls .hg
   00changelog.i
+  blackbox
   requires
   store
   treestate
@@ -45,6 +46,7 @@ Poke at a clone:
   0 files, 0 changesets, 0 total revisions
   $ ls .hg
   00changelog.i
+  blackbox
   hgrc
   requires
   store

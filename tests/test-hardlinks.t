@@ -13,7 +13,7 @@
 
   $ nlinksdir()
   > {
-  >     find "$@" -type f | $PYTHON $TESTTMP/nlinks.py
+  >     find "$@" -type f | $PYTHON $TESTTMP/nlinks.py | grep -v blackbox
   > }
 
 Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):

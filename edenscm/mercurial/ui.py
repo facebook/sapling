@@ -25,6 +25,7 @@ import traceback
 from edenscmnative.bindings import configparser
 
 from . import (
+    blackbox,
     color,
     configitems,
     encoding,
@@ -1532,7 +1533,25 @@ class ui(object):
         then any values to %-format into that format string.
 
         **opts is a dict of additional key-value pairs to log.
+
+        This method is being slowly deprecated. Use 'blackbox.log' instead.
         """
+        if not msg:
+            msg = ""
+        elif len(msg) > 1:
+            try:
+                msg = msg[0] % msg[1:]
+            except TypeError:
+                # "TypeError: not enough arguments for format string"
+                # Fallback to just concat the strings. Ideally this fallback is
+                # not necessary.
+                msg = " ".join(msg)
+        else:
+            msg = msg[0]
+        try:
+            blackbox.log({"legacy_log": {"service": service, "msg": msg, "opts": opts}})
+        except UnicodeDecodeError:
+            pass
 
     def label(self, msg, label):
         """style msg based on supplied label

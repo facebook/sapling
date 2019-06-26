@@ -47,7 +47,7 @@ import traceback
 import warnings
 import zlib
 
-from . import encoding, error, fscap, i18n, policy, pycompat, urllibcompat
+from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
 
 
 base85 = policy.importmod(r"base85")
@@ -4445,3 +4445,21 @@ def log(service, *msg, **opts):
 
     **opts is a dict of additional key-value pairs to log.
     """
+    # The default implementation is to log as a LegacyLog event.
+    # Callsites should migrate to blackbox.log, the structured logging API.
+    if not msg:
+        msg = ""
+    elif len(msg) > 1:
+        try:
+            msg = msg[0] % msg[1:]
+        except TypeError:
+            # "TypeError: not enough arguments for format string"
+            # Fallback to just concat the strings. Ideally this fallback is
+            # not necessary.
+            msg = " ".join(msg)
+    else:
+        msg = msg[0]
+    try:
+        blackbox.log({"legacy_log": {"service": service, "msg": msg, "opts": opts}})
+    except UnicodeDecodeError:
+        pass

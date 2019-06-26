@@ -131,6 +131,8 @@ coreconfigitem("annotate", "ignorewseol", default=False)
 coreconfigitem("annotate", "nobinary", default=False)
 coreconfigitem("annotate", "noprefix", default=False)
 coreconfigitem("auth", "cookiefile", default=None)
+coreconfigitem("blackbox", "maxsize", default="100 MB")
+coreconfigitem("blackbox", "maxfiles", default=3)
 # bookmarks.pushing: internal hack for discovery
 coreconfigitem("bookmarks", "pushing", default=list)
 # bundle.mainreporoot: internal hack for bundlerepo

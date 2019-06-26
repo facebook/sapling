@@ -60,9 +60,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("blackbox", "dirty", default=False)
-configitem("blackbox", "maxsize", default="1 MB")
 configitem("blackbox", "logsource", default=False)
-configitem("blackbox", "maxfiles", default=7)
 configitem("blackbox", "track", default=lambda: ["*"])
 
 

@@ -41,7 +41,7 @@ many files:
 The watchman clock remains unchanged. Watchman still returns 4 files, which
 means the "status" command could still be slow.
 
-  $ rm .hg/blackbox*
+  $ rm -rf .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
@@ -52,14 +52,14 @@ return an empty list:
   $ hg status
   $ setconfig fsmonitor.watchman-changed-file-threshold=5
 
-  $ rm .hg/blackbox*
+  $ rm -rf .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
 
   $ sleep 1
 
-  $ rm .hg/blackbox*
+  $ rm -rf .hg/blackbox*
   $ hg status
   $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned []

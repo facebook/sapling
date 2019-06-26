@@ -1249,7 +1249,7 @@ server won't turn changeset public.
 
   $ hg init Phi
   $ cd Upsilon
-  $ chmod -R -w .hg
+  $ chmod -R a-w .hg
   $ hg push ../Phi
   pushing to ../Phi
   searching for changes
@@ -1271,7 +1271,7 @@ server won't turn changeset public.
   test-debug-phase: new rev 11:  x -> 0
   test-debug-phase: new rev 12:  x -> 0
   test-debug-phase: new rev 13:  x -> 0
-  $ chmod -R +w .hg
+  $ chmod -R a+w .hg
 
 2. Test that failed phases movement are reported
 
@@ -1280,14 +1280,14 @@ server won't turn changeset public.
   test-debug-phase: move rev 7: 0 -> 1
   test-debug-phase: move rev 8: 0 -> 1
   test-debug-phase: move rev 9: 0 -> 1
-  $ chmod -R -w .hg
+  $ chmod -R a-w .hg
   $ hg push ../Phi
   pushing to ../Phi
   searching for changes
   no changes found
   cannot lock source repo, skipping local public phase update
   [1]
-  $ chmod -R +w .hg
+  $ chmod -R a+w .hg
 
   $ cd ..
 

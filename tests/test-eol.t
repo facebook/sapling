@@ -401,7 +401,7 @@ Test issue2569 -- eol extension takes write lock on reading:
   $ touch .hgeol
   $ hg status
   ? .hgeol
-  $ chmod -R -w .hg
+  $ chmod -R a-w .hg
   $ sleep 1
   $ touch .hgeol
   $ hg status --traceback

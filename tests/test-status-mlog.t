@@ -14,7 +14,7 @@ Test logging of "M" entries
   *> M a: size changed (2 -> 4) (glob)
 
   $ sleep 1
-  $ rm a .hg/blackbox*
+  $ rm -rf a .hg/blackbox*
   $ touch a
   $ hg status
   M a
@@ -22,7 +22,7 @@ Test logging of "M" entries
   *> M a: size changed (2 -> 0), os.stat size = 0 (glob)
 
   $ sleep 1
-  $ rm .hg/blackbox*
+  $ rm -rf .hg/blackbox*
   $ echo 1 > a
   $ hg status
   $ hg blackbox | grep 'a:'
