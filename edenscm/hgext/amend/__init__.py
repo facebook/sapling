@@ -476,7 +476,12 @@ def amend(ui, repo, *pats, **opts):
             noconflictmsg = _(
                 "restacking would create conflicts (%s in %s), so you must run it manually\n(run `hg restack` manually to restack this commit's children)"
             )
-            fixupamend(ui, repo, noconflict=noconflict, noconflictmsg=noconflictmsg)
+            revs = [c.hex() for c in repo.set("(%n::)-%n", old.node(), old.node())]
+            with ui.configoverride({("rebase", "noconflictmsg"): noconflictmsg}):
+                # Note: this has effects on linearizing (old:: - old). That can
+                # fail. If that fails, it might make sense to try a plain
+                # rebase -s (old:: - old) -d new.
+                restack.restack(ui, repo, rev=revs, noconflict=noconflict)
 
         showtemplate(ui, repo, repo[node], **opts)
     finally:

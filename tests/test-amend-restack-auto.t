@@ -62,8 +62,6 @@ amend.autorestack=only-trivial, and simple changes (expect restack)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [426bad] A
   $ hg amend -m 'Unchanged manifest for A'
-  rebasing 1:112478962961 "B" (B)
-  rebasing 2:26805aba1e60 "C" (C)
   rebasing 3:5357953e3ea3 "Unchanged manifest for B"
   rebasing 4:b635bd2cf20b "C"
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
@@ -299,15 +297,12 @@ Test rebasing children with obsolete children themselves needing a restack.
   restacking children automatically (unless they conflict)
   rebasing 2:917a077edb8d "B" (B)
   rebasing 4:ff9eba5e2480 "C2" (C2)
-  rebasing 3:b45c90359798 "C" (C)
   rebasing 5:01f26f1a10b2 "D" (D)
   $ showgraph
-  o  10 c83f7cf4e4f0 D
+  o  9 0a75af8fc6e3 D
   |
-  x  9 68f241c592e0 C
+  o  8 84f362759e03 C2
   |
-  | o  8 84f362759e03 C2
-  |/
   o  7 23018262b14e B
   |
   @  6 21006be03678 A
@@ -342,18 +337,15 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   $ hg up -q B2
   $ hg amend -m B3
   restacking children automatically (unless they conflict)
-  rebasing 4:dbe6ebcaec86 "C" (C)
   rebasing 5:afb1812f5f28 "D" (D)
   $ showgraph
-  o  8 c9dfcf01df0b D
+  o  7 c9dfcf01df0b D
   |
-  | o  7 40d6342465dc C
-  |/
   @  6 1c28c4186c15 B3
   |
   | x  5 afb1812f5f28 D
   | |
-  | | x  4 dbe6ebcaec86 C
+  | | o  4 dbe6ebcaec86 C
   | | |
   | x |  3 1b9d31199d34 B2
   |/ /
@@ -362,6 +354,4 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   o  1 ac2f7407182b A
   |
   o  0 48b9aae0607f Z
-
-(BUG: C shouldn't be rebased)
 

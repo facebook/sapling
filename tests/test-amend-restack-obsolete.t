@@ -40,18 +40,12 @@ Test invalid value for amend.autorestack
   $ hg amend -m "B'"
   restacking children automatically (unless they conflict)
   rebasing 3:26805aba1e60 "C" (C)
-  rebasing 4:07863d11c289 "C_old" (C_old)
-  rebasing 5:3c36beb5705f "D" (D)
   $ showgraph
-  o  9 391104b74ed1 D
+  o  7 5676eb48a524 C
   |
-  x  8 d815d244f06c C_old
-  |
-  | o  7 5676eb48a524 C
-  |/
   @  6 180681c3ccd0 B'
   |
-  | x  5 3c36beb5705f D
+  | o  5 3c36beb5705f D
   | |
   | x  4 07863d11c289 C_old
   | |
@@ -63,9 +57,9 @@ Test invalid value for amend.autorestack
   |/
   o  0 426bada5c675 A
   $ hg rebase --restack
-  rebasing 9:391104b74ed1 "D" (tip)
+  rebasing 5:3c36beb5705f "D" (D)
   $ showgraph
-  o  10 11d241457f44 D
+  o  8 d1e904d06977 D
   |
   o  7 5676eb48a524 C
   |
