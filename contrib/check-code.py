@@ -193,10 +193,6 @@ uprefix = r"^  \$ "
 utestpats = [
     [
         (r"^(\S.*||  [$>] \S.*)[ \t]\n", "trailing whitespace on non-output"),
-        (
-            uprefix + r".*\|\s*sed[^|>\n]*\n",
-            "use regex test output patterns instead of sed",
-        ),
         (uprefix + r"(true|exit 0)", "explicit zero exit unnecessary"),
         (uprefix + r".*(?<!\[)\$\?", "explicit exit code checks unnecessary"),
         (
