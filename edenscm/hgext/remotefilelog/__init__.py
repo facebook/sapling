@@ -474,7 +474,7 @@ def setupclient(ui, repo):
     if edenapi.enabled(ui):
         try:
             repo.edenapi = edenapi.pyclient(ui, repo)
-        except RuntimeError as e:
+        except Exception as e:
             ui.warn(_("failed to initialize EdenAPI client;"))
             ui.warn(_(" disabling HTTPS data fetching\n"))
             if edenapi.debug(ui):
