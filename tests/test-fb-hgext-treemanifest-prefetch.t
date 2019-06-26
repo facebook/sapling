@@ -39,7 +39,6 @@ There are three cases which are of interest in this test:
   > server=True
   > name=master
   > cachepath=$CACHEDIR
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usetree=True

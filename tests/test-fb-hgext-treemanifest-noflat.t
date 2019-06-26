@@ -45,7 +45,6 @@ This file tests that normal mercurial operations almost never read the flat mani
   > treemanifest=
   > 
   > [remotefilelog]
-  > usefastdatapack=True
   > reponame=master
   > 
   > [fastmanifest]

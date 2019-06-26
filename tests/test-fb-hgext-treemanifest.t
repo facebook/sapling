@@ -23,9 +23,6 @@ TODO: Make this test compatibile with obsstore enabled.
   > fastmanifest=
   > treemanifest=
   > 
-  > [remotefilelog]
-  > usefastdatapack=True
-  > 
   > [fastmanifest]
   > usetree=True
   > usecache=False

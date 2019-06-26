@@ -19,12 +19,7 @@ from edenscm.hgext.remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
     SMALLFANOUTPREFIX,
 )
-from edenscm.hgext.remotefilelog.datapack import (
-    datapack,
-    datapackstore,
-    fastdatapack,
-    mutabledatapack,
-)
+from edenscm.hgext.remotefilelog.datapack import datapackstore, mutabledatapack
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
 

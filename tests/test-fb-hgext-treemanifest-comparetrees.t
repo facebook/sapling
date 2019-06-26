@@ -26,9 +26,6 @@ Clone it
   > [extensions]
   > treemanifest=
   > 
-  > [remotefilelog]
-  > usefastdatapack=True
-  > 
   > [treemanifest]
   > treeonly=True
   > sendtrees=True

@@ -18,7 +18,6 @@
   > [remotefilelog]
   > name=master
   > cachepath=$CACHEDIR
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usetree=True
@@ -82,7 +81,6 @@ Test backfilling a commit with a null manifest
   > [remotefilelog]
   > name=master
   > cachepath=$CACHEDIR
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usetree=True

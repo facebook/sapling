@@ -37,7 +37,6 @@
   > treemanifest=
   > 
   > [remotefilelog]
-  > usefastdatapack=True
   > reponame=master
   > 
   > [fastmanifest]

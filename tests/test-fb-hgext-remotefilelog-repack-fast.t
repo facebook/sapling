@@ -2,11 +2,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ cat >> $HGRCPATH <<EOF
-  > [remotefilelog]
-  > fastdatapack=True
-  > EOF
-
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF

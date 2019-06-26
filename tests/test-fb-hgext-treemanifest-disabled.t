@@ -12,7 +12,6 @@
   > [remotefilelog]
   > reponame=master
   > cachepath=$CACHEDIR
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usetree=True

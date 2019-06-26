@@ -16,8 +16,6 @@ different, so this is a different test script.
   > [extensions]
   > fastmanifest=
   > treemanifest=
-  > [remotefilelog]
-  > usefastdatapack=True
   > [fastmanifest]
   > usetree=True
   > usecache=False

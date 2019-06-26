@@ -33,7 +33,6 @@ two server and one local commits later.
   > [remotefilelog]
   > reponame=master
   > cachepath=$CACHEDIR
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usetree=True
@@ -60,7 +59,6 @@ Create client1 - it will have both server commits
   > [remotefilelog]
   > reponame=master
   > cachepath=$CACHEDIR
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usetree=True

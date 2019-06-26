@@ -187,7 +187,6 @@ Somehow problematic: With many extensions
   > 
   > [remotefilelog]
   > datapackversion = 1
-  > fastdatapack = True
   > historypackv1 = True
   > reponame = x
   > cachepath = $TESTTMP/cache

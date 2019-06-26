@@ -30,9 +30,6 @@
   > fastmanifest=
   > treemanifest=
   > 
-  > [remotefilelog]
-  > usefastdatapack=True
-  > 
   > [treemanifest]
   > autocreatetrees=True
   > demanddownload=False

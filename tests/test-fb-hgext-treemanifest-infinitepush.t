@@ -36,9 +36,6 @@ Push a non-tree scratch branch from one client
   > treemanifest=
   > fastmanifest=
   > 
-  > [remotefilelog]
-  > usefastdatapack=True
-  > 
   > [fastmanifest]
   > usecache=False
   > usetree=True
@@ -63,9 +60,6 @@ Push a tree-only scratch branch from another client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > treemanifest=
-  > 
-  > [remotefilelog]
-  > usefastdatapack=True
   > 
   > [treemanifest]
   > treeonly=True
@@ -93,9 +87,6 @@ Pull a non-tree scratch branch into a normal client
   > [extensions]
   > treemanifest=
   > fastmanifest=
-  > 
-  > [remotefilelog]
-  > usefastdatapack=True
   > 
   > [fastmanifest]
   > usecache=False
@@ -162,9 +153,6 @@ Set up another treeonly client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > treemanifest=
-  > 
-  > [remotefilelog]
-  > usefastdatapack=True
   > 
   > [treemanifest]
   > treeonly=True
@@ -295,9 +283,6 @@ trees
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > treemanifest=
-  > 
-  > [remotefilelog]
-  > usefastdatapack=True
   > 
   > [treemanifest]
   > treeonly=True
