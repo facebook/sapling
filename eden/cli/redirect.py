@@ -19,7 +19,7 @@ from typing import Dict, Iterable, Optional
 from thrift.Thrift import TApplicationException
 
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
-from .config import CheckoutConfig, EdenCheckout, EdenInstance
+from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .subcmd import Subcmd
 from .util import mkdir_p, mkscratch_bin
 
@@ -320,6 +320,17 @@ class Redirection:
             raise Exception(f"Unsupported redirection type {self.type}")
 
 
+def load_redirection_profile(path: Path) -> Dict[str, RedirectionType]:
+    """Load a redirection profile and return the mapping of path to
+    redirection type that it contains.
+    """
+    config = load_toml_config(path)
+    mapping: Dict[str, RedirectionType] = {}
+    for k, v in config["redirections"].items():
+        mapping[k] = RedirectionType.from_arg_str(v)
+    return mapping
+
+
 def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection]:
     """Returns the explicitly configured redirection configuration.
     This does not take into account how things are currently mounted;
@@ -327,8 +338,10 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
     """
 
     redirs = {}
+
     config = checkout.get_config()
 
+    # Legacy configuration has lowest precedence
     for store_path, repo_path in config.bind_mounts.items():
         redirs[repo_path] = Redirection(
             Path(repo_path),
@@ -336,6 +349,18 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
             Path(store_path),
             LEGACY_BIND_MOUNTS_SOURCE,
         )
+
+    # Repo-specified settings have next level of precedence
+    repo_redirection_config_file_name = checkout.path.joinpath(".eden-redirections")
+    if os.path.exists(repo_redirection_config_file_name):
+        for repo_path, redir_type in load_redirection_profile(
+            repo_redirection_config_file_name
+        ).items():
+            redirs[repo_path] = Redirection(
+                Path(repo_path), redir_type, None, REPO_SOURCE
+            )
+
+    # User-specific things have the highest precedence
     for repo_path, redir_type in config.redirections.items():
         redirs[repo_path] = Redirection(
             Path(repo_path), redir_type, None, USER_REDIRECTION_SOURCE
@@ -410,7 +435,7 @@ def apply_redirection_configs_to_checkout_config(
     for r in redirs:
         if r.type == RedirectionType.LEGACY:
             bind_mounts[str(r.target)] = str(r.repo_path)
-        else:
+        elif r.source != REPO_SOURCE:
             redirections[str(r.repo_path)] = r.type
     return CheckoutConfig(
         backing_repo=config.backing_repo,

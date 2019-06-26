@@ -32,11 +32,32 @@ class RedirectTest(testcase.EdenRepoTest):
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")
         self.repo.symlink("slink", "hello")
+        self.repo.write_file(
+            ".eden-redirections",
+            """\
+[redirections]
+via-profile = "bind"
+""",
+        )
         self.repo.commit("Initial commit.")
 
     def test_list_no_legacy_bind_mounts(self) -> None:
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
-        self.assertEqual(json.loads(output), [])
+        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    # until we hook up post-update or post-mount hooks,
+                    # this won't auto-mount
+                    "state": "not-mounted",
+                }
+            ],
+        )
 
     def clone_with_legacy_bind_mounts(self) -> str:
         edenrc = os.path.join(os.environ["HOME"], ".edenrc")
@@ -106,6 +127,7 @@ buck-out = "buck-out"
         tmp = self.clone_with_legacy_bind_mounts()
         client_dir = os.readlink(os.path.join(tmp, ".eden/client"))
 
+        profile_path = scratch_path(tmp, "edenfs/redirections/via-profile")
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", tmp)
         self.assertEqual(
             json.loads(output),
@@ -116,7 +138,16 @@ buck-out = "buck-out"
                     "target": f"{client_dir}/bind-mounts/buck-out",
                     "source": ".eden/client/config.toml:bind-mounts",
                     "state": "ok",
-                }
+                },
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    # until we hook up post-update or post-mount hooks,
+                    # this won't auto-mount
+                    "state": "not-mounted",
+                },
             ],
             msg="We can interpret the saved bind mount configuration",
         )
@@ -144,6 +175,15 @@ buck-out = "buck-out"
                     "target": f"{client_dir}/bind-mounts/buck-out",
                     "source": ".eden/client/config.toml:bind-mounts",
                     "state": "ok",
+                },
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    # until we hook up post-update or post-mount hooks,
+                    # this won't auto-mount
+                    "state": "not-mounted",
                 },
             ],
             msg="saved config agrees with last output",
@@ -180,6 +220,15 @@ buck-out = "buck-out"
                     "source": ".eden/client/config.toml:bind-mounts",
                     "state": "ok",
                 },
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    # until we hook up post-update or post-mount hooks,
+                    # this won't auto-mount
+                    "state": "not-mounted",
+                },
             ],
             msg="saved config agrees with last output",
         )
@@ -203,11 +252,53 @@ buck-out = "buck-out"
                     "target": f"{client_dir}/bind-mounts/buck-out",
                     "source": ".eden/client/config.toml:bind-mounts",
                     "state": "ok",
-                }
+                },
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    # until we hook up post-update or post-mount hooks,
+                    # this won't auto-mount
+                    "state": "not-mounted",
+                },
             ],
             msg="saved config agrees with last output",
         )
 
         self.assertFalse(
             os.path.exists(os.path.join(tmp, "a", "new-one")), msg="symlink is gone"
+        )
+
+    def test_fixup_mounts_things(self) -> None:
+        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+
+        output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    # until we hook up post-update or post-mount hooks,
+                    # this won't auto-mount
+                    "state": "not-mounted",
+                }
+            ],
+        )
+        self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
+        output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    "state": "ok",
+                }
+            ],
         )

@@ -172,7 +172,7 @@ class EdenInstance:
         )
         for path in self.get_rc_files():
             try:
-                toml_cfg = _load_toml_config(path)
+                toml_cfg = load_toml_config(path)
             except FileNotFoundError:
                 # Ignore missing config files. Eg. user_config_path is optional
                 continue
@@ -823,7 +823,7 @@ class ConfigUpdater(object):
         # other eden CLI processes.)
         self._acquire_lock()
         try:
-            toml_cfg = _load_toml_config(self.path)
+            toml_cfg = load_toml_config(self.path)
             self.config.read_dict(toml_cfg)
         except FileNotFoundError:
             pass
@@ -1032,7 +1032,7 @@ class EdenCheckout:
         under self.state_dir is not properly formatted or does not exist.
         """
         config_path = self._config_path()
-        config = _load_toml_config(config_path)
+        config = load_toml_config(config_path)
         repo_field = config.get("repository")
         if isinstance(repo_field, dict):
             repository = repo_field
@@ -1232,8 +1232,8 @@ def _verify_mount_point(mount_point: str) -> None:
         )
 
 
-_TomlConfigDict = Mapping[str, Mapping[str, Any]]
+TomlConfigDict = Mapping[str, Mapping[str, Any]]
 
 
-def _load_toml_config(path: Path) -> _TomlConfigDict:
-    return typing.cast(_TomlConfigDict, toml.load(str(path)))
+def load_toml_config(path: Path) -> TomlConfigDict:
+    return typing.cast(TomlConfigDict, toml.load(str(path)))
