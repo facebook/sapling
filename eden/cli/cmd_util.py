@@ -34,7 +34,7 @@ def find_checkout(
 
 
 def require_checkout(
-    args: argparse.Namespace, path: Union[Path, str]
+    args: argparse.Namespace, path: Union[Path, str, None]
 ) -> Tuple[EdenInstance, EdenCheckout, Path]:
     instance, checkout, rel_path = find_checkout(args, path)
     if checkout is None:

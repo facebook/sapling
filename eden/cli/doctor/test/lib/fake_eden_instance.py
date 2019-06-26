@@ -109,6 +109,7 @@ class FakeEdenInstance:
             scm_type=scm_type,
             bind_mounts=bind_mounts,
             default_revision=snapshot,
+            redirections={},
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
         self._checkouts_by_path[full_path] = checkout

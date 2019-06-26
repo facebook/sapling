@@ -28,6 +28,9 @@ from . import configinterpolator, configutil, util
 from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_estale
 
 
+if typing.TYPE_CHECKING:
+    from eden.cli.redirect import RedirectionType  # noqa: F401
+
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
 if os.name == "nt":
@@ -98,12 +101,16 @@ class CheckoutConfig(typing.NamedTuple):
     - bind_mounts: dict where keys are private pathnames under ~/.eden where the
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
+    - redirections: dict where keys are relative pathnames in the EdenFS mount
+      and the values are RedirectionType enum values that describe the type of
+      the redirection.  This configuration supersedes the older bind_mounts config.
     """
 
     backing_repo: Path
     scm_type: str
     bind_mounts: Dict[str, str]
     default_revision: str
+    redirections: Dict[str, "RedirectionType"]
 
 
 class EdenInstance:
@@ -292,6 +299,7 @@ class EdenInstance:
             scm_type=scm_type,
             bind_mounts=bind_mounts,
             default_revision=default_revision,
+            redirections={},
         )
 
     def get_mount_paths(self) -> List[str]:
@@ -987,13 +995,28 @@ class EdenCheckout:
 
     def save_config(self, checkout_config: CheckoutConfig) -> None:
         # Store information about the mount in the config.toml file.
+
+        # This is a little gross, but only needs to live long enough
+        # to swing through migrating folks away from the legacy
+        # configuration.
+        from eden.cli.redirect import RedirectionType  # noqa: F811
+
+        redirections = {
+            k: str(v)
+            for k, v in checkout_config.redirections.items()
+            # We don't want to duplicate the legacy config in the
+            # new redirections config.
+            if v != RedirectionType.LEGACY
+        }
         config_data = {
             "repository": {
                 "path": str(checkout_config.backing_repo),
                 "type": checkout_config.scm_type,
             },
             "bind-mounts": checkout_config.bind_mounts,
+            "redirections": redirections,
         }
+
         with self._config_path().open("w") as f:
             # pyre-fixme[6]: Expected `_Writable` for 2nd param but got `IO[]`.
             toml.dump(config_data, f)
@@ -1044,10 +1067,35 @@ class EdenCheckout:
                     )
                 bind_mounts[key] = value
 
+        redirections = {}
+        redirections_dict = config.get("redirections")
+
+        if redirections_dict is not None:
+            from eden.cli.redirect import RedirectionType  # noqa: F811
+
+            if not isinstance(redirections_dict, dict):
+                raise Exception(f"{config_path} has an invalid [redirections] section")
+            for key, value in redirections_dict.items():
+                if not isinstance(value, str):
+                    raise Exception(
+                        f"{config_path} has invalid value in "
+                        f"[redirections] for {key}: {value} "
+                        "(string expected)"
+                    )
+                try:
+                    redirections[key] = RedirectionType.from_arg_str(value)
+                except ValueError as exc:
+                    raise Exception(
+                        f"{config_path} has invalid value in "
+                        f"[redirections] for {key}: {value} "
+                        f"{str(exc)}"
+                    )
+
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
             bind_mounts=bind_mounts,
+            redirections=redirections,
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),

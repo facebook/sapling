@@ -326,6 +326,14 @@ class GitRepo(Repo):
         return self._run_git(["cat-file", "blob", ":".join((commit, path))])
 
 
+def mkscratch_bin() -> Path:
+    # mkscratch is provided by the hg deployment at facebook, which has a
+    # different installation prefix on macOS vs Linux, so we need to resolve
+    # it via the PATH.  In the integration test environment we'll set the
+    # MKSCRATCH_BIN to point to the binary under test
+    return Path(os.environ.get("MKSCRATCH_BIN", "mkscratch"))
+
+
 def is_git_dir(path: str) -> bool:
     return (
         os.path.isdir(os.path.join(path, "objects"))

@@ -33,6 +33,7 @@ from . import (
     mtab,
     process_finder,
     rage as rage_mod,
+    redirect as redirect_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
     top as top_mod,
@@ -490,6 +491,7 @@ re-run `eden clone` with --allow-empty-repo"""
                 scm_type=repo.type,
                 bind_mounts={},
                 default_revision=config_mod.DEFAULT_REVISION[repo.type],
+                redirections={},
             )
         else:
             # Build our own CheckoutConfig object, using our source repository
@@ -500,6 +502,7 @@ re-run `eden clone` with --allow-empty-repo"""
                 scm_type=repo.type,
                 bind_mounts=project_config.bind_mounts,
                 default_revision=project_config.default_revision,
+                redirections={},
             )
 
         return repo, repo_type, repo_config
@@ -1415,6 +1418,7 @@ def create_parser() -> argparse.ArgumentParser:
             subcmd_mod.HelpCmd,
             stats_mod.StatsCmd,
             trace_mod.TraceCmd,
+            redirect_mod.RedirectCmd,
         ],
     )
 
