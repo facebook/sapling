@@ -32,3 +32,12 @@ pub fn log(data: &impl serde::Serialize) {
         }
     }
 }
+
+/// Write buffered data to disk.
+pub fn sync() {
+    if let Ok(mut singleton) = SINGLETON.lock() {
+        if let Some(blackbox) = singleton.deref_mut() {
+            blackbox.sync();
+        }
+    }
+}

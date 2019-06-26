@@ -30,6 +30,10 @@ pub struct Blackbox {
     // The on-disk files are considered bad (ex. no permissions, or no disk space)
     // and further write attempts will be ignored.
     is_broken: Cell<bool>,
+
+    // Timestamp of the last write operation. Used to reduce frequency of
+    // log.sync().
+    last_write_time: Cell<u64>,
 }
 
 #[derive(Copy, Clone)]
@@ -112,6 +116,7 @@ impl BlackboxOptions {
             // pid is used as an initial guess of "unique" session id
             session_id: unsafe { libc::getpid() } as u32,
             is_broken: Cell::new(false),
+            last_write_time: Cell::new(0),
         };
         blackbox.refresh_session_id();
         Ok(blackbox)
@@ -169,11 +174,18 @@ impl Blackbox {
             return;
         }
 
-        let now = SystemTime::now();
-        if let Some(buf) = Entry::to_vec(data, &now, self.session_id) {
-            // PERF: Consider moving log.sync() to a different thread
-            // if `log` is called very frequently.
+        let now = time_to_u64(&SystemTime::now());
+        if let Some(buf) = Entry::to_vec(data, now, self.session_id) {
             self.log.append(&buf).unwrap();
+
+            // Skip sync() for frequent writes (within 10ms).
+            let last = self.last_write_time.get();
+            let threshold = 10;
+            if last <= now && now - last < threshold {
+                return;
+            }
+            self.last_write_time.set(now);
+
             if self.log.sync().is_err() {
                 // Not fatal. Try rotate the log.
                 if self.log.force_rotate().is_err() {
@@ -186,6 +198,14 @@ impl Blackbox {
                     }
                 }
             }
+        }
+    }
+
+    /// Write buffered data to disk.
+    pub fn sync(&mut self) {
+        if !self.is_broken.get() {
+            // Ignore failures.
+            self.log.sync().is_ok();
         }
     }
 
@@ -231,6 +251,12 @@ impl Blackbox {
     }
 }
 
+impl Drop for Blackbox {
+    fn drop(&mut self) {
+        self.sync();
+    }
+}
+
 impl<'a, T: Deserialize<'a>> Entry<T> {
     fn from_slice(bytes: &'a [u8]) -> Option<Self> {
         if bytes.len() >= HEADER_BYTES {
@@ -255,9 +281,9 @@ impl<'a, T: Deserialize<'a>> Entry<T> {
 }
 
 impl<T: Serialize> Entry<T> {
-    fn to_vec(data: &T, timestamp: &SystemTime, session_id: u32) -> Option<Vec<u8>> {
+    fn to_vec(data: &T, timestamp: u64, session_id: u32) -> Option<Vec<u8>> {
         let mut buf = Vec::with_capacity(32);
-        buf.write_u64::<BigEndian>(time_to_u64(timestamp)).unwrap();
+        buf.write_u64::<BigEndian>(timestamp).unwrap();
         buf.write_u32::<BigEndian>(session_id).unwrap();
 
         if serde_cbor::to_writer(&mut buf, data).is_ok() {
@@ -430,6 +456,7 @@ mod tests {
 
         let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
         assert_eq!(entries.len(), events.len());
+        blackbox.sync();
 
         // Corrupt log
         let log_path = dir.path().join("0").join("log");

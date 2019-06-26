@@ -18,7 +18,7 @@ mod match_pattern;
 mod singleton;
 
 pub use self::blackbox::{Blackbox, BlackboxOptions, Entry, IndexFilter, ToValue};
-pub use self::singleton::{init, log, SINGLETON};
+pub use self::singleton::{init, log, sync, SINGLETON};
 pub use match_pattern::match_pattern;
 pub use serde_json::{self, Value};
 

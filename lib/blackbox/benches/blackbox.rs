@@ -14,9 +14,9 @@ use minibench::{
 use serde_json::json;
 use tempfile::tempdir;
 
-// Insert 400 entries
+// Insert 4000 entries
 fn insert(blackbox: &mut Blackbox) {
-    for _ in 0..200 {
+    for _ in 0..2000 {
         blackbox.log(&Event::Alias {
             from: "foo".to_string(),
             to: "bar".to_string(),
@@ -31,10 +31,11 @@ fn insert(blackbox: &mut Blackbox) {
             result: None,
         });
     }
+    blackbox.sync();
 }
 
 fn main() {
-    bench("blackbox insertion (400 entries)", || {
+    bench("blackbox insertion (4000 entries)", || {
         let dir = tempdir().unwrap();
         let mut blackbox = BlackboxOptions::new().open(dir.path()).unwrap();
         Both::<Both<WallClock, IO>, Bytes>::measure(move || {
@@ -46,9 +47,7 @@ fn main() {
     {
         let dir = tempdir().unwrap();
         let mut blackbox = BlackboxOptions::new().open(dir.path()).unwrap();
-        for _ in 0..10 {
-            insert(&mut blackbox);
-        }
+        insert(&mut blackbox);
 
         bench("blackbox filter by index (4000 entries)", || {
             Both::<WallClock, IO>::measure(|| {
