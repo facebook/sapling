@@ -78,18 +78,43 @@ def _initclient(ui, repo):
     return edenapi.client(**kwargs)
 
 
-class pyclient(object):
-    def __init__(self, ui, repo):
-        self._rustclient = _initclient(ui, repo)
-        self._ui = ui
+def _badcertwarning(ui):
+    """Show the user a configurable messaage when their TLS certificate
+       is missing, expired, or otherwise invalid.
+    """
+    msg = ui.config("edenapi", "badcertmessage")
+    if msg is not None:
+        ui.warn(msg + "\n")
 
-    def __getattr__(self, name):
-        method = getattr(self._rustclient, name)
 
+def _warnexceptions(ui):
+    """Decorator that catches certain exceptions defined by the Rust bindings
+       and emits a user-friendly message before re-raising the exception.
+
+       Although function is designed as a decorator, in practice it needs
+       to be called manually rather than using decorator syntax, since it
+       requires a ui object as an argument, which is typically not available
+       outside of a function/method body.
+    """
+
+    def decorator(func):
         def wrapped(*args, **kwargs):
             try:
-                return method(*args, **kwargs)
-            except Exception as e:
+                return func(*args, **kwargs)
+            except edenapi.CredsError as e:
+                _badcertwarning(ui)
                 raise e
 
         return wrapped
+
+    return decorator
+
+
+class pyclient(object):
+    def __init__(self, ui, repo):
+        self._ui = ui
+        self._rustclient = _warnexceptions(ui)(_initclient)(ui, repo)
+
+    def __getattr__(self, name):
+        method = getattr(self._rustclient, name)
+        return _warnexceptions(self._ui)(method)
