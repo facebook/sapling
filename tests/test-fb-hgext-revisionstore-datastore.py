@@ -11,11 +11,7 @@ import edenscm.mercurial.ui as uimod
 import silenttestrunner
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.contentstore import unioncontentstore
-from edenscm.hgext.remotefilelog.datapack import (
-    datapackstore,
-    fastdatapack,
-    mutabledatapack,
-)
+from edenscm.hgext.remotefilelog.datapack import datapackstore, mutabledatapack
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
 
@@ -50,7 +46,7 @@ class datastoretests(unittest.TestCase):
             packer.add(filename, node, base, content, metadata=meta)
 
         path = packer.close()
-        return fastdatapack(path)
+        return revisionstore.datapack(path)
 
     def testGet(self):
         packdir = self.makeTempDir()
