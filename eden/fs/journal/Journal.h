@@ -28,6 +28,13 @@ struct JournalStats {
   std::chrono::steady_clock::time_point latestTimestamp;
 };
 
+struct JournalDeltaInfo {
+  Hash fromHash;
+  Hash toHash;
+  JournalDelta::SequenceNumber sequenceID;
+  std::chrono::steady_clock::time_point time;
+};
+
 /** The Journal exists to answer questions about how files are changing
  * over time.
  *
@@ -90,9 +97,9 @@ class Journal {
       Hash toHash,
       std::unordered_set<RelativePath>&& uncleanPaths);
 
-  /** Get a shared, immutable reference to the tip of the journal.
-   * May return nullptr if there have been no changes */
-  JournalDeltaPtr getLatest() const;
+  /** Get a copy of the tip of the journal.
+   * Will return a nullopt if the journal is empty */
+  std::optional<JournalDeltaInfo> getLatest() const;
 
   /** Register a subscriber.
    * A subscriber is just a callback that is called whenever the

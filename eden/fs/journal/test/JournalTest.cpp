@@ -15,6 +15,7 @@ TEST(Journal, accumulate_range_all_changes) {
   Journal journal;
 
   // Empty journals have no rang to accumulate over
+  EXPECT_FALSE(journal.getLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
@@ -22,16 +23,16 @@ TEST(Journal, accumulate_range_all_changes) {
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
+  ASSERT_TRUE(latest);
   EXPECT_EQ(1, latest->sequenceID);
-  EXPECT_EQ(nullptr, latest->previous);
 
   // Add a second entry.
   journal.recordChanged("baz"_relpath);
 
   // Sanity check that the latest information matches.
   latest = journal.getLatest();
+  ASSERT_TRUE(latest);
   EXPECT_EQ(2, latest->sequenceID);
-  EXPECT_EQ(1, latest->previous->sequenceID);
 
   // Check basic sum implementation.
   auto summed = journal.accumulateRange();
@@ -67,6 +68,7 @@ TEST(Journal, accumulateRangeRemoveCreateUpdate) {
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
+  ASSERT_TRUE(latest);
   EXPECT_EQ(3, latest->sequenceID);
 
   // The summed data should report test.txt as changed
@@ -189,6 +191,7 @@ TEST(Journal, basic_journal_stats) {
   Journal journal;
   // Journal with 1 entry
   journal.recordRemoved("test.txt"_relpath);
+  ASSERT_TRUE(journal.getLatest());
   auto from1 = journal.getLatest()->time;
   auto to1 = journal.getLatest()->time;
   auto stats = journal.getStats();
@@ -200,6 +203,7 @@ TEST(Journal, basic_journal_stats) {
   // Journal with 2 entries
   journal.recordCreated("test.txt"_relpath);
   stats = journal.getStats();
+  ASSERT_TRUE(journal.getLatest());
   auto to2 = journal.getLatest()->time;
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(2, stats->entryCount);

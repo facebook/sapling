@@ -488,8 +488,13 @@ void EdenServiceHandler::getCurrentJournalPosition(
   auto latest = edenMount->getJournal().getLatest();
 
   out.mountGeneration = edenMount->getMountGeneration();
-  out.sequenceNumber = latest->sequenceID;
-  out.snapshotHash = thriftHash(latest->toHash);
+  if (latest) {
+    out.sequenceNumber = latest->sequenceID;
+    out.snapshotHash = thriftHash(latest->toHash);
+  } else {
+    out.sequenceNumber = 0;
+    out.snapshotHash = thriftHash(kZeroHash);
+  }
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
@@ -553,9 +558,14 @@ EdenServiceHandler::subscribeStreamTemporary(
       auto& journal = mount->getJournal();
       JournalPosition pos;
 
-      auto delta = journal.getLatest();
-      pos.sequenceNumber = delta->sequenceID;
-      pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
+      auto latest = journal.getLatest();
+      if (latest) {
+        pos.sequenceNumber = latest->sequenceID;
+        pos.snapshotHash = StringPiece(latest->toHash.getBytes()).str();
+      } else {
+        pos.sequenceNumber = 0;
+        pos.snapshotHash = StringPiece(kZeroHash.getBytes()).str();
+      }
       pos.mountGeneration = mount->getMountGeneration();
       stream->publisher.next(pos);
     }

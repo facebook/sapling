@@ -103,8 +103,16 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
   }
 }
 
-JournalDeltaPtr Journal::getLatest() const {
-  return deltaState_.rlock()->latest;
+std::optional<JournalDeltaInfo> Journal::getLatest() const {
+  auto deltaState = deltaState_.rlock();
+  if (deltaState->latest) {
+    return JournalDeltaInfo{deltaState->latest->fromHash,
+                            deltaState->latest->toHash,
+                            deltaState->latest->sequenceID,
+                            deltaState->latest->time};
+  } else {
+    return std::nullopt;
+  }
 }
 
 uint64_t Journal::registerSubscriber(SubscriberCallback&& callback) {
