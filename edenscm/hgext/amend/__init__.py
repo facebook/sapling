@@ -104,7 +104,7 @@ testedwith = "ships-with-fb-hgext"
 
 amendopts = [
     ("", "rebase", None, _("rebases children after the amend (ADVANCED)")),
-    ("", "fixup", None, _("rebase children from a previous amend (ADVANCED)")),
+    ("", "fixup", None, _("rebase children from a previous amend (DEPRECATED)")),
     ("", "to", "", _("amend to a specific commit in the current stack (ADVANCED)")),
 ] + cmdutil.templateopts
 
@@ -351,6 +351,11 @@ def amend(ui, repo, *pats, **opts):
         raise error.Abort(_("--to cannot be used with any other options"))
 
     if fixup:
+        ui.warn(
+            _(
+                "warning: --fixup is deprecated and WILL BE REMOVED. use 'hg restack' instead.\n"
+            )
+        )
         fixupamend(ui, repo)
         return
 

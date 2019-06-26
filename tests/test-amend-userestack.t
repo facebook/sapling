@@ -50,6 +50,7 @@ Test hg amend --fixup.
   o  0 add a
 
   $ hg amend --fixup
+  warning: --fixup is deprecated and WILL BE REMOVED. use 'hg restack' instead.
   rebasing 2:* "add c" (glob)
   rebasing 3:* "add d" (glob)
   $ showgraph
