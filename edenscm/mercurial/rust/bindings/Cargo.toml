@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 lto = "thin"
 
 [dependencies]
+blackbox = { path = "../../../../lib/blackbox" }
 bookmarkstore = { path = "../../../../lib/bookmarkstore" }
 byteorder = "1.2.7"
 configparser = { path = "../../../../lib/configparser" }

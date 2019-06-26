@@ -7,6 +7,7 @@
 
 use cpython::py_module_initializer;
 
+pub mod blackbox;
 pub mod bookmarkstore;
 pub mod configparser;
 pub mod edenapi;
@@ -23,6 +24,7 @@ py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     init::init_rust();
     let name = m.get(py, "__name__")?.extract::<String>(py)?;
     m.add(py, "__doc__", "Mercurial Rust Bindings")?;
+    m.add(py, "blackbox", blackbox::init_module(py, &name)?)?;
     m.add(py, "bookmarkstore", bookmarkstore::init_module(py, &name)?)?;
     m.add(py, "configparser", configparser::init_module(py, &name)?)?;
     m.add(py, "edenapi", edenapi::init_module(py, &name)?)?;
