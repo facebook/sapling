@@ -56,8 +56,8 @@ pub trait ToValue {
     fn to_value(&self) -> Value;
 }
 
-/// Specify how to filter entries. Input of [`Blackbox::find_by`].
-pub enum Filter {
+/// Specify how to filter entries by indexes. Input of [`Blackbox::filter`].
+pub enum IndexFilter {
     /// Filter by session ID.
     SessionId(u32),
 
@@ -189,7 +189,7 @@ impl Blackbox {
         }
     }
 
-    /// Filter entries. Newest first.
+    /// IndexFilter entries. Newest first.
     ///
     /// - `filter` is backed by indexes.
     /// - `pattern` requires an expensive linear scan.
@@ -197,7 +197,7 @@ impl Blackbox {
     /// Entries that cannot be read or deserialized are ignored silently.
     pub fn filter<'a, 'b: 'a, T: Deserialize<'a> + ToValue>(
         &'b self,
-        filter: Filter,
+        filter: IndexFilter,
         pattern: Option<Value>,
     ) -> Vec<Entry<T>> {
         // API: Consider returning an iterator to get some laziness.
@@ -268,26 +268,26 @@ impl<T: Serialize> Entry<T> {
     }
 }
 
-impl Filter {
+impl IndexFilter {
     fn index_id(&self) -> usize {
         match self {
-            Filter::SessionId(_) => INDEX_SESSION_ID,
-            Filter::Time(_, _) => INDEX_TIMESTAMP,
-            Filter::Nop => INDEX_TIMESTAMP,
+            IndexFilter::SessionId(_) => INDEX_SESSION_ID,
+            IndexFilter::Time(_, _) => INDEX_TIMESTAMP,
+            IndexFilter::Nop => INDEX_TIMESTAMP,
         }
     }
 
     fn index_range(&self) -> (Box<[u8]>, Box<[u8]>) {
         match self {
-            Filter::SessionId(id) => (
+            IndexFilter::SessionId(id) => (
                 u32_to_slice(*id).to_vec().into_boxed_slice(),
                 u32_to_slice(*id + 1).to_vec().into_boxed_slice(),
             ),
-            Filter::Time(start, end) => (
+            IndexFilter::Time(start, end) => (
                 u64_to_slice(*start).to_vec().into_boxed_slice(),
                 u64_to_slice(*end).to_vec().into_boxed_slice(),
             ),
-            Filter::Nop => (
+            IndexFilter::Nop => (
                 u64_to_slice(0).to_vec().into_boxed_slice(),
                 u64_to_slice(u64::max_value()).to_vec().into_boxed_slice(),
             ),
@@ -295,8 +295,8 @@ impl Filter {
     }
 }
 
-impl<T: RangeBounds<SystemTime>> From<T> for Filter {
-    fn from(range: T) -> Filter {
+impl<T: RangeBounds<SystemTime>> From<T> for IndexFilter {
+    fn from(range: T) -> IndexFilter {
         let start = match range.start_bound() {
             Included(v) => time_to_u64(v),
             Excluded(v) => time_to_u64(v) + 1,
@@ -307,7 +307,7 @@ impl<T: RangeBounds<SystemTime>> From<T> for Filter {
             Excluded(v) => time_to_u64(v),
             Unbounded => u64::max_value(),
         };
-        Filter::Time(start, end)
+        IndexFilter::Time(start, end)
     }
 }
 
@@ -370,7 +370,9 @@ mod tests {
         // Test find by session id (pid if no conflict).
         let pid = unsafe { libc::getpid() } as u32;
         assert_eq!(
-            blackbox.filter::<Event>(Filter::SessionId(pid), None).len(),
+            blackbox
+                .filter::<Event>(IndexFilter::SessionId(pid), None)
+                .len(),
             events.len()
         );
 
@@ -379,7 +381,7 @@ mod tests {
 
         // The time range covers everything, so it should match "find all".
         assert_eq!(
-            blackbox.filter::<Event>(Filter::Nop, None).len(),
+            blackbox.filter::<Event>(IndexFilter::Nop, None).len(),
             entries.len()
         );
         assert_eq!(entries.len(), events.len() * session_count);
@@ -404,11 +406,13 @@ mod tests {
         // Check logging with multiple blackboxes.
         let blackbox = BlackboxOptions::new().open(&dir.path().join("2")).unwrap();
         assert_eq!(
-            blackbox.filter::<Event>(Filter::SessionId(pid), None).len(),
+            blackbox
+                .filter::<Event>(IndexFilter::SessionId(pid), None)
+                .len(),
             1
         );
         assert_eq!(
-            blackbox.filter::<Event>(Filter::Nop, None).len(),
+            blackbox.filter::<Event>(IndexFilter::Nop, None).len(),
             entries.len()
         );
     }
@@ -424,7 +428,7 @@ mod tests {
             blackbox.log(event);
         }
 
-        let entries = blackbox.filter::<Event>(Filter::Nop, None);
+        let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
         assert_eq!(entries.len(), events.len());
 
         // Corrupt log
@@ -435,7 +439,7 @@ mod tests {
             corrupt(&log_path, *bytes);
 
             // The other entries can still be read without errors.
-            let entries = blackbox.filter::<Event>(Filter::Nop, None);
+            let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
             assert_eq!(entries.len(), events.len() - corrupted_count);
             assert!(entries
                 .iter()
@@ -452,7 +456,7 @@ mod tests {
         // Requires a reload of the blackbox so the in-memory checksum table
         // gets updated.
         let blackbox = BlackboxOptions::new().open(&dir.path()).unwrap();
-        let entries = blackbox.filter::<Event>(Filter::Nop, None);
+        let entries = blackbox.filter::<Event>(IndexFilter::Nop, None);
 
         // Loading this Log would trigger a rewrite.
         // TODO: Add some auto-recovery logic to the indexes on `Log`.
