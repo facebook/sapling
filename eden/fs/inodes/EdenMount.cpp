@@ -303,11 +303,68 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 
 EdenMount::~EdenMount() {}
 
+FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
+    RelativePathPiece repoPath,
+    AbsolutePathPiece targetPath) {
+  auto absRepoPath = getPath() + repoPath;
+
+  // Sanity check that the mount point isn't pre-existing so that
+  // we can show a nicer error message than we would otherwise.
+  {
+    auto bindMounts = bindMounts_.rlock();
+    for (const auto& bindMount : *bindMounts) {
+      if (bindMount.pathInMountDir == absRepoPath) {
+        return folly::make_exception_wrapper<std::runtime_error>(
+            folly::to<std::string>(
+                "attempted to bind mount ",
+                targetPath,
+                " over ",
+                bindMount.pathInMountDir,
+                " but that path is already a bind mount for ",
+                bindMount.pathInClientDir));
+      }
+    }
+  }
+
+  return this->ensureDirectoryExists(repoPath)
+      .thenValue([this,
+                  target = targetPath.copy(),
+                  pathInMountDir = getPath() + repoPath](auto&&) {
+        return serverState_->getPrivHelper()->bindMount(
+            target.stringPiece(), pathInMountDir.stringPiece());
+      })
+      .thenValue([this,
+                  target = targetPath.copy(),
+                  pathInMountDir = getPath() + repoPath](auto&&) {
+        // Record a successful mount into the list
+        bindMounts_.wlock()->emplace_back(target, pathInMountDir);
+      });
+}
+
+FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
+    RelativePathPiece repoPath) {
+  auto absRepoPath = getPath() + repoPath;
+  return serverState_->getPrivHelper()
+      ->bindUnMount(absRepoPath.stringPiece())
+      .thenValue([this, absRepoPath](auto&&) {
+        auto bindMounts = bindMounts_.wlock();
+        bindMounts->erase(
+            std::remove_if(
+                bindMounts->begin(),
+                bindMounts->end(),
+                [&](const auto& bindMount) {
+                  return bindMount.pathInMountDir == absRepoPath;
+                }),
+            bindMounts->end());
+      });
+}
+
 Future<Unit> EdenMount::performBindMounts() {
   vector<Future<Unit>> futures;
 
-  for (const auto& bindMount : bindMounts_) {
-    futures.push_back(folly::makeFutureWith([&] {
+  auto bindMounts = bindMounts_.rlock();
+  for (const auto& bindMount : *bindMounts) {
+    futures.push_back(folly::makeFutureWith([this, bindMount] {
       // Make sure that both pathInClientDir and pathInMountDir exist before we
       // attempt to perform the mount.
       boost::filesystem::path boostBindMountSrc{
@@ -539,8 +596,8 @@ EdenStats* EdenMount::getStats() const {
   return &serverState_->getStats();
 }
 
-const vector<BindMount>& EdenMount::getBindMounts() const {
-  return bindMounts_;
+vector<BindMount> EdenMount::getBindMounts() const {
+  return *bindMounts_.rlock();
 }
 
 TreeInodePtr EdenMount::getRootInode() const {
@@ -987,8 +1044,11 @@ void EdenMount::fuseInitSuccessful(
         }
 
         std::vector<AbsolutePath> bindMounts;
-        for (const auto& entry : bindMounts_) {
-          bindMounts.push_back(entry.pathInMountDir);
+        {
+          auto locked = bindMounts_.rlock();
+          for (const auto& entry : *locked) {
+            bindMounts.push_back(entry.pathInMountDir);
+          }
         }
 
         fuseCompletionPromise_.setValue(TakeoverData::MountInfo(

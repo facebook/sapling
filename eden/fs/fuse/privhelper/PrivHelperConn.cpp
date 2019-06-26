@@ -208,6 +208,23 @@ void PrivHelperConn::parseBindMountRequest(
   checkAtEnd(cursor, "bind mount request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeBindUnMountRequest(
+    uint32_t xid,
+    folly::StringPiece mountPath) {
+  auto msg = serializeHeader(xid, REQ_UNMOUNT_BIND);
+  Appender appender(&msg.data, kDefaultBufferSize);
+
+  serializeString(appender, mountPath);
+  return msg;
+}
+
+void PrivHelperConn::parseBindUnMountRequest(
+    Cursor& cursor,
+    std::string& mountPath) {
+  mountPath = deserializeString(cursor);
+  checkAtEnd(cursor, "bind mount request");
+}
+
 UnixSocket::Message PrivHelperConn::serializeSetLogFileRequest(
     uint32_t xid,
     folly::File logFile) {

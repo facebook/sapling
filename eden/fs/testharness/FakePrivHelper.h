@@ -54,6 +54,7 @@ class FakePrivHelper : public PrivHelper {
   folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,
       folly::StringPiece mountPath) override;
+  folly::Future<folly::Unit> bindUnMount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> fuseTakeoverShutdown(
       folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> fuseTakeoverStartup(

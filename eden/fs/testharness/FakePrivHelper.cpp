@@ -98,6 +98,12 @@ Future<Unit> FakePrivHelper::bindMount(
       runtime_error("FakePrivHelper::bindMount() not implemented"));
 }
 
+folly::Future<folly::Unit> FakePrivHelper::bindUnMount(
+    folly::StringPiece /* mountPath */) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::bindUnMount() not implemented"));
+}
+
 Future<Unit> FakePrivHelper::fuseTakeoverShutdown(
     folly::StringPiece /* mountPath */) {
   return makeFuture<Unit>(

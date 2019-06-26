@@ -42,6 +42,7 @@ class PrivHelperConn {
     REQ_TAKEOVER_SHUTDOWN = 5,
     REQ_TAKEOVER_STARTUP = 6,
     REQ_SET_LOG_FILE = 7,
+    REQ_UNMOUNT_BIND = 8,
   };
 
   /**
@@ -86,6 +87,13 @@ class PrivHelperConn {
   static void parseBindMountRequest(
       folly::io::Cursor& cursor,
       std::string& clientPath,
+      std::string& mountPath);
+
+  static UnixSocket::Message serializeBindUnMountRequest(
+      uint32_t xid,
+      folly::StringPiece mountPath);
+  static void parseBindUnMountRequest(
+      folly::io::Cursor& cursor,
       std::string& mountPath);
 
   static UnixSocket::Message serializeTakeoverShutdownRequest(

@@ -449,6 +449,36 @@ void EdenServiceHandler::getBindMounts(
 #endif // !_WIN32
 }
 
+void EdenServiceHandler::addBindMount(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> repoPath,
+    std::unique_ptr<std::string> targetPath) {
+#ifndef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto edenMount = server_->getMount(*mountPoint);
+
+  edenMount
+      ->addBindMount(
+          RelativePathPiece{*repoPath}, AbsolutePathPiece{*targetPath})
+      .get();
+#else
+  NOT_IMPLEMENTED();
+#endif
+}
+
+void EdenServiceHandler::removeBindMount(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> repoPath) {
+#ifndef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto edenMount = server_->getMount(*mountPoint);
+
+  edenMount->removeBindMount(RelativePathPiece{*repoPath}).get();
+#else
+  NOT_IMPLEMENTED();
+#endif
+}
+
 void EdenServiceHandler::getCurrentJournalPosition(
     JournalPosition& out,
     std::unique_ptr<std::string> mountPoint) {

@@ -80,11 +80,13 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processUnmountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processBindMountMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processBindUnMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processTakeoverShutdownMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processTakeoverStartupMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processSetLogFileMsg(
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
+  std::string findMatchingMountPrefix(folly::StringPiece path);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);

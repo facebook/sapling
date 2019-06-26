@@ -240,7 +240,7 @@ class EdenMount {
    * Return bind mounts that are applied for this mount. These are based on the
    * state of the CheckoutConfig when this EdenMount was created.
    */
-  const std::vector<BindMount>& getBindMounts() const;
+  std::vector<BindMount> getBindMounts() const;
 
   /**
    * Return the ObjectStore used by this mount point.
@@ -545,6 +545,12 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> performBindMounts();
 
+  FOLLY_NODISCARD folly::Future<folly::Unit> addBindMount(
+      RelativePathPiece repoPath,
+      AbsolutePathPiece targetPath);
+  FOLLY_NODISCARD folly::Future<folly::Unit> removeBindMount(
+      RelativePathPiece repoPath);
+
   /**
    * Ensures the path `fromRoot` is a directory. If it is not, then it creates
    * subdirectories until it is. If creating a subdirectory fails, it throws an
@@ -704,7 +710,7 @@ class EdenMount {
    * Note that this config will not be updated if the user modifies the
    * underlying config files after the CheckoutConfig was created.
    */
-  const std::vector<BindMount> bindMounts_;
+  folly::Synchronized<std::vector<BindMount>> bindMounts_;
 
   Journal journal_;
 

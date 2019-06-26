@@ -85,6 +85,7 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
+  folly::Future<folly::Unit> bindUnMount(folly::StringPiece mountPath) override;
   Future<Unit> fuseTakeoverShutdown(StringPiece mountPath) override;
   Future<Unit> fuseTakeoverStartup(
       StringPiece mountPath,
@@ -376,6 +377,18 @@ Future<Unit> PrivHelperClientImpl::bindMount(
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_MOUNT_BIND, response);
+      });
+}
+
+folly::Future<folly::Unit> PrivHelperClientImpl::bindUnMount(
+    folly::StringPiece mountPath) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeBindUnMountRequest(xid, mountPath);
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_UNMOUNT_BIND, response);
       });
 }
 

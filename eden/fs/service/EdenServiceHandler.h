@@ -56,6 +56,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void getBindMounts(
       std::vector<std::string>& out,
       std::unique_ptr<std::string> mountPoint) override;
+  void addBindMount(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> repoPath,
+      std::unique_ptr<std::string> targetPath) override;
+  void removeBindMount(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> repoPath) override;
 
   void getSHA1(
       std::vector<SHA1Result>& out,

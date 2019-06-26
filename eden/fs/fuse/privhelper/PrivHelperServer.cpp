@@ -473,28 +473,51 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
   return makeResponse();
 }
 
+std::string PrivHelperServer::findMatchingMountPrefix(folly::StringPiece path) {
+  for (const auto& mountPoint : mountPoints_) {
+    if (boost::starts_with(path, mountPoint + "/")) {
+      return mountPoint;
+    }
+  }
+  throw std::domain_error(folly::to<string>("No FUSE mount found for ", path));
+}
+
 UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
   string clientPath;
   string mountPath;
   PrivHelperConn::parseBindMountRequest(cursor, clientPath, mountPath);
   XLOG(DBG3) << "bind mount \"" << mountPath << "\"";
 
-  // Figure out which FUSE mount the mountPath belongs to.
-  // (Alternatively, we could just make this part of the Message.)
-  string key;
-  for (const auto& mountPoint : mountPoints_) {
-    if (boost::starts_with(mountPath, mountPoint + "/")) {
-      key = mountPoint;
-      break;
-    }
-  }
-  if (key.empty()) {
-    throw std::domain_error(
-        folly::to<string>("No FUSE mount found for ", mountPath));
-  }
+  // findMatchingMountPrefix will throw if mountPath doesn't match
+  // any known mount.  We perform this check so that we're not a
+  // vector for mounting things in arbitrary places.
+  auto key = findMatchingMountPrefix(mountPath);
 
   bindMount(clientPath.c_str(), mountPath.c_str());
   bindMountPoints_.insert({key, mountPath});
+  return makeResponse();
+}
+
+UnixSocket::Message PrivHelperServer::processBindUnMountMsg(Cursor& cursor) {
+  string mountPath;
+  PrivHelperConn::parseBindUnMountRequest(cursor, mountPath);
+  XLOG(DBG3) << "bind unmount \"" << mountPath << "\"";
+
+  // findMatchingMountPrefix will throw if mountPath doesn't match
+  // any known mount.  We perform this check so that we're not a
+  // vector for arbitrarily unmounting things.
+  findMatchingMountPrefix(mountPath);
+
+  bindUnmount(mountPath.c_str());
+
+  const auto range = bindMountPoints_.equal_range(mountPath);
+  for (auto bindIter = range.first; bindIter != range.second; ++bindIter) {
+    if (bindIter->second == mountPath) {
+      bindMountPoints_.erase(bindIter);
+      break;
+    }
+  }
+
   return makeResponse();
 }
 
@@ -685,6 +708,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processTakeoverStartupMsg(cursor);
     case PrivHelperConn::REQ_SET_LOG_FILE:
       return processSetLogFileMsg(cursor, request);
+    case PrivHelperConn::REQ_UNMOUNT_BIND:
+      return processBindUnMountMsg(cursor);
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

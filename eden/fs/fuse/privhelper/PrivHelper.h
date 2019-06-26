@@ -80,6 +80,9 @@ class PrivHelper {
       folly::StringPiece clientPath,
       folly::StringPiece mountPath) = 0;
 
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> bindUnMount(
+      folly::StringPiece mountPath) = 0;
+
   /**
    * Inform the privhelper process that we are shutting down as part of a
    * graceful restart, and a new edenfs daemon will take over our existing
