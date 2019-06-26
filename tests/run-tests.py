@@ -249,19 +249,21 @@ else:
 
 def Popen4(cmd, wd, timeout, env=None):
     processlock.acquire()
-    p = subprocess.Popen(
-        cmd,
-        shell=True,
-        bufsize=-1,
-        cwd=wd,
-        env=env,
-        close_fds=closefds,
-        preexec_fn=preexec,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    processlock.release()
+    try:
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            bufsize=-1,
+            cwd=wd,
+            env=env,
+            close_fds=closefds,
+            preexec_fn=preexec,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    finally:
+        processlock.release()
 
     p.fromchild = p.stdout
     p.tochild = p.stdin
