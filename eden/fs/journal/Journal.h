@@ -153,8 +153,9 @@ class Journal {
     /** The sequence number that we'll use for the next entry
      * that we link into the chain */
     SequenceNumber nextSequence{1};
-    /** The most recently recorded entry */
-    JournalDeltaPtr latest;
+    /** All recorded entries. Newer (more recent) deltas are added using
+     * push_back. */
+    std::deque<JournalDelta> deltas;
     /** The stats about this Journal up to the latest delta */
     std::optional<JournalStats> stats;
   };

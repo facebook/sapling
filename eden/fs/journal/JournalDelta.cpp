@@ -47,17 +47,6 @@ JournalDelta::JournalDelta(
       isPath1Valid{true},
       isPath2Valid{true} {}
 
-JournalDelta::~JournalDelta() {
-  // O(1) stack space destruction of the delta chain.
-  JournalDeltaPtr p{std::move(previous)};
-  while (p && p.unique()) {
-    // We know we have the only reference to p, so cast away constness because
-    // we need to unset p->previous.
-    JournalDelta* q = const_cast<JournalDelta*>(p.get());
-    p = std::move(q->previous);
-  }
-}
-
 size_t JournalDelta::estimateMemoryUsage() const {
   size_t mem = folly::goodMallocSize(sizeof(JournalDelta));
   /* NOTE: The following code assumes an unordered_set is separated into an
@@ -88,20 +77,6 @@ size_t JournalDelta::estimateMemoryUsage() const {
   }
 
   return mem;
-}
-
-void JournalDelta::incRef() const noexcept {
-  refCount_.fetch_add(1, std::memory_order_relaxed);
-}
-
-void JournalDelta::decRef() const noexcept {
-  if (1 == refCount_.fetch_sub(1, std::memory_order_acq_rel)) {
-    delete this;
-  }
-}
-
-bool JournalDelta::isUnique() const noexcept {
-  return 1 == refCount_.load(std::memory_order_acquire);
 }
 
 std::unordered_map<RelativePath, PathChangeInfo>

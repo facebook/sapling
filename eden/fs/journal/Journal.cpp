@@ -68,13 +68,12 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
 
     delta->time = std::chrono::steady_clock::now();
 
-    delta->previous = deltaState->latest;
-
     // If the hashes were not set to anything, default to copying
     // the value from the prior journal entry
-    if (delta->previous && delta->fromHash == kZeroHash &&
+    if (!deltaState->deltas.empty() && delta->fromHash == kZeroHash &&
         delta->toHash == kZeroHash) {
-      delta->fromHash = delta->previous->toHash;
+      JournalDelta& previous = deltaState->deltas.back();
+      delta->fromHash = previous.toHash;
       delta->toHash = delta->fromHash;
     }
 
@@ -93,7 +92,7 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
       deltaState->stats->latestTimestamp = delta->time;
     }
 
-    deltaState->latest = JournalDeltaPtr{std::move(delta)};
+    deltaState->deltas.emplace_back(std::move(*delta));
   }
 
   // Careful to call the subscribers with no locks held.
@@ -105,13 +104,12 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
 
 std::optional<JournalDeltaInfo> Journal::getLatest() const {
   auto deltaState = deltaState_.rlock();
-  if (deltaState->latest) {
-    return JournalDeltaInfo{deltaState->latest->fromHash,
-                            deltaState->latest->toHash,
-                            deltaState->latest->sequenceID,
-                            deltaState->latest->time};
-  } else {
+  if (deltaState->deltas.empty()) {
     return std::nullopt;
+  } else {
+    const JournalDelta& back = deltaState->deltas.back();
+    return JournalDeltaInfo{
+        back.fromHash, back.toHash, back.sequenceID, back.time};
   }
 }
 
@@ -262,19 +260,19 @@ void Journal::forEachDelta(
     std::optional<size_t> lengthLimit,
     Func&& deltaCallback) const {
   auto deltaState = deltaState_.rlock();
-  const JournalDelta* current = deltaState->latest.get();
-
   size_t iters = 0;
-  while (current) {
-    if (current->sequenceID < from) {
+  for (auto deltaIter = deltaState->deltas.rbegin();
+       deltaIter != deltaState->deltas.rend();
+       ++deltaIter) {
+    const JournalDelta& current = *deltaIter;
+    if (current.sequenceID < from) {
       break;
     }
     if (lengthLimit && iters >= lengthLimit.value()) {
       break;
     }
-    deltaCallback(*current);
+    deltaCallback(current);
     ++iters;
-    current = current->previous.get();
   }
 }
 } // namespace eden

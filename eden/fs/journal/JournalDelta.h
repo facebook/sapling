@@ -8,7 +8,6 @@
 
 #include <chrono>
 #include <unordered_set>
-#include "eden/fs/journal/JournalDeltaPtr.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -50,8 +49,8 @@ class JournalDelta {
   enum Renamed { RENAMED };
   enum Replaced { REPLACED };
   JournalDelta() = default;
-  JournalDelta(JournalDelta&&) = delete;
-  JournalDelta& operator=(JournalDelta&&) = delete;
+  JournalDelta(JournalDelta&&) = default;
+  JournalDelta& operator=(JournalDelta&&) = default;
   JournalDelta(const JournalDelta&) = delete;
   JournalDelta& operator=(const JournalDelta&) = delete;
   JournalDelta(RelativePathPiece fileName, Created);
@@ -69,10 +68,6 @@ class JournalDelta {
    */
   JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Replaced);
 
-  ~JournalDelta();
-
-  /** the prior delta and its chain */
-  JournalDeltaPtr previous;
   /** The ID of this Delta in the Journal */
   SequenceNumber sequenceID;
   /** The time at which the change was recorded. */
@@ -102,15 +97,6 @@ class JournalDelta {
   /** Get memory used (in bytes) by this Delta */
   size_t estimateMemoryUsage() const;
 
- private:
-  void incRef() const noexcept;
-  void decRef() const noexcept;
-  bool isUnique() const noexcept;
-
-  mutable std::atomic<size_t> refCount_{0};
-
-  // For reference counting.
-  friend class JournalDeltaPtr;
 };
 
 struct JournalDeltaRange {
