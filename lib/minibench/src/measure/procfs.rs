@@ -60,8 +60,8 @@ impl Measure for IO {
 
     fn merge(self, rhs: Self) -> Self {
         Self {
-            rchar: self.rchar + rhs.rchar,
-            wchar: self.wchar + rhs.wchar,
+            rchar: self.rchar.max(rhs.rchar),
+            wchar: self.wchar.max(rhs.wchar),
         }
     }
 
