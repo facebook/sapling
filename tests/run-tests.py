@@ -1446,7 +1446,10 @@ class Test(unittest.TestCase):
             env["HGPORT%s" % offset] = "%s" % (self._startport + i)
 
         env = os.environ.copy()
-        env["PYTHONUSERBASE"] = sysconfig.get_config_var("userbase")
+        if os.name != "nt":
+            # Now that we *only* load stdlib from python.zip on Windows,
+            # there's no userbase
+            env["PYTHONUSERBASE"] = sysconfig.get_config_var("userbase")
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["HOME"] = self._testtmp
