@@ -323,3 +323,45 @@ Test rebasing children with obsolete children themselves needing a restack.
   | x  1 ac2f7407182b A
   |/
   o  0 48b9aae0607f Z
+
+Test not rebasing unrelated changes. When rebasing X, only X:: are expected to be rebased.
+Rebasing commits outside X:: can be surprising and more easily cause conflicts.
+
+  $ newrepo
+  $ setconfig amend.autorestack=no-conflict
+  $ hg debugdrawdag<<'EOS'
+  > D  C
+  > |  |
+  > B2 B1  # amend: B1 -> B2
+  > | /    # then, amend B2.
+  > |/     # expect: D gets rebased, while C is kept unchanged.
+  > A
+  > |
+  > Z
+  > EOS
+  $ hg up -q B2
+  $ hg amend -m B3
+  restacking children automatically (unless they conflict)
+  rebasing 4:dbe6ebcaec86 "C" (C)
+  rebasing 5:afb1812f5f28 "D" (D)
+  $ showgraph
+  o  8 c9dfcf01df0b D
+  |
+  | o  7 40d6342465dc C
+  |/
+  @  6 1c28c4186c15 B3
+  |
+  | x  5 afb1812f5f28 D
+  | |
+  | | x  4 dbe6ebcaec86 C
+  | | |
+  | x |  3 1b9d31199d34 B2
+  |/ /
+  | x  2 588f87b965af B1
+  |/
+  o  1 ac2f7407182b A
+  |
+  o  0 48b9aae0607f Z
+
+(BUG: C shouldn't be rebased)
+
