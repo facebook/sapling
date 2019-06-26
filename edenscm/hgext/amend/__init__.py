@@ -581,7 +581,7 @@ def wraprebase(orig, ui, repo, *pats, **opts):
         if repo == repo.unfiltered():
             raise error.Abort(_("cannot use both --hidden and --restack"))
 
-        return restack.restack(ui, repo, opts)
+        return restack.restack(ui, repo, **opts)
 
     return orig(ui, repo, *pats, **opts)
 
