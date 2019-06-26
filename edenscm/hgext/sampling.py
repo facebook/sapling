@@ -162,18 +162,8 @@ def telemetry(reporef):
     repo = reporef()
     if repo is None:
         return
+    ui = repo.ui
     try:
-        ui = repo.ui
-        if util.safehasattr(repo, "requirements"):
-            ui.log(
-                "requirements",
-                generaldelta=str("generaldelta" in repo.requirements).lower(),
-            )
-            ui.log(
-                "requirements",
-                remotefilelog=str("remotefilelog" in repo.requirements).lower(),
-            )
-
         try:
             lfsmetrics = repo.svfs.lfsremoteblobstore.getlfsmetrics()
             ui.log("command_metrics", **lfsmetrics)
