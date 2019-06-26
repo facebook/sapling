@@ -66,6 +66,7 @@ from ..node import bin, hex, nullid, nullrev, short
 with hgdemandimport.disabled():
     # Importing these modules have side effect on the command table.
     from . import (  # noqa: F401
+        blackbox,
         debug,
         debugcheckoutidentifier,
         debugmutation,

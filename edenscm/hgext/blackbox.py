@@ -53,9 +53,6 @@ from edenscm.mercurial.node import hex
 # leave the attribute unspecified.
 testedwith = "ships-with-hg-core"
 
-cmdtable = {}
-command = registrar.command(cmdtable)
-
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -254,33 +251,3 @@ def reposetup(ui, repo):
             lastui = weakref.ref(ui)
 
     repo._wlockfreeprefix.add("blackbox.log")
-
-
-@command(
-    "^blackbox",
-    [("l", "limit", 10, _("the number of events to show"))],
-    _("hg blackbox [OPTION]..."),
-)
-def blackbox(ui, repo, *revs, **opts):
-    """view the recent repository events
-    """
-
-    if not repo.localvfs.exists("blackbox.log"):
-        return
-
-    limit = opts.get(r"limit")
-    fp = repo.localvfs("blackbox.log", "r")
-    lines = fp.read().split("\n")
-
-    count = 0
-    output = []
-    for line in reversed(lines):
-        if count >= limit:
-            break
-
-        # count the commands by matching lines like: 2013/01/23 19:13:36 root>
-        if re.match("^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} .*> .*", line):
-            count += 1
-        output.append(line)
-
-    ui.status("\n".join(reversed(output)))

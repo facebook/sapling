@@ -1,12 +1,8 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > amend=
-  > blackbox=
   > [experimental]
   > evolution = all
-  > [blackbox]
-  > track = command, command_finish, command_exception,
-  >   pinnednodes
   > EOF
 
   $ hg init
@@ -63,35 +59,34 @@ Bookmark pins nodes even after removed
   
 Check blackbox logs
 
-  $ hg blackbox -l 10000
-  *> init exited 0 after * seconds (glob)
-  *> debugdrawdag (glob)
-  *> pinnednodes: ['debugdrawdag'] newpin=[] newunpin=['112478962961'] before=[] after=[] (glob)
-  *> debugdrawdag exited 0 after * (glob)
-  *> log -G -T '{rev} {desc}\n' (glob)
-  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
-  *> log -G -T '{rev} {desc}\n' --hidden (glob)
-  *> log -G -T '{rev} {desc}\n' --hidden exited 0 after * (glob)
-  *> update 1 --hidden -q (glob)
-  *> pinnednodes: ['update', '1', '--hidden', '-q'] newpin=['112478962961'] newunpin=[] before=[] after=['112478962961'] (glob)
-  *> update 1 --hidden -q exited 0 after * (glob)
-  *> update 0 -q (glob)
-  *> update 0 -q exited 0 after * (glob)
-  *> log -G -T '{rev} {desc}\n' (glob)
-  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
-  *> prune 1 -q (glob)
-  *> pinnednodes: ['prune', '1', '-q'] newpin=[] newunpin=['112478962961'] before=['112478962961'] after=[] (glob)
-  *> prune 1 -q exited 0 after * (glob)
-  *> log -G -T '{rev} {desc}\n' (glob)
-  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
-  *> bookmark -ir 1 BOOK --hidden -q (glob)
-  *> pinnednodes: ['bookmark', '-ir', '1', 'BOOK', '--hidden', '-q'] newpin=['112478962961'] newunpin=[] before=[] after=['112478962961'] (glob)
-  *> bookmark -ir 1 BOOK --hidden -q exited 0 after * (glob)
-  *> bookmark -d BOOK -q (glob)
-  *> bookmark -d BOOK -q exited 0 after * (glob)
-  *> log -G -T '{rev} {desc}\n' (glob)
-  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
-  *> blackbox -l 10000 (glob)
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":["or","command","command_finish","pinnednodes"]}}'
+  [legacy][command] debugdrawdag
+  [legacy][pinnednodes] pinnednodes: ['debugdrawdag'] newpin=[] newunpin=['112478962961'] before=[] after=[]
+  [legacy][command_finish] debugdrawdag exited 0 after 0.00 seconds
+  [legacy][command] log -G -T '{rev} {desc}\n'
+  [legacy][command_finish] log -G -T '{rev} {desc}\n' exited 0 after 0.00 seconds
+  [legacy][command] log -G -T '{rev} {desc}\n' --hidden
+  [legacy][command_finish] log -G -T '{rev} {desc}\n' --hidden exited 0 after 0.00 seconds
+  [legacy][command] update 1 --hidden -q
+  [legacy][pinnednodes] pinnednodes: ['update', '1', '--hidden', '-q'] newpin=['112478962961'] newunpin=[] before=[] after=['112478962961']
+  [legacy][command_finish] update 1 --hidden -q exited 0 after 0.00 seconds
+  [legacy][command] update 0 -q
+  [legacy][command_finish] update 0 -q exited 0 after 0.00 seconds
+  [legacy][command] log -G -T '{rev} {desc}\n'
+  [legacy][command_finish] log -G -T '{rev} {desc}\n' exited 0 after 0.00 seconds
+  [legacy][command] prune 1 -q
+  [legacy][pinnednodes] pinnednodes: ['prune', '1', '-q'] newpin=[] newunpin=['112478962961'] before=['112478962961'] after=[]
+  [legacy][command_finish] prune 1 -q exited 0 after 0.00 seconds
+  [legacy][command] log -G -T '{rev} {desc}\n'
+  [legacy][command_finish] log -G -T '{rev} {desc}\n' exited 0 after 0.00 seconds
+  [legacy][command] bookmark -ir 1 BOOK --hidden -q
+  [legacy][pinnednodes] pinnednodes: ['bookmark', '-ir', '1', 'BOOK', '--hidden', '-q'] newpin=['112478962961'] newunpin=[] before=[] after=['112478962961']
+  [legacy][command_finish] bookmark -ir 1 BOOK --hidden -q exited 0 after 0.00 seconds
+  [legacy][command] bookmark -d BOOK -q
+  [legacy][command_finish] bookmark -d BOOK -q exited 0 after 0.00 seconds
+  [legacy][command] log -G -T '{rev} {desc}\n'
+  [legacy][command_finish] log -G -T '{rev} {desc}\n' exited 0 after 0.00 seconds
+  [legacy][command] blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":["or","command","command_finish","pinnednodes"]}}'
 
 The order matters - putting bookmarks or moving working copy on non-obsoleted
 commits do not pin them. Test this using "debugobsolete" which will not call

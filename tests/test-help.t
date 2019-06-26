@@ -2150,6 +2150,13 @@ Dish up an empty repo; serve it cold.
   subdivision search of changesets
   </td></tr>
   <tr><td>
+  <a href="/help/blackbox">
+  blackbox
+  </a>
+  </td><td>
+  view the recent repository events
+  </td></tr>
+  <tr><td>
   <a href="/help/bookmarks">
   bookmarks
   </a>

@@ -9,6 +9,7 @@ Show all commands except debug commands
   archive
   backout
   bisect
+  blackbox
   bookmarks
   branch
   bundle
@@ -268,6 +269,7 @@ Show all commands + options
   archive: no-decode, prefix, rev, type, include, exclude
   backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
+  blackbox: start, end, pattern, timestamp, sid
   bookmarks: force, rev, delete, strip, rename, inactive, template
   branch: force, clean, new
   bundle: force, rev, base, all, type, ssh, remotecmd, insecure

@@ -63,13 +63,8 @@ Traces are logged in blackbox
   > logsource = 1
   > EOF
 
-  $ hg blackbox -l 2
-  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> blackbox -l 2
   $ hg crash --config errorredirect.script='echo Works'
   Works
   [255]
-  $ hg blackbox -l 12 | grep '\[command'
-  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> blackbox -l 2
-  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> crash --config 'errorredirect.script=echo Works'
-  1970/01/01 00:00:00 bob @(unknown) (5000) [command_exception]> ** Mercurial Distributed SCM (version *) has crashed: (glob)
-  1970/01/01 00:00:00 bob @(unknown) (5000) [command]> blackbox -l 12
+  $ hg blackbox --pattern '{"legacy_log":{"service":"command_exception"}}' | head -n 1
+  * [legacy][command_exception] ** has crashed: (glob)

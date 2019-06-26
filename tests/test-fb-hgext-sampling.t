@@ -179,13 +179,14 @@ Metrics can be printed if devel.print-metrics is set:
 
 Metrics is logged to blackbox:
 
-  $ enable blackbox
   $ setconfig blackbox.track=metrics
   $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py
   .
   atexit handler executed
-  $ hg blackbox
-  *> {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}} (glob)
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}'
+  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
+  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
+  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   atexit handler executed
 
 Invalid format strings don't crash Mercurial

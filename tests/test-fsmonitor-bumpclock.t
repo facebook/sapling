@@ -26,24 +26,25 @@ many files:
   clock = * (glob)
 
   $ enable blackbox
-  $ setconfig blackbox.track=fsmonitor_status,fsmonitor_details,fsmonitor
+  $ setconfig blackbox.track=watchman,fsmonitor
+
+  $ rm -rf .hg/blackbox*
   $ hg status
 
-  $ hg blackbox | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep -v command | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
   clock='c:x' len(nonnormal)=0
   setlastclock 'c:x'
   setlastisfresh False
   watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
   getlastclock 'c:x'
   set clock='c:x' notefiles=[]
-  status exited 0 after 0.00 seconds
 
 The watchman clock remains unchanged. Watchman still returns 4 files, which
 means the "status" command could still be slow.
 
   $ rm -rf .hg/blackbox*
   $ hg status
-  $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep returned | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
 
 With watchman-changed-file-threshold set, clock is bumped and watchman can
@@ -54,12 +55,12 @@ return an empty list:
 
   $ rm -rf .hg/blackbox*
   $ hg status
-  $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep returned | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
 
   $ sleep 1
 
   $ rm -rf .hg/blackbox*
   $ hg status
-  $ hg blackbox | grep watchman | sed "s/^[^>]*> //;s/c:[0-9][0-9:]*/c:x/"
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep returned | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
   watchman returned []

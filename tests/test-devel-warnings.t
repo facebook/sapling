@@ -79,8 +79,6 @@
   $ cat << EOF >> $HGRCPATH
   > [extensions]
   > buggylocking=$TESTTMP/buggylocking.py
-  > mock=$TESTDIR/mockblackbox.py
-  > blackbox=
   > [devel]
   > all-warnings=1
   > EOF
@@ -131,77 +129,15 @@ Stripping from a transaction
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
 
 #if no-chg normal-layout
-  $ hg blackbox -l 7
-  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated
-  1970/01/01 00:00:00 bob @(unknown) (5000)> devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
-  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated exited 0 after 0.00 seconds
-  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated --traceback
-  1970/01/01 00:00:00 bob @(unknown) (5000)> devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
-   */hg:* in <module> (glob) (?)
-   */mercurial/entrypoint.py:* in * (glob) (?)
-   */mercurial/entrypoint.py:* in * (glob) (?)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
-  1970/01/01 00:00:00 bob @(unknown) (5000)> oldanddeprecated --traceback exited 0 after 0.00 seconds
-  1970/01/01 00:00:00 bob @(unknown) (5000)> blackbox -l 7
-#endif
-
-#if chg normal-layout
-  $ hg blackbox -l 7
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
-   */hg:* in <module> (glob)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py:* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   */mercurial/commands.py:* in serve (glob)
-   */mercurial/server.py:* in runservice (glob)
-   */mercurial/commandserver.py:* in run (glob)
-   */mercurial/commandserver.py:* in _mainloop (glob)
-   */mercurial/commandserver.py:* in _runworker (glob)
-   */mercurial/commandserver.py:* in _serverequest (glob)
-   */mercurial/commandserver.py:* in serve (glob)
-   */mercurial/commandserver.py:* in serveone (glob)
-   */mercurial/chgserver.py:* in runcommand (glob)
-   */mercurial/commandserver.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py:* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 7
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"develwarn"}}' | grep develwarn
+  [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:12 (buggylocking)
+  [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:12 (buggylocking)
+  [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at:
+  [legacy][develwarn] devel-warn: use of bare vfs instead of localvfs or sharedvfs at: $TESTTMP/buggylocking.py:47 (nowlockwrite)
+  [legacy][develwarn] devel-warn: write with no wlock: "branch" at: $TESTTMP/buggylocking.py:47 (nowlockwrite)
+  [legacy][develwarn] devel-warn: write with no lock: "fncache" at: $TESTTMP/buggylocking.py:52 (nolockwrite)
+  [legacy][develwarn] devel-warn: foorbar is deprecated, go shopping
+  [legacy][develwarn] devel-warn: foorbar is deprecated, go shopping
 #endif
 
 Test programming error failure:

@@ -12,7 +12,7 @@
   > A   # A/A=1\n
   > EOS
 
-  $ enable blackbox fsmonitor rebase hgevents
+  $ enable fsmonitor rebase hgevents
   $ setconfig blackbox.track=merge_resolve,watchman blackbox.logsource=true
 
   $ hg rebase -s B -d C --tool=false
@@ -23,13 +23,10 @@
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
-  $ hg blackbox -l 100 | egrep '(watchman.*state.*completed|resolving)' | python $RUNTESTDIR/sortdictfilter.py
-  *> command ('state-enter', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': False, 'partial': False, 'rev': '0000000000000000000000000000000000000000', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds (glob)
-  *> command ('state-leave', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': False, 'partial': False, 'rev': '2e2f27616b65209eecd4710c454df0f678f271d9', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds (glob)
-  *> command ('state-enter', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': True, 'partial': False, 'rev': '2e2f27616b65209eecd4710c454df0f678f271d9', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds (glob)
-  *> resolving 2, preresolve = True (glob)
-  *> resolving A, preresolve = True (glob)
-  *> resolving 2, preresolve = False (glob)
-  *> command ('state-enter', '$TESTTMP/repo1', {'metadata': {'path': '2'}, 'name': 'hg.filemerge'}) completed in 0.00 seconds (glob)
-  *> command ('state-leave', '$TESTTMP/repo1', {'metadata': {'path': '2'}, 'name': 'hg.filemerge'}) completed in 0.00 seconds (glob)
-  *> command ('state-leave', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': True, 'partial': False, 'rev': '65f3e88a53bc0f5183deea0cdbc46738777ec005', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds (glob)
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"watchman"}}' | egrep '(watchman.*state.*completed|resolving)' | python $RUNTESTDIR/sortdictfilter.py
+  [legacy][watchman] command ('state-enter', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': False, 'partial': False, 'rev': '0000000000000000000000000000000000000000', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds
+  [legacy][watchman] command ('state-leave', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': False, 'partial': False, 'rev': '2e2f27616b65209eecd4710c454df0f678f271d9', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds
+  [legacy][watchman] command ('state-enter', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': True, 'partial': False, 'rev': '2e2f27616b65209eecd4710c454df0f678f271d9', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds
+  [legacy][watchman] command ('state-enter', '$TESTTMP/repo1', {'metadata': {'path': '2'}, 'name': 'hg.filemerge'}) completed in 0.00 seconds
+  [legacy][watchman] command ('state-leave', '$TESTTMP/repo1', {'metadata': {'path': '2'}, 'name': 'hg.filemerge'}) completed in 0.00 seconds
+  [legacy][watchman] command ('state-leave', '$TESTTMP/repo1', {'metadata': {'distance': 3, 'merge': True, 'partial': False, 'rev': '65f3e88a53bc0f5183deea0cdbc46738777ec005', 'status': 'ok'}, 'name': 'hg.update'}) completed in 0.00 seconds
