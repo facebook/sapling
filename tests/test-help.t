@@ -2154,7 +2154,7 @@ Dish up an empty repo; serve it cold.
   blackbox
   </a>
   </td><td>
-  view the recent repository events
+  view recent repository events
   </td></tr>
   <tr><td>
   <a href="/help/bookmarks">
