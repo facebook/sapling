@@ -28,6 +28,7 @@ mod exceptions {
     py_exception!(edenapi, ResponseError);
     py_exception!(edenapi, CurlError);
     py_exception!(edenapi, HttpError);
+    py_exception!(edenapi, ProxyError);
     py_exception!(edenapi, SerializationError);
     py_exception!(edenapi, StoreError);
     py_exception!(edenapi, TlsError);
@@ -293,6 +294,7 @@ fn into_exception(py: Python, error: ApiError) -> PyErr {
         &BadResponse => PyErr::new::<ResponseError, _>(py, msg),
         &Curl => PyErr::new::<CurlError, _>(py, msg),
         &Http { .. } => PyErr::new::<HttpError, _>(py, msg),
+        &Proxy(..) => PyErr::new::<ProxyError, _>(py, msg),
         &Serialization => PyErr::new::<SerializationError, _>(py, msg),
         &Store => PyErr::new::<StoreError, _>(py, msg),
         &Url => PyErr::new::<UrlError, _>(py, msg),

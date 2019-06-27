@@ -30,6 +30,17 @@ impl ApiError {
             Err(e) => return e.context(ApiErrorKind::BadResponse).into(),
         };
         let msg = msg.to_string();
+
+        // XXX: Really crude heuristic. Typically, Mercurial will be configured to
+        // talk to the API server through an HTTP proxy. When the proxy encounters
+        // an error, it will generally return an HTML response since it assumes the
+        // client is a browser. In contrast, the API server itself will never return
+        // an HTML payload. As such, if we observe something that looks like an HTML
+        // response, we can assume that it's an error from the proxy server.
+        if msg.starts_with("<!DOCTYPE html") {
+            return ApiErrorKind::Proxy(code).into();
+        }
+
         ApiErrorKind::Http { code, msg }.into()
     }
 }
@@ -116,6 +127,8 @@ pub enum ApiErrorKind {
     Curl,
     #[fail(display = "Received HTTP status {} with response: {:?}", code, msg)]
     Http { code: StatusCode, msg: String },
+    #[fail(display = "Proxy server returned an error (HTTP {})", _0)]
+    Proxy(StatusCode),
     #[fail(display = "Error during serialization/deserialization")]
     Serialization,
     #[fail(display = "Failed to write data to the store")]
