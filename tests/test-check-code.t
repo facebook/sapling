@@ -147,6 +147,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
   Skipping tests/test-rustthreading.py it has no-che?k-code (glob)
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)
+  edenscm/mercurial/commands/eden.py:408: use foobar, not foo_bar naming --> def cmd_get_file_size(self, request):
   tests/test-revset.t:*: warning: ^ must be quoted --> > . + (glob)
 
 @commands in debugcommands.py should be in alphabetical order.

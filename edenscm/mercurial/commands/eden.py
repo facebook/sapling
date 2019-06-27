@@ -98,6 +98,7 @@ CMD_MANIFEST_NODE_FOR_COMMIT = 4
 CMD_FETCH_TREE = 5
 CMD_PREFETCH_FILES = 6
 CMD_CAT_FILE = 7
+CMD_GET_FILE_SIZE = 8
 
 #
 # Flag values.
@@ -403,6 +404,31 @@ class HgServer(object):
         length_data = struct.pack(b">Q", len(contents))
         self.send_chunk(request, contents, length_data)
 
+    @cmd(CMD_GET_FILE_SIZE)
+    def cmd_get_file_size(self, request):
+        """CMD_GET_FILE_SIZE: get the size of a file.
+
+        Request body format:
+        - <id><path>
+          Fields:
+          - <id>: The file revision hash, as a 20-byte binary value
+          - <path>: The file path, relative to the root of the repository
+
+        Response body format:
+        - <file_size>
+        """
+        if len(request.body) < SHA1_NUM_BYTES + 1:
+            raise RuntimeError("get_file_size request data too short")
+
+        id = request.body[:SHA1_NUM_BYTES]
+        path = request.body[SHA1_NUM_BYTES:]
+
+        self.debug("(pid:%s) GET_FILE_SIZE, path %r, id %s", os.getpid(), path, hex(id))
+        size = self.get_file_size(path, id)
+
+        data = struct.pack(b">Q", size)
+        self.send_chunk(request, data)
+
     @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
     def cmd_manifest_node_for_commit(self, request):
         """
@@ -606,6 +632,12 @@ class HgServer(object):
             return self._get_manifest_node_impl(rev)
 
     def get_file(self, path, rev_hash):
+        return self.get_file_attribute(path, rev_hash, "data", lambda fctx: fctx.data())
+
+    def get_file_size(self, path, rev_hash):
+        return self.get_file_attribute(path, rev_hash, "size", lambda fctx: fctx.size())
+
+    def get_file_attribute(self, path, rev_hash, attr, attr_of):
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
         except Exception:
@@ -613,7 +645,7 @@ class HgServer(object):
             fctx = self.repo.filectx(path, fileid=rev_hash)
 
         try:
-            return fctx.data()
+            return attr_of(fctx)
         except KeyError:
             # There is a race condition in Mercurial's repacking which may be
             # triggered by debugedenimporthelper since we have multiple
@@ -622,10 +654,10 @@ class HgServer(object):
             self.repo.ui.develwarn("Retrying due to possible race condition")
             self.repo.fileslog.contentstore.markforrefresh()
             try:
-                return fctx.data()
-            except Exception as ex:
-                raise ResetRepoError(ex)
-        except Exception as ex:
+                return attr_of(fctx)
+            except Exception as e:
+                raise ResetRepoError(e)
+        except Exception as e:
             # Ugh.  The server-side remotefilelog code can sometimes
             # incorrectly fail to return data here.  I believe this occurs if
             # the file data is new since we first opened our connection to the
@@ -636,9 +668,9 @@ class HgServer(object):
             # retry.
             if self.repo.ui.configbool("devel", "all-warnings"):
                 logging.exception(
-                    "Got exception when getting file: %s, %s", path, hex(rev_hash)
+                    "Exception while getting file %s: %s, %s", attr, path, hex(rev_hash)
                 )
-            raise ResetRepoError(ex)
+            raise ResetRepoError(e)
 
     def prefetch(self, rev):
         if not util.safehasattr(self.repo, "prefetch"):
@@ -758,6 +790,14 @@ def runedenimporthelper(repo, **opts):
         sys.stdout.write(data)
         return 0
 
+    if opts.get("get_file_size"):
+        path, id_str = opts.get("get_file_size").rsplit(":", -1)
+        path = path.encode(sys.getfilesystemencoding())
+        id = binascii.unhexlify(id_str)
+        size = server.get_file_size(path, id)
+        sys.stdout.write("{}\n".format(size))
+        return 0
+
     if opts.get("fetch_tree"):
         parts = opts.get("fetch_tree").rsplit(":", -1)
         if len(parts) == 1:
@@ -832,6 +872,13 @@ def runedenimporthelper(repo, **opts):
             _(
                 "Dump the file contents for the specified file at the given file revision"
             ),
+            _("PATH:REV"),
+        ),
+        (
+            "",
+            "get-file-size",
+            "",
+            _("Get the file size for the specified file at the given file revision"),
             _("PATH:REV"),
         ),
         (

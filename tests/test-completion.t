@@ -295,7 +295,7 @@ Show all commands + options
   debugdirstate: nodates, datesort, json
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugdrawdag: print
-  debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, fetch-tree
+  debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, get-file-size, fetch-tree
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev
