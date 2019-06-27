@@ -55,7 +55,7 @@ def saveremotebookmarks(repo, newbookmarks, remote):
 
     for bookmark, hexnode in newbookmarks.iteritems():
         bookmarks[bookmark] = hexnode
-    remotenamesext.saveremotenames(repo, remotepath, bookmarks)
+    remotenamesext.saveremotenames(repo, {remotepath: bookmarks})
 
 
 def savelocalbookmarks(repo, bookmarks):
@@ -104,7 +104,7 @@ def deleteremotebookmarks(ui, repo, path, names):
         if nametype == "bookmarks" and name not in names:
             bookmarks[name] = node
 
-    remotenamesext.saveremotenames(repo, path, bookmarks)
+    remotenamesext.saveremotenames(repo, {path: bookmarks})
 
 
 def encodebookmarks(bookmarks):

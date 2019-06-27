@@ -411,7 +411,7 @@ def pullremotenames(repo, remote, bookmarks):
         # remove them here otherwise we would require the user
         # to issue a pull to refresh .hg/remotenames
         repo = repo.unfiltered()
-        saveremotenames(repo, path, bookmarks)
+        saveremotenames(repo, {path: bookmarks})
 
     precachedistance(repo)
 
@@ -677,6 +677,16 @@ class remotenames(dict):
         self._node2hoists = None
         self._node2branch = None
 
+    def applychanges(self, changes):
+        # Only supported for bookmarks
+        bmchanges = changes.get("bookmarks", {})
+        remotepathbooks = {}
+        for remotename, node in bmchanges.iteritems():
+            path, name = splitremotename(remotename)
+            remotepathbooks.setdefault(path, {})[name] = node
+
+        saveremotenames(self._repo, remotepathbooks)
+
     def mark2nodes(self):
         return self["bookmarks"]
 
@@ -847,7 +857,7 @@ def expaths(orig, ui, repo, *args, **opts):
             if not (foundpaths and line.strip().startswith(delete)):
                 f.write(line)
         f.close()
-        saveremotenames(repo, delete)
+        saveremotenames(repo, {delete: {}})
         precachedistance(repo)
         return
 
@@ -1801,19 +1811,21 @@ def transition(repo, ui):
         ui.warn(message + "\n")
 
 
-def saveremotenames(repo, remotepath, bookmarks=None):
+def _recordbookmarksupdate(repo, changes):
+    """writes remotebookmarks changes to the journal
+
+    'changes' - is a list of tuples '(remotebookmark, oldnode, newnode)''"""
+    if util.safehasattr(repo, "journal"):
+        repo.journal.recordmany(journalremotebookmarktype, changes)
+
+
+def saveremotenames(repo, remotebookmarks):
+    if not remotebookmarks:
+        return
+
     vfs = repo.sharedvfs
     wlock = repo.wlock()
-    if bookmarks is None:
-        bookmarks = {}
     try:
-        # delete old files
-        try:
-            vfs.unlink("remotedistance")
-        except OSError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-
         if not vfs.exists("remotenames"):
             transition(repo, repo.ui)
 
@@ -1821,39 +1833,36 @@ def saveremotenames(repo, remotepath, bookmarks=None):
         olddata = set(readremotenames(repo))
         oldbooks = {}
 
+        remotepaths = remotebookmarks.keys()
         f = vfs("remotenames", "w", atomictemp=True)
-
-        # only update the given 'remote path'; iterate over
-        # old data and re-save it
-        for node, nametype, oldremote, rname in olddata:
-            if oldremote != remotepath:
-                _writesingleremotename(f, oldremote, nametype, rname, node)
+        for node, nametype, remote, rname in olddata:
+            if remote not in remotepaths:
+                _writesingleremotename(f, remote, nametype, rname, node)
             elif nametype == "bookmarks":
-                oldbooks[rname] = node
+                oldbooks[(remote, rname)] = node
 
-        # record a journal entry if journal is loaded
-        if util.safehasattr(repo, "journal"):
-            entrydata = []
-            for rmbookmark, newnode in bookmarks.iteritems():
-                oldnode = oldbooks.get(rmbookmark, hex(nullid))
-                if oldnode != newnode:
-                    joinedremotename = joinremotename(remotepath, rmbookmark)
-                    entrydata.append((joinedremotename, bin(oldnode), bin(newnode)))
-            repo.journal.recordmany(journalremotebookmarktype, entrydata)
-
+        journal = []
         nm = repo.unfiltered().changelog.nodemap
-        for bookmark, n in bookmarks.iteritems():
-            bookhex = n
-            if not bin(bookhex) in nm:
-                # node is unknown locally, don't change the bookmark
-                bookhex = oldbooks.get(bookmark)
-            if bookhex:
-                _writesingleremotename(f, remotepath, "bookmarks", bookmark, bookhex)
+        for remote, rmbookmarks in remotebookmarks.iteritems():
+            rmbookmarks = {} if rmbookmarks is None else rmbookmarks
+            for name, node in rmbookmarks.iteritems():
+                oldnode = oldbooks.get((remote, name), hex(nullid))
+                newnode = node
+                if not bin(newnode) in nm:
+                    # node is unknown locally, don't change the bookmark
+                    newnode = oldnode
+                if newnode != hex(nullid):
+                    _writesingleremotename(f, remote, "bookmarks", name, newnode)
+                    if newnode != oldnode:
+                        journal.append(
+                            (joinremotename(remote, name), bin(oldnode), bin(newnode))
+                        )
+
+        _recordbookmarksupdate(repo, journal)
         f.close()
 
         # Old paths have been deleted, refresh remotenames
         repo._remotenames.clearnames()
-
     finally:
         wlock.release()
 
