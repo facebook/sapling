@@ -56,6 +56,10 @@ class SyncState(object):
                 self.bookmarks = {
                     n.encode("utf-8"): v.encode() for n, v in data["bookmarks"].items()
                 }
+                self.remotebookmarks = {
+                    n.encode("utf-8"): v.encode()
+                    for n, v in data.get("remotebookmarks", {}).items()
+                }
                 self.omittedheads = [h.encode() for h in data.get("omittedheads", ())]
                 self.omittedbookmarks = [
                     n.encode("utf-8") for n in data.get("omittedbookmarks", ())
@@ -66,6 +70,7 @@ class SyncState(object):
             self.version = 0
             self.heads = []
             self.bookmarks = {}
+            self.remotebookmarks = {}
             self.omittedheads = []
             self.omittedbookmarks = []
             self.maxage = None
@@ -79,6 +84,7 @@ class SyncState(object):
         newomittedheads,
         newomittedbookmarks,
         newmaxage,
+        newremotebookmarks={},
     ):
         data = {
             "version": newversion,
@@ -88,6 +94,7 @@ class SyncState(object):
             "omittedbookmarks": newomittedbookmarks,
             "maxage": newmaxage,
             "lastupdatetime": time.time(),
+            "remotebookmarks": newremotebookmarks,
         }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
             json.dump(data, f)
@@ -95,18 +102,20 @@ class SyncState(object):
         self.version = newversion
         self.heads = newheads
         self.bookmarks = newbookmarks
+        self.remotebookmarks = newremotebookmarks
         self.omittedheads = newomittedheads
         self.omittedbookmarks = newomittedbookmarks
         self.maxage = newmaxage
         self.repo.ui.log(
             "commitcloud_sync",
-            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted)\n",
+            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks\n",
             self.workspacename,
             newversion,
             len(newheads),
             len(newomittedheads),
             len(newbookmarks),
             len(newomittedbookmarks),
+            len(newremotebookmarks),
         )
 
     def oscillating(self, newheads, newbookmarks):
