@@ -307,9 +307,8 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     remotebookmarknodes = []
     newremotebookmarks = {}
-    remotebookmarkstodelete = []
     if _isremotebookmarkssyncenabled(repo.ui):
-        newremotebookmarks, remotebookmarkstodelete = _processremotebookmarks(
+        newremotebookmarks = _processremotebookmarks(
             repo, cloudrefs.remotebookmarks, lastsyncstate
         )
 
@@ -321,7 +320,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     backuplock.progresspulling(repo, [nodemod.bin(node) for node in newheads])
 
-    if newheads:
+    if remotebookmarknodes or newheads:
         # Disable pulling of bookmarks.
         def _pullbookmarks(orig, pullop):
             pass
@@ -360,7 +359,8 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
     )
 
-    _updateremotebookmarks(repo, tr, newremotebookmarks, remotebookmarkstodelete)
+    if _isremotebookmarkssyncenabled(repo.ui):
+        _updateremotebookmarks(repo, tr, newremotebookmarks)
 
     _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
 
@@ -481,8 +481,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
     Performs a 3-way diff between the last sync remote bookmark state, new cloud
     state and local remote bookmarks.
 
-    Returns a dict <remotebookmark: newnode> and a list of remote bookmarks to
-    unsubscribe from."""
+    Returns a dict <remotebookmark: newnode> - new state of remote bookmarks"""
 
     def usecloudnode(cloudnode, localnode):
         """returns True if cloudnode should be a new state for the remote bookmark
@@ -513,7 +512,6 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
     allremotenames = set(localremotebooks.keys() + cloudremotebooks.keys())
 
     newremotebooks = {}
-    remotebookstodelete = []
     for remotename in allremotenames:
         cloudnode = cloudremotebooks.get(remotename, None)
         localnode = localremotebooks.get(remotename, None)
@@ -543,11 +541,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
                 newremotebooks[remotename] = localnode
             continue
 
-        if not cloudnode:
-            # The remote bookmark was deleted in or the client uncubscribed from the
-            # bookmark. Need to unsubscribe from it as well.
-            remotebookstodelete.append(remotename)
-        elif cloudnode != oldcloudnode:
+        if cloudnode and cloudnode != oldcloudnode:
             # Cloud has changes, need to apply them
             newremotebooks[remotename] = cloudnode
 
@@ -555,12 +549,12 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
             # Need to update the cloud
             newremotebooks[remotename] = localnode
 
-    return newremotebooks, remotebookstodelete
+    return newremotebooks
 
 
-def _updateremotebookmarks(repo, tr, remotebookmarks, deletedremotebooks):
-    """updates the remote bookmarks to point to their new nodes"""
-    pass
+def _updateremotebookmarks(repo, tr, remotebookmarks):
+    """updates the remote bookmarks to point their new nodes"""
+    repo._remotenames.applychanges({"bookmarks": remotebookmarks})
 
 
 def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):

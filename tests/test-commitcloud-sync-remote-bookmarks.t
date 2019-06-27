@@ -1,6 +1,8 @@
   $ enable amend commitcloud infinitepush remotenames
   $ setconfig extensions.treemanifest=!
   $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+  $ setconfig commitcloud.hostname=testhost
+  $ setconfig remotefilelog.reponame=server
 
   $ mkcommit() {
   >    echo $1 > $1
@@ -47,6 +49,8 @@ Setup first client repo
   $ cd ..
   $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master
+  $ setconfig commitcloud.remotebookmarkssync=True
+
   $ hg clone -q ssh://user@dummy/remoterepo client1
   $ cd client1
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
@@ -55,8 +59,8 @@ Setup first client repo
   setting authentication token
   authentication successful
   $ hg cloud join
-  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'reponame-default' repo
-  commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph
@@ -76,10 +80,11 @@ Setup second client repo
   updating authentication token
   authentication successful
   $ hg cloud join
-  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'reponame-default' repo
-  commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in 0.00 sec
+
 Common case of unsynchronized remote bookmarks
   $ cd ../remoterepo
   $ mkcommit a3 serv
@@ -101,15 +106,14 @@ Common case of unsynchronized remote bookmarks
   
 
 default/master should point to the new commit
-(it doen't work because remote bookmarks sync wasn't enabled)
   $ cd ../client1
   $ hg cloud sync -q
   $ showgraph
   o  draft-1: draft
   |
-  o  a3: public
+  o  a3: public  default/master
   |
-  @  a2: public  default/master
+  @  a2: public
   |
   o  a1: public
   |
@@ -138,25 +142,26 @@ Subscribe to a new remote bookmark
      default/stable            5:b2bfab231667
 
 the other client should be subscribed to this bookmark as well
-(it doen't work because remote bookmarks sync wasn't enabled)
   $ cd ../client2
   $ hg cloud sync -q
   $ showgraph
-  @  draft-1: draft
+  o  b1: public  default/stable
   |
-  o  a3: public  default/master
-  |
-  o  a2: public
-  |
-  o  a1: public
-  |
+  | @  draft-1: draft
+  | |
+  | o  a3: public  default/master
+  | |
+  | o  a2: public
+  | |
+  | o  a1: public
+  |/
   o  root: public
   
   $ hg book --list-subscriptions
      default/master            3:1b6e90080435
+     default/stable            5:b2bfab231667
 
 try to create a commit on top of the default/stable
-(remote bookmark is still not here)
   $ cd ../client1
   $ hg up stable -q
   $ mkcommit draft-2
@@ -167,7 +172,7 @@ try to create a commit on top of the default/stable
   $ showgraph
   o  draft-2: draft
   |
-  o  b1: public
+  o  b1: public  default/stable
   |
   | @  draft-1: draft
   | |
