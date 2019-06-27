@@ -185,25 +185,30 @@ impl MemoryManifestEntry {
     ) -> impl Future<Item = HgBlobEntry, Error = Error> {
         let unfold = {
             cloned!(ctx, blobstore);
-            move |(path, entry): &mut (RepoPath, Self)| match entry {
-                MemoryManifestEntry::Blob(_) => future::ok(Vec::new()).left_future(),
+            move |(path, entry): (RepoPath, Self)| match entry {
+                MemoryManifestEntry::Blob(_) => {
+                    future::ok(((path, entry), Vec::new())).left_future()
+                }
                 MemoryManifestEntry::Conflict(_) => {
                     future::err(ErrorKind::UnresolvedConflicts.into()).left_future()
                 }
                 MemoryManifestEntry::MemTree { .. } => {
                     if !entry.is_modified() {
-                        return future::ok(Vec::new()).left_future();
+                        return future::ok(((path, entry), Vec::new())).left_future();
                     }
-                    cloned!(path);
                     entry
                         .get_new_children(ctx.clone(), &blobstore)
-                        .map(move |children| {
-                            children
-                                .into_iter()
-                                .map(|(path_elem, child)| {
-                                    (extend_repopath_with_dir(&path, &path_elem), child)
-                                })
-                                .collect()
+                        .map({
+                            cloned!(path, entry);
+                            move |children| {
+                                let children = children
+                                    .into_iter()
+                                    .map(|(path_elem, child)| {
+                                        (extend_repopath_with_dir(&path, &path_elem), child)
+                                    })
+                                    .collect();
+                                ((path, entry), children)
+                            }
                         })
                         .right_future()
                 }

@@ -18,37 +18,38 @@ pub type Iter<Out> = std::iter::Flatten<std::vec::IntoIter<Option<Out>>>;
 /// ## `init: In`
 /// Is the root of the implicit tree to be traversed
 ///
-/// ## `unfold: FnMut(&In) -> impl IntoFuture<Item = impl IntoIterator<Item = In>>`
-/// Asynchronous function which given input value produces list of its children.
-/// If this list is empty it is a leaf of the tree and `fold` can be run on this node.
+/// ## `unfold: FnMut(In) -> impl IntoFuture<Item = (OutCtx, impl IntoIterator<Item = In>)>`
+/// Asynchronous function which given input value produces list of its children. And context
+/// associated with current node. If this list is empty, it is a leaf of the tree, and `fold`
+/// will be run on this node.
 ///
-/// ## `fold: FnMut(In, impl Iterator<Out>) -> impl IntoFuture<Item=Out>`
-/// Aynchronous function which given input node and output of `fold` for its chidlren
+/// ## `fold: FnMut(OutCtx, impl Iterator<Out>) -> impl IntoFuture<Item=Out>`
+/// Aynchronous function which given node context and output of `fold` for its chidlren
 /// should produce new output value.
 ///
 /// ## return value `impl Future<Item = Out>`
 /// Result of running fold operation on the root of the tree.
 ///
-pub fn bounded_traversal<In, Out, Unfold, UFut, Fold, FFut>(
+pub fn bounded_traversal<In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>(
     scheduled_max: usize,
     init: In,
     unfold: Unfold,
     fold: Fold,
 ) -> impl Future<Item = Out, Error = UFut::Error>
 where
-    Unfold: FnMut(&mut In) -> UFut,
-    UFut: IntoFuture,
-    UFut::Item: IntoIterator<Item = In>,
-    Fold: FnMut(In, Iter<Out>) -> FFut,
+    Unfold: FnMut(In) -> UFut,
+    UFut: IntoFuture<Item = (OutCtx, Ins)>,
+    Ins: IntoIterator<Item = In>,
+    Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
     FFut: IntoFuture<Item = Out, Error = UFut::Error>,
 {
     BoundedTraversal::new(scheduled_max, init, unfold, fold)
 }
 
 // execution tree node
-struct Node<In, Out> {
+struct Node<Out, OutCtx> {
     parent: NodeLocation,       // location of this node relative to it's parent
-    value: In,                  // value associated with node
+    context: OutCtx,            // context associated with node
     children: Vec<Option<Out>>, // results of children folds
     children_left: usize,       // number of unresolved children
 }
@@ -62,7 +63,7 @@ struct NodeLocation {
     child_index: usize,    // index inside parents children list
 }
 
-struct BoundedTraversal<In, Out, Unfold, UFut, Fold, FFut>
+struct BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
 where
     UFut: IntoFuture,
     FFut: IntoFuture,
@@ -72,16 +73,17 @@ where
     scheduled_max: usize,
     scheduled: FuturesUnordered<Job<UFut::Future, FFut::Future>>, // jobs being executed
     unscheduled: VecDeque<Job<UFut::Future, FFut::Future>>,       // as of yet unscheduled jobs
-    execution_tree: HashMap<NodeIndex, Node<In, Out>>,            // tree tracking execution process
+    execution_tree: HashMap<NodeIndex, Node<Out, OutCtx>>,        // tree tracking execution process
     execution_tree_index: NodeIndex,                              // last allocated node index
 }
 
-impl<In, Out, Unfold, UFut, Fold, FFut> BoundedTraversal<In, Out, Unfold, UFut, Fold, FFut>
+impl<In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>
+    BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
 where
-    Unfold: FnMut(&mut In) -> UFut,
-    UFut: IntoFuture,
-    UFut::Item: IntoIterator<Item = In>,
-    Fold: FnMut(In, Iter<Out>) -> FFut,
+    Unfold: FnMut(In) -> UFut,
+    UFut: IntoFuture<Item = (OutCtx, Ins)>,
+    Ins: IntoIterator<Item = In>,
+    Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
     FFut: IntoFuture<Item = Out, Error = UFut::Error>,
 {
     fn new(scheduled_max: usize, init: In, unfold: Unfold, fold: Fold) -> Self {
@@ -104,37 +106,27 @@ where
         this
     }
 
-    fn enqueue_unfold(&mut self, parent: NodeLocation, mut value: In) {
-        // allocate index
-        self.execution_tree_index = NodeIndex(self.execution_tree_index.0 + 1);
-        let node_index = self.execution_tree_index;
-        // create future
-        let future = (self.unfold)(&mut value).into_future();
-        // allocate execution node
-        self.execution_tree.insert(
-            node_index,
-            Node {
-                parent,
-                value,
-                children: Vec::new(),
-                children_left: 0,
-            },
-        );
-        // enqueue job
-        self.unscheduled
-            .push_front(Job::Unfold { node_index, future });
-    }
-
-    fn enqueue_fold(&mut self, parent: NodeLocation, value: In, children: Iter<Out>) {
-        self.unscheduled.push_front(Job::Fold {
+    fn enqueue_unfold(&mut self, parent: NodeLocation, value: In) {
+        self.unscheduled.push_front(Job::Unfold {
             parent,
-            future: (self.fold)(value, children).into_future(),
+            future: (self.unfold)(value).into_future(),
         });
     }
 
-    fn process_unfold(&mut self, node_index: NodeIndex, result: UFut::Item) {
+    fn enqueue_fold(&mut self, parent: NodeLocation, context: OutCtx, children: Iter<Out>) {
+        self.unscheduled.push_front(Job::Fold {
+            parent,
+            future: (self.fold)(context, children).into_future(),
+        });
+    }
+
+    fn process_unfold(&mut self, parent: NodeLocation, (context, children): UFut::Item) {
+        // allocate index
+        self.execution_tree_index = NodeIndex(self.execution_tree_index.0 + 1);
+        let node_index = self.execution_tree_index;
+
         // schedule unfold for node's children
-        let count = result.into_iter().fold(0, |child_index, child| {
+        let count = children.into_iter().fold(0, |child_index, child| {
             self.enqueue_unfold(
                 NodeLocation {
                     node_index,
@@ -144,58 +136,61 @@ where
             );
             child_index + 1
         });
+
         if count != 0 {
-            // preallocate storage for children's folds
-            let node = self
-                .execution_tree
-                .get_mut(&node_index)
-                .expect("unfold referenced invalid node");
-            node.children_left = count;
-            node.children.resize_with(count, || None);
+            // allocate node
+            let mut children = Vec::new();
+            children.resize_with(count, || None);
+            self.execution_tree.insert(
+                node_index,
+                Node {
+                    parent,
+                    context,
+                    children,
+                    children_left: count,
+                },
+            );
         } else {
-            // leaf node schedules fold for itself
-            let Node { parent, value, .. } = self
-                .execution_tree
-                .remove(&node_index)
-                .expect("unfold referenced invalid node");
-            self.enqueue_fold(parent, value, Vec::new().into_iter().flatten());
+            // leaf node schedules fold for itself immediately
+            self.enqueue_fold(parent, context, Vec::new().into_iter().flatten());
         }
     }
 
     fn process_fold(&mut self, parent: NodeLocation, result: Out) {
-        // update parent
-        let node = self
-            .execution_tree
-            .get_mut(&parent.node_index)
-            .expect("fold referenced invalid node");
-        debug_assert!(node.children[parent.child_index].is_none());
-        node.children[parent.child_index] = Some(result);
-        node.children_left -= 1;
-
-        if node.children_left == 0 {
+        if {
+            // update parent
+            let node = self
+                .execution_tree
+                .get_mut(&parent.node_index)
+                .expect("fold referenced invalid node");
+            debug_assert!(node.children[parent.child_index].is_none());
+            node.children[parent.child_index] = Some(result);
+            node.children_left -= 1;
+            node.children_left == 0
+        } {
             // all parents children have been completed, so we need
             // to schedule fold operation for it
             let Node {
                 parent,
-                value,
+                context,
                 children,
                 ..
             } = self
                 .execution_tree
                 .remove(&parent.node_index)
                 .expect("fold referenced invalid node");
-            self.enqueue_fold(parent, value, children.into_iter().flatten());
+            self.enqueue_fold(parent, context, children.into_iter().flatten());
         }
     }
 }
 
-impl<In, Out, Unfold, UFut, Fold, FFut> Future
-    for BoundedTraversal<In, Out, Unfold, UFut, Fold, FFut>
+impl<In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut> Future
+    for BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
 where
-    Unfold: FnMut(&mut In) -> UFut,
-    UFut: IntoFuture,
-    UFut::Item: IntoIterator<Item = In>,
-    Fold: FnMut(In, Iter<Out>) -> FFut,
+    Unfold: FnMut(In) -> UFut,
+    UFut: IntoFuture<Item = (OutCtx, Ins)>,
+    Ins: IntoIterator<Item = In>,
+    Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
     FFut: IntoFuture<Item = Out, Error = UFut::Error>,
 {
     type Item = Out;
@@ -216,9 +211,7 @@ where
             // execute scheduled until it is blocked or done
             if let Some(job_result) = try_ready!(self.scheduled.poll()) {
                 match job_result {
-                    JobResult::Unfold { node_index, result } => {
-                        self.process_unfold(node_index, result)
-                    }
+                    JobResult::Unfold { parent, result } => self.process_unfold(parent, result),
                     JobResult::Fold { parent, result } => {
                         // `0` is special index which means whole tree have been executed
                         if parent.node_index == NodeIndex(0) {
@@ -239,12 +232,12 @@ where
 // This is essentially just a `.map`  over futures `{FFut|UFut}`, this only exisists
 // so it would be possible to name `FuturesUnoredered` type parameter.
 enum Job<UFut, FFut> {
-    Unfold { node_index: NodeIndex, future: UFut },
+    Unfold { parent: NodeLocation, future: UFut },
     Fold { parent: NodeLocation, future: FFut },
 }
 
 enum JobResult<In, Out> {
-    Unfold { node_index: NodeIndex, result: In },
+    Unfold { parent: NodeLocation, result: In },
     Fold { parent: NodeLocation, result: Out },
 }
 
@@ -262,8 +255,8 @@ where
                 parent: *parent,
                 result: try_ready!(future.poll()),
             },
-            Job::Unfold { future, node_index } => JobResult::Unfold {
-                node_index: *node_index,
+            Job::Unfold { future, parent } => JobResult::Unfold {
+                parent: *parent,
                 result: try_ready!(future.poll()),
             },
         };
@@ -274,6 +267,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::bounded_traversal;
+    use failure::Error;
     use futures::{
         future,
         sync::oneshot::{channel, Sender},
@@ -284,7 +278,6 @@ mod tests {
         cmp::{Ord, Ordering},
         collections::{BinaryHeap, HashSet},
         hash::Hash,
-        ops::Deref,
         sync::{Arc, Mutex},
         thread,
         time::Duration,
@@ -292,33 +285,18 @@ mod tests {
     use tokio::runtime::Runtime;
 
     // Tree for test purposes
-    struct TreeInner {
+    struct Tree {
         id: usize,
         children: Vec<Tree>,
     }
 
-    #[derive(Clone)]
-    struct Tree {
-        inner: Arc<TreeInner>,
-    }
-
     impl Tree {
         fn new(id: usize, children: Vec<Tree>) -> Self {
-            Self {
-                inner: Arc::new(TreeInner { id, children }),
-            }
+            Self { id, children }
         }
 
         fn leaf(id: usize) -> Self {
             Self::new(id, vec![])
-        }
-    }
-
-    impl Deref for Tree {
-        type Target = TreeInner;
-
-        fn deref(&self) -> &Self::Target {
-            &*self.inner
         }
     }
 
@@ -447,7 +425,7 @@ mod tests {
     impl<V: Eq + Hash + Clone> Eq for StateLog<V> {}
 
     #[test]
-    fn test() -> Result<(), ()> {
+    fn test() -> Result<(), Error> {
         // tree
         //      0
         //     / \
@@ -465,7 +443,7 @@ mod tests {
         let tick = Tick::new();
         let log: StateLog<String> = StateLog::new();
         let reference: StateLog<String> = StateLog::new();
-        let mut rt = Runtime::new().expect("failed to create runtime");
+        let mut rt = Runtime::new()?;
 
         let traverse = bounded_traversal(
             2, // level of parallelism
@@ -474,12 +452,11 @@ mod tests {
             {
                 let tick = tick.clone();
                 let log = log.clone();
-                move |node| {
-                    let node = node.clone();
+                move |Tree { id, children }| {
                     let log = log.clone();
                     tick.sleep(1).map(move |now| {
-                        log.unfold(node.id, now);
-                        node.children.clone()
+                        log.unfold(id, now);
+                        (id, children)
                     })
                 }
             },
@@ -487,11 +464,11 @@ mod tests {
             {
                 let tick = tick.clone();
                 let log = log.clone();
-                move |node, children| {
+                move |id, children| {
                     let log = log.clone();
                     tick.sleep(1).map(move |now| {
-                        let value = node.id.to_string() + &children.into_iter().collect::<String>();
-                        log.fold(node.id, now, value.clone());
+                        let value = id.to_string() + &children.into_iter().collect::<String>();
+                        log.fold(id, now, value.clone());
                         value
                     })
                 }

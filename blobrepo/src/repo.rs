@@ -1094,7 +1094,6 @@ impl BlobRepo {
                     // logic in Mononoke.
                     // TODO(stash): T45618931 replicate all the cases from _filecommit()
 
-
                     let parents_fut = if let Some((ref copy_from_path, _)) = copy_from {
                         if copy_from_path != &path && p1.is_some() && p2.is_none() {
                             // This case can happen if a file existed in it's parent
@@ -1138,31 +1137,39 @@ impl BlobRepo {
                     parents_fut
                         .and_then({
                             move |(p1, p2)| {
-                            let upload_entry = UploadHgFileEntry {
-                                upload_node_id: UploadHgNodeHash::Generate,
-                                contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-                                    id: change.content_id(),
-                                    copy_from: copy_from.clone(),
-                                }),
-                                file_type: change.file_type(),
-                                p1,
-                                p2,
-                                path: path.clone(),
-                            };
-                            match upload_entry.upload(ctx, &repo) {
-                                Ok((_, upload_fut)) => upload_fut.map(move |(entry, _)| {
-                                    let node_info = IncompleteFilenodeInfo {
-                                        path: RepoPath::FilePath(path),
-                                        filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
-                                        p1,
-                                        p2,
-                                        copyfrom: copy_from.map(|(p, h)| (RepoPath::FilePath(p), h)),
-                                    };
-                                    (entry, Some(node_info))
-                                }).left_future(),
-                                Err(err) => return future::err(err).right_future(),
+                                let upload_entry = UploadHgFileEntry {
+                                    upload_node_id: UploadHgNodeHash::Generate,
+                                    contents: UploadHgFileContents::ContentUploaded(
+                                        ContentBlobMeta {
+                                            id: change.content_id(),
+                                            copy_from: copy_from.clone(),
+                                        },
+                                    ),
+                                    file_type: change.file_type(),
+                                    p1,
+                                    p2,
+                                    path: path.clone(),
+                                };
+                                match upload_entry.upload(ctx, &repo) {
+                                    Ok((_, upload_fut)) => upload_fut
+                                        .map(move |(entry, _)| {
+                                            let node_info = IncompleteFilenodeInfo {
+                                                path: RepoPath::FilePath(path),
+                                                filenode: HgFileNodeId::new(
+                                                    entry.get_hash().into_nodehash(),
+                                                ),
+                                                p1,
+                                                p2,
+                                                copyfrom: copy_from
+                                                    .map(|(p, h)| (RepoPath::FilePath(p), h)),
+                                            };
+                                            (entry, Some(node_info))
+                                        })
+                                        .left_future(),
+                                    Err(err) => return future::err(err).right_future(),
+                                }
                             }
-                        }})
+                        })
                         .right_future()
                 }
             }
@@ -1314,12 +1321,11 @@ impl BlobRepo {
             {
                 let repo = self.clone();
                 cloned!(output);
-                move |(query_tree, manifest_id, path)| {
-                    let children = mem::replace(&mut query_tree.children, HashMap::new());
+                move |(QueryTree { children, .. }, manifest_id, path)| {
                     cloned!(path, output);
-                    repo.get_manifest_by_nodeid(ctx.clone(), *manifest_id)
+                    repo.get_manifest_by_nodeid(ctx.clone(), manifest_id)
                         .map(move |manifest| {
-                            children
+                            let children = children
                                 .into_iter()
                                 .filter_map(|(element, child)| {
                                     let path = MPath::join_opt_element(path.as_ref(), &element);
@@ -1335,7 +1341,8 @@ impl BlobRepo {
                                             .map(|manifest_id| (child, manifest_id, Some(path)))
                                     })
                                 })
-                                .collect::<Vec<_>>()
+                                .collect::<Vec<_>>();
+                            ((), children)
                         })
                 }
             },
