@@ -524,6 +524,7 @@ class mutablebasepack(versionmixin):
 
         self._ui = ui
         self._packdir = packdir
+        self._datalen = 0
 
         self.entries = {}
 
@@ -573,7 +574,10 @@ class mutablebasepack(versionmixin):
         self._cleantemppacks()
 
     def writeraw(self, data):
+        self.packfp.seek(self._datalen, os.SEEK_SET)
+        assert self.packfp.tell() == self._datalen
         self.packfp.write(data)
+        self._datalen += len(data)
         self.sha.update(data)
 
     def close(self):

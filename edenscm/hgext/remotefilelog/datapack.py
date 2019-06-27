@@ -542,7 +542,7 @@ class mutabledatapack(basepack.mutablebasepack):
             if metadata and metadata.get(constants.METAKEYFLAG, 0) != 0:
                 raise error.ProgrammingError("v0 pack cannot store flags")
 
-        offset = self.packfp.tell()
+        offset = self._datalen
 
         size = len(rawdata)
 

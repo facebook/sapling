@@ -463,7 +463,7 @@ class mutablehistorypack(basepack.mutablebasepack):
     def _write(self):
         for filename in sorted(self.fileentries):
             entrymap = self.fileentries[filename]
-            sectionstart = self.packfp.tell()
+            sectionstart = self._datalen
 
             # Write the file section content
             def parentfunc(node):
