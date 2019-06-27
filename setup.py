@@ -759,7 +759,6 @@ class fetchbuilddeps(Command):
         for url in [
             "https://files.pythonhosted.org/packages/b0/88/d996ab8be22cea1eaa18baee3678a11265e18cf09974728d683c51102148/ipython-5.8.0-py2-none-any.whl",
             "https://files.pythonhosted.org/packages/bc/bb/a24838832ba35baf52f32ab1a49b906b5f82fb7c76b2f6a7e35e140bac30/decorator-4.3.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/d1/b0/1a6c262da35c779dd79550137aa7c298a424987240a28792ec5ccf48f848/prompt_toolkit-1.0.15-py2-none-any.whl",
             "https://files.pythonhosted.org/packages/e7/16/da8cb8046149d50940c6110310983abb359bbb8cbc3539e6bef95c29428a/setuptools-40.6.2-py2.py3-none-any.whl",
             "https://files.pythonhosted.org/packages/7d/cd/1750d6c35fe86d35f8562091737907f234b78fdffab42b29c72b1dd861f4/backports.shutil_get_terminal_size-1.0.0-py2.py3-none-any.whl",
             "https://files.pythonhosted.org/packages/89/e6/b5a1de8b0cc4e07ca1b305a4fcc3f9806025c1b651ea302646341222f88b/pexpect-4.6.0-py2.py3-none-any.whl",
@@ -780,6 +779,12 @@ class fetchbuilddeps(Command):
             "https://files.pythonhosted.org/packages/cc/3e/29f92b7aeda5b078c86d14f550bf85cff809042e3429ace7af6193c3bc9f/typing-3.6.6-py2-none-any.whl",
             "https://files.pythonhosted.org/packages/2d/99/b2c4e9d5a30f6471e410a146232b4118e697fa3ffc06d6a65efde84debd0/futures-3.2.0-py2-none-any.whl",
         ]
+    ]
+    pyassets += [
+        asset(
+            name="python-prompt-toolkit-01523894d6e9abfbd4f65bad015052cc7bd7f4ca.zip",
+            url="https://github.com/prompt-toolkit/python-prompt-toolkit/archive/01523894d6e9abfbd4f65bad015052cc7bd7f4ca.zip",
+        )
     ]
     pyassets += [
         fbsourcepylibrary(
@@ -1213,8 +1218,14 @@ class buildpyzip(Command):
         # IPython.zip
         if not appendzippath:
             tryunlink(zippath)
-        # Special case: pexpect/_async.py is Python 3 only. Delete it so
-        # writepy won't try to compile it and fail.
+        # Special case: Delete files using Python 3 syntax so writepy won't
+        # try to compile it and fail.
+        tryunlink(
+            pjoin(
+                builddir,
+                "python-prompt-toolkit-01523894d6e9abfbd4f65bad015052cc7bd7f4ca/examples/asyncio-prompt.py",
+            )
+        )
         tryunlink(pjoin(builddir, "pexpect-4.6.0-py2.py3-none-any/pexpect/_async.py"))
         with zipfile.PyZipFile(zippath, "a") as f:
             for asset in fetchbuilddeps.pyassets:
