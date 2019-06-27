@@ -1888,7 +1888,18 @@ class TTest(Test):
                     # We've just entered a Python block. Add the header.
                     inpython = True
                     addsalt(prepos, False)  # Make sure we report the exit code.
-                    script.append(b"%s -m heredoctest <<EOF\n" % PYTHON)
+                    if os.name == "nt":
+                        script.append(
+                            b"%s %s <<EOF\n"
+                            % (
+                                PYTHON,
+                                self._stringescape(
+                                    os.path.join(self._testdir, "heredoctest.py")
+                                ),
+                            )
+                        )
+                    else:
+                        script.append(b"%s -m heredoctest <<EOF\n" % PYTHON)
                 addsalt(n, True)
                 script.append(l[2:])
             elif l.startswith(b"  ... "):  # python inlines
