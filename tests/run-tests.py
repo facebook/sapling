@@ -248,8 +248,7 @@ else:
 
 
 def Popen4(cmd, wd, timeout, env=None):
-    processlock.acquire()
-    try:
+    with processlock:
         p = subprocess.Popen(
             cmd,
             shell=True,
@@ -262,8 +261,6 @@ def Popen4(cmd, wd, timeout, env=None):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-    finally:
-        processlock.release()
 
     p.fromchild = p.stdout
     p.tochild = p.stdin
