@@ -77,7 +77,6 @@ DEFAULT_EXTENSIONS = {
     "mergedriver",
     "progressfile",
     "sampling",
-    "simplecache",
 }
 
 # Similar to DEFAULT_EXTENSIONS. But cannot be disabled.
