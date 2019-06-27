@@ -272,7 +272,9 @@ class stringserializer(object):
 def localpath(key, ui):
     tempdir = ui.config("simplecache", "cachedir")
     if not tempdir:
-        tempdir = os.path.join(tempfile.gettempdir(), "hgsimplecache")
+        tempdir = os.path.join(
+            os.environ.get("TESTTMP", tempfile.gettempdir()), "hgsimplecache"
+        )
     return os.path.join(tempdir, key)
 
 
