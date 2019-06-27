@@ -9,20 +9,32 @@
 from __future__ import absolute_import
 
 import code
+import edenscm
+import edenscmnative
 import os
 import sys
 
-from edenscm import mercurial
+from edenscm import hgext, mercurial
 from edenscm.mercurial import demandimport, registrar, thirdparty
 from edenscm.mercurial.i18n import _
 
+from edenscmnative import bindings
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
 
 def _assignobjects(objects, repo):
-    objects.update({"m": mercurial, "mercurial": mercurial})
+    objects.update(
+        {
+            "m": mercurial,
+            "e": edenscm,
+            "n": edenscmnative,
+            "b": bindings,
+            "x": hgext,
+            "mercurial": mercurial,
+        }
+    )
     if repo:
         objects.update({"repo": repo, "cl": repo.changelog, "mf": repo.manifestlog})
 
@@ -43,10 +55,17 @@ def debugshell(ui, repo, **opts):
         exec(command)
         return 0
 
-    bannermsg = (
-        "loaded repo:  %s\n"
-        "using source: %s" % (repo and repo.root or "(none)", mercurial.__path__[0])
-        + "\n\nAvailable variables:\n m:  the mercurial module\n ui: the ui object"
+    bannermsg = "loaded repo:  %s\n" "using source: %s" % (
+        repo and repo.root or "(none)",
+        mercurial.__path__[0],
+    ) + (
+        "\n\nAvailable variables:\n"
+        " e:  edenscm\n"
+        " n:  edenscmnative\n"
+        " m:  edenscm.mercurial\n"
+        " x:  edenscm.hgext\n"
+        " b:  edenscmnative.bindings\n"
+        " ui: the ui object"
     )
     if repo:
         bannermsg += (
