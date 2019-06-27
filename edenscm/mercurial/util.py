@@ -108,6 +108,7 @@ cachestat = platform.cachestat
 checkexec = platform.checkexec
 checklink = platform.checklink
 copymode = platform.copymode
+fdopen = platform.fdopen
 executablepath = platform.executablepath
 expandglobs = platform.expandglobs
 explainexit = platform.explainexit

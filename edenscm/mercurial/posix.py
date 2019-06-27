@@ -42,6 +42,7 @@ except AttributeError:
         raise OSError(errno.EINVAL, "hardlinks not supported: %s to %s" % (src, dst))
 
 
+fdopen = os.fdopen
 unlink = os.unlink
 rename = os.rename
 removedirs = os.removedirs

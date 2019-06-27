@@ -128,18 +128,30 @@ def posixfile(name, mode="r", buffering=-1):
     try:
         fp = osutil.posixfile(name, mode, buffering)  # may raise WindowsError
 
-        # The position when opening in append mode is implementation defined, so
-        # make it consistent with other platforms, which position at EOF.
-        if "a" in mode:
-            fp.seek(0, os.SEEK_END)
-
-        if "+" in mode:
-            return mixedfilemodewrapper(fp)
-
-        return fp
+        return _fixseek(fp, mode)
     except WindowsError as err:
         # convert to a friendlier exception
         raise IOError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
+
+
+def fdopen(fd, mode="r", bufsize=-1):
+    fp = os.fdopen(fd, mode, bufsize)
+    return _fixseek(fp, mode)
+
+
+def _fixseek(fp, mode):
+    """Fix seek related issues for files with read+write mode on Windows,
+    by wrapping it in mixedfilemodewrapper.
+    """
+    # The position when opening in append mode is implementation defined, so
+    # make it consistent with other platforms, which position at EOF.
+    if "a" in mode:
+        fp.seek(0, os.SEEK_END)
+
+    if "+" in mode:
+        return mixedfilemodewrapper(fp)
+
+    return fp
 
 
 # may be wrapped by win32mbcs extension
