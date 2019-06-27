@@ -31,7 +31,7 @@ use types::{
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
-use crate::errors::{ApiErrorKind, ApiResult};
+use crate::errors::{ApiError, ApiErrorKind, ApiResult};
 use crate::progress::{ProgressFn, ProgressManager};
 use crate::stats::DownloadStats;
 
@@ -134,7 +134,7 @@ impl EdenApi for EdenApiCurlClient {
         let msg = String::from_utf8_lossy(&handle.get_ref().data()).into_owned();
 
         if code != 200 {
-            return Err(ApiErrorKind::Http { code, msg }.into());
+            return Err(ApiError::from_http(code, msg));
         }
 
         if msg != "I_AM_ALIVE" {
@@ -156,7 +156,7 @@ impl EdenApi for EdenApiCurlClient {
         let msg = String::from_utf8_lossy(&handle.get_ref().data()).into_owned();
 
         if code != 200 {
-            return Err(ApiErrorKind::Http { code, msg }.into());
+            return Err(ApiError::from_http(code, msg));
         }
 
         Ok(msg)
@@ -421,7 +421,7 @@ where
 
         if code >= 400 {
             let msg = String::from_utf8_lossy(data).into_owned();
-            Err(ApiErrorKind::Http { code, msg })?;
+            return Err(ApiError::from_http(code, msg));
         }
 
         let response = Deserializer::from_slice(data)

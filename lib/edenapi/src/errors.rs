@@ -1,11 +1,13 @@
 // Copyright Facebook, Inc. 2019
 
 use std::{
+    convert::TryInto,
     fmt::{self, Display},
     path::PathBuf,
 };
 
 use failure::{Backtrace, Context, Fail};
+use http::StatusCode;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -17,6 +19,18 @@ pub struct ApiError {
 impl ApiError {
     pub fn kind(&self) -> &ApiErrorKind {
         &*self.context.get_context()
+    }
+
+    pub(crate) fn from_http(code: u32, msg: impl ToString) -> Self {
+        let code = match code.try_into() {
+            Ok(code) => match StatusCode::from_u16(code) {
+                Ok(code) => code,
+                Err(e) => return e.context(ApiErrorKind::BadResponse).into(),
+            },
+            Err(e) => return e.context(ApiErrorKind::BadResponse).into(),
+        };
+        let msg = msg.to_string();
+        ApiErrorKind::Http { code, msg }.into()
     }
 }
 
@@ -100,11 +114,8 @@ pub enum ApiErrorKind {
     BadResponse,
     #[fail(display = "libcurl returned an error")]
     Curl,
-    #[fail(
-        display = "Received HTTP status code {} with response: {:?}",
-        code, msg
-    )]
-    Http { code: u32, msg: String },
+    #[fail(display = "Received HTTP status {} with response: {:?}", code, msg)]
+    Http { code: StatusCode, msg: String },
     #[fail(display = "Error during serialization/deserialization")]
     Serialization,
     #[fail(display = "Failed to write data to the store")]
