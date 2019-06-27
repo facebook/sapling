@@ -14,9 +14,20 @@ from edenscm.mercurial import dagop, node as nodemod
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
 
 
+def _joinremotename(remote, name):
+    return "/".join([remote, name])
+
+
+def _splitremotename(remotename):
+    name = ""
+    if "/" in remotename:
+        remote, name = remotename.split("/", 1)
+    return remote, name
+
+
 abstractmethod = abc.abstractmethod
 References = collections.namedtuple(
-    "References", "version heads bookmarks obsmarkers headdates"
+    "References", "version heads bookmarks obsmarkers headdates remotebookmarks"
 )
 NodeInfo = collections.namedtuple(
     "NodeInfo", "node bookmarks parents author date message phase"
@@ -129,8 +140,21 @@ class BaseService(object):
         headdates = {
             h.encode("ascii"): d for h, d in data.get("head_dates", {}).items()
         }
+        newremotebookmarks = {
+            _joinremotename(
+                book["remote"].encode("utf-8"), book["name"].encode("utf-8")
+            ): book["node"].encode("ascii")
+            for book in data.get("remote_bookmarks", [])
+        }
 
-        return References(version, newheads, newbookmarks, newobsmarkers, headdates)
+        return References(
+            version,
+            newheads,
+            newbookmarks,
+            newobsmarkers,
+            headdates,
+            newremotebookmarks,
+        )
 
     def _encodedmarkers(self, obsmarkers):
         # pred, succs, flags, metadata, date, parents = marker
@@ -146,6 +170,27 @@ class BaseService(object):
             }
             for m in obsmarkers
         ]
+
+    def _makeremotebookmarks(self, remotebookmarks):
+        """Makes a RemoteBookmark object from dictionary '{remotename: node}'
+        or list '[remotename, ...]'.
+
+            Result represents struct RemoteBookmark from
+            //scm/commitcloud/if/CommitCloudService.thrift module.
+        """
+        remotebookslist = []
+
+        def appendremotebook(remotename, node=None):
+            remote, name = _splitremotename(remotename)
+            remotebookslist.append({"remote": remote, "name": name, "node": node})
+
+        if type(remotebookmarks) is dict:
+            for remotename, node in remotebookmarks.items():
+                appendremotebook(remotename, node)
+        else:
+            for remotename in remotebookmarks:
+                appendremotebook(remotename)
+        return remotebookslist
 
     @abstractmethod
     def requiresauthentication(self):
@@ -166,6 +211,8 @@ class BaseService(object):
         oldbookmarks,
         newbookmarks,
         newobsmarkers,
+        oldremotebookmarks,
+        newremotebookmarks,
     ):
         """Updates the references to a new version.
 

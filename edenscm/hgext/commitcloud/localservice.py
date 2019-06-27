@@ -34,7 +34,13 @@ class LocalService(baseservice.BaseService):
                 data = json.load(f)
                 return data
         else:
-            return {"version": 0, "heads": [], "bookmarks": {}, "obsmarkers": {}}
+            return {
+                "version": 0,
+                "heads": [],
+                "bookmarks": {},
+                "obsmarkers": {},
+                "remotebookmarks": {},
+            }
 
     def _save(self, data):
         filename = os.path.join(self.path, "commitcloudservicedb")
@@ -80,7 +86,7 @@ class LocalService(baseservice.BaseService):
                 "commitcloud local service: "
                 "get_references for current version %s\n" % version
             )
-            return baseservice.References(version, None, None, None, None)
+            return baseservice.References(version, None, None, None, None, None)
         else:
             self._ui.debug(
                 "commitcloud local service: "
@@ -100,6 +106,8 @@ class LocalService(baseservice.BaseService):
         oldbookmarks,
         newbookmarks,
         newobsmarkers,
+        oldremotebookmarks=[],
+        newremotebookmarks={},
     ):
         data = self._load()
         if version != data["version"]:
@@ -110,13 +118,19 @@ class LocalService(baseservice.BaseService):
         data["heads"] = newheads
         data["bookmarks"] = newbookmarks
         data["obsmarkers"][str(newversion)] = self._encodedmarkers(newobsmarkers)
+        data["remote_bookmarks"] = self._makeremotebookmarks(newremotebookmarks)
         self._ui.debug(
             "commitcloud local service: "
-            "update_references to %s (%s heads, %s bookmarks)\n"
-            % (newversion, len(data["heads"]), len(data["bookmarks"]))
+            "update_references to %s (%s heads, %s bookmarks, %s remote bookmarks)\n"
+            % (
+                newversion,
+                len(data["heads"]),
+                len(data["bookmarks"]),
+                len(data["remote_bookmarks"]),
+            )
         )
         self._save(data)
-        return True, baseservice.References(newversion, None, None, None, None)
+        return True, baseservice.References(newversion, None, None, None, None, None)
 
     def getsmartlog(self, reponame, workspace, repo):
         filename = os.path.join(self.path, "usersmartlogdata")

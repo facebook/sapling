@@ -268,6 +268,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
         oldbookmarks,
         newbookmarks,
         newobsmarkers,
+        oldremotebookmarks=[],
+        newremotebookmarks={},
     ):
         self.ui.debug("sending 'update_references' request\n", component="commitcloud")
 
@@ -290,6 +292,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
             "removed_bookmarks": oldbookmarks,
             "updated_bookmarks": newbookmarks,
             "new_obsmarkers_data": self._encodedmarkers(newobsmarkers),
+            "removed_remote_bookmarks": self._makeremotebookmarks(oldremotebookmarks),
+            "updated_remote_bookmarks": self._makeremotebookmarks(newremotebookmarks),
         }
 
         start = util.timer()
