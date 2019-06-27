@@ -108,10 +108,10 @@ cachestat = platform.cachestat
 checkexec = platform.checkexec
 checklink = platform.checklink
 copymode = platform.copymode
-fdopen = platform.fdopen
 executablepath = platform.executablepath
 expandglobs = platform.expandglobs
 explainexit = platform.explainexit
+fdopen = platform.fdopen
 findexe = platform.findexe
 getfstype = platform.getfstype
 gethgcmd = platform.gethgcmd
@@ -1070,7 +1070,7 @@ def tempfilter(s, cmd):
     inname, outname = None, None
     try:
         infd, inname = tempfile.mkstemp(prefix="hg-filter-in-")
-        fp = os.fdopen(infd, pycompat.sysstr("wb"))
+        fp = fdopen(infd, pycompat.sysstr("wb"))
         fp.write(s)
         fp.close()
         outfd, outname = tempfile.mkstemp(prefix="hg-filter-out-")

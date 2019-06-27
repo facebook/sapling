@@ -697,7 +697,7 @@ def _makebundlefile(op, part, cgversion):
     fd, bundlefile = tempfile.mkstemp()
     try:  # guards bundlefile
         try:  # guards fp
-            fp = os.fdopen(fd, "wb")
+            fp = util.fdopen(fd, "wb")
             if cgversion == "01":
                 magic = "HG10UN"
                 fp.write(magic)

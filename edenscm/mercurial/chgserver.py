@@ -342,7 +342,7 @@ class chgcmdserver(commandserver.server):
                     bufsize = 1  # line buffered
                 else:
                     bufsize = -1  # system default
-                newfp = os.fdopen(fp.fileno(), mode, bufsize)
+                newfp = util.fdopen(fp.fileno(), mode, bufsize)
                 setattr(ui, fn, newfp)
             setattr(self, cn, newfp)
 

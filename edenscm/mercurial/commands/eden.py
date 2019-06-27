@@ -24,13 +24,13 @@ if pycompat.iswindows:
     def fdopen(handle, mode):
         os_mode = os.O_WRONLY if mode == "wb" else os.O_RDONLY
         fileno = open_osfhandle(handle, os_mode)
-        return os.fdopen(fileno, mode)
+        return util.fdopen(fileno, mode)
 
 
 else:
 
     def fdopen(handle, mode):
-        return os.fdopen(handle, mode)
+        return util.fdopen(handle, mode)
 
 
 hex = binascii.hexlify

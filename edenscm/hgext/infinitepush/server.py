@@ -293,7 +293,7 @@ def downloadbundle(repo, unknownbinhead):
     fd, bundlefile = tempfile.mkstemp()
     try:  # guards bundlefile
         try:  # guards fp
-            fp = os.fdopen(fd, "wb")
+            fp = util.fdopen(fd, "wb")
             fp.write(data)
         finally:
             fp.close()
@@ -535,7 +535,7 @@ def processparts(orig, repo, op, unbundler):
         fd, bundlefile = tempfile.mkstemp()
         try:
             try:
-                fp = os.fdopen(fd, "wb")
+                fp = util.fdopen(fd, "wb")
                 fp.write(buf.read())
             finally:
                 fp.close()

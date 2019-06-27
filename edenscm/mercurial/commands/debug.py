@@ -1361,7 +1361,7 @@ def debuginstall(ui, **opts):
 
     def writetemp(contents):
         (fd, name) = tempfile.mkstemp(prefix="hg-debuginstall-")
-        f = os.fdopen(fd, pycompat.sysstr("wb"))
+        f = util.fdopen(fd, pycompat.sysstr("wb"))
         f.write(contents)
         f.close()
         return name

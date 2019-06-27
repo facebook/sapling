@@ -785,7 +785,7 @@ def get_winpopen4(pipei_bufsize):
             universal_newlines=newlines,
             env=env,
         )
-        p.stdin = os.fdopen(wfd, "wb", bufsize)
+        p.stdin = util.fdopen(wfd, "wb", bufsize)
         return p.stdin, p.stdout, p.stderr, p
 
     return winpopen4

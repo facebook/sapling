@@ -1386,7 +1386,7 @@ class ui(object):
             prefix="hg-" + extra["prefix"] + "-", suffix=suffix, dir=rdir
         )
         try:
-            f = os.fdopen(fd, r"wb")
+            f = util.fdopen(fd, r"wb")
             f.write(util.tonativeeol(text))
             f.close()
 

@@ -208,7 +208,7 @@ def bundle2scratchbranch(op, part):
     fd, bundlefile = tempfile.mkstemp()
     try:
         try:
-            fp = os.fdopen(fd, "wb")
+            fp = util.fdopen(fd, "wb")
             fp.write(buf.read())
         finally:
             fp.close()

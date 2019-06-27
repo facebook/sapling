@@ -246,6 +246,7 @@ def _shoulddisableecho(prompt):
 def _sshaskpassmain(prompt):
     """the ssh-askpass client"""
     rfd, wfd = _receivefds(environ["TTYSOCK"])
+    # cannot use util.fdopen here - the script runs outside "edenscm" context.
     r, w = os.fdopen(rfd, "r"), os.fdopen(wfd, "a")
     w.write("\033[31;1m==== AUTHENTICATING FOR SSH  ====\033[0m\n")
     w.write(prompt)

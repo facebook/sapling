@@ -530,8 +530,8 @@ class mutablebasepack(versionmixin):
         shallowutil.mkstickygroupdir(ui, packdir)
         self.packfp, self.packpath = opener.mkstemp(suffix=self.PACKSUFFIX + "-tmp")
         self.idxfp, self.idxpath = opener.mkstemp(suffix=self.INDEXSUFFIX + "-tmp")
-        self.packfp = os.fdopen(self.packfp, "w+")
-        self.idxfp = os.fdopen(self.idxfp, "w+")
+        self.packfp = util.fdopen(self.packfp, "w+")
+        self.idxfp = util.fdopen(self.idxfp, "w+")
         self.sha = hashlib.sha1()
         self._closed = False
 

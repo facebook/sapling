@@ -372,7 +372,7 @@ class bundlerepository(localrepo.localrepository):
         fdtemp, temp = self.localvfs.mkstemp(prefix="hg-bundle-", suffix=suffix)
         self.tempfile = temp
 
-        with os.fdopen(fdtemp, pycompat.sysstr("wb")) as fptemp:
+        with util.fdopen(fdtemp, pycompat.sysstr("wb")) as fptemp:
             fptemp.write(header)
             while True:
                 chunk = readfn(2 ** 18)

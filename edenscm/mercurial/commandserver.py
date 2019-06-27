@@ -319,7 +319,7 @@ def _protectio(ui):
         if f is sysf:
             newfd = os.dup(f.fileno())
             os.dup2(nullfd, f.fileno())
-            f = os.fdopen(newfd, mode)
+            f = util.fdopen(newfd, mode)
         newfiles.append(f)
     os.close(nullfd)
     return tuple(newfiles)
