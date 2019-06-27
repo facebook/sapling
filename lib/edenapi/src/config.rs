@@ -111,12 +111,12 @@ impl ClientCreds {
     pub fn new(certs: impl AsRef<Path>, key: impl AsRef<Path>) -> ApiResult<Self> {
         let certs = certs.as_ref().to_path_buf();
         if !certs.is_file() {
-            return Err(ApiErrorKind::BadCreds(certs).into());
+            return Err(ApiErrorKind::BadCertificate(certs).into());
         }
 
         let key = key.as_ref().to_path_buf();
         if !key.is_file() {
-            return Err(ApiErrorKind::BadCreds(key).into());
+            return Err(ApiErrorKind::BadCertificate(key).into());
         }
 
         Ok(Self { certs, key })

@@ -101,7 +101,7 @@ def _warnexceptions(ui):
         def wrapped(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except edenapi.CredsError as e:
+            except edenapi.CertificateError as e:
                 _badcertwarning(ui)
                 raise e
 

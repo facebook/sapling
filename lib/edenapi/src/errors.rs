@@ -92,8 +92,8 @@ impl Display for ApiError {
 /// ```
 #[derive(Clone, Debug, Fail)]
 pub enum ApiErrorKind {
-    #[fail(display = "Client TLS credentials are missing or invalid: {:?}", _0)]
-    BadCreds(PathBuf),
+    #[fail(display = "Client TLS certificate is missing or invalid: {:?}", _0)]
+    BadCertificate(PathBuf),
     #[fail(display = "Invalid client configuration: {}", _0)]
     BadConfig(String),
     #[fail(display = "The server returned an unexpected or invalid response")]

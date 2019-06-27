@@ -23,7 +23,7 @@ use crate::revisionstore::{
 mod exceptions {
     use super::*;
 
-    py_exception!(edenapi, CredsError);
+    py_exception!(edenapi, CertificateError);
     py_exception!(edenapi, ConfigError);
     py_exception!(edenapi, ResponseError);
     py_exception!(edenapi, CurlError);
@@ -41,7 +41,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     {
         use exceptions::*;
-        m.add(py, "CredsError", CredsError::type_object(py))?;
+        m.add(py, "CertificateError", CertificateError::type_object(py))?;
         m.add(py, "ConfigError", ConfigError::type_object(py))?;
         m.add(py, "ResponseError", ResponseError::type_object(py))?;
         m.add(py, "CurlError", CurlError::type_object(py))?;
@@ -288,7 +288,7 @@ fn into_exception(py: Python, error: ApiError) -> PyErr {
 
     let msg = format!("{}", &error);
     match error.kind() {
-        &BadCreds(..) => PyErr::new::<CredsError, _>(py, msg),
+        &BadCertificate(..) => PyErr::new::<CertificateError, _>(py, msg),
         &BadConfig(..) => PyErr::new::<ConfigError, _>(py, msg),
         &BadResponse => PyErr::new::<ResponseError, _>(py, msg),
         &Curl => PyErr::new::<CurlError, _>(py, msg),
