@@ -483,7 +483,79 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
 
     Returns a dict <remotebookmark: newnode> and a list of remote bookmarks to
     unsubscribe from."""
-    return {}, []
+
+    def usecloudnode(cloudnode, localnode):
+        """returns True if cloudnode should be a new state for the remote bookmark
+
+        Both cloudnode and localnode are public commits."""
+        unfi = repo.unfiltered()
+        if localnode not in unfi:
+            # we somehow don't have the localnode in the repo, probably may want
+            # to fetch it
+            return False
+        if cloudnode not in unfi:
+            # we don't have cloudnode in the repo, assume that cloudnode is newer
+            # than the local
+            return True
+        if repo.changelog.isancestor(localnode, cloudnode):
+            # cloudnode is descendant of the localnode, assume that remote book
+            # should move forward to the newer node
+            #
+            # Note: if remote book was reverted back to the older revision on
+            # the server, and current repo in fact has newer working copy, then
+            # we'll end up with wrong state by moving the bookmark forward.
+            # It will be fixed on the next pull and sync operations.
+            return True
+        return False
+
+    localremotebooks = _getremotebookmarks(repo)
+    oldcloudremotebooks = lastsyncstate.remotebookmarks
+    allremotenames = set(localremotebooks.keys() + cloudremotebooks.keys())
+
+    newremotebooks = {}
+    remotebookstodelete = []
+    for remotename in allremotenames:
+        cloudnode = cloudremotebooks.get(remotename, None)
+        localnode = localremotebooks.get(remotename, None)
+        oldcloudnode = oldcloudremotebooks.get(remotename, None)
+
+        if (
+            cloudnode != localnode
+            and cloudnode != oldcloudnode
+            and localnode != oldcloudnode
+        ):
+            # Both cloud [remote bookmark -> node] mapping and local have changed.
+            if cloudnode and localnode:
+                newremotebooks[remotename] = (
+                    cloudnode if usecloudnode(cloudnode, localnode) else localnode
+                )
+            else:
+                # The remote bookmark was deleted in the cloud or in the current
+                # repo. Keep local remote book for now: if it was deleted on the
+                # server, the state will be updated with the next pull.
+                # (Unsubscription mechanism is not implemented yet)
+                #
+                # Note: consider 'deleted' status in the Cloud table
+                newremotebooks[remotename] = localnode
+        elif cloudnode == localnode:
+            # if both were updated to the same place
+            if cloudnode:
+                newremotebooks[remotename] = localnode
+            continue
+
+        if not cloudnode:
+            # The remote bookmark was deleted in or the client uncubscribed from the
+            # bookmark. Need to unsubscribe from it as well.
+            remotebookstodelete.append(remotename)
+        elif cloudnode != oldcloudnode:
+            # Cloud has changes, need to apply them
+            newremotebooks[remotename] = cloudnode
+
+        if localnode and localnode != oldcloudnode:
+            # Need to update the cloud
+            newremotebooks[remotename] = localnode
+
+    return newremotebooks, remotebookstodelete
 
 
 def _updateremotebookmarks(repo, tr, remotebookmarks, deletedremotebooks):
