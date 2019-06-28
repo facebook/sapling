@@ -271,7 +271,6 @@ Test extension help:
        rebase        command to move sets of revisions to a different ancestor
        eden          accelerated hg functionality in Eden checkouts (eden !)
        sampling      (no help text available)
-       simplecache
   
       Disabled extensions:
   
@@ -375,6 +374,7 @@ Test extension help:
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal
+       simplecache
        smartlog      command to display a relevant subgraph
        sparse        allow sparse checkouts of the working directory
        sshaskpass    ssh-askpass implementation that works with chg
