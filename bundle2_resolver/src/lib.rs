@@ -13,6 +13,7 @@ mod getbundle_response;
 mod resolver;
 mod stats;
 mod upload_blobs;
+mod upload_changesets;
 
 pub use getbundle_response::create_getbundle_response;
 pub use resolver::resolve;
