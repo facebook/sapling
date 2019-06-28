@@ -55,7 +55,7 @@ def blackbox(ui, repo, **opts):
     pattern = opts.get("pattern")
 
     now = time.time()
-    events = filter(now - start * 60, now - end * 60, pattern)
+    events = filter(now - start * 60, now - end * 60 + 1, pattern)
 
     ui.pager("blackbox")
     sidcolor = {}

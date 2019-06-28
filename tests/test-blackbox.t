@@ -29,6 +29,7 @@ alias expansion is logged
   [legacy][command_alias] alias 'confuse' expands to 'log --limit 3'
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
 
 recursive aliases work correctly
   $ rm -rf ./.hg/blackbox*
@@ -39,6 +40,7 @@ recursive aliases work correctly
   [legacy][command_alias] alias 'confuse' expands to 'log --limit 3'
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
 
 incoming change tracking
 
@@ -70,6 +72,7 @@ clone, commit, pull
   [legacy][command] pull
   [legacy][command_finish] pull exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  [legacy][command_alias] alias 'blackbox' expands to 'blackbox --no-timestamp --no-sid'
 
 we must not cause a failure if we cannot write to the log
 
