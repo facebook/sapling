@@ -108,10 +108,10 @@ The common case - no options or filenames
 
 Ensure that our shelved changes exist
   $ hg shelve -l
-  default-01      (*)    shelve changes to: second (glob)
-  default         (*)    shelve changes to: second (glob)
+  default-01 * shelve changes to: second (glob)
+  default * shelve changes to: second (glob)
   $ hg shelve -l -p default
-  default         (*)    shelve changes to: second (glob)
+  default * shelve changes to: second (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -211,7 +211,7 @@ Expect "a" to no longer be present, but status otherwise unchanged
     c
   R b/b
   $ hg shelve -l --stat
-  wibble          (*)    wat (glob)
+  wibble * wat (glob)
    a/a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
 
@@ -406,7 +406,7 @@ If we resolve a conflict while unshelving, the unshelve should succeed
   rebasing .* "shelve changes to: second" (re)
   merging a/a
   $ hg shelve -l
-  default         (*)* shelve changes to: second (glob)
+  default * shelve changes to: second (glob)
   $ hg status
   M a/a
   A foo/foo
@@ -440,11 +440,11 @@ Test keep and cleanup
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --list
-  default         (*)* shelve changes to: create conflict (glob)
+  default * shelve changes to: create conflict (glob)
   $ hg unshelve -k
   unshelving change 'default'
   $ hg shelve --list
-  default         (*)* shelve changes to: create conflict (glob)
+  default * shelve changes to: create conflict (glob)
   $ hg shelve --cleanup
   $ hg shelve --list
 
@@ -467,7 +467,7 @@ Shelve should still work even if mq is disabled
   shelved as test
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --config extensions.mq=! shelve --list
-  test            (*)* shelve changes to: create conflict (glob)
+  test * shelve changes to: create conflict (glob)
   $ hg bookmark
    * test                      * (glob)
   $ hg --config extensions.mq=! unshelve
