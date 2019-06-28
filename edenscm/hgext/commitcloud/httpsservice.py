@@ -240,7 +240,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 % workspace,
                 component="commitcloud",
             )
-            return baseservice.References(version, None, None, None, None)
+            return baseservice.References(version, None, None, None, None, None)
 
         if version == baseversion:
             self.ui.debug(
@@ -248,7 +248,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 % version,
                 component="commitcloud",
             )
-            return baseservice.References(version, None, None, None, None)
+            return baseservice.References(version, None, None, None, None, None)
 
         self.ui.debug(
             "'get_references' returns version %s, current version %s\n"
@@ -324,7 +324,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             component="commitcloud",
         )
 
-        return True, baseservice.References(newversion, None, None, None, None)
+        return True, baseservice.References(newversion, None, None, None, None, None)
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog")
     def getsmartlog(self, reponame, workspace, repo):
