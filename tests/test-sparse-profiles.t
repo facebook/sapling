@@ -365,6 +365,7 @@ Test profile discovery
     "path": "profiles/foo/spam"
    }
   ]
+  $ enable simplecache
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
   > profile_directory = profiles/
