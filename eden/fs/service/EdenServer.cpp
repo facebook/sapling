@@ -761,6 +761,11 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         auto stats = edenMount->getJournal().getStats();
         return stats ? stats->entryCount : 0;
       });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_DURATION), [edenMount] {
+        auto stats = edenMount->getJournal().getStats();
+        return stats ? stats->getDurationInSeconds() : 0;
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

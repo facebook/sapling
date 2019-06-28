@@ -87,7 +87,11 @@ enum class CounterName {
   /**
    * Represents the number of entries in the change log
    */
-  JOURNAL_ENTRIES
+  JOURNAL_ENTRIES,
+  /**
+   * Represents the duration of the journal in seconds end to end
+   */
+  JOURNAL_DURATION,
 };
 
 /**
