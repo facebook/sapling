@@ -1189,9 +1189,11 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     if (auto journalStats = mount->getJournal().getStats()) {
       journalThrift.entryCount = journalStats->entryCount;
       journalThrift.memoryUsage = journalStats->memoryUsage;
+      journalThrift.durationSeconds = journalStats->getDurationInSeconds();
     } else {
       journalThrift.entryCount = 0;
       journalThrift.memoryUsage = 0;
+      journalThrift.durationSeconds = 0;
     }
     result.mountPointJournalInfo[mount->getPath().stringPiece().str()] =
         journalThrift;

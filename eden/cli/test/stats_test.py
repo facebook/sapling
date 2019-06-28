@@ -97,6 +97,19 @@ key                1              2              3              4
         self.assertEqual("12 B", stats_print.format_size(12))
         self.assertEqual("0", stats_print.format_size(0))
 
+    def test_time_formats_correctly(self):
+        self.assertEqual(stats_print.format_time(0), "0 second(s)")
+        self.assertEqual(stats_print.format_time(30), "30 second(s)")
+        self.assertEqual(stats_print.format_time(60), "1.0 minute(s)")
+        self.assertEqual(stats_print.format_time(90), "1.5 minute(s)")
+        self.assertEqual(stats_print.format_time(120), "2.0 minute(s)")
+        self.assertEqual(stats_print.format_time(60 * 60), "1.0 hour(s)")
+        self.assertEqual(stats_print.format_time(60 * 30 * 5), "2.5 hour(s)")
+        self.assertEqual(stats_print.format_time(60 * 60 * 3), "3.0 hour(s)")
+        self.assertEqual(stats_print.format_time(60 * 60 * 23), "23.0 hour(s)")
+        self.assertEqual(stats_print.format_time(60 * 60 * 24), "1.0 day(s)")
+        self.assertEqual(stats_print.format_time(60 * 60 * 32), "1.3 day(s)")
+
 
 class HgImporterStatsTest(unittest.TestCase):
     def test_call_counts_are_zero_if_no_data_was_logged(self) -> None:

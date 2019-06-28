@@ -93,9 +93,11 @@ def do_stats_general(
         else:
             entries = journal.entryCount
             mem = journal.memoryUsage
+            duration = journal.durationSeconds
             journalLine = (
-                f"- Journal entry count: {entries} "
-                f"(memory usage: {stats_print.format_size(mem)})\n"
+                f"- Journal: {entries} entries over "
+                f"{stats_print.format_time(duration)} "
+                f"({stats_print.format_size(mem)})\n"
             )
         out.write(
             textwrap.dedent(

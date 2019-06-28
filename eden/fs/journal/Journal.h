@@ -26,6 +26,11 @@ struct JournalStats {
   size_t memoryUsage = 0;
   std::chrono::steady_clock::time_point earliestTimestamp;
   std::chrono::steady_clock::time_point latestTimestamp;
+  uint64_t getDurationInSeconds() {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               std::chrono::steady_clock::now() - earliestTimestamp)
+        .count();
+  }
 };
 
 struct JournalDeltaInfo {

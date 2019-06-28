@@ -113,3 +113,14 @@ def format_size(size: int) -> str:
     if size > 0:
         return "{} B".format(size)
     return "0"
+
+
+def format_time(time: int) -> str:
+    if time >= 86400:
+        return "{:.1f} day(s)".format(time / 86400)
+    elif time >= 3600:
+        return "{:.1f} hour(s)".format(time / 3600)
+    elif time >= 60:
+        return "{:.1f} minute(s)".format(time / 60)
+    else:
+        return "{} second(s)".format(time)
