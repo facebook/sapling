@@ -125,7 +125,7 @@ pub enum ApiErrorKind {
     BadResponse,
     #[fail(display = "libcurl returned an error")]
     Curl,
-    #[fail(display = "Received HTTP status {} with response: {:?}", code, msg)]
+    #[fail(display = "Received HTTP status '{}' with response: {:?}", code, msg)]
     Http { code: StatusCode, msg: String },
     #[fail(display = "Proxy server returned an error (HTTP {})", _0)]
     Proxy(StatusCode),

@@ -536,8 +536,8 @@ def wraprepo(repo):
                 except Exception as e:
                     self.ui.warn(_("encountered error during HTTPS fetching;"))
                     self.ui.warn(_(" falling back to SSH\n"))
-                    if edenapi.debug(self.ui):
-                        self.ui.warn(_("exception: %s\n") % str(e))
+                    edenapi.logexception(self.ui, e)
+                    self.ui.metrics.gauge("edenapi_fallbacks", 1)
 
             start = util.timer()
             with self.ui.timesection("fetchingtrees"):

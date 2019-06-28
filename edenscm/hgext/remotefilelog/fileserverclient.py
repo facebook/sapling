@@ -704,17 +704,7 @@ class fileserverclient(object):
             except Exception as e:
                 self.ui.warn(_("encountered error during HTTPS fetching;"))
                 self.ui.warn(_(" falling back to SSH\n"))
-
-                if edenapi.debug(self.ui):
-                    self.ui.warn(_("exception: %s\n") % str(e))
-
-                self.ui.log(
-                    "edenapi_error",
-                    exception_msg=str(e),
-                    exception_type=type(e).__name__,
-                    traceback=traceback.format_exc(),
-                )
-
+                edenapi.logexception(self.ui, e)
                 self.ui.metrics.gauge("edenapi_fallbacks", 1)
 
         rcvd = 0
@@ -1043,8 +1033,6 @@ class fileserverclient(object):
             assert all(store.has(p.oid()) for p in pointers)
 
     def logstacktrace(self):
-        import traceback
-
         self.ui.log(
             "remotefilelog",
             "excess remotefilelog fetching:\n%s\n",

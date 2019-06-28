@@ -5,6 +5,8 @@
 
 from __future__ import absolute_import
 
+import traceback
+
 from edenscm.mercurial import error, httpconnection
 from edenscm.mercurial.i18n import _
 from edenscmnative.bindings import edenapi
@@ -28,6 +30,22 @@ def bailifdisabled(ui):
     """Abort if HTTPS data fetching is disabled."""
     if not enabled(ui):
         raise error.Abort(_("HTTPS data fetching is disabled"))
+
+
+def logexception(ui, exc):
+    """Log an exception to Mercurial's telemetry and print a user warning."""
+    exctype = type(exc).__name__
+    excmsg = str(exc)
+
+    if debug(ui):
+        ui.warn("%s: %s\n" % (exctype, excmsg))
+
+    ui.log(
+        "edenapi_error",
+        exception_msg=excmsg,
+        exception_type=exctype,
+        traceback=traceback.format_exc(),
+    )
 
 
 def _getbaseurl(ui):
