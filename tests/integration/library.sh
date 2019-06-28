@@ -845,6 +845,7 @@ function create_replaybookmarks_table() {
   bookmark_hash varbinary(64) NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   synced TINYINT(1) NOT NULL DEFAULT 0,
+  backfill TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   KEY sync_queue (synced, reponame, bookmark_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
