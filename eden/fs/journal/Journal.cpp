@@ -219,7 +219,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
   auto result = std::vector<DebugJournalDelta>();
   forEachDelta(
       0,
-      std::optional(limit),
+      std::optional<size_t>(limit),
       [mountGeneration, &result](const JournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
