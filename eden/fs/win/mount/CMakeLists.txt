@@ -14,6 +14,7 @@ target_link_libraries(
   eden_win_mount
   PUBLIC
     eden_service_thrift
+    streamingeden_thrift
     Folly::folly
     ProjectedFS
 )
