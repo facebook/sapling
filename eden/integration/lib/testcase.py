@@ -60,6 +60,8 @@ class EdenTestCase(
     # injection framework when starting edenfs
     enable_fault_injection: bool = False
 
+    enable_logview: bool = True
+
     # The current typeshed library claims unittest.TestCase.run() returns a TestCase,
     # but it really returns Optional[TestResult].
     # We declare it to return Any here just to make the type checkers happy.
@@ -137,8 +139,12 @@ class EdenTestCase(
         logging_settings = self.edenfs_logging_settings()
         extra_args = self.edenfs_extra_args()
         if self.enable_fault_injection:
-            extra_args = extra_args[:] if extra_args is not None else []
             extra_args.append("--enable_fault_injection")
+
+        if not self.enable_logview and not os.environ.get("EDENFS_SUFFIX", ""):
+            # add option to disable logview
+            # we set `EDENFS_SUFFIX` when running our tests with OSS build
+            extra_args.append("--eden_logview=false")
 
         storage_engine = self.select_storage_engine()
         self.eden = edenclient.EdenFS(
@@ -201,11 +207,11 @@ class EdenTestCase(
         """
         return None
 
-    def edenfs_extra_args(self) -> Optional[List[str]]:
+    def edenfs_extra_args(self) -> List[str]:
         """
         Get additional arguments to pass to edenfs
         """
-        return None
+        return []
 
     def create_hg_repo(
         self, name: str, hgrc: Optional[configparser.ConfigParser] = None
@@ -297,6 +303,8 @@ class EdenRepoTest(EdenTestCase):
 
     repo: repobase.Repository
     repo_name: str
+
+    enable_logview: bool = False
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()

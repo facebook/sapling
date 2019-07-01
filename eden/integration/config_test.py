@@ -20,6 +20,8 @@ from .lib import testcase
 
 
 class ConfigTest(testcase.EdenTestCase):
+    enable_logview: bool = False
+
     def assert_config(
         self, config: EdenConfigData, name: str, value: str, source: ConfigSource
     ) -> None:
