@@ -51,7 +51,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
   std::shared_ptr<HgBackingStore> backingStore{
       std::make_shared<HgBackingStore>(&importer, localStore.get(), stats)};
   std::shared_ptr<ObjectStore> objectStore{
-      ObjectStore::create(localStore, backingStore)};
+      ObjectStore::create(localStore, backingStore, stats)};
 };
 
 TEST_F(

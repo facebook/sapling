@@ -20,7 +20,8 @@ class ObjectStoreTest : public ::testing::Test {
   void SetUp() override {
     localStore_ = std::make_shared<MemoryLocalStore>();
     backingStore_ = std::make_shared<FakeBackingStore>(localStore_);
-    objectStore_ = ObjectStore::create(localStore_, backingStore_);
+    stats_ = std::make_shared<EdenStats>();
+    objectStore_ = ObjectStore::create(localStore_, backingStore_, stats_);
   }
 
   Hash putReadyBlob(folly::StringPiece data) {
@@ -33,6 +34,7 @@ class ObjectStoreTest : public ::testing::Test {
 
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
+  std::shared_ptr<EdenStats> stats_;
   std::shared_ptr<ObjectStore> objectStore_;
 };
 
@@ -43,7 +45,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   // Get blob size from backing store, caches in local store
   objectStore_->getBlobSize(id);
   // Clear backing store
-  objectStore_ = ObjectStore::create(localStore_, nullptr);
+  objectStore_ = ObjectStore::create(localStore_, nullptr, stats_);
 
   size_t expectedSize = data.size();
   size_t size = objectStore_->getBlobSize(id).get();

@@ -179,7 +179,7 @@ void TestMount::createMountWithoutInitializing(
 
 void TestMount::createMount() {
   shared_ptr<ObjectStore> objectStore =
-      ObjectStore::create(localStore_, backingStore_);
+      ObjectStore::create(localStore_, backingStore_, stats_);
   edenMount_ = EdenMount::create(
       std::move(config_), std::move(objectStore), blobCache_, serverState_);
 }
@@ -225,6 +225,8 @@ void TestMount::initTestDirectory() {
   // Create localStore_ and backingStore_
   localStore_ = make_shared<MemoryLocalStore>();
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
+
+  stats_ = make_shared<EdenStats>();
 }
 
 Dispatcher* TestMount::getDispatcher() const {
@@ -246,7 +248,7 @@ void TestMount::remount() {
   // Create a new copy of the CheckoutConfig
   auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
-  auto objectStore = ObjectStore::create(localStore_, backingStore_);
+  auto objectStore = ObjectStore::create(localStore_, backingStore_, stats_);
 
   // Reset the edenMount_ pointer.  This will destroy the old EdenMount
   // assuming that no-one else still has any references to it.
@@ -269,7 +271,7 @@ void TestMount::remountGracefully() {
   // Create a new copy of the CheckoutConfig
   auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
-  auto objectStore = ObjectStore::create(localStore_, backingStore_);
+  auto objectStore = ObjectStore::create(localStore_, backingStore_, stats_);
 
   auto takeoverData =
       edenMount_->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)

@@ -7,6 +7,7 @@
 #include "ObjectStore.h"
 
 #include <folly/Conv.h>
+#include <folly/Format.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
@@ -16,6 +17,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 using folly::Future;
 using folly::IOBuf;
@@ -29,17 +31,20 @@ namespace eden {
 
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<LocalStore> localStore,
-    shared_ptr<BackingStore> backingStore) {
-  return std::shared_ptr<ObjectStore>{
-      new ObjectStore{std::move(localStore), std::move(backingStore)}};
+    shared_ptr<BackingStore> backingStore,
+    shared_ptr<EdenStats> stats) {
+  return std::shared_ptr<ObjectStore>{new ObjectStore{
+      std::move(localStore), std::move(backingStore), std::move(stats)}};
 }
 
 ObjectStore::ObjectStore(
     shared_ptr<LocalStore> localStore,
-    shared_ptr<BackingStore> backingStore)
+    shared_ptr<BackingStore> backingStore,
+    shared_ptr<EdenStats> stats)
     : metadataCache_{folly::in_place, kCacheSize},
       localStore_{std::move(localStore)},
-      backingStore_{std::move(backingStore)} {}
+      backingStore_{std::move(backingStore)},
+      stats_{std::move(stats)} {}
 
 ObjectStore::~ObjectStore() {}
 
@@ -83,34 +88,21 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
       });
 }
 
-Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
-  return localStore_->getBlob(id).thenValue(
-      [id, self = shared_from_this()](shared_ptr<const Blob> blob) {
-        if (blob) {
-          // Not computing the BlobMetadata here because if the blob was found
-          // in the local store, the LocalStore probably also has the metadata
-          // already, and the caller may not even need the SHA-1 here. (If the
-          // caller needed the SHA-1, they would have called getBlobMetadata
-          // instead.)
-          XLOG(DBG4) << "blob " << id << "  found in local store";
-          return makeFuture(shared_ptr<const Blob>(std::move(blob)));
+Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
+    const Hash& commitID) const {
+  XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
+
+  return backingStore_->getTreeForCommit(commitID).thenValue(
+      [commitID](std::shared_ptr<const Tree> tree) {
+        if (!tree) {
+          throw std::domain_error(folly::to<string>(
+              "unable to import commit ", commitID.toString()));
         }
 
-        // Look in the BackingStore
-        return self->backingStore_->getBlob(id).thenValue(
-            [self, id](unique_ptr<const Blob> loadedBlob) {
-              if (!loadedBlob) {
-                XLOG(DBG2) << "unable to find blob " << id;
-                // TODO: Perhaps we should do some short-term negative caching?
-                throw std::domain_error(
-                    folly::to<string>("blob ", id.toString(), " not found"));
-              }
-
-              XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
-              auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
-              self->metadataCache_.wlock()->set(id, metadata);
-              return shared_ptr<const Blob>(std::move(loadedBlob));
-            });
+        // For now we assume that the BackingStore will insert the Tree into the
+        // LocalStore on its own, so we don't have to update the LocalStore
+        // ourselves here.
+        return tree;
       });
 }
 
@@ -130,42 +122,73 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
   return backingStore_->prefetchBlobs(ids);
 }
 
-Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
-    const Hash& commitID) const {
-  XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
+Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
+  auto self = shared_from_this();
 
-  return backingStore_->getTreeForCommit(commitID).thenValue(
-      [commitID](std::shared_ptr<const Tree> tree) {
-        if (!tree) {
-          throw std::domain_error(folly::to<string>(
-              "unable to import commit ", commitID.toString()));
-        }
+  return localStore_->getBlob(id).thenValue([id, self](
+                                                shared_ptr<const Blob> blob) {
+    if (blob) {
+      // Not computing the BlobMetadata here because if the blob was found
+      // in the local store, the LocalStore probably also has the metadata
+      // already, and the caller may not even need the SHA-1 here. (If the
+      // caller needed the SHA-1, they would have called getBlobMetadata
+      // instead.)
+      XLOG(DBG4) << "blob " << id << " found in local store";
+      self->updateBlobStats(true, false);
+      return makeFuture(shared_ptr<const Blob>(std::move(blob)));
+    }
 
-        // For now we assume that the BackingStore will insert the Tree into the
-        // LocalStore on its own, so we don't have to update the LocalStore
-        // ourselves here.
-        return tree;
-      });
+    // Look in the BackingStore
+    return self->backingStore_->getBlob(id).thenValue(
+        [self, id](unique_ptr<const Blob> loadedBlob) {
+          if (loadedBlob) {
+            XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
+            self->updateBlobStats(false, true);
+            auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
+            self->metadataCache_.wlock()->set(id, metadata);
+            return shared_ptr<const Blob>(std::move(loadedBlob));
+          }
+
+          XLOG(DBG2) << "unable to find blob " << id;
+          self->updateBlobStats(false, false);
+          // TODO: Perhaps we should do some short-term negative caching?
+          throw std::domain_error(
+              folly::to<string>("blob ", id.toString(), " not found"));
+        });
+  });
+}
+
+void ObjectStore::updateBlobStats(bool local, bool backing) const {
+#if defined(EDEN_HAVE_STATS)
+  ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
+  stats.getBlobFromLocalStore.addValue(local);
+  stats.getBlobFromBackingStore.addValue(backing);
+#endif
 }
 
 Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
-  // First, check the in-memory cache.
+  // Check in-memory cache
   {
     auto metadataCache = metadataCache_.wlock();
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
+      updateBlobMetadataStats(true, false, false);
       return cacheIter->second;
     }
   }
 
+  auto self = shared_from_this();
+
+  // Check local store
   return localStore_->getBlobMetadata(id).thenValue(
-      [id, self = shared_from_this()](std::optional<BlobMetadata>&& localData) {
-        if (localData.has_value()) {
-          self->metadataCache_.wlock()->set(id, localData.value());
-          return makeFuture(localData.value());
+      [self, id](std::optional<BlobMetadata>&& metadata) {
+        if (metadata) {
+          self->updateBlobMetadataStats(false, true, false);
+          self->metadataCache_.wlock()->set(id, *metadata);
+          return makeFuture(*metadata);
         }
 
-        // Load the blob from the BackingStore.
+        // Check backing store
         //
         // TODO: It would be nice to add a smarter API to the BackingStore so
         // that we can query it just for the blob metadata if it supports
@@ -175,24 +198,44 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         // especially when we begin to expire entries in RocksDB.
         return self->backingStore_->getBlob(id).thenValue(
             [self, id](std::unique_ptr<Blob> blob) {
-              if (!blob) {
-                throw std::domain_error(
-                    folly::to<string>("blob ", id.toString(), " not found"));
+              if (blob) {
+                self->updateBlobMetadataStats(false, false, true);
+                auto metadata = self->localStore_->putBlob(id, blob.get());
+                self->metadataCache_.wlock()->set(id, metadata);
+                return makeFuture(metadata);
               }
 
-              auto metadata = self->localStore_->putBlob(id, blob.get());
-              self->metadataCache_.wlock()->set(id, metadata);
-              return makeFuture(metadata);
+              self->updateBlobMetadataStats(false, false, false);
+              throw std::domain_error(
+                  folly::to<string>("blob ", id.toString(), " not found"));
             });
       });
 }
 
+void ObjectStore::updateBlobMetadataStats(bool memory, bool local, bool backing)
+    const {
+#if defined(EDEN_HAVE_STATS)
+  ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
+  stats.getBlobMetadataFromMemory.addValue(memory);
+  stats.getBlobMetadataFromLocalStore.addValue(local);
+  stats.getBlobMetadataFromBackingStore.addValue(backing);
+#endif
+}
+
+Future<Hash> ObjectStore::getBlobSha1(const Hash& id) const {
+  return getBlobMetadata(id).thenValue(
+      [](const BlobMetadata& metadata) { return metadata.sha1; });
+}
+
 Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
-  // Check local store
   auto self = shared_from_this();
+
+  // Check local store for size
   return self->localStore_->getBlobSize(id).thenValue(
       [self, id](std::optional<uint64_t> size) {
         if (size) {
+          self->updateBlobSizeStats(true, false);
+          self->localStore_->putBlobSize(id, *size);
           return makeFuture(*size);
         }
 
@@ -200,21 +243,28 @@ Future<uint64_t> ObjectStore::getBlobSize(const Hash& id) const {
         return self->backingStore_->getBlob(id).thenValue(
             [self, id](std::unique_ptr<Blob> blob) {
               if (blob) {
-                uint64_t size = blob.get()->getSize();
+                const uint64_t size = blob.get()->getSize();
+                self->updateBlobSizeStats(false, true);
                 self->localStore_->putBlobWithoutMetadata(id, blob.get());
                 self->localStore_->putBlobSize(id, size);
+
                 return makeFuture(size);
-              } else {
-                throw std::domain_error(
-                    folly::to<string>("blob ", id.toString(), " not found"));
               }
+
+              // Not found
+              self->updateBlobSizeStats(false, false);
+              throw std::domain_error(
+                  folly::to<string>("blob ", id.toString(), " not found"));
             });
       });
 }
 
-Future<Hash> ObjectStore::getBlobSha1(const Hash& id) const {
-  return getBlobMetadata(id).thenValue(
-      [](const BlobMetadata& metadata) { return metadata.sha1; });
+void ObjectStore::updateBlobSizeStats(bool local, bool backing) const {
+#if defined(EDEN_HAVE_STATS)
+  ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
+  stats.getBlobSizeFromLocalStore.addValue(local);
+  stats.getBlobSizeFromBackingStore.addValue(backing);
+#endif
 }
 
 } // namespace eden

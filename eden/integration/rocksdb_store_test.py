@@ -115,8 +115,8 @@ ephemeral-size-limit = "1"
                 counters.get("local_store.auto_gc.last_duration_ms"), 0
             )
 
-        # Run "eden stats local_store" and check the output
-        stats_output = self.eden.run_cmd("stats", "local_store")
+        # Run "eden stats local-store" and check the output
+        stats_output = self.eden.run_cmd("stats", "local-store")
         print(stats_output)
         m = re.search(r"Successful Auto-GC Runs:\s+(\d+)", stats_output)
         self.assertIsNotNone(m)

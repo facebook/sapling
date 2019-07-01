@@ -28,6 +28,10 @@ FuseThreadStats& EdenStats::getFuseStatsForCurrentThread() {
   return *threadLocalFuseStats_.get();
 }
 
+ObjectStoreThreadStats& EdenStats::getObjectStoreStatsForCurrentThread() {
+  return *threadLocalObjectStoreStats_.get();
+}
+
 HgBackingStoreThreadStats& EdenStats::getHgBackingStoreStatsForCurrentThread() {
   return *threadLocalHgBackingStoreStats_.get();
 }
@@ -38,6 +42,9 @@ HgImporterThreadStats& EdenStats::getHgImporterStatsForCurrentThread() {
 
 void EdenStats::aggregate() {
   for (auto& stats : threadLocalFuseStats_.accessAllThreads()) {
+    stats.aggregate();
+  }
+  for (auto& stats : threadLocalObjectStoreStats_.accessAllThreads()) {
     stats.aggregate();
   }
   for (auto& stats : threadLocalHgBackingStoreStats_.accessAllThreads()) {
@@ -74,6 +81,7 @@ EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
     const std::string& name) {
   auto timeseries = Timeseries{this, name};
   timeseries.exportStat(facebook::stats::COUNT);
+  timeseries.exportStat(facebook::stats::PERCENT);
   return timeseries;
 }
 #endif

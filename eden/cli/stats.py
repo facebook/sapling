@@ -120,15 +120,15 @@ class MemoryCmd(Subcmd):
         instance = cmd_util.get_eden_instance(args)
 
         with instance.get_thrift_client() as client:
-            diag_info = client.getStatInfo()
-            stats_print.write_mem_status_table(diag_info.counters, out)
+            counters = client.getCounters()
+            stats_print.write_mem_status_table(counters, out)
 
             # print memory counters
             heading = "Average values of Memory usage and availability"
             out.write("\n\n %s \n\n" % heading.center(80, " "))
 
-            mem_counters = get_memory_counters(diag_info.counters)
-            stats_print.write_table(mem_counters, "", out)
+            table = get_memory_counters(counters)
+            stats_print.write_table(table, "", out)
 
         return 0
 
@@ -166,11 +166,11 @@ class IoCmd(Subcmd):
         stats_print.write_heading("Counts of I/O operations performed in EdenFs", out)
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
-            diag_info = client.getStatInfo()
+            counters = client.getCounters()
 
         # If the arguments has --all flag, we will have args.all set to
         # true.
-        fuse_counters = get_fuse_counters(diag_info.counters, args.all)
+        fuse_counters = get_fuse_counters(counters, args.all)
         stats_print.write_table(fuse_counters, "SystemCall", out)
 
         return 0
@@ -257,16 +257,15 @@ class LatencyCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        out = sys.stdout
+        TITLE = "Latencies of I/O operations performed in EdenFS"
+        stats_print.write_heading(TITLE, sys.stdout)
+
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
-            diag_info = client.getStatInfo()
+            counters = client.getCounters()
 
-        table = get_fuse_latency(diag_info.counters, args.all)
-        stats_print.write_heading(
-            "Latencies of I/O operations performed in EdenFs", out
-        )
-        stats_print.write_latency_table(table, out)
+        table = get_fuse_latency(counters, args.all)
+        stats_print.write_latency_table(table, sys.stdout)
 
         return 0
 
@@ -319,95 +318,49 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
 )
 class HgImporterCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        out = sys.stdout
-        stats_print.write_heading(
-            "Counts of HgImporter requests performed in EdenFS", out
-        )
+        TITLE = "Counts of HgImporter requests performed in EdenFS"
+        stats_print.write_heading(TITLE, sys.stdout)
+
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
             counters = client.getCounters()
 
-        hg_importer_counters = get_hg_importer_counters(counters)
-        stats_print.write_table(hg_importer_counters, "HgImporter Request", out)
+        table = get_counter_table(counters, ["hg_importer"], ["count"])
+        stats_print.write_table(table, "HgImporter Request", sys.stdout)
 
         return 0
-
-
-def get_hg_importer_counters(counters: DiagInfoCounters) -> Table:
-    zero = [0, 0, 0, 0]
-    table: Table = {
-        "cat_file": zero,
-        "fetch_tree": zero,
-        "manifest": zero,
-        "manifest_node_for_commit": zero,
-        "prefetch_files": zero,
-    }
-
-    for key in counters:
-        segments = key.split(".")
-        if (
-            len(segments) == 3
-            and segments[0] == "hg_importer"
-            and segments[2] == "count"
-        ):
-            call_name = segments[1]
-            last_minute = counters[key + ".60"]
-            last_10_minutes = counters[key + ".600"]
-            last_hour = counters[key + ".3600"]
-            all_time = counters[key]
-            table[call_name] = [last_minute, last_10_minutes, last_hour, all_time]
-
-    return table
 
 
 @stats_cmd("thrift", "Show the number of received thrift calls")
 class ThriftCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        out = sys.stdout
-        stats_print.write_heading("Counts of Thrift calls performed in EdenFs", out)
+        TITLE = "Counts of Thrift calls performed in EdenFS"
+        stats_print.write_heading(TITLE, sys.stdout)
+
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
-            counters = client.getCounters()
+            counters = client.getRegexCounters("thrift.EdenService\\..*")
 
-        thrift_counters = get_thrift_counters(counters)
-        stats_print.write_table(thrift_counters, "Thrift Call", out)
+        PREFIX = ["thrift", "EdenService"]
+        SUFFIX = ["num_calls", "sum"]
+        table = get_counter_table(counters, PREFIX, SUFFIX)
+        stats_print.write_table(table, "Thrift Call", sys.stdout)
 
         return 0
-
-
-def get_thrift_counters(counters: DiagInfoCounters) -> Table:
-    table: Table = {}
-
-    for key in counters:
-        segments = key.split(".")
-        if (
-            len(segments) == 5
-            and segments[:2] == ["thrift", "EdenService"]
-            and segments[-2:] == ["num_calls", "sum"]
-        ):
-            call_name = segments[2]
-            last_minute = counters[key + ".60"]
-            last_10_minutes = counters[key + ".600"]
-            last_hour = counters[key + ".3600"]
-            all_time = counters[key]
-            table[call_name] = [last_minute, last_10_minutes, last_hour, all_time]
-
-    return table
 
 
 @stats_cmd("thrift-latency", "Show the latency of received thrift calls")
 class ThriftLatencyCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        out = sys.stdout
+        TITLE = "Latency of Thrift processing time performed in EdenFS"
+        stats_print.write_heading(TITLE, sys.stdout)
+
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
-            diag_info = client.getStatInfo()
+            counters = client.getCounters()
 
-        table = get_thrift_latency(diag_info.counters)
-        stats_print.write_heading(
-            "Latency of Thrift processing time performed in EdenFs", out
-        )
-        stats_print.write_latency_table(table, out)
+        table = get_thrift_latency(counters)
+        stats_print.write_latency_table(table, sys.stdout)
 
         return 0
 
@@ -441,15 +394,16 @@ class MononokeBackingStoreLatencyCmd(Subcmd):
 
 
 def backing_store_latency(store: str, args: argparse.Namespace) -> int:
-    out = sys.stdout
+    TITLE = "Latency of {} backing store operations in EdenFs".format(store)
+    stats_print.write_heading(TITLE, sys.stdout)
+
     instance = cmd_util.get_eden_instance(args)
     with instance.get_thrift_client() as client:
-        diag_info = client.getStatInfo()
-    table = get_store_latency(diag_info.counters, store)
-    stats_print.write_heading(
-        "Latency of {} backing store operations in EdenFs".format(store), out
-    )
-    stats_print.write_latency_table(table, out)
+        counters = client.getCounters()
+
+    table = get_store_latency(counters, store)
+    stats_print.write_latency_table(table, sys.stdout)
+
     return 0
 
 
@@ -468,7 +422,7 @@ def get_store_latency(counters: DiagInfoCounters, store: str) -> Table2D:
     return table
 
 
-@stats_cmd("local_store", "Show information about the local store data size")
+@stats_cmd("local-store", "Show information about the local store data size")
 class LocalStoreCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         # (name, ephemeral)
@@ -482,6 +436,7 @@ class LocalStoreCmd(Subcmd):
 
         out = sys.stdout
         stats_print.write_heading("EdenFS Local Store Stats", out)
+
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
             counters = client.getRegexCounters("local_store\\..*")
@@ -523,6 +478,35 @@ class LocalStoreCmd(Subcmd):
             out.write(f"Last Auto-GC Duration:    {last_gc_sec:.03f}s\n")
 
         return 0
+
+
+@stats_cmd("object-store", "Show information about the object store pipeline")
+class ObjectStoreCommand(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        TITLE = "Percentages of where data was found by the object store"
+        stats_print.write_heading(TITLE, sys.stdout)
+
+        eden = cmd_util.get_eden_instance(args)
+        with eden.get_thrift_client() as thrift:
+            counters = thrift.getRegexCounters("object_store\\..*")
+
+        table = get_counter_table(counters, ["object_store"], ["pct"])
+        stats_print.write_table(table, "Object Store", sys.stdout)
+
+        return 0
+
+
+def get_counter_table(counters: DiagInfoCounters, prefix: List, suffix: List) -> Table:
+    table: Table = {}
+
+    for key in counters:
+        tags = key.split(".")
+        if tags[-len(suffix) :] == suffix:
+            TIME_SUFFIXES = (".60", ".600", ".3600", "")
+            row_name = ".".join(tags[len(prefix) : -len(suffix)])
+            table[row_name] = [counters[key + suffix] for suffix in TIME_SUFFIXES]
+
+    return table
 
 
 class StatsCmd(Subcmd):

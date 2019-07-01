@@ -8,6 +8,7 @@
 
 #include <folly/ThreadLocal.h>
 #include <memory>
+
 #include "common/stats/ThreadLocalStats.h"
 #include "eden/fs/eden-config.h"
 
@@ -15,6 +16,7 @@ namespace facebook {
 namespace eden {
 
 class FuseThreadStats;
+class ObjectStoreThreadStats;
 class HgBackingStoreThreadStats;
 class HgImporterThreadStats;
 
@@ -26,6 +28,13 @@ class EdenStats {
    * The returned object can be used only on the current thread.
    */
   FuseThreadStats& getFuseStatsForCurrentThread();
+
+  /**
+   * This function can be called on any thread.
+   *
+   * The returned object can be used only on the current thread.
+   */
+  ObjectStoreThreadStats& getObjectStoreStatsForCurrentThread();
 
   /**
    * This function can be called on any thread.
@@ -51,6 +60,8 @@ class EdenStats {
 
   folly::ThreadLocal<FuseThreadStats, ThreadLocalTag, void>
       threadLocalFuseStats_;
+  folly::ThreadLocal<ObjectStoreThreadStats, ThreadLocalTag, void>
+      threadLocalObjectStoreStats_;
   folly::ThreadLocal<HgBackingStoreThreadStats, ThreadLocalTag, void>
       threadLocalHgBackingStoreStats_;
   folly::ThreadLocal<HgImporterThreadStats, ThreadLocalTag, void>
@@ -141,6 +152,31 @@ class FuseThreadStats : public EdenThreadStatsBase {
       HistogramPtr item,
       std::chrono::microseconds elapsed,
       std::chrono::seconds now);
+};
+
+/**
+ * @see ObjectStore
+ */
+class ObjectStoreThreadStats : public EdenThreadStatsBase {
+ public:
+#if defined(EDEN_HAVE_STATS)
+  Timeseries getBlobFromLocalStore{
+      createTimeseries("object_store.get_blob.local_store")};
+  Timeseries getBlobFromBackingStore{
+      createTimeseries("object_store.get_blob.backing_store")};
+
+  Timeseries getBlobMetadataFromMemory{
+      createTimeseries("object_store.get_blob_metadata.memory")};
+  Timeseries getBlobMetadataFromLocalStore{
+      createTimeseries("object_store.get_blob_metadata.local_store")};
+  Timeseries getBlobMetadataFromBackingStore{
+      createTimeseries("object_store.get_blob_metadata.backing_store")};
+
+  Timeseries getBlobSizeFromLocalStore{
+      createTimeseries("object_store.get_blob_size.local_store")};
+  Timeseries getBlobSizeFromBackingStore{
+      createTimeseries("object_store.get_blob_size.backing_store")};
+#endif
 };
 
 /**

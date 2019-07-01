@@ -341,6 +341,7 @@ class TestMount {
   std::shared_ptr<EdenMount> edenMount_;
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
+  std::shared_ptr<EdenStats> stats_;
   std::shared_ptr<BlobCache> blobCache_;
 
   /*

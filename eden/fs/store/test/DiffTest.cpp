@@ -52,7 +52,8 @@ class DiffTest : public ::testing::Test {
   void SetUp() override {
     localStore_ = make_shared<MemoryLocalStore>();
     backingStore_ = make_shared<FakeBackingStore>(localStore_);
-    store_ = ObjectStore::create(localStore_, backingStore_);
+    store_ = ObjectStore::create(
+        localStore_, backingStore_, std::make_shared<EdenStats>());
   }
 
   Future<ScmStatus> diffCommits(StringPiece commit1, StringPiece commit2) {

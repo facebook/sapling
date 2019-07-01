@@ -65,7 +65,10 @@ struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
       : localStore{std::make_shared<NullLocalStore>()},
         backingStore{std::make_shared<FakeBackingStore>(localStore)},
-        objectStore{ObjectStore::create(localStore, backingStore)},
+        objectStore{ObjectStore::create(
+            localStore,
+            backingStore,
+            std::make_shared<EdenStats>())},
         blobCache{BlobCache::create(10, 0)},
         blobAccess{objectStore, blobCache} {
     backingStore->putBlob(hash3, "333"_sp)->setReady();

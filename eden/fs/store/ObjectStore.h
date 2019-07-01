@@ -13,6 +13,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/tracing/EdenStats.h"
 
 namespace facebook {
 namespace eden {
@@ -37,7 +38,8 @@ class ObjectStore : public IObjectStore,
  public:
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<LocalStore> localStore,
-      std::shared_ptr<BackingStore> backingStore);
+      std::shared_ptr<BackingStore> backingStore,
+      std::shared_ptr<EdenStats> stats);
   ~ObjectStore() override;
 
   /**
@@ -51,18 +53,6 @@ class ObjectStore : public IObjectStore,
       const Hash& id) const override;
 
   /**
-   * Get a Blob by ID.
-   *
-   * This returns a Future object that will produce the Blob when it is ready.
-   * It may result in a std::domain_error if the specified blob ID does not
-   * exist, or possibly other exceptions on error.
-   */
-  folly::Future<std::shared_ptr<const Blob>> getBlob(
-      const Hash& id) const override;
-  folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids) const override;
-
-  /**
    * Get a commit's root Tree.
    *
    * This returns a Future object that will produce the root Tree when it is
@@ -71,6 +61,19 @@ class ObjectStore : public IObjectStore,
    */
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID) const override;
+
+  folly::Future<folly::Unit> prefetchBlobs(
+      const std::vector<Hash>& ids) const override;
+
+  /**
+   * Get a Blob by ID.
+   *
+   * This returns a Future object that will produce the Blob when it is ready.
+   * It may result in a std::domain_error if the specified blob ID does not
+   * exist, or possibly other exceptions on error.
+   */
+  folly::Future<std::shared_ptr<const Blob>> getBlob(
+      const Hash& id) const override;
 
   /**
    * Get metadata about a Blob.
@@ -109,7 +112,8 @@ class ObjectStore : public IObjectStore,
   // Forbidden constructor. Use create().
   ObjectStore(
       std::shared_ptr<LocalStore> localStore,
-      std::shared_ptr<BackingStore> backingStore);
+      std::shared_ptr<BackingStore> backingStore,
+      std::shared_ptr<EdenStats> stats);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
@@ -146,6 +150,12 @@ class ObjectStore : public IObjectStore,
    * Multiple ObjectStores may share the same BackingStore.
    */
   std::shared_ptr<BackingStore> backingStore_;
+
+  std::shared_ptr<EdenStats> const stats_;
+
+  void updateBlobStats(bool local, bool backing) const;
+  void updateBlobSizeStats(bool local, bool backing) const;
+  void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
 };
 
 } // namespace eden

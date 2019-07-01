@@ -825,7 +825,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
-  auto objectStore = ObjectStore::create(getLocalStore(), backingStore);
+  auto objectStore =
+      ObjectStore::create(getLocalStore(), backingStore, getSharedStats());
 
 #if _WIN32
   // Create the EdenMount object and insert the mount into the mountPoints_ map.

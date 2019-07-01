@@ -159,7 +159,7 @@ class HgImportErrorTest : public ::testing::Test {
         fakeImportHelper);
     backingStore_ =
         make_shared<HgBackingStore>(importer_.get(), localStore_.get(), stats_);
-    objectStore_ = ObjectStore::create(localStore_, backingStore_);
+    objectStore_ = ObjectStore::create(localStore_, backingStore_, stats_);
   }
 
   template <typename ImporterType>
