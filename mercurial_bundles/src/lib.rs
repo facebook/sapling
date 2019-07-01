@@ -87,7 +87,7 @@ use std::fmt;
 use futures_ext::{BoxFuture, BoxStream};
 
 pub use crate::bundle2_encode::Bundle2EncodeBuilder;
-pub use crate::part_header::{PartHeader, PartHeaderInner, PartHeaderType};
+pub use crate::part_header::{PartHeader, PartHeaderInner, PartHeaderType, PartId};
 pub use crate::types::StreamHeader;
 
 pub enum Bundle2Item {

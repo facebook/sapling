@@ -18,7 +18,7 @@ use tokio_codec::{Decoder, Framed, FramedParts};
 use tokio_io::AsyncRead;
 
 use crate::errors::*;
-use crate::part_header::{self, PartHeader, PartHeaderType};
+use crate::part_header::{self, PartHeader, PartHeaderType, PartId};
 use crate::part_inner::validate_header;
 use crate::types::StreamHeader;
 use crate::utils::{get_decompressor_type, BytesExt};
@@ -52,7 +52,7 @@ enum OuterState {
     Header,
     Payload {
         part_type: PartHeaderType,
-        part_id: u32,
+        part_id: PartId,
     },
     DiscardPayload,
     StreamEnd,
@@ -257,12 +257,12 @@ pub enum OuterFrame {
     Header(PartHeader),
     Payload {
         part_type: PartHeaderType,
-        part_id: u32,
+        part_id: PartId,
         payload: Bytes,
     },
     PartEnd {
         part_type: PartHeaderType,
-        part_id: u32,
+        part_id: PartId,
     },
     Discard,
     StreamEnd,

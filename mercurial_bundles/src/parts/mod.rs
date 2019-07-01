@@ -13,7 +13,7 @@ use super::wirepack::packer::WirePackPacker;
 use crate::errors::*;
 use crate::failure::prelude::*;
 use crate::part_encode::PartEncodeBuilder;
-use crate::part_header::PartHeaderType;
+use crate::part_header::{PartHeaderType, PartId};
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
 use context::CoreContext;
@@ -231,7 +231,7 @@ impl fmt::Display for ChangegroupApplyResult {
 
 pub fn replychangegroup_part(
     res: ChangegroupApplyResult,
-    in_reply_to: u32,
+    in_reply_to: PartId,
 ) -> Result<PartEncodeBuilder> {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::ReplyChangegroup)?;
     builder.add_mparam("return", format!("{}", res))?;
@@ -240,7 +240,7 @@ pub fn replychangegroup_part(
     Ok(builder)
 }
 
-pub fn replypushkey_part(res: bool, in_reply_to: u32) -> Result<PartEncodeBuilder> {
+pub fn replypushkey_part(res: bool, in_reply_to: PartId) -> Result<PartEncodeBuilder> {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::ReplyPushkey)?;
     if res {
         builder.add_mparam("return", "1")?;

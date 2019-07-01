@@ -15,6 +15,8 @@ use crate::chunk::Chunk;
 use crate::errors::*;
 use crate::utils::BytesExt;
 
+pub type PartId = u32;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum PartHeaderType {
     /// Responsible for sending Changesets and Filelogs during a push. In Mercurial it also sends
@@ -126,7 +128,7 @@ impl PartHeaderType {
 pub struct PartHeaderInner {
     pub part_type: PartHeaderType,
     pub mandatory: bool,
-    pub part_id: u32,
+    pub part_id: PartId,
     // Part parameter keys are strings and values are arbitrary bytestrings
     // (which can even include null characters).
     pub mparams: HashMap<String, Bytes>,
@@ -144,7 +146,7 @@ impl PartHeader {
     }
 
     #[inline]
-    pub fn part_id(&self) -> u32 {
+    pub fn part_id(&self) -> PartId {
         self.0.part_id
     }
 
@@ -375,7 +377,7 @@ impl PartHeaderBuilder {
     ///
     /// We only accept part_id at this point because in the serialization use
     /// case, a part id is only assigned when the header is finalized.
-    pub fn build(self, part_id: u32) -> PartHeader {
+    pub fn build(self, part_id: PartId) -> PartHeader {
         PartHeader(PartHeaderInner {
             part_type: self.part_type,
             mandatory: self.mandatory,
@@ -463,7 +465,7 @@ mod test {
                 as fn(
                     PartHeaderType,
                     bool,
-                    u32,
+                    PartId,
                     HashMap<String, QCBytes>,
                     HashMap<String, QCBytes>,
                 ) -> TestResult,
@@ -473,7 +475,7 @@ mod test {
     fn roundtrip(
         part_type: PartHeaderType,
         mandatory: bool,
-        part_id: u32,
+        part_id: PartId,
         mparams: HashMap<String, QCBytes>,
         aparams: HashMap<String, QCBytes>,
     ) -> TestResult {
@@ -490,7 +492,7 @@ mod test {
     fn roundtrip_inner(
         part_type: PartHeaderType,
         mandatory: bool,
-        part_id: u32,
+        part_id: PartId,
         mparams: HashMap<String, QCBytes>,
         aparams: HashMap<String, QCBytes>,
     ) -> Result<TestResult> {

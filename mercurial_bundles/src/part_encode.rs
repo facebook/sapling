@@ -14,7 +14,7 @@ use futures::{Async, Future, Poll, Stream};
 
 use crate::chunk::Chunk;
 use crate::errors::*;
-use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType};
+use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType, PartId};
 
 /// Represents a stream of chunks produced by the individual part handler.
 pub struct ChunkStream(Box<dyn Stream<Item = Chunk, Error = Error> + Send>);
@@ -121,7 +121,7 @@ impl PartEncodeBuilder {
         self
     }
 
-    pub fn build(self, part_id: u32) -> PartEncode {
+    pub fn build(self, part_id: PartId) -> PartEncode {
         PartEncode {
             state: GenerationState::NotStarted(self.headerb.build(part_id), self.data),
         }

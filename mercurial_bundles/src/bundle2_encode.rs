@@ -23,6 +23,7 @@ use async_compression::{Compressor, CompressorType};
 use crate::chunk::{Chunk, ChunkEncoder};
 use crate::errors::*;
 use crate::part_encode::{PartEncode, PartEncodeBuilder};
+use crate::part_header::PartId;
 use crate::types::StreamHeader;
 use crate::utils::{capitalize_first, get_compression_param, is_mandatory_param};
 use mercurial_types::percent_encode;
@@ -91,7 +92,7 @@ where
     }
 
     pub fn add_part(&mut self, part: PartEncodeBuilder) -> &mut Self {
-        let part_id = self.parts.len() as u32;
+        let part_id = self.parts.len() as PartId;
         self.parts.push(part.build(part_id));
         self
     }
