@@ -9,7 +9,6 @@ import binascii
 import collections
 import datetime
 import errno
-import fcntl
 import json
 import os
 import shutil
@@ -26,6 +25,12 @@ import toml
 
 from . import configinterpolator, configutil, util
 from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_estale
+
+
+# On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
+# same as flock. We will need to make some changes for LockFileEx to work.
+if os.name != "nt":
+    import fcntl
 
 
 if typing.TYPE_CHECKING:
@@ -181,12 +186,20 @@ class EdenInstance:
 
     @property
     def _config_variables(self) -> Dict[str, str]:
+        if os.name == "nt":
+            # We don't have user ids on Windows right now.
+            # We should update this code if and when we add user id support.
+            user_id = 0
+            user_name = "USERNAME"
+        else:
+            user_id = os.getuid()
+            user_name = "USER"
         return (
             self._interpolate_dict
             if self._interpolate_dict is not None
             else {
-                "USER": os.environ.get("USER", ""),
-                "USER_ID": str(os.getuid()),
+                "USER": os.environ.get(user_name, ""),
+                "USER_ID": str(user_id),
                 "HOME": str(self._home_dir),
             }
         )
@@ -449,7 +462,8 @@ Do you want to run `eden mount %s` instead?"""
         if help_contents is not None:
             with help_path.open("w") as f:
                 f.write(help_contents)
-                os.fchmod(f.fileno(), 0o444)
+                if os.name != "nt":
+                    os.fchmod(f.fileno(), 0o444)
 
     def _create_client_dir_for_path(self, clients_dir: Path, path: str) -> Path:
         """Tries to create a new subdirectory of clients_dir based on the
@@ -850,6 +864,14 @@ class ConfigUpdater(object):
         self.config[key] = value
 
     def _acquire_lock(self) -> None:
+        # Skipping locks on Windows for two reasons:
+        # First, locking the config file is not a strict requirement even on
+        # POSIX. Plus we don't have a similar flock implementation on Windows.
+        # We could make a locking scheme with LockFileEx(), but it would
+        # have different symentics than flock (For one, we can't unlink a
+        # locked file).
+        if os.name == "nt":
+            return
         while True:
             self._lock_file = typing.cast(typing.TextIO, open(self._lock_path, "w+"))
             fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX)
@@ -869,6 +891,8 @@ class ConfigUpdater(object):
             continue
 
     def _unlock(self) -> None:
+        if os.name == "nt":
+            return
         assert self._lock_file is not None
         # Remove the file on disk before we unlock it.
         # This way processes currently waiting in _acquire_lock() that already
