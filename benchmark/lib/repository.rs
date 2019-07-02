@@ -118,6 +118,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
         Logger::root(Discard {}.ignore_res(), o!()),
         bookmarks,
         blobstore,
+        None,
         filenodes,
         changesets,
         bonsai_hg_mapping,

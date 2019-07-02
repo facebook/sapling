@@ -5,15 +5,14 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::*;
+use blob_changeset::RepoBlobstore;
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
 use futures_ext::BoxFuture;
 use hooks::HookManager;
 use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
 };
 use mononoke_types::RepositoryId;
-use prefixblob::PrefixBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use sql_ext::SqlConstructors;
 use std::fmt::{self, Debug};
@@ -22,7 +21,7 @@ use streaming_clone::SqlStreamingChunksFetcher;
 
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {
-    pub blobstore: PrefixBlobstore<Arc<Blobstore>>,
+    pub blobstore: RepoBlobstore,
     pub fetcher: SqlStreamingChunksFetcher,
     pub repoid: RepositoryId,
 }

@@ -12,7 +12,6 @@ use failure_ext::Error;
 use futures::future;
 use futures_ext::{BoxFuture, FutureExt};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 mod errors;
 use crate::errors::ErrorKind;
@@ -23,21 +22,38 @@ pub use crate::store::SqlCensoredContentStore;
 // A wrapper for any blobstore, which provides a verification layer for the blacklisted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
 #[derive(Debug, Clone)]
-pub struct CensoredBlob {
-    blobstore: Arc<dyn Blobstore>,
+pub struct CensoredBlob<T: Blobstore + Clone> {
+    blobstore: T,
     censored: HashMap<String, String>,
 }
 
-impl CensoredBlob {
-    pub fn new(blobstore: Arc<dyn Blobstore>, censored: HashMap<String, String>) -> Self {
+impl<T: Blobstore + Clone> CensoredBlob<T> {
+    pub fn new(blobstore: T, censored: HashMap<String, String>) -> Self {
         Self {
             blobstore,
             censored,
         }
     }
+
+    pub fn is_censored(&self, key: String) -> Result<(), Error> {
+        match self.censored.get(&key) {
+            Some(task) => Err(ErrorKind::Censored(key, task.clone()).into()),
+            None => Ok(()),
+        }
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> T {
+        self.blobstore
+    }
+
+    #[inline]
+    pub fn as_inner(&self) -> &T {
+        &self.blobstore
+    }
 }
 
-impl Blobstore for CensoredBlob {
+impl<T: Blobstore + Clone> Blobstore for CensoredBlob<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         match self.censored.get(&key) {
             Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
@@ -69,6 +85,7 @@ mod test {
     use context::CoreContext;
     use maplit::hashmap;
     use memblob::EagerMemblob;
+    use prefixblob::PrefixBlobstore;
     use tokio::runtime::Runtime;
 
     #[test]
@@ -86,7 +103,7 @@ mod test {
             censored_key.clone() => censored_task.clone(),
         };
 
-        let blob = CensoredBlob::new(Arc::new(inner), censored_pairs);
+        let blob = CensoredBlob::new(PrefixBlobstore::new(inner, "prefix"), censored_pairs);
 
         //Test put with blacklisted key
         let res = rt.block_on(blob.put(

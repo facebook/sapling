@@ -13,6 +13,7 @@ use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
 use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
+use censoredblob::CensoredBlob;
 use prefixblob::PrefixBlobstore;
 
 use context::CoreContext;
@@ -26,11 +27,14 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 
+/// CensoredBlob should be part of every blobstore since it is a layer
+/// which adds security by preventing users to access sensitive content.
+
 /// Making PrefixBlobstore part of every blobstore does two things:
 /// 1. It ensures that the prefix applies first, which is important for shared caches like
 ///    memcache.
 /// 2. It ensures that all possible blobrepos use a prefix.
-pub type RepoBlobstore = PrefixBlobstore<Arc<Blobstore>>;
+pub type RepoBlobstore = CensoredBlob<PrefixBlobstore<Arc<Blobstore>>>;
 
 pub struct ChangesetMetadata {
     pub user: String,

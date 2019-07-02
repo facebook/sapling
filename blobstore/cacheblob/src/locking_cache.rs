@@ -10,6 +10,7 @@ use std::sync::Arc;
 use failure_ext::Error;
 
 use blobstore::{Blobstore, CountedBlobstore};
+use censoredblob::CensoredBlob;
 use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use prefixblob::PrefixBlobstore;
@@ -383,5 +384,27 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
     #[inline]
     fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_inner().get_cache_only(self.prepend(key))
+    }
+}
+
+impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for CensoredBlob<T> {
+    #[inline]
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        match self.is_censored(key.clone()) {
+            Ok(()) => self.as_inner().get_no_cache_fill(ctx, key),
+            Err(err) => Err(err).into_future().boxify(),
+        }
+    }
+
+    #[inline]
+    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        match self.is_censored(key.clone()) {
+            Err(err) => Err(err).into_future().boxify(),
+            Ok(()) => self.as_inner().get_cache_only(key),
+        }
     }
 }

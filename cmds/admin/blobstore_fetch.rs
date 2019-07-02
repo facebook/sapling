@@ -10,9 +10,12 @@ use clap::ArgMatches;
 use failure_ext::{Error, Result};
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use std::sync::Arc;
 
 use blobstore::Blobstore;
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
+use censoredblob::{CensoredBlob, SqlCensoredContentStore};
+use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use manifoldblob::ManifoldBlob;
@@ -21,6 +24,8 @@ use metaconfig_types::BlobConfig;
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents};
 use prefixblob::PrefixBlobstore;
 use slog::{info, warn, Logger};
+use std::collections::HashMap;
+use std::iter::FromIterator;
 
 pub fn subcommand_blobstore_fetch(
     logger: Logger,
@@ -43,45 +48,65 @@ pub fn subcommand_blobstore_fetch(
 
     let blobstore = ManifoldBlob::new_with_prefix(&bucket, &prefix);
 
-    match (use_memcache, no_prefix) {
-        (None, false) => {
-            let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-            blobstore.get(ctx, key.clone()).boxify()
-        }
-        (None, true) => blobstore.get(ctx, key.clone()).boxify(),
-        (Some(mode), false) => {
-            let blobstore = new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
-            let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-            get_cache(ctx.clone(), &blobstore, key.clone(), mode)
-        }
-        (Some(mode), true) => {
-            let blobstore = new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
-            get_cache(ctx.clone(), &blobstore, key.clone(), mode)
-        }
-    }
-    .map(move |value| {
-        println!("{:?}", value);
-        if let Some(value) = value {
-            let decode_as = decode_as.as_ref().and_then(|val| {
-                let val = val.as_str();
-                if val == "auto" {
-                    detect_decode(&key, &logger)
-                } else {
-                    Some(val)
-                }
-            });
+    let censored_blobs_store: Arc<_> = Arc::new(
+        args::open_sql::<SqlCensoredContentStore>(&matches)
+            .expect("Failed to open the db with censored_blobs_store"),
+    );
 
-            match decode_as {
-                Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
-                Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
-                Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
-                // TODO: (rain1) T30974137 add a better way to print out file contents
-                Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
-                _ => (),
+    censored_blobs_store
+        .get_all_censored_blobs()
+        .map_err(Error::from)
+        .map(HashMap::from_iter)
+        .and_then({
+            cloned!(key, ctx);
+            move |censored_blobs: HashMap<String, String>| {
+                let empty_prefix = "".to_string();
+                match use_memcache {
+                    None => {
+                        let blobstore = match no_prefix {
+                            false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
+                            true => PrefixBlobstore::new(blobstore, empty_prefix),
+                        };
+                        let blobstore = CensoredBlob::new(blobstore, censored_blobs);
+                        blobstore.get(ctx, key.clone()).boxify()
+                    }
+
+                    Some(mode) => {
+                        let blobstore =
+                            new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
+                        let blobstore = match no_prefix {
+                            false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
+                            true => PrefixBlobstore::new(blobstore, empty_prefix),
+                        };
+                        let blobstore = CensoredBlob::new(blobstore, censored_blobs);
+                        get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+                    }
+                }
             }
-        }
-    })
-    .boxify()
+        })
+        .map(move |value| {
+            println!("{:?}", value);
+            if let Some(value) = value {
+                let decode_as = decode_as.as_ref().and_then(|val| {
+                    let val = val.as_str();
+                    if val == "auto" {
+                        detect_decode(&key, &logger)
+                    } else {
+                        Some(val)
+                    }
+                });
+
+                match decode_as {
+                    Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
+                    Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
+                    Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
+                    // TODO: (rain1) T30974137 add a better way to print out file contents
+                    Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
+                    _ => (),
+                }
+            }
+        })
+        .boxify()
 }
 
 fn display<T>(res: &Result<T>)

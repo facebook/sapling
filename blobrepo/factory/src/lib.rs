@@ -26,7 +26,7 @@ use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
     dummy::DummyLease, new_cachelib_blobstore_no_lease, new_memcache_blobstore, MemcacheOps,
 };
-use censoredblob::{CensoredBlob, SqlCensoredContentStore};
+use censoredblob::SqlCensoredContentStore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
@@ -209,15 +209,22 @@ fn do_open_blobrepo<T: SqlFactory>(
         });
 
     uncensored_blobstore.join(censored_blobs).and_then(
-        move |(uncensored_blobstore, censored_blobs)| {
-            let blobstore = Arc::new(CensoredBlob::new(uncensored_blobstore, censored_blobs));
-
-            match caching {
-                Caching::Disabled => new_development(logger, &sql_factory, blobstore, repoid),
-                Caching::Enabled => {
-                    new_production(logger, &sql_factory, blobstore, repoid, bookmarks_cache_ttl)
-                }
-            }
+        move |(uncensored_blobstore, censored_blobs)| match caching {
+            Caching::Disabled => new_development(
+                logger,
+                &sql_factory,
+                uncensored_blobstore,
+                censored_blobs,
+                repoid,
+            ),
+            Caching::Enabled => new_production(
+                logger,
+                &sql_factory,
+                uncensored_blobstore,
+                censored_blobs,
+                repoid,
+                bookmarks_cache_ttl,
+            ),
         },
     )
 }
@@ -343,6 +350,7 @@ pub fn new_memblob_empty(
         logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
         Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
         blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
+        None,
         Arc::new(
             SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
@@ -366,6 +374,7 @@ fn new_development<T: SqlFactory>(
     logger: Logger,
     sql_factory: &T,
     blobstore: Arc<Blobstore>,
+    censored_blobs: HashMap<String, String>,
     repoid: RepositoryId,
 ) -> Result<BlobRepo> {
     let bookmarks: Arc<SqlBookmarks> = sql_factory
@@ -385,6 +394,7 @@ fn new_development<T: SqlFactory>(
         logger,
         bookmarks,
         blobstore,
+        Some(censored_blobs),
         filenodes,
         changesets,
         bonsai_hg_mapping,
@@ -399,6 +409,7 @@ fn new_production<T: SqlFactory>(
     logger: Logger,
     sql_factory: &T,
     blobstore: Arc<Blobstore>,
+    censored_blobs: HashMap<String, String>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
@@ -462,6 +473,7 @@ fn new_production<T: SqlFactory>(
         logger,
         bookmarks,
         blobstore,
+        censored_blobs,
         Arc::new(filenodes),
         changesets,
         Arc::new(bonsai_hg_mapping),

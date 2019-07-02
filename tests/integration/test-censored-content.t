@@ -145,7 +145,7 @@ Censore the blacklisted blob (file 'c' contained in commit '064d994d0240')
   $ sqlite3 "$TESTTMP/repo/censored_contents" \
   > "insert into censored_contents \
   > (id, content_key, task, add_timestamp) \
-  > values(0, 'repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2', 'task', 0)";
+  > values(0, 'content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2', 'task', 0)";
 
 Restart mononoke
   $ kill $MONONOKE_PID
@@ -170,13 +170,13 @@ Expect error with a suggestive explanation (the last commit contains a censored 
   remote:     Error while deserializing file contents retrieved from key 'content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2'
   remote:   Root cause:
   remote:     Censored(
-  remote:         "repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
+  remote:         "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
   remote:         "task",
   remote:     )
   remote:   Caused by:
   remote:     While fetching content blob
   remote:   Caused by:
-  remote:     The blob repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
+  remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
   remote:      Task/Sev: task
   abort: error downloading file contents:
   'connection closed early for filename * and node *' (glob)
@@ -215,7 +215,7 @@ Should send an error since the blob is blacklisted
   remote:   Root cause:
   remote:     SharedError {
   remote:         error: Compat {
-  remote:             error: Censored("repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2", "task")
+  remote:             error: Censored("content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2", "task")
   remote:             
   remote:             While fetching content blob
   remote:             
@@ -271,13 +271,13 @@ Expect error with a suggestive explanation (the commit contains a censored file)
   remote:     Error while deserializing file contents retrieved from key 'content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2'
   remote:   Root cause:
   remote:     Censored(
-  remote:         "repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
+  remote:         "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
   remote:         "task",
   remote:     )
   remote:   Caused by:
   remote:     While fetching content blob
   remote:   Caused by:
-  remote:     The blob repo0000.content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
+  remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
   remote:      Task/Sev: task
   abort: error downloading file contents:
   'connection closed early for filename * and node *' (glob)
