@@ -200,9 +200,8 @@ pub struct LogRangeIter<'a> {
 }
 
 /// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
-/// Used internally.
 #[derive(PartialEq, Eq, Debug)]
-struct LogMetadata {
+pub struct LogMetadata {
     /// Length of the primary log file.
     primary_len: u64,
 
@@ -1286,7 +1285,7 @@ impl<'a> DoubleEndedIterator for LogRangeIter<'a> {
 impl LogMetadata {
     const HEADER: &'static [u8] = b"meta\0";
 
-    fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
+    pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
         let mut header = vec![0; Self::HEADER.len()];
         reader.read_exact(&mut header)?;
         if header != Self::HEADER {
@@ -1327,7 +1326,7 @@ impl LogMetadata {
         })
     }
 
-    fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+    pub fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
         let mut buf = Vec::new();
         buf.write_vlq(self.primary_len)?;
         buf.write_vlq(self.indexes.len())?;
@@ -1345,7 +1344,7 @@ impl LogMetadata {
         Ok(())
     }
 
-    fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+    pub fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let mut file = fs::OpenOptions::new().read(true).open(path)?;
         let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;
@@ -1353,7 +1352,7 @@ impl LogMetadata {
         Self::read(&mut cur)
     }
 
-    fn write_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+    pub fn write_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut buf = Vec::new();
         self.write(&mut buf)?;
         atomic_write(path, &buf)?;
