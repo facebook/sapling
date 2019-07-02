@@ -277,3 +277,32 @@ when selectivepull is disabled
     "rev": 0
    }
   ]
+
+Clone remote repo with the selectivepull enabled
+  $ cd ..
+
+  $ hg clone --config remotenames.selectivepull=True --config remotenames.selectivepulldefault=master ssh://user@dummy/remoterepo new_localrepo
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  new changesets 1449e7934ec1:0238718db2b1
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd new_localrepo
+
+  $ setconfig remotenames.selectivepull=True
+  $ setconfig remotenames.selectivepullaccessedbookmarks=True
+  $ setconfig remotenames.selectivepulldefault=master
+
+  $ hg book --list-subscriptions
+     default/master            1:0238718db2b1
+     default/thirdbook         0:1449e7934ec1
+
+Check remote bookmarks after push
+  $ echo "new commit to push" >> pushsh
+  $ hg commit -qAm "push commit"
+  $ hg push -r . --to master -q
+  $ hg book --list-subscriptions
+     default/master            2:a81520e7283a
+     default/thirdbook         0:1449e7934ec1
