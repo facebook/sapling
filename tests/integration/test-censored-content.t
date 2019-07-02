@@ -141,11 +141,15 @@ Update blacklisted blob
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Censore the blacklisted blob (file 'c' contained in commit '064d994d0240')
-  $ sqlite3 "$TESTTMP/repo/censored_contents" \
-  > "insert into censored_contents \
-  > (content_key, task, add_timestamp) \
-  > values('content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2', 'task', 0)";
+  $ hg log -T '{node}\n'
+  bbb84cdc8ec039fe71d78a3adb6f5cf244fafb6a
+  064d994d0240f9738dba1ef7479f0a4ce8486b05
+  14961831bd3af3a6331fef7e63367d61cb6c9f6b
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90
+
+Censore the blacklisted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
+  $ mononoke_admin blacklist --hash 064d994d0240f9738dba1ef7479f0a4ce8486b05 --task "my_task" c
+  * using repo "repo" repoid RepositoryId(0) (glob)
 
 Restart mononoke
   $ kill $MONONOKE_PID
@@ -171,13 +175,13 @@ Expect error with a suggestive explanation (the last commit contains a censored 
   remote:   Root cause:
   remote:     Censored(
   remote:         "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
-  remote:         "task",
+  remote:         "my_task",
   remote:     )
   remote:   Caused by:
   remote:     While fetching content blob
   remote:   Caused by:
   remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
-  remote:      Task/Sev: task
+  remote:      Task/Sev: my_task
   abort: error downloading file contents:
   'connection closed early for filename * and node *' (glob)
   [255]
@@ -215,7 +219,7 @@ Should send an error since the blob is blacklisted
   remote:   Root cause:
   remote:     SharedError {
   remote:         error: Compat {
-  remote:             error: Censored("content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2", "task")
+  remote:             error: Censored("content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2", "my_task")
   remote:             
   remote:             While fetching content blob
   remote:             
@@ -272,13 +276,13 @@ Expect error with a suggestive explanation (the commit contains a censored file)
   remote:   Root cause:
   remote:     Censored(
   remote:         "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
-  remote:         "task",
+  remote:         "my_task",
   remote:     )
   remote:   Caused by:
   remote:     While fetching content blob
   remote:   Caused by:
   remote:     The blob content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2 is censored. 
-  remote:      Task/Sev: task
+  remote:      Task/Sev: my_task
   abort: error downloading file contents:
   'connection closed early for filename * and node *' (glob)
   [255]

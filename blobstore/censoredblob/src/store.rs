@@ -7,8 +7,7 @@
 #![deny(warnings)]
 use failure_ext::Error;
 use futures::future::Future;
-use futures_ext::BoxFuture;
-use futures_ext::FutureExt;
+use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::Timestamp;
 use sql::{queries, Connection};
 use std::collections::HashMap;

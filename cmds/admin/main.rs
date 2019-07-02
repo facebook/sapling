@@ -253,22 +253,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(true),
         )
-        .arg(
-            Arg::with_name("files-list")
-                .help("list of files")
-                .long("files-list")
-                .short("fl")
-                .required(true)
-                .takes_value(true)
-                .multiple(true),
-        )
-        .arg(
-            Arg::with_name("message")
-                .help("blacklist message")
-                .short("m")
-                .takes_value(true)
-                .required(true),
-        );
+        .args_from_usage(
+            r#"
+                <FILES_LIST>...                             'list of files to be be censored'
+                "#,
+            );
 
     let app = args::MononokeApp {
         safe_writes: false,
