@@ -47,6 +47,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         m.add(py, "ResponseError", ResponseError::type_object(py))?;
         m.add(py, "CurlError", CurlError::type_object(py))?;
         m.add(py, "HttpError", HttpError::type_object(py))?;
+        m.add(py, "ProxyError", ProxyError::type_object(py))?;
         m.add(
             py,
             "SerializationError",

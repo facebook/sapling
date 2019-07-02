@@ -12,6 +12,11 @@ from edenscm.mercurial.i18n import _
 from edenscmnative.bindings import edenapi
 
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 # Set to True to manually disable HTTPS fetching.
 _disabled = False
 
@@ -128,6 +133,28 @@ def _warnexceptions(ui):
     return decorator
 
 
+def _retryonerror(ui, exctypes, maxtries=3):
+    """Decorator retries the wrapped function if one of the
+       listed exception types is raised.
+    """
+
+    def decorator(func):
+        def wrapped(*args, **kwargs):
+            for i in xrange(maxtries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if type(e) not in exctypes or i == maxtries - 1:
+                        raise e
+                    if debug(ui):
+                        ui.warn(_("retrying due to exception: "))
+                    logexception(ui, e)
+
+        return wrapped
+
+    return decorator
+
+
 class pyclient(object):
     def __init__(self, ui, repo):
         self._ui = ui
@@ -135,4 +162,6 @@ class pyclient(object):
 
     def __getattr__(self, name):
         method = getattr(self._rustclient, name)
-        return _warnexceptions(self._ui)(method)
+        method = _retryonerror(self._ui, [edenapi.ProxyError])(method)
+        method = _warnexceptions(self._ui)(method)
+        return method
