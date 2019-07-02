@@ -7,7 +7,14 @@ import re
 
 import test_hgsubversion_util
 from edenscm.hgext import rebase
-from edenscm.hgext.hgsubversion import compathacks, svncommands, util, verify, wrappers
+from edenscm.hgext.hgsubversion import (
+    compathacks,
+    svncommands,
+    svnmeta,
+    util,
+    verify,
+    wrappers,
+)
 from edenscm.mercurial import commands, context, hg, node, revlog, util as hgutil
 
 
@@ -224,9 +231,12 @@ missing file: binary3
     def test_svnrebuildmeta(self):
         otherpath = self.load_svndump("binaryfiles-broken.svndump")
         otherurl = test_hgsubversion_util.fileurl(otherpath)
-        self.load_and_fetch("replace_trunk_with_branch.svndump")
+        _, repopath = self.load_and_fetch("replace_trunk_with_branch.svndump")
+        repourl = test_hgsubversion_util.fileurl(repopath)
         # rebuildmeta with original repo
         svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[])
+        # rebuildmeta with original repo explicitly
+        svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[repourl])
         # rebuildmeta with unrelated repo
         self.assertRaises(
             hgutil.Abort,
@@ -266,6 +276,67 @@ missing file: binary3
         self.assertEqual(
             list(repo.revs("svnrev(%s)" % orig_tip_svn_rev)), [new_tip_rev]
         )
+
+    def test_svn_reposubdir_config(self):
+        otherpath = self.load_svndump("binaryfiles-broken.svndump")
+        otherurl = test_hgsubversion_util.fileurl(otherpath)
+        _, repopath = self.load_and_fetch(
+            "subdir_is_file_prefix.svndump", subdir="flaf"
+        )
+        repourl = test_hgsubversion_util.fileurl(repopath)
+        ui = self.ui()
+
+        # rebuildmeta with original repo
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[repourl])
+        old_subdir = svnmeta.SVNMeta(self.repo).subdir
+        # remove metadata, rebuild with a wrong subdir config
+        # this should raise
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
+        ui.setconfig("hgsubversion", "reposubdir", "new_wrong_subdir")
+        self.assertRaises(
+            AssertionError,
+            svncommands.rebuildmeta,
+            ui=ui,
+            repo=self.repo,
+            args=[repourl],
+        )
+        # remove metadata, rebuild with the correct subdir config
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
+        ui.setconfig("hgsubversion", "reposubdir", old_subdir)
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[repourl])
+        new_subdir = svnmeta.SVNMeta(self.repo).subdir
+        self.assertEqual(old_subdir, new_subdir)
+        # remove metadata, rebuild with the correct subdir config, with a unrealted url
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
+        ui.setconfig("hgsubversion", "reposubdir", old_subdir)
+        ui.setconfig("hgsubversion", "repouuid", "924a052a-5e5a-4a8e-a677-da5565bec340")
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[otherurl])
+        another_subdir = svnmeta.SVNMeta(self.repo).subdir
+        self.assertEqual(old_subdir, another_subdir)
+
+    def test_svn_repouuid_config(self):
+        otherpath = self.load_svndump("binaryfiles-broken.svndump")
+        otherurl = test_hgsubversion_util.fileurl(otherpath)
+        _, repopath = self.load_and_fetch("replace_trunk_with_branch.svndump")
+        repourl = test_hgsubversion_util.fileurl(repopath)
+        # rebuildmeta with original repo
+        svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[])
+        # updatemeta with the wrong, pre-configured uuid
+        ui = self.ui()
+        ui.setconfig("hgsubversion", "repouuid", "a wrong uuid")
+        self.assertRaises(
+            hgutil.Abort, svncommands.updatemeta, ui=ui, repo=self.repo, args=[repourl]
+        )
+        # updatemeta with the right, pre-configured uuid
+        ui.setconfig("hgsubversion", "repouuid", "5b65bade-98f3-4993-a01f-b7a6710da339")
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[repourl])
+        # updatemeta with the right, pre-configured uuid, and unrelated repo
+        ui.setconfig("hgsubversion", "repouuid", "5b65bade-98f3-4993-a01f-b7a6710da339")
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[otherurl])
+        # updatemeta with empty meta
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
+        ui.setconfig("hgsubversion", "repouuid", "5b65bade-98f3-4993-a01f-b7a6710da339")
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[otherurl])
 
 
 if __name__ == "__main__":
