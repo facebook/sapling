@@ -17,7 +17,9 @@ use std::{env, path::Path};
 fn main() {
     for arg in env::args().skip(1) {
         let path = Path::new(&arg);
-        if path.is_dir() {
+        if let Ok(meta) = indexedlog::log::LogMetadata::read_file(path) {
+            println!("Metadata File {:?}\n{:?}\n", path, meta);
+        } else if path.is_dir() {
             // Treate it as Log.
             let log = indexedlog::log::Log::open(path, Vec::new()).unwrap();
             println!("Log Directory {:?}:\n{:#?}\n", path, log);
