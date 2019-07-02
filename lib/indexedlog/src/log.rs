@@ -385,7 +385,7 @@ impl Log {
     pub fn sync(&mut self) -> Fallible<u64> {
         // Read-only fast path - no need to take directory lock.
         if self.mem_buf.is_empty() {
-            let meta = Self::load_meta(&self.dir, false)?;
+            let meta = Self::load_or_create_meta(&self.dir, false)?;
             let changed = self.meta != meta;
             // No need to reload anything if metadata hasn't changed.
             if changed {
@@ -408,7 +408,7 @@ impl Log {
         let _lock = ScopedFileLock::new(&mut dir_file, true)?;
 
         // Step 1: Reload metadata to get the latest view of the files.
-        let mut meta = Self::load_meta(&self.dir, false)?;
+        let mut meta = Self::load_or_create_meta(&self.dir, false)?;
         let changed = self.meta != meta;
 
         if changed && self.open_options.flush_filter.is_some() {
@@ -729,7 +729,7 @@ impl Log {
     ///
     /// The caller should ensure the directory exists and take a lock on it to
     /// avoid filesystem races.
-    fn load_meta(dir: &Path, create: bool) -> Fallible<LogMetadata> {
+    fn load_or_create_meta(dir: &Path, create: bool) -> Fallible<LogMetadata> {
         let meta_path = dir.join(META_FILE);
         match LogMetadata::read_file(&meta_path) {
             Err(err) => {
@@ -1124,13 +1124,13 @@ impl OpenOptions {
     fn open_internal(self, dir: &Path, reuse_indexes: Option<Vec<Index>>) -> Fallible<Log> {
         let create = self.create;
 
-        let meta = Log::load_meta(dir, false).or_else(|_| {
+        let meta = Log::load_or_create_meta(dir, false).or_else(|_| {
             if create {
                 fs::create_dir_all(dir)?;
                 // Make sure check and write happens atomically.
                 let mut dir_file = open_dir(dir)?;
                 let _lock = ScopedFileLock::new(&mut dir_file, true)?;
-                Log::load_meta(dir, true)
+                Log::load_or_create_meta(dir, true)
             } else {
                 Err(io::Error::new(
                     io::ErrorKind::NotFound,
