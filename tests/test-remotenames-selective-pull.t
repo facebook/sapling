@@ -1,12 +1,8 @@
   $ setconfig extensions.treemanifest=!
-Set up repos
+  $ enable remotenames
+  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
 
-  $ cat >> $HGRCPATH << EOF
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
-  > [extensions]
-  > remotenames=
-  > EOF
+Set up repos
   $ hg init remoterepo
   $ hg clone -q ssh://user@dummy/remoterepo localrepo
 
@@ -30,11 +26,9 @@ Pull master bookmark
      default/master            0:1449e7934ec1
 
 Set up selective pull
-  $ cat >> .hg/hgrc << EOF
-  > [remotenames]
-  > selectivepull=True
-  > selectivepulldefault=master
-  > EOF
+  $ setconfig remotenames.selectivepull=True
+  $ setconfig remotenames.selectivepullaccessedbookmarks=True
+  $ setconfig remotenames.selectivepulldefault=master
 
 Create another bookmark on the remote repo
   $ cd ../remoterepo
@@ -210,11 +204,10 @@ Make another clone with selectivepull disabled
      default/thirdbook         0:1449e7934ec1
 
 Enable selectivepull and make a pull. Make sure only master bookmark is left
-  $ cat >> .hg/hgrc << EOF
-  > [remotenames]
-  > selectivepull=True
-  > selectivepulldefault=master
-  > EOF
+  $ setconfig remotenames.selectivepull=True
+  $ setconfig remotenames.selectivepullaccessedbookmarks=True
+  $ setconfig remotenames.selectivepulldefault=master
+
   $ hg pull -q
   $ hg book --list-subscriptions
      default/master            2:0238718db2b1
@@ -236,10 +229,8 @@ Check that log shows the hint about selective pull
   [255]
 
 Set two bookmarks in selectivepulldefault, make sure both of them were pulled
-  $ cat >> .hg/hgrc << EOF
-  > [remotenames]
-  > selectivepulldefault=master,thirdbook
-  > EOF
+  $ setconfig "remotenames.selectivepulldefault=master,thirdbook"
+
   $ rm .hg/selectivepullenabled
   $ hg pull -q
   $ hg book --list-subscriptions

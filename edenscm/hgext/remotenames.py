@@ -191,7 +191,18 @@ def _getselectivepullinitbookmarks(repo, remote):
     initbooks = set(_getselectivepulldefaultbookmarks(repo.ui))
 
     vfs = repo.sharedvfs
-    accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
+    try:
+        accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
+    except error.CorruptedState:
+        # if the file is corrupted, let's remove it
+        repo.ui.warn(
+            _(
+                "'selectivepullaccessedbookmarks' file was corrupted, removing it and proceeding further\n"
+            )
+        )
+        with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
+            vfs.unlink(_selectivepullaccessedbookmarks)
+
     for node, nametype, remotepath, name in accessedbooks:
         if nametype == "bookmarks" and remotepath == remote:
             initbooks.add(name)
@@ -290,15 +301,7 @@ def expull(orig, repo, remote, heads=None, force=False, **kwargs):
         # "hg update REMOTE_BOOK_NAME" or "hg pull -B REMOTE_BOOK_NAME".
         # Selectivepull is helpful when server has too many remote bookmarks
         # because it may slow down clients.
-        remotebookmarkslist = []
-        if _isselectivepullenabledforremote(repo, path):
-            # 'selectivepullenabled' file is used for transition between
-            # non-selectivepull repo to selectivepull repo. It is used as
-            # indicator to whether "non-interesting" bookmarks were removed
-            # from remotenames file.
-            remotebookmarkslist = list(readbookmarknames(repo, path))
-        if not remotebookmarkslist:
-            remotebookmarkslist = _getselectivepullinitbookmarks(repo, path)
+        remotebookmarkslist = list(_getselectivepullinitbookmarks(repo, path))
 
         if kwargs.get("bookmarks"):
             remotebookmarkslist.extend(kwargs["bookmarks"])
