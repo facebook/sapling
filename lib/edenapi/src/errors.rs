@@ -179,7 +179,11 @@ impl From<&str> for ApiError {
 
 impl From<curl::Error> for ApiError {
     fn from(error: curl::Error) -> Self {
-        error.context(ApiErrorKind::Curl).into()
+        if error.is_ssl_connect_error() {
+            error.context(ApiErrorKind::Tls).into()
+        } else {
+            error.context(ApiErrorKind::Curl).into()
+        }
     }
 }
 
