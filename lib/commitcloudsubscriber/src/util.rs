@@ -3,15 +3,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error::*;
+use crate::error::*;
+use crate::subscriber::Subscription;
 use failure::Fallible;
 use ini::Ini;
-use std::{fs, io};
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use subscriber::Subscription;
+use std::{fs, io};
 
 #[cfg(unix)]
 use std::process::Command;

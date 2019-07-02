@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error::*;
+use crate::error::*;
 use failure::Fallible;
 use std::path::Path;
 use std::process::{Command, Stdio};

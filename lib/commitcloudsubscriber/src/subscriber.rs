@@ -3,23 +3,25 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use action::CloudSyncTrigger;
-use config::CommitCloudConfig;
-use error::*;
+use crate::action::CloudSyncTrigger;
+use crate::config::CommitCloudConfig;
+use crate::error::*;
+use crate::receiver::CommandName::{
+    self, CommitCloudCancelSubscriptions, CommitCloudRestartSubscriptions,
+    CommitCloudStartSubscriptions,
+};
+use crate::util;
 use eventsource::reqwest::Client;
 use failure::Fallible;
-use receiver::CommandName::{self, CommitCloudCancelSubscriptions, CommitCloudRestartSubscriptions,
-                            CommitCloudStartSubscriptions};
 use reqwest::Url;
 use serde_json;
-use std::{str, thread};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::path::PathBuf;
-use std::sync::{mpsc, Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 use std::time::{Duration, SystemTime};
-use util;
+use std::{str, thread};
 
 #[allow(unused_macros)]
 macro_rules! tinfo {

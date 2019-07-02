@@ -65,7 +65,7 @@ impl TcpReceiverService {
             info!("Listening on port {}", self.port);
             for stream in listener.incoming() {
                 match stream {
-                    Ok(mut stream) => {
+                    Ok(stream) => {
                         match serde_json::from_reader::<_, Command>(stream) {
                             Ok(command) => {
                                 let command_name = serde_json::to_string(&(command.0).0)
