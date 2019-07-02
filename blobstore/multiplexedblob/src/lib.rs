@@ -9,7 +9,7 @@
 pub mod base;
 pub mod queue;
 
-pub use crate::queue::MultiplexedBlobstore;
+pub use crate::queue::{MultiplexedBlobstore, ScrubBlobstore};
 
 #[cfg(test)]
 mod test;

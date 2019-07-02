@@ -12,12 +12,13 @@ use failure_ext::{Error, Fail};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
+use itertools::{Either, Itertools};
 use lazy_static::lazy_static;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use scuba::{ScubaClient, ScubaSample};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
 use std::sync::{
@@ -54,12 +55,25 @@ lazy_static! {
     };
 }
 
+type BlobstoresWithEntry = HashSet<BlobstoreId>;
+type BlobstoresReturnedNone = HashSet<BlobstoreId>;
+type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
+
 #[derive(Fail, Debug, Clone)]
 pub enum ErrorKind {
     #[fail(display = "Some blobstores failed, and other returned None: {:?}", _0)]
-    SomeFailedOthersNone(Arc<HashMap<BlobstoreId, Error>>),
+    SomeFailedOthersNone(Arc<BlobstoresReturnedError>),
     #[fail(display = "All blobstores failed: {:?}", _0)]
-    AllFailed(Arc<HashMap<BlobstoreId, Error>>),
+    AllFailed(Arc<BlobstoresReturnedError>),
+    // Errors below this point are from ScrubBlobstore only. If they include an
+    // Option<BlobstoreBytes>, this implies that this error is recoverable
+    #[fail(
+        display = "Different blobstores have different values for this item: {:?} differ, {:?} do not have",
+        _0, _1
+    )]
+    ValueMismatch(Arc<BlobstoresWithEntry>, Arc<BlobstoresReturnedNone>),
+    #[fail(display = "Some blobstores missing this item: {:?}", _0)]
+    SomeMissingItem(Arc<BlobstoresReturnedNone>, Option<BlobstoreBytes>),
 }
 
 /// This handler is called on each successful put to underlying blobstore,
@@ -92,24 +106,23 @@ impl MultiplexedBlobstoreBase {
             scuba_logger,
         }
     }
-}
 
-fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
-    match err.into_inner() {
-        Some(err) => err,
-        None => err_msg("blobstore operation timeout"),
-    }
-}
-
-impl Blobstore for MultiplexedBlobstoreBase {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
-        let requests: Vec<_> = self
-            .blobstores
+    fn get_from_all(
+        &self,
+        ctx: &CoreContext,
+        key: &String,
+        operation: &'static str,
+        should_log: bool,
+    ) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreBytes>), (BlobstoreId, Error)>> {
+        self.blobstores
             .iter()
             .map(|&(blobstore_id, ref blobstore)| {
                 blobstore
                     .get(ctx.clone(), key.clone())
+                    .map({
+                        cloned!(blobstore_id);
+                        move |val| (blobstore_id, val)
+                    })
                     .timeout(REQUEST_TIMEOUT)
                     .map_err({
                         cloned!(blobstore_id);
@@ -123,11 +136,12 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 return future::ok(());
                             }
 
-                            if let (Ok(Some(data)), Some(ref scuba_logger)) = (result, scuba_logger)
+                            if let (Ok((_, Some(data))), Some(ref scuba_logger)) =
+                                (result, scuba_logger)
                             {
                                 let mut sample = ScubaSample::new();
                                 sample
-                                    .add("operation", "get")
+                                    .add("operation", operation)
                                     .add("blobstore_id", blobstore_id)
                                     .add("size", data.len())
                                     .add(
@@ -143,13 +157,13 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 }
 
                                 match result {
-                                    Ok(Some(data)) => {
+                                    Ok((_, Some(data))) => {
                                         sample.add("size", data.len());
                                     }
                                     Err((_, error)) => {
                                         sample.add("error", error.to_string());
                                     }
-                                    Ok(None) => {}
+                                    Ok((_, None)) => {}
                                 }
                                 scuba_logger.log(&sample);
                             }
@@ -158,7 +172,75 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         }
                     })
             })
-            .collect();
+            .collect()
+    }
+
+    pub fn scrub_get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
+
+        let requests = self
+            .get_from_all(&ctx, &key, "scrub_get", should_log)
+            .into_iter()
+            .map(|f| f.then(|r| Ok(r)));
+        future::join_all(requests)
+            .and_then(|results| {
+                let (successes, errors): (HashMap<_, _>, HashMap<_, _>) =
+                    results.into_iter().partition_map(|r| match r {
+                        Ok(v) => Either::Left(v),
+                        Err(v) => Either::Right(v),
+                    });
+
+                if successes.is_empty() {
+                    future::err(ErrorKind::AllFailed(errors.into()).into())
+                } else {
+                    let mut best_value = None;
+                    let mut missing = HashSet::new();
+                    let mut answered = HashSet::new();
+                    let mut all_same = true;
+
+                    for (blobstore_id, value) in successes.into_iter() {
+                        if value.is_none() {
+                            missing.insert(blobstore_id);
+                        } else {
+                            answered.insert(blobstore_id);
+                        }
+                        if best_value.is_none() {
+                            best_value = value;
+                        } else if value != best_value {
+                            all_same = false;
+                        }
+                    }
+
+                    match (all_same, missing.is_empty() && best_value.is_some()) {
+                        (false, _) => future::err(
+                            ErrorKind::ValueMismatch(Arc::new(answered), Arc::new(missing)).into(),
+                        ),
+                        (true, false) => future::err(
+                            ErrorKind::SomeMissingItem(Arc::new(missing), best_value).into(),
+                        ),
+                        (true, true) => future::ok(best_value),
+                    }
+                }
+            })
+            .boxify()
+    }
+}
+
+fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
+    match err.into_inner() {
+        Some(err) => err,
+        None => err_msg("blobstore operation timeout"),
+    }
+}
+
+impl Blobstore for MultiplexedBlobstoreBase {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        let should_log = thread_rng().gen::<f32>() > SAMPLING_THRESHOLD;
+        let requests = self.get_from_all(&ctx, &key, "get", should_log);
         let state = (
             requests,                             // pending requests
             HashMap::<BlobstoreId, Error>::new(), // previous errors
@@ -168,7 +250,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
             future::select_all(requests).then({
                 move |result| {
                     let requests = match result {
-                        Ok((value @ Some(_), _, requests)) => {
+                        Ok(((_, value @ Some(_)), _, requests)) => {
                             if should_log {
                                 // Allow the other requests to complete so that we can record some
                                 // metrics for the blobstore.
@@ -180,7 +262,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             }
                             return future::ok(Loop::Break(value));
                         }
-                        Ok((None, _, requests)) => requests,
+                        Ok(((_, None), _, requests)) => requests,
                         Err(((blobstore_id, error), _, requests)) => {
                             errors.insert(blobstore_id, error);
                             requests

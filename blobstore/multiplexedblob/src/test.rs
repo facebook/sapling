@@ -8,22 +8,20 @@ use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
+use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
+use crate::queue::{MultiplexedBlobstore, ScrubBlobstore};
 use async_unit;
+use blobstore::Blobstore;
+use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
+use context::CoreContext;
 use failure_ext::{err_msg, Error};
 use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;
 use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
-
-use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
-use context::CoreContext;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
-
-use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
-use crate::queue::MultiplexedBlobstore;
 
 pub struct TickBlobstore {
     pub storage: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
@@ -311,6 +309,144 @@ fn multiplexed() {
             bs0.tick(Some("bs0 failed"));
             bs1.tick(Some("bs1 failed"));
             assert!(get_fut.wait().is_err());
+        }
+    });
+}
+
+#[test]
+fn scrubbed() {
+    async_unit::tokio_unit_test(|| {
+        let repoid = RepositoryId::new(0);
+        let ctx = CoreContext::test_mock();
+        let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
+
+        let bid0 = BlobstoreId::new(0);
+        let bs0 = Arc::new(TickBlobstore::new());
+        let bid1 = BlobstoreId::new(1);
+        let bs1 = Arc::new(TickBlobstore::new());
+        let bs = ScrubBlobstore::new(
+            repoid,
+            vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+            queue.clone(),
+            None,
+        );
+
+        // non-existing key when one blobstore failing
+        {
+            let k0 = String::from("k0");
+
+            let mut get_fut = bs.get(ctx.clone(), k0.clone());
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+
+            bs0.tick(None);
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+
+            bs1.tick(Some("bs1 failed"));
+            assert_eq!(get_fut.wait().unwrap(), None, "None/Err no replication");
+        }
+
+        // only replica containing key failed
+        {
+            let k1 = String::from("k1");
+            let v1 = make_value("v1");
+
+            let mut put_fut = bs.put(ctx.clone(), k1.clone(), v1.clone());
+            assert_eq!(put_fut.poll().unwrap(), Async::NotReady);
+            bs0.tick(None);
+            bs1.tick(Some("bs1 failed"));
+            put_fut.wait().unwrap();
+
+            match queue
+                .get(ctx.clone(), repoid, k1.clone())
+                .wait()
+                .unwrap()
+                .as_slice()
+            {
+                [entry] => assert_eq!(entry.blobstore_id, bid0, "Queue bad"),
+                _ => panic!("only one entry expected"),
+            }
+
+            let mut get_fut = bs.get(ctx.clone(), k1.clone());
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+            bs0.tick(Some("bs0 failed"));
+            bs1.tick(None);
+            assert!(get_fut.wait().is_err(), "None/Err while replicating");
+        }
+
+        // both replicas fail
+        {
+            let k2 = String::from("k2");
+
+            let mut get_fut = bs.get(ctx.clone(), k2.clone());
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+            bs0.tick(Some("bs0 failed"));
+            bs1.tick(Some("bs1 failed"));
+            assert!(get_fut.wait().is_err(), "Err/Err");
+        }
+
+        // Now replace bs1 with an empty blobstore, and see the scrub work
+        let bid1 = BlobstoreId::new(1);
+        let bs1 = Arc::new(TickBlobstore::new());
+        let bs = ScrubBlobstore::new(
+            repoid,
+            vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+            queue.clone(),
+            None,
+        );
+
+        // Non-existing key in both blobstores, new blobstore failing
+        {
+            let k0 = String::from("k0");
+
+            let mut get_fut = bs.get(ctx.clone(), k0.clone());
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+
+            bs0.tick(None);
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+
+            bs1.tick(Some("bs1 failed"));
+            assert_eq!(get_fut.wait().unwrap(), None, "None/Err after replacement");
+        }
+
+        // only replica containing key replaced after failure - DATA LOST
+        {
+            let k1 = String::from("k1");
+
+            let mut get_fut = bs.get(ctx.clone(), k1.clone());
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+            bs0.tick(Some("bs0 failed"));
+            bs1.tick(None);
+            assert!(get_fut.wait().is_err(), "Empty replacement against error");
+        }
+
+        // One working replica after failure. TODO: When scrub happens properly, check queue instead
+        // of assuming an error case.
+        {
+            let k1 = String::from("k1");
+
+            match queue
+                .get(ctx.clone(), repoid, k1.clone())
+                .wait()
+                .unwrap()
+                .as_slice()
+            {
+                [entry] => {
+                    assert_eq!(entry.blobstore_id, bid0, "Queue bad");
+                    queue
+                        .del(ctx.clone(), vec![entry.clone()])
+                        .wait()
+                        .expect("Could not delete scrub queue entry");
+                }
+                _ => panic!("only one entry expected"),
+            }
+
+            let mut get_fut = bs.get(ctx.clone(), k1.clone());
+            assert_eq!(get_fut.poll().unwrap(), Async::NotReady);
+            bs0.tick(None);
+            bs1.tick(None);
+            // TODO: Once we scrub properly, this will succeed
+            assert!(get_fut.wait().is_err(), "Got from working replica");
+            // TODO: Check queue here to ensure that bs1 is now scheduled for healing
         }
     });
 }

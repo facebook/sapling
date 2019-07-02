@@ -4,35 +4,32 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fmt;
-use std::sync::Arc;
-
+use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
+use blobstore::Blobstore;
+use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use cloned::cloned;
+use context::CoreContext;
 use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use scuba::ScubaClient;
-
-use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
-use context::CoreContext;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-
-use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
+use scuba::ScubaClient;
+use std::fmt;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MultiplexedBlobstore {
     repo_id: RepositoryId,
     blobstore: Arc<MultiplexedBlobstoreBase>,
-    queue: Arc<dyn BlobstoreSyncQueue>,
+    queue: Arc<BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstore {
     pub fn new(
         repo_id: RepositoryId,
-        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
-        queue: Arc<dyn BlobstoreSyncQueue>,
+        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
+        queue: Arc<BlobstoreSyncQueue>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
@@ -61,7 +58,7 @@ impl fmt::Debug for MultiplexedBlobstore {
 
 struct QueueBlobstorePutHandler {
     repo_id: RepositoryId,
-    queue: Arc<dyn BlobstoreSyncQueue>,
+    queue: Arc<BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
@@ -143,5 +140,84 @@ impl Blobstore for MultiplexedBlobstore {
                 }
             })
             .boxify()
+    }
+}
+
+#[derive(Clone)]
+pub struct ScrubBlobstore {
+    inner: MultiplexedBlobstore,
+}
+
+impl ScrubBlobstore {
+    pub fn new(
+        repo_id: RepositoryId,
+        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
+        queue: Arc<BlobstoreSyncQueue>,
+        scuba_logger: Option<Arc<ScubaClient>>,
+    ) -> Self {
+        let inner = MultiplexedBlobstore::new(repo_id, blobstores, queue, scuba_logger);
+        Self { inner }
+    }
+}
+
+impl fmt::Debug for ScrubBlobstore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ScrubBlobstore")
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
+impl Blobstore for ScrubBlobstore {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.inner
+            .blobstore
+            .scrub_get(ctx.clone(), key.clone())
+            .then({
+                let inner = &self.inner;
+                cloned!(inner.repo_id, inner.queue);
+                move |result| {
+                    match result {
+                        Ok(value) => future::ok(value).left_future(),
+                        Err(mut error) => {
+                            let (some_none, value) = match error.downcast_mut() {
+                                Some(ErrorKind::SomeFailedOthersNone(_)) => (true, None),
+                                Some(ErrorKind::SomeMissingItem(has_none, value)) => {
+                                    (!has_none.is_empty(), value.take())
+                                }
+                                _ => return future::err(error).left_future(),
+                            };
+                            queue
+                                .get(ctx, repo_id, key)
+                                .and_then(move |entries| {
+                                    match (entries.is_empty(), value.is_some(), some_none) {
+                                        // No sync in progress, got None + Error. Assume OK
+                                        (true, false, _) => Ok(None),
+                                        // Sync in progress, got None as best result. Uh-oh
+                                        (false, false, _) => Err(error),
+                                        // No sync in progress, got Some + None (+ possibly Error).
+                                        // Error for now, but should schedule a sync
+                                        // TODO: Should schedule a sync here to fix Some + None. then return Ok
+                                        (true, true, true) => Err(error),
+                                        // No sync in progress, got Some + Error. Assume OK
+                                        (true, true, false) => Ok(value),
+                                        // Sync in progress. Mix of Some/None/Error is OK
+                                        (false, true, _) => Ok(value),
+                                    }
+                                })
+                                .right_future()
+                        }
+                    }
+                }
+            })
+            .boxify()
+    }
+
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        self.inner.put(ctx, key, value)
+    }
+
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.inner.is_present(ctx, key)
     }
 }

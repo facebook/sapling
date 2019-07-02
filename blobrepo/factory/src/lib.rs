@@ -39,7 +39,7 @@ use metaconfig_types::{
     self, BlobConfig, Censoring, MetadataDBConfig, ShardedFilenodesParams, StorageConfig,
 };
 use mononoke_types::RepositoryId;
-use multiplexedblob::MultiplexedBlobstore;
+use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore};
 use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
@@ -51,6 +51,12 @@ use std::iter::FromIterator;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Caching {
+    Enabled,
+    Disabled,
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum Scrubbing {
     Enabled,
     Disabled,
 }
@@ -152,7 +158,7 @@ impl SqlFactory for SqliteFactory {
 /// configure a local blobstore with a remote db, or vice versa. There's no error checking
 /// at this level (aside from disallowing a multiplexed blobstore with a local db).
 pub fn open_blobrepo(
-    logger: slog::Logger,
+    logger: Logger,
     storage_config: StorageConfig,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
@@ -249,7 +255,7 @@ fn make_blobstore<T: SqlFactory>(
     blobconfig: &BlobConfig,
     sql_factory: &T,
     myrouter_port: Option<u16>,
-) -> BoxFuture<Arc<Blobstore>, Error> {
+) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
 
     match blobconfig {
@@ -319,7 +325,6 @@ fn make_blobstore<T: SqlFactory>(
             blobstores,
         } => {
             let queue: Result<Arc<SqlBlobstoreSyncQueue>> = sql_factory.open();
-
             let components: Vec<_> = blobstores
                 .iter()
                 .map({
@@ -338,17 +343,51 @@ fn make_blobstore<T: SqlFactory>(
                     move |queue| {
                         future::join_all(components).map({
                             move |components| {
-                                MultiplexedBlobstore::new(
+                                Arc::new(MultiplexedBlobstore::new(
                                     repoid,
                                     components,
                                     queue,
                                     scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
-                                )
+                                )) as Arc<dyn Blobstore>
                             }
                         })
                     }
                 })
-                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
+                .boxify()
+        }
+        Scrub {
+            scuba_table,
+            blobstores,
+        } => {
+            let queue: Result<Arc<SqlBlobstoreSyncQueue>> = sql_factory.open();
+            let components: Vec<_> = blobstores
+                .iter()
+                .map({
+                    move |(blobstoreid, config)| {
+                        cloned!(blobstoreid);
+                        make_blobstore(repoid, config, sql_factory, myrouter_port)
+                            .map({ move |store| (blobstoreid, store) })
+                    }
+                })
+                .collect();
+
+            queue
+                .into_future()
+                .and_then({
+                    cloned!(scuba_table);
+                    move |queue| {
+                        future::join_all(components).map({
+                            move |components| {
+                                Arc::new(ScrubBlobstore::new(
+                                    repoid,
+                                    components,
+                                    queue,
+                                    scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
+                                )) as Arc<dyn Blobstore>
+                            }
+                        })
+                    }
+                })
                 .boxify()
         }
     }
@@ -357,7 +396,7 @@ fn make_blobstore<T: SqlFactory>(
 /// Used by tests
 pub fn new_memblob_empty(
     logger: Option<Logger>,
-    blobstore: Option<Arc<Blobstore>>,
+    blobstore: Option<Arc<dyn Blobstore>>,
 ) -> Result<BlobRepo> {
     Ok(BlobRepo::new(
         logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),

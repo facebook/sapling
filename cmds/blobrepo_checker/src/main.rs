@@ -55,7 +55,7 @@ fn main() {
 
     let ctx = CoreContext::test_mock();
 
-    let repo_fut = args::open_repo(&logger, &matches);
+    let repo_fut = args::open_scrub_repo(&logger, &matches);
 
     let bookmarks: Vec<_> = matches
         .values_of("BOOKMARK")

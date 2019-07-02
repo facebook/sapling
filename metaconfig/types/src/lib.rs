@@ -10,7 +10,9 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-use std::{collections::HashMap, num::NonZeroUsize, path::PathBuf, str, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap, mem, num::NonZeroUsize, path::PathBuf, str, sync::Arc, time::Duration,
+};
 
 use bookmarks::BookmarkName;
 use regex::Regex;
@@ -513,6 +515,13 @@ pub enum BlobConfig {
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, BlobConfig)>,
     },
+    /// Multiplex across multiple blobstores scrubbing for errors
+    Scrub {
+        /// A scuba table I guess
+        scuba_table: Option<String>,
+        /// Set of blobstores being multiplexed over
+        blobstores: Vec<(BlobstoreId, BlobConfig)>,
+    },
 }
 
 impl BlobConfig {
@@ -524,10 +533,33 @@ impl BlobConfig {
         match self {
             Disabled | Files { .. } | Rocks { .. } | Sqlite { .. } => true,
             Manifold { .. } | Gluster { .. } | Mysql { .. } => false,
-            Multiplexed { blobstores, .. } => blobstores
+            Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, config)| config)
                 .all(BlobConfig::is_local),
+        }
+    }
+
+    /// Change all internal blobstores to scrub themselves for errors where possible.
+    /// This maximises error rates, and asks blobstores to silently fix errors when they are able
+    /// to do so - ideal for repository checkers.
+    pub fn set_scrubbed(&mut self) {
+        use BlobConfig::{Multiplexed, Scrub};
+
+        if let Multiplexed {
+            scuba_table,
+            blobstores,
+        } = self
+        {
+            let scuba_table = mem::replace(scuba_table, None);
+            let mut blobstores = mem::replace(blobstores, Vec::new());
+            for (_, store) in blobstores.iter_mut() {
+                store.set_scrubbed();
+            }
+            *self = Scrub {
+                scuba_table,
+                blobstores,
+            };
         }
     }
 }

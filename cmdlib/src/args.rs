@@ -34,7 +34,7 @@ use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, Caching};
+use blobrepo_factory::{open_blobrepo, Caching, Scrubbing};
 use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
@@ -311,7 +311,13 @@ pub fn create_repo<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    open_repo_internal(logger, matches, true, parse_caching(matches))
+    open_repo_internal(
+        logger,
+        matches,
+        true,
+        parse_caching(matches),
+        Scrubbing::Disabled,
+    )
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
@@ -320,7 +326,30 @@ pub fn open_repo<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    open_repo_internal(logger, matches, false, parse_caching(matches))
+    open_repo_internal(
+        logger,
+        matches,
+        false,
+        parse_caching(matches),
+        Scrubbing::Disabled,
+    )
+}
+
+/// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
+/// If there are multiple backing blobstores, open them in scrub mode, where we check that
+/// the blobstore contents all match.
+#[inline]
+pub fn open_scrub_repo<'a>(
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    open_repo_internal(
+        logger,
+        matches,
+        false,
+        parse_caching(matches),
+        Scrubbing::Enabled,
+    )
 }
 
 pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
@@ -634,10 +663,17 @@ fn open_repo_internal<'a>(
     matches: &ArgMatches<'a>,
     create: bool,
     caching: Caching,
+    scrub: Scrubbing,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let repo_id = get_repo_id(matches);
 
-    let (reponame, config) = try_boxfuture!(get_config(matches));
+    let (reponame, config) = {
+        let (reponame, mut config) = try_boxfuture!(get_config(matches));
+        if let Scrubbing::Enabled = scrub {
+            config.storage_config.blobstore.set_scrubbed();
+        }
+        (reponame, config)
+    };
     info!(
         logger,
         "using repo \"{}\" repoid {:?}",
@@ -674,6 +710,9 @@ fn open_repo_internal<'a>(
         } => logger.new(o!["BlobConfig:Mysql" => format!("{} {}", shard_map, shard_num)]),
         BlobConfig::Multiplexed { blobstores, .. } => {
             logger.new(o!["BlobConfig:Multiplexed" => format!("{:?}", blobstores)])
+        }
+        BlobConfig::Scrub { blobstores, .. } => {
+            logger.new(o!["BlobConfig:Scrub" => format!("{:?}", blobstores)])
         }
     };
 
