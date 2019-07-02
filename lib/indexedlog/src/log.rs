@@ -436,15 +436,25 @@ impl Log {
         let primary_path = self.dir.join(PRIMARY_FILE);
         let mut primary_file = fs::OpenOptions::new()
             .read(true)
-            .append(true)
+            .write(true)
             .open(&primary_path)?;
 
-        let physical_len = primary_file.seek(SeekFrom::End(0))?;
-        if physical_len != meta.primary_len {
+        // It's possible that the previous write was interrupted. In that case,
+        // the length of "log" can be longer than the length of "log" stored in
+        // the metadata. Seek to the length specified by the metadata and
+        // overwrite (broken) data.
+        // This breaks the "append-only" property of the physical file. But all
+        // readers use "meta" to decide the length of "log". So "log" is still
+        // append-only as seen by readers, as long as the length specified in
+        // "meta" is append-only (i.e. "meta" is not rewritten to have a smaller
+        // length, and all bytes in the specified length are immutable).
+        // Note: file.set_len might easily fail on Windows due to mmap.
+        let pos = primary_file.seek(SeekFrom::Start(meta.primary_len))?;
+        if pos != meta.primary_len {
             let msg = format!(
-                "log file {} has {} bytes, expected {} bytes",
+                "log file {} has {} bytes, expect at least {} bytes",
                 primary_path.to_string_lossy(),
-                physical_len,
+                pos,
                 meta.primary_len
             );
             return Err(data_error(msg));
@@ -1427,6 +1437,48 @@ mod tests {
         let log_path = dir.path().join("log2");
         let opts = OpenOptions::new().create(false);
         assert!(opts.open(&log_path).is_err());
+    }
+
+    #[test]
+    fn test_incomplete_rewrite() {
+        let dir = tempdir().unwrap();
+        let read_entries = || -> Vec<Vec<u8>> {
+            let log = Log::open(&dir, Vec::new()).unwrap();
+            log.iter()
+                .map(|v| v.map(|v| v.to_vec()))
+                .collect::<Result<Vec<Vec<u8>>, _>>()
+                .unwrap()
+        };
+        let add_noise = |noise: &[u8]| {
+            let mut file = fs::OpenOptions::new()
+                .append(true)
+                .open(dir.path().join("log"))
+                .unwrap();
+            // Emulate an incomplete write with broken data.
+            file.write_all(noise).unwrap();
+        };
+
+        let mut log1 = Log::open(&dir, Vec::new()).unwrap();
+        log1.append(b"abc").unwrap();
+        log1.sync().unwrap();
+        assert_eq!(read_entries(), vec![b"abc"]);
+
+        add_noise(&[0xcc; 1]);
+        assert_eq!(read_entries(), vec![b"abc"]);
+
+        log1.append(b"def").unwrap();
+        log1.sync().unwrap();
+        assert_eq!(read_entries(), vec![b"abc", b"def"]);
+
+        add_noise(&[0xcc; 1000]);
+        assert_eq!(read_entries(), vec![b"abc", b"def"]);
+
+        log1.append(b"ghi").unwrap();
+        log1.sync().unwrap();
+        assert_eq!(read_entries(), vec![b"abc", b"def", b"ghi"]);
+
+        add_noise(&[0xcc; 1000]);
+        assert_eq!(read_entries(), vec![b"abc", b"def", b"ghi"]);
     }
 
     #[test]
