@@ -119,7 +119,14 @@ def exbookcalcupdate(orig, ui, repo, checkout):
 
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
-    pullremotenames(repo, remote, remote.listkeys("bookmarks"))
+
+    if _isselectivepull(repo.ui):
+        remotebookmarkskeys = _getselectivepullinitbookmarks(repo, remote)
+        remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
+    else:
+        remotebookmarks = remote.listkeys("bookmarks")
+    pullremotenames(repo, remote, remotebookmarks)
+
     return res
 
 
@@ -458,11 +465,16 @@ def exclone(orig, ui, *args, **opts):
     """
     srcpeer, dstpeer = orig(ui, *args, **opts)
 
-    pullremotenames(dstpeer.local(), srcpeer, srcpeer.listkeys("bookmarks"))
+    repo = dstpeer.local()
+    if _isselectivepull(ui):
+        remotebookmarkskeys = _getselectivepullinitbookmarks(repo, srcpeer)
+        remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
+    else:
+        remotebookmarks = srcpeer.listkeys("bookmarks")
+    pullremotenames(repo, srcpeer, remotebookmarks)
 
     if not ui.configbool("remotenames", "syncbookmarks"):
         ui.debug("remotenames: removing cloned bookmarks\n")
-        repo = dstpeer.local()
         wlock = repo.wlock()
         try:
             try:

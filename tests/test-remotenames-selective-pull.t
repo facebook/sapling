@@ -297,7 +297,6 @@ Clone remote repo with the selectivepull enabled
 
   $ hg book --list-subscriptions
      default/master            1:0238718db2b1
-     default/thirdbook         0:1449e7934ec1
 
 Check remote bookmarks after push
   $ echo "new commit to push" >> pushsh
@@ -305,4 +304,3 @@ Check remote bookmarks after push
   $ hg push -r . --to master -q
   $ hg book --list-subscriptions
      default/master            2:a81520e7283a
-     default/thirdbook         0:1449e7934ec1
