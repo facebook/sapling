@@ -144,8 +144,8 @@ Update blacklisted blob
 Censore the blacklisted blob (file 'c' contained in commit '064d994d0240')
   $ sqlite3 "$TESTTMP/repo/censored_contents" \
   > "insert into censored_contents \
-  > (id, content_key, task, add_timestamp) \
-  > values(0, 'content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2', 'task', 0)";
+  > (content_key, task, add_timestamp) \
+  > values('content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2', 'task', 0)";
 
 Restart mononoke
   $ kill $MONONOKE_PID
