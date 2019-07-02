@@ -114,6 +114,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
     //  - add delay
     let bookmarks = Arc::new(SqlBookmarks::with_sqlite_in_memory()?);
 
+    // Disable censoring check when executing benchmark reports
     Ok(BlobRepo::new(
         Logger::root(Discard {}.ignore_res(), o!()),
         bookmarks,

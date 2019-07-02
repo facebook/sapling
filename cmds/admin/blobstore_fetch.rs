@@ -12,16 +12,17 @@ use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use std::sync::Arc;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, CountedBlobstore};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use censoredblob::{CensoredBlob, SqlCensoredContentStore};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
+use futures::future;
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::BlobConfig;
-use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents};
+use metaconfig_types::{BlobConfig, Censoring};
+use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
@@ -34,6 +35,9 @@ pub fn subcommand_blobstore_fetch(
 ) -> BoxFuture<(), Error> {
     let blobstore_args = args::parse_blobstore_args(&matches);
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
+
+    let (_, config) = try_boxfuture!(args::get_config(&matches));
+    let censoring = config.censoring;
 
     let (bucket, prefix) = match blobstore_args {
         BlobConfig::Manifold { bucket, prefix } => (bucket, prefix),
@@ -48,65 +52,99 @@ pub fn subcommand_blobstore_fetch(
 
     let blobstore = ManifoldBlob::new_with_prefix(&bucket, &prefix);
 
-    let censored_blobs_store: Arc<_> = Arc::new(
-        args::open_sql::<SqlCensoredContentStore>(&matches)
-            .expect("Failed to open the db with censored_blobs_store"),
-    );
+    let maybe_censored_blobs_fut = match censoring {
+        Censoring::Enabled => {
+            let censored_blobs_store: Arc<_> = Arc::new(
+                args::open_sql::<SqlCensoredContentStore>(&matches)
+                    .expect("Failed to open the db with censored_blobs_store"),
+            );
 
-    censored_blobs_store
-        .get_all_censored_blobs()
-        .map_err(Error::from)
-        .map(HashMap::from_iter)
-        .and_then({
-            cloned!(key, ctx);
-            move |censored_blobs: HashMap<String, String>| {
-                let empty_prefix = "".to_string();
-                match use_memcache {
-                    None => {
-                        let blobstore = match no_prefix {
-                            false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
-                            true => PrefixBlobstore::new(blobstore, empty_prefix),
-                        };
-                        let blobstore = CensoredBlob::new(blobstore, censored_blobs);
-                        blobstore.get(ctx, key.clone()).boxify()
-                    }
+            censored_blobs_store
+                .get_all_censored_blobs()
+                .map_err(Error::from)
+                .map(HashMap::from_iter)
+                .map(Some)
+                .left_future()
+        }
+        Censoring::Disabled => future::ok(None).right_future(),
+    };
 
-                    Some(mode) => {
-                        let blobstore =
-                            new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
-                        let blobstore = match no_prefix {
-                            false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
-                            true => PrefixBlobstore::new(blobstore, empty_prefix),
-                        };
-                        let blobstore = CensoredBlob::new(blobstore, censored_blobs);
-                        get_cache(ctx.clone(), &blobstore, key.clone(), mode)
-                    }
-                }
-            }
-        })
-        .map(move |value| {
-            println!("{:?}", value);
-            if let Some(value) = value {
-                let decode_as = decode_as.as_ref().and_then(|val| {
-                    let val = val.as_str();
-                    if val == "auto" {
-                        detect_decode(&key, &logger)
-                    } else {
-                        Some(val)
-                    }
-                });
+    let value_fut = maybe_censored_blobs_fut.and_then({
+        cloned!(key, ctx);
+        move |maybe_censored_blobs| {
+            get_from_sources(
+                use_memcache,
+                blobstore,
+                no_prefix,
+                bucket,
+                key.clone(),
+                ctx,
+                maybe_censored_blobs,
+                repo_id,
+            )
+        }
+    });
 
-                match decode_as {
-                    Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
-                    Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
-                    Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
-                    // TODO: (rain1) T30974137 add a better way to print out file contents
-                    Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
-                    _ => (),
+    value_fut
+        .map({
+            cloned!(key);
+            move |value| {
+                println!("{:?}", value);
+                if let Some(value) = value {
+                    let decode_as = decode_as.as_ref().and_then(|val| {
+                        let val = val.as_str();
+                        if val == "auto" {
+                            detect_decode(&key, &logger)
+                        } else {
+                            Some(val)
+                        }
+                    });
+
+                    match decode_as {
+                        Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
+                        Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
+                        Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
+                        // TODO: (rain1) T30974137 add a better way to print out file contents
+                        Some("contents") => println!("{:?}", FileContents::from_blob(value.into())),
+                        _ => (),
+                    }
                 }
             }
         })
         .boxify()
+}
+
+fn get_from_sources(
+    use_memcache: Option<String>,
+    blobstore: CountedBlobstore<ManifoldBlob>,
+    no_prefix: bool,
+    bucket: String,
+    key: String,
+    ctx: CoreContext,
+    censored_blobs: Option<HashMap<String, String>>,
+    repo_id: RepositoryId,
+) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    let empty_prefix = "".to_string();
+
+    match use_memcache {
+        Some(mode) => {
+            let blobstore = new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
+            let blobstore = match no_prefix {
+                false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
+                true => PrefixBlobstore::new(blobstore, empty_prefix),
+            };
+            let blobstore = CensoredBlob::new(blobstore, censored_blobs);
+            get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+        }
+        None => {
+            let blobstore = match no_prefix {
+                false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
+                true => PrefixBlobstore::new(blobstore, empty_prefix),
+            };
+            let blobstore = CensoredBlob::new(blobstore, censored_blobs);
+            blobstore.get(ctx, key.clone()).boxify()
+        }
+    }
 }
 
 fn display<T>(res: &Result<T>)

@@ -24,11 +24,11 @@ pub use crate::store::SqlCensoredContentStore;
 #[derive(Debug, Clone)]
 pub struct CensoredBlob<T: Blobstore + Clone> {
     blobstore: T,
-    censored: HashMap<String, String>,
+    censored: Option<HashMap<String, String>>,
 }
 
 impl<T: Blobstore + Clone> CensoredBlob<T> {
-    pub fn new(blobstore: T, censored: HashMap<String, String>) -> Self {
+    pub fn new(blobstore: T, censored: Option<HashMap<String, String>>) -> Self {
         Self {
             blobstore,
             censored,
@@ -36,8 +36,11 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
     }
 
     pub fn is_censored(&self, key: String) -> Result<(), Error> {
-        match self.censored.get(&key) {
-            Some(task) => Err(ErrorKind::Censored(key, task.clone()).into()),
+        match &self.censored {
+            Some(censored) => match censored.get(&key) {
+                Some(task) => Err(ErrorKind::Censored(key, task.clone()).into()),
+                None => Ok(()),
+            },
             None => Ok(()),
         }
     }
@@ -55,15 +58,21 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
 
 impl<T: Blobstore + Clone> Blobstore for CensoredBlob<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        match self.censored.get(&key) {
-            Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
+        match &self.censored {
+            Some(censored) => match censored.get(&key) {
+                Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
+                None => self.blobstore.get(ctx, key),
+            },
             None => self.blobstore.get(ctx, key),
         }
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        match self.censored.get(&key) {
-            Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
+        match &self.censored {
+            Some(censored) => match censored.get(&key) {
+                Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
+                None => self.blobstore.put(ctx, key, value),
+            },
             None => self.blobstore.put(ctx, key, value),
         }
     }
@@ -103,7 +112,7 @@ mod test {
             censored_key.clone() => censored_task.clone(),
         };
 
-        let blob = CensoredBlob::new(PrefixBlobstore::new(inner, "prefix"), censored_pairs);
+        let blob = CensoredBlob::new(PrefixBlobstore::new(inner, "prefix"), Some(censored_pairs));
 
         //Test put with blacklisted key
         let res = rt.block_on(blob.put(

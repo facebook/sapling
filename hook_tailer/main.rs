@@ -91,6 +91,7 @@ fn main() -> Result<()> {
         cmdlib::args::parse_myrouter_port(&matches),
         caching,
         config.bookmarks_cache_ttl,
+        config.censoring,
     );
 
     let rc = RequestContext {

@@ -23,9 +23,9 @@ use bookmarks::BookmarkName;
 use failure_ext::ResultExt;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams,
-    CacheWarmupParams, CommonConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
-    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig, PushParams,
-    PushrebaseParams, RepoConfig, RepoReadOnly, ShardedFilenodesParams, StorageConfig,
+    CacheWarmupParams, Censoring, CommonConfig, HookBypass, HookConfig, HookManagerParams,
+    HookParams, HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, MetadataDBConfig,
+    PushParams, PushrebaseParams, RepoConfig, RepoReadOnly, ShardedFilenodesParams, StorageConfig,
     WhitelistEntry,
 };
 use regex::Regex;
@@ -444,6 +444,12 @@ impl RepoConfigs {
             RepoReadOnly::ReadWrite
         };
 
+        let censoring = if this.censoring {
+            Censoring::Enabled
+        } else {
+            Censoring::Disabled
+        };
+
         let infinitepush = this.infinitepush.map(|p| {
             let namespace = InfinitepushNamespace::new(p.namespace.0);
             InfinitepushParams { namespace }
@@ -471,6 +477,7 @@ impl RepoConfigs {
             wireproto_scribe_category,
             hash_validation_percentage,
             readonly,
+            censoring,
             skiplist_index_blobstore_key,
             bundle2_replay_params,
             write_lock_db_address: this.write_lock_db_address,
@@ -537,6 +544,10 @@ struct RawRepoConfig {
     /// it's the same one Mercurial uses, to make it easier to manage repo locking for
     /// both from one tool.
     write_lock_db_address: Option<String>,
+
+    /// This enables or disables verification for censored blobstores
+    #[serde(default = "is_true")]
+    censoring: bool,
 
     // TODO: work out what these all are
     generation_cache_size: Option<usize>,
@@ -1100,6 +1111,7 @@ mod test {
                 wireproto_scribe_category: None,
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
+                censoring: Censoring::Enabled,
                 skiplist_index_blobstore_key: Some("skiplist_key".into()),
                 bundle2_replay_params: Bundle2ReplayParams {
                     preserve_raw_bundle2: true,
@@ -1137,6 +1149,7 @@ mod test {
                 wireproto_scribe_category: Some("category".to_string()),
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
+                censoring: Censoring::Enabled,
                 skiplist_index_blobstore_key: None,
                 bundle2_replay_params: Bundle2ReplayParams::default(),
                 infinitepush: None,

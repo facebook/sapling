@@ -151,7 +151,7 @@ impl BlobRepo {
 
         let blobstore = CensoredBlob::new(
             PrefixBlobstore::new(blobstore, repoid.prefix()),
-            censored_blobs.unwrap_or_else(|| HashMap::new()),
+            censored_blobs,
         );
 
         BlobRepo {
@@ -171,7 +171,7 @@ impl BlobRepo {
         logger: Logger,
         bookmarks: Arc<Bookmarks>,
         blobstore: Arc<Blobstore>,
-        censored_blobs: HashMap<String, String>,
+        censored_blobs: Option<HashMap<String, String>>,
         filenodes: Arc<Filenodes>,
         changesets: Arc<Changesets>,
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,

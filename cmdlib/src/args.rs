@@ -689,6 +689,7 @@ fn open_repo_internal<'a>(
                 myrouter_port,
                 caching,
                 config.bookmarks_cache_ttl,
+                config.censoring,
             )
         })
         .boxify()

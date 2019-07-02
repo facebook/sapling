@@ -90,6 +90,7 @@ impl MononokeRepo {
             myrouter_port,
             with_cachelib,
             config.bookmarks_cache_ttl,
+            config.censoring,
         )
         .map(move |repo| {
             let skiplist_index = {

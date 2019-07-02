@@ -84,6 +84,8 @@ pub struct RepoConfig {
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
     pub readonly: RepoReadOnly,
+    /// Should files be checked for censored
+    pub censoring: Censoring,
     /// Params for the hook manager
     pub hook_manager_params: Option<HookManagerParams>,
     /// Skiplist blobstore key (used to make revset faster)
@@ -98,6 +100,21 @@ impl RepoConfig {
     /// Returns a db address that is referenced in this config or None if there is none
     pub fn get_db_address(&self) -> Option<&str> {
         self.storage_config.dbconfig.get_db_address()
+    }
+}
+
+#[derive(Eq, Copy, Clone, Debug, PartialEq, Deserialize)]
+/// Should the censored verification be enabled?
+pub enum Censoring {
+    /// Censored files cannot be accessed
+    Enabled,
+    /// All the files can be fetched
+    Disabled,
+}
+
+impl Default for Censoring {
+    fn default() -> Self {
+        Censoring::Enabled
     }
 }
 

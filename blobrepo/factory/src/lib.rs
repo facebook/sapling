@@ -35,7 +35,9 @@ use filenodes::CachingFilenodes;
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
 use memblob::EagerMemblob;
-use metaconfig_types::{self, BlobConfig, MetadataDBConfig, ShardedFilenodesParams, StorageConfig};
+use metaconfig_types::{
+    self, BlobConfig, Censoring, MetadataDBConfig, ShardedFilenodesParams, StorageConfig,
+};
 use mononoke_types::RepositoryId;
 use multiplexedblob::MultiplexedBlobstore;
 use prefixblob::PrefixBlobstore;
@@ -156,6 +158,7 @@ pub fn open_blobrepo(
     myrouter_port: Option<u16>,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
+    censoring: Censoring,
 ) -> BoxFuture<BlobRepo, Error> {
     myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
         .and_then(move |()| match storage_config.dbconfig {
@@ -167,6 +170,7 @@ pub fn open_blobrepo(
                 repoid,
                 myrouter_port,
                 bookmarks_cache_ttl,
+                censoring,
             )
             .left_future(),
             MetadataDBConfig::Mysql {
@@ -180,6 +184,7 @@ pub fn open_blobrepo(
                 repoid,
                 myrouter_port,
                 bookmarks_cache_ttl,
+                censoring,
             )
             .right_future(),
         })
@@ -194,19 +199,27 @@ fn do_open_blobrepo<T: SqlFactory>(
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
+    censoring: Censoring,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let uncensored_blobstore = make_blobstore(repoid, &blobconfig, &sql_factory, myrouter_port);
 
-    let censored_blobs_store: Result<Arc<SqlCensoredContentStore>> = sql_factory.open();
+    let censored_blobs = match censoring {
+        Censoring::Enabled => {
+            let censored_blobs_store: Result<Arc<SqlCensoredContentStore>> = sql_factory.open();
 
-    let censored_blobs = censored_blobs_store
-        .into_future()
-        .and_then(move |censored_store| {
-            censored_store
-                .get_all_censored_blobs()
-                .map_err(Error::from)
-                .map(HashMap::from_iter)
-        });
+            censored_blobs_store
+                .into_future()
+                .and_then(move |censored_store| {
+                    let censored_blobs = censored_store
+                        .get_all_censored_blobs()
+                        .map_err(Error::from)
+                        .map(HashMap::from_iter);
+                    Some(censored_blobs)
+                })
+                .left_future()
+        }
+        Censoring::Disabled => Ok(None).into_future().right_future(),
+    };
 
     uncensored_blobstore.join(censored_blobs).and_then(
         move |(uncensored_blobstore, censored_blobs)| match caching {
@@ -374,7 +387,7 @@ fn new_development<T: SqlFactory>(
     logger: Logger,
     sql_factory: &T,
     blobstore: Arc<Blobstore>,
-    censored_blobs: HashMap<String, String>,
+    censored_blobs: Option<HashMap<String, String>>,
     repoid: RepositoryId,
 ) -> Result<BlobRepo> {
     let bookmarks: Arc<SqlBookmarks> = sql_factory
@@ -394,7 +407,7 @@ fn new_development<T: SqlFactory>(
         logger,
         bookmarks,
         blobstore,
-        Some(censored_blobs),
+        censored_blobs,
         filenodes,
         changesets,
         bonsai_hg_mapping,
@@ -409,7 +422,7 @@ fn new_production<T: SqlFactory>(
     logger: Logger,
     sql_factory: &T,
     blobstore: Arc<Blobstore>,
-    censored_blobs: HashMap<String, String>,
+    censored_blobs: Option<HashMap<String, String>>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
