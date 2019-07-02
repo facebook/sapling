@@ -102,10 +102,19 @@ def _initclient(ui, repo):
 
 
 def _badcertwarning(ui):
-    """Show the user a configurable messaage when their TLS certificate
+    """Show the user a configurable message when their TLS certificate
        is missing, expired, or otherwise invalid.
     """
-    msg = ui.config("edenapi", "badcertmessage")
+    msg = ui.config("edenapi", "authhelp")
+    if msg is not None:
+        ui.warn(msg + "\n")
+
+
+def _tlswarning(ui):
+    """Show the user a configurable message when a TLS error occurs
+       during data fetching.
+    """
+    msg = ui.config("edenapi", "tlshelp")
     if msg is not None:
         ui.warn(msg + "\n")
 
@@ -126,6 +135,9 @@ def _warnexceptions(ui):
                 return func(*args, **kwargs)
             except edenapi.CertificateError as e:
                 _badcertwarning(ui)
+                raise e
+            except edenapi.TlsError as e:
+                _tlswarning(ui)
                 raise e
 
         return wrapped

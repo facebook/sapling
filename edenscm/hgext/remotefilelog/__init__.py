@@ -154,11 +154,14 @@ Configs for Eden API (HTTP data fetching):
     ``edenapi.streamtrees`` specifies that the client should request a
     streaming response for tree fetches
 
-    ``edenapi.badcertmessage`` specifies the error message that will be
+    ``edenapi.authhelp`` specifies the error message that will be
     printed out if there is an issue with the user's configured TLS
     client certificate. It is often desirable to configure a custom
     error message that explains to the user how to obtain valid TLS
     client credentials.
+
+    ``edenapi.tlshelp`` specifies the error message that will be
+    printed out when HTTP data fetching encounters a TLS error.
 
 Eden API TLS credentials are configured using the auth section:
 
@@ -262,7 +265,8 @@ configitem("edenapi", "validate", default=True)
 configitem("edenapi", "streamdata", default=False)
 configitem("edenapi", "streamhistory", default=False)
 configitem("edenapi", "streamtrees", default=False)
-configitem("edenapi", "badcertmessage", default=None)
+configitem("edenapi", "authhelp", default=None)
+configitem("edenapi", "tlshelp", default=None)
 
 testedwith = "ships-with-fb-hgext"
 
