@@ -166,15 +166,21 @@ def _isselectivepullenabledforremote(repo, remote):
     return False
 
 
-def _setselectivepullenabledforremote(repo, remote):
+def _enableselectivepullforremote(repo, remote):
     vfs = repo.sharedvfs
     with lockmod.lock(vfs, _selectivepullenabledfilelock):
         enabledremotes = set(_readisselectivepullenabledfile(repo))
-
         enabledremotes.add(remote)
         with vfs(_selectivepullenabledfile, "w", atomictemp=True) as f:
             for renabled in enabledremotes:
                 f.write("%s\n" % renabled)
+
+
+def _disableselectivepull(repo):
+    vfs = repo.sharedvfs
+    if vfs.exists(_selectivepullenabledfile):
+        with lockmod.lock(vfs, _selectivepullenabledfilelock):
+            vfs.unlink(_selectivepullenabledfile)
 
 
 def _getselectivepulldefaultbookmarks(ui):
@@ -270,10 +276,10 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
 
 
 def expull(orig, repo, remote, heads=None, force=False, **kwargs):
-    vfs = repo.sharedvfs
-
     path = activepath(repo.ui, remote)
-    if _isselectivepull(repo.ui):
+
+    isselectivepull = _isselectivepull(repo.ui)
+    if isselectivepull:
         # if selectivepull is enabled then we don't save all of the remote
         # bookmarks in remotenames file. Instead we save only bookmarks that
         # are "interesting" to a user. Moreover, "hg pull" without parameters
@@ -310,12 +316,11 @@ def expull(orig, repo, remote, heads=None, force=False, **kwargs):
     with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
         res = orig(repo, remote, heads, force, **kwargs)
     pullremotenames(repo, remote, bookmarks)
-    if not _isselectivepull(repo.ui):
-        if vfs.exists(_selectivepullenabledfile):
-            with repo.wlock():
-                vfs.unlink(_selectivepullenabledfile)
+
+    if isselectivepull:
+        _enableselectivepullforremote(repo, path)
     else:
-        _setselectivepullenabledforremote(repo, path)
+        _disableselectivepull(repo)
 
     if _trackaccessedbookmarks(repo.ui):
         pulledbookmarks = kwargs.get("bookmarks", [])
