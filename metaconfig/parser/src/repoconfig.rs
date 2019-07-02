@@ -450,10 +450,21 @@ impl RepoConfigs {
             Censoring::Disabled
         };
 
-        let infinitepush = this.infinitepush.map(|p| {
-            let namespace = InfinitepushNamespace::new(p.namespace.0);
-            InfinitepushParams { namespace }
-        });
+        let infinitepush = this
+            .infinitepush
+            .map(
+                |RawInfinitepushParams {
+                     allow_writes,
+                     namespace,
+                 }| {
+                    let namespace = namespace.map(|ns| InfinitepushNamespace::new(ns.0));
+                    InfinitepushParams {
+                        allow_writes,
+                        namespace,
+                    }
+                },
+            )
+            .unwrap_or(InfinitepushParams::default());
 
         let list_keys_patterns_max = this
             .list_keys_patterns_max
@@ -827,7 +838,8 @@ struct RawShardedFilenodesParams {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawInfinitepushParams {
-    namespace: RawRegex,
+    allow_writes: bool,
+    namespace: Option<RawRegex>,
 }
 
 #[cfg(test)]
@@ -946,6 +958,7 @@ mod test {
             preserve_raw_bundle2 = true
 
             [infinitepush]
+            allow_writes = true
             namespace = "foobar/.+"
         "#;
         let www_content = r#"
@@ -1116,9 +1129,10 @@ mod test {
                 bundle2_replay_params: Bundle2ReplayParams {
                     preserve_raw_bundle2: true,
                 },
-                infinitepush: Some(InfinitepushParams {
-                    namespace: InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap()),
-                }),
+                infinitepush: InfinitepushParams {
+                    allow_writes: true,
+                    namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
+                },
                 list_keys_patterns_max: 123,
             },
         );
@@ -1152,7 +1166,7 @@ mod test {
                 censoring: Censoring::Enabled,
                 skiplist_index_blobstore_key: None,
                 bundle2_replay_params: Bundle2ReplayParams::default(),
-                infinitepush: None,
+                infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
             },
         );

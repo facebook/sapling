@@ -1,7 +1,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ INFINITE_PUSH_NAMESPACE_REGEX='^(infinitepush1|infinitepush2)/.+$' setup_common_config
+  $ INFINITEPUSH_NAMESPACE_REGEX='^(infinitepush1|infinitepush2)/.+$' setup_common_config
   $ cd $TESTTMP
 
 setup common configuration for these tests

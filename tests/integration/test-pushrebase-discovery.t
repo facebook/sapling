@@ -8,7 +8,7 @@ actual pushrebase.
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
+  $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
   $ cd "$TESTTMP/mononoke-config"
 
   $ cat >> repos/repo/server.toml <<CONFIG

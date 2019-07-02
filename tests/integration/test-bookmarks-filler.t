@@ -2,7 +2,7 @@
 
 setup configuration
 
-  $ INFINITE_PUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
+  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
 
 setup repo

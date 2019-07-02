@@ -59,7 +59,7 @@ pub fn resolve(
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
     bookmark_attrs: BookmarkAttrs,
-    infinitepush_params: Option<InfinitepushParams>,
+    infinitepush_params: InfinitepushParams,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
@@ -539,6 +539,8 @@ struct InfiniteBookmarkPush<T> {
 
 #[derive(Debug, Clone)]
 struct InfinitepushPayload {
+    /// An Infinitepush bookmark (aka scratch bookmark) that was provided through an Infinitepush
+    /// bundle part.
     bookmark_push: Option<InfiniteBookmarkPush<HgChangesetId>>,
 }
 
@@ -548,6 +550,8 @@ struct ChangegroupPush {
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
     mparams: HashMap<String, Bytes>,
+    /// Infinitepush data provided through the Changegroup. If the push was an Infinitepush, this
+    /// will be present.
     infinitepush_payload: Option<InfinitepushPayload>,
 }
 
@@ -633,7 +637,7 @@ struct Bundle2Resolver {
     repo: BlobRepo,
     pushrebase: PushrebaseParams,
     bookmark_attrs: BookmarkAttrs,
-    infinitepush_params: Option<InfinitepushParams>,
+    infinitepush_params: InfinitepushParams,
     hook_manager: Arc<HookManager>,
     scribe_commit_queue: Arc<ScribeCommitQueue>,
 }
@@ -644,7 +648,7 @@ impl Bundle2Resolver {
         repo: BlobRepo,
         pushrebase: PushrebaseParams,
         bookmark_attrs: BookmarkAttrs,
-        infinitepush_params: Option<InfinitepushParams>,
+        infinitepush_params: InfinitepushParams,
         hook_manager: Arc<HookManager>,
     ) -> Self {
         let scribe_commit_queue = match pushrebase.commit_scribe_category.clone() {
@@ -870,64 +874,78 @@ impl Bundle2Resolver {
     ) -> BoxFuture<(Option<ChangegroupPush>, BoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
 
-        next_item(bundle2)
-            .and_then(move |(changegroup, bundle2)| match changegroup {
-                // XXX: we may be interested in checking that this is a correct changegroup part
-                // type
-                Some(Bundle2Item::Changegroup(header, parts))
-                | Some(Bundle2Item::B2xInfinitepush(header, parts))
-                | Some(Bundle2Item::B2xRebase(header, parts)) => {
-                    if header.part_type() == &PartHeaderType::Changegroup && !changegroup_acceptable() {
-                        // Changegroup part type signals that we are in a pure push scenario
-                        return err(format_err!("Pure pushes are disallowed in this repo"))
-                            .boxify();
-                    }
-                    let (c, f) = split_changegroup(parts);
-                    convert_to_revlog_changesets(c)
-                        .collect()
-                        .and_then({
-                            cloned!(repo, ctx);
-                            let repo = Arc::new(repo);
-                            move |changesets| {
-                                upload_hg_blobs(
-                                    ctx.clone(),
-                                    repo.clone(),
-                                    convert_to_revlog_filelog(ctx.clone(), repo.clone(), f),
-                                    UploadBlobsType::EnsureNoDuplicates,
-                                )
-                                .map(move |upload_map| {
-                                    let mut filelogs = HashMap::new();
-                                    let mut content_blobs = HashMap::new();
-                                    for (node_key, (cbinfo, file_upload)) in upload_map {
-                                        filelogs.insert(node_key.clone(), file_upload);
-                                        content_blobs.insert(node_key, cbinfo);
-                                    }
-                                    (changesets, filelogs, content_blobs)
-                                })
-                                .context("While uploading File Blobs")
-                                .from_err()
-                            }
-                        })
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |(changesets, filelogs, content_blobs)| {
-                                build_changegroup_push(
-                                    ctx,
-                                    &repo,
-                                    header,
-                                    changesets,
-                                    filelogs,
-                                    content_blobs,
-                                )
-                                .map(move |cg_push| (Some(cg_push), bundle2))
-                            }
-                        })
-                        .boxify()
+        let fut = next_item(bundle2).and_then(move |(changegroup, bundle2)| match changegroup {
+            // XXX: we may be interested in checking that this is a correct changegroup part
+            // type
+            Some(Bundle2Item::Changegroup(header, parts))
+            | Some(Bundle2Item::B2xInfinitepush(header, parts))
+            | Some(Bundle2Item::B2xRebase(header, parts)) => {
+                if header.part_type() == &PartHeaderType::Changegroup && !changegroup_acceptable() {
+                    // Changegroup part type signals that we are in a pure push scenario
+                    return err(format_err!("Pure pushes are disallowed in this repo")).boxify();
                 }
-                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
-                _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
+                let (c, f) = split_changegroup(parts);
+                convert_to_revlog_changesets(c)
+                    .collect()
+                    .and_then({
+                        cloned!(repo, ctx);
+                        let repo = Arc::new(repo);
+                        move |changesets| {
+                            upload_hg_blobs(
+                                ctx.clone(),
+                                repo.clone(),
+                                convert_to_revlog_filelog(ctx.clone(), repo.clone(), f),
+                                UploadBlobsType::EnsureNoDuplicates,
+                            )
+                            .map(move |upload_map| {
+                                let mut filelogs = HashMap::new();
+                                let mut content_blobs = HashMap::new();
+                                for (node_key, (cbinfo, file_upload)) in upload_map {
+                                    filelogs.insert(node_key.clone(), file_upload);
+                                    content_blobs.insert(node_key, cbinfo);
+                                }
+                                (changesets, filelogs, content_blobs)
+                            })
+                            .context("While uploading File Blobs")
+                            .from_err()
+                        }
+                    })
+                    .and_then({
+                        cloned!(ctx, repo);
+                        move |(changesets, filelogs, content_blobs)| {
+                            build_changegroup_push(
+                                ctx,
+                                &repo,
+                                header,
+                                changesets,
+                                filelogs,
+                                content_blobs,
+                            )
+                            .map(move |cg_push| (Some(cg_push), bundle2))
+                        }
+                    })
+                    .boxify()
+            }
+            Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+            _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
+        });
+
+        // Check that infinitepush is enabled if we use it.
+        let fut = if self.infinitepush_params.allow_writes {
+            fut.left_future()
+        } else {
+            fut.and_then(|maybe_cg_push| match maybe_cg_push {
+                (Some(ref cg_push), _) if cg_push.infinitepush_payload.is_some() => {
+                    let m =
+                        "Infinitepush is not enabled on this server. Contact Source Control @ FB.";
+                    Err(err_msg(m))
+                }
+                r => Ok(r),
             })
-            .context("While resolving Changegroup")
+            .right_future()
+        };
+
+        fut.context("While resolving Changegroup")
             .from_err()
             .boxify()
     }
@@ -1529,7 +1547,7 @@ fn check_plain_bookmark_move_preconditions(
     bookmark: &BookmarkName,
     reason: &'static str,
     bookmark_attrs: &BookmarkAttrs,
-    infinitepush_params: &Option<InfinitepushParams>,
+    infinitepush_params: &InfinitepushParams,
 ) -> Result<()> {
     let user = ctx.user_unix_name();
     if !bookmark_attrs.is_allowed_user(user, bookmark) {
@@ -1541,7 +1559,7 @@ fn check_plain_bookmark_move_preconditions(
         ));
     }
 
-    if let Some(InfinitepushParams { namespace }) = infinitepush_params {
+    if let Some(ref namespace) = infinitepush_params.namespace {
         if namespace.matches_bookmark(bookmark) {
             return Err(format_err!(
                 "[{}] Only Infinitepush bookmarks are allowed to match pattern {}",
@@ -1559,7 +1577,7 @@ fn check_bookmark_push_allowed(
     repo: BlobRepo,
     bookmark_attrs: BookmarkAttrs,
     allow_non_fast_forward: bool,
-    infinitepush_params: Option<InfinitepushParams>,
+    infinitepush_params: InfinitepushParams,
     bp: PlainBookmarkPush<ChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
 ) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> {
@@ -1598,11 +1616,11 @@ fn filter_or_check_infinitepush_allowed(
     ctx: CoreContext,
     repo: BlobRepo,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: Option<InfinitepushParams>,
+    infinitepush_params: InfinitepushParams,
     bp: InfiniteBookmarkPush<ChangesetId>,
 ) -> impl Future<Item = Option<InfiniteBookmarkPush<ChangesetId>>, Error = Error> {
-    match infinitepush_params {
-        Some(InfinitepushParams { namespace }) => ok(bp)
+    match infinitepush_params.namespace {
+        Some(namespace) => ok(bp)
             // First, check that we match the namespace.
             .and_then(move |bp| match namespace.matches_bookmark(&bp.name) {
                 true => ok(bp),
@@ -1634,7 +1652,6 @@ fn filter_or_check_infinitepush_allowed(
             .map(Some)
             .left_future(),
         None => {
-            // TODO: (torozco) T45058281 fail when Infinitepush is disabled but write is attempted.
             warn!(ctx.logger(), "Infinitepush bookmark push to {} was ignored", bp.name; o!("remote" => "true"));
             ok(None)
         }.right_future()

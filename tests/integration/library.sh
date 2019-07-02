@@ -460,10 +460,16 @@ threshold=$LFS_THRESHOLD
 CONFIG
 fi
 
-if [[ -v INFINITE_PUSH_NAMESPACE_REGEX ]]; then
+if [[ -v INFINITEPUSH_ALLOW_WRITES ]] || [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
+  namespace=""
+  if [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
+    namespace="namespace=\"$INFINITEPUSH_NAMESPACE_REGEX\""
+  fi
+
   cat >> repos/repo/server.toml <<CONFIG
 [infinitepush]
-namespace="$INFINITE_PUSH_NAMESPACE_REGEX"
+allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
+${namespace}
 CONFIG
 fi
 }

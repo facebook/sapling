@@ -25,7 +25,8 @@ use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
     BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, Censoring, HookConfig,
-    HookParams, HookType, MetadataDBConfig, RepoConfig, RepoReadOnly, StorageConfig,
+    HookParams, HookType, InfinitepushParams, MetadataDBConfig, RepoConfig, RepoReadOnly,
+    StorageConfig,
 };
 use mononoke_types::FileType;
 use regex::Regex;
@@ -1244,7 +1245,7 @@ fn default_repo_config() -> RepoConfig {
         censoring: Censoring::Enabled,
         skiplist_index_blobstore_key: None,
         bundle2_replay_params: Bundle2ReplayParams::default(),
-        infinitepush: None,
+        infinitepush: InfinitepushParams::default(),
         list_keys_patterns_max: 123,
     }
 }

@@ -2,7 +2,7 @@
 
 setup configuration
   $ export READ_ONLY_REPO=1
-  $ setup_common_config
+  $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
   $ cd $TESTTMP
 
 setup common configuration for these tests

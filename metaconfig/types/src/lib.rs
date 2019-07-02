@@ -67,8 +67,8 @@ pub struct RepoConfig {
     pub cache_warmup: Option<CacheWarmupParams>,
     /// Configuration for bookmarks
     pub bookmarks: Vec<BookmarkParams>,
-    /// Namespace for infinite push scratch bookmarks
-    pub infinitepush: Option<InfinitepushParams>,
+    /// Infinitepush configuration
+    pub infinitepush: InfinitepushParams,
     /// Enables bookmarks cache with specified ttl (time to live)
     pub bookmarks_cache_ttl: Option<Duration>,
     /// Configuration for hooks
@@ -668,9 +668,26 @@ impl InfinitepushNamespace {
     }
 }
 
-/// Params for Infinitepush configuration
+/// Infinitepush configuration. Note that it is legal to not allow Infinitepush (server = false),
+/// while still providing a namespace. Doing so will prevent regular pushes to the namespace, as
+/// well as allow the creation of Infinitepush scratchbookmarks through e.g. replicating them from
+/// Mercurial.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct InfinitepushParams {
-    /// Valid namespace for infinite push bookmarks.
-    pub namespace: InfinitepushNamespace,
+    /// Whether infinite push bundles are allowed on this server. If false, all infinitepush
+    /// bundles will be rejected.
+    pub allow_writes: bool,
+
+    /// Valid namespace for infinite push bookmarks. If None, then infinitepush bookmarks are not
+    /// allowed.
+    pub namespace: Option<InfinitepushNamespace>,
+}
+
+impl Default for InfinitepushParams {
+    fn default() -> Self {
+        Self {
+            allow_writes: false,
+            namespace: None,
+        }
+    }
 }
