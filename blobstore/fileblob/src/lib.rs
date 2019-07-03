@@ -19,6 +19,7 @@ use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
+use tempfile::NamedTempFile;
 
 const PREFIX: &str = "blob";
 
@@ -76,7 +77,9 @@ impl Blobstore for Fileblob {
         let p = self.path(&key);
 
         poll_fn::<_, Error, _>(move || {
-            File::create(&p)?.write_all(value.as_bytes().as_ref())?;
+            let tempfile = NamedTempFile::new()?;
+            tempfile.as_file().write_all(value.as_bytes().as_ref())?;
+            tempfile.persist(&p)?;
             Ok(Async::Ready(()))
         })
         .boxify()
