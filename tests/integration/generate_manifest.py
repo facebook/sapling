@@ -9,6 +9,8 @@ import os
 import sys
 import json
 
+from mononoke.tests.integration.lib_buck import find_buck_out
+
 
 def map_name(k):
     v = os.environ[k]
@@ -29,11 +31,19 @@ def main():
     # We provide the output file and names as argument
     _, out, *names = sys.argv
 
-    # ... and we provide locations through the environment
-    manifest = {k: map_name(k) for k in sorted(names)}
-
-    # INSTALL_DIR is also provided by Buck's custom_rule
+    # The INSTALL_DIR is provided by Buck's custom_rule.
     out = os.path.join(os.environ["INSTALL_DIR"], out)
+
+    # Locations are provided through the environment (using Buck location
+    # macro). The paths we output must be relative to buck_out, since they might
+    # have been built on a different host so we must avoid absolute paths.
+    buck_out = find_buck_out(out)
+
+    manifest = {
+        k: os.path.relpath(map_name(k), buck_out)
+        for k in sorted(names)
+    }
+
     with open(out, "w") as f:
         json.dump(manifest, f, indent=2)
 

@@ -19,6 +19,7 @@ from typing import NamedTuple, Dict, List, Any
 
 import click
 
+from mononoke.tests.integration.lib_buck import find_buck_out
 from common.db.tests import DbDef
 
 
@@ -98,6 +99,15 @@ def public_test_root(manifest_env: ManifestEnv) -> str:
 
 def facebook_test_root(manifest_env: ManifestEnv) -> str:
     return manifest_env["TEST_ROOT_FACEBOOK"]
+
+
+def load_manifest_env(manifest_path: str) -> ManifestEnv:
+    buck_out = find_buck_out(manifest_path)
+
+    with open(manifest_path) as f:
+        manifest_env = json.load(f)
+
+    return {k: os.path.join(buck_out, v) for k, v in manifest_env.items()}
 
 
 def maybe_use_local_test_paths(manifest_env: ManifestEnv):
@@ -318,8 +328,7 @@ def run(
     keep_tmpdir,
     mysql,
 ):
-    with open(manifest) as f:
-        manifest_env: ManifestEnv = json.load(f)
+    manifest_env = load_manifest_env(manifest)
     maybe_use_local_test_paths(manifest_env)
 
     db_helper = no_db_helper
