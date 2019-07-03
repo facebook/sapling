@@ -638,6 +638,36 @@ void EdenServiceHandler::getFilesChangedSince(
 #endif
 }
 
+void EdenServiceHandler::setJournalMemoryLimit(
+    std::unique_ptr<PathString> mountPoint,
+    int64_t limit) {
+#ifndef _WIN32
+  if (!mountPoint) {
+    throw newEdenError(EINVAL, "mount point must not be null");
+  }
+  auto edenMount = server_->getMount(*mountPoint);
+  if (limit < 0) {
+    throw newEdenError(EINVAL, "memory limit must be non-negative");
+  }
+  edenMount->getJournal().setMemoryLimit(static_cast<size_t>(limit));
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
+int64_t EdenServiceHandler::getJournalMemoryLimit(
+    std::unique_ptr<PathString> mountPoint) {
+#ifndef _WIN32
+  if (!mountPoint) {
+    throw newEdenError(EINVAL, "mount point must not be null");
+  }
+  auto edenMount = server_->getMount(*mountPoint);
+  return static_cast<int64_t>(edenMount->getJournal().getMemoryLimit());
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {

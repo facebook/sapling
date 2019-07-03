@@ -227,3 +227,13 @@ TEST(Journal, memory_usage) {
     prevMem = newMem;
   }
 }
+
+TEST(Journal, set_get_memory_limit) {
+  Journal journal;
+  journal.setMemoryLimit(500);
+  ASSERT_EQ(500, journal.getMemoryLimit());
+  journal.setMemoryLimit(333);
+  ASSERT_EQ(333, journal.getMemoryLimit());
+  journal.setMemoryLimit(0);
+  ASSERT_EQ(0, journal.getMemoryLimit());
+}

@@ -78,6 +78,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<JournalPosition> fromPosition) override;
 
+  void setJournalMemoryLimit(
+      std::unique_ptr<PathString> mountPoint,
+      int64_t limit) override;
+
+  int64_t getJournalMemoryLimit(
+      std::unique_ptr<PathString> mountPoint) override;
+
   void debugGetRawJournal(
       DebugGetRawJournalResponse& out,
       std::unique_ptr<DebugGetRawJournalParams> params) override;

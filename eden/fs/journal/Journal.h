@@ -147,12 +147,18 @@ class Journal {
       size_t limit,
       long mountGeneration) const;
 
+  void setMemoryLimit(size_t limit);
+
+  size_t getMemoryLimit() const;
+
  private:
   /** Add a delta to the journal.
    * The delta will have a new sequence number and timestamp
    * applied.
    */
   void addDelta(std::unique_ptr<JournalDelta>&& delta);
+
+  static constexpr size_t kDefaultJournalMemoryLimit = 500000000;
 
   struct DeltaState {
     /** The sequence number that we'll use for the next entry
@@ -163,6 +169,7 @@ class Journal {
     std::deque<JournalDelta> deltas;
     /** The stats about this Journal up to the latest delta */
     std::optional<JournalStats> stats;
+    size_t memoryLimit = kDefaultJournalMemoryLimit;
   };
   folly::Synchronized<DeltaState> deltaState_;
 

@@ -44,7 +44,13 @@ from facebook.eden.ttypes import (
     TreeInodeDebugInfo,
 )
 
-from . import cmd_util, overlay as overlay_mod, subcmd as subcmd_mod, ui as ui_mod
+from . import (
+    cmd_util,
+    overlay as overlay_mod,
+    stats_print,
+    subcmd as subcmd_mod,
+    ui as ui_mod,
+)
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 
@@ -828,6 +834,54 @@ class SetLogLevelCmd(Subcmd):
         log_arg = shlex.quote(f"{args.category}={args.level}")
         print(f"  eden debug logging {log_arg}")
         return 1
+
+
+@debug_cmd("journal_set_memory_limit", "Sets the journal memory limit")
+class DebugJournalSetMemoryLimitCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "limit",
+            type=int,
+            help="The amount of memory (in bytes) that the journal can keep.",
+        )
+        parser.add_argument(
+            "path",
+            nargs="?",
+            help="The path to an Eden mount point. Uses `pwd` by default.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
+
+        with instance.get_thrift_client() as client:
+            try:
+                client.setJournalMemoryLimit(bytes(checkout.path), args.limit)
+            except EdenError as err:
+                print(err, file=sys.stderr)
+                return 1
+            return 0
+
+
+@debug_cmd("journal_get_memory_limit", "Gets the journal memory limit")
+class DebugJournalGetMemoryLimitCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "path",
+            nargs="?",
+            help="The path to an Eden mount point. Uses `pwd` by default.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
+
+        with instance.get_thrift_client() as client:
+            try:
+                mem = client.getJournalMemoryLimit(bytes(checkout.path))
+            except EdenError as err:
+                print(err, file=sys.stderr)
+                return 1
+            print("Journal memory limit is " + stats_print.format_size(mem))
+            return 0
 
 
 @debug_cmd("journal", "Prints the most recent N entries from the journal")

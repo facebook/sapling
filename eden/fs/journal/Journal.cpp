@@ -167,6 +167,16 @@ folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
 }
 } // namespace
 
+void Journal::setMemoryLimit(size_t limit) {
+  auto deltaState = deltaState_.wlock();
+  deltaState->memoryLimit = limit;
+}
+
+size_t Journal::getMemoryLimit() const {
+  auto deltaState = deltaState_.rlock();
+  return deltaState->memoryLimit;
+}
+
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() const {
   return accumulateRange(0);
 }
