@@ -9,9 +9,10 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from edenscm.hgext.remotefilelog.datapack import datapack, mutabledatapack
+from edenscm.hgext.remotefilelog.datapack import mutabledatapack
 from edenscm.mercurial import mdiff
 from edenscm.mercurial.node import nullid
+from edenscmnative.bindings import revisionstore
 from edenscmnative.cstore import datapackstore, uniondatapackstore
 
 
@@ -187,7 +188,7 @@ class uniondatastorepythontests(uniondatapackstoretests):
             packer.add(filename, node, base, content)
 
         path = packer.close()
-        return datapack(path)
+        return revisionstore.datapack(path)
 
     def testGetDeltaChainMultiPack(self):
         """Test getting chains from multiple packs."""
