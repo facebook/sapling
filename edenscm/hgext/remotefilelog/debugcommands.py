@@ -447,7 +447,7 @@ def debughistorypack(ui, paths, **opts):
     for path in paths:
         if ".hist" in path:
             path = path[: path.index(".hist")]
-        hpack = historypack.historypack(path)
+        hpack = revisionstore.historypack(path)
 
         lastfilename = None
         for entry in hpack.iterentries():
