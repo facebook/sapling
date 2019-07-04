@@ -4,16 +4,17 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{
-    PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, Python, PythonObject,
+    PyBytes, PyDict, PyErr, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
+use failure::Fallible;
 
-use revisionstore::datastore::{DataStore, MutableDeltaStore};
+use revisionstore::{DataStore, IterableStore, MutableDeltaStore};
 use types::{Key, Node};
 
 use crate::revisionstore::pythonutil::{
-    from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_delta, to_key,
-    to_metadata, to_pyerr,
+    from_base, from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, to_delta,
+    to_key, to_metadata, to_pyerr,
 };
 
 pub trait DataStorePyExt {
@@ -22,6 +23,10 @@ pub trait DataStorePyExt {
     fn get_delta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyObject>;
     fn get_meta_py(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
+}
+
+pub trait IterableStorePyExt {
+    fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>>;
 }
 
 pub trait MutableDeltaStorePyExt: DataStorePyExt {
@@ -112,6 +117,27 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
         }
 
         Ok(results)
+    }
+}
+
+impl<T: IterableStore + DataStore + ?Sized> IterableStorePyExt for T {
+    fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
+        let iter = self.iter().map(|res| {
+            let key = res?;
+            let delta = self.get_delta(&key)?;
+            let (name, node) = from_key(py, &key);
+            let (_, base_node) = from_base(py, &delta);
+            let tuple = (
+                name.into_object(),
+                node.into_object(),
+                base_node.into_object(),
+                delta.data.len().into_py_object(py),
+            )
+                .into_py_object(py);
+            Ok(tuple)
+        });
+        iter.collect::<Fallible<Vec<PyTuple>>>()
+            .map_err(|e| to_pyerr(py, &e.into()))
     }
 }
 

@@ -19,12 +19,14 @@ use revisionstore::{
 };
 use types::{Key, NodeInfo};
 
-use crate::revisionstore::datastorepyext::{DataStorePyExt, MutableDeltaStorePyExt};
+use crate::revisionstore::datastorepyext::{
+    DataStorePyExt, IterableStorePyExt, MutableDeltaStorePyExt,
+};
 use crate::revisionstore::historystorepyext::{HistoryStorePyExt, MutableHistoryStorePyExt};
 use crate::revisionstore::pyerror::pyerr_to_error;
 use crate::revisionstore::pyext::PyOptionalRefCell;
 use crate::revisionstore::pythondatastore::PythonDataStore;
-use crate::revisionstore::pythonutil::{from_base, from_key, to_pyerr};
+use crate::revisionstore::pythonutil::{from_key, to_pyerr};
 use crate::revisionstore::repackablepyext::RepackablePyExt;
 
 mod datastorepyext;
@@ -245,20 +247,7 @@ py_class!(class datapack |py| {
 
     def iterentries(&self) -> PyResult<Vec<PyTuple>> {
         let store = self.store(py).get_value(py)?;
-        let iter = store.iter().map(|res| {
-            let key = res?;
-            let delta = store.get_delta(&key)?;
-            let (name, node) = from_key(py, &key);
-            let (_, base_node) = from_base(py, &delta);
-            let tuple = (
-                name.into_object(),
-                node.into_object(),
-                base_node.into_object(),
-                delta.data.len().into_py_object(py),
-            ).into_py_object(py);
-            Ok(tuple)
-        });
-        iter.collect::<Fallible<Vec<PyTuple>>>().map_err(|e| to_pyerr(py, &e.into()))
+        store.iter_py(py)
     }
 });
 
@@ -400,6 +389,11 @@ py_class!(class indexedlogdatastore |py| {
         let mut store = self.store(py).get_mut_value(py)?;
         store.flush_py(py)?;
         Ok(Python::None(py))
+    }
+
+    def iterentries(&self) -> PyResult<Vec<PyTuple>> {
+        let store = self.store(py).get_value(py)?;
+        store.iter_py(py)
     }
 });
 
