@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::{
-    io::{Cursor, Seek, SeekFrom, Write},
+    io::{Cursor, Write},
     path::{Path, PathBuf},
 };
 
@@ -17,12 +17,13 @@ use indexedlog::{
     rotate::{OpenOptions, RotateLog},
 };
 use lz4_pyframe::{compress, decompress};
-use types::{Key, Node};
+use types::{node::ReadNodeExt, Key, Node, RepoPath};
 
 use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
     error::KeyError,
     localstore::LocalStore,
+    repack::IterableStore,
     sliceext::SliceExt,
 };
 
@@ -48,7 +49,7 @@ impl Entry {
         }
     }
 
-    /// Read an entry from the IndexedLog and deserialize it.
+    /// Read an entry from the slice and deserialize it.
     ///
     /// The on-disk format of an entry is the following:
     /// - Node <20 bytes>
@@ -62,31 +63,40 @@ impl Entry {
     /// - Flag: 1 byte,
     /// - Len: 2 unsigned bytes, big-endian
     /// - Value: <Len> bytes, big-endian
-    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Self> {
-        let mut log_entry = log.lookup(0, key.node.as_ref())?;
-        let buf = log_entry
-            .nth(0)
-            .ok_or_else(|| KeyError::new(format_err!("Key {} not found", key)))??;
+    fn from_slice(data: &[u8]) -> Fallible<Self> {
+        let mut cur = Cursor::new(data);
+        let node = cur.read_node()?;
 
-        let mut cur = Cursor::new(buf);
-        cur.seek(SeekFrom::Current(Node::len() as i64))?;
+        let name_len = cur.read_u16::<BigEndian>()? as u64;
+        let name_slice =
+            data.get_err(cur.position() as usize..(cur.position() + name_len) as usize)?;
+        cur.set_position(cur.position() + name_len);
+        let filename = RepoPath::from_utf8(name_slice)?;
 
-        let name_len = cur.read_u16::<BigEndian>()? as i64;
-        cur.seek(SeekFrom::Current(name_len))?;
+        let key = Key::new(filename.to_owned(), node);
 
         let metadata = Metadata::read(&mut cur)?;
 
         let compressed_len = cur.read_u64::<BigEndian>()?;
         let compressed =
-            buf.get_err(cur.position() as usize..(cur.position() + compressed_len) as usize)?;
+            data.get_err(cur.position() as usize..(cur.position() + compressed_len) as usize)?;
 
-        let key = key.clone();
         Ok(Entry {
             key,
             content: None,
             compressed_content: Some(compressed.into()),
             metadata,
         })
+    }
+
+    /// Read an entry from the IndexedLog and deserialize it.
+    pub fn from_log(key: &Key, log: &RotateLog) -> Fallible<Self> {
+        let mut log_entry = log.lookup(0, key.node.as_ref())?;
+        let buf = log_entry
+            .nth(0)
+            .ok_or_else(|| KeyError::new(format_err!("Key {} not found", key)))??;
+
+        Entry::from_slice(buf)
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
@@ -200,6 +210,17 @@ impl DataStore for IndexedLogDataStore {
     }
 }
 
+impl IterableStore for IndexedLogDataStore {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+        Box::new(
+            self.log
+                .iter()
+                .map(|entry| Entry::from_slice(entry?))
+                .map(|entry| Ok(entry?.key)),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,6 +301,24 @@ mod tests {
         let metadata = Default::default();
 
         assert!(log.add(&delta, &metadata).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_iter() -> Fallible<()> {
+        let tempdir = TempDir::new()?;
+        let mut log = IndexedLogDataStore::new(&tempdir)?;
+
+        let k = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k.clone(),
+        };
+        let metadata = Default::default();
+
+        log.add(&delta, &metadata)?;
+        assert!(log.iter().all(|e| e.unwrap() == k));
         Ok(())
     }
 }
