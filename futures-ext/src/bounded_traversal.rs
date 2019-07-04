@@ -4,7 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::{stream::FuturesUnordered, try_ready, Async, Future, IntoFuture, Poll, Stream};
+use futures::{
+    stream::{self, FuturesUnordered},
+    try_ready, Async, Future, IntoFuture, Poll, Stream,
+};
 use std::collections::{HashMap, VecDeque};
 
 pub type Iter<Out> = std::iter::Flatten<std::vec::IntoIter<Option<Out>>>;
@@ -264,20 +267,72 @@ where
     }
 }
 
+/// `bounded_traversal_stream` traverses implicit asynchronous tree specified by `init`
+/// and `unfold` arguments. All `unfold` operations are executed in parallel if they
+/// do not depend on each other (not related by ancestor-descendant relation in implicit
+/// tree) with amount of concurrency constrained by `scheduled_max`. Main difference
+/// with `bounded_traversal` is that this one is not structure perserving, and returns
+/// stream.
+///
+/// ## `init: In`
+/// Is the root of the implicit tree to be traversed
+///
+/// ## `unfold: FnMut(In) -> impl IntoFuture<Item = (Out, impl IntoIterator<Item = In>)>`
+/// Asynchronous function which given input value produces list of its children and output
+/// value.
+///
+/// ## return value `impl Stream<Item = Out>`
+/// Stream of all `Out` values
+///
+pub fn bounded_traversal_stream<In, Ins, Out, Unfold, UFut>(
+    scheduled_max: usize,
+    init: In,
+    mut unfold: Unfold,
+) -> impl Stream<Item = Out, Error = UFut::Error>
+where
+    Unfold: FnMut(In) -> UFut,
+    UFut: IntoFuture<Item = (Out, Ins)>,
+    Ins: IntoIterator<Item = In>,
+{
+    let mut unscheduled = VecDeque::new();
+    unscheduled.push_front(init);
+    let mut scheduled = FuturesUnordered::new();
+    stream::poll_fn(move || loop {
+        if scheduled.is_empty() && unscheduled.is_empty() {
+            return Ok(Async::Ready(None));
+        }
+
+        for item in
+            unscheduled.drain(..std::cmp::min(unscheduled.len(), scheduled_max - scheduled.len()))
+        {
+            scheduled.push(unfold(item).into_future())
+        }
+
+        if let Some((out, children)) = try_ready!(scheduled.poll()) {
+            for child in children {
+                unscheduled.push_front(child);
+            }
+            return Ok(Async::Ready(Some(out)));
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::bounded_traversal;
+    use super::{bounded_traversal, bounded_traversal_stream};
     use failure::Error;
     use futures::{
         future,
         sync::oneshot::{channel, Sender},
-        Future,
+        Future, Stream,
     };
     use lock_ext::LockExt;
+    use pretty_assertions::assert_eq;
     use std::{
         cmp::{Ord, Ordering},
-        collections::{BinaryHeap, HashSet},
+        collections::{BTreeSet, BinaryHeap, HashSet},
         hash::Hash,
+        iter::FromIterator,
         sync::{Arc, Mutex},
         thread,
         time::Duration,
@@ -425,7 +480,7 @@ mod tests {
     impl<V: Eq + Hash + Clone> Eq for StateLog<V> {}
 
     #[test]
-    fn test() -> Result<(), Error> {
+    fn test_bounded_traversal() -> Result<(), Error> {
         // tree
         //      0
         //     / \
@@ -523,6 +578,73 @@ mod tests {
         tick();
         reference.fold(0, 8, "015234".to_string());
         reference.done("015234".to_string());
+        assert_eq!(log, reference);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_bounded_traversal_stream() -> Result<(), Error> {
+        // tree
+        //      0
+        //     / \
+        //    1   2
+        //   /   / \
+        //  5   3   4
+        let tree = Tree::new(
+            0,
+            vec![
+                Tree::new(1, vec![Tree::leaf(5)]),
+                Tree::new(2, vec![Tree::leaf(3), Tree::leaf(4)]),
+            ],
+        );
+
+        let tick = Tick::new();
+        let log: StateLog<BTreeSet<usize>> = StateLog::new();
+        let reference: StateLog<BTreeSet<usize>> = StateLog::new();
+        let mut rt = Runtime::new()?;
+
+        let traverse = bounded_traversal_stream(2, tree, {
+            let tick = tick.clone();
+            let log = log.clone();
+            move |Tree { id, children }| {
+                let log = log.clone();
+                tick.sleep(1).map(move |now| {
+                    log.unfold(id, now);
+                    (id, children)
+                })
+            }
+        });
+        rt.spawn(traverse.collect().map({
+            let log = log.clone();
+            move |items| log.done(BTreeSet::from_iter(items))
+        }));
+
+        let tick = move || {
+            tick.tick();
+            thread::sleep(Duration::from_millis(50));
+        };
+
+        thread::sleep(Duration::from_millis(50));
+        assert_eq!(log, reference);
+
+        tick();
+        reference.unfold(0, 1);
+        assert_eq!(log, reference);
+
+        tick();
+        reference.unfold(1, 2);
+        reference.unfold(2, 2);
+        assert_eq!(log, reference);
+
+        tick();
+        reference.unfold(5, 3);
+        reference.unfold(4, 3);
+        assert_eq!(log, reference);
+
+        tick();
+        reference.unfold(3, 4);
+        reference.done(BTreeSet::from_iter(0..6));
         assert_eq!(log, reference);
 
         Ok(())
