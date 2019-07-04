@@ -121,6 +121,18 @@ impl CoreContext {
         }
     }
 
+    pub fn new_with_logger(logger: Logger) -> Self {
+        Self::new(
+            Uuid::new_v4(),
+            logger,
+            ScubaSampleBuilder::with_discard(),
+            None,
+            TraceContext::default(),
+            None,
+            SshEnvVars::default(),
+        )
+    }
+
     pub fn with_logger_kv<T>(&self, values: OwnedKV<T>) -> Self
     where
         T: SendSyncRefUnwindSafeKV + 'static,
