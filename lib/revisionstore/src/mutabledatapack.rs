@@ -15,7 +15,7 @@ use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use failure::{format_err, Error, Fail, Fallible};
-use tempfile::NamedTempFile;
+use tempfile::{Builder, NamedTempFile};
 
 use lz4_pyframe::compress;
 use types::{Key, Node};
@@ -63,7 +63,8 @@ impl MutableDataPackInner {
             return Err(format_err!("cannot create a v0 datapack"));
         }
 
-        let mut data_file = PackWriter::new(NamedTempFile::new_in(&dir)?);
+        let tempfile = Builder::new().append(true).tempfile_in(&dir)?;
+        let mut data_file = PackWriter::new(tempfile);
         let mut hasher = Sha1::new();
         let version_u8: u8 = version.clone().into();
         data_file.write_u8(version_u8)?;
@@ -95,8 +96,6 @@ impl MutableDataPackInner {
 
         file.seek(SeekFrom::Start(location.offset))?;
         file.read_exact(&mut data)?;
-        // The add function assumes the file position is always at the end, so reset it.
-        file.seek(SeekFrom::End(0))?;
 
         let entry = DataEntry::new(&data, 0, DataPackVersion::One)?;
         Ok((
