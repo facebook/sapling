@@ -374,3 +374,48 @@ Test creating a bookmark and new head
   adding file changes
   added 0 changesets with 0 changes to 0 files
   exporting bookmark newbook
+
+Test non-fast-forward force pushrebase
+  $ hgmn up -qr 20
+  $ echo Aeneas > was_a_lively_fellow && hg ci -qAm 26
+  $ log -r "20::"
+  @  26 [draft;rev=27;4899f9112d9b]
+  |
+  | o  draft [public;rev=26;7a037594e202] default/newbook
+  | |
+  | | o  merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  | |/|
+  +---o  12 [public;rev=23;cd5aac4439e5]
+  | |
+  | o  11 [public;rev=22;589551466f25]
+  | |
+  | o  10 [public;rev=21;c573a92e1179]
+  |/
+  o  9 [public;rev=20;2f7cc50dc4e5]
+  |
+  ~
+-- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
+  $ hgmn push -r . -f --to newbook
+  pushing rev 4899f9112d9b to destination ssh://user@dummy/repo bookmark newbook
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  updating bookmark newbook
+  $ log -r "20::"
+  @  26 [public;rev=27;4899f9112d9b] default/newbook
+  |
+  | o  draft [public;rev=26;7a037594e202]
+  | |
+  | | o  merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  | |/|
+  +---o  12 [public;rev=23;cd5aac4439e5]
+  | |
+  | o  11 [public;rev=22;589551466f25]
+  | |
+  | o  10 [public;rev=21;c573a92e1179]
+  |/
+  o  9 [public;rev=20;2f7cc50dc4e5]
+  |
+  ~

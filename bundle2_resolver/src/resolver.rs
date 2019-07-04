@@ -26,6 +26,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
+use lazy_static::lazy_static;
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::{
     create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item, PartHeader, PartHeaderInner,
@@ -50,6 +51,15 @@ type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
+
+// This is to match the core hg behavior from https://fburl.com/jf3iyl7y
+// Mercurial substitutes the `onto` parameter with this bookmark name when
+// the force pushrebase is done, so we need to look for it and make sure we
+// do the right thing here too.
+lazy_static! {
+    static ref DONOTREBASEBOOKMARK: BookmarkName =
+        BookmarkName::new("__pushrebase_donotrebase__").unwrap();
+}
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
@@ -280,6 +290,25 @@ fn resolve_push(
         .boxify()
 }
 
+// Enum used to pass data for normal or forceful pushrebases
+// Normal pushrebase is what one would expect: take a (potentially
+// stack of) commit(s) and rebase it on top of a given bookmark.
+// Force pushrebase is basically a push, which for logging
+// and respondin purposes is treated like a pushrebase
+enum PushrebaseBookmarkSpec {
+    NormalPushrebase(pushrebase::OntoBookmarkParams),
+    ForcePushrebase(PlainBookmarkPush<HgChangesetId>),
+}
+
+impl PushrebaseBookmarkSpec {
+    fn get_bookmark_name(&self) -> BookmarkName {
+        match self {
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params.bookmark.clone(),
+            PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => plain_push.name.clone(),
+        }
+    }
+}
+
 fn resolve_pushrebase(
     ctx: CoreContext,
     commonheads: CommonHeads,
@@ -348,8 +377,13 @@ fn resolve_pushrebase(
                                 .boxify();
                             }
 
-                            let bookmark_push_part_id = match bookmark_pushes.get(0) {
-                                Some(bk_push) if bk_push.name != onto_params.bookmark => {
+                            let (bookmark_push_part_id, bookmark_spec) = match bookmark_pushes
+                                .get(0)
+                            {
+                                Some(bk_push)
+                                    if bk_push.name != onto_params.bookmark
+                                        && onto_params.bookmark != *DONOTREBASEBOOKMARK =>
+                                {
                                     return future::err(format_err!(
                                         "allowed only pushes of {} bookmark: {:?}",
                                         onto_params.bookmark,
@@ -357,8 +391,23 @@ fn resolve_pushrebase(
                                     ))
                                     .boxify();
                                 }
-                                Some(bk_push) => Some(bk_push.part_id),
-                                None => None,
+                                Some(bk_push) if onto_params.bookmark == *DONOTREBASEBOOKMARK => {
+                                    (
+                                        // This is a force pushrebase scenario. We need to ignore `onto_params`
+                                        // and run normal push (using bk_push), but generate a pushrebase
+                                        // response.
+                                        // See comment next to DONOTREBASEBOOKMARK definition
+                                        Some(bk_push.part_id),
+                                        PushrebaseBookmarkSpec::ForcePushrebase(bk_push.clone()),
+                                    )
+                                }
+                                Some(bk_push) => (
+                                    Some(bk_push.part_id),
+                                    PushrebaseBookmarkSpec::NormalPushrebase(onto_params),
+                                ),
+                                None => {
+                                    (None, PushrebaseBookmarkSpec::NormalPushrebase(onto_params))
+                                }
                             };
 
                             resolver
@@ -367,7 +416,7 @@ fn resolve_pushrebase(
                                     (
                                         changesets,
                                         bookmark_push_part_id,
-                                        onto_params,
+                                        bookmark_spec,
                                         maybe_raw_bundle2_id,
                                     )
                                 })
@@ -377,15 +426,11 @@ fn resolve_pushrebase(
             }
         })
         .and_then({
-            cloned!(ctx, resolver);
-            move |(changesets, bookmark_push_part_id, onto_params, maybe_raw_bundle2_id)| {
+            cloned!(ctx, resolver, lca_hint);
+            move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id)| {
+                let bookmark = bookmark_spec.get_bookmark_name();
                 resolver
-                    .run_hooks(
-                        ctx.clone(),
-                        changesets.clone(),
-                        maybe_pushvars,
-                        &onto_params.bookmark,
-                    )
+                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &bookmark)
                     .map_err(|err| match err {
                         RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
                             let mut err_msgs = vec![];
@@ -410,20 +455,22 @@ fn resolve_pushrebase(
                         RunHooksError::Error(err) => err,
                     })
                     .and_then(move |()| {
-                        resolver
-                            .pushrebase(ctx, changesets.clone(), &onto_params, maybe_raw_bundle2_id)
-                            .map(move |pushrebased_rev| {
-                                (pushrebased_rev, onto_params, bookmark_push_part_id)
-                            })
+                        match bookmark_spec {
+                            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => resolver
+                                .pushrebase(ctx, changesets, &onto_params, maybe_raw_bundle2_id)
+                                .left_future(),
+                            PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => resolver
+                                .force_pushrebase(ctx, lca_hint, plain_push, maybe_raw_bundle2_id)
+                                .right_future(),
+                        }
+                        .map(move |pushrebased_rev| {
+                            (pushrebased_rev, bookmark, bookmark_push_part_id)
+                        })
                     })
             }
         })
         .and_then(
-            move |(
-                (pushrebased_rev, pushrebased_changesets),
-                onto_params,
-                bookmark_push_part_id,
-            )| {
+            move |((pushrebased_rev, pushrebased_changesets), bookmark, bookmark_push_part_id)| {
                 // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
                 let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
 
@@ -435,7 +482,7 @@ fn resolve_pushrebase(
                             commonheads,
                             pushrebased_rev,
                             pushrebased_changesets,
-                            onto_params.bookmark,
+                            bookmark,
                             lca_hint,
                             phases_hint,
                             bookmark_push_part_id,
@@ -520,7 +567,7 @@ enum BookmarkPush<T: Copy> {
     Infinitepush(InfiniteBookmarkPush<T>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct PlainBookmarkPush<T: Copy> {
     part_id: PartId,
     name: BookmarkName,
@@ -1359,6 +1406,33 @@ impl Bundle2Resolver {
             })
         })
         .boxify()
+    }
+
+    fn force_pushrebase(
+        &self,
+        ctx: CoreContext,
+        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        bookmark_push: PlainBookmarkPush<HgChangesetId>,
+        maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    ) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error>
+    {
+        let this = self.clone();
+        bonsai_from_hg_opt(ctx.clone(), &self.repo, bookmark_push.new.clone()).and_then(
+            move |maybe_target_bcs| {
+                let target_bcs = try_boxfuture!(maybe_target_bcs
+                    .ok_or(err_msg("new changeset is required for force pushrebase")));
+                let pushes = vec![BookmarkPush::PlainPush(bookmark_push)];
+                let reason = BookmarkUpdateReason::Pushrebase {
+                    bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
+                };
+                // Note that this push did not do any actual rebases, so we do not
+                // need to provide any actual mapping, an empty Vec will do
+                let ret = (target_bcs, Vec::new());
+                this.resolve_bookmark_pushes(pushes, reason, lca_hint, true)
+                    .map(move |_| ret)
+                    .boxify()
+            },
+        )
     }
 
     fn pushrebase(

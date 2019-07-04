@@ -770,6 +770,69 @@ Test bookmark deletion sync
   date:        * (glob)
   summary:     symlink
   
+
+Test force pushrebase sync
+  $ cd $TESTTMP/client-push
+  $ hgmn -q up master_bookmark^
+-- create a commit, which is not an ancestor of master
+  $ mkcommit commit_to_force_pushmaster
+  $ hg log -r .
+  changeset:   10:cc83c88b72d3
+  tag:         tip
+  parent:      6:a7acac33c050
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commit_to_force_pushmaster
+  
+-- force-pushrebase this commit
+  $ hgmn push -q -f --to master_bookmark
+-- master should now point to it
+  $ hg log -r .
+  changeset:   10:cc83c88b72d3
+  tag:         tip
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
+  parent:      6:a7acac33c050
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commit_to_force_pushmaster
+  
+-- let us now see if we can replay it
+  $ cd $TESTTMP
+  $ mononoke_hg_sync_loop repo-hg-3 8
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * preparing log entry #10 ... (glob)
+  * successful prepare of entry #10 (glob)
+  * syncing log entries [10] ... (glob)
+  * 'user@dummy' 'hg -R repo-hg-3 serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities: * (glob)
+  remote: 1
+  sending clienttelemetry command
+  connected to * (glob)
+  creating a peer took: * (glob)
+  single wireproto command took: * (glob)
+  using * as a reports file (glob)
+  sending unbundlereplay command
+  remote: pushing 1 changeset:
+  remote:     cc83c88b72d3  commit_to_force_pushmaster
+  unbundle replay batch item #0 successfully sent
+  * queue size after processing: 0 (glob)
+  * successful sync of entries [10] (glob)
+-- and if the replay result is good (e.g. master_bookmark points to the same commit as in client-push)
+  $ cd $TESTTMP/repo-hg-3
+  $ hg log -r master_bookmark
+  changeset:   7:cc83c88b72d3
+  bookmark:    master_bookmark
+  tag:         tip
+  parent:      5:a7acac33c050
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commit_to_force_pushmaster
+  
+
 Test the job exits when the exit file is set
   $ cd $TESTTMP/client-push
   $ hg up -q master_bookmark
