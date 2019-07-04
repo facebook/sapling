@@ -14,7 +14,7 @@ import subprocess
 import sys
 import typing
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
 import eden.thrift
 import thrift.transport
@@ -27,12 +27,10 @@ from fb303.ttypes import fb_status
 from . import (
     buck,
     config as config_mod,
-    debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
     mtab,
     process_finder,
-    rage as rage_mod,
     redirect as redirect_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
@@ -49,7 +47,7 @@ from .util import ShutdownError, print_stderr
 
 
 if os.name != "nt":
-    from . import daemon, fsck as fsck_mod
+    from . import daemon, debug as debug_mod, fsck as fsck_mod, rage as rage_mod
 
 
 subcmd = subcmd_mod.Decorator()
@@ -1410,17 +1408,17 @@ def create_parser() -> argparse.ArgumentParser:
         "--version", "-v", action="store_true", help="Print eden version."
     )
 
-    subcmd_mod.add_subcommands(
-        parser,
-        subcmd.commands
-        + [
-            debug_mod.DebugCmd,
-            subcmd_mod.HelpCmd,
-            stats_mod.StatsCmd,
-            trace_mod.TraceCmd,
-            redirect_mod.RedirectCmd,
-        ],
-    )
+    subcmd_add_list: List[Type[Subcmd]] = [
+        subcmd_mod.HelpCmd,
+        stats_mod.StatsCmd,
+        trace_mod.TraceCmd,
+        redirect_mod.RedirectCmd,
+    ]
+
+    if os.name != "nt":
+        subcmd_add_list.append(debug_mod.DebugCmd)
+
+    subcmd_mod.add_subcommands(parser, subcmd.commands + subcmd_add_list)
 
     return parser
 
