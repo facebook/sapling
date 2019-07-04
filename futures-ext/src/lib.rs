@@ -30,12 +30,14 @@ pub mod decode;
 pub mod encode;
 mod futures_ordered;
 pub mod io;
+mod launch;
 mod select_all;
 mod stream_wrappers;
 mod streamfork;
 
 pub use crate::bytes_stream::{BytesStream, BytesStreamFuture};
 pub use crate::futures_ordered::{futures_ordered, FuturesOrdered};
+pub use crate::launch::top_level_launch;
 pub use crate::select_all::{select_all, SelectAll};
 pub use crate::stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
 
