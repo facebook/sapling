@@ -172,6 +172,7 @@ from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscmnative import cstore
+from edenscmnative.bindings import revisionstore
 
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
@@ -184,8 +185,8 @@ from ..remotefilelog import (
     wirepack,
 )
 from ..remotefilelog.contentstore import manifestrevlogstore, unioncontentstore
-from ..remotefilelog.datapack import datapack, datapackstore, memdatapack
-from ..remotefilelog.historypack import historypack, historypackstore, memhistorypack
+from ..remotefilelog.datapack import datapackstore, memdatapack
+from ..remotefilelog.historypack import historypackstore, memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
 from ..remotefilelog.repack import (
     _computeincrementaldatapack,
@@ -2505,7 +2506,9 @@ def serverrepack(repo, incremental=False, options=None):
     fulldatapackstore = datapackstore(repo.ui, packpath)
     if incremental:
         datastores = _topacks(
-            packpath, _computeincrementaldatapack(repo.ui, files), datapack
+            packpath,
+            _computeincrementaldatapack(repo.ui, files),
+            revisionstore.datapack,
         )
     else:
         datastores = [fulldatapackstore]
@@ -2515,7 +2518,9 @@ def serverrepack(repo, incremental=False, options=None):
     # History store
     if incremental:
         historystores = _topacks(
-            packpath, _computeincrementalhistorypack(repo.ui, files), historypack
+            packpath,
+            _computeincrementalhistorypack(repo.ui, files),
+            revisionstore.historypack,
         )
     else:
         historystores = [historypackstore(repo.ui, packpath)]
