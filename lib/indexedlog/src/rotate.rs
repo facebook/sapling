@@ -302,6 +302,13 @@ impl RotateLog {
     fn writable_log(&mut self) -> &mut Log {
         &mut self.logs[0]
     }
+
+    /// Iterate over all the entries.
+    ///
+    /// The entries are returned in FIFO order.
+    pub fn iter(&self) -> impl Iterator<Item = Fallible<&[u8]>> {
+        self.logs.iter().rev().map(|log| log.iter()).flatten()
+    }
 }
 
 /// Get access to internals of [`RotateLog`].
@@ -714,5 +721,31 @@ mod tests {
             .open(&dir)
             .unwrap();
         rotate.lookup_latest(0, b"a").unwrap(); // flush_filter is not set
+    }
+
+    #[test]
+    fn test_iter() {
+        let dir = tempdir().unwrap();
+        let mut rotate = OpenOptions::new()
+            .create(true)
+            .max_bytes_per_log(100)
+            .open(&dir)
+            .unwrap();
+
+        let a = vec![b'a'; 101];
+        let b = vec![b'b'; 10];
+
+        rotate.append(a.clone()).unwrap();
+        rotate.sync().unwrap(); // trigger rotate
+        rotate.append(b.clone()).unwrap();
+        rotate.sync().unwrap();
+
+        assert_eq!(
+            rotate
+                .iter()
+                .map(|e| e.unwrap().to_vec())
+                .collect::<Vec<Vec<u8>>>(),
+            vec![a, b]
+        );
     }
 }
