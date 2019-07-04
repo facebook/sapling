@@ -254,112 +254,123 @@ def parsefileblob(path, decompress):
     return size, firstnode, mapping
 
 
+def debugdatastore(ui, store, verifynoduplicate=True, **opts):
+    nodedelta = opts.get("node_delta")
+    if nodedelta:
+        deltachain = store.getdeltachain("", bin(nodedelta))
+        dumpdeltachain(ui, deltachain, **opts)
+        return
+    node = opts.get("node")
+    if node:
+        unionstore = unioncontentstore(store)
+        try:
+            content = unionstore.get("", bin(node))
+        except KeyError:
+            ui.write(("(not found)\n"))
+            return
+        else:
+            ui.write(("%s") % content)
+            return
+
+    if opts.get("long"):
+        hashformatter = hex
+        hashlen = 42
+    else:
+        hashformatter = short
+        hashlen = 14
+
+    lastfilename = None
+    totaldeltasize = 0
+    totalblobsize = 0
+
+    def printtotals():
+        if lastfilename is not None:
+            ui.write("\n")
+        if not totaldeltasize or not totalblobsize:
+            return
+        difference = totalblobsize - totaldeltasize
+        deltastr = "%0.1f%% %s" % (
+            (100.0 * abs(difference) / totalblobsize),
+            ("smaller" if difference > 0 else "bigger"),
+        )
+
+        ui.write(
+            ("Total:%s%s  %s (%s)\n")
+            % (
+                "".ljust(2 * hashlen - len("Total:")),
+                str(totaldeltasize).ljust(12),
+                str(totalblobsize).ljust(9),
+                deltastr,
+            )
+        )
+
+    bases = {}
+    nodes = set()
+    failures = 0
+    for filename, node, deltabase, deltalen in store.iterentries():
+        bases[node] = deltabase
+        if verifynoduplicate and node in nodes:
+            ui.write(("Bad entry: %s appears twice\n" % short(node)))
+            failures += 1
+        nodes.add(node)
+        if filename != lastfilename:
+            printtotals()
+            name = "(empty name)" if filename == "" else filename
+            ui.write("%s:\n" % name)
+            ui.write(
+                "%s%s%s%s\n"
+                % (
+                    "Node".ljust(hashlen),
+                    "Delta Base".ljust(hashlen),
+                    "Delta Length".ljust(14),
+                    "Blob Size".ljust(9),
+                )
+            )
+            lastfilename = filename
+            totalblobsize = 0
+            totaldeltasize = 0
+
+        # Metadata could be missing, in which case it will be an empty dict.
+        meta = store.getmeta(filename, node)
+        if constants.METAKEYSIZE in meta:
+            blobsize = meta[constants.METAKEYSIZE]
+            totaldeltasize += deltalen
+            totalblobsize += blobsize
+        else:
+            blobsize = "(missing)"
+        ui.write(
+            "%s  %s  %s%s\n"
+            % (
+                hashformatter(node),
+                hashformatter(deltabase),
+                str(deltalen).ljust(14),
+                blobsize,
+            )
+        )
+
+    if filename is not None:
+        printtotals()
+
+    failures += _sanitycheck(ui, set(nodes), bases)
+    if failures > 1:
+        ui.warn(("%d failures\n" % failures))
+        return 1
+
+
 def debugdatapack(ui, *paths, **opts):
     for path in paths:
         if ".data" in path:
             path = path[: path.index(".data")]
         ui.write("%s:\n" % path)
         dpack = revisionstore.datapack(path)
-        nodedelta = opts.get("node_delta")
-        if nodedelta:
-            deltachain = dpack.getdeltachain("", bin(nodedelta))
-            dumpdeltachain(ui, deltachain, **opts)
-            return
-        node = opts.get("node")
-        if node:
-            unionstore = unioncontentstore(dpack)
-            try:
-                content = unionstore.get("", bin(node))
-            except KeyError:
-                ui.write(("(not found)\n"))
-                continue
-            else:
-                ui.write(("%s") % content)
-                return
+        debugdatastore(ui, dpack, **opts)
 
-        if opts.get("long"):
-            hashformatter = hex
-            hashlen = 42
-        else:
-            hashformatter = short
-            hashlen = 14
 
-        lastfilename = None
-        totaldeltasize = 0
-        totalblobsize = 0
-
-        def printtotals():
-            if lastfilename is not None:
-                ui.write("\n")
-            if not totaldeltasize or not totalblobsize:
-                return
-            difference = totalblobsize - totaldeltasize
-            deltastr = "%0.1f%% %s" % (
-                (100.0 * abs(difference) / totalblobsize),
-                ("smaller" if difference > 0 else "bigger"),
-            )
-
-            ui.write(
-                ("Total:%s%s  %s (%s)\n")
-                % (
-                    "".ljust(2 * hashlen - len("Total:")),
-                    str(totaldeltasize).ljust(12),
-                    str(totalblobsize).ljust(9),
-                    deltastr,
-                )
-            )
-
-        bases = {}
-        nodes = set()
-        failures = 0
-        for filename, node, deltabase, deltalen in dpack.iterentries():
-            bases[node] = deltabase
-            if node in nodes:
-                ui.write(("Bad entry: %s appears twice\n" % short(node)))
-                failures += 1
-            nodes.add(node)
-            if filename != lastfilename:
-                printtotals()
-                name = "(empty name)" if filename == "" else filename
-                ui.write("%s:\n" % name)
-                ui.write(
-                    "%s%s%s%s\n"
-                    % (
-                        "Node".ljust(hashlen),
-                        "Delta Base".ljust(hashlen),
-                        "Delta Length".ljust(14),
-                        "Blob Size".ljust(9),
-                    )
-                )
-                lastfilename = filename
-                totalblobsize = 0
-                totaldeltasize = 0
-
-            # Metadata could be missing, in which case it will be an empty dict.
-            meta = dpack.getmeta(filename, node)
-            if constants.METAKEYSIZE in meta:
-                blobsize = meta[constants.METAKEYSIZE]
-                totaldeltasize += deltalen
-                totalblobsize += blobsize
-            else:
-                blobsize = "(missing)"
-            ui.write(
-                "%s  %s  %s%s\n"
-                % (
-                    hashformatter(node),
-                    hashformatter(deltabase),
-                    str(deltalen).ljust(14),
-                    blobsize,
-                )
-            )
-
-        if filename is not None:
-            printtotals()
-
-        failures += _sanitycheck(ui, set(nodes), bases)
-        if failures > 1:
-            ui.warn(("%d failures\n" % failures))
-            return 1
+def debugindexedlogdatastore(ui, *paths, **opts):
+    for path in paths:
+        ui.write("%s:\n" % path)
+        store = revisionstore.indexedlogdatastore(path)
+        debugdatastore(ui, store, verifynoduplicate=False, **opts)
 
 
 def _sanitycheck(ui, nodes, bases):

@@ -1271,6 +1271,20 @@ def debugdatapack(ui, *paths, **opts):
 
 
 @command(
+    "debugindexedlogdatastore",
+    [
+        ("", "long", None, _("print the long hashes")),
+        ("", "node", "", _("dump the contents of node"), "NODE"),
+        ("", "node-delta", "", _("dump the delta chain info of node"), "NODE"),
+    ],
+    _("hg debugindexedlogdatastore <paths>"),
+    norepo=True,
+)
+def debugindexedlogdatastore(ui, *paths, **opts):
+    return debugcommands.debugindexedlogdatastore(ui, *paths, **opts)
+
+
+@command(
     "debughistorypack",
     [("", "long", None, _("print the long hashes"))],
     _("hg debughistorypack <path>"),
