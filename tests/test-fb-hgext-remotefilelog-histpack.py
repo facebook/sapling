@@ -12,7 +12,7 @@ import unittest
 
 import silenttestrunner
 from edenscm.hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
-from edenscm.hgext.remotefilelog.historypack import historypack, mutablehistorypack
+from edenscm.hgext.remotefilelog.historypack import mutablehistorypack
 from edenscm.mercurial import error, ui as uimod, util
 from edenscm.mercurial.node import nullid
 from edenscmnative.bindings import revisionstore
@@ -240,7 +240,7 @@ class histpacktestsbase(object):
             f.write(raw)
 
         try:
-            pack = historypack(pack.path())
+            pack = self.historypackreader(pack.path())
             self.assertTrue(False, "bad version number should have thrown")
         except RuntimeError:
             pass
