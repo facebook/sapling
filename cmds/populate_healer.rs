@@ -108,7 +108,6 @@ fn parse_args() -> Result<Config, Error> {
     let app = args::MononokeApp {
         safe_writes: true,
         hide_advanced_args: false,
-        local_instances: true,
         default_glog: true,
     }
     .build("populate healer queue")

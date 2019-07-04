@@ -9,7 +9,7 @@ use std::{
     collections::HashMap,
     fs,
     num::NonZeroUsize,
-    path::{Path, PathBuf},
+    path::Path,
     time::{Duration, Instant},
 };
 
@@ -72,8 +72,6 @@ pub struct MononokeApp {
     /// Whether to hide advanced Manifold configuration from help. Note that the arguments will
     /// still be available, just not displayed in help.
     pub hide_advanced_args: bool,
-    /// Whether this tool can deal with local instances (which are very useful for testing).
-    pub local_instances: bool,
     /// Whether to use glog by default.
     pub default_glog: bool,
 }
@@ -167,24 +165,6 @@ impl MononokeApp {
 
         app = add_myrouter_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
-
-        if self.local_instances {
-            app = app
-                .arg(
-                    Arg::with_name("blobstore")
-                        .long("blobstore")
-                        .value_name("TYPE")
-                        .possible_values(&["files", "rocksdb", "manifold"])
-                        .default_value("manifold")
-                        .help("blobstore type"),
-                )
-                .arg(
-                    Arg::with_name("data-dir")
-                        .long("data-dir")
-                        .value_name("DIR")
-                        .help("local data directory (used for local blobstores)"),
-                );
-        }
 
         app
     }
@@ -763,15 +743,6 @@ pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
         ),
         None => None,
     }
-}
-
-pub fn parse_data_dir<'a>(matches: &ArgMatches<'a>) -> PathBuf {
-    let data_dir = matches
-        .value_of("data-dir")
-        .expect("local data directory must be specified");
-    Path::new(data_dir)
-        .canonicalize()
-        .expect("Failed to read local directory path")
 }
 
 pub fn get_usize_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<usize> {

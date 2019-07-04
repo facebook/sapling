@@ -55,7 +55,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         hide_advanced_args: false,
         safe_writes: false,
-        local_instances: true,
         default_glog: false,
     };
     app.build("bonsai roundtrip verification")

@@ -15,7 +15,6 @@ fn main() -> Result<()> {
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
-        local_instances: false,
         default_glog: false,
     };
     let matches = app

@@ -273,7 +273,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
         safe_writes: true,
         hide_advanced_args: false,
-        local_instances: true,
         default_glog: true,
     };
     app.build("Verify and reload all the alias blobs")

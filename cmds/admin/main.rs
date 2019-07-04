@@ -257,12 +257,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             r#"
                 <FILES_LIST>...                             'list of files to be be censored'
                 "#,
-            );
+        );
 
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
-        local_instances: false,
         default_glog: false,
     };
 
