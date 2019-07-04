@@ -378,14 +378,14 @@ def _incrementalrepack(
     if shared:
         files = _deletebigpacks(repo, packpath, files)
     datapacks = _topacks(
-        packpath, _computeincrementaldatapack(repo.ui, files), datapack.datapack
+        packpath, _computeincrementaldatapack(repo.ui, files), revisionstore.datapack
     )
     datapacks.extend(s for s in datastore if not isinstance(s, datapack.datapackstore))
 
     historypacks = _topacks(
         packpath,
         _computeincrementalhistorypack(repo.ui, files),
-        historypack.historypack,
+        revisionstore.historypack,
     )
     historypacks.extend(
         s for s in historystore if not isinstance(s, historypack.historypackstore)
@@ -398,7 +398,7 @@ def _incrementalrepack(
         files, historypack.PACKSUFFIX, historypack.INDEXSUFFIX
     )
     allhistorypacks = _topacks(
-        packpath, (f for f, mode, stat in allhistoryfiles), historypack.historypack
+        packpath, (f for f, mode, stat in allhistoryfiles), revisionstore.historypack
     )
     allhistorypacks.extend(
         s for s in historystore if not isinstance(s, historypack.historypackstore)
