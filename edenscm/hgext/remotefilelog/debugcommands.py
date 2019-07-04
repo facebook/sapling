@@ -14,10 +14,10 @@ from edenscm.hgext import extutil
 from edenscm.mercurial import error, filelog, progress, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
+from edenscmnative.bindings import revisionstore
 
 from . import (
     constants,
-    datapack,
     edenapi,
     fileserverclient,
     historypack,
@@ -259,7 +259,7 @@ def debugdatapack(ui, *paths, **opts):
         if ".data" in path:
             path = path[: path.index(".data")]
         ui.write("%s:\n" % path)
-        dpack = datapack.datapack(path)
+        dpack = revisionstore.datapack(path)
         nodedelta = opts.get("node_delta")
         if nodedelta:
             deltachain = dpack.getdeltachain("", bin(nodedelta))

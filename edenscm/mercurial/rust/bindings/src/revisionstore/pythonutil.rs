@@ -97,15 +97,19 @@ pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delt
     })
 }
 
-pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
-    let (name, node) = from_key(py, &delta.key);
-    let (base_name, base_node) = match delta.base.as_ref() {
+pub fn from_base(py: Python, delta: &Delta) -> (PyBytes, PyBytes) {
+    match delta.base.as_ref() {
         Some(base) => from_key(py, &base),
         None => from_key(
             py,
             &Key::new(delta.key.path.clone(), Node::null_id().clone()),
         ),
-    };
+    }
+}
+
+pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
+    let (name, node) = from_key(py, &delta.key);
+    let (base_name, base_node) = from_base(py, &delta);
     let bytes = PyBytes::new(py, &delta.data);
     // A python delta is a tuple: (name, node, base name, base node, delta bytes)
     (

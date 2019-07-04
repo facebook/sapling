@@ -333,8 +333,8 @@ impl DataStore for DataPack {
                 data: data_entry.delta()?,
                 base: data_entry
                     .delta_base()
-                    .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
-                key: Key::new(key.path.clone(), data_entry.node().clone()),
+                    .map(|delta_base| Key::new(data_entry.filename.to_owned(), delta_base.clone())),
+                key: Key::new(data_entry.filename.to_owned(), data_entry.node().clone()),
             });
 
             if let DeltaBaseOffset::Offset(offset) = next_entry.delta_base_offset() {
