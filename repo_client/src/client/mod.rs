@@ -16,7 +16,7 @@ use context::CoreContext;
 use failure::{err_msg, format_err};
 use fbwhoami::FbWhoAmI;
 use futures::future::ok;
-use futures::{future, stream, stream::empty, try_ready, Async, Future, IntoFuture, Poll, Stream};
+use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{
     select_all, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt,
     StreamExt, StreamTimeoutError,
@@ -29,7 +29,7 @@ use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
 use mercurial_types::manifest_utils::{
     changed_entry_stream_with_pruner, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
-    Pruner, VisitedPruner,
+    Pruner,
 };
 use mercurial_types::{
     convert_parents_to_remotefilelog_format, percent_encode, Delta, Entry, HgBlobNode,
@@ -92,7 +92,7 @@ fn format_nodes_list(nodes: &Vec<HgChangesetId>) -> String {
     nodes.iter().map(|node| format!("{}", node)).join(" ")
 }
 
-fn format_manifests_list(nodes: &Vec<HgManifestId>) -> String {
+fn format_manifests_set(nodes: &HashSet<HgManifestId>) -> String {
     nodes.iter().map(|node| format!("{}", node)).join(" ")
 }
 
@@ -1202,8 +1202,8 @@ impl HgCommands for RepoClient {
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
         let args = json!({
             "rootdir": String::from_utf8_lossy(&params.rootdir),
-            "mfnodes": format_manifests_list(&params.mfnodes),
-            "basemfnodes": format_manifests_list(&params.basemfnodes),
+            "mfnodes": format_manifests_set(&params.mfnodes),
+            "basemfnodes": format_manifests_set(&params.basemfnodes),
             "directories": format_utf8_bytes_list(&params.directories),
         });
         let args = json!(vec![args]);
@@ -1472,58 +1472,59 @@ pub fn gettreepack_entries(
     repo: &BlobRepo,
     params: GettreepackArgs,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
-    // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
-    let fetchdepth = params.depth.unwrap_or(2 << 16);
-
     if !params.directories.is_empty() {
         // This param is not used by core hg, don't worry about implementing it now
         return stream::once(Err(err_msg("directories param is not supported"))).boxify();
     }
 
+    let GettreepackArgs {
+        rootdir,
+        mfnodes,
+        basemfnodes,
+        depth: fetchdepth,
+        directories: _,
+    } = params;
+
+    // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
+    let fetchdepth = fetchdepth.unwrap_or(2 << 16);
+
     // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
     // already has can be sent to the client.
-    let basemfnode = params
-        .basemfnodes
-        .get(0)
-        .cloned()
-        .unwrap_or(HgManifestId::new(NULL_HASH));
+    let mut basemfnode = basemfnodes.iter().next().cloned();
 
-    let rootpath = if params.rootdir.is_empty() {
+    let rootpath = if rootdir.is_empty() {
         None
     } else {
-        Some(try_boxstream!(MPath::new(params.rootdir)))
+        Some(try_boxstream!(MPath::new(rootdir)))
     };
 
-    let default_pruner = CombinatorPruner::new(FilePruner, DeletedPruner);
+    select_all(
+        mfnodes
+            .iter()
+            .filter(|node| !basemfnodes.contains(node))
+            .map(move |mfnode| {
+                let cur_basemfnode = basemfnode.unwrap_or(HgManifestId::new(NULL_HASH));
+                // `basemfnode`s are used to reduce the data we send the client by having us prune
+                // manifests the client already has. If the client claims to have no manifests,
+                // then give it a full set for the first manifest it requested, then give it diffs
+                // against the manifest we now know it has (the one we're sending), to reduce
+                // the data we send.
+                if basemfnode.is_none() {
+                    basemfnode = Some(*mfnode);
+                }
 
-    if params.mfnodes.len() > 1 {
-        let visited_pruner = VisitedPruner::new();
-        select_all(params.mfnodes.iter().map(|manifest_id| {
-            get_changed_manifests_stream(
-                ctx.clone(),
-                repo,
-                *manifest_id,
-                basemfnode,
-                rootpath.clone(),
-                CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
-                fetchdepth,
-            )
-        }))
-        .boxify()
-    } else {
-        match params.mfnodes.get(0) {
-            Some(mfnode) => get_changed_manifests_stream(
-                ctx.clone(),
-                repo,
-                *mfnode,
-                basemfnode,
-                rootpath.clone(),
-                default_pruner,
-                fetchdepth,
-            ),
-            None => empty().boxify(),
-        }
-    }
+                get_changed_manifests_stream(
+                    ctx.clone(),
+                    repo,
+                    *mfnode,
+                    cur_basemfnode,
+                    rootpath.clone(),
+                    CombinatorPruner::new(FilePruner, DeletedPruner),
+                    fetchdepth,
+                )
+            }),
+    )
+    .boxify()
 }
 
 fn get_changed_manifests_stream(
