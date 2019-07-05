@@ -596,7 +596,7 @@ macro_rules! try_boxfuture {
     ($e:expr) => {
         match $e {
             Ok(t) => t,
-            Err(e) => return ::futures::future::err(e.into()).boxify(),
+            Err(e) => return $crate::FutureExt::boxify(::futures::future::err(e.into())),
         }
     };
 }
@@ -610,7 +610,7 @@ macro_rules! try_boxstream {
     ($e:expr) => {
         match $e {
             Ok(t) => t,
-            Err(e) => return ::futures::stream::once(Err(e.into())).boxify(),
+            Err(e) => return $crate::StreamExt::boxify(::futures::stream::once(Err(e.into()))),
         }
     };
 }
@@ -623,7 +623,7 @@ macro_rules! try_boxstream {
 macro_rules! ensure_boxfuture {
     ($cond:expr, $e:expr) => {
         if !($cond) {
-            return ::futures::future::err($e.into()).boxify();
+            return $crate::FutureExt::boxify(::futures::future::err($e.into()));
         }
     };
 }
@@ -636,7 +636,7 @@ macro_rules! ensure_boxfuture {
 macro_rules! ensure_boxstream {
     ($cond:expr, $e:expr) => {
         if !($cond) {
-            return ::futures::stream::once(Err($e.into())).boxify();
+            return $crate::StreamExt::boxify(::futures::stream::once(Err($e.into())));
         }
     };
 }
