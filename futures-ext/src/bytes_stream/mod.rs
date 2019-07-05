@@ -79,7 +79,7 @@ impl<S: Stream<Item = Bytes>> BytesStream<S> {
     }
 
     fn poll_buffer_until(&mut self, len: usize) -> Poll<(), S::Error> {
-        while self.bytes.len() < len || self.stream_done {
+        while self.bytes.len() < len && !self.stream_done {
             try_ready!(self.poll_buffer());
         }
 
@@ -142,5 +142,72 @@ where
 
     fn consume(&mut self, amt: usize) {
         self.bytes.split_to(amt);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::BoxStream;
+    use crate::StreamExt;
+    use futures::stream::iter_ok;
+
+    fn make_reader(in_reads: Vec<Vec<u8>>) -> BytesStream<BoxStream<Bytes, io::Error>> {
+        let stream = iter_ok(in_reads.into_iter().map(|v| v.into()));
+        BytesStream::new(stream.boxify())
+    }
+
+    fn do_read<S>(reader: &mut BytesStream<S>, len_to_read: usize) -> io::Result<Vec<u8>>
+    where
+        S: Stream<Item = Bytes, Error = io::Error>,
+    {
+        let mut out = vec![0; len_to_read];
+        let len_read = reader.read(&mut out)?;
+        out.truncate(len_read);
+        Ok(out)
+    }
+
+    #[test]
+    fn test_read_once() -> io::Result<()> {
+        let mut reader = make_reader(vec![vec![1, 2, 3, 4]]);
+        let out = do_read(&mut reader, 4)?;
+        assert_eq!(out, vec![1, 2, 3, 4]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_join() -> io::Result<()> {
+        let mut reader = make_reader(vec![vec![1, 2], vec![3, 4]]);
+        let out = do_read(&mut reader, 4)?;
+        assert_eq!(out, vec![1, 2, 3, 4]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_split() -> io::Result<()> {
+        let mut reader = make_reader(vec![vec![1, 2, 3, 4]]);
+        let out = do_read(&mut reader, 2)?;
+        assert_eq!(out, vec![1, 2]);
+        let out = do_read(&mut reader, 2)?;
+        assert_eq!(out, vec![3, 4]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_eof() -> io::Result<()> {
+        let mut reader = make_reader(vec![vec![1, 2, 3]]);
+        let out = do_read(&mut reader, 4)?;
+        assert_eq!(out, vec![1, 2, 3]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_no_data() -> io::Result<()> {
+        let mut reader = make_reader(vec![vec![1, 2, 3]]);
+        let out = do_read(&mut reader, 4)?;
+        assert_eq!(out, vec![1, 2, 3]);
+        let out = do_read(&mut reader, 1)?;
+        assert_eq!(out, vec![]);
+        Ok(())
     }
 }
