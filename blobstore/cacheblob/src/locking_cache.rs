@@ -4,20 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fmt;
-use std::sync::Arc;
-
-use failure_ext::Error;
-
 use blobstore::{Blobstore, CountedBlobstore};
 use censoredblob::CensoredBlob;
+use context::CoreContext;
+use failure_ext::Error;
 use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use prefixblob::PrefixBlobstore;
-use tokio;
-
-use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
+use prefixblob::PrefixBlobstore;
+use slog::debug;
+use std::fmt;
+use std::sync::Arc;
+use tokio;
 
 /// Extra operations that can be performed on a cache. Other wrappers can implement this trait for
 /// e.g. all `WrapperBlobstore<CacheBlobstore<T>>`.
@@ -29,7 +27,11 @@ pub trait CacheBlobstoreExt: Blobstore {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error>;
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
+    fn get_cache_only(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error>;
 }
 
 /// The operations a cache must provide in order to be usable as the caching layer for a
@@ -335,7 +337,11 @@ where
             .boxify()
     }
 
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get_cache_only(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         CacheOpsUtil::get(&self.cache, &key).boxify()
     }
 }
@@ -366,8 +372,12 @@ impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
     }
 
     #[inline]
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_inner().get_cache_only(key)
+    fn get_cache_only(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_cache_only(ctx, key)
     }
 }
 
@@ -382,8 +392,12 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
     }
 
     #[inline]
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_inner().get_cache_only(self.prepend(key))
+    fn get_cache_only(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_cache_only(ctx, self.prepend(key))
     }
 }
 
@@ -394,17 +408,33 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for CensoredBlob<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        match self.is_censored(key.clone()) {
+        match self.err_if_censored(&key) {
             Ok(()) => self.as_inner().get_no_cache_fill(ctx, key),
-            Err(err) => Err(err).into_future().boxify(),
+            Err(err) => {
+                debug!(
+                    ctx.logger(),
+                    "Accessing censored blobstore with key {:?}", key
+                );
+                Err(err).into_future().boxify()
+            }
         }
     }
 
     #[inline]
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        match self.is_censored(key.clone()) {
-            Err(err) => Err(err).into_future().boxify(),
-            Ok(()) => self.as_inner().get_cache_only(key),
+    fn get_cache_only(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        match self.err_if_censored(&key) {
+            Ok(()) => self.as_inner().get_cache_only(ctx, key),
+            Err(err) => {
+                debug!(
+                    ctx.logger(),
+                    "Accessing censored blobstore with key {:?}", key
+                );
+                Err(err).into_future().boxify()
+            }
         }
     }
 }

@@ -9,11 +9,13 @@
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
 use failure_ext::Error;
-use futures::future;
+use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use slog::debug;
 use std::collections::HashMap;
-
 mod errors;
+use cloned::cloned;
+
 use crate::errors::ErrorKind;
 
 mod store;
@@ -35,12 +37,11 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
         }
     }
 
-    pub fn is_censored(&self, key: String) -> Result<(), Error> {
+    pub fn err_if_censored(&self, key: &String) -> Result<(), Error> {
         match &self.censored {
-            Some(censored) => match censored.get(&key) {
-                Some(task) => Err(ErrorKind::Censored(key, task.clone()).into()),
-                None => Ok(()),
-            },
+            Some(censored) => censored.get(key).map_or(Ok(()), |task| {
+                Err(ErrorKind::Censored(key.to_string(), task.to_string()).into())
+            }),
             None => Ok(()),
         }
     }
@@ -58,23 +59,43 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
 
 impl<T: Blobstore + Clone> Blobstore for CensoredBlob<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        match &self.censored {
-            Some(censored) => match censored.get(&key) {
-                Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
-                None => self.blobstore.get(ctx, key),
-            },
-            None => self.blobstore.get(ctx, key),
-        }
+        self.err_if_censored(&key)
+            .into_future()
+            .map_err({
+                cloned!(ctx, key);
+                move |err| {
+                    debug!(
+                        ctx.logger(),
+                        "Accessing censored blobstore with key {:?}", key
+                    );
+                    err
+                }
+            })
+            .and_then({
+                cloned!(self.blobstore);
+                move |()| blobstore.get(ctx, key)
+            })
+            .boxify()
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        match &self.censored {
-            Some(censored) => match censored.get(&key) {
-                Some(task) => future::err(ErrorKind::Censored(key, task.clone()).into()).boxify(),
-                None => self.blobstore.put(ctx, key, value),
-            },
-            None => self.blobstore.put(ctx, key, value),
-        }
+        self.err_if_censored(&key)
+            .into_future()
+            .map_err({
+                cloned!(ctx, key);
+                move |err| {
+                    debug!(
+                        ctx.logger(),
+                        "Updating censored blobstore with key {:?}", key
+                    );
+                    err
+                }
+            })
+            .and_then({
+                cloned!(self.blobstore);
+                move |()| blobstore.put(ctx, key, value)
+            })
+            .boxify()
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {

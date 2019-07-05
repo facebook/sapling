@@ -188,7 +188,7 @@ fn get_cache<B: CacheBlobstoreExt>(
     mode: String,
 ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
     if mode == "cache-only" {
-        blobstore.get_cache_only(key)
+        blobstore.get_cache_only(ctx, key)
     } else if mode == "no-fill" {
         blobstore.get_no_cache_fill(ctx, key)
     } else {
