@@ -30,7 +30,7 @@ use lazy_static::lazy_static;
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::{
     create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item, PartHeader, PartHeaderInner,
-    PartHeaderType,
+    PartHeaderType, PartId,
 };
 use mercurial_types::{HgChangesetId, HgNodeKey, RepoPath};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams, RepoReadOnly};
@@ -46,7 +46,6 @@ use std::io::Cursor;
 use std::sync::{Arc, Mutex};
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
-type PartId = u32;
 type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
@@ -810,7 +809,7 @@ impl Bundle2Resolver {
                         ))
                         .boxify()
                     } else {
-                        ok((false, stream::once(Ok(part)).chain(bundle2).boxify())).boxify()
+                        return_with_rest_of_bundle(false, part, bundle2)
                     }
                 }
                 _ => ok((false, bundle2)).boxify(),
@@ -873,7 +872,7 @@ impl Bundle2Resolver {
                         (Some(heads), bundle2)
                     })
                     .boxify(),
-                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                Some(part) => return_with_rest_of_bundle(None, part, bundle2),
                 _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
             })
             .boxify()
@@ -898,7 +897,7 @@ impl Bundle2Resolver {
                     // ignored for now, will be used for hooks
                     emptypart.map(move |_| (Some(pushvars), bundle2)).boxify()
                 }
-                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                Some(part) => return_with_rest_of_bundle(None, part, bundle2),
                 None => ok((None, bundle2)).boxify(),
             })
             .context("While resolving Pushvars")
@@ -973,7 +972,7 @@ impl Bundle2Resolver {
                     })
                     .boxify()
             }
-            Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+            Some(part) => return_with_rest_of_bundle(None, part, bundle2),
             _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
         });
 
@@ -1039,7 +1038,7 @@ impl Bundle2Resolver {
 
                     emptypart.map(move |_| (Some(pushkey), bundle2)).boxify()
                 }
-                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                Some(part) => return_with_rest_of_bundle(None, part, bundle2),
                 None => ok((None, bundle2)).boxify(),
             })
             .context("While resolving Pushkey")
@@ -1875,4 +1874,18 @@ fn collect_all_bookmark_pushes(
     }
 
     bookmark_pushes
+}
+
+/// Helper fn to return some (usually "empty") value and
+/// chain together an unused part with the rest of the bundle
+fn return_with_rest_of_bundle<T: Send + 'static>(
+    value: T,
+    unused_part: Bundle2Item,
+    rest_of_bundle: BoxStream<Bundle2Item, Error>,
+) -> BoxFuture<(T, BoxStream<Bundle2Item, Error>), Error> {
+    ok((
+        value,
+        stream::once(Ok(unused_part)).chain(rest_of_bundle).boxify(),
+    ))
+    .boxify()
 }
