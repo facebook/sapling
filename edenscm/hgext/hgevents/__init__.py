@@ -95,9 +95,9 @@ def reposetup(ui, repo):
                 with perftrace.trace("Watchman State Enter"):
                     l.stateupdate.enter()
                 l.releasefn = staterelease
-            except Exception as e:
+            except Exception:
                 # Swallow any errors; fire and forget
-                self.ui.log("watchman", "Exception in state update %s\n", e)
+                pass
             return l
 
     repo.__class__ = hgeventsrepo

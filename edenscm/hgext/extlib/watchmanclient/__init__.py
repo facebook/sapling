@@ -11,7 +11,7 @@ import ctypes
 import getpass
 import os
 
-from edenscm.mercurial import progress, pycompat, util
+from edenscm.mercurial import blackbox, progress, pycompat, util
 from edenscm.mercurial.node import hex
 
 from .. import pywatchman
@@ -115,8 +115,10 @@ class client(object):
 
     def _command(self, *args):
         watchmanargs = (args[0], self._resolved_root) + args[1:]
+        error = None
+        needretry = False
+        starttime = util.timer()
         try:
-            starttime = util.timer()
             if self._watchmanclient is None:
                 self._firsttime = False
                 self._watchmanclient = pywatchman.client(
@@ -126,23 +128,14 @@ class client(object):
                     sendEncoding="bser-v1",
                     useImmutableBser=True,
                 )
-            result = self._watchmanclient.query(*watchmanargs)
-            self._ui.log(
-                "watchman",
-                "command %r completed in %0.2f seconds",
-                watchmanargs,
-                util.timer() - starttime,
-            )
-            return result
+            return self._watchmanclient.query(*watchmanargs)
         except pywatchman.CommandError as ex:
+            error = ex.msg
             if "unable to resolve root" in ex.msg:
-                self._ui.log(
-                    "watchman", "command %r failed - unable to resolve root", args
-                )
                 raise WatchmanNoRoot(self._resolved_root, ex.msg)
-            self._ui.log("watchman", "command %r failed - %s", watchmanargs, ex.msg)
             raise Unavailable(ex.msg)
         except pywatchman.SocketConnectError as ex:
+            error = str(ex)
             # If fsmonitor.sockpath was specified in the configuration, we will
             # have skipped running `watchman get-sockname` which has the
             # consequence of not starting the watchman server up if it happens
@@ -153,16 +146,27 @@ class client(object):
             if not self._ui.config("fsmonitor", "sockpath") or self._sockpath is None:
                 # Either sockpath wasn't configured, or we already tried clearing
                 # it out, so let's propagate this error.
-                self._ui.log("watchman", "command %r failed - %s", watchmanargs, ex)
                 raise Unavailable(str(ex))
             # Recurse and retry the command, and hopefully it will
             # start the server this time.
             self._sockpath = None
             self._watchmanclient = None
-            return self._command(*args)
+            needretry = True
         except pywatchman.WatchmanError as ex:
-            self._ui.log("watchman", "command %r failed - %s", watchmanargs, ex)
+            error = str(ex)
             raise Unavailable(str(ex))
+        finally:
+            event = {
+                "watchman": {
+                    "args": args,
+                    "duration_ms": int((util.timer() - starttime) * 1000),
+                }
+            }
+            if error is not None:
+                event["watchman"]["result"] = {"error": error}
+            blackbox.log(event)
+        if needretry:
+            return self._command(*args)
 
     @util.timefunction("watchmanquery", 0, "_ui")
     def command(self, *args):
@@ -173,9 +177,12 @@ class client(object):
                 except pywatchman.UseAfterFork:
                     # Ideally we wouldn't let this happen, but if it does happen,
                     # record it in the log and retry the command.
-                    self._ui.log(
-                        "watchman",
-                        "UseAfterFork detected, re-establish a client connection",
+                    blackbox.log(
+                        {
+                            "debug": {
+                                "value": "fork detected. re-connect to watchman socket"
+                            }
+                        }
                     )
                     self._watchmanclient = None
                     return self._command(*args)
