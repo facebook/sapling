@@ -12,6 +12,18 @@ log = _blackbox.log
 sync = _blackbox.sync
 
 
+def shortlist(listlike, count=None, limit=4):
+    """Return a value that can be converted to Rust blackbox::event::ShortList"""
+    shortlist = []
+    for name in listlike:
+        shortlist.append(name)
+        if len(shortlist) > limit:
+            break
+    if count is None:
+        count = len(listlike)
+    return {"short_list": shortlist, "len": count}
+
+
 class logblocked(object):
     def __new__(cls, op, seconds=None, name=None, ignorefast=False):
         """Log a "Blocked" event.

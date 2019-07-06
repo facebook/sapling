@@ -170,7 +170,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from . import fsmonitorutil, state
+from . import state
 from ..extlib import pywatchman, watchmanclient
 
 
@@ -391,7 +391,7 @@ def _walk(orig, self, match, unknown, ignored, full, event):
         nonnormalset = self._map.nonnormalset
 
     event["old_clock"] = clock
-    event["old_files"] = fsmonitorutil.shortlist(nonnormalset)
+    event["old_files"] = blackbox.shortlist(nonnormalset)
 
     copymap = self._map.copymap
     getkind = stat.S_IFMT
@@ -472,7 +472,7 @@ def _walk(orig, self, match, unknown, ignored, full, event):
         else:
             count = len(result["files"])
             state.setwatchmanchangedfilecount(count)
-            event["new_files"] = fsmonitorutil.shortlist(
+            event["new_files"] = blackbox.shortlist(
                 (e["name"] for e in result["files"]), count
             )
         # XXX: Legacy scuba logging. Remove this once the source of truth
