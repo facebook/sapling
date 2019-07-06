@@ -860,9 +860,10 @@ class ui(object):
             except IOError as err:
                 raise error.StdioError(err)
             finally:
-                self._measuredtimes["stdio_blocked"] += (
-                    util.timer() - starttime
-                ) * 1000
+                # Assuming the only way to be blocked on stdout is the pager.
+                seconds = util.timer() - starttime
+                blackbox.logblocked("pager", seconds, ignorefast=True)
+                self._measuredtimes["stdio_blocked"] += (seconds) * 1000
 
     def write_err(self, *args, **opts):
         with progress.suspend():
@@ -877,20 +878,25 @@ class ui(object):
                     self._write_err(*msgs, **opts)
 
     def _write_err(self, *msgs, **opts):
+        starttime = util.timer()
         try:
-            with self.timeblockedsection("stdio"):
-                if not getattr(self.fout, "closed", False):
-                    self.fout.flush()
-                # Write all messages in a single operation as stderr may be
-                # unbuffered.
-                self.ferr.write("".join(msgs))
-                # stderr may be buffered under win32 when redirected to files,
-                # including stdout.
-                if not getattr(self.ferr, "closed", False):
-                    self.ferr.flush()
+            if not getattr(self.fout, "closed", False):
+                self.fout.flush()
+            # Write all messages in a single operation as stderr may be
+            # unbuffered.
+            self.ferr.write("".join(msgs))
+            # stderr may be buffered under win32 when redirected to files,
+            # including stdout.
+            if not getattr(self.ferr, "closed", False):
+                self.ferr.flush()
         except IOError as inst:
             if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                 raise error.StdioError(inst)
+        finally:
+            # Assuming the only way to be blocked on stdout is the pager.
+            seconds = util.timer() - starttime
+            blackbox.logblocked("pager", seconds, ignorefast=True)
+            self._measuredtimes["stdio_blocked"] += (seconds) * 1000
 
     def flush(self):
         # opencode timeblockedsection because this is a critical path

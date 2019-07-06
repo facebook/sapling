@@ -453,10 +453,10 @@ impl fmt::Display for Event {
             } => match name {
                 Some(name) => write!(
                     f,
-                    "[blocked] {:?} ({}) finished in {} ms",
+                    "[blocked] {:?} ({}) blocked for {} ms",
                     op, name, duration_ms
                 )?,
-                None => write!(f, "[blocked] {:?} finished in {} ms", op, duration_ms)?,
+                None => write!(f, "[blocked] {:?} blocked for {} ms", op, duration_ms)?,
             },
             Config { items, interactive } => {
                 let interactive = if *interactive {
@@ -595,12 +595,12 @@ mod tests {
 
         assert_eq!(
             f(r#"{"blocked":{"op":"editor","duration_ms":3000}}"#),
-            "[blocked] Editor finished in 3000 ms"
+            "[blocked] Editor blocked for 3000 ms"
         );
 
         assert_eq!(
             f(r#"{"blocked":{"op":"pythonhook","name":"foo","duration_ms":50}}"#),
-            "[blocked] PythonHook (foo) finished in 50 ms"
+            "[blocked] PythonHook (foo) blocked for 50 ms"
         );
 
         assert_eq!(
