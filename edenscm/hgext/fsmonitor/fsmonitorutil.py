@@ -6,9 +6,13 @@
 # GNU General Public License version 2 or any later version.
 
 
-def reprshort(filelist, limit=20):
-    """Like repr(filelist). But truncate it if it is too long"""
-    if len(filelist) <= limit:
-        return repr(filelist)
-    else:
-        return "%r and %s more entries" % (filelist[:limit], len(filelist) - limit)
+def shortlist(listlike, count=None, limit=4):
+    """Return a value that can be converted to Rust blackbox::event::ShortList"""
+    shortlist = []
+    for name in listlike:
+        shortlist.append(name)
+        if len(shortlist) > limit:
+            break
+    if count is None:
+        count = len(listlike)
+    return {"short_list": shortlist, "len": count}

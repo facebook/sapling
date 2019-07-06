@@ -15,8 +15,6 @@ import struct
 from edenscm.mercurial import pathutil, util
 from edenscm.mercurial.i18n import _
 
-from . import fsmonitorutil
-
 
 _version = 4
 _versionformat = ">I"
@@ -61,22 +59,12 @@ class state(object):
 
         versionbytes = file.read(4)
         if len(versionbytes) < 4:
-            self._ui.log(
-                "fsmonitor",
-                "fsmonitor: state file only has %d bytes, "
-                "nuking state\n" % len(versionbytes),
-            )
             self.invalidate(reason="state_file_truncated")
             return None, None, None
         try:
             diskversion = struct.unpack(_versionformat, versionbytes)[0]
             if diskversion != _version:
                 # different version, nuke state and start over
-                self._ui.log(
-                    "fsmonitor",
-                    "fsmonitor: version switch from %d to "
-                    "%d, nuking state\n" % (diskversion, _version),
-                )
                 self.invalidate(reason="state_file_wrong_version")
                 return None, None, None
 
@@ -84,24 +72,12 @@ class state(object):
             # state = hostname\0clock\0ignorehash\0 + list of files, each
             # followed by a \0
             if len(state) < 3:
-                self._ui.log(
-                    "fsmonitor",
-                    "fsmonitor: state file truncated (expected "
-                    "3 chunks, found %d), nuking state\n",
-                    len(state),
-                )
                 self.invalidate(reason="state_file_truncated")
                 return None, None, None
             diskhostname = state[0]
             hostname = socket.gethostname()
             if diskhostname != hostname:
                 # file got moved to a different host
-                self._ui.log(
-                    "fsmonitor",
-                    'fsmonitor: stored hostname "%s" '
-                    'different from current "%s", nuking state\n'
-                    % (diskhostname, hostname),
-                )
                 self.invalidate(reason="hostname_mismatch")
                 return None, None, None
 
@@ -112,11 +88,6 @@ class state(object):
 
         finally:
             file.close()
-
-        self._ui.log(
-            "fsmonitor",
-            "get clock=%r notefiles=%s" % (clock, fsmonitorutil.reprshort(notefiles)),
-        )
 
         return clock, ignorehash, notefiles
 
@@ -134,11 +105,6 @@ class state(object):
             self._ignorelist = ignorelist
 
     def set(self, clock, ignorehash, notefiles):
-        self._ui.log(
-            "fsmonitor",
-            "set clock=%r notefiles=%s" % (clock, fsmonitorutil.reprshort(notefiles)),
-        )
-
         if self._usetreestate:
             ds = self._repo.dirstate
             dmap = ds._map
@@ -186,26 +152,20 @@ class state(object):
                 file.write("\0")
 
     def invalidate(self, reason=None):
-        if reason:
-            self._ui.log("command_info", watchman_invalidate_reason=reason)
         try:
             os.unlink(os.path.join(self._rootdir, ".hg", "fsmonitor.state"))
         except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-        self._ui.log("fsmonitor", "state invalidated")
 
     def setlastclock(self, clock):
-        self._ui.log("fsmonitor", "setlastclock %r" % clock)
         self._lastclock = clock
 
     def setlastisfresh(self, isfresh):
-        self._ui.log("fsmonitor", "setlastisfresh %r" % isfresh)
         self._lastisfresh = isfresh
 
     def setwatchmanchangedfilecount(self, filecount):
         self._lastchangedfilecount = filecount
 
     def getlastclock(self):
-        self._ui.log("fsmonitor", "getlastclock %r" % self._lastclock)
         return self._lastclock

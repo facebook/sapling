@@ -25,27 +25,19 @@ many files:
   len(filtered nonnormal) = 0
   clock = * (glob)
 
-  $ enable blackbox
-  $ setconfig blackbox.track=watchman,fsmonitor
-
   $ rm -rf .hg/blackbox*
   $ hg status
 
-  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep -v command | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
-  clock='c:x' len(nonnormal)=0
-  setlastclock 'c:x'
-  setlastisfresh False
-  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
-  getlastclock 'c:x'
-  set clock='c:x' notefiles=[]
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"fsmonitor":"_"}'
+  [fsmonitor] clock: "c:*" -> "c:*"; need check: * + ["a", "b", "c", "d", "e"] and 1 entries (glob)
 
-The watchman clock remains unchanged. Watchman still returns 4 files, which
+The watchman clock remains unchanged. Watchman still returns 6 files, which
 means the "status" command could still be slow.
 
   $ rm -rf .hg/blackbox*
   $ hg status
-  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep returned | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"fsmonitor":"_"}'
+  [fsmonitor] clock: "c:*" -> "c:*"; need check: * + ["a", "b", "c", "d", "e"] and 1 entries (glob)
 
 With watchman-changed-file-threshold set, clock is bumped and watchman can
 return an empty list:
@@ -55,12 +47,12 @@ return an empty list:
 
   $ rm -rf .hg/blackbox*
   $ hg status
-  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep returned | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned ['a', 'b', 'c', 'd', 'e', 'f']
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"fsmonitor":"_"}'
+  [fsmonitor] clock: "c:*" -> "c:*"; need check: * + ["a", "b", "c", "d", "e"] and 1 entries (glob)
 
   $ sleep 1
 
   $ rm -rf .hg/blackbox*
   $ hg status
-  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"fsmonitor"}}' | grep returned | sed "s/^.*\\] //;s/c:[0-9][0-9:]*/c:x/"
-  watchman returned []
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"fsmonitor":"_"}'
+  [fsmonitor] clock: "c:*" -> "c:*"; need check: [] + [] (glob)

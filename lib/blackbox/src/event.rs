@@ -105,6 +105,58 @@ pub enum Event {
         duration_ms: u64,
     },
 
+    /// A watchman query with related context.
+    #[serde(rename = "FQ", alias = "fsmonitor")]
+    FsmonitorQuery {
+        #[serde(
+            rename = "1",
+            alias = "old_clock",
+            default,
+            skip_serializing_if = "is_default"
+        )]
+        old_clock: String,
+
+        #[serde(
+            rename = "2",
+            alias = "old_files",
+            default,
+            skip_serializing_if = "is_default"
+        )]
+        old_files: ShortList,
+
+        #[serde(
+            rename = "3",
+            alias = "new_clock",
+            default,
+            skip_serializing_if = "is_default"
+        )]
+        new_clock: String,
+
+        #[serde(
+            rename = "4",
+            alias = "new_files",
+            default,
+            skip_serializing_if = "is_default"
+        )]
+        new_files: ShortList,
+
+        #[serde(
+            rename = "F",
+            alias = "is_fresh",
+            default,
+            skip_serializing_if = "is_default"
+        )]
+        is_fresh: bool,
+
+        #[serde(
+            rename = "E",
+            alias = "is_error",
+            default,
+            skip_serializing_if = "is_default"
+        )]
+        is_error: bool,
+    },
+
     /// Legacy blackbox message for compatibility.
     #[serde(rename = "L", alias = "legacy_log")]
     LegacyLog {
@@ -272,6 +324,27 @@ pub enum Event {
     },
 }
 
+/// A truncated (file) list.
+#[serde_alt]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct ShortList {
+    #[serde(
+        rename = "S",
+        alias = "short_list",
+        default,
+        skip_serializing_if = "is_default"
+    )]
+    short_list: Vec<String>,
+
+    #[serde(
+        rename = "L",
+        alias = "len",
+        default,
+        skip_serializing_if = "is_default"
+    )]
+    len: usize,
+}
+
 #[serde_alt]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum NetworkOp {
@@ -353,6 +426,18 @@ impl ToValue for Event {
     }
 }
 
+impl fmt::Display for ShortList {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.short_list.len() >= self.len {
+            write!(f, "{:?}", self.short_list)?;
+        } else {
+            let remaining = self.len - self.short_list.len();
+            write!(f, "{:?} and {} entries", self.short_list, remaining)?;
+        }
+        Ok(())
+    }
+}
+
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Event::*;
@@ -399,6 +484,29 @@ impl fmt::Display for Event {
                     "[commmand_finish] exited {} in {} ms, max RSS: {} bytes",
                     exit_code, duration_ms, max_rss
                 )?;
+            }
+            FsmonitorQuery {
+                old_clock,
+                old_files,
+                new_clock,
+                new_files,
+                is_error,
+                is_fresh,
+            } => {
+                let msg = if *is_error {
+                    format!("query failed")
+                } else if *is_fresh {
+                    format!(
+                        "clock: {:?} -> {:?}; need check: {} + all files",
+                        old_clock, new_clock, old_files
+                    )
+                } else {
+                    format!(
+                        "clock: {:?} -> {:?}; need check: {} + {}",
+                        old_clock, new_clock, old_files, new_files
+                    )
+                };
+                write!(f, "[fsmonitor] {}", msg)?;
             }
             LegacyLog {
                 service,

@@ -154,6 +154,7 @@ import sys
 import weakref
 
 from edenscm.mercurial import (
+    blackbox,
     context,
     encoding,
     error,
@@ -205,11 +206,6 @@ def _handleunavailable(ui, state, ex):
             ui.warn(str(ex) + "\n")
         if ex.invalidate:
             state.invalidate(reason="exception")
-        ui.log("fsmonitor", "watchman unavailable: %s\n", ex.msg)
-        ui.log("fsmonitor_status", fsmonitor_status="unavailable")
-    else:
-        ui.log("fsmonitor", "watchman exception: %s\n", ex)
-        ui.log("fsmonitor_status", fsmonitor_status="exception")
 
 
 def _hashignore(ignore):
@@ -303,6 +299,18 @@ def wrappurge(orig, repo, match, findfiles, finddirs, includeignored):
 
 @util.timefunction("fsmonitorwalk", 1, "_ui")
 def overridewalk(orig, self, match, unknown, ignored, full=True):
+    fsmonitorevent = {}
+    try:
+        return _walk(orig, self, match, unknown, ignored, full, event=fsmonitorevent)
+    finally:
+        try:
+            blackbox.log({"fsmonitor": fsmonitorevent})
+        except UnicodeDecodeError:
+            # test-adding-invalid-utf8.t hits this path
+            pass
+
+
+def _walk(orig, self, match, unknown, ignored, full, event):
     """Replacement for dirstate.walk, hooking into Watchman.
 
     Whenever full is False, ignored is False, and the Watchman client is
@@ -381,7 +389,9 @@ def overridewalk(orig, self, match, unknown, ignored, full=True):
         nonnormalset = self._map.nonnormalsetfiltered(dirfilter)
     else:
         nonnormalset = self._map.nonnormalset
-    self._ui.log("fsmonitor", "clock=%r len(nonnormal)=%d" % (clock, len(nonnormalset)))
+
+    event["old_clock"] = clock
+    event["old_files"] = fsmonitorutil.shortlist(nonnormalset)
 
     copymap = self._map.copymap
     getkind = stat.S_IFMT
@@ -438,12 +448,18 @@ def overridewalk(orig, self, match, unknown, ignored, full=True):
             },
         )
     except Exception as ex:
+        event["is_error"] = True
         _handleunavailable(self._ui, state, ex)
         self._watchmanclient.clearconnection()
+        # XXX: Legacy scuba logging. Remove this once the source of truth
+        # is moved to the Rust Event.
+        self._ui.log("fsmonitor_status", fsmonitor_status="exception")
         return bail("exception during run")
     else:
         # We need to propagate the last observed clock up so that we
         # can use it for our next query
+        event["new_clock"] = result["clock"]
+        event["is_fresh"] = result["is_fresh_instance"]
         state.setlastclock(result["clock"])
         state.setlastisfresh(result["is_fresh_instance"])
         if result["is_fresh_instance"]:
@@ -453,17 +469,18 @@ def overridewalk(orig, self, match, unknown, ignored, full=True):
             fresh_instance = True
             # Ignore any prior noteable files from the state info
             notefiles = []
-
-    if fresh_instance:
-        self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
-    else:
-        self._ui.log("fsmonitor_status", fsmonitor_status="normal")
-        if "fsmonitor" in getattr(self._ui, "track", ()):
-            filelist = [e["name"] for e in result["files"]]
-            self._ui.log(
-                "fsmonitor", "watchman returned %s" % fsmonitorutil.reprshort(filelist)
+        else:
+            count = len(result["files"])
+            state.setwatchmanchangedfilecount(count)
+            event["new_files"] = fsmonitorutil.shortlist(
+                (e["name"] for e in result["files"]), count
             )
-        state.setwatchmanchangedfilecount(len(result["files"]))
+        # XXX: Legacy scuba logging. Remove this once the source of truth
+        # is moved to the Rust Event.
+        if event["is_fresh"]:
+            self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
+        else:
+            self._ui.log("fsmonitor_status", fsmonitor_status="normal")
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap
@@ -891,7 +908,6 @@ def _racedetect(orig, self, other, s, match, listignored, listclean, listunknown
             msg = _(
                 "[race-detector] files changed when scanning changes in working copy:\n%s"
             ) % "".join("  %s\n" % name for name in sorted(racenames))
-            repo.ui.log("fsmonitor", msg)
             raise error.WorkingCopyRaced(
                 msg,
                 hint=_(
