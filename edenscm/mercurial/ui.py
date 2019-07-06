@@ -1467,8 +1467,26 @@ class ui(object):
             suspend = progress.suspend
         else:
             suspend = util.nullcontextmanager
+        starttime = util.timer()
         with self.timeblockedsection(blockedtag), suspend():
             rc = self._runsystem(cmd, environ=environ, cwd=cwd, out=out)
+        seconds = util.timer() - starttime
+        # NOTE: The whitelist needs to be carefully chosen. Make sure they
+        # match the Rust Event enum, and do not overlap with other "blocked"
+        # events. For example, the curses interface might call ui.edit ->
+        # ui.system. But the entire duration of curses interaction is already
+        # recorded as a "blocked" event. So it's important to skip logging
+        # "blocked" for "edit" inside curses. See D15755288 for an example.
+        if blockedtag in {
+            "editor",
+            "exthook",
+            "extdiff",
+            "pythonhook",
+            "bisect_check",
+            "histedit_exec",
+            "mergetool",
+        }:
+            blackbox.logblocked(blockedtag, seconds)
         if rc and onerr:
             errmsg = "%s %s" % (
                 os.path.basename(cmd.split(None, 1)[0]),

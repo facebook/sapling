@@ -399,6 +399,9 @@ pub enum BlockedOp {
 
     #[serde(rename = "M", alias = "mergedriver")]
     MergeDriver,
+
+    #[serde(rename = "m", alias = "mergetool")]
+    MergeTool,
 }
 
 fn is_default<T: PartialEq + Default>(value: &T) -> bool {
