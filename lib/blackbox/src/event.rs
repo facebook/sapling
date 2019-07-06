@@ -394,6 +394,9 @@ pub enum BlockedOp {
     #[serde(rename = "C", alias = "curses")]
     Curses,
 
+    #[serde(rename = "PR", alias = "prompt")]
+    Prompt,
+
     #[serde(rename = "M", alias = "mergedriver")]
     MergeDriver,
 }

@@ -1232,7 +1232,7 @@ class ui(object):
             self.write(msg, " ", default or "", "\n")
             return default
         try:
-            with progress.suspend():
+            with progress.suspend(), blackbox.logblocked("prompt"):
                 r = self._readline(self.label(msg, "ui.prompt"))
                 if not r:
                     r = default
