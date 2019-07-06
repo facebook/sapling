@@ -382,6 +382,7 @@ pub enum BlockedOp {
     #[serde(rename = "H", alias = "exthook")]
     ExtHook,
 
+    // Note: MergeDriver belongs to PythonHook.
     #[serde(rename = "h", alias = "pythonhook")]
     PythonHook,
 
@@ -397,9 +398,9 @@ pub enum BlockedOp {
     #[serde(rename = "PR", alias = "prompt")]
     Prompt,
 
-    #[serde(rename = "M", alias = "mergedriver")]
-    MergeDriver,
-
+    // Do not reuse "M" or "mergedriver".
+    // #[serde(rename = "M", alias = "mergedriver")]
+    // MergeDriver,
     #[serde(rename = "m", alias = "mergetool")]
     MergeTool,
 }

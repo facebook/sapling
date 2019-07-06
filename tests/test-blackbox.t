@@ -130,9 +130,9 @@ extension and python hooks - use the eol extension for a pythonhook
   > # (in addition, keeping it requires extra care for fsmonitor)
   > eol=!
   > EOF
-  $ hg blackbox --pattern '{"legacy_log":{"service":["or","pythonhook","exthook"]}}'
-  [legacy][pythonhook] pythonhook-preupdate: edenscm.hgext.eol.preupdate finished in 0.00 seconds
-  [legacy][exthook] exthook-update: echo hooked finished in 0.00 seconds
+  $ hg blackbox --pattern '{"blocked":{"op":["or","pythonhook","exthook"]}}'
+  [blocked] PythonHook (preupdate.eol) blocked for 0 ms
+  [blocked] ExtHook blocked for 0 ms
 
 log rotation (tested in the Rust land)
 

@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import os
 import sys
 
-from . import demandimport, encoding, error, extensions, pycompat, util
+from . import blackbox, demandimport, encoding, error, extensions, pycompat, util
 from .i18n import _
 
 
@@ -101,6 +101,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
         return True, True
     finally:
         duration = util.timer() - starttime
+        blackbox.logblocked("pythonhook", duration, name=hname)
         ui.log(
             "pythonhook",
             "pythonhook-%s: %s finished in %0.2f seconds\n",
