@@ -142,10 +142,5 @@ class metricscollector(object):
                         % (kind, sorted(dispkw.items()))
                     )
                 )
-            ui.log(
-                "fastmanifest-%s" % kind,
-                "",  # ui.log requires a format string as args[0].
-                **kwargs
-            )
         if debug:
             ui.status(("[FM-METRICS] End metrics\n"))

@@ -234,21 +234,13 @@ def cachemanifestfillandtrim(ui, repo, revset):
 
             computedrevs = scmutil.revrange(repo, revset)
             sortedrevs = sorted(computedrevs, key=lambda x: -x)
-            repo.ui.log("fastmanifest", "FM: trying to cache %s\n" % str(sortedrevs))
 
             if len(sortedrevs) == 0:
                 # normally, we prune as we make space for new revisions to add
                 # to the cache.  however, if we're not adding any new elements,
                 # we'll never check the disk cache size.  this is an explicit
                 # check for that particular scenario.
-                before = cache.ondiskcache.items()
                 cache.prune()
-                after = cache.ondiskcache.items()
-                diff = set(after) - set(before)
-                if diff:
-                    ui.log("fastmanifest", "FM: removed entries %s\n" % str(diff))
-                else:
-                    ui.log("fastmanifest", "FM: no entries removed\n")
             else:
                 revstomannodes = {}
                 mannodesprocessed = set()
@@ -262,10 +254,6 @@ def cachemanifestfillandtrim(ui, repo, revset):
                             "[FM] skipped %s, already cached "
                             "(fast path)\n" % (mannode,)
                         )
-                        repo.ui.log(
-                            "fastmanifest",
-                            "FM: skip(rev, man) %s->%s\n" % (rev, mannode),
-                        )
 
                         # Account for the fact that we access this manifest
                         cache.ondiskcache.touch(mannode)
@@ -277,12 +265,7 @@ def cachemanifestfillandtrim(ui, repo, revset):
 
                     try:
                         cache[mannode] = fastmanifest
-                        repo.ui.log(
-                            "fastmanifest",
-                            "FM: cached(rev,man) " "%s->%s\n" % (rev, mannode),
-                        )
                     except CacheFullException:
-                        repo.ui.log("fastmanifest", "FM: overflow\n")
                         break
 
                 # Make the least relevant entries have an artificially older
@@ -340,7 +323,6 @@ class triggers(object):
         result = orig(*args, **kwargs)
 
         for repo in triggers.repos_to_update:
-            repo.ui.log("fastmanifest", "FM: triggering caching for %s\n" % repo.root)
             bg = repo.ui.configbool("fastmanifest", "cacheonchangebackground", True)
 
             if bg:
@@ -356,7 +338,6 @@ class triggers(object):
 
                 cmd.extend(["--repository", repo.root, "cachemanifest"])
 
-                repo.ui.log("fastmanifest", "FM: running command %s\n" % cmd)
                 concurrency.runshellcommand(cmd, silent_worker=silent_worker)
             else:
                 cacher.cachemanifest(repo)
@@ -371,7 +352,6 @@ class triggers(object):
         if ui.configbool("fastmanifest", "cacheonchange", False):
             triggers.repos_to_update.add(repo)
             metricscollector.get().recordsample("trigger", source="bookmark")
-            ui.log("fastmanifest", "FM: caching trigger: bookmark\n")
 
         return orig(self, *args, **kwargs)
 
@@ -383,7 +363,6 @@ class triggers(object):
         if ui.configbool("fastmanifest", "cacheonchange", False):
             triggers.repos_to_update.add(repo)
             metricscollector.get().recordsample("trigger", source="commit")
-            ui.log("fastmanifest", "FM: caching trigger: commit\n")
 
         return orig(self, *args, **kwargs)
 
@@ -394,6 +373,5 @@ class triggers(object):
         if ui.configbool("fastmanifest", "cacheonchange", False):
             triggers.repos_to_update.add(repo)
             metricscollector.get().recordsample("trigger", source="remotenames")
-            ui.log("fastmanifest", "FM: caching trigger: remotenames\n")
 
         return orig(repo, *args, **kwargs)
