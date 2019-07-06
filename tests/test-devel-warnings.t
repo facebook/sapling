@@ -128,7 +128,7 @@ Stripping from a transaction
   devel-warn: foorbar is deprecated, go shopping
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
 
-#if no-chg normal-layout
+#if no-chg normal-layout no-fsmonitor
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"develwarn"}}' | grep develwarn
   [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:12 (buggylocking)
   [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:12 (buggylocking)

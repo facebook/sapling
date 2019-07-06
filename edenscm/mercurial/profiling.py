@@ -11,7 +11,7 @@ import contextlib
 import errno
 import time
 
-from . import error, extensions, pycompat, util
+from . import blackbox, error, extensions, pycompat, util
 from .i18n import _
 
 
@@ -234,7 +234,7 @@ class profile(object):
                 output = self._ui.config(self._section, "output")
                 content = self._fp.getvalue()
                 if output == "blackbox":
-                    self._ui.log("profile", "Profile:\n%s", content)
+                    blackbox.log({"profile": {"msg": content}})
                 elif output:
                     path = self._ui.expandpath(output)
                     try:

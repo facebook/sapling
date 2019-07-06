@@ -32,7 +32,8 @@ In alias
   $ grep CallCount ../out > /dev/null || cat ../out
 
   $ $prof --config profiling.output=blackbox --config extensions.blackbox= st
-  $ grep CallCount .hg/blackbox.log > /dev/null || cat .hg/blackbox.log
+  $ hg blackbox --pattern '{"profile":"_"}' | grep -o CallCount
+  CallCount
 
   $ $prof --config profiling.format=text st 2>../out
   $ grep CallCount ../out > /dev/null || cat ../out
