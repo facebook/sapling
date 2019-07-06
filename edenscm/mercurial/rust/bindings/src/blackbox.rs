@@ -78,7 +78,7 @@ fn filter(
     start: f64,
     end: f64,
     json: String,
-) -> PyResult<Vec<(u32, f64, String, String)>> {
+) -> PyResult<Vec<(u64, f64, String, String)>> {
     if let Ok(blackbox) = blackbox::SINGLETON.lock() {
         if let Some(blackbox) = blackbox.deref() {
             // Blackbox uses millisecond integers. Translate seconds to milliseconds.

@@ -59,6 +59,7 @@ def blackbox(ui, repo, **opts):
 
     ui.pager("blackbox")
     sidcolor = {}
+    debugflag = ui.debugflag
     for sid, ts, msg, json in reversed(events):
         if showtimestamp:
             localtime = time.localtime(ts)
@@ -72,9 +73,12 @@ def blackbox(ui, repo, **opts):
             if color is None:
                 color = len(sidcolor) % 4
                 sidcolor[sid] = color
+            if not debugflag:
+                # The lowest 3 bytes are "pid". See blackbox.rs.
+                sid = sid & 0xFFFFFF
             ui.write("%10d" % sid, label="blackbox.session.%d" % color)
             ui.write(" ")
-        if ui.debugflag:
+        if debugflag:
             ui.write(json, label="blackbox.json")
         else:
             ui.write(msg.strip(), label="blackbox.message")
