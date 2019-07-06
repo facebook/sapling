@@ -10,3 +10,48 @@ filter = _blackbox.filter
 init = _blackbox.init
 log = _blackbox.log
 sync = _blackbox.sync
+
+
+class logblocked(object):
+    def __new__(cls, op, seconds=None, name=None, ignorefast=False):
+        """Log a "Blocked" event.
+
+        If seconds is None, then this should be used as a context manager,
+        and seconds will be calculated automatically. Otherwise, this
+        function will log a "Blocked" event immediately.
+
+        If name is not None, then additional name will be logged. This is
+        useful for things like hook name where "op" is "hook", "name" is
+        the actual hook name.
+
+        If ignorefast is True, then a fast operation will be ignored.
+        """
+        if seconds is not None:
+            # Non-context manager version
+            millis = int(seconds * 1000)
+            if not ignorefast or millis >= 10:
+                log({"blocked": {"op": op, "duration_ms": millis, "name": name}})
+            return None
+        else:
+            self = super(logblocked, cls).__new__(cls)
+            self.op = op
+            self.name = name
+            self.ignorefast = ignorefast
+            return self
+
+    def __enter__(self):
+        self.starttime = _timer()
+
+    def __exit__(self, exctype, excval, exctb):
+        seconds = _timer() - self.starttime
+        millis = int(seconds * 1000)
+        if not self.ignorefast or millis >= 10:
+            log({"blocked": {"op": self.op, "duration_ms": millis, "name": self.name}})
+
+
+def _timer():
+    """util.timer"""
+    from . import util  # avoid cycles
+
+    globals()["_timer"] = util.timer  # replace self
+    return util.timer()

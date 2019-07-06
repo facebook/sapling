@@ -15,7 +15,7 @@ import os
 import re
 import signal
 
-from . import encoding, error, patch as patchmod, progress, scmutil, util
+from . import blackbox, encoding, error, patch as patchmod, progress, scmutil, util
 from .i18n import _
 
 
@@ -545,7 +545,7 @@ def chunkselector(ui, headerlist, operation=None):
     if util.safehasattr(signal, "SIGTSTP"):
         origsigtstp = signal.getsignal(signal.SIGTSTP)
     try:
-        with progress.suspend():
+        with progress.suspend(), blackbox.logblocked("curses"):
             curses.wrapper(chunkselector.main)
             if chunkselector.initerr is not None:
                 hint = _(
