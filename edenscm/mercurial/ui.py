@@ -1479,7 +1479,8 @@ class ui(object):
         # "blocked" for "edit" inside curses. See D15755288 for an example.
         if blockedtag in {
             "editor",
-            "exthook",
+            # exthook is logged at the callsite - hook.py:_exthook.
+            # "exthook",
             "extdiff",
             "pythonhook",
             "bisect_check",

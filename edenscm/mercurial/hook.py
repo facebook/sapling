@@ -148,6 +148,7 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
     r = ui.system(cmd, environ=env, cwd=cwd, blockedtag="exthook")
 
     duration = util.timer() - starttime
+    blackbox.logblocked("exthook", duration, name=name)
     ui.log("exthook", "exthook-%s: %s finished in %0.2f seconds\n", name, cmd, duration)
     if r:
         desc, r = util.explainexit(r)

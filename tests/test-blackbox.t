@@ -132,7 +132,7 @@ extension and python hooks - use the eol extension for a pythonhook
   > EOF
   $ hg blackbox --pattern '{"blocked":{"op":["or","pythonhook","exthook"]}}'
   [blocked] PythonHook (preupdate.eol) blocked for 0 ms
-  [blocked] ExtHook blocked for 0 ms
+  [blocked] ExtHook (update) blocked for 0 ms
 
 log rotation (tested in the Rust land)
 
