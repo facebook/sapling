@@ -246,12 +246,12 @@ fn get_resume_state(
 
     let init_state = {
         let start = format!(
-            "flat/repo{}.{}",
+            "flat/repo{:04}.{}",
             config.repo_id.id(),
             config.start_key.clone().unwrap_or_else(|| "".to_string())
         );
         let end = format!(
-            "flat/repo{}.{}",
+            "flat/repo{:04}.{}",
             config.repo_id.id(),
             config.end_key.clone().unwrap_or_else(|| "\x7f".to_string()),
         );
