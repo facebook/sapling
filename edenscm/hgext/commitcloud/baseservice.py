@@ -182,7 +182,10 @@ class BaseService(object):
 
         def appendremotebook(remotename, node=None):
             remote, name = _splitremotename(remotename)
-            remotebookslist.append({"remote": remote, "name": name, "node": node})
+            remotebook = {"remote": remote, "name": name}
+            if node:
+                remotebook["node"] = node
+            remotebookslist.append(remotebook)
 
         if type(remotebookmarks) is dict:
             for remotename, node in remotebookmarks.items():

@@ -419,6 +419,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         omittedheads,
         omittedbookmarks,
         maxage,
+        newremotebookmarks,
     )
 
     # Also update backup state.  These new heads are already backed up,
@@ -700,6 +701,7 @@ def _checkomissions(repo, remotepath, lastsyncstate):
             list(omittedheads),
             list(omittedbookmarks),
             lastsyncstate.maxage,
+            lastsyncstate.remotebookmarks,
         )
     if changes:
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
