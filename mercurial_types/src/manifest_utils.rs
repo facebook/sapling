@@ -4,20 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{HashSet, VecDeque};
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
-use std::sync::{Arc, Mutex};
-
 use context::CoreContext;
 use futures::future::{self, Future};
 use futures::stream::{empty, once, Stream};
 use futures::IntoFuture;
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
+use std::collections::{HashSet, VecDeque};
+use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::iter::FromIterator;
 
 use super::manifest::{Content, EmptyManifest, Type};
-use super::{Entry, HgNodeHash, MPath, MPathElement, Manifest};
+use super::{Entry, MPath, MPathElement, Manifest};
 use crate::errors::*;
 
 // Note that:
@@ -286,43 +284,6 @@ impl Pruner for DeletedPruner {
             EntryStatus::Deleted(..) => false,
             _ => true,
         }
-    }
-}
-
-#[derive(Clone)]
-pub struct VisitedPruner {
-    visited: Arc<Mutex<HashSet<(Option<MPath>, HgNodeHash)>>>,
-}
-
-impl VisitedPruner {
-    pub fn new() -> Self {
-        Self {
-            visited: Default::default(),
-        }
-    }
-}
-
-impl Pruner for VisitedPruner {
-    fn keep(&mut self, entry: &ChangedEntry) -> bool {
-        let dirname = &entry.dirname;
-
-        let (path, hash) = match entry.status {
-            EntryStatus::Added(ref entry) => {
-                let fullpath = MPath::join_opt(dirname.as_ref(), entry.get_name());
-                (fullpath, entry.get_hash().into_nodehash())
-            }
-            EntryStatus::Deleted(ref entry) => {
-                let fullpath = MPath::join_opt(dirname.as_ref(), entry.get_name());
-                (fullpath, entry.get_hash().into_nodehash())
-            }
-            EntryStatus::Modified { ref to_entry, .. } => {
-                let fullpath = MPath::join_opt(dirname.as_ref(), to_entry.get_name());
-                (fullpath, to_entry.get_hash().into_nodehash())
-            }
-        };
-
-        let mut visited = self.visited.lock().unwrap();
-        visited.insert((path, hash))
     }
 }
 
