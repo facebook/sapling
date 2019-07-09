@@ -26,7 +26,7 @@ TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
 function next_repo_id {
     if [[ -e "$TESTTMP/mononoke-config/last_id" ]] ; then
-        LAST_ID=$(cat "$TESTTMP/mononoke-config/last_id")
+        LAST_ID=$(< "$TESTTMP/mononoke-config/last_id")
     else
         LAST_ID=-1
     fi
@@ -123,7 +123,7 @@ function create_repo_lock_sqlite3_db {
   );
 SQL
   mkdir -p "$TESTTMP"/hgrepos
-  sqlite3 "$TESTTMP/hgrepos/repo_lock" "$(cat "$TESTTMP"/repo_lock.sql)"
+  sqlite3 "$TESTTMP/hgrepos/repo_lock" < "$TESTTMP"/repo_lock.sql
 }
 
 function init_repo_lock_sqlite3_db {
@@ -158,7 +158,7 @@ function create_mutable_counters_sqlite3_db {
     PRIMARY KEY (repo_id, name)
   );
 SQL
-  sqlite3 "$TESTTMP/repo/mutable_counters" "$(cat "$TESTTMP"/mutable_counters.sql)"
+  sqlite3 "$TESTTMP/repo/mutable_counters" < "$TESTTMP"/mutable_counters.sql
 }
 
 function init_mutable_counters_sqlite3_db {
@@ -179,7 +179,7 @@ function create_books_sqlite3_db {
 );
 SQL
 
-  sqlite3 "$TESTTMP/repo/bookmarks" "$(cat "$TESTTMP"/bookmarks.sql)"
+  sqlite3 "$TESTTMP/repo/bookmarks" < "$TESTTMP"/bookmarks.sql
 }
 
 function mononoke_hg_sync_loop {
@@ -283,7 +283,7 @@ function create_pushrebaserecording_sqlite3_db {
     PRIMARY KEY (id)
   );
 SQL
-  sqlite3 "$TESTTMP"/pushrebaserecording "$(cat "$TESTTMP"/pushrebaserecording.sql)"
+  sqlite3 "$TESTTMP"/pushrebaserecording < "$TESTTMP"/pushrebaserecording.sql
 }
 
 function init_pushrebaserecording_sqlite3_db {
@@ -589,7 +589,7 @@ function wait_for_apiserver {
 }
 
 function extract_json_error {
-  input=$(cat)
+  input=$(< /dev/stdin)
   echo "$input" | head -1 | jq -r '.message'
   echo "$input" | tail -n +2
 }
