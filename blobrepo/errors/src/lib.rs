@@ -22,7 +22,6 @@ use blob_changeset::HgBlobChangeset;
 pub enum StateOpenError {
     Heads,
     Bookmarks,
-    Blobstore,
     Changesets,
     Filenodes,
     BonsaiHgMapping,
@@ -33,7 +32,6 @@ impl fmt::Display for StateOpenError {
         match *self {
             StateOpenError::Heads => write!(f, "heads"),
             StateOpenError::Bookmarks => write!(f, "bookmarks"),
-            StateOpenError::Blobstore => write!(f, "blob store"),
             StateOpenError::Changesets => write!(f, "changesets"),
             StateOpenError::Filenodes => write!(f, "filenodes"),
             StateOpenError::BonsaiHgMapping => write!(f, "bonsai_hg_mapping"),

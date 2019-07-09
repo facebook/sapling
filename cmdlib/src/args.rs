@@ -34,7 +34,8 @@ use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, Caching, Scrubbing};
+use blobrepo_factory::{open_blobrepo, Caching};
+use blobstore_factory::Scrubbing;
 use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;

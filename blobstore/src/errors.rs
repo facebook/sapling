@@ -10,4 +10,6 @@ use failure_ext::Fail;
 pub enum ErrorKind {
     #[fail(display = "Blob {} not found in blobstore", _0)]
     NotFound(String),
+    #[fail(display = "Error while opening state for blob store")]
+    StateOpen,
 }
