@@ -10,6 +10,7 @@ from urllib import urlencode
 
 from edenscm.mercurial import extensions, namespaces, node, registrar, revset, templater
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin
 from edenscm.mercurial.util import httplib
 
 
@@ -284,7 +285,7 @@ def _scmquerylookupglobalrev(orig, repo, rev):
             )
             matchedrevs = []
             if hghash:
-                matchedrevs.append(repo[hghash].node())
+                matchedrevs.append(bin(hghash))
             return matchedrevs
         except Exception:
             pass
