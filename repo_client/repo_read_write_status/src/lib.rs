@@ -21,6 +21,7 @@ use sql::mysql_async::{
 use metaconfig_types::RepoReadOnly;
 
 static DEFAULT_MSG: &str = "Defaulting to locked as the lock state isn't initialised for this repo";
+static NOT_CONNECTED_MSG: &str = "Defaulting to locked as no database connection passed";
 static DB_MSG: &str = "Repo is locked in DB";
 
 #[derive(Clone)]
@@ -74,13 +75,11 @@ queries! {
     write SetReadWriteStatus(values: (repo_name: String, state: HgMononokeReadWrite, reason: str)) {
         none,
         mysql("INSERT INTO repo_lock (repo, state, reason) VALUES {values} ON DUPLICATE KEY UPDATE state = VALUES(state), reason = VALUES(reason)")
-        // sqlite query currently doesn't support changing the value
-        sqlite("INSERT INTO repo_lock (repo, state, reason) VALUES {values}")
-
+        sqlite("INSERT OR REPLACE INTO repo_lock (repo, state, reason) VALUES {values}")
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SqlRepoReadWriteStatus {
     write_connection: Connection,
     read_connection: Connection,
@@ -125,7 +124,7 @@ impl SqlRepoReadWriteStatus {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RepoReadWriteFetcher {
     sql_repo_read_write_status: Option<SqlRepoReadWriteStatus>,
     readonly_config: RepoReadOnly,
@@ -157,7 +156,7 @@ impl RepoReadWriteFetcher {
                     None => RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string()),
                 })
                 .left_future(),
-            None => ok(RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string())).right_future(),
+            None => ok(RepoReadOnly::ReadOnly(NOT_CONNECTED_MSG.to_string())).right_future(),
         }
     }
 
@@ -192,6 +191,10 @@ impl RepoReadWriteFetcher {
         reason: &String,
     ) -> impl Future<Item = bool, Error = Error> {
         self.set_state(&HgMononokeReadWrite::MononokeWrite, &reason)
+    }
+
+    pub fn set_read_only(&self, reason: &String) -> impl Future<Item = bool, Error = Error> {
+        self.set_state(&HgMononokeReadWrite::NoWrite, &reason)
     }
 }
 

@@ -101,13 +101,35 @@ function mononoke_hg_sync_with_retry {
 }
 
 function mononoke_hg_sync_with_failure_handler {
+  sql_name="${TESTTMP}/hgrepos/repo_lock"
+
   $MONONOKE_HG_SYNC \
     "${CACHING_ARGS[@]}" \
     --retry-num 1 \
     --mononoke-config-path mononoke-config  \
-    --run-on-failure "$3" \
     --verify-server-bookmark-on-failure \
+    --lock-on-failure \
+    --repo-lock-sqlite \
+    --repo-lock-db-address "$sql_name" \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
+}
+
+function create_repo_lock_sqlite3_db {
+  cat >> "$TESTTMP"/repo_lock.sql <<SQL
+  CREATE TABLE repo_lock (
+    repo VARCHAR(255) PRIMARY KEY,
+    state INTEGER NOT NULL,
+    reason VARCHAR(255)
+  );
+SQL
+  mkdir -p "$TESTTMP"/hgrepos
+  sqlite3 "$TESTTMP/hgrepos/repo_lock" "$(cat "$TESTTMP"/repo_lock.sql)"
+}
+
+function init_repo_lock_sqlite3_db {
+  # State 2 is mononoke write
+  sqlite3 "$TESTTMP/hgrepos/repo_lock" \
+    "insert into repo_lock (repo, state, reason) values(CAST('repo' AS BLOB), 2, null)";
 }
 
 function mononoke_bookmarks_filler {
@@ -792,7 +814,6 @@ cat >> "$TESTTMP"/replayverification.py <<EOF
 def verify_replay(ui, repo, *args, **kwargs):
      EXP_ONTO = "EXPECTED_ONTOBOOK"
      EXP_HEAD = "EXPECTED_REBASEDHEAD"
-
      expected_book = kwargs.get(EXP_ONTO)
      expected_head = kwargs.get(EXP_HEAD)
      actual_book = kwargs.get("key")
@@ -808,7 +829,6 @@ def verify_replay(ui, repo, *args, **kwargs):
      if expected_book is None and expected_head is None:
          # We are allowing non-unbundle-replay pushes to go through
          return 0
-
      if allowed_replay_books and actual_book not in allowed_replay_books:
          ui.warn("[ReplayVerification] only allowed to unbundlereplay on %r\n" % (allowed_replay_books, ))
          return 1
