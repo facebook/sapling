@@ -277,6 +277,7 @@ def _dorepack(repo, options, incremental):
         options["incremental"] = incremental
 
     try:
+        mask = os.umask(0o002)
         with flock(
             repacklockvfs(repo).join("repacklock"),
             _("repacking %s") % repo.origroot,
@@ -287,11 +288,12 @@ def _dorepack(repo, options, incremental):
             _shareddatastoresrepack(repo, options, incremental)
             _localdatarepack(repo, options, incremental)
             _manifestrepack(repo, options, incremental)
-
     except error.LockHeld:
         raise RepackAlreadyRunning(
             _("skipping repack - another repack " "is already running")
         )
+    finally:
+        os.umask(mask)
 
 
 def fullrepack(repo, options=None):
