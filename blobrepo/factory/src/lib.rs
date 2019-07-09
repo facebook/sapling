@@ -14,7 +14,9 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::{self, o, Discard, Drain, Logger};
 use std::collections::HashMap;
 
-use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
+use blobstore_factory::{
+    make_blobstore, make_censored_prefixed_blobstore, SqlFactory, SqliteFactory, XdbFactory,
+};
 
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
@@ -145,11 +147,16 @@ pub fn new_memblob_empty(
     logger: Option<Logger>,
     blobstore: Option<Arc<dyn Blobstore>>,
 ) -> Result<BlobRepo> {
+    let repoid = RepositoryId::new(0);
+    let blobstore = make_censored_prefixed_blobstore(
+        blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
+        None,
+        repoid.prefix(),
+    );
     Ok(BlobRepo::new(
         logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
         Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
-        blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
-        None,
+        blobstore,
         Arc::new(
             SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
@@ -162,7 +169,7 @@ pub fn new_memblob_empty(
             SqlBonsaiHgMapping::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
         ),
-        RepositoryId::new(0),
+        repoid,
         Arc::new(DummyLease {}),
     ))
 }
@@ -192,8 +199,7 @@ fn new_development<T: SqlFactory>(
     Ok(BlobRepo::new(
         logger,
         bookmarks,
-        blobstore,
-        censored_blobs,
+        make_censored_prefixed_blobstore(blobstore, censored_blobs, repoid.prefix()),
         filenodes,
         changesets,
         bonsai_hg_mapping,
@@ -271,8 +277,7 @@ fn new_production<T: SqlFactory>(
     Ok(BlobRepo::new_with_changeset_fetcher_factory(
         logger,
         bookmarks,
-        blobstore,
-        censored_blobs,
+        make_censored_prefixed_blobstore(blobstore, censored_blobs, repoid.prefix()),
         Arc::new(filenodes),
         changesets,
         Arc::new(bonsai_hg_mapping),

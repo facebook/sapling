@@ -19,13 +19,13 @@ use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::Blobstore;
+use blobstore_factory::make_censored_prefixed_blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
 };
 use bytes::Bytes;
 use cacheblob::{LeaseOps, MemWritesBlobstore};
-use censoredblob::CensoredBlob;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
@@ -54,7 +54,6 @@ use mononoke_types::{
     ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
     RepositoryId, Timestamp,
 };
-use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{trace, Logger};
 use stats::{define_stats, Histogram, Timeseries};
@@ -131,8 +130,7 @@ impl BlobRepo {
     pub fn new(
         logger: Logger,
         bookmarks: Arc<Bookmarks>,
-        blobstore: Arc<Blobstore>,
-        censored_blobs: Option<HashMap<String, String>>,
+        blobstore: RepoBlobstore,
         filenodes: Arc<Filenodes>,
         changesets: Arc<Changesets>,
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
@@ -148,11 +146,6 @@ impl BlobRepo {
                 res
             }
         };
-
-        let blobstore = CensoredBlob::new(
-            PrefixBlobstore::new(blobstore, repoid.prefix()),
-            censored_blobs,
-        );
 
         BlobRepo {
             logger,
@@ -170,8 +163,7 @@ impl BlobRepo {
     pub fn new_with_changeset_fetcher_factory(
         logger: Logger,
         bookmarks: Arc<Bookmarks>,
-        blobstore: Arc<Blobstore>,
-        censored_blobs: Option<HashMap<String, String>>,
+        blobstore: RepoBlobstore,
         filenodes: Arc<Filenodes>,
         changesets: Arc<Changesets>,
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
@@ -179,11 +171,6 @@ impl BlobRepo {
         changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
         hg_generation_lease: Arc<LeaseOps>,
     ) -> Self {
-        let blobstore = CensoredBlob::new(
-            PrefixBlobstore::new(blobstore, repoid.prefix()),
-            censored_blobs,
-        );
-
         BlobRepo {
             logger,
             bookmarks,
@@ -204,6 +191,7 @@ impl BlobRepo {
     /// ------------
     /// Currently this applies to the blobstore *ONLY*. A future improvement would be to also
     /// do database writes in-memory.
+    /// This function produces a blobrepo which DOES NOT HAVE ANY CENSORSHIP ENABLED
     #[allow(non_snake_case)]
     pub fn in_memory_writes_READ_DOC_COMMENT(self) -> BlobRepo {
         let BlobRepo {
@@ -220,14 +208,14 @@ impl BlobRepo {
 
         // Drop CensoredBlob and PrefixBlobstore (they will be wrapped up in one again by BlobRepo::new)
         let blobstore = blobstore.into_inner().into_inner();
-        let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
-
+        let blobstore: Arc<dyn Blobstore> = Arc::new(MemWritesBlobstore::new(blobstore));
         // TODO: T46577530 - the hashmap of blacklisted keys is not sent as argument for the BlobRepo below
+        let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix());
+
         BlobRepo::new(
             logger,
             bookmarks,
             blobstore,
-            None,
             filenodes,
             changesets,
             bonsai_hg_mapping,

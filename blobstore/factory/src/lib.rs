@@ -18,6 +18,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use blobstore::ErrorKind;
 use blobstore::{Blobstore, DisabledBlob};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+use censoredblob::CensoredBlob;
 use fileblob::Fileblob;
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
@@ -30,6 +31,7 @@ use rocksdb;
 use scuba::ScubaClient;
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Scrubbing {
@@ -269,4 +271,15 @@ pub fn make_blobstore<T: SqlFactory>(
                 .boxify()
         }
     }
+}
+
+pub fn make_censored_prefixed_blobstore<T: Blobstore + Clone>(
+    inner_blobstore: T,
+    censored_blobs: Option<HashMap<String, String>>,
+    prefix: String,
+) -> CensoredBlob<PrefixBlobstore<T>> {
+    CensoredBlob::new(
+        PrefixBlobstore::new(inner_blobstore, prefix),
+        censored_blobs,
+    )
 }

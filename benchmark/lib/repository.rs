@@ -8,6 +8,7 @@
 //! to all underlying stores, but which all the caching enabled.
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
+use blobstore_factory::make_censored_prefixed_blobstore;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
     SqlBonsaiHgMapping,
@@ -52,7 +53,7 @@ impl Default for DelaySettings {
 }
 
 pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
-    let blobstore = {
+    let blobstore: Arc<dyn Blobstore> = {
         let delayed: Arc<dyn Blobstore> = Arc::new(DelayedBlobstore::new(
             EagerMemblob::new(),
             settings.blobstore_get_dist,
@@ -115,15 +116,16 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
     let bookmarks = Arc::new(SqlBookmarks::with_sqlite_in_memory()?);
 
     // Disable censoring check when executing benchmark reports
+    let repoid = RepositoryId::new(rand::random());
+    let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix());
     Ok(BlobRepo::new(
         Logger::root(Discard {}.ignore_res(), o!()),
         bookmarks,
         blobstore,
-        None,
         filenodes,
         changesets,
         bonsai_hg_mapping,
-        RepositoryId::new(rand::random()),
+        repoid,
         Arc::new(DummyLease {}),
     ))
 }
