@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # stresstest-atomicreplace.py - test interrupting threading.Condition
 #
 # Copyright 2018 Facebook, Inc.
