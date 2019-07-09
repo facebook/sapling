@@ -144,7 +144,8 @@ class Journal {
    * reached then it will just return what had been currently found.
    * */
   std::vector<DebugJournalDelta> getDebugRawJournalInfo(
-      size_t limit,
+      SequenceNumber from,
+      std::optional<size_t> limit,
       long mountGeneration) const;
 
   void setMemoryLimit(size_t limit);

@@ -224,12 +224,13 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 }
 
 std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
-    size_t limit,
+    SequenceNumber from,
+    std::optional<size_t> limit,
     long mountGeneration) const {
   auto result = std::vector<DebugJournalDelta>();
   forEachDelta(
-      0,
-      std::optional<size_t>(limit),
+      from,
+      limit,
       [mountGeneration, &result](const JournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;

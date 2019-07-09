@@ -15,6 +15,7 @@ import shlex
 import shutil
 import stat
 import sys
+import time
 from pathlib import Path
 from typing import (
     IO,
@@ -884,7 +885,7 @@ class DebugJournalGetMemoryLimitCmd(Subcmd):
             return 0
 
 
-@debug_cmd("journal", "Prints the most recent N entries from the journal")
+@debug_cmd("journal", "Prints the most recent entries from the journal")
 class DebugJournalCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -902,6 +903,13 @@ class DebugJournalCmd(Subcmd):
             "Specify '^((?!^\\.hg/).)*$' to exclude the .hg/ directory.",
         )
         parser.add_argument(
+            "-f",
+            "--follow",
+            action="store_true",
+            default=False,
+            help="Output appended data as the journal grows.",
+        )
+        parser.add_argument(
             "-i",
             "--ignore-case",
             action="store_true",
@@ -915,27 +923,48 @@ class DebugJournalCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
+        pattern: Optional[Pattern[bytes]] = None
+        if args.pattern:
+            pattern_bytes = args.pattern.encode("utf-8")
+            flags = re.IGNORECASE if args.ignore_case else 0
+            pattern = re.compile(pattern_bytes, flags)
 
-        with instance.get_thrift_client() as client:
-            params = DebugGetRawJournalParams(
-                mountPoint=bytes(checkout.path), limit=args.limit
-            )
-            try:
-                raw_journal = client.debugGetRawJournal(params)
-            except EdenError as err:
-                print(err, file=sys.stderr)
-                return 1
-            if args.pattern:
-                flags = re.IGNORECASE if args.ignore_case else 0
-                bytes_pattern = args.pattern.encode("utf-8")
-                pattern: Optional[Pattern[bytes]] = re.compile(bytes_pattern, flags)
+        instance, checkout, _ = cmd_util.require_checkout(args, args.path)
+        mount = bytes(checkout.path)
+
+        def refresh(params):
+            with instance.get_thrift_client() as client:
+                journal = client.debugGetRawJournal(params)
+
+            deltas = journal.allDeltas
+            if len(deltas) == 0:
+                seq_num = params.fromSequenceNumber
             else:
-                pattern = None
-            # debugGetRawJournal() returns the most recent entries first, but
-            # we want to display the oldest entries first, so we pass a reversed
-            # iterator along.
-            _print_raw_journal_deltas(reversed(raw_journal.allDeltas), pattern)
+                seq_num = deltas[0].fromPosition.sequenceNumber + 1
+                _print_raw_journal_deltas(reversed(deltas), pattern)
+
+            return seq_num
+
+        try:
+            params = DebugGetRawJournalParams(
+                mountPoint=mount, fromSequenceNumber=1, limit=args.limit
+            )
+            seq_num = refresh(params)
+            while args.follow:
+                REFRESH_SEC = 2
+                time.sleep(REFRESH_SEC)
+                params = DebugGetRawJournalParams(
+                    mountPoint=mount, fromSequenceNumber=seq_num
+                )
+                seq_num = refresh(params)
+        except EdenError as err:
+            print(err, file=sys.stderr)
+            return 1
+        except KeyboardInterrupt:
+            if args.follow:
+                pass
+            else:
+                raise
 
         return 0
 

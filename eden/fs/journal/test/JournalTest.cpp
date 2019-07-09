@@ -138,7 +138,7 @@ TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
 
   long mountGen = 333;
 
-  auto debugDeltas = journal.getDebugRawJournalInfo(3, mountGen);
+  auto debugDeltas = journal.getDebugRawJournalInfo(0, 3, mountGen);
   ASSERT_EQ(3, debugDeltas.size());
 
   // Debug Raw Journal Info returns info from newest->latest
@@ -155,14 +155,14 @@ TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
   EXPECT_EQ(debugDeltas[2].fromPosition.mountGeneration, mountGen);
   EXPECT_EQ(debugDeltas[2].fromPosition.sequenceNumber, 1);
 
-  debugDeltas = journal.getDebugRawJournalInfo(1, mountGen);
+  debugDeltas = journal.getDebugRawJournalInfo(0, 1, mountGen);
   ASSERT_EQ(1, debugDeltas.size());
   EXPECT_TRUE(debugDeltas[0].changedPaths["test.txt"].existedBefore);
   EXPECT_TRUE(debugDeltas[0].changedPaths["test.txt"].existedAfter);
   EXPECT_EQ(debugDeltas[0].fromPosition.mountGeneration, mountGen);
   EXPECT_EQ(debugDeltas[0].fromPosition.sequenceNumber, 3);
 
-  debugDeltas = journal.getDebugRawJournalInfo(0, mountGen);
+  debugDeltas = journal.getDebugRawJournalInfo(0, 0, mountGen);
   ASSERT_EQ(0, debugDeltas.size());
 }
 

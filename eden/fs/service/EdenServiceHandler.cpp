@@ -675,8 +675,14 @@ void EdenServiceHandler::debugGetRawJournal(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, params->mountPoint);
   auto edenMount = server_->getMount(params->mountPoint);
   auto mountGeneration = static_cast<ssize_t>(edenMount->getMountGeneration());
+
+  std::optional<size_t> limitopt = std::nullopt;
+  if (auto limit = params->limit_ref()) {
+    limitopt = static_cast<size_t>(*limit);
+  }
+
   out.allDeltas = edenMount->getJournal().getDebugRawJournalInfo(
-      static_cast<size_t>(params->limit), mountGeneration);
+      params->fromSequenceNumber, limitopt, mountGeneration);
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
