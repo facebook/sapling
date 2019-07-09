@@ -59,6 +59,7 @@ pub fn open_blobrepo(
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
     censoring: Censoring,
+    scuba_censored_table: Option<String>,
 ) -> BoxFuture<BlobRepo, Error> {
     myrouter_ready(storage_config.dbconfig.get_db_address(), myrouter_port)
         .and_then(move |()| match storage_config.dbconfig {
@@ -71,6 +72,7 @@ pub fn open_blobrepo(
                 myrouter_port,
                 bookmarks_cache_ttl,
                 censoring,
+                scuba_censored_table,
             )
             .left_future(),
             MetadataDBConfig::Mysql {
@@ -85,6 +87,7 @@ pub fn open_blobrepo(
                 myrouter_port,
                 bookmarks_cache_ttl,
                 censoring,
+                scuba_censored_table,
             )
             .right_future(),
         })
@@ -100,6 +103,7 @@ fn do_open_blobrepo<T: SqlFactory>(
     myrouter_port: Option<u16>,
     bookmarks_cache_ttl: Option<Duration>,
     censoring: Censoring,
+    scuba_censored_table: Option<String>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let uncensored_blobstore = make_blobstore(repoid, &blobconfig, &sql_factory, myrouter_port);
 
@@ -128,6 +132,7 @@ fn do_open_blobrepo<T: SqlFactory>(
                 &sql_factory,
                 uncensored_blobstore,
                 censored_blobs,
+                scuba_censored_table,
                 repoid,
             ),
             Caching::Enabled => new_production(
@@ -135,6 +140,7 @@ fn do_open_blobrepo<T: SqlFactory>(
                 &sql_factory,
                 uncensored_blobstore,
                 censored_blobs,
+                scuba_censored_table,
                 repoid,
                 bookmarks_cache_ttl,
             ),
@@ -152,6 +158,7 @@ pub fn new_memblob_empty(
         blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
         None,
         repoid.prefix(),
+        None,
     );
     Ok(BlobRepo::new(
         logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
@@ -181,6 +188,7 @@ fn new_development<T: SqlFactory>(
     sql_factory: &T,
     blobstore: Arc<Blobstore>,
     censored_blobs: Option<HashMap<String, String>>,
+    scuba_censored_table: Option<String>,
     repoid: RepositoryId,
 ) -> Result<BlobRepo> {
     let bookmarks: Arc<SqlBookmarks> = sql_factory
@@ -199,7 +207,12 @@ fn new_development<T: SqlFactory>(
     Ok(BlobRepo::new(
         logger,
         bookmarks,
-        make_censored_prefixed_blobstore(blobstore, censored_blobs, repoid.prefix()),
+        make_censored_prefixed_blobstore(
+            blobstore,
+            censored_blobs,
+            repoid.prefix(),
+            scuba_censored_table,
+        ),
         filenodes,
         changesets,
         bonsai_hg_mapping,
@@ -215,6 +228,7 @@ fn new_production<T: SqlFactory>(
     sql_factory: &T,
     blobstore: Arc<Blobstore>,
     censored_blobs: Option<HashMap<String, String>>,
+    scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
 ) -> Result<BlobRepo> {
@@ -277,7 +291,7 @@ fn new_production<T: SqlFactory>(
     Ok(BlobRepo::new_with_changeset_fetcher_factory(
         logger,
         bookmarks,
-        make_censored_prefixed_blobstore(blobstore, censored_blobs, repoid.prefix()),
+        make_censored_prefixed_blobstore(blobstore, censored_blobs, repoid.prefix(), scuba_censored_table),
         Arc::new(filenodes),
         changesets,
         Arc::new(bonsai_hg_mapping),

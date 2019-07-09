@@ -64,6 +64,7 @@ pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
     caching: Caching,
+    scuba_censored_table: Option<String>,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
@@ -97,6 +98,7 @@ pub fn repo_handlers(
                 caching,
                 config.bookmarks_cache_ttl,
                 config.censoring,
+                scuba_censored_table.clone(),
             )
             .and_then(move |blobrepo| {
                 let hook_manager_params = match config.hook_manager_params.clone() {

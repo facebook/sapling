@@ -39,7 +39,7 @@ use blobstore_factory::Scrubbing;
 use changesets::SqlConstructors;
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{BlobConfig, MetadataDBConfig, RepoConfig, StorageConfig};
+use metaconfig_types::{BlobConfig, CommonConfig, MetadataDBConfig, RepoConfig, StorageConfig};
 use mononoke_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -609,6 +609,23 @@ pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     RepoConfigs::read_configs(config_path)
 }
 
+pub fn read_common_config<'a>(matches: &ArgMatches<'a>) -> Result<CommonConfig> {
+    let config_path = matches
+        .value_of("mononoke-config-path")
+        .ok_or(err_msg("mononoke-config-path must be specified"))?;
+
+    let config_path = Path::new(config_path);
+    let common_dir = config_path.join("common");
+    let maybe_common_config = if common_dir.is_dir() {
+        RepoConfigs::read_common_config(&common_dir)?
+    } else {
+        None
+    };
+
+    let common_config = maybe_common_config.unwrap_or(Default::default());
+    Ok(common_config)
+}
+
 pub fn read_storage_configs<'a>(
     matches: &ArgMatches<'a>,
 ) -> Result<HashMap<String, StorageConfig>> {
@@ -647,6 +664,8 @@ fn open_repo_internal<'a>(
     scrub: Scrubbing,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     let repo_id = get_repo_id(matches);
+
+    let common_config = try_boxfuture!(read_common_config(&matches));
 
     let (reponame, config) = {
         let (reponame, mut config) = try_boxfuture!(get_config(matches));
@@ -710,6 +729,7 @@ fn open_repo_internal<'a>(
                 caching,
                 config.bookmarks_cache_ttl,
                 config.censoring,
+                common_config.scuba_censored_table,
             )
         })
         .boxify()

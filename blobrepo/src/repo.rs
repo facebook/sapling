@@ -210,7 +210,7 @@ impl BlobRepo {
         let blobstore = blobstore.into_inner().into_inner();
         let blobstore: Arc<dyn Blobstore> = Arc::new(MemWritesBlobstore::new(blobstore));
         // TODO: T46577530 - the hashmap of blacklisted keys is not sent as argument for the BlobRepo below
-        let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix());
+        let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix(), None);
 
         BlobRepo::new(
             logger,

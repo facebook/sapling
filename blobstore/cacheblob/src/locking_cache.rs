@@ -5,7 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 use blobstore::{Blobstore, CountedBlobstore};
-use censoredblob::CensoredBlob;
+use censoredblob::{config::GET_OPERATION, CensoredBlob};
+use cloned::cloned;
 use context::CoreContext;
 use failure_ext::Error;
 use futures::{future, future::Either, Future, IntoFuture};
@@ -408,16 +409,24 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for CensoredBlob<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        match self.err_if_censored(&key) {
-            Ok(()) => self.as_inner().get_no_cache_fill(ctx, key),
-            Err(err) => {
-                debug!(
-                    ctx.logger(),
-                    "Accessing censored blobstore with key {:?}", key
-                );
-                Err(err).into_future().boxify()
-            }
-        }
+        self.err_if_censored(&key)
+            .map_err({
+                cloned!(ctx, key);
+                move |err| {
+                    debug!(
+                        ctx.logger(),
+                        "Accessing censored blobstore with key {:?}", key
+                    );
+                    self.to_scuba_censored_blobstore_accessed(&ctx, &key, GET_OPERATION);
+                    err
+                }
+            })
+            .into_future()
+            .and_then({
+                let cache_blob = self.clone();
+                move |()| cache_blob.as_inner().get_no_cache_fill(ctx, key)
+            })
+            .boxify()
     }
 
     #[inline]
@@ -426,15 +435,23 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for CensoredBlob<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        match self.err_if_censored(&key) {
-            Ok(()) => self.as_inner().get_cache_only(ctx, key),
-            Err(err) => {
-                debug!(
-                    ctx.logger(),
-                    "Accessing censored blobstore with key {:?}", key
-                );
-                Err(err).into_future().boxify()
-            }
-        }
+        self.err_if_censored(&key)
+            .map_err({
+                cloned!(ctx, key);
+                move |err| {
+                    debug!(
+                        ctx.logger(),
+                        "Accessing censored blobstore with key {:?}", key
+                    );
+                    self.to_scuba_censored_blobstore_accessed(&ctx, &key, GET_OPERATION);
+                    err
+                }
+            })
+            .into_future()
+            .and_then({
+                let cache_blob = self.clone();
+                move |()| cache_blob.as_inner().get_cache_only(ctx, key)
+            })
+            .boxify()
     }
 }

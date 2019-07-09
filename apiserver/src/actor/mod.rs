@@ -40,34 +40,39 @@ pub struct Mononoke {
 impl Mononoke {
     pub fn new(
         logger: Logger,
-        config: RepoConfigs,
+        configs: RepoConfigs,
         myrouter_port: Option<u16>,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
         with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
+        let common_config = configs.common;
         join_all(
-            config
+            configs
                 .repos
                 .into_iter()
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
                         cloned!(logger, cache);
-                        lazy(move || {
-                            info!(logger, "Initializing repo: {}", &name);
-                            MononokeRepo::new(
-                                logger.clone(),
-                                config,
-                                myrouter_port,
-                                cache,
-                                with_cachelib,
-                                with_skiplist,
-                            )
-                            .map(move |repo| {
-                                debug!(logger, "Initialized {}", &name);
-                                (name, repo)
-                            })
+                        lazy({
+                            cloned!(common_config);
+                            move || {
+                                info!(logger, "Initializing repo: {}", &name);
+                                MononokeRepo::new(
+                                    logger.clone(),
+                                    config,
+                                    common_config,
+                                    myrouter_port,
+                                    cache,
+                                    with_cachelib,
+                                    with_skiplist,
+                                )
+                                .map(move |repo| {
+                                    debug!(logger, "Initialized {}", &name);
+                                    (name, repo)
+                                })
+                            }
                         })
                     }
                 }),

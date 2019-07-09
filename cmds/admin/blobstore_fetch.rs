@@ -39,6 +39,9 @@ pub fn subcommand_blobstore_fetch(
     let (_, config) = try_boxfuture!(args::get_config(&matches));
     let censoring = config.censoring;
 
+    let common_config = try_boxfuture!(args::read_common_config(&matches));
+    let scuba_censored_table = common_config.scuba_censored_table;
+
     let (bucket, prefix) = match blobstore_args {
         BlobConfig::Manifold { bucket, prefix } => (bucket, prefix),
         bad => panic!("Unsupported blobstore: {:#?}", bad),
@@ -80,6 +83,7 @@ pub fn subcommand_blobstore_fetch(
                 key.clone(),
                 ctx,
                 maybe_censored_blobs,
+                scuba_censored_table,
                 repo_id,
             )
         }
@@ -122,6 +126,7 @@ fn get_from_sources(
     key: String,
     ctx: CoreContext,
     censored_blobs: Option<HashMap<String, String>>,
+    scuba_censored_table: Option<String>,
     repo_id: RepositoryId,
 ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
     let empty_prefix = "".to_string();
@@ -133,7 +138,7 @@ fn get_from_sources(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore = CensoredBlob::new(blobstore, censored_blobs);
+            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censored_table);
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
         }
         None => {
@@ -141,7 +146,7 @@ fn get_from_sources(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore = CensoredBlob::new(blobstore, censored_blobs);
+            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censored_table);
             blobstore.get(ctx, key.clone()).boxify()
         }
     }

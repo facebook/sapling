@@ -117,7 +117,7 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
 
     // Disable censoring check when executing benchmark reports
     let repoid = RepositoryId::new(rand::random());
-    let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix());
+    let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix(), None);
     Ok(BlobRepo::new(
         Logger::root(Discard {}.ignore_res(), o!()),
         bookmarks,

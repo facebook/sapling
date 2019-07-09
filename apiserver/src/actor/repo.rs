@@ -35,7 +35,7 @@ use tracing::TraceContext;
 use uuid::Uuid;
 
 use mercurial_types::{manifest::Content, Entry as _, HgChangesetId, HgFileNodeId, HgManifestId};
-use metaconfig_types::RepoConfig;
+use metaconfig_types::{CommonConfig, RepoConfig};
 use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
@@ -64,6 +64,7 @@ impl MononokeRepo {
     pub fn new(
         logger: Logger,
         config: RepoConfig,
+        common_config: CommonConfig,
         myrouter_port: Option<u16>,
         cache: Option<CacheManager>,
         with_cachelib: Caching,
@@ -91,6 +92,7 @@ impl MononokeRepo {
             with_cachelib,
             config.bookmarks_cache_ttl,
             config.censoring,
+            common_config.scuba_censored_table,
         )
         .map(move |repo| {
             let skiplist_index = {

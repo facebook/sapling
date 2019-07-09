@@ -56,6 +56,7 @@ fn main() -> Result<()> {
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let err: Error = ErrorKind::NoSuchRepo(repo_name.clone()).into();
     let config = configs.repos.get(&repo_name).ok_or(err)?;
+    let common_config = cmdlib::args::read_common_config(&matches)?;
     let init_revision = matches.value_of("init_revision").map(String::from);
     let continuous = matches.is_present("continuous");
     let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
@@ -92,6 +93,7 @@ fn main() -> Result<()> {
         caching,
         config.bookmarks_cache_ttl,
         config.censoring,
+        common_config.scuba_censored_table,
     );
 
     let rc = RequestContext {

@@ -277,9 +277,11 @@ pub fn make_censored_prefixed_blobstore<T: Blobstore + Clone>(
     inner_blobstore: T,
     censored_blobs: Option<HashMap<String, String>>,
     prefix: String,
+    scuba_censored_table: Option<String>,
 ) -> CensoredBlob<PrefixBlobstore<T>> {
     CensoredBlob::new(
         PrefixBlobstore::new(inner_blobstore, prefix),
         censored_blobs,
+        scuba_censored_table,
     )
 }

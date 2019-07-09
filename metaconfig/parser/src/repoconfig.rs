@@ -88,7 +88,8 @@ impl RepoConfigs {
         })
     }
 
-    fn read_common_config(common_dir: &PathBuf) -> Result<Option<CommonConfig>> {
+    /// Read common config
+    pub fn read_common_config(common_dir: &PathBuf) -> Result<Option<CommonConfig>> {
         for entry in common_dir.read_dir()? {
             let entry = entry?;
             if entry.file_name() == "common.toml" {
@@ -167,9 +168,12 @@ impl RepoConfigs {
                     None => None,
                 };
 
+                let scuba_censored_table = raw_config.scuba_censored_table;
+
                 return Ok(Some(CommonConfig {
                     security_config: whitelisted_entries?,
                     loadlimiter_category,
+                    scuba_censored_table,
                 }));
             }
         }
@@ -503,6 +507,9 @@ impl RepoConfigs {
 struct RawCommonConfig {
     whitelist_entry: Option<Vec<RawWhitelistEntry>>,
     loadlimiter_category: Option<String>,
+
+    /// Scuba table for logging censored file accesses
+    scuba_censored_table: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1181,6 +1188,7 @@ mod test {
                     },
                 ],
                 loadlimiter_category: Some("test-category".to_string()),
+                scuba_censored_table: None
             }
         );
         assert_eq!(

@@ -45,6 +45,8 @@ pub struct CommonConfig {
     pub security_config: Vec<WhitelistEntry>,
     /// Parent category to use for load limiting
     pub loadlimiter_category: Option<String>,
+    /// Scuba table for logging censored file accesses
+    pub scuba_censored_table: Option<String>,
 }
 
 /// Configuration of a single repository
