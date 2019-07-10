@@ -384,6 +384,7 @@ def testui(stupid=False, layout="auto", startrev=0):
     u.setconfig("hgsubversion", "nativerevs", True)
     u.setconfig("hgsubversion", "startrev", startrev)
     u.setconfig("hgsubversion", "stupid", bools[stupid])
+    u.setconfig("hgsubversion", "revmapimpl", "sqlite")
     u.setconfig("devel", "all-warnings", True)
     u.setconfig("subrepos", "hgsubversion:allowed", True)
     return u

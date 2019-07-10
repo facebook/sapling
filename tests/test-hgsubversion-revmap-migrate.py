@@ -35,6 +35,8 @@ class TestRevMapMigrate(test_hgsubversion_util.TestBase):
 
         svnmeta.SVNMeta._defaultrevmapclass = fromclass
         repo = self._load_fixture_and_fetch("two_heads.svndump")
+        # set to None to the default revmapclass will be used
+        repo.ui.setconfig("hgsubversion", "revmapimpl", None)
         meta = svnmeta.SVNMeta(repo)
         self.assertEqual(meta.revmap.__class__, fromclass)
         origrevmap = meta.revmap
