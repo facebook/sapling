@@ -24,6 +24,7 @@ use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, Censoring};
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
 use std::iter::FromIterator;
@@ -41,6 +42,7 @@ pub fn subcommand_blobstore_fetch(
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));
     let scuba_censored_table = common_config.scuba_censored_table;
+    let scuba_censorship_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
 
     let (bucket, prefix) = match blobstore_args {
         BlobConfig::Manifold { bucket, prefix } => (bucket, prefix),
@@ -83,7 +85,7 @@ pub fn subcommand_blobstore_fetch(
                 key.clone(),
                 ctx,
                 maybe_censored_blobs,
-                scuba_censored_table,
+                scuba_censorship_builder,
                 repo_id,
             )
         }
@@ -126,7 +128,7 @@ fn get_from_sources(
     key: String,
     ctx: CoreContext,
     censored_blobs: Option<HashMap<String, String>>,
-    scuba_censored_table: Option<String>,
+    scuba_censorship_builder: ScubaSampleBuilder,
     repo_id: RepositoryId,
 ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
     let empty_prefix = "".to_string();
@@ -138,7 +140,7 @@ fn get_from_sources(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censored_table);
+            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censorship_builder);
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
         }
         None => {
@@ -146,7 +148,7 @@ fn get_from_sources(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censored_table);
+            let blobstore = CensoredBlob::new(blobstore, censored_blobs, scuba_censorship_builder);
             blobstore.get(ctx, key.clone()).boxify()
         }
     }

@@ -17,7 +17,6 @@ use slog::debug;
 use std::collections::HashMap;
 mod errors;
 use cloned::cloned;
-use scuba_ext::ScubaSampleBuilderExt;
 
 use crate::errors::ErrorKind;
 use std::sync::{
@@ -48,9 +47,8 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
     pub fn new(
         blobstore: T,
         censored: Option<HashMap<String, String>>,
-        scuba_censored_table: Option<String>,
+        scuba_builder: ScubaSampleBuilder,
     ) -> Self {
-        let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
         let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
 
         Self {
@@ -197,7 +195,7 @@ mod test {
         let blob = CensoredBlob::new(
             PrefixBlobstore::new(inner, "prefix"),
             Some(censored_pairs),
-            None,
+            ScubaSampleBuilder::with_discard(),
         );
 
         //Test put with blacklisted key

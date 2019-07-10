@@ -29,6 +29,7 @@ use prefixblob::PrefixBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
 use scuba::ScubaClient;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::collections::HashMap;
@@ -282,6 +283,6 @@ pub fn make_censored_prefixed_blobstore<T: Blobstore + Clone>(
     CensoredBlob::new(
         PrefixBlobstore::new(inner_blobstore, prefix),
         censored_blobs,
-        scuba_censored_table,
+        ScubaSampleBuilder::with_opt_table(scuba_censored_table),
     )
 }
