@@ -108,7 +108,7 @@ impl Sqlblob {
             read_master_connection: Vec::with_capacity(shard_num.get()),
         };
 
-        for shard_id in 1..=shard_num.get() {
+        for shard_id in 0..shard_num.get() {
             let SqlConnections {
                 write_connection,
                 read_connection,
@@ -181,7 +181,7 @@ impl Sqlblob {
     {
         let mut cons = Vec::new();
 
-        for i in 1..=SQLITE_SHARD_NUM.get() {
+        for i in 0..SQLITE_SHARD_NUM.get() {
             cons.push(Connection::with_sqlite(constructor(i)?));
         }
 
