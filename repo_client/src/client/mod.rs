@@ -45,7 +45,7 @@ use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json::{self, json};
 use slog::{debug, info, o};
-use stats::{define_stats, Histogram};
+use stats::{define_stats, Histogram, Timeseries};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::FromIterator;
 use std::mem;
@@ -68,6 +68,12 @@ define_stats! {
         histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getfiles_ms:
         histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    total_tree_count: timeseries(RATE, SUM),
+    quicksand_tree_count: timeseries(RATE, SUM),
+    total_tree_size: timeseries(RATE, SUM),
+    quicksand_tree_size: timeseries(RATE, SUM),
+    total_fetched_file_size: timeseries(RATE, SUM),
+    quicksand_fetched_file_size: timeseries(RATE, SUM),
 }
 
 mod ops {
@@ -605,6 +611,11 @@ impl RepoClient {
                     let len = bytes.len() as i64;
                     ctx.perf_counters()
                         .add_to_counter("getpack_response_size", len);
+
+                    STATS::total_fetched_file_size.add_value(len as i64);
+                    if ctx.is_quicksand() {
+                        STATS::quicksand_fetched_file_size.add_value(len as i64);
+                    }
                 }
             })
             .timed({
@@ -1218,6 +1229,12 @@ impl HgCommands for RepoClient {
                 move |bytes| {
                     ctx.perf_counters()
                         .add_to_counter("gettreepack_response_size", bytes.len() as i64);
+                    STATS::total_tree_size.add_value(bytes.len() as i64);
+                    STATS::total_tree_count.add_value(1);
+                    if ctx.is_quicksand() {
+                        STATS::quicksand_tree_size.add_value(bytes.len() as i64);
+                        STATS::quicksand_tree_count.add_value(1);
+                    }
                 }
             })
             .timed({
@@ -1295,6 +1312,11 @@ impl HgCommands for RepoClient {
                         .add_to_counter("getfiles_response_size", len);
                     ctx.perf_counters()
                         .set_max_counter("getfiles_max_file_size", len);
+
+                    STATS::total_fetched_file_size.add_value(len as i64);
+                    if ctx.is_quicksand() {
+                        STATS::quicksand_fetched_file_size.add_value(len as i64);
+                    }
                 }
             })
             .whole_stream_timeout(getfiles_timeout_duration())

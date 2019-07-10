@@ -205,4 +205,11 @@ impl CoreContext {
     pub fn ssh_env_vars(&self) -> &SshEnvVars {
         &self.inner.ssh_env_vars
     }
+    pub fn is_quicksand(&self) -> bool {
+        if let Some(ref ssh_cert_principals) = self.ssh_env_vars().ssh_cert_principals {
+            ssh_cert_principals.contains("quicksand")
+        } else {
+            false
+        }
+    }
 }
