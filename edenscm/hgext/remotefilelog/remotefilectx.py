@@ -9,7 +9,16 @@ from __future__ import absolute_import
 import collections
 import time
 
-from edenscm.mercurial import ancestor, context, error, extensions, phases, util
+from edenscm.mercurial import (
+    ancestor,
+    context,
+    error,
+    extensions,
+    perftrace,
+    phases,
+    progress,
+    util,
+)
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
 
@@ -287,11 +296,16 @@ class remotefilectx(context.filectx):
         # by temporarily limiting the fetch depth to 1.
         with repo.ui.timesection("adjustlinknode"), repo.ui.configoverride(
             {("treemanifest", "fetchdepth"): 1}
-        ):
+        ), perftrace.trace("Adjust Linknode"), progress.bar(
+            repo.ui, _("adjusting linknode for %s") % self._path
+        ) as prog:
+            perftrace.tracevalue("Path", self._path)
+            perftrace.tracevalue("Source Nodes", [hex(cl.node(rev)) for rev in revs])
             pc = repo._phasecache
             seenpublic = False
             iteranc = cl.ancestors(revs, inclusive=inclusive)
-            for ancrev in iteranc:
+            for i, ancrev in enumerate(iteranc):
+                prog.value = i
                 # First, check locally-available history.
                 lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
                 if lnode is not None:
