@@ -71,7 +71,7 @@ class remotefilectx(context.filectx):
         )
         self._ancestormap = ancestormap
         self._descendantrevfastpath = repo.ui.configbool(
-            "remotefilelog", "descendantrevfastpath", True
+            "remotefilelog", "descendantrevfastpath"
         )
 
     def size(self):
@@ -215,7 +215,7 @@ class remotefilectx(context.filectx):
             p1ctx = remotefilectx(
                 repo, path, fileid=p1, filelog=flog, ancestormap=ancestormap
             )
-            if self._descendantrevfastpath:
+            if self._descendantrevfastpath or "_changeid" in self.__dict__:
                 p1ctx._descendantrev = self.rev()
             results.append(p1ctx)
 
@@ -225,7 +225,7 @@ class remotefilectx(context.filectx):
             p2ctx = remotefilectx(
                 repo, path, fileid=p2, filelog=flog, ancestormap=ancestormap
             )
-            if self._descendantrevfastpath:
+            if self._descendantrevfastpath or "_changeid" in self.__dict__:
                 p2ctx._descendantrev = self.rev()
             results.append(p2ctx)
 
@@ -589,7 +589,7 @@ class remoteworkingfilectx(context.workingfilectx, remotefilectx):
     def __init__(self, repo, path, filelog=None, workingctx=None):
         self._ancestormap = None
         self._descendantrevfastpath = repo.ui.configbool(
-            "remotefilelog", "descendantrevfastpath", True
+            "remotefilelog", "descendantrevfastpath"
         )
         return super(remoteworkingfilectx, self).__init__(
             repo, path, filelog, workingctx

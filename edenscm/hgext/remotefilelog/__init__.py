@@ -246,6 +246,7 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem("remotefilelog", "descendantrevfastpath", default=False)
 configitem("remotefilelog", "fetchpacks", default=False)
 configitem("remotefilelog", "localdatarepack", default=False)
 configitem("remotefilelog", "packlocaldata", default=False)

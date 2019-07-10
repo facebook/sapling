@@ -117,10 +117,10 @@ Rename the file in a commit
   11 trees fetched over *s (glob)
   * files fetched over *s (glob)
 
-Amend the commit to add a new file with an empty cache
+Amend the commit to add a new file with an empty cache, with descendantrevfastpath enabled
   $ clearcache
   $ echo more >> a/b/c/d/e/f/g/h/i/j/file3
-  $ hg amend -A --config remotefilelog.debug=True
+  $ hg amend -A --config remotefilelog.debug=True --config remotefilelog.descendantrevfastpath=True
   adding a/b/c/d/e/f/g/h/i/j/file3
   fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0, found via 9f95b8f1011f
   11 trees fetched over *s (glob)
