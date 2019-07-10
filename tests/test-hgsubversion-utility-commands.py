@@ -338,6 +338,36 @@ missing file: binary3
         ui.setconfig("hgsubversion", "repouuid", "5b65bade-98f3-4993-a01f-b7a6710da339")
         svncommands.rebuildmeta(ui, repo=self.repo, args=[otherurl])
 
+    def test_svn_repouuid_reposuburl_config_not_accessing_svn(self):
+        _, repopath = self.load_and_fetch(
+            "subdir_is_file_prefix.svndump", subdir="flaf"
+        )
+        repourl = test_hgsubversion_util.fileurl(repopath)
+        ui = self.ui()
+
+        # rebuildmeta with original repo
+        svncommands.rebuildmeta(ui, repo=self.repo, args=[repourl])
+        subdir = svnmeta.SVNMeta(self.repo).subdir
+        uuid = svnmeta.SVNMeta(self.repo).uuid
+        # remove metadata, rebuild without configs.
+        # In attempt to use the some_random_string as url, this should raise.
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
+        self.assertRaises(
+            hgutil.Abort,
+            svncommands.rebuildmeta,
+            ui=ui,
+            repo=self.repo,
+            args=["svn+ssh://some_random_string"],
+        )
+        # remove metadata, rebuild with the correct configs
+        # This time it doesn't try to use the wrong url, this should pass.
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
+        ui.setconfig("hgsubversion", "reposubdir", subdir)
+        ui.setconfig("hgsubversion", "repouuid", uuid)
+        svncommands.rebuildmeta(
+            ui=ui, repo=self.repo, args=["svn+ssh://some_random_string"]
+        )
+
 
 if __name__ == "__main__":
     import silenttestrunner

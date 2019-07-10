@@ -92,6 +92,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsubversion.nativerevs (bool)
   undocumented: hgsubversion.password (str)
   undocumented: hgsubversion.password_stores (list)
+  undocumented: hgsubversion.reposubdir (str)
+  undocumented: hgsubversion.repouuid (str)
   undocumented: hgsubversion.revmapimpl (str)
   undocumented: hgsubversion.startrev (str)
   undocumented: hgsubversion.stupid (bool)

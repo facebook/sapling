@@ -416,9 +416,9 @@ configitem("hgsubversion", "sqlitepragmas", default=list)
 # real default is False
 configitem("hgsubversion", "failonmissing", default=configitem.dynamicdefault)
 # for stopping hg svn rebuildmeta from resolving this info from svn server
-configitem("hgsubversion", "reposubdir", default=configitem.dynamicdefault)
+configitem("hgsubversion", "reposubdir", default="")
 # for stopping hg svn rebuildmeta from getting this info from svn server
-configitem("hgsubversion", "repouuid", default=configitem.dynamicdefault)
+configitem("hgsubversion", "repouuid", default="")
 
 
 @templatekeyword("svnrev")

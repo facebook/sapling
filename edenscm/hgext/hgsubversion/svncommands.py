@@ -98,8 +98,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     meta = svnmeta.SVNMeta(repo, skiperrorcheck=True)
 
     if meta.subdir is None:
-        subdir = ui.config(
-            "hgsubversion", "reposubdir", svnrepo.svnremoterepo(ui, url).svn.subdir
+        subdir = (
+            ui.config("hgsubversion", "reposubdir")
+            or svnrepo.svnremoterepo(ui, url).svn.subdir
         )
         meta.subdir = subdir
 
@@ -232,10 +233,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 validateuuid = False
                 uuid = convinfo[4:40]
                 if not skipuuid:
-                    uuidfromconforserver = ui.config(
-                        "hgsubversion",
-                        "repouuid",
-                        svnrepo.svnremoterepo(ui, url).svn.uuid,
+                    uuidfromconforserver = (
+                        ui.config("hgsubversion", "repouuid")
+                        or svnrepo.svnremoterepo(ui, url).svn.uuid
                     )
                     if uuid != uuidfromconforserver:
                         raise hgutil.Abort(
