@@ -95,7 +95,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
 
     // The blob does not exist...
-    run_future(repo.get_file_content(ctx.clone(), expected_hash)).is_err();
+    let _ = run_future(repo.get_file_content(ctx.clone(), expected_hash)).unwrap_err();
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_path, p1);
