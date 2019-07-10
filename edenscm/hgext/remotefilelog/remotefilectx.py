@@ -129,19 +129,28 @@ class remotefilectx(context.filectx):
             return rev
 
         # Search all commits for the appropriate linkrev (slow, but uncommon)
+        repo = self._repo
         path = self._path
         fileid = self._filenode
-        cl = self._repo.unfiltered().changelog
-        mfl = self._repo.manifestlog
+        cl = repo.unfiltered().changelog
+        mfl = repo.manifestlog
 
-        for rev in range(len(cl) - 1, 0, -1):
-            node = cl.node(rev)
-            data = cl.read(node)  # get changeset data (we avoid object creation)
-            if path in data[3]:  # checking the 'files' field.
-                # The file has been touched, check if the hash is what we're
-                # looking for.
-                if fileid == mfl[data[0]].read().get(path):
-                    return rev
+        with repo.ui.timesection("scanlinkrev"), repo.ui.configoverride(
+            {("treemanifest", "fetchdepth"): 1}
+        ), perftrace.trace("Scanning for Linkrev"), progress.bar(
+            repo.ui, _("scanning for linkrev of %s") % path
+        ) as prog:
+            perftrace.tracevalue("Path", path)
+            for i, rev in enumerate(range(len(cl) - 1, 0, -1)):
+                prog.value = i
+                node = cl.node(rev)
+                data = cl.read(node)  # get changeset data (we avoid object creation)
+                if path in data[3]:  # checking the 'files' field.
+                    # The file has been touched, check if the hash is what we're
+                    # looking for.
+                    if fileid == mfl[data[0]].read().get(path):
+                        perftrace.tracevalue("Distance", len(cl) - rev)
+                        return rev
 
         # Couldn't find the linkrev. This should generally not happen, and will
         # likely cause a crash.
