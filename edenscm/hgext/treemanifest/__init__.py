@@ -127,6 +127,14 @@ the Eden API.
 
     [treemanifest]
     usehttp = true
+
+`treemanifest.prefetchdraftparents` causes treemanifest to prefetch the parent
+trees for new draft roots added to the repository.
+
+::
+
+    [treemanifest]
+    prefetchdraftparents = True
 """
 from __future__ import absolute_import
 
@@ -216,6 +224,7 @@ configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "usehttp", default=False)
+configitem("treemanifest", "prefetchdraftparents", default=True)
 
 PACK_CATEGORY = "manifests"
 
@@ -467,6 +476,9 @@ def wraprepo(repo):
             repository. This is useful for avoiding expensive ondemand downloads when
             accessing a draft commit for which we have the draft trees but not the
             public trees."""
+            if not self.ui.configbool("treemanifest", "prefetchdraftparents"):
+                return
+
             revs = tr.changes.get("revs")
             if not revs:
                 return
