@@ -118,6 +118,7 @@ class HgImporterStatsTest(unittest.TestCase):
             "hg_importer.cat_file.count.3600": 9,
             "hg_importer.cat_file.count.60": 1,
             "hg_importer.cat_file.count.600": 7,
+            "journal.fbsource.count": 22,
         }
         table = get_counter_table(counters, ["hg_importer"], ["count"])
         self.assertEqual(table.get("cat_file"), [1, 7, 9, 10])
@@ -128,6 +129,7 @@ class HgImporterStatsTest(unittest.TestCase):
             "hg_importer.dog_file.count.3600": 90,
             "hg_importer.dog_file.count.60": 10,
             "hg_importer.dog_file.count.600": 70,
+            "journal.fbsource.count": 33,
         }
         table = get_counter_table(counters, ["hg_importer"], ["count"])
         self.assertEqual(table.get("dog_file"), [10, 70, 90, 100])

@@ -501,7 +501,7 @@ def get_counter_table(counters: DiagInfoCounters, prefix: List, suffix: List) ->
 
     for key in counters:
         tags = key.split(".")
-        if tags[-len(suffix) :] == suffix:
+        if tags[-len(suffix) :] == suffix and tags[0 : len(prefix)] == prefix:
             TIME_SUFFIXES = (".60", ".600", ".3600", "")
             row_name = ".".join(tags[len(prefix) : -len(suffix)])
             table[row_name] = [counters[key + suffix] for suffix in TIME_SUFFIXES]
