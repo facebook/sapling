@@ -64,7 +64,7 @@ macro_rules! ensure_msg {
 /// Constructs an `Error` using the standard string interpolation syntax.
 ///
 /// ```rust
-/// #[macro_use] extern crate failure;
+/// use failure::format_err;
 ///
 /// fn main() {
 ///     let code = 101;

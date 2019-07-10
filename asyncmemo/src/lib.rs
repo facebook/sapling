@@ -32,15 +32,6 @@
 //! TODO: entry invalidation interface
 #![deny(warnings)]
 
-extern crate bytes;
-extern crate futures;
-extern crate futures_ext;
-extern crate heapsize;
-extern crate linked_hash_map;
-extern crate parking_lot;
-#[macro_use]
-extern crate stats;
-
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{self, Debug};
 use std::hash::{Hash, Hasher};

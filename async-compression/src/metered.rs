@@ -10,7 +10,7 @@
 use std::io::{self, Read, Write};
 
 use bytes::{Buf, BufMut};
-use futures::{Async, Poll};
+use futures::{try_ready, Async, Poll};
 use tokio_io::{AsyncRead, AsyncWrite};
 
 /// A reader wrapper that tracks the total number of bytes read through it.

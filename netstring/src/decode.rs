@@ -1,7 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
 use bytes::BytesMut;
-use failure::{bail_err, ensure_err};
+use failure_ext::{bail_err, ensure_err};
 use tokio_io::codec::Decoder;
 
 use crate::errors::*;

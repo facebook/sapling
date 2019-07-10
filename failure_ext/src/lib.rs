@@ -15,7 +15,8 @@ pub mod chain;
 
 pub mod prelude {
     pub use crate::chain::{self, Chain, ChainExt};
-    pub use failure::{Error, Fail, ResultExt};
+    pub use failure::{self, Error, Fail, ResultExt};
+    pub use failure_derive::*;
 
     pub use super::{
         AsFail, FutureFailureErrorExt, FutureFailureExt, Result, StreamFailureErrorExt,
@@ -24,7 +25,7 @@ pub mod prelude {
 }
 
 pub use failure::{
-    _core, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt, SyncFailure,
+    _core, bail, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt, SyncFailure,
 };
 pub use failure_derive::*;
 

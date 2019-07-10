@@ -11,10 +11,10 @@
 
 #![deny(warnings)]
 
-extern crate failure_ext as failure;
+use failure_ext as failure;
 
 mod errors {
-    pub use failure::{Error, Fail, Result};
+    pub use crate::failure::{Error, Fail, Result};
 
     #[derive(Clone, Debug, Fail)]
     pub enum ErrorKind {

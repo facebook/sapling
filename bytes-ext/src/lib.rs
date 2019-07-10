@@ -8,8 +8,6 @@
 
 #![deny(warnings)]
 
-extern crate bytes;
-
 mod sized;
 
 pub use crate::sized::SizeCounter;
