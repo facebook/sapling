@@ -187,6 +187,8 @@ class EdenServer::ThriftServerEventHandler
   folly::Promise<Unit> runningPromise_;
 };
 
+static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
+
 EdenServer::EdenServer(
     UserInfo userInfo,
     std::unique_ptr<PrivHelper> privHelper,
@@ -201,9 +203,17 @@ EdenServer::EdenServer(
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
-          edenConfig)} {}
+          edenConfig)} {
+  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  counters->registerCallback(kBlobCacheMemory, [this] {
+    return this->getBlobCache()->getStats().totalSizeInBytes;
+  });
+}
 
-EdenServer::~EdenServer() {}
+EdenServer::~EdenServer() {
+  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  counters->unregisterCallback(kBlobCacheMemory);
+}
 
 Future<Unit> EdenServer::unmountAll() {
 #ifndef _WIN32
