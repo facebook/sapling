@@ -51,19 +51,13 @@ class GrepTest(EdenHgTestCase):
     def test_grep_that_does_not_match_anything(self) -> None:
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("grep", "NOT IN THERE")
-        # pyre-fixme[16]: `_E` has no attribute `stdout`.
         self.assertEqual(b"", context.exception.stdout)
-        # pyre-fixme[16]: `_E` has no attribute `stderr`.
         self.assertEqual(b"", context.exception.stderr)
-        # pyre-fixme[16]: `_E` has no attribute `returncode`.
         self.assertEqual(123, context.exception.returncode)
 
     def test_grep_that_does_not_match_anything_in_directory(self) -> None:
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("grep", "NOT IN THERE", "d1")
-        # pyre-fixme[16]: `_E` has no attribute `stdout`.
         self.assertEqual(b"", context.exception.stdout)
-        # pyre-fixme[16]: `_E` has no attribute `stderr`.
         self.assertEqual(b"", context.exception.stderr)
-        # pyre-fixme[16]: `_E` has no attribute `returncode`.
         self.assertEqual(123, context.exception.returncode)

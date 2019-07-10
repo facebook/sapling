@@ -292,7 +292,6 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertIn(
             f"error: {repo_name!r} does not look like a valid hg or git "
             "repository or a well-known repository name\n",
-            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr.decode(),
         )
 

@@ -521,13 +521,9 @@ class EdenConfigParserTest(unittest.TestCase):
                 parser.read_dict({"test_section": {"test_option": value}})
                 with self.assertRaises(UnexpectedType) as expectation:
                     parser.get_bool("test_section", "test_option", default=False)
-                # pyre-fixme[16]: `_E` has no attribute `section`.
                 self.assertEqual(expectation.exception.section, "test_section")
-                # pyre-fixme[16]: `_E` has no attribute `option`.
                 self.assertEqual(expectation.exception.option, "test_option")
-                # pyre-fixme[16]: `_E` has no attribute `value`.
                 self.assertEqual(expectation.exception.value, value)
-                # pyre-fixme[16]: `_E` has no attribute `expected_type`.
                 self.assertEqual(expectation.exception.expected_type, bool)
 
     def test_querying_bool_with_value_of_unsupported_type_fails(self) -> None:
@@ -535,13 +531,9 @@ class EdenConfigParserTest(unittest.TestCase):
         parser.read_dict({"test_section": {"test_option": self.unsupported_value}})
         with self.assertRaises(UnexpectedType) as expectation:
             parser.get_bool("test_section", "test_option", default=False)
-        # pyre-fixme[16]: `_E` has no attribute `section`.
         self.assertEqual(expectation.exception.section, "test_section")
-        # pyre-fixme[16]: `_E` has no attribute `option`.
         self.assertEqual(expectation.exception.option, "test_option")
-        # pyre-fixme[16]: `_E` has no attribute `value`.
         self.assertEqual(expectation.exception.value, self.unsupported_value)
-        # pyre-fixme[16]: `_E` has no attribute `expected_type`.
         self.assertEqual(expectation.exception.expected_type, bool)
 
     def test_querying_str_with_non_string_value_fails(self) -> None:
@@ -549,13 +541,9 @@ class EdenConfigParserTest(unittest.TestCase):
         parser.read_dict({"test_section": {"test_option": True}})
         with self.assertRaises(UnexpectedType) as expectation:
             parser.get_str("test_section", "test_option", default="")
-        # pyre-fixme[16]: `_E` has no attribute `section`.
         self.assertEqual(expectation.exception.section, "test_section")
-        # pyre-fixme[16]: `_E` has no attribute `option`.
         self.assertEqual(expectation.exception.option, "test_option")
-        # pyre-fixme[16]: `_E` has no attribute `value`.
         self.assertEqual(expectation.exception.value, True)
-        # pyre-fixme[16]: `_E` has no attribute `expected_type`.
         self.assertEqual(expectation.exception.expected_type, str)
 
     def test_querying_section_str_to_str_returns_mapping(self) -> None:
@@ -573,13 +561,9 @@ class EdenConfigParserTest(unittest.TestCase):
         parser.read_dict({"test_section": {"unsupported": self.unsupported_value}})
         with self.assertRaises(UnexpectedType) as expectation:
             parser.get_section_str_to_any("test_section")
-        # pyre-fixme[16]: `_E` has no attribute `section`.
         self.assertEqual(expectation.exception.section, "test_section")
-        # pyre-fixme[16]: `_E` has no attribute `option`.
         self.assertEqual(expectation.exception.option, "unsupported")
-        # pyre-fixme[16]: `_E` has no attribute `value`.
         self.assertEqual(expectation.exception.value, self.unsupported_value)
-        # pyre-fixme[16]: `_E` has no attribute `expected_type`.
         self.assertIsNone(expectation.exception.expected_type)
 
     def test_querying_section_str_to_any_interpolates_options(self) -> None:
@@ -611,13 +595,9 @@ class EdenConfigParserTest(unittest.TestCase):
         parser.read_dict({"test_section": {"a": False}})
         with self.assertRaises(UnexpectedType) as expectation:
             parser.get_section_str_to_str("test_section")
-        # pyre-fixme[16]: `_E` has no attribute `section`.
         self.assertEqual(expectation.exception.section, "test_section")
-        # pyre-fixme[16]: `_E` has no attribute `option`.
         self.assertEqual(expectation.exception.option, "a")
-        # pyre-fixme[16]: `_E` has no attribute `value`.
         self.assertEqual(expectation.exception.value, False)
-        # pyre-fixme[16]: `_E` has no attribute `expected_type`.
         self.assertEqual(expectation.exception.expected_type, str)
 
     def test_querying_section_str_to_str_of_missing_section_fails(self) -> None:
@@ -653,13 +633,9 @@ class EdenConfigParserTest(unittest.TestCase):
         parser.read_dict({"test_section": {"test_option": [123]}})
         with self.assertRaises(UnexpectedType) as expectation:
             parser.get_strs("test_section", "test_option", default=[])
-        # pyre-fixme[16]: `_E` has no attribute `section`.
         self.assertEqual(expectation.exception.section, "test_section")
-        # pyre-fixme[16]: `_E` has no attribute `option`.
         self.assertEqual(expectation.exception.option, "test_option")
-        # pyre-fixme[16]: `_E` has no attribute `value`.
         self.assertEqual(expectation.exception.value, [123])
-        # pyre-fixme[16]: `_E` has no attribute `expected_type`.
         self.assertEqual(expectation.exception.expected_type, configutil.Strs)
 
     def test_querying_missing_value_as_strs_returns_default(self) -> None:

@@ -103,6 +103,7 @@ class ExpectedSocket(ExpectedFileBase):
 _ExpectedFile = TypeVar("_ExpectedFile", bound=ExpectedFileBase)
 
 
+# pyre-fixme[24]: Generic type `typing.Mapping` expects 2 type parameters.
 class ExpectedFileSet(collections.abc.Mapping):
     """
     ExpectedFileSet is basically a container of ExpectedFileBase objects,

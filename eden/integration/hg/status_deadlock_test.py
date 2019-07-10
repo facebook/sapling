@@ -77,6 +77,7 @@ class StatusDeadlockTest(EdenHgTestCase):
         gen_tree("src", fanouts, create_new_file)
         self._hg_add_many(repo, new_files)
 
+        # pyre-fixme[16]: `StatusDeadlockTest` has no attribute `commit2`.
         self.commit2 = repo.commit("Initial commit.")
         logging.debug("== created second commit")
 

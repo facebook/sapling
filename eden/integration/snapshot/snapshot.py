@@ -383,6 +383,7 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
 
         eden.clone(self.backing_repo.path, str(self.checkout_path))
 
+        # pyre-fixme[16]: `HgSnapshot` has no attribute `checkout_repo`.
         self.checkout_repo = self.hg_repo(self.checkout_path)
         self.populate_checkout()
 
@@ -518,8 +519,7 @@ def unpack_into(snapshot_path: Path, output_path: Path) -> BaseSnapshot:
         if snapshot_type is None:
             raise UnknownSnapshotTypeError(type_name)
 
-        # pyre-fixme[38]: Abstract method(s) `verify_snapshot_data` in class
-        #  `BaseSnapshot` are never initialized.
+        # pyre-fixme[45]: Cannot instantiate abstract class `BaseSnapshot`.
         snapshot = snapshot_type(output_path)
         snapshot.resume()
         return snapshot

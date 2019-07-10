@@ -85,5 +85,4 @@ class SplitTest(EdenHgTestCase):
             )
         self.assert_status_empty()
         self.assertListEqual(commits, self.repo.log())
-        # pyre-fixme[16]: `_E` has no attribute `returncode`.
         self.assertEqual(255, context.exception.returncode)

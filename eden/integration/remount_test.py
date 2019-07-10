@@ -139,10 +139,8 @@ class RemountTest(testcase.EdenRepoTest):
                 b"ERROR: Mount point in use! %s is already mounted by Eden.\n"
                 % mount_destination.encode()
             ),
-            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
-        # pyre-fixme[16]: `_E` has no attribute `returncode`.
         self.assertEqual(1, context.exception.returncode)
 
     def test_empty_config_json(self) -> None:

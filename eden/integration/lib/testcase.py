@@ -77,15 +77,15 @@ class EdenTestCase(
                 old_tearDown = self.tearDown
                 self.setUp = lambda: None  # type: ignore # (mypy issue 2427)
                 self.tearDown = lambda: None  # type: ignore # (mypy issue 2427)
+                # pyre-fixme[16]: `EdenTestCase` has no attribute `setup_example`.
                 self.setup_example = old_setUp
+                # pyre-fixme[16]: `EdenTestCase` has no attribute `teardown_example`.
                 self.teardown_example = lambda _: old_tearDown()
                 return super(EdenTestCase, self).run(result)
             finally:
                 self.setUp = old_setUp  # type: ignore # (mypy issue 2427)
                 self.tearDown = old_tearDown  # type: ignore # (mypy issue 2427)
-                # pyre-fixme[16]: `EdenTestCase` has no attribute `setup_example`.
                 del self.setup_example
-                # pyre-fixme[16]: `EdenTestCase` has no attribute `teardown_example`.
                 del self.teardown_example
         else:
             return super(EdenTestCase, self).run(result)

@@ -40,6 +40,5 @@ class SparseTest(EdenHgTestCase):
                 self.hg("--config", "extensions.sparse=", "sparse", *sub.split())
             self.assertIn(
                 "don't need sparse profiles",
-                # pyre-fixme[16]: `_E` has no attribute `stderr`.
                 context.exception.stderr.decode("utf-8", errors="replace"),
             )

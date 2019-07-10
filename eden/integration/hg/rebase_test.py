@@ -149,7 +149,6 @@ class RebaseTest(EdenHgTestCase):
         self.assertIn(
             b"conflicts while merging numbers/1/11! "
             b"(edit, then use 'hg resolve --mark')",
-            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
         self.assert_unresolved(unresolved=["numbers/1/11", "numbers/1/12"])
@@ -184,7 +183,6 @@ class RebaseTest(EdenHgTestCase):
         self.assertIn(
             b"conflicts while merging numbers/1/12! "
             b"(edit, then use 'hg resolve --mark')",
-            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
         self.assert_unresolved(

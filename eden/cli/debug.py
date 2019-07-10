@@ -747,6 +747,7 @@ class LoggingCmd(Subcmd):
         if args.reset and args.config is None:
             # The configuration to use if the caller specifies --reset with no
             # explicit config argument.
+            # pyre-fixme[16]: `Namespace` has no attribute `config`.
             args.config = (
                 "WARN:default,eden=DBG2; default=stream:stream=stderr,async=true"
             )

@@ -176,7 +176,6 @@ class UpdateTest(EdenHgTestCase):
         self.assertIn(
             b"1 conflicts while merging foo/bar.txt! "
             b"(edit, then use 'hg resolve --mark')",
-            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
         self.assert_status({"foo/bar.txt": "M"}, op="merge")
@@ -211,7 +210,6 @@ class UpdateTest(EdenHgTestCase):
         # both the working copy and the destination.
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
-        # pyre-fixme[16]: `_E` has no attribute `stderr`.
         self.assertIn(b"abort: conflicting changes", context.exception.stderr)
         self.assertEqual(
             base_commit,
@@ -275,7 +273,6 @@ class UpdateTest(EdenHgTestCase):
         self.assertIn(
             b"warning: 1 conflicts while merging some_new_file.txt! "
             b"(edit, then use 'hg resolve --mark')",
-            # pyre-fixme[16]: `_E` has no attribute `stderr`.
             context.exception.stderr,
         )
         self.assertEqual(
@@ -489,13 +486,16 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.commit1 = repo.commit("Initial commit.")
 
         repo.remove_file("dir/file1")
+        # pyre-fixme[16]: `UpdateCacheInvalidationTest` has no attribute `commit2`.
         self.commit2 = repo.commit("Remove file1")
 
         repo.write_file("dir/file3", "three")
+        # pyre-fixme[16]: `UpdateCacheInvalidationTest` has no attribute `commit3`.
         self.commit3 = repo.commit("Add file3")
 
         repo.update(self.commit1)
         repo.write_file("dir/file2", "new two")
+        # pyre-fixme[16]: `UpdateCacheInvalidationTest` has no attribute `commit4`.
         self.commit4 = repo.commit("Change file2")
 
     def _populate_kernel_caches(self):

@@ -280,6 +280,7 @@ class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
 
     def populate_repo(self) -> None:
         self.repo.write_file("test-directory/file", "")
+        # pyre-fixme[16]: `TakeoverRocksDBStressTest` has no attribute `commit1`.
         self.commit1 = self.repo.commit("Initial commit.")
 
     def select_storage_engine(self) -> str:

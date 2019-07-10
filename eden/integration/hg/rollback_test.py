@@ -14,6 +14,7 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 class RollbackTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("first", "")
+        # pyre-fixme[16]: `RollbackTest` has no attribute `_commit1`.
         self._commit1 = repo.commit("first commit")
 
     def test_commit_with_precommit_failure_should_trigger_rollback(self) -> None:
@@ -34,7 +35,6 @@ class RollbackTest(EdenHgTestCase):
             b"transaction abort!\nrollback completed\n"
             b"abort: pretxncommit hook exited with status 1\n"
         )
-        # pyre-fixme[16]: `_E` has no attribute `stderr`.
         self.assertIn(expected_msg, context.exception.stderr)
 
         self.assertEqual(
