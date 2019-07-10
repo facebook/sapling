@@ -138,7 +138,9 @@ def sync(
     if cloudrefs is None:
         cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
 
-    with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+    with repo.ui.configoverride(
+        {("treemanifest", "prefetchdraftparents"): False}, "cloudsync"
+    ), repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
 
         if origheads != _getheads(repo) or origbookmarks != _getbookmarks(repo):
             # Another transaction changed the repository while we were backing
@@ -344,16 +346,18 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             exchange, "_pullbookmarks", _pullbookmarks
         ), extensions.wrappedfunction(
             remotenames, "pullremotenames", _pullremotenames
-        ) if remotenames else util.nullcontextmanager():
-            with progress.bar(
-                repo.ui, _("pulling from commit cloud"), total=len(headgroups)
-            ) as prog:
-                for index, headgroup in enumerate(headgroups):
-                    headgroupstr = " ".join([head[:12] for head in headgroup])
-                    repo.ui.status(_("pulling %s\n") % headgroupstr)
-                    prog.value = (index, headgroupstr)
-                    pullopts["rev"] = headgroup
-                    pullcmd(repo.ui, repo, remotepath, **pullopts)
+        ) if remotenames else util.nullcontextmanager(), repo.ui.configoverride(
+            {("pull", "automigrate"): False, ("treemanifest", "pullprefetchrevs"): ""},
+            "cloudsyncpull",
+        ), progress.bar(
+            repo.ui, _("pulling from commit cloud"), total=len(headgroups)
+        ) as prog:
+            for index, headgroup in enumerate(headgroups):
+                headgroupstr = " ".join([head[:12] for head in headgroup])
+                repo.ui.status(_("pulling %s\n") % headgroupstr)
+                prog.value = (index, headgroupstr)
+                pullopts["rev"] = headgroup
+                pullcmd(repo.ui, repo, remotepath, **pullopts)
 
     omittedbookmarks.extend(
         _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
