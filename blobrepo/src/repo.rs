@@ -1828,6 +1828,7 @@ impl BlobRepo {
 
         let repo = self.clone();
 
+        cloned!(self.bonsai_hg_mapping, self.repoid);
         find_toposorted_bonsai_cs_with_no_hg_cs_generated(
             ctx.clone(),
             repo.clone(),
@@ -1853,15 +1854,13 @@ impl BlobRepo {
                             })
                             .left_future(),
                         None => {
-                            return fetch_hg_changeset_from_mapping(
-                                ctx.clone(),
-                                repo.clone(),
-                                bcs_id,
-                            )
-                            .map(move |hg_cs| {
-                                Loop::Break((hg_cs.get_changeset_id(), generated_count))
-                            })
-                            .right_future();
+                            return bonsai_hg_mapping
+                                .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
+                                .map(move |maybe_hg_cs_id| match maybe_hg_cs_id {
+                                    Some(hg_cs_id) => Loop::Break((hg_cs_id, generated_count)),
+                                    None => panic!("hg changeset must be generated already"),
+                                })
+                                .right_future();
                         }
                     },
                 )
