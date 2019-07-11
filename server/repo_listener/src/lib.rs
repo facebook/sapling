@@ -97,18 +97,25 @@ pub fn create_repo_listeners(
     let mut ready = ready_state::ReadyStateBuilder::new();
 
     (
-        repo_handlers(repos, myrouter_port, caching, common_config.scuba_censored_table.clone(), &root_log, &mut ready)
-            .and_then(move |handlers| {
-                connection_acceptor(
-                    common_config,
-                    sockname,
-                    root_log,
-                    handlers,
-                    tls_acceptor,
-                    terminate_process,
-                )
-            })
-            .boxify(),
+        repo_handlers(
+            repos,
+            myrouter_port,
+            caching,
+            common_config.scuba_censored_table.clone(),
+            &root_log,
+            &mut ready,
+        )
+        .and_then(move |handlers| {
+            connection_acceptor(
+                common_config,
+                sockname,
+                root_log,
+                handlers,
+                tls_acceptor,
+                terminate_process,
+            )
+        })
+        .boxify(),
         ready.freeze(),
     )
 }

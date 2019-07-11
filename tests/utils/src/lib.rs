@@ -18,8 +18,9 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future::Future;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents,
-                     FileType, MPath};
+use mononoke_types::{
+    BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType, MPath,
+};
 
 use std::collections::BTreeMap;
 
@@ -28,7 +29,7 @@ pub fn store_files(
     files: BTreeMap<&str, Option<&str>>,
     repo: BlobRepo,
 ) -> BTreeMap<MPath, Option<FileChange>> {
-    let mut res = btreemap!{};
+    let mut res = btreemap! {};
 
     for (path, content) in files {
         let path = MPath::new(path).unwrap();
@@ -72,16 +73,17 @@ pub fn create_commit(
     file_changes: BTreeMap<MPath, Option<FileChange>>,
 ) -> ChangesetId {
     let bcs = BonsaiChangesetMut {
-        parents: parents,
+        parents,
         author: "author".to_string(),
         author_date: DateTime::from_timestamp(0, 0).unwrap(),
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: btreemap!{},
+        extra: btreemap! {},
         file_changes,
-    }.freeze()
-        .unwrap();
+    }
+    .freeze()
+    .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx, repo.clone())

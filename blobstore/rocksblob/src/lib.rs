@@ -39,8 +39,10 @@ impl Rocksblob {
 
     pub fn open_with_options<P: AsRef<Path>>(path: P, opts: rocksdb::Options) -> Result<Self> {
         let opts = opts.set_compression(rocksdb::Compression::Zstd);
-        let opts = opts.set_block_based_table_factory(&rocksdb::BlockBasedTableOptions::new()
-            .set_filter_policy(rocksdb::FilterPolicy::create_bloom(10)));
+        let opts = opts.set_block_based_table_factory(
+            &rocksdb::BlockBasedTableOptions::new()
+                .set_filter_policy(rocksdb::FilterPolicy::create_bloom(10)),
+        );
 
         Ok(Rocksblob {
             db: Db::open(path, opts)?,

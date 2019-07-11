@@ -139,7 +139,7 @@ macro_rules! blobstore_test_impl {
                 boxable($new_cb(state.clone()));
             }
         }
-    }
+    };
 }
 
 blobstore_test_impl! {

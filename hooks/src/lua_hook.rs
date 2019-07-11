@@ -356,9 +356,13 @@ impl LuaHook {
                         if acc {
                             Ok(HookExecution::Accepted)
                         } else {
-                            let desc = t.get::<String, _, _>(2).ok_or(Error::from(ErrorKind::HookRuntimeError("No description".to_string())))?;
+                            let desc = t.get::<String, _, _>(2).ok_or(Error::from(
+                                ErrorKind::HookRuntimeError("No description".to_string()),
+                            ))?;
                             let long_desc = t.get::<String, _, _>(3);
-                            Ok(HookExecution::Rejected(HookRejectionInfo::new_opt(desc, long_desc)))
+                            Ok(HookExecution::Rejected(HookRejectionInfo::new_opt(
+                                desc, long_desc,
+                            )))
                         }
                     })
             })

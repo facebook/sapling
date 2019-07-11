@@ -25,7 +25,8 @@ pub mod prelude {
 }
 
 pub use failure::{
-    _core, bail, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt, SyncFailure,
+    _core, bail, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt,
+    SyncFailure,
 };
 pub use failure_derive::*;
 

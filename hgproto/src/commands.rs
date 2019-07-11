@@ -273,7 +273,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                         .boxify(),
                     instream,
                 )
-            },
+            }
             SingleRequest::GetpackV2 => {
                 let (reqs, instream) =
                     decode_getfiles_arg_stream(instream, || Getpackv1ArgDecoder::new());

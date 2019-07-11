@@ -101,12 +101,10 @@ mod test {
             .expect("initial put should work");
         let outer = MemWritesBlobstore::new(inner.clone());
 
-        assert!(
-            outer
-                .is_present(ctx.clone(), foo_key.clone())
-                .wait()
-                .expect("is_present to inner should work")
-        );
+        assert!(outer
+            .is_present(ctx.clone(), foo_key.clone())
+            .wait()
+            .expect("is_present to inner should work"));
 
         assert_eq!(
             outer

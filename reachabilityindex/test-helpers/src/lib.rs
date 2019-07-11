@@ -357,7 +357,6 @@ mod test {
     use futures::Future;
     use mononoke_types::Generation;
 
-
     #[test]
     fn test_helpers() {
         async_unit::tokio_unit_test(move || {

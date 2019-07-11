@@ -9,7 +9,10 @@
 
 extern crate futures;
 
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use futures::{Async, Future, Poll};
 
@@ -83,7 +86,8 @@ impl ReadyHandle {
     where
         F: Future,
     {
-        let inner = self.inner
+        let inner = self
+            .inner
             .take()
             .expect("inner should only be None in the Drop impl");
         ReadyFuture {

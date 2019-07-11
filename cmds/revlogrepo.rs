@@ -16,7 +16,7 @@ use std::str::FromStr;
 
 use clap::{App, SubCommand};
 
-use mercurial::{RevlogChangeset, revlog::Revlog};
+use mercurial::{revlog::Revlog, RevlogChangeset};
 use mercurial_types::HgNodeHash;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {

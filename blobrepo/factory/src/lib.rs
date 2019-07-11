@@ -291,7 +291,12 @@ fn new_production<T: SqlFactory>(
     Ok(BlobRepo::new_with_changeset_fetcher_factory(
         logger,
         bookmarks,
-        make_censored_prefixed_blobstore(blobstore, censored_blobs, repoid.prefix(), scuba_censored_table),
+        make_censored_prefixed_blobstore(
+            blobstore,
+            censored_blobs,
+            repoid.prefix(),
+            scuba_censored_table,
+        ),
         Arc::new(filenodes),
         changesets,
         Arc::new(bonsai_hg_mapping),

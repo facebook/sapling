@@ -22,7 +22,7 @@ pub struct MeteredRead<R: Read> {
 impl<R: Read> MeteredRead<R> {
     pub fn new(inner: R) -> Self {
         MeteredRead {
-            inner: inner,
+            inner,
             total_thru: 0,
         }
     }
@@ -98,7 +98,7 @@ pub struct MeteredWrite<W: Write> {
 impl<W: Write> MeteredWrite<W> {
     pub fn new(inner: W) -> Self {
         MeteredWrite {
-            inner: inner,
+            inner,
             total_thru: 0,
         }
     }

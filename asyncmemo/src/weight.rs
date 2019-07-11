@@ -89,9 +89,7 @@ where
 {
     #[inline]
     fn get_weight(&self) -> usize {
-        let inner_size = self.as_ref()
-            .map(Weight::get_weight)
-            .unwrap_or(0);
+        let inner_size = self.as_ref().map(Weight::get_weight).unwrap_or(0);
 
         mem::size_of::<Self>() - mem::size_of::<A>() + inner_size
     }

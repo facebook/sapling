@@ -48,7 +48,8 @@ pub(crate) fn start_thrift_service<'a>(
                     port,
                     0, // Disables separate status http server
                     Box::new(MononokeService { ready }),
-                ).expect("failure while running thrift service framework")
+                )
+                .expect("failure while running thrift service framework")
             })
             .map_err(Error::from)
     })

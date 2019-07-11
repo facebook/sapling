@@ -45,12 +45,14 @@ impl Fail for BlobRepoErrorCause {
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "{} not found in repo", _0)] NodeNotFound(String),
+    #[fail(display = "{} not found in repo", _0)]
+    NodeNotFound(String),
     #[fail(display = "failed to fetch node generation")]
     GenerationFetchFailed(#[cause] BlobRepoErrorCause),
     #[fail(display = "failed to fetch parent nodes")]
     ParentsFetchFailed(#[cause] BlobRepoErrorCause),
     #[fail(display = "checking existence failed")]
     CheckExistenceFailed(String, #[cause] BlobRepoErrorCause),
-    #[fail(display = "Unknown field in thrift encoding")] UknownSkiplistThriftEncoding,
+    #[fail(display = "Unknown field in thrift encoding")]
+    UknownSkiplistThriftEncoding,
 }
