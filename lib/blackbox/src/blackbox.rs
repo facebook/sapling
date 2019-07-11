@@ -201,7 +201,7 @@ impl Blackbox {
     pub fn sync(&mut self) {
         if !self.is_broken.get() {
             // Ignore failures.
-            self.log.sync().is_ok();
+            let _ = self.log.sync();
         }
     }
 
