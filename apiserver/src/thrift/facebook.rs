@@ -9,9 +9,8 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use fb303::fb_status;
 use fb303::server::FacebookService;
-use fb303::services::facebook_service::GetStatusExn;
 use fb303_core::server::BaseService;
-use fb303_core::services::base_service::{GetNameExn, GetStatusDetailsExn};
+use fb303_core::services::base_service::{GetNameExn, GetStatusDetailsExn, GetStatusExn};
 
 #[derive(Clone)]
 pub struct FacebookServiceImpl {}
@@ -21,13 +20,12 @@ impl BaseService for FacebookServiceImpl {
         Ok("Mononoke API Server".to_string()).into_future().boxify()
     }
 
+    fn getStatus(&self) -> BoxFuture<fb_status, GetStatusExn> {
+        Ok(fb_status::ALIVE).into_future().boxify()
+    }
     fn getStatusDetails(&self) -> BoxFuture<String, GetStatusDetailsExn> {
         Ok("Alive and running.".to_string()).into_future().boxify()
     }
 }
 
-impl FacebookService for FacebookServiceImpl {
-    fn getStatus(&self) -> BoxFuture<fb_status, GetStatusExn> {
-        Ok(fb_status::ALIVE).into_future().boxify()
-    }
-}
+impl FacebookService for FacebookServiceImpl {}
