@@ -7,9 +7,9 @@
 
 import abc
 import errno
+import getpass
 import json
 import os
-import pwd
 import random
 import subprocess
 import sys
@@ -23,6 +23,9 @@ import thrift.transport
 from fb303.ttypes import fb_status
 from thrift import Thrift
 
+
+if os.name != "nt":
+    import pwd
 
 # These paths are relative to the user's client directory.
 LOCK_FILE = "lock"
@@ -486,4 +489,4 @@ def get_eden_mount_name(path_arg: str) -> str:
 
 
 def get_username() -> str:
-    return pwd.getpwuid(os.getuid()).pw_name
+    return getpass.getuser()
