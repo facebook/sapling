@@ -430,13 +430,23 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
         lastrev = globalrevmap.lastrev
         repolen = len(unfi)
         with progress.bar(ui, _("indexing"), _("revs"), repolen - lastrev) as prog:
-            for rev in xrange(lastrev, repolen):  # noqa: F821
-                commitdata = clrevision(rev)
-                grev = _getglobalrev(ui, commitdata.extra)
+
+            def addtoglobalrevmap(grev, node):
                 if grev:
-                    grev = int(grev)
-                    hgnode = clnode(rev)
-                    globalrevmap.add(grev, hgnode)
+                    globalrevmap.add(int(grev), node)
+
+            for rev in xrange(lastrev, repolen):  # noqa: F821
+                hgnode = clnode(rev)
+                commitdata = clrevision(rev)
+                extra = commitdata.extra
+
+                svnrev = _getsvnrev(extra)
+                addtoglobalrevmap(svnrev, hgnode)
+
+                globalrev = _getglobalrev(ui, extra)
+                if globalrev != svnrev:
+                    addtoglobalrevmap(globalrev, hgnode)
+
                 prog.value += 1
 
         globalrevmap.lastrev = repolen
