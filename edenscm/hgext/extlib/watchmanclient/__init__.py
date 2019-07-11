@@ -303,6 +303,7 @@ class state_update(object):
 
 
 if pycompat.iswindows:
+    from ctypes.wintypes import HANDLE, DWORD
 
     def openfilewin(path):
 
@@ -314,11 +315,20 @@ if pycompat.iswindows:
         disposition = 3  # OPEN_EXISTING
         flags = 33554432  # FILE_FLAG_BACKUP_SEMANTICS
 
-        h = createfile(cpath, access, mode, 0, disposition, flags, 0)
-        if h == -1:
+        createfile.restype = HANDLE
+        h = createfile(
+            cpath,
+            DWORD(access),
+            DWORD(mode),
+            None,
+            DWORD(disposition),
+            DWORD(flags),
+            HANDLE(0),
+        )
+        if h == HANDLE(-1).value:
             raise WindowsError("Failed to open file: " + path)
 
-        return h
+        return HANDLE(h)
 
     def getcanonicalpath(name):
         gfpnbh = ctypes.windll.kernel32.GetFinalPathNameByHandleW
@@ -326,11 +336,10 @@ if pycompat.iswindows:
 
         h = openfilewin(name)
         try:
-            gfpnbh = ctypes.windll.kernel32.GetFinalPathNameByHandleW
             numwchars = 1024
             while True:
                 buf = ctypes.create_unicode_buffer(numwchars)
-                result = gfpnbh(h, buf, numwchars, 0)
+                result = gfpnbh(h, buf, DWORD(numwchars), DWORD(0))
                 if result == 0:
                     raise IOError("unknown error while normalizing path")
 
