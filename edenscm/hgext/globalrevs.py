@@ -320,13 +320,6 @@ def _lookupglobalrev(repo, grev):
     changelogrevision = cl.changelogrevision
     tonode = cl.node
     ui = repo.ui
-    startrev = ui.configint("globalrevs", "startrev")
-
-    # If the globalrevs start after 0, commit with global revision 0 cannot be
-    # associated with any commit because there exists no commit corresponding to
-    # a Subversion revision 0.
-    if startrev > 0 and grev == 0:
-        return []
 
     def matchglobalrev(rev):
         commitextra = changelogrevision(rev).extra
@@ -352,12 +345,7 @@ def _lookupglobalrev(repo, grev):
         # upto lastrev and therefore, we can safely say that there is no commit
         # which has the specified globalrev if we are looking at a revision
         # before the lastrev.
-        #
-        # However, we may be looking for a svnrev which would be the case if the
-        # the revision we are looking for is before the startrev. We cannot bail
-        # out quickly in that case otherwise, we won't be able to answer svnrev
-        # revset queries correctly.
-        if usefastlookup and rev < lastrev and rev >= startrev:
+        if usefastlookup and rev < lastrev:
             break
 
         if matchglobalrev(rev):
