@@ -316,7 +316,8 @@ mod tests {
                 Some(aggregated_state) => aggregated_state.union.intersects(state_required_any),
             },
             &|_, file| file.state.intersects(state_required_any),
-        ).expect("visit");
+        )
+        .expect("visit");
         result
     }
 

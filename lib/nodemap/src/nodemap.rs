@@ -69,8 +69,7 @@ impl NodeMap {
     }
 
     pub fn iter<'a>(&'a self) -> Fallible<Box<dyn Iterator<Item = Fallible<(Node, Node)>> + 'a>> {
-        let iter = self.log.iter().map(move |entry| {
-            match entry {
+        let iter = self.log.iter().map(move |entry| match entry {
             Ok(data) => {
                 let mut first = self.log.index_func(0, &data)?;
                 if first.len() != 1 {
@@ -94,7 +93,6 @@ impl NodeMap {
                 Ok((Node::from_slice(&first)?, Node::from_slice(&second)?))
             }
             Err(e) => Err(e.into()),
-        }
         });
         Ok(Box::new(iter))
     }

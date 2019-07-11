@@ -20,7 +20,7 @@ use watchman_client::transport::Transport;
 
 /// Test binary for manual testing
 
-arg_enum!{
+arg_enum! {
     #[allow(non_camel_case_types)]
     #[derive(Debug)]
     enum Transports {
@@ -30,7 +30,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[allow(non_camel_case_types)]
     #[derive(Debug)]
     enum Protocols {
@@ -39,7 +39,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[allow(non_camel_case_types)]
     #[derive(Debug)]
     enum Tests {
@@ -138,7 +138,8 @@ mod test_client {
             let now = Instant::now();
             self.client.watch_project()?;
             let mut clock_state = self.read_watchman_state()?;
-            let res = self.client
+            let res = self
+                .client
                 .query_files(None, None, clock_state.query_files_last_clock);
             match res {
                 Ok(ref r) => {
@@ -161,7 +162,8 @@ mod test_client {
             let now = Instant::now();
             self.client.watch_project()?;
             let mut clock_state = self.read_watchman_state()?;
-            let res = self.client
+            let res = self
+                .client
                 .query_dirs(None, None, clock_state.query_dirs_last_clock);
             match res {
                 Ok(ref r) => {

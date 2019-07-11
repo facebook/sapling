@@ -70,7 +70,8 @@ impl ThrottlingExecutor {
     #[inline]
     fn execute(&mut self, f: &Fn()) {
         let now = SystemTime::now();
-        if now.duration_since(self.last_time)
+        if now
+            .duration_since(self.last_time)
             .map(|elapsed| elapsed >= self.rate)
             .unwrap_or(true)
         {
@@ -267,7 +268,10 @@ impl WorkspaceSubscriberService {
     /// It starts all the requested subscriptions by simply runing a separate thread for each one
     /// All threads keep checking the interrupt flag and join gracefully if it is restart or stop
 
-    fn run_subscriptions(&self, access_token: util::Token) -> Fallible<Vec<thread::JoinHandle<()>>> {
+    fn run_subscriptions(
+        &self,
+        access_token: util::Token,
+    ) -> Fallible<Vec<thread::JoinHandle<()>>> {
         util::read_subscriptions(&self.connected_subscribers_path)?
             .into_iter()
             .map(|(subscription, repo_roots)| {
@@ -325,12 +329,7 @@ impl WorkspaceSubscriberService {
                         reason,
                     );
                     // log outputs, results and continue even if unsuccessful
-                    let _res = CloudSyncTrigger::fire(
-                        &sid,
-                        repo_root,
-                        cloudsync_retries,
-                        version,
-                    );
+                    let _res = CloudSyncTrigger::fire(&sid, repo_root, cloudsync_retries, version);
                     if interrupt.load(Ordering::Relaxed) {
                         break;
                     }
@@ -413,10 +412,7 @@ impl WorkspaceSubscriberService {
                         info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
                     }
                 }
-                fire(
-                    "on new version notification",
-                    Some(notification.version),
-                );
+                fire("on new version notification", Some(notification.version));
                 if interrupt.load(Ordering::Relaxed) {
                     return;
                 }

@@ -30,7 +30,8 @@ mod defaults {
         match ::std::env::var_os(var) {
             Some(ref val) if !val.is_empty() => Some(val),
             _ => None,
-        }.map(|value| PathBuf::from(value))
+        }
+        .map(|value| PathBuf::from(value))
     }
 
     pub fn connected_subscribers_path() -> Option<PathBuf> {

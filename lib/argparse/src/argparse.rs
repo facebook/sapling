@@ -338,7 +338,7 @@ impl<T> Command<T> {
 
                     parsed.known_args.push(ParsedArgument {
                         name: argdef.name.clone(),
-                        value: value,
+                        value,
                     });
                 } else {
                     // ambiguous or no match
@@ -423,7 +423,8 @@ impl<T> Command<T> {
                         // Our strategy is to check every character in the arg and see if it is a
                         // valid short name for a boolean arg. If so, we set all of the
                         // corresponding args to "true". If not, we record arg as an unknown arg.
-                        let bool_argdefs: Vec<ArgToRecord> = arg.bytes()
+                        let bool_argdefs: Vec<ArgToRecord> = arg
+                            .bytes()
                             .skip(1)
                             .filter_map(|arg_char| match self.find_short_argdef(arg_char) {
                                 Some(ref argdef) if !argdef.requires_value => Some(ArgToRecord {

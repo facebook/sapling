@@ -13,9 +13,12 @@ use std::thread;
 /// All unknown commands will be ignored
 #[derive(Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum CommandName {
-    #[serde(rename = "commitcloud::restart_subscriptions")] CommitCloudRestartSubscriptions,
-    #[serde(rename = "commitcloud::cancel_subscriptions")] CommitCloudCancelSubscriptions,
-    #[serde(rename = "commitcloud::start_subscriptions")] CommitCloudStartSubscriptions,
+    #[serde(rename = "commitcloud::restart_subscriptions")]
+    CommitCloudRestartSubscriptions,
+    #[serde(rename = "commitcloud::cancel_subscriptions")]
+    CommitCloudCancelSubscriptions,
+    #[serde(rename = "commitcloud::start_subscriptions")]
+    CommitCloudStartSubscriptions,
 }
 
 #[derive(Debug, Deserialize, Default, Serialize)]
@@ -51,7 +54,8 @@ impl TcpReceiverService {
         mut self,
         actions: HashMap<CommandName, Box<Fn() + Send>>,
     ) -> TcpReceiverService {
-        self.actions = self.actions
+        self.actions = self
+            .actions
             .into_iter()
             .chain(actions.into_iter())
             .collect();

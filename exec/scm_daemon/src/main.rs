@@ -18,8 +18,9 @@ pub mod error;
 
 use self::error::*;
 use clap::{App, Arg};
-use commitcloudsubscriber::{CommitCloudConfig, CommitCloudTcpReceiverService,
-                            CommitCloudWorkspaceSubscriberService};
+use commitcloudsubscriber::{
+    CommitCloudConfig, CommitCloudTcpReceiverService, CommitCloudWorkspaceSubscriberService,
+};
 use std::fs::File;
 use std::io::Read;
 
@@ -91,9 +92,9 @@ fn run() -> Result<()> {
 
     let commitcloud_workspacesubscriber =
         CommitCloudWorkspaceSubscriberService::new(commitcloudconfref)?;
-    let commitcloud_tcpreceiver = CommitCloudTcpReceiverService::new(
-        commitcloudconfref.tcp_receiver_port,
-    ).with_actions(commitcloud_workspacesubscriber.actions());
+    let commitcloud_tcpreceiver =
+        CommitCloudTcpReceiverService::new(commitcloudconfref.tcp_receiver_port)
+            .with_actions(commitcloud_workspacesubscriber.actions());
 
     // start services
     let commitcloud_tcpreceiver_handler = commitcloud_tcpreceiver.serve()?;

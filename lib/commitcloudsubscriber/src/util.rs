@@ -182,9 +182,11 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Fallible<Token> {
                 ])
                 .output();
             match output {
-                Err(e) => if let io::ErrorKind::NotFound = e.kind() {
-                    info!("`security` executable is not found");
-                },
+                Err(e) => {
+                    if let io::ErrorKind::NotFound = e.kind() {
+                        info!("`security` executable is not found");
+                    }
+                }
                 Ok(output) => {
                     if !output.status.success() {
                         error!(
@@ -226,22 +228,26 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Fallible<Token> {
                 .output();
 
             match output {
-                Err(e) => if let io::ErrorKind::NotFound = e.kind() {
-                    info!("`clicat` executable is not found");
-                },
-                Ok(output) => if !output.status.success() {
-                    error!(
-                        "CAT token: failed to generate via clicat, process exited with {}",
-                        output.status
-                    );
-                } else {
-                    // Will start using it later
-                    info!("CAT token has been generated");
-                    return Ok(Token {
-                        token: str::from_utf8(&output.stdout)?.trim().to_string(),
-                        token_type: TokenType::Cat,
-                    });
-                },
+                Err(e) => {
+                    if let io::ErrorKind::NotFound = e.kind() {
+                        info!("`clicat` executable is not found");
+                    }
+                }
+                Ok(output) => {
+                    if !output.status.success() {
+                        error!(
+                            "CAT token: failed to generate via clicat, process exited with {}",
+                            output.status
+                        );
+                    } else {
+                        // Will start using it later
+                        info!("CAT token has been generated");
+                        return Ok(Token {
+                            token: str::from_utf8(&output.stdout)?.trim().to_string(),
+                            token_type: TokenType::Cat,
+                        });
+                    }
+                }
             }
         }
         // try to read token from secrets tool
@@ -255,9 +261,11 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Fallible<Token> {
                 .output();
 
             match output {
-                Err(e) => if let io::ErrorKind::NotFound = e.kind() {
-                    info!("`secrets_tool` executable is not found");
-                },
+                Err(e) => {
+                    if let io::ErrorKind::NotFound = e.kind() {
+                        info!("`secrets_tool` executable is not found");
+                    }
+                }
                 Ok(output) => {
                     if !output.status.success() {
                         error!("OAuth token: failed to retrieve from secrets using key {}, process exited with: {}", key, output.status);

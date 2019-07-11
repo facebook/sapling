@@ -224,7 +224,8 @@ mod tests {
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
-        let id2 = s.append("data block two".as_bytes())
+        let id2 = s
+            .append("data block two".as_bytes())
             .expect("write block 2");
         s.flush().expect("flush");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
@@ -233,7 +234,8 @@ mod tests {
         let mut s = FileStore::open(&p).expect("open store");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
-        let id3 = s.append("third data block".as_bytes())
+        let id3 = s
+            .append("third data block".as_bytes())
             .expect("write block 3");
         s.flush().expect("flush");
         drop(s);
@@ -334,7 +336,8 @@ mod tests {
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
-        let id2 = s.append("data block two".as_bytes())
+        let id2 = s
+            .append("data block two".as_bytes())
             .expect("write block 2");
         s.flush().expect("flush");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
@@ -344,7 +347,8 @@ mod tests {
         s.cache().expect("can cache");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
-        let id3 = s.append("third data block".as_bytes())
+        let id3 = s
+            .append("third data block".as_bytes())
             .expect("write block 3");
         s.flush().expect("flush");
         assert_eq!(s.read(id3).expect("read 3"), "third data block".as_bytes());

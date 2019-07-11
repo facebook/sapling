@@ -251,10 +251,7 @@ impl<'a> Parser<'a> {
     ///
     /// parse_args will clean arguments such that they can be properly parsed by Parser#_parse
     pub fn parse_args(&self, args: &'a Vec<String>) -> Fallible<ParseOutput> {
-        let arg_vec: Vec<&'a str> = args
-            .iter()
-            .map(|string| &string[..])
-            .collect();
+        let arg_vec: Vec<&'a str> = args.iter().map(|string| &string[..]).collect();
 
         self._parse(arg_vec)
     }

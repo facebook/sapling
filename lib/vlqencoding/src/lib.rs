@@ -123,7 +123,7 @@ pub trait VLQDecodeAt<T> {
 }
 
 macro_rules! impl_unsigned_primitive {
-    ($T: ident) => (
+    ($T: ident) => {
         impl<W: Write + ?Sized> VLQEncode<$T> for W {
             fn write_vlq(&mut self, value: $T) -> io::Result<()> {
                 let mut buf = [0u8];
@@ -154,13 +154,16 @@ macro_rules! impl_unsigned_primitive {
                 loop {
                     self.read_exact(&mut buf)?;
                     let byte = buf[0];
-                    value = ($T::from(byte & 127)).checked_mul(base)
+                    value = ($T::from(byte & 127))
+                        .checked_mul(base)
                         .and_then(|v| v.checked_add(value))
                         .ok_or(io::ErrorKind::InvalidData)?;
                     if byte & 128 == 0 {
                         break;
                     }
-                    base = base.checked_mul(base_multiplier).ok_or(io::ErrorKind::InvalidData)?;
+                    base = base
+                        .checked_mul(base_multiplier)
+                        .ok_or(io::ErrorKind::InvalidData)?;
                 }
                 Ok(value)
             }
@@ -183,9 +186,9 @@ macro_rules! impl_unsigned_primitive {
                         if byte & 128 == 0 {
                             break;
                         }
-                        base = base.checked_mul(base_multiplier).ok_or(
-                            io::ErrorKind::InvalidData,
-                        )?;
+                        base = base
+                            .checked_mul(base_multiplier)
+                            .ok_or(io::ErrorKind::InvalidData)?;
                     } else {
                         return Err(io::ErrorKind::InvalidData.into());
                     }
@@ -193,7 +196,7 @@ macro_rules! impl_unsigned_primitive {
                 Ok((value, size))
             }
         }
-    )
+    };
 }
 
 impl_unsigned_primitive!(usize);
@@ -203,7 +206,7 @@ impl_unsigned_primitive!(u16);
 impl_unsigned_primitive!(u8);
 
 macro_rules! impl_signed_primitive {
-    ($T: ty, $U: ty) => (
+    ($T: ty, $U: ty) => {
         impl<W: Write + ?Sized> VLQEncode<$T> for W {
             fn write_vlq(&mut self, v: $T) -> io::Result<()> {
                 self.write_vlq(((v << 1) ^ (v >> (size_of::<$U>() * 8 - 1))) as $U)
@@ -212,20 +215,17 @@ macro_rules! impl_signed_primitive {
 
         impl<R: Read + ?Sized> VLQDecode<$T> for R {
             fn read_vlq(&mut self) -> io::Result<$T> {
-                (self.read_vlq() as Result<$U, _>).map (|n| {
-                    ((n >> 1) as $T) ^ -((n & 1) as $T)
-                })
+                (self.read_vlq() as Result<$U, _>).map(|n| ((n >> 1) as $T) ^ -((n & 1) as $T))
             }
         }
 
         impl<R: AsRef<[u8]>> VLQDecodeAt<$T> for R {
             fn read_vlq_at(&self, offset: usize) -> io::Result<($T, usize)> {
-                (self.read_vlq_at(offset) as Result<($U, _), _>).map (|(n, s)| {
-                    (((n >> 1) as $T) ^ -((n & 1) as $T), s)
-                })
+                (self.read_vlq_at(offset) as Result<($U, _), _>)
+                    .map(|(n, s)| (((n >> 1) as $T) ^ -((n & 1) as $T), s))
             }
         }
-    )
+    };
 }
 
 impl_signed_primitive!(isize, usize);
@@ -240,25 +240,23 @@ mod tests {
     use std::io::{self, Cursor, Seek, SeekFrom};
 
     macro_rules! check_round_trip {
-        ($N: expr) => (
-            {
-                let mut v = vec![];
-                let mut x = $N;
-                v.write_vlq(x).expect("write");
+        ($N: expr) => {{
+            let mut v = vec![];
+            let mut x = $N;
+            v.write_vlq(x).expect("write");
 
-                // `z` and `y` below are helpful for the compiler to figure out the return type of
-                // `read_vlq_at`, and `read_vlq`.
-                #[allow(unused_assignments)]
-                let mut z = x;
-                let t = v.read_vlq_at(0).unwrap();
-                z = t.0;
+            // `z` and `y` below are helpful for the compiler to figure out the return type of
+            // `read_vlq_at`, and `read_vlq`.
+            #[allow(unused_assignments)]
+            let mut z = x;
+            let t = v.read_vlq_at(0).unwrap();
+            z = t.0;
 
-                let mut c = Cursor::new(v);
-                let y = x;
-                x = c.read_vlq().unwrap();
-                x == y && y == z && t.1 == c.position() as usize
-            }
-        )
+            let mut c = Cursor::new(v);
+            let y = x;
+            x = c.read_vlq().unwrap();
+            x == y && y == z && t.1 == c.position() as usize
+        }};
     }
 
     #[test]
@@ -313,7 +311,8 @@ mod tests {
             (-127, 253),
             (127, 254),
             (-128i8, 255u8),
-        ].iter()
+        ]
+        .iter()
         {
             c.seek(SeekFrom::Start(0)).expect("seek");
             c.write_vlq(i).expect("write");

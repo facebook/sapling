@@ -18,8 +18,6 @@ use std::path::PathBuf;
 use cpython::*;
 use failure::Fallible;
 
-use cpython_failure::ResultPyErrExt;
-use encoding::local_bytes_to_path;
 use ::treestate::{
     errors::ErrorKind,
     filestate::{FileState, FileStateV2, StateFlags},
@@ -28,6 +26,8 @@ use ::treestate::{
     treedirstate::TreeDirstate,
     treestate::TreeState,
 };
+use cpython_failure::ResultPyErrExt;
+use encoding::local_bytes_to_path;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "treestate"].join(".");

@@ -159,7 +159,9 @@ impl DataIndexOptions {
             0b10000000 => true,
             0 => false,
             _ => {
-                return Err(DataIndexError(format!("invalid data index '{:?}'", raw_config)).into());
+                return Err(
+                    DataIndexError(format!("invalid data index '{:?}'", raw_config)).into(),
+                );
             }
         };
         Ok(DataIndexOptions { version, large })
