@@ -206,6 +206,7 @@ TODO: Make this test compatibile with obsstore enabled.
   > bgprefetchrevs=0::
   > EOF
 
+  $ sleep 0.5
   $ clearcache
   $ find $CACHEDIR -type f | sort
   $ echo b > b
@@ -256,6 +257,10 @@ TODO: Make this test compatibile with obsstore enabled.
   $ hg up -r 2
   3 files updated, 0 files merged, 3 files removed, 0 files unresolved
   (leaving bookmark temporary)
+  $ sleep 0.5 # wait for any prefetches triggered by update
+  $ hg debugwaitonprefetch >/dev/null 2>%1
+  $ sleep 0.5
+  $ hg debugwaitonrepack >/dev/null 2>%1
   $ clearcache
   $ find $CACHEDIR -type f | sort
   $ hg rebase -s temporary -d foo

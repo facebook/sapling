@@ -551,7 +551,7 @@ Test repack option
   (running background incremental repack)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
 
-  $ sleep 0.5
+  $ sleep 1
   $ hg debugwaitonrepack
   $ ls_l $CACHEDIR/master/packs/manifests | grep datapack | wc -l
   \s*1 (re)
