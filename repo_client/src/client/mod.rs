@@ -90,7 +90,8 @@ mod ops {
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
     pub static GETFILES: &str = "getfiles";
-    pub static GETPACK: &str = "getpack";
+    pub static GETPACKV1: &str = "getpackv1";
+    pub static GETPACKV2: &str = "getpackv2";
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
@@ -487,10 +488,8 @@ impl RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
         version: u8,
+        mut wireproto_logger: WireprotoLogger,
     ) -> BoxStream<Bytes, Error> {
-        info!(self.ctx.logger(), "{}v{}", ops::GETPACK, version);
-        let mut wireproto_logger = self.wireproto_logger(ops::GETPACK, None);
-
         // We buffer all parameters in memory so that we can log them.
         // That shouldn't be a problem because requests are quite small
         let getpack_params = Arc::new(Mutex::new(vec![]));
@@ -1472,7 +1471,10 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        self.getpack(params, 1)
+        info!(self.ctx.logger(), "{}", ops::GETPACKV1);
+        let wireproto_logger = self.wireproto_logger(ops::GETPACKV1, None);
+
+        self.getpack(params, 1, wireproto_logger)
     }
 
     // @wireprotocommand('getpackv2')
@@ -1480,7 +1482,10 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
-        self.getpack(params, 2)
+        info!(self.ctx.logger(), "{}", ops::GETPACKV2);
+        let wireproto_logger = self.wireproto_logger(ops::GETPACKV2, None);
+
+        self.getpack(params, 2, wireproto_logger)
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore
