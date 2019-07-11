@@ -25,7 +25,6 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use slog::{debug, info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
@@ -33,7 +32,6 @@ use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 use tailer::Tailer;
@@ -48,14 +46,11 @@ fn main() -> Result<()> {
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
     let matches = setup_app().get_matches();
-    let repo_name = matches.value_of("repo_name").unwrap().to_string();
+    let (repo_name, config) = cmdlib::args::get_config(&matches)?;
     let logger = setup_logger(&matches, repo_name.to_string());
     info!(logger, "Hook tailer is starting");
-    let configs = get_config(&matches)?;
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    let err: Error = ErrorKind::NoSuchRepo(repo_name.clone()).into();
-    let config = configs.repos.get(&repo_name).ok_or(err)?;
     let common_config = cmdlib::args::read_common_config(&matches)?;
     let init_revision = matches.value_of("init_revision").map(String::from);
     let continuous = matches.is_present("continuous");
@@ -277,30 +272,20 @@ impl fmt::Display for HookExecutionStat {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = App::new("mononoke hook server")
+    let app = cmdlib::args::MononokeApp {
+        safe_writes: false,
+        hide_advanced_args: true,
+        default_glog: true,
+    };
+
+    let app = app
+        .build("run hooks against repo")
         .version("0.0.0")
-        .about("run hooks against repo")
-        .arg(
-            Arg::with_name("cpath")
-                .long("config_path")
-                .short("P")
-                .help("path to the config files")
-                .takes_value(true)
-                .required(true),
-        )
         .arg(
             Arg::with_name("bookmark")
                 .long("bookmark")
                 .short("B")
                 .help("bookmark to tail")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("repo_name")
-                .long("repo_name")
-                .short("R")
-                .help("the name of the repo to run hooks for")
                 .takes_value(true)
                 .required(true),
         )
@@ -349,8 +334,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("print debug level output"),
         );
 
-    let app = cmdlib::args::add_myrouter_args(app);
-    cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */)
+    app
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
@@ -374,11 +358,6 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
         o!("repo" => repo_name,
         kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
     )
-}
-
-fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    let cpath = PathBuf::from(matches.value_of("cpath").unwrap());
-    RepoConfigs::read_configs(cpath)
 }
 
 #[derive(Debug, Fail)]
