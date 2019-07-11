@@ -1101,7 +1101,10 @@ class buildembedded(Command):
 
     def _copy_other(self, dirtocopy):
         """Copy misc files, which aren't main hg codebase"""
-        tocopy = {"contrib/editmergeps.ps1": "contrib/editmergeps.ps1"}
+        tocopy = {
+            "contrib/editmergeps.ps1": "contrib/editmergeps.ps1",
+            "contrib/editmergeps.bat": "contrib/editmergeps.bat",
+        }
         for sname, tname in tocopy.items():
             source = pjoin(scriptdir, sname)
             target = pjoin(dirtocopy, tname)
