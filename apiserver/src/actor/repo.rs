@@ -28,11 +28,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use http::uri::Uri;
 use mononoke_api;
 use repo_client::gettreepack_entries;
-use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, Logger};
-use sshrelay::SshEnvVars;
-use tracing::TraceContext;
-use uuid::Uuid;
 
 use mercurial_types::{manifest::Content, Entry as _, HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommonConfig, RepoConfig};
@@ -70,15 +66,7 @@ impl MononokeRepo {
         with_cachelib: Caching,
         with_skiplist: bool,
     ) -> impl Future<Item = Self, Error = Error> {
-        let ctx = CoreContext::new(
-            Uuid::new_v4(),
-            logger.clone(),
-            ScubaSampleBuilder::with_discard(),
-            None,
-            TraceContext::default(),
-            None,
-            SshEnvVars::default(),
-        );
+        let ctx = CoreContext::new_with_logger(logger.clone());
 
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 

@@ -27,10 +27,7 @@ use futures_stats::{FutureStats, Timed};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde::Serialize;
 use slog::Logger;
-use sshrelay::SshEnvVars;
 use time_ext::DurationExt;
-use tracing::TraceContext;
-use uuid::Uuid;
 
 use super::super::actor::{Mononoke, MononokeRepoResponse};
 
@@ -89,18 +86,7 @@ impl MononokeAPIServiceImpl {
     }
 
     fn create_ctx(&self) -> CoreContext {
-        let session_uuid = Uuid::new_v4();
-
-        CoreContext::new(
-            session_uuid,
-            self.logger.clone(),
-            //this ctx is passed into Mononoke, we do not want to pass in a Scuba Builder with the mononoke-api table set in case scuba.log is called
-            ScubaSampleBuilder::with_discard(),
-            None,
-            TraceContext::default(),
-            None,
-            SshEnvVars::default(),
-        )
+        CoreContext::new_with_logger(self.logger.clone())
     }
 }
 

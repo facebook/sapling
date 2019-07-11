@@ -17,7 +17,6 @@ use futures_ext::FutureExt;
 use hostname::get_hostname;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use tokio::runtime::Runtime;
-use uuid::Uuid;
 
 use blobrepo_factory::Caching;
 use context::CoreContext;
@@ -30,8 +29,6 @@ use serde_derive::Deserialize;
 use slog::{info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
-use sshrelay::SshEnvVars;
-use tracing::TraceContext;
 
 mod actor;
 mod cache;
@@ -55,15 +52,7 @@ mod config {
 // Currently logging and scuba is handled using the middleware service
 // so we pass on a fake context
 fn prepare_fake_ctx(state: &State<HttpServerState>) -> CoreContext {
-    CoreContext::new(
-        Uuid::new_v4(),
-        state.logger.clone(),
-        ScubaSampleBuilder::with_discard(),
-        None,
-        TraceContext::default(),
-        None,
-        SshEnvVars::default(),
-    )
+    CoreContext::new_with_logger(state.logger.clone())
 }
 
 #[derive(Deserialize)]
