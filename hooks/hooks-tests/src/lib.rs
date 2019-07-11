@@ -1302,7 +1302,7 @@ fn test_load_hooks() {
         ];
 
         let mut hm = hook_manager_blobrepo();
-        match load_hooks(&mut hm, config) {
+        match load_hooks(&mut hm, config, &hashset![]) {
             Err(e) => assert!(false, format!("Failed to load hooks {}", e)),
             Ok(()) => (),
         };
@@ -1330,7 +1330,8 @@ fn test_verify_integrity_fast_failure() {
     }];
 
     let mut hm = hook_manager_blobrepo();
-    load_hooks(&mut hm, config).expect_err("`verify_integrity` hook loading should have failed");
+    load_hooks(&mut hm, config, &hashset![])
+        .expect_err("`verify_integrity` hook loading should have failed");
 }
 
 #[test]
@@ -1355,7 +1356,7 @@ fn test_load_hooks_no_such_hook() {
 
         let mut hm = hook_manager_blobrepo();
 
-        match load_hooks(&mut hm, config)
+        match load_hooks(&mut hm, config, &hashset![])
             .unwrap_err()
             .downcast::<ErrorKind>()
         {
@@ -1388,7 +1389,7 @@ fn test_load_hooks_bad_rust_hook() {
 
         let mut hm = hook_manager_blobrepo();
 
-        match load_hooks(&mut hm, config)
+        match load_hooks(&mut hm, config, &hashset![])
             .unwrap_err()
             .downcast::<ErrorKind>()
         {
@@ -1398,4 +1399,68 @@ fn test_load_hooks_bad_rust_hook() {
             _ => assert!(false, "Unexpected err type"),
         };
     });
+}
+
+#[test]
+fn test_load_disabled_hooks() {
+    let mut config = default_repo_config();
+
+    config.bookmarks = vec![];
+
+    config.hooks = vec![HookParams {
+        name: "hook1".into(),
+        code: None,
+        hook_type: HookType::PerChangeset,
+        config: Default::default(),
+    }];
+
+    let mut hm = hook_manager_blobrepo();
+
+    load_hooks(&mut hm, config, &hashset!["hook1".to_string()])
+        .expect("disabling a broken hook should allow loading to succeed");
+}
+
+#[test]
+fn test_load_disabled_hooks_referenced_by_bookmark() {
+    let mut config = default_repo_config();
+
+    config.bookmarks = vec![BookmarkParams {
+        bookmark: BookmarkName::new("bm1").unwrap().into(),
+        hooks: vec!["hook1".into()],
+        only_fast_forward: false,
+        allowed_users: None,
+        rewrite_dates: None,
+    }];
+
+    config.hooks = vec![HookParams {
+        name: "hook1".into(),
+        code: None,
+        hook_type: HookType::PerChangeset,
+        config: Default::default(),
+    }];
+
+    let mut hm = hook_manager_blobrepo();
+
+    load_hooks(&mut hm, config, &hashset!["hook1".to_string()])
+        .expect("disabling a broken hook should allow loading to succeed");
+}
+
+#[test]
+fn test_load_disabled_hooks_hook_does_not_exist() {
+    let mut config = default_repo_config();
+
+    config.bookmarks = vec![];
+    config.hooks = vec![];
+
+    let mut hm = hook_manager_blobrepo();
+
+    match load_hooks(&mut hm, config, &hashset!["hook1".to_string()])
+        .unwrap_err()
+        .downcast::<ErrorKind>()
+    {
+        Ok(ErrorKind::NoSuchHookToDisable(hooks)) => {
+            assert_eq!(hashset!["hook1".to_string()], hooks);
+        }
+        _ => assert!(false, "Unexpected err type"),
+    };
 }

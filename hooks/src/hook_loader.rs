@@ -20,10 +20,22 @@ use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<(), Error> {
+pub fn load_hooks(
+    hook_manager: &mut HookManager,
+    config: RepoConfig,
+    disabled_hooks: &HashSet<String>,
+) -> Result<(), Error> {
+    let mut hooks_not_disabled = disabled_hooks.clone();
+
     let mut hook_set = HashSet::new();
     for hook in config.hooks {
         let name = hook.name;
+
+        if disabled_hooks.contains(&name) {
+            hooks_not_disabled.remove(&name);
+            continue;
+        }
+
         if name.starts_with("rust:") {
             let rust_name = &name[5..];
             let rust_name = rust_name.to_string();
@@ -48,9 +60,18 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
         }
         hook_set.insert(name);
     }
+
+    if hooks_not_disabled.len() > 0 {
+        return Err(ErrorKind::NoSuchHookToDisable(hooks_not_disabled).into());
+    }
+
     for bookmark_hook in config.bookmarks {
         let bookmark = bookmark_hook.bookmark;
-        let hooks = bookmark_hook.hooks;
+        let hooks: Vec<_> = bookmark_hook
+            .hooks
+            .into_iter()
+            .filter(|h| !disabled_hooks.contains(h))
+            .collect();
         let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
         let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
         if diff.len() != 0 {
@@ -59,5 +80,6 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
             hook_manager.set_hooks_for_bookmark(bookmark, hooks);
         }
     }
+
     Ok(())
 }

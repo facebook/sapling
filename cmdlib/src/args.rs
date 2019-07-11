@@ -19,13 +19,14 @@ use futures::{Future, IntoFuture};
 use futures_ext::{try_boxfuture, FutureExt};
 use panichandler::{self, Fate};
 use scuba_ext::ScubaSampleBuilder;
-use slog::{debug, info, o, Drain, Logger};
+use slog::{debug, info, o, warn, Drain, Logger};
 use sloggers::{
     terminal::{Destination, TerminalLoggerBuilder},
     types::{Format, Severity, SourceLocation},
     Build,
 };
 use sshrelay::SshEnvVars;
+use std::collections::HashSet;
 use tracing::TraceContext;
 use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 use uuid::Uuid;
@@ -602,6 +603,17 @@ pub fn add_myrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--myrouter-port=[PORT]    'port for local myrouter instance'")
 }
 
+pub fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("disabled-hooks")
+            .long("disable-hook")
+            .help("Disable a hook. Pass this argument multiple times to disable multiple hooks.")
+            .multiple(true)
+            .number_of_values(1)
+            .takes_value(true),
+    )
+}
+
 pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let config_path = matches
         .value_of("mononoke-config-path")
@@ -803,4 +815,23 @@ pub fn get_i64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i64> {
         val.parse::<i64>()
             .expect(&format!("{} must be integer", key))
     })
+}
+
+pub fn parse_disabled_hooks(matches: &ArgMatches, logger: &Logger) -> HashSet<String> {
+    let disabled_hooks: HashSet<String> = matches
+        .values_of("disabled-hooks")
+        .map(|m| m.collect())
+        .unwrap_or(vec![])
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    if disabled_hooks.len() > 0 {
+        warn!(
+            logger,
+            "The following Hooks were disabled: {:?}", disabled_hooks
+        );
+    }
+
+    disabled_hooks
 }

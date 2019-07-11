@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::failure::prelude::*;
@@ -64,6 +64,7 @@ pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
     caching: Caching,
+    disabled_hooks: &HashSet<String>,
     scuba_censored_table: Option<String>,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
@@ -90,6 +91,8 @@ pub fn repo_handlers(
             let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let repoid = RepositoryId::new(config.repoid);
+            let disabled_hooks = disabled_hooks.clone();
+
             open_blobrepo(
                 logger.clone(),
                 config.storage_config.clone(),
@@ -115,7 +118,11 @@ pub fn repo_handlers(
                 );
 
                 info!(root_log, "Loading hooks");
-                try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
+                try_boxfuture!(load_hooks(
+                    &mut hook_manager,
+                    config.clone(),
+                    &disabled_hooks
+                ));
 
                 let streaming_clone =
                     if let Some(db_address) = config.storage_config.dbconfig.get_db_address() {

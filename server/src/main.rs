@@ -53,7 +53,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             "#,
         );
     let app = cmdlib::args::add_myrouter_args(app);
-    cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */)
+    let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
+    let app = cmdlib::args::add_disabled_hooks_args(app);
+    app
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
@@ -96,8 +98,6 @@ fn main() {
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
     fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
-        let caching = cmdlib::args::init_cachelib(&matches);
-
         info!(root_log, "Starting up");
 
         let stats_aggregation = stats::schedule_stats_aggregation()
@@ -136,7 +136,8 @@ fn main() {
             config.common,
             config.repos.into_iter(),
             cmdlib::args::parse_myrouter_port(&matches),
-            caching,
+            cmdlib::args::init_cachelib(&matches),
+            &cmdlib::args::parse_disabled_hooks(&matches, &root_log),
             root_log,
             matches
                 .value_of("listening-host-port")

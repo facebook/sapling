@@ -74,6 +74,7 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
+use std::collections::HashSet;
 use std::sync::atomic::AtomicBool;
 
 use metaconfig_types::{CommonConfig, RepoConfig};
@@ -87,6 +88,7 @@ pub fn create_repo_listeners(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     myrouter_port: Option<u16>,
     caching: Caching,
+    disabled_hooks: &HashSet<String>,
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
@@ -101,6 +103,7 @@ pub fn create_repo_listeners(
             repos,
             myrouter_port,
             caching,
+            disabled_hooks,
             common_config.scuba_censored_table.clone(),
             &root_log,
             &mut ready,

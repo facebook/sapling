@@ -78,6 +78,8 @@ fn main() -> Result<()> {
         excludes.extend(changesets);
     }
 
+    let disabled_hooks = cmdlib::args::parse_disabled_hooks(&matches, &logger);
+
     let caching = cmdlib::args::init_cachelib(&matches);
 
     let blobrepo = open_blobrepo(
@@ -120,6 +122,7 @@ fn main() -> Result<()> {
                             manifold_client.clone(),
                             logger.clone(),
                             excl.into_iter().map(|(_, cs)| cs).collect(),
+                            &disabled_hooks,
                         ))
                     }
                 })
@@ -334,7 +337,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("print debug level output"),
         );
 
-    app
+    cmdlib::args::add_disabled_hooks_args(app)
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {

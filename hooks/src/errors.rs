@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fail;
+use std::collections::HashSet;
 
 pub use mercurial_types::HgChangesetId;
 use metaconfig_types::BookmarkOrRegex;
@@ -35,4 +36,7 @@ pub enum ErrorKind {
 
     #[fail(display = "invalid rust hook: {}", _0)]
     InvalidRustHook(String),
+
+    #[fail(display = "Disabled hook(s) do(es) not exist: {:?}", _0)]
+    NoSuchHookToDisable(HashSet<String>),
 }

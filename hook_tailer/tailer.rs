@@ -45,6 +45,7 @@ impl Tailer {
         manifold_client: ManifoldHttpClient,
         logger: Logger,
         excludes: HashSet<ChangesetId>,
+        disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
         let changeset_store = BlobRepoChangesetStore::new(repo.clone());
         let content_store = BlobRepoFileContentStore::new(repo.clone());
@@ -57,7 +58,7 @@ impl Tailer {
             logger.clone(),
         );
 
-        load_hooks(&mut hook_manager, config)?;
+        load_hooks(&mut hook_manager, config, disabled_hooks)?;
 
         let repo_id = repo.get_repoid().id();
         let last_rev_key = format!("{}{}", "__mononoke_hook_tailer_last_rev.", repo_id).to_string();
