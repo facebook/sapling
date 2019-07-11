@@ -80,6 +80,7 @@ Test Python hooks
   >             ui.write("Got pushvar: %s=%s\n" % (k, v))
   > EOF
 
+  $ cp $HGRCPATH $TESTTMP/hgrc.bak
   $ cat >> $HGRCPATH << EOF
   > [hooks]
   > pretxnchangegroup.pyhook = python:$TESTTMP/pyhook.py:hook
@@ -94,3 +95,28 @@ Test Python hooks
   added 1 changesets with 1 changes to 1 files
   Got pushvar: USERVAR_A=1
   Got pushvar: USERVAR_B=2
+  $ cp $TESTTMP/hgrc.bak $HGRCPATH
+
+Test pushvars for enforcing push reasons
+  $ cat >> .hg/hgrc <<EOF
+  > [push]
+  > requirereason=True
+  > requirereasonmsg="Because I said so"
+  > EOF
+  $ echo c >> a
+  $ hg commit -Aqm c
+  $ hg push
+  pushing to $TESTTMP/repo
+  abort: "Because I said so"
+  (use `--pushvars PUSH_REASON='because ...'`)
+  [255]
+  $ hg push --pushvars PUSH_REASON="I want to"
+  pushing to $TESTTMP/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ hg blackbox --pattern '{"legacy_log": {"service": "pushreason"}}'
+  * [legacy][pushreason] bypassing push block with reason: I want to (glob)
+  $ cp $TESTTMP/hgrc.bak $HGRCPATH

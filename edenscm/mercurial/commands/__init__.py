@@ -4868,6 +4868,13 @@ def push(ui, repo, dest=None, **opts):
             [push]
             pushvars.server = true
 
+        If ``push.requirereason`` is set to true, users will need to pass
+        ``--pushvars PUSH_REASON="..."`` in order to push, and their reason will
+        be logged via ``ui.log(...)``.
+
+        ``push.requirereasonmsg`` can be used to set the message shown to users
+        when they don't provide a reason.
+
     Returns 0 if push was successful, 1 if nothing to push.
     """
 
@@ -4913,6 +4920,16 @@ def push(ui, repo, dest=None, **opts):
             raise error.Abort(
                 _("default push revset for path evaluates to an " "empty set")
             )
+
+    if ui.configbool("push", "requirereason"):
+        pushvar = "PUSH_REASON="
+        reasons = list(v for v in opts.get("pushvars", []) if v.startswith(pushvar))
+        if reasons:
+            reason = reasons[-1][len(pushvar):]
+            ui.log("pushreason", "bypassing push block with reason: %s", reason, pushreason=reason)
+        else:
+            msg = ui.config("push", "requirereasonmsg")
+            raise error.Abort(msg, hint="use `--pushvars PUSH_REASON='because ...'`")
 
     opargs = dict(opts.get("opargs", {}))  # copy opargs since we may mutate it
     opargs.setdefault("pushvars", []).extend(opts.get("pushvars", []))
