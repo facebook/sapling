@@ -80,7 +80,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
 }
 
-impl BlobstoreSyncQueue for Arc<BlobstoreSyncQueue> {
+impl BlobstoreSyncQueue for Arc<dyn BlobstoreSyncQueue> {
     fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<(), Error> {
         (**self).add(ctx, entry)
     }

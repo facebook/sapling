@@ -492,7 +492,7 @@ macro_rules! impl_hash {
                 &self,
                 _record: &slog::Record,
                 key: slog::Key,
-                serializer: &mut slog::Serializer,
+                serializer: &mut dyn slog::Serializer,
             ) -> slog::Result {
                 let hex = self.to_hex();
                 serializer.emit_str(key, hex.as_str())

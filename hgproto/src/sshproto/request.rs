@@ -51,8 +51,8 @@ named!(
 fn ident(input: &[u8]) -> IResult<&[u8], &[u8]> {
     for (idx, item) in input.iter().enumerate() {
         match *item as char {
-            'a'...'z' | 'A'...'Z' | '_' => continue,
-            '0'...'9' if idx > 0 => continue,
+            'a'..='z' | 'A'..='Z' | '_' => continue,
+            '0'..='9' if idx > 0 => continue,
             _ => {
                 if idx > 0 {
                     return IResult::Done(&input[idx..], &input[0..idx]);

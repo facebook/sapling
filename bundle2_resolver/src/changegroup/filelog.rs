@@ -305,7 +305,7 @@ impl Arbitrary for Filelog {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         fn append(result: &mut Vec<Filelog>, f: Filelog) {
             result.append(&mut f.shrink().collect());
             result.push(f);

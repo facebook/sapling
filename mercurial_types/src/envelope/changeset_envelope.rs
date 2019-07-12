@@ -144,7 +144,7 @@ impl Arbitrary for HgChangesetEnvelope {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         empty_shrinker()
     }
 }

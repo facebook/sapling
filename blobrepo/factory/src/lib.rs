@@ -186,7 +186,7 @@ pub fn new_memblob_empty(
 fn new_development<T: SqlFactory>(
     logger: Logger,
     sql_factory: &T,
-    blobstore: Arc<Blobstore>,
+    blobstore: Arc<dyn Blobstore>,
     censored_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
@@ -226,7 +226,7 @@ fn new_development<T: SqlFactory>(
 fn new_production<T: SqlFactory>(
     logger: Logger,
     sql_factory: &T,
-    blobstore: Arc<Blobstore>,
+    blobstore: Arc<dyn Blobstore>,
     censored_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
@@ -280,10 +280,9 @@ fn new_production<T: SqlFactory>(
     let changeset_fetcher_factory = {
         cloned!(changesets, repoid);
         move || {
-            let res: Arc<ChangesetFetcher + Send + Sync> = Arc::new(SimpleChangesetFetcher::new(
-                changesets.clone(),
-                repoid.clone(),
-            ));
+            let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
+                SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
+            );
             res
         }
     };

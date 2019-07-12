@@ -41,7 +41,7 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
 }
 
 pub struct CachingChangesets {
-    changesets: Arc<Changesets>,
+    changesets: Arc<dyn Changesets>,
     cachelib: CachelibHandler<ChangesetEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
@@ -58,7 +58,10 @@ fn get_keygen() -> KeyGen {
 }
 
 impl CachingChangesets {
-    pub fn new(changesets: Arc<Changesets>, cache_pool: cachelib::VolatileLruCachePool) -> Self {
+    pub fn new(
+        changesets: Arc<dyn Changesets>,
+        cache_pool: cachelib::VolatileLruCachePool,
+    ) -> Self {
         Self {
             changesets,
             cachelib: cache_pool.into(),
@@ -68,7 +71,7 @@ impl CachingChangesets {
     }
 
     #[cfg(test)]
-    pub fn mocked(changesets: Arc<Changesets>) -> Self {
+    pub fn mocked(changesets: Arc<dyn Changesets>) -> Self {
         let cachelib = CachelibHandler::create_mock();
         let memcache = MemcacheHandler::create_mock();
 

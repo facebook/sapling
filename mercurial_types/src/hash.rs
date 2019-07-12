@@ -159,7 +159,7 @@ impl Arbitrary for Sha1 {
         Sha1::from_bytes(&bytes).unwrap()
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         single_shrinker(NULL)
     }
 }

@@ -824,7 +824,7 @@ fn test_get_manifest_from_bonsai() {
         };
         let get_entries = {
             cloned!(ctx, repo);
-            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
+            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn Entry + Sync>>, Error> {
                 repo.get_manifest_by_nodeid(ctx.clone(), ms_hash)
                     .map(|ms| {
                         ms.list()

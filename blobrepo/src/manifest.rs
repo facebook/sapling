@@ -226,7 +226,7 @@ impl BlobManifest {
 }
 
 impl Manifest for BlobManifest {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
         self.content.files.get(path).map({
             move |entry_id| {
                 HgBlobEntry::new(
@@ -240,7 +240,7 @@ impl Manifest for BlobManifest {
         })
     }
 
-    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
         let list_iter = self.content.files.clone().into_iter().map({
             let blobstore = self.blobstore.clone();
             move |(path, entry_id)| {

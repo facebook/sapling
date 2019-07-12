@@ -46,8 +46,8 @@ use std::str;
 use std::sync::{Arc, Mutex};
 use tracing::{trace_args, Traced};
 
-type ChangesetHooks = HashMap<String, (Arc<Hook<HookChangeset>>, HookConfig)>;
-type FileHooks = Arc<Mutex<HashMap<String, (Arc<Hook<HookFile>>, HookConfig)>>>;
+type ChangesetHooks = HashMap<String, (Arc<dyn Hook<HookChangeset>>, HookConfig)>;
+type FileHooks = Arc<Mutex<HashMap<String, (Arc<dyn Hook<HookFile>>, HookConfig)>>>;
 type Cache = Asyncmemo<HookCacheFiller>;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
@@ -59,8 +59,8 @@ pub struct HookManager {
     file_hooks: FileHooks,
     bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
-    changeset_store: Box<ChangesetStore>,
-    content_store: Arc<FileContentStore>,
+    changeset_store: Box<dyn ChangesetStore>,
+    content_store: Arc<dyn FileContentStore>,
     logger: Logger,
     reviewers_acl_checker: Arc<Option<AclChecker>>,
 }
@@ -68,8 +68,8 @@ pub struct HookManager {
 impl HookManager {
     pub fn new(
         ctx: CoreContext,
-        changeset_store: Box<ChangesetStore>,
-        content_store: Arc<FileContentStore>,
+        changeset_store: Box<dyn ChangesetStore>,
+        content_store: Arc<dyn FileContentStore>,
         hook_manager_params: HookManagerParams,
         logger: Logger,
     ) -> HookManager {
@@ -120,7 +120,7 @@ impl HookManager {
     pub fn register_changeset_hook(
         &mut self,
         hook_name: &str,
-        hook: Arc<Hook<HookChangeset>>,
+        hook: Arc<dyn Hook<HookChangeset>>,
         config: HookConfig,
     ) {
         self.changeset_hooks
@@ -130,7 +130,7 @@ impl HookManager {
     pub fn register_file_hook(
         &mut self,
         hook_name: &str,
-        hook: Arc<Hook<HookFile>>,
+        hook: Arc<dyn Hook<HookFile>>,
         config: HookConfig,
     ) {
         let mut hooks = self.file_hooks.lock().unwrap();
@@ -216,7 +216,7 @@ impl HookManager {
         maybe_pushvars: Option<HashMap<String, Bytes>>,
         bookmark: &BookmarkName,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
-        let hooks: Result<Vec<(String, (Arc<Hook<HookChangeset>>, _))>, Error> = hooks
+        let hooks: Result<Vec<(String, (Arc<dyn Hook<HookChangeset>>, _))>, Error> = hooks
             .iter()
             .map(|hook_name| {
                 let hook = self
@@ -264,7 +264,7 @@ impl HookManager {
     fn run_changeset_hooks_for_changeset(
         ctx: CoreContext,
         changeset: HookChangeset,
-        hooks: Vec<(String, Arc<Hook<HookChangeset>>, HookConfig)>,
+        hooks: Vec<(String, Arc<dyn Hook<HookChangeset>>, HookConfig)>,
         bookmark: BookmarkName,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
@@ -279,7 +279,7 @@ impl HookManager {
 
     fn run_changeset_hook(
         ctx: CoreContext,
-        hook: Arc<Hook<HookChangeset>>,
+        hook: Arc<dyn Hook<HookChangeset>>,
         hook_context: HookContext<HookChangeset>,
     ) -> BoxFuture<(String, HookExecution), Error> {
         let hook_name = hook_context.hook_name.clone();
@@ -342,7 +342,7 @@ impl HookManager {
         &self,
         ctx: CoreContext,
         changeset_id: HgChangesetId,
-        hooks: Vec<(String, (Arc<Hook<HookFile>>, HookConfig))>,
+        hooks: Vec<(String, (Arc<dyn Hook<HookFile>>, HookConfig))>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
         logger: Logger,
         bookmark: BookmarkName,
@@ -555,7 +555,7 @@ pub struct HookChangeset {
     pub files: Vec<HookFile>,
     pub comments: String,
     pub parents: HookChangesetParents,
-    content_store: Arc<FileContentStore>,
+    content_store: Arc<dyn FileContentStore>,
     changeset_id: HgChangesetId,
     reviewers_acl_checker: Arc<Option<AclChecker>>,
 }
@@ -596,7 +596,7 @@ impl From<EntryStatus> for ChangedFileType {
 #[derive(Clone)]
 pub struct HookFile {
     pub path: String,
-    content_store: Arc<FileContentStore>,
+    content_store: Arc<dyn FileContentStore>,
     changeset_id: HgChangesetId,
     ty: ChangedFileType,
     hash_and_type: Option<(HgFileNodeId, FileType)>,
@@ -636,7 +636,7 @@ impl Hash for HookFile {
 impl HookFile {
     pub fn new(
         path: String,
-        content_store: Arc<FileContentStore>,
+        content_store: Arc<dyn FileContentStore>,
         changeset_id: HgChangesetId,
         ty: ChangedFileType,
         hash_and_type: Option<(HgFileNodeId, FileType)>,
@@ -706,7 +706,7 @@ impl HookChangeset {
         comments: String,
         parents: HookChangesetParents,
         changeset_id: HgChangesetId,
-        content_store: Arc<FileContentStore>,
+        content_store: Arc<dyn FileContentStore>,
         reviewers_acl_checker: Arc<Option<AclChecker>>,
     ) -> HookChangeset {
         HookChangeset {

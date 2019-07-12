@@ -30,19 +30,19 @@ pub trait ChangesetFetcher: Send + Sync {
         cs_id: ChangesetId,
     ) -> BoxFuture<Vec<ChangesetId>, Error>;
 
-    fn get_stats(&self) -> HashMap<String, Box<Any>> {
+    fn get_stats(&self) -> HashMap<String, Box<dyn Any>> {
         HashMap::new()
     }
 }
 
 /// Simplest ChangesetFetcher implementation which is just a wrapper around `Changesets` object
 pub struct SimpleChangesetFetcher {
-    changesets: Arc<Changesets>,
+    changesets: Arc<dyn Changesets>,
     repo_id: RepositoryId,
 }
 
 impl SimpleChangesetFetcher {
-    pub fn new(changesets: Arc<Changesets>, repo_id: RepositoryId) -> Self {
+    pub fn new(changesets: Arc<dyn Changesets>, repo_id: RepositoryId) -> Self {
         Self {
             changesets,
             repo_id,

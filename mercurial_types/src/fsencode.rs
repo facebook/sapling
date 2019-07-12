@@ -135,9 +135,9 @@ fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
         for e in elem {
             let e = *e;
             match e {
-                0...31 | 126...255 => hexenc(e, &mut ret),
+                0..=31 | 126..=255 => hexenc(e, &mut ret),
                 b'\\' | b':' | b'*' | b'?' | b'"' | b'<' | b'>' | b'|' => hexenc(e, &mut ret),
-                b'A'...b'Z' => match encode_upper {
+                b'A'..=b'Z' => match encode_upper {
                     UpperEncoding::ToUnderscoreAndLower => {
                         upper_to_underscore_and_lower(&mut ret, e)
                     }
@@ -186,9 +186,9 @@ fn lowerencode(elem: &[u8]) -> Vec<u8> {
     for e in elem {
         let e = *e;
         match e {
-            0...31 | 126...255 => hexenc(e, &mut ret),
+            0..=31 | 126..=255 => hexenc(e, &mut ret),
             b'\\' | b':' | b'*' | b'?' | b'"' | b'<' | b'>' | b'|' => hexenc(e, &mut ret),
-            b'A'...b'Z' => {
+            b'A'..=b'Z' => {
                 ret.push(e - b'A' + b'a');
             }
             _ => ret.push(e),

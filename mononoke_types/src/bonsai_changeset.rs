@@ -272,7 +272,7 @@ impl Arbitrary for BonsaiChangeset {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         let cs = self.clone().inner;
         let iter = (
             cs.parents.clone(),

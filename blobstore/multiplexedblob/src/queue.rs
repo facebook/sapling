@@ -22,14 +22,14 @@ use std::sync::Arc;
 pub struct MultiplexedBlobstore {
     repo_id: RepositoryId,
     blobstore: Arc<MultiplexedBlobstoreBase>,
-    queue: Arc<BlobstoreSyncQueue>,
+    queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstore {
     pub fn new(
         repo_id: RepositoryId,
-        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
-        queue: Arc<BlobstoreSyncQueue>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        queue: Arc<dyn BlobstoreSyncQueue>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
@@ -58,7 +58,7 @@ impl fmt::Debug for MultiplexedBlobstore {
 
 struct QueueBlobstorePutHandler {
     repo_id: RepositoryId,
-    queue: Arc<BlobstoreSyncQueue>,
+    queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
@@ -151,8 +151,8 @@ pub struct ScrubBlobstore {
 impl ScrubBlobstore {
     pub fn new(
         repo_id: RepositoryId,
-        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
-        queue: Arc<BlobstoreSyncQueue>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        queue: Arc<dyn BlobstoreSyncQueue>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         let inner = MultiplexedBlobstore::new(repo_id, blobstores, queue, scuba_logger);

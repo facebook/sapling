@@ -685,7 +685,7 @@ struct Bundle2Resolver {
     bookmark_attrs: BookmarkAttrs,
     infinitepush_params: InfinitepushParams,
     hook_manager: Arc<HookManager>,
-    scribe_commit_queue: Arc<ScribeCommitQueue>,
+    scribe_commit_queue: Arc<dyn ScribeCommitQueue>,
 }
 
 impl Bundle2Resolver {
@@ -1734,7 +1734,7 @@ fn filter_or_check_infinitepush_allowed(
 }
 
 fn add_bookmark_to_transaction(
-    txn: &mut Box<Transaction>,
+    txn: &mut Box<dyn Transaction>,
     bookmark_push: BookmarkPush<ChangesetId>,
     reason: BookmarkUpdateReason,
 ) -> Result<()> {

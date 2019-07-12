@@ -141,7 +141,7 @@ impl Arbitrary for FileChange {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         // The only thing that can be reduced here is copy_from.
         if self.copy_from.is_some() {
             single_shrinker(FileChange {
@@ -230,7 +230,7 @@ impl Arbitrary for FileType {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         empty_shrinker()
     }
 }

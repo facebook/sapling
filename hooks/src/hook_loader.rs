@@ -39,7 +39,7 @@ pub fn load_hooks(
         if name.starts_with("rust:") {
             let rust_name = &name[5..];
             let rust_name = rust_name.to_string();
-            let rust_hook: Arc<Hook<HookChangeset>> = match rust_name.as_ref() {
+            let rust_hook: Arc<dyn Hook<HookChangeset>> = match rust_name.as_ref() {
                 "check_unittests" => Arc::new(CheckUnittestsHook::new(&hook.config)?),
                 "verify_integrity" => Arc::new(VerifyIntegrityHook::new(&hook.config)?),
                 "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(&hook.config)),

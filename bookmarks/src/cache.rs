@@ -502,7 +502,7 @@ mod tests {
         bookmarks: &T,
         ctx: CoreContext,
         repoid: RepositoryId,
-    ) -> Box<Transaction> {
+    ) -> Box<dyn Transaction> {
         let mut transaction = bookmarks.create_transaction(ctx.clone(), repoid);
 
         // Dirty the transaction.

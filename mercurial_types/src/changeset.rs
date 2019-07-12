@@ -21,7 +21,7 @@ pub trait Changeset: Send + 'static {
     // XXX Change this to return p1 and p2 directly.
     fn parents(&self) -> HgParents;
 
-    fn boxed(self) -> Box<Changeset>
+    fn boxed(self) -> Box<dyn Changeset>
     where
         Self: Sized,
     {
@@ -29,7 +29,7 @@ pub trait Changeset: Send + 'static {
     }
 }
 
-impl Changeset for Box<Changeset> {
+impl Changeset for Box<dyn Changeset> {
     fn manifestid(&self) -> HgManifestId {
         (**self).manifestid()
     }

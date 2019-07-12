@@ -58,12 +58,12 @@ impl Hook<HookChangeset> for FnChangesetHook {
     }
 }
 
-fn always_accepting_changeset_hook() -> Box<Hook<HookChangeset>> {
+fn always_accepting_changeset_hook() -> Box<dyn Hook<HookChangeset>> {
     let f: fn(HookContext<HookChangeset>) -> HookExecution = |_| HookExecution::Accepted;
     Box::new(FnChangesetHook::new(f))
 }
 
-fn always_rejecting_changeset_hook() -> Box<Hook<HookChangeset>> {
+fn always_rejecting_changeset_hook() -> Box<dyn Hook<HookChangeset>> {
     let f: fn(HookContext<HookChangeset>) -> HookExecution = |_| default_rejection();
     Box::new(FnChangesetHook::new(f))
 }
@@ -86,7 +86,7 @@ impl Hook<HookChangeset> for ContextMatchingChangesetHook {
 
 fn context_matching_changeset_hook(
     expected_context: HookContext<HookChangeset>,
-) -> Box<Hook<HookChangeset>> {
+) -> Box<dyn Hook<HookChangeset>> {
     Box::new(ContextMatchingChangesetHook { expected_context })
 }
 
@@ -125,7 +125,7 @@ impl Hook<HookChangeset> for ContainsStringMatchingChangesetHook {
 
 fn contains_string_matching_changeset_hook(
     expected_content: HashMap<String, String>,
-) -> Box<Hook<HookChangeset>> {
+) -> Box<dyn Hook<HookChangeset>> {
     Box::new(ContainsStringMatchingChangesetHook { expected_content })
 }
 
@@ -172,7 +172,7 @@ impl Hook<HookChangeset> for FileContentMatchingChangesetHook {
 
 fn file_content_matching_changeset_hook(
     expected_content: HashMap<String, String>,
-) -> Box<Hook<HookChangeset>> {
+) -> Box<dyn Hook<HookChangeset>> {
     Box::new(FileContentMatchingChangesetHook { expected_content })
 }
 
@@ -216,7 +216,7 @@ impl Hook<HookChangeset> for LengthMatchingChangesetHook {
 
 fn length_matching_changeset_hook(
     expected_lengths: HashMap<String, u64>,
-) -> Box<Hook<HookChangeset>> {
+) -> Box<dyn Hook<HookChangeset>> {
     Box::new(LengthMatchingChangesetHook { expected_lengths })
 }
 
@@ -251,7 +251,7 @@ impl Hook<HookChangeset> for OtherFileMatchingChangesetHook {
 fn other_file_matching_changeset_hook(
     file_path: String,
     expected_content: Option<String>,
-) -> Box<Hook<HookChangeset>> {
+) -> Box<dyn Hook<HookChangeset>> {
     Box::new(OtherFileMatchingChangesetHook {
         file_path,
         expected_content,
@@ -279,12 +279,12 @@ impl Hook<HookFile> for FnFileHook {
     }
 }
 
-fn always_accepting_file_hook() -> Box<Hook<HookFile>> {
+fn always_accepting_file_hook() -> Box<dyn Hook<HookFile>> {
     let f: fn(HookContext<HookFile>) -> HookExecution = |_| HookExecution::Accepted;
     Box::new(FnFileHook::new(f))
 }
 
-fn always_rejecting_file_hook() -> Box<Hook<HookFile>> {
+fn always_rejecting_file_hook() -> Box<dyn Hook<HookFile>> {
     let f: fn(HookContext<HookFile>) -> HookExecution = |_| default_rejection();
     Box::new(FnFileHook::new(f))
 }
@@ -309,7 +309,7 @@ impl Hook<HookFile> for PathMatchingFileHook {
     }
 }
 
-fn path_matching_file_hook(paths: HashSet<String>) -> Box<Hook<HookFile>> {
+fn path_matching_file_hook(paths: HashSet<String>) -> Box<dyn Hook<HookFile>> {
     Box::new(PathMatchingFileHook { paths })
 }
 
@@ -338,7 +338,7 @@ impl Hook<HookFile> for ContainsStringMatchingFileHook {
     }
 }
 
-fn contains_string_matching_file_hook(content: String) -> Box<Hook<HookFile>> {
+fn contains_string_matching_file_hook(content: String) -> Box<dyn Hook<HookFile>> {
     Box::new(ContainsStringMatchingFileHook { content })
 }
 
@@ -369,7 +369,7 @@ impl Hook<HookFile> for FileContentMatchingFileHook {
     }
 }
 
-fn file_content_matching_file_hook(content: String) -> Box<Hook<HookFile>> {
+fn file_content_matching_file_hook(content: String) -> Box<dyn Hook<HookFile>> {
     Box::new(FileContentMatchingFileHook { content })
 }
 
@@ -403,7 +403,7 @@ impl Hook<HookFile> for IsSymLinkMatchingFileHook {
     }
 }
 
-fn is_symlink_matching_file_hook(is_symlink: bool) -> Box<Hook<HookFile>> {
+fn is_symlink_matching_file_hook(is_symlink: bool) -> Box<dyn Hook<HookFile>> {
     Box::new(IsSymLinkMatchingFileHook { is_symlink })
 }
 
@@ -433,7 +433,7 @@ impl Hook<HookFile> for LengthMatchingFileHook {
     }
 }
 
-fn length_matching_file_hook(length: u64) -> Box<Hook<HookFile>> {
+fn length_matching_file_hook(length: u64) -> Box<dyn Hook<HookFile>> {
     Box::new(LengthMatchingFileHook { length })
 }
 
@@ -441,7 +441,7 @@ fn length_matching_file_hook(length: u64) -> Box<Hook<HookFile>> {
 fn test_changeset_hook_accepted() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_accepting_changeset_hook()
         };
         let bookmarks = hashmap! {
@@ -459,7 +459,7 @@ fn test_changeset_hook_accepted() {
 fn test_changeset_hook_rejected() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_rejecting_changeset_hook()
         };
         let bookmarks = hashmap! {
@@ -477,7 +477,7 @@ fn test_changeset_hook_rejected() {
 fn test_changeset_hook_mix() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_accepting_changeset_hook(),
             "hook2".to_string() => always_rejecting_changeset_hook(),
             "hook3".to_string() => always_accepting_changeset_hook(),
@@ -537,7 +537,7 @@ fn test_changeset_hook_context() {
             data,
             bookmark: BookmarkName::new("bm1").unwrap(),
         };
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => context_matching_changeset_hook(expected_context)
         };
         let bookmarks = hashmap! {
@@ -570,7 +570,7 @@ fn test_changeset_hook_contains_string() {
             "dir1/subdir1/subsubdir2/file_1".to_string() => "giraffes".to_string(),
             "dir1/subdir1/subsubdir2/file_2".to_string() => "lions".to_string()
         ];
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => contains_string_matching_changeset_hook(hook1_map),
             "hook2".to_string() => contains_string_matching_changeset_hook(hook2_map),
             "hook3".to_string() => contains_string_matching_changeset_hook(hook3_map),
@@ -594,7 +594,7 @@ fn test_changeset_hook_contains_string() {
 fn test_changeset_hook_other_file_content() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir1/file_1".to_string(), Some("elephants".to_string())),
             "hook2".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir1/file_1".to_string(), Some("giraffes".to_string())),
             "hook3".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir2/file_2".to_string(), Some("aardvarks".to_string())),
@@ -637,7 +637,7 @@ fn test_changeset_hook_file_content() {
             "dir1/subdir1/subsubdir2/file_1".to_string() => "giraffes".to_string(),
             "dir1/subdir1/subsubdir2/file_2".to_string() => "lions".to_string()
         ];
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => file_content_matching_changeset_hook(hook1_map),
             "hook2".to_string() => file_content_matching_changeset_hook(hook2_map),
             "hook3".to_string() => file_content_matching_changeset_hook(hook3_map),
@@ -676,7 +676,7 @@ fn test_changeset_hook_lengths() {
             "dir1/subdir1/subsubdir2/file_1".to_string() => 17,
             "dir1/subdir1/subsubdir2/file_2".to_string() => 2
         ];
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => length_matching_changeset_hook(hook1_map),
             "hook2".to_string() => length_matching_changeset_hook(hook2_map),
             "hook3".to_string() => length_matching_changeset_hook(hook3_map),
@@ -700,7 +700,7 @@ fn test_changeset_hook_lengths() {
 fn test_file_hook_accepted() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => always_accepting_file_hook()
         };
         let bookmarks = hashmap! {
@@ -722,7 +722,7 @@ fn test_file_hook_accepted() {
 fn test_file_hook_rejected() {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => always_rejecting_file_hook()
         };
         let bookmarks = hashmap! {
@@ -744,7 +744,7 @@ fn test_file_hook_rejected() {
 fn test_file_hook_mix() {
     async_unit::tokio_unit_test(move || {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => always_rejecting_file_hook(),
             "hook2".to_string() => always_accepting_file_hook()
         };
@@ -778,7 +778,7 @@ fn test_file_hooks_paths() {
             "dir1/subdir1/subsubdir2/file_1".to_string(),
             "dir1/subdir1/subsubdir2/file_2".to_string(),
         ];
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => path_matching_file_hook(matching_paths),
         };
         let bookmarks = hashmap! {
@@ -805,7 +805,7 @@ fn test_file_hooks_paths_mix() {
             "dir1/subdir1/subsubdir2/file_2".to_string(),
         ];
         let matching_paths2 = hashset!["dir1/subdir1/subsubdir1/file_1".to_string(),];
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => path_matching_file_hook(matching_paths1),
             "hook2".to_string() => path_matching_file_hook(matching_paths2),
         };
@@ -835,7 +835,7 @@ fn test_file_hooks_paths_mix() {
 fn test_file_hook_contains_string() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => contains_string_matching_file_hook("elephants".to_string()),
             "hook2".to_string() => contains_string_matching_file_hook("hippopatami".to_string()),
             "hook3".to_string() => contains_string_matching_file_hook("eels".to_string())
@@ -871,7 +871,7 @@ fn test_file_hook_contains_string() {
 fn test_file_hook_file_content() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => file_content_matching_file_hook("elephants".to_string()),
             "hook2".to_string() => file_content_matching_file_hook("hippopatami".to_string()),
             "hook3".to_string() => file_content_matching_file_hook("eels".to_string())
@@ -907,7 +907,7 @@ fn test_file_hook_file_content() {
 fn test_file_hook_is_symlink() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => is_symlink_matching_file_hook(true),
             "hook2".to_string() => is_symlink_matching_file_hook(false),
         };
@@ -937,7 +937,7 @@ fn test_file_hook_is_symlink() {
 fn test_file_hook_length() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookFile>>> = hashmap! {
             "hook1".to_string() => length_matching_file_hook("elephants".len() as u64),
             "hook2".to_string() => length_matching_file_hook("hippopatami".len() as u64),
             "hook3".to_string() => length_matching_file_hook("eels".len() as u64),
@@ -995,7 +995,7 @@ fn test_register_changeset_hooks() {
 fn test_with_blob_store() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
-        let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+        let hooks: HashMap<String, Box<dyn Hook<HookChangeset>>> = hashmap! {
             "hook1".to_string() => always_accepting_changeset_hook()
         };
         let bookmarks = hashmap! {
@@ -1012,7 +1012,7 @@ fn test_with_blob_store() {
 fn run_changeset_hooks(
     ctx: CoreContext,
     bookmark_name: &str,
-    hooks: HashMap<String, Box<Hook<HookChangeset>>>,
+    hooks: HashMap<String, Box<dyn Hook<HookChangeset>>>,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HookExecution>,
@@ -1031,7 +1031,7 @@ fn run_changeset_hooks(
 fn run_changeset_hooks_with_mgr(
     ctx: CoreContext,
     bookmark_name: &str,
-    hooks: HashMap<String, Box<Hook<HookChangeset>>>,
+    hooks: HashMap<String, Box<dyn Hook<HookChangeset>>>,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HookExecution>,
@@ -1058,7 +1058,7 @@ fn run_changeset_hooks_with_mgr(
 fn run_file_hooks(
     ctx: CoreContext,
     bookmark_name: &str,
-    hooks: HashMap<String, Box<Hook<HookFile>>>,
+    hooks: HashMap<String, Box<dyn Hook<HookFile>>>,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
@@ -1077,7 +1077,7 @@ fn run_file_hooks(
 fn run_file_hooks_with_mgr(
     ctx: CoreContext,
     bookmark_name: &str,
-    hooks: HashMap<String, Box<Hook<HookFile>>>,
+    hooks: HashMap<String, Box<dyn Hook<HookFile>>>,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,

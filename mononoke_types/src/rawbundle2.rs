@@ -109,7 +109,7 @@ impl Arbitrary for RawBundle2 {
         RawBundle2::new_bytes(Vec::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         single_shrinker(RawBundle2::new_bytes(vec![]))
     }
 }

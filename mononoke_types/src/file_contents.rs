@@ -112,7 +112,7 @@ impl Arbitrary for FileContents {
         FileContents::new_bytes(Vec::arbitrary(g))
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         single_shrinker(FileContents::new_bytes(vec![]))
     }
 }

@@ -22,7 +22,7 @@ use mononoke_types::FileContents;
 
 use crate::errors::*;
 
-pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
+pub type ContentFactory = Arc<dyn Fn() -> Content + Send + Sync>;
 
 pub fn make_file<C: Into<Bytes>>(file_type: FileType, content: C) -> ContentFactory {
     let content = content.into();
@@ -187,10 +187,10 @@ fn finalize_dirs(
 }
 
 impl Manifest for MockManifest {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
         self.entries.get(path).map(|e| e.clone().boxed())
     }
-    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
         Box::new(self.entries.clone().into_iter().map(|e| e.1.boxed()))
     }
 }

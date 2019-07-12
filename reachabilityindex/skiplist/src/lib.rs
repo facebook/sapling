@@ -201,7 +201,7 @@ pub struct SkiplistIndex {
 // Then it orders them topologically using their generation numbers and returns them.
 fn find_nodes_to_index(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
     (start_node, start_gen): (ChangesetId, Generation),
     depth: u64,
@@ -251,7 +251,7 @@ fn find_nodes_to_index(
 /// If a previously indexed node is reached, indexing will stop there.
 fn lazy_index_node(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
     node: ChangesetId,
     max_depth: u64,
@@ -351,7 +351,7 @@ impl SkiplistIndex {
     pub fn add_node(
         &self,
         ctx: CoreContext,
-        changeset_fetcher: Arc<ChangesetFetcher>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
         node: ChangesetId,
         max_index_depth: u64,
     ) -> BoxFuture<(), Error> {
@@ -396,7 +396,7 @@ impl ReachabilityIndex for SkiplistIndex {
     fn query_reachability(
         &self,
         ctx: CoreContext,
-        changeset_fetcher: Arc<ChangesetFetcher>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
         desc_hash: ChangesetId,
         anc_hash: ChangesetId,
     ) -> BoxFuture<bool, Error> {
@@ -475,7 +475,7 @@ fn move_skippable_nodes(
 /// - Any ancestor of "node_frontier" with generation <= gen is also an ancestor of "C"
 fn process_frontier(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     skip_edges: Arc<SkiplistEdgeMapping>,
     node_frontier: NodeFrontier,
     max_gen: Generation,
@@ -545,7 +545,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
     fn lca_hint(
         &self,
         ctx: CoreContext,
-        changeset_fetcher: Arc<ChangesetFetcher>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error> {
@@ -562,7 +562,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
     fn is_ancestor(
         &self,
         ctx: CoreContext,
-        changeset_fetcher: Arc<ChangesetFetcher>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> BoxFuture<bool, Error> {
@@ -1183,12 +1183,12 @@ mod test {
     struct CountingChangesetFetcher {
         pub get_parents_count: Arc<AtomicUsize>,
         pub get_gen_number_count: Arc<AtomicUsize>,
-        cs_fetcher: Arc<ChangesetFetcher>,
+        cs_fetcher: Arc<dyn ChangesetFetcher>,
     }
 
     impl CountingChangesetFetcher {
         fn new(
-            cs_fetcher: Arc<ChangesetFetcher>,
+            cs_fetcher: Arc<dyn ChangesetFetcher>,
             get_parents_count: Arc<AtomicUsize>,
             get_gen_number_count: Arc<AtomicUsize>,
         ) -> Self {
@@ -1546,7 +1546,7 @@ mod test {
 
     fn advance_node_forward(
         ctx: CoreContext,
-        changeset_fetcher: Arc<ChangesetFetcher>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
         skip_list_edges: Arc<SkiplistEdgeMapping>,
         (node, gen): (ChangesetId, Generation),
         max_gen: Generation,

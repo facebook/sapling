@@ -89,15 +89,15 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 }
 
 pub struct MultiplexedBlobstoreBase {
-    blobstores: Arc<[(BlobstoreId, Arc<Blobstore>)]>,
-    handler: Arc<MultiplexedBlobstorePutHandler>,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba_logger: Option<Arc<ScubaClient>>,
 }
 
 impl MultiplexedBlobstoreBase {
     pub fn new(
-        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
-        handler: Arc<MultiplexedBlobstorePutHandler>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         Self {

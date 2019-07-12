@@ -385,7 +385,7 @@ impl Bookmarks for SqlBookmarks {
             .boxify()
     }
 
-    fn create_transaction(&self, _ctx: CoreContext, repoid: RepositoryId) -> Box<Transaction> {
+    fn create_transaction(&self, _ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction> {
         Box::new(SqlBookmarksTransaction::new(
             self.write_connection.clone(),
             repoid.clone(),

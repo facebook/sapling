@@ -24,13 +24,13 @@ use crate::errors::*;
 //   its parent, or the other way round
 #[derive(Debug)]
 pub enum EntryStatus {
-    Added(Box<Entry + Sync>),
-    Deleted(Box<Entry + Sync>),
+    Added(Box<dyn Entry + Sync>),
+    Deleted(Box<dyn Entry + Sync>),
     // Entries will always either be File or Tree. However, it's possible for one of the entries
     // to be Regular and the other to be Symlink, etc.
     Modified {
-        to_entry: Box<Entry + Sync>,
-        from_entry: Box<Entry + Sync>,
+        to_entry: Box<dyn Entry + Sync>,
+        from_entry: Box<dyn Entry + Sync>,
     },
 }
 
@@ -73,14 +73,14 @@ pub struct ChangedEntry {
 }
 
 impl ChangedEntry {
-    pub fn new_added(dirname: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
+    pub fn new_added(dirname: Option<MPath>, entry: Box<dyn Entry + Sync>) -> Self {
         ChangedEntry {
             dirname,
             status: EntryStatus::Added(entry),
         }
     }
 
-    pub fn new_deleted(dirname: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
+    pub fn new_deleted(dirname: Option<MPath>, entry: Box<dyn Entry + Sync>) -> Self {
         ChangedEntry {
             dirname,
             status: EntryStatus::Deleted(entry),
@@ -89,8 +89,8 @@ impl ChangedEntry {
 
     pub fn new_modified(
         dirname: Option<MPath>,
-        to_entry: Box<Entry + Sync>,
-        from_entry: Box<Entry + Sync>,
+        to_entry: Box<dyn Entry + Sync>,
+        from_entry: Box<dyn Entry + Sync>,
     ) -> Self {
         ChangedEntry {
             dirname,
@@ -165,7 +165,7 @@ impl fmt::Display for ChangedEntry {
 
 struct NewEntry {
     dirname: Option<MPath>,
-    entry: Box<Entry + Sync>,
+    entry: Box<dyn Entry + Sync>,
 }
 
 impl NewEntry {
@@ -180,7 +180,7 @@ impl NewEntry {
         }
     }
 
-    fn into_tuple(self) -> (Option<MPath>, Box<Entry + Sync>) {
+    fn into_tuple(self) -> (Option<MPath>, Box<dyn Entry + Sync>) {
         (self.dirname, self.entry)
     }
 }
@@ -217,7 +217,7 @@ pub fn new_entry_intersection_stream<M, P1M, P2M>(
     root: &M,
     p1: Option<&P1M>,
     p2: Option<&P2M>,
-) -> BoxStream<(Option<MPath>, Box<Entry + Sync>), Error>
+) -> BoxStream<(Option<MPath>, Box<dyn Entry + Sync>), Error>
 where
     M: Manifest,
     P1M: Manifest,
@@ -394,7 +394,7 @@ fn recursive_changed_entry_stream(
 
     let (to_mf, from_mf, path) = match &changed_entry.status {
         EntryStatus::Added(entry) => {
-            let empty_mf: Box<Manifest> = Box::new(EmptyManifest {});
+            let empty_mf: Box<dyn Manifest> = Box::new(EmptyManifest {});
             let to_mf = entry
                 .get_content(ctx.clone())
                 .map(get_tree_content)
@@ -408,7 +408,7 @@ fn recursive_changed_entry_stream(
             (to_mf, from_mf, path)
         }
         EntryStatus::Deleted(entry) => {
-            let empty_mf: Box<Manifest> = Box::new(EmptyManifest {});
+            let empty_mf: Box<dyn Manifest> = Box::new(EmptyManifest {});
             let to_mf = Ok(empty_mf).into_future().boxify();
             let from_mf = entry
                 .get_content(ctx.clone())
@@ -480,8 +480,8 @@ fn recursive_changed_entry_stream(
 pub fn recursive_entry_stream(
     ctx: CoreContext,
     rootpath: Option<MPath>,
-    entry: Box<Entry + Sync>,
-) -> BoxStream<(Option<MPath>, Box<Entry + Sync>), Error> {
+    entry: Box<dyn Entry + Sync>,
+) -> BoxStream<(Option<MPath>, Box<dyn Entry + Sync>), Error> {
     let subentries =
         match entry.get_type() {
             Type::File(_) => empty().boxify(),
@@ -529,8 +529,8 @@ where
 // We need to find a workaround for an issue.
 pub fn diff_sorted_vecs(
     path: Option<MPath>,
-    to: Vec<Box<Entry + Sync>>,
-    from: Vec<Box<Entry + Sync>>,
+    to: Vec<Box<dyn Entry + Sync>>,
+    from: Vec<Box<dyn Entry + Sync>>,
 ) -> Vec<ChangedEntry> {
     let mut to = VecDeque::from(to);
     let mut from = VecDeque::from(from);
@@ -583,7 +583,7 @@ pub fn diff_sorted_vecs(
     res
 }
 
-fn get_tree_content(content: Content) -> Box<Manifest> {
+fn get_tree_content(content: Content) -> Box<dyn Manifest> {
     match content {
         Content::Tree(manifest) => manifest,
         _ => panic!("Tree entry was expected"),

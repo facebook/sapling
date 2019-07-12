@@ -204,8 +204,8 @@ pub struct RepoClient {
     // Percent of returned entries (filelogs, manifests, changesets) which content
     // will be hash validated
     hash_validation_percentage: usize,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
-    phases_hint: Arc<Phases>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases_hint: Arc<dyn Phases>,
     // Whether to save raw bundle2 content into the blobstore
     preserve_raw_bundle2: bool,
     // Whether to allow non-pushrebase pushes
@@ -319,8 +319,8 @@ impl RepoClient {
         repo: MononokeRepo,
         ctx: CoreContext,
         hash_validation_percentage: usize,
-        lca_hint: Arc<LeastCommonAncestorsHint>,
-        phases_hint: Arc<Phases>,
+        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        phases_hint: Arc<dyn Phases>,
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
         hook_manager: Arc<HookManager>,
@@ -1498,7 +1498,7 @@ pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,
-) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
+) -> BoxStream<(Box<dyn Entry + Sync>, Option<MPath>), Error> {
     if !params.directories.is_empty() {
         // This param is not used by core hg, don't worry about implementing it now
         return stream::once(Err(err_msg("directories param is not supported"))).boxify();
@@ -1562,10 +1562,10 @@ fn get_changed_manifests_stream(
     rootpath: Option<MPath>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
-) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
+) -> BoxStream<(Box<dyn Entry + Sync>, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(ctx.clone(), mfid);
     let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), basemfid);
-    let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(mfid));
+    let entry: Box<dyn Entry + Sync> = Box::new(repo.get_root_entry(mfid));
     let root_entry_stream = stream::once(Ok((entry, rootpath.clone())));
 
     if max_depth == 1 {
@@ -1609,7 +1609,7 @@ fn get_changed_manifests_stream(
 fn fetch_treepack_part_input(
     ctx: CoreContext,
     repo: &BlobRepo,
-    entry: Box<Entry + Sync>,
+    entry: Box<dyn Entry + Sync>,
     basepath: Option<MPath>,
     validate_content: bool,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {

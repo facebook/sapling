@@ -34,7 +34,7 @@ use mononoke_types::DateTime;
 /// 1. It ensures that the prefix applies first, which is important for shared caches like
 ///    memcache.
 /// 2. It ensures that all possible blobrepos use a prefix.
-pub type RepoBlobstore = CensoredBlob<PrefixBlobstore<Arc<Blobstore>>>;
+pub type RepoBlobstore = CensoredBlob<PrefixBlobstore<Arc<dyn Blobstore>>>;
 
 pub struct ChangesetMetadata {
     pub user: String,

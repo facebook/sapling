@@ -46,7 +46,7 @@ pub fn assert_changesets_sequence<I>(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     hashes: I,
-    stream: Box<Stream<Item = ChangesetId, Error = Error>>,
+    stream: Box<dyn Stream<Item = ChangesetId, Error = Error>>,
 ) where
     I: IntoIterator<Item = ChangesetId>,
 {

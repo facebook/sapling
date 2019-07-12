@@ -123,7 +123,7 @@ pub trait ReachabilityIndex {
     fn query_reachability(
         &self,
         ctx: CoreContext,
-        repo: Arc<ChangesetFetcher>,
+        repo: Arc<dyn ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
     ) -> BoxFuture<bool, Error>;
@@ -139,7 +139,7 @@ pub trait LeastCommonAncestorsHint: Send + Sync {
     fn lca_hint(
         &self,
         ctx: CoreContext,
-        repo: Arc<ChangesetFetcher>,
+        repo: Arc<dyn ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error>;
@@ -147,7 +147,7 @@ pub trait LeastCommonAncestorsHint: Send + Sync {
     fn is_ancestor(
         &self,
         ctx: CoreContext,
-        repo: Arc<ChangesetFetcher>,
+        repo: Arc<dyn ChangesetFetcher>,
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> BoxFuture<bool, Error>;

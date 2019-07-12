@@ -88,10 +88,10 @@ where
 }
 
 // Replacements for BoxFuture and BoxStream, deprecated in upstream futures-rs.
-pub type BoxFuture<T, E> = Box<Future<Item = T, Error = E> + Send>;
-pub type BoxFutureNonSend<T, E> = Box<Future<Item = T, Error = E>>;
-pub type BoxStream<T, E> = Box<Stream<Item = T, Error = E> + Send>;
-pub type BoxStreamNonSend<T, E> = Box<Stream<Item = T, Error = E>>;
+pub type BoxFuture<T, E> = Box<dyn Future<Item = T, Error = E> + Send>;
+pub type BoxFutureNonSend<T, E> = Box<dyn Future<Item = T, Error = E>>;
+pub type BoxStream<T, E> = Box<dyn Stream<Item = T, Error = E> + Send>;
+pub type BoxStreamNonSend<T, E> = Box<dyn Stream<Item = T, Error = E>>;
 
 pub trait FutureExt: Future + Sized {
     /// Map a `Future` to have `Item=()` and `Error=()`. This is
@@ -207,7 +207,7 @@ pub trait StreamExt: Stream {
     /// Whether this stream is empty.
     ///
     /// This will consume one element from the stream if returned.
-    fn is_empty<'a>(self) -> Box<Future<Item = bool, Error = Self::Error> + Send + 'a>
+    fn is_empty<'a>(self) -> Box<dyn Future<Item = bool, Error = Self::Error> + Send + 'a>
     where
         Self: 'a + Send + Sized,
     {
@@ -221,7 +221,7 @@ pub trait StreamExt: Stream {
     /// Whether this stream is not empty (has at least one element).
     ///
     /// This will consume one element from the stream if returned.
-    fn not_empty<'a>(self) -> Box<Future<Item = bool, Error = Self::Error> + Send + 'a>
+    fn not_empty<'a>(self) -> Box<dyn Future<Item = bool, Error = Self::Error> + Send + 'a>
     where
         Self: 'a + Send + Sized,
     {

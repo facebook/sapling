@@ -188,7 +188,7 @@ impl Arbitrary for Blake2 {
         Blake2(bytes)
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         empty_shrinker()
     }
 }

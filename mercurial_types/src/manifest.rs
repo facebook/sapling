@@ -34,15 +34,15 @@ pub trait Manifest: Send + 'static {
     /// If the name exists, return it as Some(entry). If it doesn't exist, return None.
     /// If it returns an error, it indicates something went wrong with the underlying
     /// infrastructure.
-    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>>;
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>>;
 
     /// List all the entries in the Manifest.
     ///
     /// Entries are returned in canonical order.
-    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send>;
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send>;
 
     /// Return self as a type-erased boxed trait (still needed as a trait method? T25577105)
-    fn boxed(self) -> Box<Manifest + Sync>
+    fn boxed(self) -> Box<dyn Manifest + Sync>
     where
         Self: Sync + Sized,
     {
@@ -50,7 +50,7 @@ pub trait Manifest: Send + 'static {
     }
 }
 
-pub fn get_empty_manifest() -> Box<Manifest + Sync> {
+pub fn get_empty_manifest() -> Box<dyn Manifest + Sync> {
     Box::new(EmptyManifest::new())
 }
 
@@ -64,31 +64,31 @@ impl EmptyManifest {
 }
 
 impl Manifest for EmptyManifest {
-    fn lookup(&self, _path: &MPathElement) -> Option<Box<Entry + Sync>> {
+    fn lookup(&self, _path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
         None
     }
 
-    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
         Box::new(iter::empty())
     }
 }
 
-impl Manifest for Box<Manifest + Sync> {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
+impl Manifest for Box<dyn Manifest + Sync> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
         (**self).list()
     }
 }
 
-impl Manifest for Box<Manifest> {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<Entry + Sync>> {
+impl Manifest for Box<dyn Manifest> {
+    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn Entry + Sync>> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> Box<Iterator<Item = Box<Entry + Sync>> + Send> {
+    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn Entry + Sync>> + Send> {
         (**self).list()
     }
 }
@@ -143,7 +143,7 @@ pub enum Content {
     // Symlinks typically point to files but can have arbitrary content, so represent them as
     // blobs rather than as MPath instances.
     Symlink(FileContents), // TODO stream
-    Tree(Box<Manifest + Sync>),
+    Tree(Box<dyn Manifest + Sync>),
 }
 
 impl Content {
@@ -198,7 +198,7 @@ pub trait Entry: Send + 'static {
 
     /// Return an Entry as a type-erased trait object.
     /// (Do we still need this as a trait method? T25577105)
-    fn boxed(self) -> Box<Entry + Sync>
+    fn boxed(self) -> Box<dyn Entry + Sync>
     where
         Self: Sync + Sized,
     {
@@ -220,7 +220,7 @@ impl<Ent> BoxEntry<Ent>
 where
     Ent: Entry + Sync + Send + 'static,
 {
-    pub fn new(entry: Ent) -> Box<Entry + Sync> {
+    pub fn new(entry: Ent) -> Box<dyn Entry + Sync> {
         Box::new(BoxEntry { entry })
     }
 }
@@ -258,7 +258,7 @@ where
     }
 }
 
-impl Entry for Box<Entry + Sync> {
+impl Entry for Box<dyn Entry + Sync> {
     fn get_type(&self) -> Type {
         (**self).get_type()
     }
@@ -288,7 +288,7 @@ impl Entry for Box<Entry + Sync> {
     }
 }
 
-impl fmt::Debug for Box<Entry + Sync> {
+impl fmt::Debug for Box<dyn Entry + Sync> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Entry")
             .field("name", &self.get_name())

@@ -28,7 +28,7 @@ impl Display for BlobRepoErrorCause {
 }
 
 impl Fail for BlobRepoErrorCause {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         match self.cause {
             Some(ref error) => error.cause(),
             None => None,

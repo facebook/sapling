@@ -98,7 +98,7 @@ where
                 let mut size = 0;
                 for inp in &*buf {
                     match *inp {
-                        digit @ b'0'...b'9' => size = size * 10 + ((digit - b'0') as usize),
+                        digit @ b'0'..=b'9' => size = size * 10 + ((digit - b'0') as usize),
                         b'\n' => break,
                         _ => {
                             return Err(io::Error::new(
@@ -223,7 +223,7 @@ mod tests {
             )
         }
 
-        fn shrink(&self) -> Box<Iterator<Item = Self>> {
+        fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
             Box::new(
                 Arbitrary::shrink(&self.0)
                     .map(|v| {

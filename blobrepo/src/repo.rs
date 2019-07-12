@@ -115,32 +115,33 @@ define_stats! {
 pub struct BlobRepo {
     logger: Logger,
     blobstore: RepoBlobstore,
-    bookmarks: Arc<Bookmarks>,
-    filenodes: Arc<Filenodes>,
-    changesets: Arc<Changesets>,
-    bonsai_hg_mapping: Arc<BonsaiHgMapping>,
+    bookmarks: Arc<dyn Bookmarks>,
+    filenodes: Arc<dyn Filenodes>,
+    changesets: Arc<dyn Changesets>,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     repoid: RepositoryId,
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
     // (for example, revsets).
-    changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
-    hg_generation_lease: Arc<LeaseOps>,
+    changeset_fetcher_factory:
+        Arc<dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync>,
+    hg_generation_lease: Arc<dyn LeaseOps>,
 }
 
 impl BlobRepo {
     pub fn new(
         logger: Logger,
-        bookmarks: Arc<Bookmarks>,
+        bookmarks: Arc<dyn Bookmarks>,
         blobstore: RepoBlobstore,
-        filenodes: Arc<Filenodes>,
-        changesets: Arc<Changesets>,
-        bonsai_hg_mapping: Arc<BonsaiHgMapping>,
+        filenodes: Arc<dyn Filenodes>,
+        changesets: Arc<dyn Changesets>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         repoid: RepositoryId,
-        hg_generation_lease: Arc<LeaseOps>,
+        hg_generation_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let changeset_fetcher_factory = {
             cloned!(changesets, repoid);
             move || {
-                let res: Arc<ChangesetFetcher + Send + Sync> = Arc::new(
+                let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
                     SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
                 );
                 res
@@ -162,14 +163,16 @@ impl BlobRepo {
 
     pub fn new_with_changeset_fetcher_factory(
         logger: Logger,
-        bookmarks: Arc<Bookmarks>,
+        bookmarks: Arc<dyn Bookmarks>,
         blobstore: RepoBlobstore,
-        filenodes: Arc<Filenodes>,
-        changesets: Arc<Changesets>,
-        bonsai_hg_mapping: Arc<BonsaiHgMapping>,
+        filenodes: Arc<dyn Filenodes>,
+        changesets: Arc<dyn Changesets>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         repoid: RepositoryId,
-        changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
-        hg_generation_lease: Arc<LeaseOps>,
+        changeset_fetcher_factory: Arc<
+            dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync,
+        >,
+        hg_generation_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         BlobRepo {
             logger,
@@ -643,7 +646,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         manifestid: HgManifestId,
-    ) -> BoxFuture<Box<Manifest + Sync>, Error> {
+    ) -> BoxFuture<Box<dyn Manifest + Sync>, Error> {
         STATS::get_manifest_by_nodeid.add_value(1);
         BlobManifest::load(ctx, &self.blobstore, manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into()))
@@ -764,7 +767,7 @@ impl BlobRepo {
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
-    pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<bookmarks::Transaction> {
+    pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn bookmarks::Transaction> {
         STATS::update_bookmark_transaction.add_value(1);
         self.bookmarks.create_transaction(ctx, self.repoid)
     }
@@ -933,7 +936,7 @@ impl BlobRepo {
             .map(|res| res.map(|res| Generation::new(res.gen)))
     }
 
-    pub fn get_changeset_fetcher(&self) -> Arc<ChangesetFetcher> {
+    pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {
         (self.changeset_fetcher_factory)()
     }
 
@@ -1042,7 +1045,7 @@ impl BlobRepo {
         self.repoid
     }
 
-    pub fn get_filenodes(&self) -> Arc<Filenodes> {
+    pub fn get_filenodes(&self) -> Arc<dyn Filenodes> {
         self.filenodes.clone()
     }
 
@@ -1719,7 +1722,7 @@ impl BlobRepo {
             ctx: CoreContext,
             repo: BlobRepo,
             bcs_id: ChangesetId,
-            bonsai_hg_mapping: Arc<BonsaiHgMapping>,
+            bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = Error> {
             let mut queue = VecDeque::new();
             let mut visited: HashSet<ChangesetId> = HashSet::new();

@@ -34,7 +34,7 @@ fn get_root_manifest(
     ctx: CoreContext,
     repo: Arc<BlobRepo>,
     changesetid: HgChangesetId,
-) -> Box<Manifest> {
+) -> Box<dyn Manifest> {
     let cs = repo
         .get_changeset_by_changesetid(ctx.clone(), changesetid)
         .wait()
@@ -48,7 +48,7 @@ fn get_hash(c: char) -> HgNodeHash {
     HgNodeHash::from_str(&hash).unwrap()
 }
 
-fn get_entry(ty: Type, hash: HgNodeHash, path: RepoPath) -> Box<Entry + Sync> {
+fn get_entry(ty: Type, hash: HgNodeHash, path: RepoPath) -> Box<dyn Entry + Sync> {
     let content_factory: ContentFactory = Arc::new(|| -> Content {
         panic!("should not be called");
     });
@@ -189,8 +189,8 @@ fn test_diff_sorted_vecs_one_empty() {
 
 fn find_changed_entry_status_stream(
     ctx: CoreContext,
-    manifest: Box<Manifest>,
-    basemanifest: Box<Manifest>,
+    manifest: Box<dyn Manifest>,
+    basemanifest: Box<dyn Manifest>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
 ) -> Vec<ChangedEntry> {

@@ -30,8 +30,8 @@ pub fn create_getbundle_response(
     blobrepo: BlobRepo,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
-    lca_hint: Arc<LeastCommonAncestorsHint>,
-    phases_hint: Option<Arc<Phases>>,
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    phases_hint: Option<Arc<dyn Phases>>,
 ) -> Result<Vec<PartEncodeBuilder>> {
     if common.is_empty() {
         return Err(err_msg("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead"));
@@ -180,7 +180,7 @@ fn prepare_phases_stream(
     ctx: CoreContext,
     repo: BlobRepo,
     heads: Vec<HgChangesetId>,
-    phases: Arc<Phases>,
+    phases: Arc<dyn Phases>,
 ) -> impl Stream<Item = (HgChangesetId, HgPhase), Error = Error> {
     // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
     // heads that are not known by the server will be skipped
@@ -240,7 +240,7 @@ fn calculate_public_roots(
     ctx: CoreContext,
     repo: BlobRepo,
     drafts: HashSet<ChangesetId>,
-    phases: Arc<Phases>,
+    phases: Arc<dyn Phases>,
 ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
     future::loop_fn(
         (drafts, HashSet::new(), HashSet::new()),

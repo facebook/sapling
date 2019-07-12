@@ -24,7 +24,7 @@ use reachabilityindex::errors::*;
 /// of the node if the node exists, else fails with ErrorKind::NodeNotFound.
 pub fn fetch_generation(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     node: ChangesetId,
 ) -> impl Future<Item = Generation, Error = Error> {
     changeset_fetcher.get_generation_number(ctx, node)
@@ -32,7 +32,7 @@ pub fn fetch_generation(
 
 pub fn fetch_generation_and_join(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     node: ChangesetId,
 ) -> impl Future<Item = (ChangesetId, Generation), Error = Error> {
     fetch_generation(ctx, changeset_fetcher, node).map(move |gen| (node, gen))
@@ -41,7 +41,7 @@ pub fn fetch_generation_and_join(
 /// Succeeds with the void value () if the node exists, else fails with ErrorKind::NodeNotFound.
 pub fn check_if_node_exists(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     node: ChangesetId,
 ) -> impl Future<Item = (), Error = Error> {
     changeset_fetcher
@@ -53,7 +53,7 @@ pub fn check_if_node_exists(
 /// Convert a collection of ChangesetId to a collection of (ChangesetId, Generation)
 pub fn changesets_with_generation_numbers(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     nodes: Vec<ChangesetId>,
 ) -> impl Future<Item = Vec<(ChangesetId, Generation)>, Error = Error> {
     join_all(nodes.into_iter().map({
@@ -66,7 +66,7 @@ pub fn changesets_with_generation_numbers(
 /// and cast into the appropriate ErrorKind if it fails
 pub fn get_parents(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     node: ChangesetId,
 ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
     changeset_fetcher.get_parents(ctx, node)
@@ -80,7 +80,7 @@ pub fn get_parents(
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 pub fn advance_bfs_layer(
     ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     curr_layer: HashSet<(ChangesetId, Generation)>,
     mut curr_seen: HashSet<(ChangesetId, Generation)>,
 ) -> impl Future<
