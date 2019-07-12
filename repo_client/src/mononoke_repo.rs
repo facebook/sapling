@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use crate::errors::*;
-use blob_changeset::RepoBlobstore;
 use blobrepo::BlobRepo;
 use futures_ext::BoxFuture;
 use hooks::HookManager;
@@ -13,6 +12,7 @@ use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
 };
 use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use sql_ext::SqlConstructors;
 use std::fmt::{self, Debug};

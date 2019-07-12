@@ -6,7 +6,6 @@
 
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
-use blob_changeset::RepoBlobstoreArgs;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bonsai_hg_mapping::{
@@ -29,6 +28,7 @@ use rand::{
     distributions::{Distribution, Normal},
     Rng,
 };
+use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{self, o, Discard, Drain, Logger};
 use sql_ext::SqlConstructors;

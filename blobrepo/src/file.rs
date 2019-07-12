@@ -9,7 +9,6 @@
 use super::alias::get_sha256;
 use crate::errors::*;
 use crate::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
-use blob_changeset::RepoBlobstore;
 use blobstore::Blobstore;
 use context::CoreContext;
 use failure_ext::{bail_err, bail_msg, Error, FutureFailureErrorExt};
@@ -23,6 +22,7 @@ use mercurial_types::{
     HgParents, MPath, MPathElement,
 };
 use mononoke_types::{hash::Sha256, ContentId, FileContents, MononokeId};
+use repo_blobstore::RepoBlobstore;
 
 #[derive(Clone)]
 pub struct HgBlobEntry {

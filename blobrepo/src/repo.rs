@@ -17,7 +17,7 @@ use crate::file::{
 };
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
-use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore, RepoBlobstoreArgs};
+use blob_changeset::{ChangesetMetadata, HgChangesetContent};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
@@ -53,6 +53,7 @@ use mononoke_types::{
     ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
     RepositoryId, Timestamp,
 };
+use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{trace, Logger};
 use stats::{define_stats, Histogram, Timeseries};

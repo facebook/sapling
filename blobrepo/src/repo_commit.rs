@@ -40,8 +40,9 @@ use crate::errors::*;
 use crate::file::HgBlobEntry;
 use crate::BlobRepo;
 use crate::HgBlobChangeset;
+use blob_changeset::ChangesetMetadata;
 use blob_changeset::HgChangesetContent;
-use blob_changeset::{ChangesetMetadata, RepoBlobstore};
+use repo_blobstore::RepoBlobstore;
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";

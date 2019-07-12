@@ -24,7 +24,7 @@ use blobstore::Blobstore;
 
 use crate::errors::*;
 use crate::file::HgBlobEntry;
-use blob_changeset::RepoBlobstore;
+use repo_blobstore::RepoBlobstore;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {

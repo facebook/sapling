@@ -16,7 +16,6 @@ use std::collections::HashMap;
 
 use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
 
-use blob_changeset::RepoBlobstoreArgs;
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
@@ -33,6 +32,7 @@ use filenodes::CachingFilenodes;
 use memblob::EagerMemblob;
 use metaconfig_types::{self, BlobConfig, Censoring, MetadataDBConfig, StorageConfig};
 use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sql_ext::myrouter_ready;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};

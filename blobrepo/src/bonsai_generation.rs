@@ -12,7 +12,6 @@ use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::FutureExt;
 
-use blob_changeset::RepoBlobstore;
 use blobstore::Blobstore;
 use bonsai_utils;
 use context::CoreContext;
@@ -20,6 +19,7 @@ use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, MPath};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
+use repo_blobstore::RepoBlobstore;
 
 use crate::errors::*;
 use crate::BlobRepo;

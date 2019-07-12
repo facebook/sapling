@@ -12,7 +12,6 @@ use crate::repo::{
     UploadHgTreeEntry,
 };
 use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-use blob_changeset::RepoBlobstore;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
@@ -24,6 +23,7 @@ use mercurial_types::{
     Entry as HgEntry, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId,
 };
 use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
+use repo_blobstore::RepoBlobstore;
 use std::io::Write;
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
