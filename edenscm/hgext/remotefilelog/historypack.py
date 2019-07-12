@@ -196,6 +196,10 @@ class mutablehistorypack(basepack.mutablebasepack):
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         if linknode is None:
             raise error.ProgrammingError("must specify a linknode")
+        if node in (p1, p2):
+            raise error.ProgrammingError(
+                "cannot add a node that is also its parent: %s" % hex(node)
+            )
 
         copyfrom = copyfrom or ""
         copyfromlen = struct.pack("!H", len(copyfrom))
