@@ -146,3 +146,23 @@ impl Blobstore for Box<dyn Blobstore> {
         self.as_ref().assert_present(ctx, key)
     }
 }
+
+pub trait Loadable: Sized + 'static {
+    type Value;
+
+    fn load(
+        &self,
+        ctx: CoreContext,
+        blobstore: impl Blobstore + Clone,
+    ) -> BoxFuture<Self::Value, Error>;
+}
+
+pub trait Storable: Sized + 'static {
+    type Key;
+
+    fn store(
+        &self,
+        ctx: CoreContext,
+        blobstore: impl Blobstore + Clone,
+    ) -> BoxFuture<Self::Key, Error>;
+}
