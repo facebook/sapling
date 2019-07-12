@@ -787,6 +787,12 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
   counters->unregisterCallback(edenMount->getCounterName(CounterName::LOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::UNLOADED));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_MEMORY));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_ENTRIES));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::JOURNAL_DURATION));
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

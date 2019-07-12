@@ -6,6 +6,7 @@
 # GNU General Public License version 2.
 
 import logging
+import os
 import time
 import typing
 from pathlib import Path
@@ -193,3 +194,21 @@ class JournalInfoTest(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         self.repo.write_file("file", "hello world!\n")
         self.repo.commit("Initial commit.")
+
+
+@testcase.eden_repo_test
+class CountersTest(testcase.EdenRepoTest):
+    """Test counters are registered/unregistered correctly."""
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    def test_mount_unmount_counters(self) -> None:
+        self.eden.unmount(self.mount_path)
+        counters = self.get_counters().keys()
+        mount2 = os.path.join(self.mounts_dir, "mount2")
+        self.eden.clone(self.repo_name, mount2)
+        self.eden.unmount(Path(mount2))
+        counters2 = self.get_counters().keys()
+        self.assertEqual(counters, counters2)
