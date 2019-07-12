@@ -4,15 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fs::File;
-use std::io::Read;
-
-use crate::failure::{Result, ResultExt};
 use clap::ArgMatches;
-use toml::{self, value};
-
+use failure_ext::{Result, ResultExt};
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
+use serde_derive::Deserialize;
+use std::{fs::File, io::Read};
+use toml::{self, value};
 
 /// Configuration for the bonsai verify tool.
 #[derive(Clone, Debug)]

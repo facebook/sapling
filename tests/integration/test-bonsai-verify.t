@@ -48,5 +48,5 @@ blobimport
 
 smoke test to ensure bonsai_verify works
 
-  $ bonsai_verify 3903775176ed42b1458a6281db4a0ccf4d9f287a 2>&1 | grep valid
+  $ bonsai_verify round-trip 3903775176ed42b1458a6281db4a0ccf4d9f287a 2>&1 | grep valid
    * INFO 100.00% valid, total: 1, valid: 1, errors: 0, ignored: 0 (glob)
