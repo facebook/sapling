@@ -4,22 +4,21 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::sync::Arc;
-
-use crate::failure::{Error, Result};
+use blobrepo::{BlobRepo, HgBlobChangeset};
 use chashmap::CHashMap;
+use cloned::cloned;
 use context::CoreContext;
+use failure::Error;
+use failure_ext::Result;
 use futures::{
     sync::mpsc::{self, Sender},
     Future, Stream,
 };
-use slog::Logger;
-use tokio;
-
 use futures_ext::{send_discard, BoxFuture};
-
-use blobrepo::{BlobRepo, HgBlobChangeset};
 use mercurial_types::HgChangesetId;
+use slog::{o, Logger};
+use std::sync::Arc;
+use tokio;
 
 /// This trait enables parallelized walks over changesets.
 pub trait ChangesetVisitor: Clone + Send + Sync + 'static {

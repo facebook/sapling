@@ -18,7 +18,6 @@ pub mod derive_hg_manifest;
 pub mod file;
 pub mod file_history;
 mod manifest;
-mod memory_manifest;
 mod repo;
 mod repo_commit;
 mod utils;
@@ -38,7 +37,6 @@ pub use changeset_fetcher::ChangesetFetcher;
 pub use crate::repo_commit::compute_changed_files;
 
 pub mod internal {
-    pub use crate::memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
     pub use crate::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 }
 

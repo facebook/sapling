@@ -6,6 +6,9 @@
 
 #![deny(warnings)]
 
+mod utils;
+
+use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
 use blobrepo::{compute_changed_files, BlobRepo};
 use blobstore::Blobstore;
 use cloned::cloned;
@@ -27,18 +30,16 @@ use mononoke_types::{
 };
 use prefixblob::PrefixBlobstore;
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
+use rand::{distributions::Normal, SeedableRng};
+use rand_xorshift::XorShiftRng;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::FromIterator,
     marker::PhantomData,
     sync::Arc,
 };
-use tokio::runtime::Runtime;
-
-mod memory_manifest;
-mod utils;
-
 use tests_utils::{create_commit, store_files};
+use tokio::runtime::Runtime;
 use utils::{
     create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
     get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
@@ -1376,4 +1377,40 @@ fn test_hg_commit_generation_many_diamond() {
         .unwrap();
 
     assert_eq!(count, 4 * diamond_stack_size);
+}
+
+#[test]
+fn save_reproducibility_under_load() -> Result<(), Error> {
+    let ctx = CoreContext::test_mock();
+    let delay_settings = DelaySettings {
+        blobstore_put_dist: Normal::new(0.01, 0.005),
+        blobstore_get_dist: Normal::new(0.005, 0.0025),
+        db_put_dist: Normal::new(0.002, 0.001),
+        db_get_dist: Normal::new(0.002, 0.001),
+    };
+    cmdlib::args::init_cachelib_from_settings(Default::default())?;
+    let repo = new_benchmark_repo(delay_settings)?;
+
+    let mut rng = XorShiftRng::seed_from_u64(1);
+    let mut gen = GenManifest::new();
+    let settings = Default::default();
+
+    let test = gen
+        .gen_stack(
+            ctx.clone(),
+            repo.clone(),
+            &mut rng,
+            &settings,
+            None,
+            std::iter::repeat(16).take(50),
+        )
+        .and_then(move |csid| repo.get_hg_from_bonsai_changeset(ctx, csid));
+
+    let mut runtime = Runtime::new()?;
+    assert_eq!(
+        runtime.block_on(test)?,
+        "6f67e722196896e645eec15b1d40fb0ecc5488d6".parse()?,
+    );
+
+    Ok(())
 }

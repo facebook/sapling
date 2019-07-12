@@ -7,28 +7,25 @@
 // NOTE: This isn't in `bonsai_utils` because blobrepo depends on it, while this depends on
 // blobrepo.
 
-use std::collections::HashSet;
-use std::fmt;
-use std::sync::Arc;
-
+use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
+use crate::errors::*;
+use blobrepo::derive_hg_manifest::derive_hg_manifest;
+use blobrepo::internal::IncompleteFilenodes;
+use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
+use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
+use cloned::cloned;
+use context::CoreContext;
+use failure_ext::bail_msg;
 use futures::{
     future::{self, Either},
     Future, Stream,
 };
-use slog::Logger;
-
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-
-use blobrepo::internal::{IncompleteFilenodes, MemoryRootManifest};
-use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
-use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
-use context::CoreContext;
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mononoke_types::DateTime;
-
-use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
-use crate::errors::*;
+use slog::{debug, Logger};
+use std::{collections::HashSet, fmt, sync::Arc};
 
 #[derive(Clone, Debug)]
 pub enum BonsaiMFVerifyResult {
@@ -337,50 +334,29 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
     }
 }
 
-// This shouldn't actually be public, but it needs to be because of
-// https://github.com/rust-lang/rust/issues/50865.
-// TODO: (rain1) T31595868 make apply_diff private once Rust 1.29 is released
-pub fn apply_diff(
+fn apply_diff(
     ctx: CoreContext,
-    logger: Logger,
+    _logger: Logger,
     repo: BlobRepo,
     diff_result: Vec<BonsaiDiffResult>,
     manifest_p1: Option<HgNodeHash>,
     manifest_p2: Option<HgNodeHash>,
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
-    MemoryRootManifest::new(
-        ctx.clone(),
-        repo.clone(),
+    let changes: Vec<_> = diff_result
+        .into_iter()
+        .map(|result| (result.path().clone(), make_entry(&repo, &result)))
+        .collect();
+    derive_hg_manifest(
+        ctx,
+        repo,
         IncompleteFilenodes::new(),
-        manifest_p1,
-        manifest_p2,
+        vec![manifest_p1, manifest_p2]
+            .into_iter()
+            .flatten()
+            .map(HgManifestId::new),
+        changes,
     )
-    .and_then({
-        move |memory_manifest| {
-            let memory_manifest = Arc::new(memory_manifest);
-            let futures: Vec<_> = diff_result
-                .into_iter()
-                .map(|result| {
-                    let entry = make_entry(&repo, &result);
-                    memory_manifest.change_entry(ctx.clone(), result.path(), entry)
-                })
-                .collect();
-
-            future::join_all(futures)
-                .and_then({
-                    cloned!(ctx, memory_manifest);
-                    move |_| memory_manifest.resolve_trivial_conflicts(ctx)
-                })
-                .and_then(move |_| {
-                    // This will cause tree entries to be written to the blobstore, but
-                    // those entries will be redirected to memory because of
-                    // repo.in_memory_writes().
-                    debug!(logger, "Applying complete: now saving");
-                    memory_manifest.save(ctx)
-                })
-                .map(|m| m.get_hash().into_nodehash())
-        }
-    })
+    .map(|manifest_id| manifest_id.into_nodehash())
 }
 
 // XXX should this be in a more central place?

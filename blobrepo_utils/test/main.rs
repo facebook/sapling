@@ -6,18 +6,6 @@
 
 #![deny(warnings)]
 
-extern crate futures;
-#[macro_use]
-extern crate slog;
-
-extern crate async_unit;
-extern crate slog_glog_fmt;
-
-extern crate blobrepo_utils;
-extern crate context;
-
-extern crate fixtures;
-
 use fixtures::*;
 
 // An extra level of nesting is required to avoid clashes between crate and module names.
@@ -43,7 +31,7 @@ mod test {
                     async_unit::tokio_unit_test(|| {
                         let ctx = CoreContext::test_mock();
                         let drain = glog_drain().filter_level(Level::Debug).fuse();
-                        let logger = Logger::root(drain, o![]);
+                        let logger = Logger::root(drain, slog::o![]);
 
                         let repo = $repo::getrepo(Some(logger.clone()));
                         let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
