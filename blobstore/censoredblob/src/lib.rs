@@ -111,6 +111,11 @@ impl<T: Blobstore + Clone> CensoredBlob<T> {
             }
         }
     }
+
+    #[inline]
+    pub fn into_parts(self) -> (T, Option<HashMap<String, String>>, ScubaSampleBuilder) {
+        (self.blobstore, self.censored, self.scuba_builder)
+    }
 }
 
 impl<T: Blobstore + Clone> Blobstore for CensoredBlob<T> {

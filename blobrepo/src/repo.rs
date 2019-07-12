@@ -17,9 +17,8 @@ use crate::file::{
 };
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
-use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
+use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore, RepoBlobstoreArgs};
 use blobstore::Blobstore;
-use blobstore_factory::make_censored_prefixed_blobstore;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateReason, Bookmarks, Freshness,
@@ -131,13 +130,14 @@ impl BlobRepo {
     pub fn new(
         logger: Logger,
         bookmarks: Arc<dyn Bookmarks>,
-        blobstore: RepoBlobstore,
+        blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-        repoid: RepositoryId,
         hg_generation_lease: Arc<dyn LeaseOps>,
     ) -> Self {
+        let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
+
         let changeset_fetcher_factory = {
             cloned!(changesets, repoid);
             move || {
@@ -164,16 +164,16 @@ impl BlobRepo {
     pub fn new_with_changeset_fetcher_factory(
         logger: Logger,
         bookmarks: Arc<dyn Bookmarks>,
-        blobstore: RepoBlobstore,
+        blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-        repoid: RepositoryId,
         changeset_fetcher_factory: Arc<
             dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync,
         >,
         hg_generation_lease: Arc<dyn LeaseOps>,
     ) -> Self {
+        let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
         BlobRepo {
             logger,
             bookmarks,
@@ -209,20 +209,18 @@ impl BlobRepo {
             ..
         } = self;
 
-        // Drop CensoredBlob and PrefixBlobstore (they will be wrapped up in one again by BlobRepo::new)
-        let blobstore = blobstore.into_inner().into_inner();
-        let blobstore: Arc<dyn Blobstore> = Arc::new(MemWritesBlobstore::new(blobstore));
-        // TODO: T46577530 - the hashmap of blacklisted keys is not sent as argument for the BlobRepo below
-        let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix(), None);
+        let repo_blobstore_args =
+            RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(blobstore, repoid, |blobstore| {
+                Arc::new(MemWritesBlobstore::new(blobstore))
+            });
 
         BlobRepo::new(
             logger,
             bookmarks,
-            blobstore,
+            repo_blobstore_args,
             filenodes,
             changesets,
             bonsai_hg_mapping,
-            repoid,
             hg_generation_lease,
         )
     }

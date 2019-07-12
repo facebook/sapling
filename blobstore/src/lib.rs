@@ -132,6 +132,21 @@ impl Blobstore for Arc<dyn Blobstore> {
     }
 }
 
+impl<T: Blobstore> Blobstore for Arc<T> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_ref().get(ctx, key)
+    }
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        self.as_ref().put(ctx, key, value)
+    }
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.as_ref().is_present(ctx, key)
+    }
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+        self.as_ref().assert_present(ctx, key)
+    }
+}
+
 impl Blobstore for Box<dyn Blobstore> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_ref().get(ctx, key)

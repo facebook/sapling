@@ -6,9 +6,9 @@
 
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
+use blob_changeset::RepoBlobstoreArgs;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use blobstore_factory::make_censored_prefixed_blobstore;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
     SqlBonsaiHgMapping,
@@ -29,6 +29,7 @@ use rand::{
     distributions::{Distribution, Normal},
     Rng,
 };
+use scuba_ext::ScubaSampleBuilder;
 use slog::{self, o, Discard, Drain, Logger};
 use sql_ext::SqlConstructors;
 use sqlfilenodes::SqlFilenodes;
@@ -117,7 +118,8 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
 
     // Disable censoring check when executing benchmark reports
     let repoid = RepositoryId::new(rand::random());
-    let blobstore = make_censored_prefixed_blobstore(blobstore, None, repoid.prefix(), None);
+    let blobstore =
+        RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
     Ok(BlobRepo::new(
         Logger::root(Discard {}.ignore_res(), o!()),
         bookmarks,
@@ -125,7 +127,6 @@ pub fn new_benchmark_repo(settings: DelaySettings) -> Result<BlobRepo> {
         filenodes,
         changesets,
         bonsai_hg_mapping,
-        repoid,
         Arc::new(DummyLease {}),
     ))
 }

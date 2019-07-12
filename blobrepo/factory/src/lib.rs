@@ -14,10 +14,9 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::{self, o, Discard, Drain, Logger};
 use std::collections::HashMap;
 
-use blobstore_factory::{
-    make_blobstore, make_censored_prefixed_blobstore, SqlFactory, SqliteFactory, XdbFactory,
-};
+use blobstore_factory::{make_blobstore, SqlFactory, SqliteFactory, XdbFactory};
 
+use blob_changeset::RepoBlobstoreArgs;
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
@@ -34,6 +33,7 @@ use filenodes::CachingFilenodes;
 use memblob::EagerMemblob;
 use metaconfig_types::{self, BlobConfig, Censoring, MetadataDBConfig, StorageConfig};
 use mononoke_types::RepositoryId;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sql_ext::myrouter_ready;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::iter::FromIterator;
@@ -153,17 +153,17 @@ pub fn new_memblob_empty(
     logger: Option<Logger>,
     blobstore: Option<Arc<dyn Blobstore>>,
 ) -> Result<BlobRepo> {
-    let repoid = RepositoryId::new(0);
-    let blobstore = make_censored_prefixed_blobstore(
+    let repo_blobstore_args = RepoBlobstoreArgs::new(
         blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
         None,
-        repoid.prefix(),
-        None,
+        RepositoryId::new(0),
+        ScubaSampleBuilder::with_discard(),
     );
+
     Ok(BlobRepo::new(
         logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
         Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
-        blobstore,
+        repo_blobstore_args,
         Arc::new(
             SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
@@ -176,7 +176,6 @@ pub fn new_memblob_empty(
             SqlBonsaiHgMapping::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
         ),
-        repoid,
         Arc::new(DummyLease {}),
     ))
 }
@@ -204,19 +203,14 @@ fn new_development<T: SqlFactory>(
         .open()
         .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
 
+    let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
     Ok(BlobRepo::new(
         logger,
         bookmarks,
-        make_censored_prefixed_blobstore(
-            blobstore,
-            censored_blobs,
-            repoid.prefix(),
-            scuba_censored_table,
-        ),
+        RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
         filenodes,
         changesets,
         bonsai_hg_mapping,
-        repoid,
         Arc::new(DummyLease {}),
     ))
 }
@@ -287,19 +281,14 @@ fn new_production<T: SqlFactory>(
         }
     };
 
+    let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
     Ok(BlobRepo::new_with_changeset_fetcher_factory(
         logger,
         bookmarks,
-        make_censored_prefixed_blobstore(
-            blobstore,
-            censored_blobs,
-            repoid.prefix(),
-            scuba_censored_table,
-        ),
+        RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
         Arc::new(filenodes),
         changesets,
         Arc::new(bonsai_hg_mapping),
-        repoid,
         Arc::new(changeset_fetcher_factory),
         Arc::new(MemcacheOps::new("bonsai-hg-generation", "")?),
     ))
