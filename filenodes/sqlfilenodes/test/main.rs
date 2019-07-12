@@ -9,18 +9,6 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-extern crate async_unit;
-extern crate context;
-
-extern crate filenodes;
-extern crate futures;
-extern crate futures_ext;
-extern crate mercurial_types;
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-extern crate mononoke_types_mocks;
-extern crate sqlfilenodes;
-
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::Future;

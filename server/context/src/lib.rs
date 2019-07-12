@@ -4,21 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate chashmap;
-extern crate scuba_ext;
-extern crate serde;
-extern crate sshrelay;
-#[macro_use]
-extern crate slog;
-extern crate tracing;
-extern crate uuid;
-
 use chashmap::CHashMap;
 use serde::{Serialize, Serializer};
 use std::sync::Arc;
 
 use scuba_ext::ScubaSampleBuilder;
-use slog::{Logger, OwnedKV, SendSyncRefUnwindSafeKV};
+use slog::{o, Logger, OwnedKV, SendSyncRefUnwindSafeKV};
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 use uuid::Uuid;

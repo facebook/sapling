@@ -8,25 +8,12 @@
 #![feature(wait_until)]
 
 #[macro_use]
-extern crate cloned;
-extern crate context;
-#[macro_use]
 extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-#[macro_use]
-extern crate sql;
-#[macro_use]
-extern crate stats;
-
-extern crate filenodes;
-extern crate mercurial_types;
-extern crate mononoke_types;
-extern crate sql_ext;
 
 mod errors;
 
 use crate::failure::prelude::*;
+use cloned::cloned;
 use context::CoreContext;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
@@ -36,10 +23,12 @@ use stats::Timeseries;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use mononoke_types::{hash, RepositoryId};
+use sql::queries;
 pub use sql_ext::SqlConstructors;
 use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, SqlConnections,
 };
+use stats::define_stats;
 
 use crate::errors::ErrorKind;
 
