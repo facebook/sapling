@@ -7,21 +7,21 @@
 use std::fmt;
 
 use clap::ArgMatches;
-use failure_ext::{Error, Result};
+use failure_ext::{format_err, Error, Result};
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use std::sync::Arc;
 
-use blobstore::{Blobstore, CountedBlobstore};
+use blobstore::Blobstore;
+use blobstore_factory::{make_blobstore, SqliteFactory, XdbFactory};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use censoredblob::{CensoredBlob, SqlCensoredContentStore};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use futures::future;
-use manifoldblob::ManifoldBlob;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::{BlobConfig, Censoring};
+use metaconfig_types::{BlobConfig, BlobstoreId, Censoring, MetadataDBConfig, StorageConfig};
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -29,33 +29,77 @@ use slog::{info, warn, Logger};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
+fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> Result<BlobConfig> {
+    match inner_blobstore_id {
+        None => Ok(blob_config),
+        Some(inner_blobstore_id) => match blob_config {
+            BlobConfig::Multiplexed { blobstores, .. } => {
+                let seeked_id = BlobstoreId::new(inner_blobstore_id);
+                blobstores
+                    .into_iter()
+                    .find_map(|(blobstore_id, blobstore)| {
+                        if blobstore_id == seeked_id {
+                            Some(blobstore)
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or(format_err!(
+                        "could not find a blobstore with id {}",
+                        inner_blobstore_id
+                    ))
+            }
+            _ => Err(format_err!(
+                "inner-blobstore-id supplied but blobstore is not multiplexed"
+            )),
+        },
+    }
+}
+
+fn get_blobstore(
+    repo_id: RepositoryId,
+    storage_config: StorageConfig,
+    inner_blobstore_id: Option<u64>,
+) -> BoxFuture<Arc<dyn Blobstore>, Error> {
+    let blobconfig = try_boxfuture!(get_blobconfig(storage_config.blobstore, inner_blobstore_id));
+
+    match storage_config.dbconfig {
+        MetadataDBConfig::LocalDB { path } => {
+            make_blobstore(repo_id, &blobconfig, &SqliteFactory::new(path), None)
+        }
+        MetadataDBConfig::Mysql {
+            db_address,
+            sharded_filenodes,
+        } => make_blobstore(
+            repo_id,
+            &blobconfig,
+            &XdbFactory::new(db_address, None, sharded_filenodes),
+            None,
+        ),
+    }
+}
+
 pub fn subcommand_blobstore_fetch(
     logger: Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<(), Error> {
-    let blobstore_args = args::parse_blobstore_args(&matches);
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
-
     let (_, config) = try_boxfuture!(args::get_config(&matches));
     let censoring = config.censoring;
+    let storage_config = config.storage_config;
+    let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
+    let blobstore_fut = get_blobstore(repo_id, storage_config, inner_blobstore_id);
 
     let common_config = try_boxfuture!(args::read_common_config(&matches));
     let scuba_censored_table = common_config.scuba_censored_table;
     let scuba_censorship_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
-
-    let (bucket, prefix) = match blobstore_args {
-        BlobConfig::Manifold { bucket, prefix } => (bucket, prefix),
-        bad => panic!("Unsupported blobstore: {:#?}", bad),
-    };
 
     let ctx = CoreContext::test_mock();
     let key = sub_m.value_of("KEY").unwrap().to_string();
     let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
     let no_prefix = sub_m.is_present("no-prefix");
-
-    let blobstore = ManifoldBlob::new_with_prefix(&bucket, &prefix);
 
     let maybe_censored_blobs_fut = match censoring {
         Censoring::Enabled => {
@@ -74,14 +118,14 @@ pub fn subcommand_blobstore_fetch(
         Censoring::Disabled => future::ok(None).right_future(),
     };
 
-    let value_fut = maybe_censored_blobs_fut.and_then({
-        cloned!(key, ctx);
-        move |maybe_censored_blobs| {
+    let value_fut = blobstore_fut.join(maybe_censored_blobs_fut).and_then({
+        cloned!(logger, key, ctx);
+        move |(blobstore, maybe_censored_blobs)| {
+            info!(logger, "using blobstore: {:?}", blobstore);
             get_from_sources(
                 use_memcache,
                 blobstore,
                 no_prefix,
-                bucket,
                 key.clone(),
                 ctx,
                 maybe_censored_blobs,
@@ -120,11 +164,10 @@ pub fn subcommand_blobstore_fetch(
         .boxify()
 }
 
-fn get_from_sources(
+fn get_from_sources<T: Blobstore + Clone>(
     use_memcache: Option<String>,
-    blobstore: CountedBlobstore<ManifoldBlob>,
+    blobstore: T,
     no_prefix: bool,
-    bucket: String,
     key: String,
     ctx: CoreContext,
     censored_blobs: Option<HashMap<String, String>>,
@@ -135,7 +178,7 @@ fn get_from_sources(
 
     match use_memcache {
         Some(mode) => {
-            let blobstore = new_memcache_blobstore(blobstore, "manifold", bucket).unwrap();
+            let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "").unwrap();
             let blobstore = match no_prefix {
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),

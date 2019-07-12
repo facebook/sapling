@@ -72,6 +72,13 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("Don't prepend a prefix based on the repo id to the key"),
+        )
+        .arg(
+            Arg::with_name("inner-blobstore-id")
+                .long("inner-blobstore-id")
+                .takes_value(true)
+                .required(false)
+                .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
         );
 
     let content_fetch = SubCommand::with_name(CONTENT_FETCH)
