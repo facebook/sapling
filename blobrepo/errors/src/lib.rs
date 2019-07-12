@@ -161,4 +161,6 @@ pub enum ErrorKind {
         expected: HgFileNodeId,
         actual: HgFileNodeId,
     },
+    #[fail(display = "Mercurial entry can not have more than two parents")]
+    TooManyParents,
 }

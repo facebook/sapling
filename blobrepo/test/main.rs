@@ -6,7 +6,7 @@
 
 #![deny(warnings)]
 
-use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
+use blobrepo::{compute_changed_files, BlobRepo};
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
@@ -861,14 +861,10 @@ fn test_get_manifest_from_bonsai() {
                 Some(ms1),
                 Some(ms2),
             ));
-            assert!(match ms_hash
+            assert!(ms_hash
                 .expect_err("should have failed")
-                .downcast::<ErrorKind>()
-                .unwrap()
-            {
-                ErrorKind::UnresolvedConflicts => true,
-                _ => false,
-            });
+                .to_string()
+                .contains("conflict"));
         }
 
         // resolves same content different parents for `branch` file

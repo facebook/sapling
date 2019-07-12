@@ -7,6 +7,7 @@
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
+use crate::derive_hg_manifest::derive_hg_manifest;
 use crate::errors::*;
 use crate::file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
@@ -14,7 +15,6 @@ use crate::file::{
     fetch_file_parents_from_blobstore, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
     fetch_rename_from_blobstore, get_rename_from_envelope, HgBlobEntry,
 };
-use crate::memory_manifest::MemoryRootManifest;
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
@@ -1396,6 +1396,10 @@ impl BlobRepo {
             }
         }
 
+        // TODO:
+        // `derive_manifest` already provides parents for newly created files, so we
+        // can remove **all** lookups to files from here, and only leave lookups for
+        // files that were copied (i.e bonsai changes that contain `copy_path`)
         let store_file_changes = (
             manifest_p1
                 .map(|manifest_p1| {
@@ -1477,33 +1481,13 @@ impl BlobRepo {
         let create_manifest = {
             cloned!(ctx, repo, incomplete_filenodes);
             move |changes| {
-                MemoryRootManifest::new(
+                derive_hg_manifest(
                     ctx.clone(),
                     repo.clone(),
                     incomplete_filenodes,
-                    manifest_p1.map(|id| id.into_nodehash()),
-                    manifest_p2.map(|id| id.into_nodehash()),
+                    vec![manifest_p1, manifest_p2].into_iter().flatten(),
+                    changes,
                 )
-                .map(Arc::new)
-                .and_then({
-                    cloned!(ctx);
-                    move |memory_manifest| {
-                        stream::iter_ok(changes)
-                            .map({
-                                cloned!(ctx, memory_manifest);
-                                move |(path, entry)| {
-                                    memory_manifest.change_entry(ctx.clone(), &path, entry)
-                                }
-                            })
-                            .buffer_unordered(100)
-                            .for_each(|_| Ok(()))
-                            .and_then({
-                                cloned!(ctx, memory_manifest);
-                                move |_| memory_manifest.resolve_trivial_conflicts(ctx)
-                            })
-                            .and_then(move |_| memory_manifest.save(ctx))
-                    }
-                })
                 .traced_with_id(
                     &ctx.trace(),
                     "generate_hg_manifest::create_manifest",
@@ -1517,12 +1501,7 @@ impl BlobRepo {
             .and_then(create_manifest)
             .map({
                 cloned!(incomplete_filenodes);
-                move |m| {
-                    (
-                        HgManifestId::new(m.get_hash().into_nodehash()),
-                        incomplete_filenodes,
-                    )
-                }
+                move |manifest_id| (manifest_id, incomplete_filenodes)
             })
             .traced_with_id(
                 &ctx.trace(),
