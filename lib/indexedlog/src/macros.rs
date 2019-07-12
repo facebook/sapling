@@ -13,7 +13,7 @@ macro_rules! define_error {
         }
 
         impl ::failure::Fail for $name {
-            fn cause(&self) -> Option<&::failure::Fail> {
+            fn cause(&self) -> Option<&dyn ::failure::Fail> {
                 self.inner.cause()
             }
 

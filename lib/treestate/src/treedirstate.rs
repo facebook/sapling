@@ -20,7 +20,7 @@ enum Backend {
 }
 
 impl Backend {
-    pub fn store<'a>(&'a mut self) -> &'a mut Store {
+    pub fn store<'a>(&'a mut self) -> &'a mut dyn Store {
         match *self {
             Backend::Empty(ref mut _null) => {
                 panic!("attempt to write to uninitialized treedirstate")
@@ -29,7 +29,7 @@ impl Backend {
         }
     }
 
-    pub fn store_view<'a>(&'a self) -> &'a StoreView {
+    pub fn store_view<'a>(&'a self) -> &'a dyn StoreView {
         match *self {
             Backend::Empty(ref null) => null,
             Backend::File(ref file) => file,

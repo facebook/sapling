@@ -142,7 +142,7 @@ fn is_looseonly_repack(py: Python, options: &PyDict) -> bool {
 }
 
 py_class!(class datastore |py| {
-    data store: Box<DataStorePyExt + Send>;
+    data store: Box<dyn DataStorePyExt + Send>;
 
     def __new__(
         _cls,

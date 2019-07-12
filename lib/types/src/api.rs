@@ -60,7 +60,7 @@ impl HistoryResponse {
 
 impl IntoIterator for HistoryResponse {
     type Item = HistoryEntry;
-    type IntoIter = Box<Iterator<Item = HistoryEntry> + Send + 'static>;
+    type IntoIter = Box<dyn Iterator<Item = HistoryEntry> + Send + 'static>;
 
     fn into_iter(self) -> Self::IntoIter {
         let iter = self

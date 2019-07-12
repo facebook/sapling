@@ -165,7 +165,7 @@ impl EdenApi for EdenApiCurlClient {
     fn get_files(
         &self,
         keys: Vec<Key>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats> {
         self.get_data(paths::DATA, keys, store, progress)
@@ -174,7 +174,7 @@ impl EdenApi for EdenApiCurlClient {
     fn get_history(
         &self,
         keys: Vec<Key>,
-        store: &mut MutableHistoryStore,
+        store: &mut dyn MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats> {
@@ -247,7 +247,7 @@ impl EdenApi for EdenApiCurlClient {
     fn get_trees(
         &self,
         keys: Vec<Key>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats> {
         self.get_data(paths::TREES, keys, store, progress)
@@ -259,7 +259,7 @@ impl EdenApi for EdenApiCurlClient {
         mfnodes: Vec<Node>,
         basemfnodes: Vec<Node>,
         depth: Option<usize>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats> {
         let mut url = self.repo_base_url()?.join(paths::PREFETCH_TREES)?;
@@ -310,7 +310,7 @@ impl EdenApiCurlClient {
         &self,
         path: &str,
         keys: Vec<Key>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats> {
         log::debug!("Fetching data for {} keys", keys.len());
@@ -534,7 +534,7 @@ fn prepare_cbor_post<H, R: Serialize>(
     Ok(())
 }
 
-fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> ApiResult<()> {
+fn add_delta(store: &mut dyn MutableDeltaStore, key: Key, data: Bytes) -> ApiResult<()> {
     let metadata = Metadata {
         size: Some(data.len() as u64),
         flags: None,
@@ -549,7 +549,7 @@ fn add_delta(store: &mut MutableDeltaStore, key: Key, data: Bytes) -> ApiResult<
 }
 
 fn add_data_response(
-    store: &mut MutableDeltaStore,
+    store: &mut dyn MutableDeltaStore,
     response: DataResponse,
     validate: bool,
 ) -> ApiResult<()> {

@@ -30,7 +30,7 @@ pub enum RepackOutputType {
 }
 
 pub trait IterableStore {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a>;
+    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a>;
 }
 
 pub struct RepackResult {
@@ -68,7 +68,7 @@ pub trait Repackable: IterableStore {
     /// came from and what type it is (data vs history).
     fn repack_iter<'a>(
         &'a self,
-    ) -> Box<Iterator<Item = Fallible<(Arc<PathBuf>, RepackOutputType, Key)>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Fallible<(Arc<PathBuf>, RepackOutputType, Key)>> + 'a> {
         let id = self.id().clone();
         let kind = self.kind().clone();
         Box::new(
@@ -326,7 +326,7 @@ mod tests {
     }
 
     impl IterableStore for FakeStore {
-        fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+        fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
             Box::new(self.keys.iter().map(|k| Ok(k.clone())))
         }
     }

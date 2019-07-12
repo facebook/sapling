@@ -98,7 +98,7 @@ impl Node {
     }
 
     #[cfg(any(test, feature = "for-tests"))]
-    pub fn random(rng: &mut RngCore) -> Self {
+    pub fn random(rng: &mut dyn RngCore) -> Self {
         let mut bytes = [0; Node::len()];
         rng.fill_bytes(&mut bytes);
         loop {
@@ -110,7 +110,7 @@ impl Node {
     }
 
     #[cfg(any(test, feature = "for-tests"))]
-    pub fn random_distinct(rng: &mut RngCore, count: usize) -> Vec<Self> {
+    pub fn random_distinct(rng: &mut dyn RngCore, count: usize) -> Vec<Self> {
         let mut nodes = Vec::new();
         let mut nodeset = HashSet::new();
         while nodes.len() < count {

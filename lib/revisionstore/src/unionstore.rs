@@ -54,7 +54,7 @@ impl<'a, T> IntoIterator for &'a UnionStore<T> {
 }
 
 impl<T: IterableStore> IterableStore for UnionStore<T> {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
         Box::new(self.into_iter().map(|store| store.iter()).flatten())
     }
 }

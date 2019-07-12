@@ -24,7 +24,7 @@ pub trait EdenApi: Send + Sync {
     fn get_files(
         &self,
         keys: Vec<Key>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
 
@@ -36,7 +36,7 @@ pub trait EdenApi: Send + Sync {
     fn get_history(
         &self,
         keys: Vec<Key>,
-        store: &mut MutableHistoryStore,
+        store: &mut dyn MutableHistoryStore,
         max_depth: Option<u32>,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
@@ -49,7 +49,7 @@ pub trait EdenApi: Send + Sync {
     fn get_trees(
         &self,
         keys: Vec<Key>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
 
@@ -62,7 +62,7 @@ pub trait EdenApi: Send + Sync {
         mfnodes: Vec<Node>,
         basemfnodes: Vec<Node>,
         depth: Option<usize>,
-        store: &mut MutableDeltaStore,
+        store: &mut dyn MutableDeltaStore,
         progress: Option<ProgressFn>,
     ) -> ApiResult<DownloadStats>;
 }
@@ -73,4 +73,4 @@ pub trait EdenApi: Send + Sync {
 // We want the trait to be object safe so that it is possible to
 // dynamically choose between multiple implementations in the
 // Python bindings.
-fn _assert_object_safety(_: &EdenApi) {}
+fn _assert_object_safety(_: &dyn EdenApi) {}

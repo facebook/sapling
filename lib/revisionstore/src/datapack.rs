@@ -368,7 +368,7 @@ impl LocalStore for DataPack {
 }
 
 impl IterableStore for DataPack {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
         Box::new(DataPackIterator::new(self))
     }
 }

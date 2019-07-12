@@ -281,7 +281,7 @@ impl LocalStore for HistoryPack {
 }
 
 impl IterableStore for HistoryPack {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
         Box::new(HistoryPackIterator::new(self))
     }
 }

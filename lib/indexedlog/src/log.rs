@@ -819,7 +819,7 @@ impl Log {
         dir: &Path,
         name: &str,
         len: u64,
-        buf: Arc<ReadonlyBuffer + Send + Sync>,
+        buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
     ) -> Fallible<Index> {
         // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
         const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;

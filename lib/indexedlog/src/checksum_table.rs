@@ -316,7 +316,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempdir;
 
-    fn setup() -> (File, Box<Fn() -> Fallible<ChecksumTable>>) {
+    fn setup() -> (File, Box<dyn Fn() -> Fallible<ChecksumTable>>) {
         let dir = tempdir().unwrap();
 
         // Checksum an non-existed file is an error.

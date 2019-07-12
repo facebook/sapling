@@ -291,7 +291,7 @@ impl<'a> Parser<'a> {
 
     fn parse_double_hyphen_flag(
         &self,
-        iter: &mut Iterator<Item = &'a str>,
+        iter: &mut dyn Iterator<Item = &'a str>,
         opts: &mut HashMap<String, Value>,
     ) -> Fallible<()> {
         let arg = iter.next().unwrap();
@@ -323,7 +323,7 @@ impl<'a> Parser<'a> {
 
     fn parse_single_hyphen_flag(
         &self,
-        iter: &mut Iterator<Item = &'a str>,
+        iter: &mut dyn Iterator<Item = &'a str>,
         opts: &mut HashMap<String, Value>,
     ) -> Fallible<()> {
         let clean_arg = iter.next().unwrap().trim_start_matches("-");

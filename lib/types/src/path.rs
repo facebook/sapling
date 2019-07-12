@@ -528,7 +528,7 @@ impl quickcheck::Arbitrary for PathComponentBuf {
         }
     }
 
-    fn shrink(&self) -> Box<Iterator<Item = PathComponentBuf>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = PathComponentBuf>> {
         Box::new(
             self.0
                 .shrink()

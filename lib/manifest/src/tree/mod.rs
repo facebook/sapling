@@ -36,7 +36,7 @@ pub struct Tree {
 
 impl Tree {
     /// Instantiates a tree manifest that was stored with the specificed `Node`
-    pub fn durable(store: Arc<TreeStore>, node: Node) -> Self {
+    pub fn durable(store: Arc<dyn TreeStore>, node: Node) -> Self {
         Tree {
             store: InnerStore::new(store),
             root: Link::durable(node),
@@ -44,7 +44,7 @@ impl Tree {
     }
 
     /// Instantiates a new tree manifest with no history
-    pub fn ephemeral(store: Arc<TreeStore>) -> Self {
+    pub fn ephemeral(store: Arc<dyn TreeStore>) -> Self {
         Tree {
             store: InnerStore::new(store),
             root: Link::Ephemeral(BTreeMap::new()),

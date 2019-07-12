@@ -57,7 +57,7 @@ struct ValueLocation {
 #[derive(Default)]
 pub struct Options {
     source: Bytes,
-    filters: Vec<Box<Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>>,
+    filters: Vec<Box<dyn Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>>,
 }
 
 impl ConfigSet {
@@ -461,7 +461,7 @@ impl Options {
     /// Filters inserted first will be executed first.
     pub fn append_filter(
         mut self,
-        filter: Box<Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>,
+        filter: Box<dyn Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>,
     ) -> Self {
         self.filters.push(filter);
         self

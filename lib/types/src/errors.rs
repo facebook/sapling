@@ -14,7 +14,7 @@ impl Fail for KeyError {
         Some(self.0.backtrace())
     }
 
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         Some(self.0.as_ref())
     }
 

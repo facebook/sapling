@@ -211,7 +211,7 @@ impl DataStore for IndexedLogDataStore {
 }
 
 impl IterableStore for IndexedLogDataStore {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
+    fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = Fallible<Key>> + 'a> {
         Box::new(
             self.log
                 .iter()
