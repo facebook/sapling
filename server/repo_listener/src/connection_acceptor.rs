@@ -56,6 +56,7 @@ pub fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: &'static AtomicBool,
+    _test_instance: bool,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);

@@ -75,6 +75,7 @@ function mononoke {
   --cert "$TEST_CERTDIR/localhost.crt" \
   --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
   --debug \
+  --test-instance \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
    "${CACHING_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &

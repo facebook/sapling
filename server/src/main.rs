@@ -49,7 +49,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
             [ticket_seed] --ssl-ticket-seeds [PATH]             'path to a file with encryption keys for SSL tickets'
 
-            -d, --debug                                          'print debug level output'
+            -d, --debug                                         'print debug level output'
+            --test-instance                                     'disables some functionality for tests'
             "#,
         );
     let app = cmdlib::args::add_myrouter_args(app);
@@ -144,6 +145,7 @@ fn main() {
                 .expect("listening path must be specified"),
             acceptor.build(),
             &TERMINATE_PROCESS,
+            matches.is_present("debug"),
         );
 
         tracing_fb303::register();

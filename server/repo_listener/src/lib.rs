@@ -93,6 +93,7 @@ pub fn create_repo_listeners(
     sockname: &str,
     tls_acceptor: SslAcceptor,
     terminate_process: &'static AtomicBool,
+    test_instance: bool,
 ) -> (BoxFuture<(), Error>, ready_state::ReadyState) {
     let sockname = String::from(sockname);
     let root_log = root_log.clone();
@@ -116,6 +117,7 @@ pub fn create_repo_listeners(
                 handlers,
                 tls_acceptor,
                 terminate_process,
+                test_instance,
             )
         })
         .boxify(),
