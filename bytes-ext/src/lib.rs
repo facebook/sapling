@@ -8,6 +8,8 @@
 
 #![deny(warnings)]
 
+mod bufext;
 mod sized;
 
+pub use crate::bufext::BufExt;
 pub use crate::sized::SizeCounter;
