@@ -251,7 +251,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         let ctx = self.create_ctx();
 
         let mut scuba = self.create_scuba_logger(
-            "get_branches",
+            "list_directory",
             &params,
             Some(params.path.clone()),
             Some(params.revision.clone()),
