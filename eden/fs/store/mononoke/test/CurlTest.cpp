@@ -41,7 +41,7 @@ class TestServer {
   }
 };
 
-// @lint-ignore-every PRIVATEKEY1
+// @lint-ignore-every PRIVATEKEY
 const std::string kClientCACertName = "client-ca-cert.pem";
 const std::string kClientCACertContent = folly::stripLeftMargin(R"(
   -----BEGIN CERTIFICATE-----
