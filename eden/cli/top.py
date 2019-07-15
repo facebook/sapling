@@ -11,7 +11,7 @@ import curses
 import datetime
 import os
 import socket
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from . import cmd_util
 
@@ -30,11 +30,42 @@ class Top:
         self.running = False
         self.rows: List = []
 
-    def refresh(self, stdscr, client):
+    def start(self, args: argparse.Namespace) -> int:
+        self.running = True
+
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
+            try:
+                curses.wrapper(self.run(client))
+            except KeyboardInterrupt:
+                pass
+        return 0
+
+    def run(self, client):
+        def mainloop(stdscr):
+            stdscr.timeout(REFRESH_SECONDS * 1000)
+            curses.curs_set(0)
+
+            while self.running:
+                stdscr.noutrefresh()
+                stdscr.erase()
+                self.update(client)
+                self.render(stdscr)
+                curses.doupdate()
+
+                self.get_keypress(stdscr)
+
+        return mainloop
+
+    def update(self, client):
+        countsByMountsAndBaseNames = self.get_process_data(client)
+        self.populate_rows(countsByMountsAndBaseNames)
+
+    def get_process_data(self, client):
         counts = client.getAccessCounts(REFRESH_SECONDS)
         exeNames = counts.exeNamesByPid
 
-        countsByMountsAndBaseNames: collections.defaultdict[
+        countsByMountsAndBaseNames: Dict[
             Tuple[bytes, bytes], List[Tuple[int, int]]
         ] = collections.defaultdict(lambda: [])
 
@@ -44,6 +75,12 @@ class Top:
                     (os.path.basename(mount), exeNames.get(pid, b"<unknown>"))
                 ].append((accessCount.count, pid))
 
+        return countsByMountsAndBaseNames
+
+    def populate_rows(
+        self,
+        countsByMountsAndBaseNames: Dict[Tuple[bytes, bytes], List[Tuple[int, int]]],
+    ):
         self.rows = []
         for (mount, exe_name), counts_and_pids in sorted(
             countsByMountsAndBaseNames.items(),
@@ -58,8 +95,6 @@ class Top:
             row = (exe_name_printed, mount_printed, total_count, pids_str)
             self.rows.append(row)
 
-        self.render(stdscr)
-
     def compute_total(self, ls):
         return sum(c[0] for c in ls)
 
@@ -72,27 +107,6 @@ class Top:
 
         self.render_column_titles(stdscr)
         self.render_rows(stdscr)
-
-    def render_rows(self, stdscr):
-        height, width = stdscr.getmaxyx()
-
-        line = 3
-        for exe_name_printed, mount_printed, total_count, pids_str in self.rows:
-            if line >= height:
-                break
-
-            # Fully writing the last line is an error, so write one fewer character.
-            max_line_width = width - 1 if line + 1 == height else width
-            stdscr.addnstr(
-                line,
-                0,
-                f"{exe_name_printed:{process_width}}{padding}"
-                + f"{mount_printed:{mount_width}}{padding}"
-                + f"{total_count:{fuse_width}}{padding}"
-                + f"{pids_str:{pids_width}}",
-                max_line_width,
-            )
-            line += 1
 
     def render_top_bar(self, stdscr):
         height, width = stdscr.getmaxyx()
@@ -116,6 +130,27 @@ class Top:
             + f'{"TOP PIDS":{pids_width}}'
         )
         stdscr.addnstr(2, 0, heading.ljust(width), width, curses.A_REVERSE)
+
+    def render_rows(self, stdscr):
+        height, width = stdscr.getmaxyx()
+
+        line = 3
+        for exe_name_printed, mount_printed, total_count, pids_str in self.rows:
+            if line >= height:
+                break
+
+            # Fully writing the last line is an error, so write one fewer character.
+            max_line_width = width - 1 if line + 1 == height else width
+            stdscr.addnstr(
+                line,
+                0,
+                f"{exe_name_printed:{process_width}}{padding}"
+                + f"{mount_printed:{mount_width}}{padding}"
+                + f"{total_count:{fuse_width}}{padding}"
+                + f"{pids_str:{pids_width}}",
+                max_line_width,
+            )
+            line += 1
 
     def summarize_exe(self, name):
         args = name.split("\x00", 2)
@@ -142,21 +177,6 @@ class Top:
                 pids_str = new_str
         return pids_str
 
-    def run(self, client):
-        def mainloop(stdscr):
-            stdscr.timeout(REFRESH_SECONDS * 1000)
-            curses.curs_set(0)
-
-            while self.running:
-                stdscr.noutrefresh()
-                stdscr.erase()
-                self.refresh(stdscr, client)
-                curses.doupdate()
-
-                self.get_keypress(stdscr)
-
-        return mainloop
-
     def get_keypress(self, stdscr):
         key = stdscr.getch()
         if key == curses.KEY_RESIZE:
@@ -164,14 +184,3 @@ class Top:
             stdscr.redrawwin()
         if key == ord("q"):
             self.running = False
-
-    def start(self, args: argparse.Namespace) -> int:
-        self.running = True
-
-        instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
-            try:
-                curses.wrapper(self.run(client))
-            except KeyboardInterrupt:
-                pass
-        return 0
