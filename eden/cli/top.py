@@ -18,6 +18,12 @@ from . import cmd_util
 
 REFRESH_SECONDS = 2
 
+process_width = 15
+mount_width = 15
+fuse_width = 12
+pids_width = 25
+padding = " " * 4
+
 
 class Top:
     def __init__(self):
@@ -39,45 +45,14 @@ class Top:
                     (os.path.basename(mount), exeNames.get(pid, b"<unknown>"))
                 ].append((accessCount.count, pid))
 
-        hostname = socket.gethostname()[:width]
-        date = datetime.datetime.now().strftime("%x %X")[:width]
-
-        stdscr.addnstr(0, 0, "eden top", width)
-        # center the date
-        stdscr.addnstr(0, (width - len(date)) // 2, date, width)
-        # right-align the hostname
-        stdscr.addnstr(0, width - len(hostname), hostname, width)
-
+        self.render_top_bar(stdscr)
         # TODO: daemon memory/inode stats on line 2
         stdscr.hline(1, 0, curses.ACS_HLINE, width)
 
-        process_width = 15
-        mount_width = 15
-        fuse_width = 12
-        pids_width = 25
-        padding = " " * 4
-
-        heading = (
-            f'{"PROCESS":{process_width}}{padding}'
-            + f'{"MOUNT":{mount_width}}{padding}'
-            + f'{"FUSE CALLS":>{fuse_width}}{padding}'
-            + f'{"TOP PIDS":{pids_width}}'
-        )
-        stdscr.addnstr(2, 0, heading.ljust(width), width, curses.A_REVERSE)
+        self.render_column_titles(stdscr)
 
         def compute_total(ls):
             return sum(c[0] for c in ls)
-
-        def summarize_exe(name):
-            args = name.split("\x00", 2)
-            # focus on just the basename as the paths can be quite long
-            result = os.path.basename(args[0])[:process_width]
-            if len(args) > 1 and len(result) < process_width:
-                # show cmdline args too, provided they fit in the available space
-                args = args[1].replace("\x00", " ")
-                result += " "
-                result += args[: process_width - len(result)]
-            return result
 
         line = 3
         for (mount, exe_name), counts_and_pids in sorted(
@@ -90,20 +65,10 @@ class Top:
 
             total_count = compute_total(counts_and_pids)
 
-            exe_name_printed = summarize_exe(os.fsdecode(exe_name))
+            exe_name_printed = self.summarize_exe(os.fsdecode(exe_name))
             mount_printed = os.fsdecode(mount)[:mount_width]
 
-            pids_str = ""
-            for _count, pid in sorted(counts_and_pids):
-                if not pid:
-                    continue
-                if not pids_str:
-                    pids_str = str(pid)
-                else:
-                    new_str = pids_str + "," + str(pid)
-                    if len(new_str) > pids_width:
-                        break
-                    pids_str = new_str
+            pids_str = self.format_top_pids(counts_and_pids)
 
             # Fully writing the last line is an error, so write one fewer character.
             max_line_width = width - 1 if line + 1 == height else width
@@ -117,6 +82,54 @@ class Top:
                 max_line_width,
             )
             line += 1
+
+    def render_top_bar(self, stdscr):
+        height, width = stdscr.getmaxyx()
+
+        hostname = socket.gethostname()[:width]
+        date = datetime.datetime.now().strftime("%x %X")[:width]
+
+        stdscr.addnstr(0, 0, "eden top", width)
+        # center the date
+        stdscr.addnstr(0, (width - len(date)) // 2, date, width)
+        # right-align the hostname
+        stdscr.addnstr(0, width - len(hostname), hostname, width)
+
+    def render_column_titles(self, stdscr):
+        height, width = stdscr.getmaxyx()
+
+        heading = (
+            f'{"PROCESS":{process_width}}{padding}'
+            + f'{"MOUNT":{mount_width}}{padding}'
+            + f'{"FUSE CALLS":>{fuse_width}}{padding}'
+            + f'{"TOP PIDS":{pids_width}}'
+        )
+        stdscr.addnstr(2, 0, heading.ljust(width), width, curses.A_REVERSE)
+
+    def summarize_exe(self, name):
+        args = name.split("\x00", 2)
+        # focus on just the basename as the paths can be quite long
+        result = os.path.basename(args[0])[:process_width]
+        if len(args) > 1 and len(result) < process_width:
+            # show cmdline args too, provided they fit in the available space
+            args = args[1].replace("\x00", " ")
+            result += " "
+            result += args[: process_width - len(result)]
+        return result
+
+    def format_top_pids(self, counts_and_pids):
+        pids_str = ""
+        for _count, pid in sorted(counts_and_pids):
+            if not pid:
+                continue
+            if not pids_str:
+                pids_str = str(pid)
+            else:
+                new_str = pids_str + "," + str(pid)
+                if len(new_str) > pids_width:
+                    break
+                pids_str = new_str
+        return pids_str
 
     def run(self, client):
         def mainloop(stdscr):
