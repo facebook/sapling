@@ -84,4 +84,19 @@ impl Blobstore for Fileblob {
         })
         .boxify()
     }
+
+    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        let p = self.path(&key);
+
+        poll_fn(move || {
+            let ret = match File::open(&p) {
+                Err(ref e) if e.kind() == io::ErrorKind::NotFound => false,
+                Err(e) => return Err(e),
+                Ok(_) => true,
+            };
+            Ok(Async::Ready(ret))
+        })
+        .from_err()
+        .boxify()
+    }
 }
