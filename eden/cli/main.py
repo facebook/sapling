@@ -539,7 +539,8 @@ class DoctorCmd(Subcmd):
 @subcmd("top", "Monitor Eden accesses by process.")
 class TopCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        return top_mod.show(args)
+        top = top_mod.Top()
+        return top.start(args)
 
 
 @subcmd("fsck", "Perform a filesystem check for Eden")
