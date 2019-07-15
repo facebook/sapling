@@ -146,14 +146,6 @@ pub fn fetch_file_parents_from_blobstore(
     })
 }
 
-pub fn fetch_rename_from_blobstore(
-    ctx: CoreContext,
-    blobstore: &RepoBlobstore,
-    node_id: HgFileNodeId,
-) -> impl Future<Item = Option<(MPath, HgFileNodeId)>, Error = Error> {
-    fetch_file_envelope(ctx, blobstore, node_id).and_then(get_rename_from_envelope)
-}
-
 pub fn fetch_file_envelope(
     ctx: CoreContext,
     blobstore: &RepoBlobstore,

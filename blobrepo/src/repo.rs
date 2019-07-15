@@ -13,7 +13,7 @@ use crate::file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
     fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_envelope,
     fetch_file_parents_from_blobstore, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
-    fetch_rename_from_blobstore, get_rename_from_envelope, HgBlobEntry,
+    get_rename_from_envelope, HgBlobEntry,
 };
 use crate::repo_commit::*;
 use crate::{BlobManifest, HgBlobChangeset};
@@ -44,9 +44,9 @@ use lock_ext::LockExt;
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
-    Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgEntryId, HgFileEnvelopeMut,
-    HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath,
-    Type,
+    Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgEntryId, HgFileEnvelope,
+    HgFileEnvelopeMut, HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
+    Manifest, RepoPath, Type,
 };
 use mononoke_types::{
     hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
@@ -475,19 +475,6 @@ impl BlobRepo {
         fetch_raw_filenode_bytes(ctx, &self.blobstore, key, validate_hash)
     }
 
-    // Fetches copy data from blobstore instead of from filenodes db. This should be used only
-    // during committing.
-    pub(crate) fn get_hg_file_copy_from_blobstore(
-        &self,
-        ctx: CoreContext,
-        key: HgFileNodeId,
-    ) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
-        STATS::get_hg_file_copy_from_blobstore.add_value(1);
-        fetch_rename_from_blobstore(ctx, &self.blobstore, key)
-            .map(|rename| rename.map(|(path, hash)| (RepoPath::FilePath(path), hash)))
-            .boxify()
-    }
-
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
     pub fn get_heads_maybe_stale(
         &self,
@@ -813,6 +800,15 @@ impl BlobRepo {
             cloned!(path);
             move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
         })
+    }
+
+    pub fn get_file_envelope(
+        &self,
+        ctx: CoreContext,
+        node: HgFileNodeId,
+    ) -> impl Future<Item = HgFileEnvelope, Error = Error> {
+        let store = self.get_blobstore();
+        fetch_file_envelope(ctx, &store, node)
     }
 
     pub fn get_filenode_from_envelope(
