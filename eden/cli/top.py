@@ -28,10 +28,9 @@ padding = " " * 4
 class Top:
     def __init__(self):
         self.running = False
+        self.rows: List = []
 
     def refresh(self, stdscr, client):
-        height, width = stdscr.getmaxyx()
-
         counts = client.getAccessCounts(REFRESH_SECONDS)
         exeNames = counts.exeNamesByPid
 
@@ -45,30 +44,42 @@ class Top:
                     (os.path.basename(mount), exeNames.get(pid, b"<unknown>"))
                 ].append((accessCount.count, pid))
 
+        self.rows = []
+        for (mount, exe_name), counts_and_pids in sorted(
+            countsByMountsAndBaseNames.items(),
+            key=lambda kv: self.compute_total(kv[1]),
+            reverse=True,
+        ):
+            exe_name_printed = self.summarize_exe(os.fsdecode(exe_name))
+            mount_printed = os.fsdecode(mount)[:mount_width]
+            total_count = self.compute_total(counts_and_pids)
+            pids_str = self.format_top_pids(counts_and_pids)
+
+            row = (exe_name_printed, mount_printed, total_count, pids_str)
+            self.rows.append(row)
+
+        self.render(stdscr)
+
+    def compute_total(self, ls):
+        return sum(c[0] for c in ls)
+
+    def render(self, stdscr):
+        height, width = stdscr.getmaxyx()
+
         self.render_top_bar(stdscr)
         # TODO: daemon memory/inode stats on line 2
         stdscr.hline(1, 0, curses.ACS_HLINE, width)
 
         self.render_column_titles(stdscr)
+        self.render_rows(stdscr)
 
-        def compute_total(ls):
-            return sum(c[0] for c in ls)
+    def render_rows(self, stdscr):
+        height, width = stdscr.getmaxyx()
 
         line = 3
-        for (mount, exe_name), counts_and_pids in sorted(
-            countsByMountsAndBaseNames.items(),
-            key=lambda kv: compute_total(kv[1]),
-            reverse=True,
-        ):
+        for exe_name_printed, mount_printed, total_count, pids_str in self.rows:
             if line >= height:
                 break
-
-            total_count = compute_total(counts_and_pids)
-
-            exe_name_printed = self.summarize_exe(os.fsdecode(exe_name))
-            mount_printed = os.fsdecode(mount)[:mount_width]
-
-            pids_str = self.format_top_pids(counts_and_pids)
 
             # Fully writing the last line is an error, so write one fewer character.
             max_line_width = width - 1 if line + 1 == height else width
@@ -142,14 +153,17 @@ class Top:
                 self.refresh(stdscr, client)
                 curses.doupdate()
 
-                key = stdscr.getch()
-                if key == curses.KEY_RESIZE:
-                    curses.update_lines_cols()
-                    stdscr.redrawwin()
-                if key == ord("q"):
-                    self.running = False
+                self.get_keypress(stdscr)
 
         return mainloop
+
+    def get_keypress(self, stdscr):
+        key = stdscr.getch()
+        if key == curses.KEY_RESIZE:
+            curses.update_lines_cols()
+            stdscr.redrawwin()
+        if key == ord("q"):
+            self.running = False
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
