@@ -93,6 +93,39 @@ pub type BoxFutureNonSend<T, E> = Box<dyn Future<Item = T, Error = E>>;
 pub type BoxStream<T, E> = Box<dyn Stream<Item = T, Error = E> + Send>;
 pub type BoxStreamNonSend<T, E> = Box<dyn Stream<Item = T, Error = E>>;
 
+/// Do something with an error if the future failed.
+///
+/// This is created by the `FutureExt::inspect_err` method.
+#[derive(Debug)]
+#[must_use = "futures do nothing unless polled"]
+pub struct InspectErr<A, F>
+where
+    A: Future,
+{
+    future: A,
+    f: Option<F>,
+}
+
+impl<A, F> Future for InspectErr<A, F>
+where
+    A: Future,
+    F: FnOnce(&A::Error),
+{
+    type Item = A::Item;
+    type Error = A::Error;
+
+    fn poll(&mut self) -> Poll<A::Item, A::Error> {
+        match self.future.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Ok(Async::Ready(e)) => Ok(Async::Ready(e)),
+            Err(e) => {
+                (self.f.take().expect("cannot poll InspectErr twice"))(&e);
+                Err(e)
+            }
+        }
+    }
+}
+
 pub trait FutureExt: Future + Sized {
     /// Map a `Future` to have `Item=()` and `Error=()`. This is
     /// useful when a future is being used to drive a computation
@@ -127,6 +160,17 @@ pub trait FutureExt: Future + Sized {
 
     fn right_future<A>(self) -> future::Either<A, Self> {
         future::Either::B(self)
+    }
+
+    fn inspect_err<F>(self, f: F) -> InspectErr<Self, F>
+    where
+        F: FnOnce(&Self::Error) -> (),
+        Self: Sized,
+    {
+        InspectErr {
+            future: self,
+            f: Some(f),
+        }
     }
 }
 
@@ -846,6 +890,12 @@ mod test {
     use futures::sync::mpsc;
     use futures::Stream;
 
+    use cloned::cloned;
+    use futures::future::{err, ok};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::runtime::Runtime;
+
     #[derive(Debug)]
     struct MyErr;
 
@@ -899,7 +949,7 @@ mod test {
     fn discard() {
         use futures::sync::mpsc;
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = Runtime::new().unwrap();
 
         let (tx, rx) = mpsc::channel(1);
 
@@ -911,6 +961,35 @@ mod test {
             Ok(v) => assert_eq!(v, vec![123]),
             bad => panic!("bad {:?}", bad),
         }
+    }
+
+    #[test]
+    fn inspect_err() {
+        let count = Arc::new(AtomicUsize::new(0));
+        cloned!(count as count_cloned);
+        let mut runtime = Runtime::new().unwrap();
+        let work = err::<i32, i32>(42).inspect_err(move |e| {
+            assert_eq!(42, *e);
+            count_cloned.fetch_add(1, Ordering::SeqCst);
+        });
+        if let Ok(_) = runtime.block_on(work) {
+            panic!("future is supposed to fail");
+        }
+        assert_eq!(1, count.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn inspect_ok() {
+        let count = Arc::new(AtomicUsize::new(0));
+        cloned!(count as count_cloned);
+        let mut runtime = Runtime::new().unwrap();
+        let work = ok::<i32, i32>(42).inspect_err(move |_| {
+            count_cloned.fetch_add(1, Ordering::SeqCst);
+        });
+        if let Err(_) = runtime.block_on(work) {
+            panic!("future is supposed to succeed");
+        }
+        assert_eq!(0, count.load(Ordering::SeqCst));
     }
 
     #[test]
@@ -944,7 +1023,7 @@ mod test {
         let s = stream::iter_ok::<_, ()>(vec!["hello", "there", "world"]).fuse();
         let (mut s, mut remainder) = s.return_remainder();
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = Runtime::new().unwrap();
         let res: Result<(), ()> = runtime.block_on(poll_fn(move || {
             assert_matches!(
                 remainder.poll(),
@@ -1051,14 +1130,10 @@ mod test {
     #[test]
     fn whole_stream_timeout_test() {
         use futures::Stream;
-        use std::sync::{
-            atomic::{AtomicUsize, Ordering},
-            Arc,
-        };
         use tokio::timer::Interval;
 
         let count = Arc::new(AtomicUsize::new(0));
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = Runtime::new().unwrap();
         let f = Interval::new(Instant::now(), Duration::new(1, 0))
             .map({
                 let count = count.clone();
@@ -1083,9 +1158,6 @@ mod test {
 
         assert!(count.load(Ordering::Relaxed) < 5);
     }
-
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
 
     #[test]
     fn test_buffered() {
