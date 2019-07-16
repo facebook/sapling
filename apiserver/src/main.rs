@@ -29,6 +29,7 @@ use serde_derive::Deserialize;
 use slog::{info, o, Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
+use stats::schedule_stats_aggregation;
 
 mod actor;
 mod cache;
@@ -586,6 +587,9 @@ fn main() -> Fallible<()> {
         (None, None)
     };
 
+    let stats_aggregation =
+        schedule_stats_aggregation().expect("failed to create stats aggregation scheduler");
+
     let mut runtime = Runtime::new().expect("tokio runtime for blocking jobs");
     let repo_configs = RepoConfigs::read_configs(config_path)?;
 
@@ -646,6 +650,10 @@ fn main() -> Fallible<()> {
         with_skiplist,
     ))?;
     let mononoke = Arc::new(mononoke);
+
+    runtime.spawn(stats_aggregation.map_err(|err| {
+        eprintln!("Unexpected error: {:#?}", err);
+    }));
 
     if let Ok(port) = thrift_port {
         thrift::make_thrift(
