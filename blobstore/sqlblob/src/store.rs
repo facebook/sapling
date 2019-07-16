@@ -8,7 +8,6 @@ use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
-use cloned::cloned;
 use failure_ext::{err_msg, format_err, Error};
 use futures::prelude::*;
 use futures_ext::FutureExt;
@@ -72,45 +71,40 @@ mod types {
 use self::types::DataType;
 
 queries! {
-    write InsertData(values: (repo_id: RepositoryId, id: &str, dtype: DataType, value: &[u8])) {
+    write InsertData(values: (id: &str, dtype: DataType, value: &[u8])) {
         insert_or_ignore,
         "{insert_or_ignore} INTO data (
-            repo_id
-            , id
+            id
             , type
             , value
         ) VALUES {values}"
     }
 
-    write InsertChunk(values: (repo_id: RepositoryId, id: &str, chunk_id: u32, value: &[u8])) {
+    write InsertChunk(values: (id: &str, chunk_id: u32, value: &[u8])) {
         insert_or_ignore,
         "{insert_or_ignore} INTO chunk (
-            repo_id
-            , id
+            id
             , chunk_id
             , value
         ) VALUES {values}"
     }
 
-    read SelectData(repo_id: RepositoryId, id: String) -> (DataType, Vec<u8>) {
+    read SelectData(id: String) -> (DataType, Vec<u8>) {
         "SELECT type, value
          FROM data
-         WHERE repo_id = {repo_id}
-           AND id = {id}"
+         WHERE id = {id}"
     }
 
-    read SelectIsDataPresent(repo_id: RepositoryId, id: String) -> (i32) {
+    read SelectIsDataPresent(id: String) -> (i32) {
         "SELECT 1
          FROM data
-         WHERE repo_id = {repo_id}
-           AND id = {id}"
+         WHERE id = {id}"
     }
 
-    read SelectChunk(repo_id: RepositoryId, id: String, chunk_id: u32) -> (Vec<u8>) {
+    read SelectChunk(id: String, chunk_id: u32) -> (Vec<u8>) {
         "SELECT value
          FROM chunk
-         WHERE repo_id = {repo_id}
-           AND id = {id}
+         WHERE id = {id}
            AND chunk_id = {chunk_id}"
     }
 }
@@ -142,16 +136,14 @@ impl DataSqlStore {
     }
 
     pub(crate) fn get(&self, key: &str) -> impl Future<Item = Option<DataEntry>, Error = Error> {
-        cloned!(self.repo_id);
-
         let key = key.to_owned();
         let shard_id = self.shard(&key);
         let read_master_connection = self.read_master_connection[shard_id - 1].clone();
 
-        SelectData::query(&self.read_connection[shard_id - 1], &repo_id, &key)
+        SelectData::query(&self.read_connection[shard_id - 1], &key)
             .and_then(move |rows| match rows.into_iter().next() {
                 Some(row) => Ok(Some(row)).into_future().left_future(),
-                None => SelectData::query(&read_master_connection, &repo_id, &key)
+                None => SelectData::query(&read_master_connection, &key)
                     .map(|rows| rows.into_iter().next())
                     .right_future(),
             })
@@ -192,24 +184,22 @@ impl DataSqlStore {
 
         InsertData::query(
             &self.write_connection[shard_id - 1],
-            &[(&self.repo_id, &key, &dtype, &value.into_bytes().as_ref())],
+            &[(&key, &dtype, &value.into_bytes().as_ref())],
         )
         .map(|_| ())
     }
 
     pub(crate) fn is_present(&self, key: &str) -> impl Future<Item = bool, Error = Error> {
-        cloned!(self.repo_id);
-
         let key = key.to_owned();
         let shard_id = self.shard(&key);
         let read_master_connection = self.read_master_connection[shard_id - 1].clone();
 
-        SelectIsDataPresent::query(&self.read_connection[shard_id - 1], &repo_id, &key).and_then(
+        SelectIsDataPresent::query(&self.read_connection[shard_id - 1], &key).and_then(
             move |rows| {
                 if rows.into_iter().next().is_some() {
                     Ok(true).into_future().left_future()
                 } else {
-                    SelectIsDataPresent::query(&read_master_connection, &repo_id, &key)
+                    SelectIsDataPresent::query(&read_master_connection, &key)
                         .map(|rows| rows.into_iter().next().is_some())
                         .right_future()
                 }
@@ -256,15 +246,12 @@ impl ChunkSqlStore {
         key: &str,
         chunk_id: u32,
     ) -> impl Future<Item = BlobstoreBytes, Error = Error> {
-        cloned!(self.repo_id);
-
         let key = key.to_owned();
         let shard_id = self.shard(&key, chunk_id);
         let read_master_connection = self.read_master_connection[shard_id - 1].clone();
 
         SelectChunk::query(
             &self.read_connection[shard_id - 1],
-            &repo_id,
             &key,
             &chunk_id,
         )
@@ -272,7 +259,7 @@ impl ChunkSqlStore {
             Some((value,)) => Ok(BlobstoreBytes::from_bytes(value))
                 .into_future()
                 .left_future(),
-            None => SelectChunk::query(&read_master_connection, &repo_id, &key, &chunk_id)
+            None => SelectChunk::query(&read_master_connection, &key, &chunk_id)
                 .and_then(move |rows| match rows.into_iter().next() {
                     Some((value,)) => Ok(BlobstoreBytes::from_bytes(value)),
                     None => Err(format_err!(
@@ -295,7 +282,7 @@ impl ChunkSqlStore {
 
         InsertChunk::query(
             &self.write_connection[shard_id - 1],
-            &[(&self.repo_id, &key, &chunk_id, &value)],
+            &[(&key, &chunk_id, &value)],
         )
         .map(|_| ())
     }
