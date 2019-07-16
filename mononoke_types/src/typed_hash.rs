@@ -22,6 +22,7 @@ use crate::file_contents::FileContents;
 use crate::hash::{Blake2, Context};
 use crate::rawbundle2::RawBundle2;
 use crate::thrift;
+use crate::unode::{FileUnode, ManifestUnode};
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
@@ -63,6 +64,14 @@ pub struct ContentId(Blake2);
 /// An identifier for raw bundle2 contents in Mononoke
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
 pub struct RawBundle2Id(Blake2);
+
+/// An identifier for a file unode
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub struct FileUnodeId(Blake2);
+
+/// An identifier for a file unode
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub struct ManifestUnodeId(Blake2);
 
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash {
@@ -242,6 +251,20 @@ impl_typed_hash! {
     context_key => "rawbundle2",
 }
 
+impl_typed_hash! {
+    hash_type => FileUnodeId,
+    value_type => FileUnode,
+    context_type => FileUnodeIdContext,
+    context_key => "fileunode",
+}
+
+impl_typed_hash! {
+    hash_type => ManifestUnodeId,
+    value_type => ManifestUnode,
+    context_type => ManifestUnodeIdContext,
+    context_key => "manifestunode",
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -272,5 +295,14 @@ mod test {
 
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
         assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
+
+        let id = RawBundle2Id::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("rawbundle2.blake2.{}", id));
+
+        let id = FileUnodeId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("fileunode.blake2.{}", id));
+
+        let id = ManifestUnodeId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("manifestunode.blake2.{}", id));
     }
 }

@@ -24,6 +24,7 @@ pub mod rawbundle2;
 pub mod repo;
 pub mod sql_types;
 pub mod typed_hash;
+pub mod unode;
 
 pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob, RawBundle2Blob};
 pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};

@@ -9,7 +9,9 @@
 use bytes::Bytes;
 
 use crate::errors::*;
-use crate::typed_hash::{ChangesetId, ContentId, MononokeId, RawBundle2Id};
+use crate::typed_hash::{
+    ChangesetId, ContentId, FileUnodeId, ManifestUnodeId, MononokeId, RawBundle2Id,
+};
 
 /// A serialized blob in memory.
 pub struct Blob<Id> {
@@ -39,6 +41,8 @@ impl<Id> Blob<Id> {
 pub type ChangesetBlob = Blob<ChangesetId>;
 pub type ContentBlob = Blob<ContentId>;
 pub type RawBundle2Blob = Blob<RawBundle2Id>;
+pub type FileUnodeBlob = Blob<FileUnodeId>;
+pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
 
 pub use blobstore::BlobstoreBytes;
 

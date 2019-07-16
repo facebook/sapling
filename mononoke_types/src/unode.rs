@@ -1,0 +1,258 @@
+// Copyright (c) 2018-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use failure_ext::{bail_msg, chain::*};
+
+use crate::blob::{Blob, BlobstoreValue, FileUnodeBlob, ManifestUnodeBlob};
+use crate::errors::*;
+use crate::file_change::FileType;
+use crate::path::{MPathElement, MPathHash};
+use crate::thrift;
+use crate::typed_hash::{
+    ChangesetId, ContentId, FileUnodeId, FileUnodeIdContext, ManifestUnodeId,
+    ManifestUnodeIdContext,
+};
+
+use rust_thrift::compact_protocol;
+use std::collections::BTreeMap;
+
+/// Unode is a filenode with fixed linknodes. They are designed to find file or directory history
+/// quickly which can be used to answer "log" or "blame" requests.
+/// The “u” stands for “unique.” There are two sorts of unodes.
+/// A file unode is a structure that contains:
+/// parent unode hashes
+/// file content hash
+/// file type - executable, symlink, regular etc
+/// hashed form of the file path, which ensures uniqueness within the repository
+/// linknode: the changeset that introduced this unode
+///
+/// NOTE: copy-from is NOT part of the hash. The goal is to make copy information mutable
+/// so that we can retroactively change it
+///
+/// A tree unode (sometimes manifest unode) is a structure that contains:
+/// parent unode hashes
+/// subentries: a map from base name to (unode hash, type)
+/// linknode: the changeset that introduced this unode
+///
+/// Q&A
+/// How is the unode graph computed for a freshly received changeset?
+///
+/// Computing the unode graph for a changeset is an inductive process. For a changeset where the
+/// unode graph has already been computed for all its parents:
+/// 1. For each changed file, create a new unode with parents set to their corresponding unodes
+///    and content set to the hash.
+/// 2. Create new manifest nodes by applying changes and deletes recursively.
+/// 3. Finalize the conversion by recording the mapping from changeset ID to root manifest unode hash.
+///
+/// How would a (commit, file name) pair be mapped to a unode?
+///
+/// External consumers can ask for data about a file name as it is at a particular commit.
+/// Finding the unode would involve walking down the tree until the file is found.
+/// (This process will not involve looking at linknodes, since linknodes map unodes to only
+/// the commits that introduced that file version, not to all the commits that
+/// contain that file version.
+///
+/// How can unodes contain linknodes? Don't linknodes form a cycle?
+///
+/// With the bonsai changeset model, the changeset is no longer computed based on unode hashes.
+/// Instead, unodes are computed from changesets. This means that linknodes no longer form a cycle.
+///
+/// Why do file unodes have a path hash? Don't linknodes guarantee uniqueness already?
+///
+/// Consider a single commit that adds two new empty files at different locations.
+/// Without the hash, the unodes for those files are going to be exactly the same.
+///
+///
+/// Why have a path hash? Why not store the full path?
+///
+/// Unlike with linknodes, there appears to be no situation where one would want to go from a
+/// unode to the path that it represents. So storing the path is just going to be a waste of space.
+///
+/// Why do tree unodes not have a path hash?
+///
+/// File unodes are repository-wide unique. Each tree contains at least one file unode.
+/// This means that manifest unodes will also be unique by construction — no path hash required.
+/// If Mononoke ever decides to support empty trees — perhaps representing empty directories? —
+/// it would have to add a path hash.
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct FileUnode {
+    parents: Vec<FileUnodeId>,
+    content_id: ContentId,
+    file_type: FileType,
+    path_hash: MPathHash,
+    linknode: ChangesetId,
+}
+
+impl FileUnode {
+    pub fn get_unode_id(&self) -> FileUnodeId {
+        // TODO(stash): try avoid clone (although BonsaiChangeset has the same problem)
+        *self.clone().into_blob().id()
+    }
+
+    pub(crate) fn from_thrift(t: thrift::FileUnode) -> Result<FileUnode> {
+        let parents: Result<Vec<_>> = t
+            .parents
+            .into_iter()
+            .map(FileUnodeId::from_thrift)
+            .collect();
+        let parents = parents?;
+        let content_id = ContentId::from_thrift(t.content_id)?;
+        let file_type = FileType::from_thrift(t.file_type)?;
+        let path_hash = MPathHash::from_thrift(t.path_hash)?;
+        let linknode = ChangesetId::from_thrift(t.linknode)?;
+        Ok(FileUnode {
+            parents,
+            content_id,
+            file_type,
+            path_hash,
+            linknode,
+        })
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::FileUnode {
+        let parents: Vec<_> = self.parents.into_iter().map(|p| p.into_thrift()).collect();
+
+        thrift::FileUnode {
+            parents,
+            content_id: self.content_id.into_thrift(),
+            file_type: self.file_type.into_thrift(),
+            path_hash: self.path_hash.into_thrift(),
+            linknode: self.linknode.into_thrift(),
+        }
+    }
+}
+
+impl BlobstoreValue for FileUnode {
+    type Key = FileUnodeId;
+
+    fn into_blob(self) -> FileUnodeBlob {
+        let thrift = self.into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        let mut context = FileUnodeIdContext::new();
+        context.update(&data);
+        let id = context.finish();
+        Blob::new(id, data)
+    }
+
+    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
+            .chain_err(ErrorKind::BlobDeserializeError("FileUnode".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ManifestUnode {
+    parents: Vec<ManifestUnodeId>,
+    subentries: BTreeMap<MPathElement, UnodeEntry>,
+    linknode: ChangesetId,
+}
+
+impl ManifestUnode {
+    pub fn get_unode_id(&self) -> ManifestUnodeId {
+        // TODO(stash): try avoid clone (although BonsaiChangeset has the same problem)
+        *self.clone().into_blob().id()
+    }
+
+    pub(crate) fn from_thrift(t: thrift::ManifestUnode) -> Result<ManifestUnode> {
+        let parents: Result<Vec<_>> = t
+            .parents
+            .into_iter()
+            .map(ManifestUnodeId::from_thrift)
+            .collect();
+        let parents = parents?;
+
+        let subentries = t
+            .subentries
+            .into_iter()
+            .map(|(basename, unode_entry)| {
+                let basename = MPathElement::from_thrift(basename)?;
+                let unode_entry = UnodeEntry::from_thrift(unode_entry)?;
+
+                Ok((basename, unode_entry))
+            })
+            .collect::<Result<_>>()?;
+
+        let linknode = ChangesetId::from_thrift(t.linknode)?;
+        Ok(ManifestUnode {
+            parents,
+            subentries,
+            linknode,
+        })
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::ManifestUnode {
+        let parents: Vec<_> = self.parents.into_iter().map(|p| p.into_thrift()).collect();
+
+        let subentries: BTreeMap<_, _> = self
+            .subentries
+            .into_iter()
+            .map(|(basename, unode_entry)| (basename.into_thrift(), unode_entry.into_thrift()))
+            .collect();
+
+        thrift::ManifestUnode {
+            parents,
+            subentries,
+            linknode: self.linknode.into_thrift(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum UnodeEntry {
+    File(FileUnodeId),
+    Directory(ManifestUnodeId),
+}
+
+impl UnodeEntry {
+    pub(crate) fn from_thrift(t: thrift::UnodeEntry) -> Result<UnodeEntry> {
+        match t {
+            thrift::UnodeEntry::File(file_unode_id) => {
+                let file_unode_id = FileUnodeId::from_thrift(file_unode_id)?;
+                Ok(UnodeEntry::File(file_unode_id))
+            }
+            thrift::UnodeEntry::Directory(manifest_unode_id) => {
+                let manifest_unode_id = ManifestUnodeId::from_thrift(manifest_unode_id)?;
+                Ok(UnodeEntry::Directory(manifest_unode_id))
+            }
+            thrift::UnodeEntry::UnknownField(unknown) => bail_msg!(
+                "Unknown field encountered when parsing thrift::UnodeEntry: {}",
+                unknown,
+            ),
+        }
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::UnodeEntry {
+        match self {
+            UnodeEntry::File(file_unode_id) => {
+                thrift::UnodeEntry::File(file_unode_id.into_thrift())
+            }
+            UnodeEntry::Directory(manifest_unode_id) => {
+                thrift::UnodeEntry::Directory(manifest_unode_id.into_thrift())
+            }
+        }
+    }
+}
+
+impl BlobstoreValue for ManifestUnode {
+    type Key = ManifestUnodeId;
+
+    fn into_blob(self) -> ManifestUnodeBlob {
+        let thrift = self.into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        let mut context = ManifestUnodeIdContext::new();
+        context.update(&data);
+        let id = context.finish();
+        Blob::new(id, data)
+    }
+
+    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
+            .chain_err(ErrorKind::BlobDeserializeError("ManifestUnode".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
+}

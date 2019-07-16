@@ -39,6 +39,9 @@ union IdType {
 typedef IdType ChangesetId (hs.newtype)
 typedef IdType ContentId (hs.newtype)
 typedef IdType RawBundle2Id (hs.newtype)
+typedef IdType FileUnodeId (hs.newtype)
+typedef IdType ManifestUnodeId (hs.newtype)
+typedef IdType MPathHash (hs.newtype)
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary.
@@ -144,4 +147,23 @@ struct CopyInfo {
   1: required MPath file,
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: required ChangesetId cs_id,
+}
+
+struct FileUnode {
+  1: list<FileUnodeId> parents,
+  2: ContentId content_id,
+  3: FileType file_type,
+  4: MPathHash path_hash,
+  5: ChangesetId linknode,
+}
+
+union UnodeEntry {
+  1: FileUnodeId File,
+  2: ManifestUnodeId Directory,
+}
+
+struct ManifestUnode {
+  1: list<ManifestUnodeId> parents,
+  2: map<MPathElement, UnodeEntry> subentries,
+  3: ChangesetId linknode,
 }

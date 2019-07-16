@@ -26,6 +26,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::*;
+use crate::hash::Blake2;
 use crate::thrift;
 
 impl Weight for RepoPath {
@@ -562,6 +563,26 @@ impl MPath {
 
     pub fn display_opt<'a>(path_opt: Option<&'a MPath>) -> DisplayOpt<'a> {
         DisplayOpt(path_opt)
+    }
+}
+
+/// Hash of the file path (used in unode)
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+pub struct MPathHash(Blake2);
+
+impl MPathHash {
+    pub fn from_thrift(thrift_path: thrift::MPathHash) -> Result<MPathHash> {
+        match thrift_path.0 {
+            thrift::IdType::Blake2(blake2) => Ok(MPathHash(Blake2::from_thrift(blake2)?)),
+            thrift::IdType::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+                "MPathHash".into(),
+                format!("unknown id type field: {}", x)
+            )),
+        }
+    }
+
+    pub fn into_thrift(self) -> thrift::MPathHash {
+        thrift::MPathHash(thrift::IdType::Blake2(self.0.into_thrift()))
     }
 }
 
