@@ -182,52 +182,66 @@ impl SqlConstructors for SqlFilenodes {
 
 impl SqlFilenodes {
     pub fn with_sharded_myrouter(
-        tier: impl ToString,
+        tier: &str,
         port: u16,
         shard_count: usize,
-    ) -> Result<Self> {
-        Self::with_sharded_factory(shard_count, |shard_id| {
+    ) -> BoxFuture<Self, Error> {
+        let tier = tier.to_string();
+
+        Self::with_sharded_factory(shard_count, move |shard_id| {
             Ok(create_myrouter_connections(
-                format!("{}.{}", tier.to_string(), shard_id),
+                &format!("{}.{}", tier, shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
                 "shardedfilenodes",
             ))
+            .into_future()
+            .boxify()
         })
     }
 
-    pub fn with_sharded_raw_xdb(tier: impl ToString, shard_count: usize) -> Result<Self> {
-        Self::with_sharded_factory(shard_count, |shard_id| {
-            create_raw_xdb_connections(format!("{}.{}", tier.to_string(), shard_id))
+    pub fn with_sharded_raw_xdb(tier: &str, shard_count: usize) -> BoxFuture<Self, Error> {
+        let tier = tier.to_string();
+
+        Self::with_sharded_factory(shard_count, move |shard_id| {
+            create_raw_xdb_connections(&format!("{}.{}", &tier, shard_id)).boxify()
         })
     }
 
     fn with_sharded_factory(
         shard_count: usize,
-        factory: impl Fn(usize) -> Result<SqlConnections>,
-    ) -> Result<Self> {
-        let mut write_connections = vec![];
-        let mut read_connections = vec![];
-        let mut read_master_connections = vec![];
-        let shards = 1..=shard_count;
+        factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
+    ) -> BoxFuture<Self, Error> {
+        let futs: Vec<_> = (1..=shard_count)
+            .into_iter()
+            .map(|shard| factory(shard))
+            .collect();
 
-        for shard_id in shards {
-            let SqlConnections {
-                write_connection,
-                read_connection,
-                read_master_connection,
-            } = factory(shard_id)?;
+        join_all(futs)
+            .map(|shard_connections| {
+                let mut write_connections = vec![];
+                let mut read_connections = vec![];
+                let mut read_master_connections = vec![];
 
-            write_connections.push(write_connection);
-            read_connections.push(read_connection);
-            read_master_connections.push(read_master_connection);
-        }
+                for conn in shard_connections {
+                    let SqlConnections {
+                        write_connection,
+                        read_connection,
+                        read_master_connection,
+                    } = conn;
 
-        Ok(Self {
-            write_connection: Arc::new(write_connections),
-            read_connection: Arc::new(read_connections),
-            read_master_connection: Arc::new(read_master_connections),
-        })
+                    write_connections.push(write_connection);
+                    read_connections.push(read_connection);
+                    read_master_connections.push(read_master_connection);
+                }
+
+                Self {
+                    write_connection: Arc::new(write_connections),
+                    read_connection: Arc::new(read_connections),
+                    read_master_connection: Arc::new(read_master_connections),
+                }
+            })
+            .boxify()
     }
 
     pub fn with_sharded_sqlite(shard_count: usize) -> Result<Self> {

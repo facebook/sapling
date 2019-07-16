@@ -10,7 +10,7 @@ use cloned::cloned;
 use failure_ext::prelude::*;
 use failure_ext::{Error, Result};
 use futures::{future::IntoFuture, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use slog::{self, o, Discard, Drain, Logger};
 use std::collections::HashMap;
 
@@ -108,20 +108,16 @@ fn do_open_blobrepo<T: SqlFactory>(
     let uncensored_blobstore = make_blobstore(repoid, &blobconfig, &sql_factory, myrouter_port);
 
     let censored_blobs = match censoring {
-        Censoring::Enabled => {
-            let censored_blobs_store: Result<Arc<SqlCensoredContentStore>> = sql_factory.open();
-
-            censored_blobs_store
-                .into_future()
-                .and_then(move |censored_store| {
-                    let censored_blobs = censored_store
-                        .get_all_censored_blobs()
-                        .map_err(Error::from)
-                        .map(HashMap::from_iter);
-                    Some(censored_blobs)
-                })
-                .left_future()
-        }
+        Censoring::Enabled => sql_factory
+            .open::<SqlCensoredContentStore>()
+            .and_then(move |censored_store| {
+                let censored_blobs = censored_store
+                    .get_all_censored_blobs()
+                    .map_err(Error::from)
+                    .map(HashMap::from_iter);
+                Some(censored_blobs)
+            })
+            .left_future(),
         Censoring::Disabled => Ok(None).into_future().right_future(),
     };
 
@@ -189,30 +185,45 @@ fn new_development<T: SqlFactory>(
     censored_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
-) -> Result<BlobRepo> {
-    let bookmarks: Arc<SqlBookmarks> = sql_factory
-        .open()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-    let filenodes: Arc<SqlFilenodes> = sql_factory
-        .open()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-    let changesets: Arc<SqlChangesets> = sql_factory
-        .open()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-    let bonsai_hg_mapping: Arc<SqlBonsaiHgMapping> = sql_factory
-        .open()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+) -> BoxFuture<BlobRepo, Error> {
+    let bookmarks = sql_factory
+        .open::<SqlBookmarks>()
+        .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))
+        .from_err();
 
-    let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
-    Ok(BlobRepo::new(
-        logger,
-        bookmarks,
-        RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
-        filenodes,
-        changesets,
-        bonsai_hg_mapping,
-        Arc::new(DummyLease {}),
-    ))
+    let filenodes = sql_factory
+        .open::<SqlFilenodes>()
+        .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))
+        .from_err();
+
+    let changesets = sql_factory
+        .open::<SqlChangesets>()
+        .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))
+        .from_err();
+
+    let bonsai_hg_mapping = sql_factory
+        .open::<SqlBonsaiHgMapping>()
+        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
+        .from_err();
+
+    bookmarks
+        .join4(filenodes, changesets, bonsai_hg_mapping)
+        .map({
+            move |(bookmarks, filenodes, changesets, bonsai_hg_mapping)| {
+                let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
+
+                BlobRepo::new(
+                    logger,
+                    bookmarks,
+                    RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
+                    filenodes,
+                    changesets,
+                    bonsai_hg_mapping,
+                    Arc::new(DummyLease {}),
+                )
+            }
+        })
+        .boxify()
 }
 
 /// If the DB is remote then set up for a full production configuration.
@@ -225,71 +236,86 @@ fn new_production<T: SqlFactory>(
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
-) -> Result<BlobRepo> {
-    let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
-    let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
-        ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
-    ))?);
-    let presence_pool = Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
-        ErrorKind::MissingCachePool("blobstore-presence".to_string()),
-    ))?);
+) -> BoxFuture<BlobRepo, Error> {
+    fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
+        let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
+        cachelib::get_pool(name).ok_or(err)
+    }
+
+    fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
+        let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
+        cachelib::get_volatile_pool(name)?.ok_or(err)
+    }
+
+    let blobstore = try_boxfuture!(new_memcache_blobstore(blobstore, "multiplexed", ""));
+    let blob_pool = try_boxfuture!(get_cache_pool("blobstore-blobs"));
+    let presence_pool = try_boxfuture!(get_cache_pool("blobstore-presence"));
+
     let blobstore = Arc::new(new_cachelib_blobstore_no_lease(
         blobstore,
-        blob_pool,
-        presence_pool,
+        Arc::new(blob_pool),
+        Arc::new(presence_pool),
     ));
 
-    let filenodes_pool = cachelib::get_volatile_pool("filenodes")?.ok_or(Error::from(
-        ErrorKind::MissingCachePool("filenodes".to_string()),
-    ))?;
-    let (filenodes_tier, filenodes): (String, Arc<SqlFilenodes>) = sql_factory.open_filenodes()?;
+    let filenodes_pool = try_boxfuture!(get_volatile_pool("filenodes"));
+    let changesets_cache_pool = try_boxfuture!(get_volatile_pool("changesets"));
+    let bonsai_hg_mapping_cache_pool = try_boxfuture!(get_volatile_pool("bonsai_hg_mapping"));
 
-    let filenodes =
-        CachingFilenodes::new(filenodes, filenodes_pool, "sqlfilenodes", &filenodes_tier);
+    let hg_generation_lease = try_boxfuture!(MemcacheOps::new("bonsai-hg-generation", ""));
 
-    let bookmarks: Arc<dyn Bookmarks> = {
-        let bookmarks: Arc<SqlBookmarks> = sql_factory.open()?;
-        if let Some(ttl) = bookmarks_cache_ttl {
-            Arc::new(CachedBookmarks::new(bookmarks, ttl))
-        } else {
-            bookmarks
-        }
-    };
+    let filenodes_tier_and_filenodes = sql_factory.open_filenodes();
+    let bookmarks = sql_factory.open::<SqlBookmarks>();
+    let changesets = sql_factory.open::<SqlChangesets>();
+    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
 
-    let changesets: Arc<SqlChangesets> = sql_factory.open()?;
-    let changesets_cache_pool = cachelib::get_volatile_pool("changesets")?.ok_or(Error::from(
-        ErrorKind::MissingCachePool("changesets".to_string()),
-    ))?;
-    let changesets = CachingChangesets::new(changesets, changesets_cache_pool.clone());
-    let changesets = Arc::new(changesets);
+    filenodes_tier_and_filenodes
+        .join4(bookmarks, changesets, bonsai_hg_mapping)
+        .map(
+            move |((filenodes_tier, filenodes), bookmarks, changesets, bonsai_hg_mapping)| {
+                let filenodes = CachingFilenodes::new(
+                    filenodes,
+                    filenodes_pool,
+                    "sqlfilenodes",
+                    &filenodes_tier,
+                );
 
-    let bonsai_hg_mapping: Arc<SqlBonsaiHgMapping> = sql_factory.open()?;
-    let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
-        bonsai_hg_mapping,
-        cachelib::get_volatile_pool("bonsai_hg_mapping")?.ok_or(Error::from(
-            ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
-        ))?,
-    );
+                let bookmarks: Arc<dyn Bookmarks> = {
+                    if let Some(ttl) = bookmarks_cache_ttl {
+                        Arc::new(CachedBookmarks::new(bookmarks, ttl))
+                    } else {
+                        bookmarks
+                    }
+                };
 
-    let changeset_fetcher_factory = {
-        cloned!(changesets, repoid);
-        move || {
-            let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
-                SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
-            );
-            res
-        }
-    };
+                let changesets =
+                    Arc::new(CachingChangesets::new(changesets, changesets_cache_pool));
 
-    let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
-    Ok(BlobRepo::new_with_changeset_fetcher_factory(
-        logger,
-        bookmarks,
-        RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
-        Arc::new(filenodes),
-        changesets,
-        Arc::new(bonsai_hg_mapping),
-        Arc::new(changeset_fetcher_factory),
-        Arc::new(MemcacheOps::new("bonsai-hg-generation", "")?),
-    ))
+                let bonsai_hg_mapping =
+                    CachingBonsaiHgMapping::new(bonsai_hg_mapping, bonsai_hg_mapping_cache_pool);
+
+                let changeset_fetcher_factory = {
+                    cloned!(changesets, repoid);
+                    move || {
+                        let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
+                            SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
+                        );
+                        res
+                    }
+                };
+
+                let scuba_builder = ScubaSampleBuilder::with_opt_table(scuba_censored_table);
+
+                BlobRepo::new_with_changeset_fetcher_factory(
+                    logger,
+                    bookmarks,
+                    RepoBlobstoreArgs::new(blobstore, censored_blobs, repoid, scuba_builder),
+                    Arc::new(filenodes),
+                    changesets,
+                    Arc::new(bonsai_hg_mapping),
+                    Arc::new(changeset_fetcher_factory),
+                    Arc::new(hg_generation_lease),
+                )
+            },
+        )
+        .boxify()
 }

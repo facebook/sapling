@@ -91,32 +91,36 @@ fn main() -> Result<()> {
 
     let no_bookmark = matches.is_present("no-bookmark");
 
-    let phases_store = Arc::new(args::open_sql::<SqlPhases>(&matches)?);
+    let phases_store = args::open_sql::<SqlPhases>(&matches);
 
-    let blobimport = args::create_repo(&ctx.logger(), &matches).and_then(move |repo| {
-        let blobrepo = Arc::new(repo.clone());
-        blobimport_lib::Blobimport {
-            ctx: ctx.clone(),
-            logger: ctx.logger().clone(),
-            blobrepo,
-            revlogrepo_path,
-            changeset,
-            skip,
-            commits_limit,
-            no_bookmark,
-            phases_store,
-        }
-        .import()
-        .traced(ctx.trace(), "blobimport", trace_args!())
-        .map_err({
-            cloned!(ctx);
-            move |err| {
-                error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                ::std::process::exit(1);
+    let blobimport = args::create_repo(&ctx.logger(), &matches)
+        .join(phases_store)
+        .and_then(move |(blobrepo, phases_store)| {
+            let blobrepo = Arc::new(blobrepo);
+            let phases_store = Arc::new(phases_store);
+
+            blobimport_lib::Blobimport {
+                ctx: ctx.clone(),
+                logger: ctx.logger().clone(),
+                blobrepo,
+                revlogrepo_path,
+                changeset,
+                skip,
+                commits_limit,
+                no_bookmark,
+                phases_store,
             }
-        })
-        .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result))
-    });
+            .import()
+            .traced(ctx.trace(), "blobimport", trace_args!())
+            .map_err({
+                cloned!(ctx);
+                move |err| {
+                    error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+                    ::std::process::exit(1);
+                }
+            })
+            .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result))
+        });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);

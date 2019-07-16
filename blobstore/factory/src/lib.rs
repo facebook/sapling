@@ -8,12 +8,12 @@ use std::{path::PathBuf, sync::Arc};
 
 use cloned::cloned;
 use failure_ext::prelude::*;
-use failure_ext::{Error, Result};
+use failure_ext::Error;
 use futures::{
     future::{self, IntoFuture},
     Future,
 };
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 
 use blobstore::ErrorKind;
 use blobstore::{Blobstore, DisabledBlob};
@@ -39,10 +39,10 @@ pub enum Scrubbing {
 
 pub trait SqlFactory: Send + Sync {
     /// Open an arbitrary struct implementing SqlConstructors
-    fn open<T: SqlConstructors>(&self) -> Result<Arc<T>>;
+    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error>;
 
     /// Open SqlFilenodes, and return a tier name and the struct.
-    fn open_filenodes(&self) -> Result<(String, Arc<SqlFilenodes>)>;
+    fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error>;
 }
 
 pub struct XdbFactory {
@@ -66,14 +66,13 @@ impl XdbFactory {
 }
 
 impl SqlFactory for XdbFactory {
-    fn open<T: SqlConstructors>(&self) -> Result<Arc<T>> {
-        Ok(Arc::new(T::with_xdb(
-            self.db_address.clone(),
-            self.myrouter_port,
-        )?))
+    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
+        T::with_xdb(&self.db_address, self.myrouter_port)
+            .map(|r| Arc::new(r))
+            .boxify()
     }
 
-    fn open_filenodes(&self) -> Result<(String, Arc<SqlFilenodes>)> {
+    fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
         let (tier, filenodes) = match (self.sharded_filenodes.clone(), self.myrouter_port) {
             (
                 Some(ShardedFilenodesParams {
@@ -82,8 +81,8 @@ impl SqlFactory for XdbFactory {
                 }),
                 Some(port),
             ) => {
-                let conn = SqlFilenodes::with_sharded_myrouter(&shard_map, port, shard_num.into())?;
-                (shard_map, Arc::new(conn))
+                let conn = SqlFilenodes::with_sharded_myrouter(&shard_map, port, shard_num.into());
+                (shard_map, conn)
             }
             (
                 Some(ShardedFilenodesParams {
@@ -92,16 +91,18 @@ impl SqlFactory for XdbFactory {
                 }),
                 None,
             ) => {
-                let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into())?;
-                (shard_map, Arc::new(conn))
+                let conn = SqlFilenodes::with_sharded_raw_xdb(&shard_map, shard_num.into());
+                (shard_map, conn)
             }
             (None, port) => {
-                let conn = SqlFilenodes::with_xdb(self.db_address.clone(), port)?;
-                (self.db_address.clone(), Arc::new(conn))
+                let conn = SqlFilenodes::with_xdb(&self.db_address, port);
+                (self.db_address.clone(), conn)
             }
         };
 
-        Ok((tier, filenodes))
+        filenodes
+            .map(move |filenodes| (tier, Arc::new(filenodes)))
+            .boxify()
     }
 }
 
@@ -116,13 +117,15 @@ impl SqliteFactory {
 }
 
 impl SqlFactory for SqliteFactory {
-    fn open<T: SqlConstructors>(&self) -> Result<Arc<T>> {
-        Ok(Arc::new(T::with_sqlite_path(self.path.join(T::LABEL))?))
+    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
+        let r = try_boxfuture!(T::with_sqlite_path(self.path.join(T::LABEL)));
+        Ok(Arc::new(r)).into_future().boxify()
     }
 
-    fn open_filenodes(&self) -> Result<(String, Arc<SqlFilenodes>)> {
-        let filenodes: Arc<SqlFilenodes> = self.open()?;
-        Ok(("sqlite".to_string(), filenodes))
+    fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
+        self.open::<SqlFilenodes>()
+            .map(|filenodes| ("sqlite".to_string(), filenodes))
+            .boxify()
     }
 }
 
@@ -202,7 +205,7 @@ pub fn make_blobstore<T: SqlFactory>(
             scuba_table,
             blobstores,
         } => {
-            let queue: Result<Arc<SqlBlobstoreSyncQueue>> = sql_factory.open();
+            let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
             let components: Vec<_> = blobstores
                 .iter()
                 .map({
@@ -215,7 +218,6 @@ pub fn make_blobstore<T: SqlFactory>(
                 .collect();
 
             queue
-                .into_future()
                 .and_then({
                     cloned!(scuba_table);
                     move |queue| {
@@ -237,7 +239,7 @@ pub fn make_blobstore<T: SqlFactory>(
             scuba_table,
             blobstores,
         } => {
-            let queue: Result<Arc<SqlBlobstoreSyncQueue>> = sql_factory.open();
+            let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
             let components: Vec<_> = blobstores
                 .iter()
                 .map({

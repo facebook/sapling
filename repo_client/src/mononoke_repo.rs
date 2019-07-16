@@ -6,7 +6,8 @@
 
 use crate::errors::*;
 use blobrepo::BlobRepo;
-use futures_ext::BoxFuture;
+use futures::future::Future;
+use futures_ext::{BoxFuture, FutureExt};
 use hooks::HookManager;
 use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
@@ -115,19 +116,14 @@ pub fn streaming_clone(
     db_address: &str,
     myrouter_port: Option<u16>,
     repoid: RepositoryId,
-) -> Result<SqlStreamingCloneConfig> {
-    let fetcher = match myrouter_port {
-        Some(port) => SqlStreamingChunksFetcher::with_myrouter(&db_address, port),
-        None => SqlStreamingChunksFetcher::with_raw_xdb_tier(&db_address)?,
-    };
-
-    let streaming_clone = SqlStreamingCloneConfig {
-        fetcher,
-        blobstore: blobrepo.get_blobstore(),
-        repoid,
-    };
-
-    Ok(streaming_clone)
+) -> BoxFuture<SqlStreamingCloneConfig, Error> {
+    SqlStreamingChunksFetcher::with_xdb(&db_address, myrouter_port)
+        .map(move |fetcher| SqlStreamingCloneConfig {
+            fetcher,
+            blobstore: blobrepo.get_blobstore(),
+            repoid,
+        })
+        .boxify()
 }
 
 impl Debug for MononokeRepo {

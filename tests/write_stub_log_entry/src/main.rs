@@ -61,45 +61,45 @@ fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
     let repo_id = args::get_repo_id(&matches).unwrap();
-    let bookmarks = args::open_sql::<SqlBookmarks>(&matches).unwrap();
+    let fut = args::open_sql::<SqlBookmarks>(&matches).and_then(move |bookmarks| {
+        let name = matches.value_of(BOOKMARK).unwrap().to_string();
+        let reason = match matches.is_present(BLOBIMPORT) {
+            true => BookmarkUpdateReason::Blobimport,
+            false => BookmarkUpdateReason::TestMove {
+                bundle_replay_data: None,
+            },
+        };
 
-    let name = matches.value_of(BOOKMARK).unwrap().to_string();
-    let reason = match matches.is_present(BLOBIMPORT) {
-        true => BookmarkUpdateReason::Blobimport,
-        false => BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    };
+        let bookmark = BookmarkName::new(name).unwrap();
 
-    let bookmark = BookmarkName::new(name).unwrap();
+        let mut txn = bookmarks.create_transaction(ctx, repo_id);
 
-    let mut txn = bookmarks.create_transaction(ctx, repo_id);
-
-    match matches.subcommand() {
-        (CREATE, Some(sub_m)) => {
-            txn.create(
-                &bookmark,
-                ChangesetId::from_str(&sub_m.value_of(ID).unwrap().to_string()).unwrap(),
-                reason,
-            )
-            .unwrap();
+        match matches.subcommand() {
+            (CREATE, Some(sub_m)) => {
+                txn.create(
+                    &bookmark,
+                    ChangesetId::from_str(&sub_m.value_of(ID).unwrap().to_string()).unwrap(),
+                    reason,
+                )
+                .unwrap();
+            }
+            (UPDATE, Some(sub_m)) => {
+                txn.update(
+                    &bookmark,
+                    ChangesetId::from_str(&sub_m.value_of(TO_ID).unwrap().to_string()).unwrap(),
+                    ChangesetId::from_str(&sub_m.value_of(FROM_ID).unwrap().to_string()).unwrap(),
+                    reason,
+                )
+                .unwrap();
+            }
+            _ => {
+                println!("{}", matches.usage());
+                ::std::process::exit(1);
+            }
         }
-        (UPDATE, Some(sub_m)) => {
-            txn.update(
-                &bookmark,
-                ChangesetId::from_str(&sub_m.value_of(TO_ID).unwrap().to_string()).unwrap(),
-                ChangesetId::from_str(&sub_m.value_of(FROM_ID).unwrap().to_string()).unwrap(),
-                reason,
-            )
-            .unwrap();
-        }
-        _ => {
-            println!("{}", matches.usage());
-            ::std::process::exit(1);
-        }
-    }
 
-    let fut = txn.commit();
+        txn.commit()
+    });
 
     tokio::run(fut.map(|_| ()).map_err(move |err| {
         println!("{:?}", err);

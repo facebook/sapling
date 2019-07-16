@@ -16,7 +16,7 @@ use std::{
 use clap::{App, Arg, ArgMatches};
 use failure_ext::{bail_msg, err_msg, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
-use futures_ext::{try_boxfuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use panichandler::{self, Fate};
 use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Logger};
@@ -269,21 +269,26 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
     Ok(RepositoryId::new(repo_id as i32))
 }
 
-pub fn open_sql<T>(matches: &ArgMatches<'_>) -> Result<T>
+pub fn open_sql<T>(matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
 where
     T: SqlConstructors,
 {
     let name = T::LABEL;
 
-    let (_, config) = get_config(matches)?;
+    let (_, config) = try_boxfuture!(get_config(matches));
+
     match &config.storage_config.dbconfig {
-        MetadataDBConfig::LocalDB { path } => T::with_sqlite_path(path.join(name)),
+        MetadataDBConfig::LocalDB { path } => {
+            T::with_sqlite_path(path.join(name)).into_future().boxify()
+        }
         MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
             T::with_xdb(&db_address, parse_myrouter_port(matches))
         }
         MetadataDBConfig::Mysql { .. } => Err(err_msg(
             "Use SqlFilenodes::with_sharded_myrouter for filenodes",
-        )),
+        ))
+        .into_future()
+        .boxify(),
     }
 }
 

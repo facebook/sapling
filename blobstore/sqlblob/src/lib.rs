@@ -67,93 +67,110 @@ pub struct Sqlblob {
 impl Sqlblob {
     pub fn with_myrouter(
         repo_id: RepositoryId,
-        shardmap: impl ToString,
+        shardmap: &str,
         port: u16,
         shard_num: NonZeroUsize,
-    ) -> Result<Self> {
-        Self::with_connection_factory(repo_id, shard_num, |shard_id| {
+    ) -> BoxFuture<Self, Error> {
+        let shardmap = shardmap.to_string();
+
+        Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
-                format!("{}.{}", shardmap.to_string(), shard_id),
+                &format!("{}.{}", shardmap, shard_id),
                 port,
                 PoolSizeConfig::for_sharded_connection(),
                 "blobstore",
             ))
+            .into_future()
+            .boxify()
         })
     }
 
     pub fn with_raw_xdb_shardmap(
         repo_id: RepositoryId,
-        shardmap: impl ToString,
+        shardmap: &str,
         shard_num: NonZeroUsize,
-    ) -> Result<Self> {
-        Self::with_connection_factory(repo_id, shard_num, |shard_id| {
-            create_raw_xdb_connections(format!("{}.{}", shardmap.to_string(), shard_id))
+    ) -> BoxFuture<Self, Error> {
+        let shardmap = shardmap.to_string();
+
+        Self::with_connection_factory(repo_id, shard_num, move |shard_id| {
+            create_raw_xdb_connections(&format!("{}.{}", &shardmap, shard_id)).boxify()
         })
     }
 
     fn with_connection_factory(
         repo_id: RepositoryId,
         shard_num: NonZeroUsize,
-        connection_factory: impl Fn(usize) -> Result<SqlConnections>,
-    ) -> Result<Self> {
-        struct Cons {
-            write_connection: Vec<Connection>,
-            read_connection: Vec<Connection>,
-            read_master_connection: Vec<Connection>,
-        }
+        connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
+    ) -> BoxFuture<Self, Error> {
+        let shard_count = shard_num.get();
 
-        let mut cons = Cons {
-            write_connection: Vec::with_capacity(shard_num.get()),
-            read_connection: Vec::with_capacity(shard_num.get()),
-            read_master_connection: Vec::with_capacity(shard_num.get()),
-        };
+        let futs: Vec<_> = (0..shard_count)
+            .into_iter()
+            .map(|shard| connection_factory(shard))
+            .collect();
 
-        for shard_id in 0..shard_num.get() {
-            let SqlConnections {
-                write_connection,
-                read_connection,
-                read_master_connection,
-            } = connection_factory(shard_id)?;
+        join_all(futs)
+            .map(move |shard_connections| {
+                struct Cons {
+                    write_connection: Vec<Connection>,
+                    read_connection: Vec<Connection>,
+                    read_master_connection: Vec<Connection>,
+                }
 
-            cons.write_connection.push(write_connection);
-            cons.read_connection.push(read_connection);
-            cons.read_master_connection.push(read_master_connection);
-        }
+                let mut cons = Cons {
+                    write_connection: Vec::with_capacity(shard_count),
+                    read_connection: Vec::with_capacity(shard_count),
+                    read_master_connection: Vec::with_capacity(shard_count),
+                };
 
-        let write_connection = Arc::new(cons.write_connection);
-        let read_connection = Arc::new(cons.read_connection);
-        let read_master_connection = Arc::new(cons.read_master_connection);
+                for conn in shard_connections {
+                    let SqlConnections {
+                        write_connection,
+                        read_connection,
+                        read_master_connection,
+                    } = conn;
 
-        Ok(Self {
-            data_store: DataSqlStore::new(
-                repo_id,
-                shard_num,
-                write_connection.clone(),
-                read_connection.clone(),
-                read_master_connection.clone(),
-            ),
-            chunk_store: ChunkSqlStore::new(
-                repo_id,
-                shard_num,
-                write_connection,
-                read_connection,
-                read_master_connection,
-            ),
-            data_cache: SqlblobCacheOps::new(
-                Arc::new(
-                    MemcacheOps::new("sqlblob.data", repo_id.id())
-                        .expect("failed to create MemcacheOps"),
-                ),
-                DataCacheTranslator::new(repo_id),
-            ),
-            chunk_cache: SqlblobCacheOps::new(
-                Arc::new(
-                    MemcacheOps::new("sqlblob.chunk", repo_id.id())
-                        .expect("failed to create MemcacheOps"),
-                ),
-                ChunkCacheTranslator::new(repo_id),
-            ),
-        })
+                    cons.write_connection.push(write_connection);
+                    cons.read_connection.push(read_connection);
+                    cons.read_master_connection.push(read_master_connection);
+                }
+
+                let write_connection = Arc::new(cons.write_connection);
+                let read_connection = Arc::new(cons.read_connection);
+                let read_master_connection = Arc::new(cons.read_master_connection);
+
+                Self {
+                    data_store: DataSqlStore::new(
+                        repo_id,
+                        shard_num,
+                        write_connection.clone(),
+                        read_connection.clone(),
+                        read_master_connection.clone(),
+                    ),
+                    chunk_store: ChunkSqlStore::new(
+                        repo_id,
+                        shard_num,
+                        write_connection,
+                        read_connection,
+                        read_master_connection,
+                    ),
+                    data_cache: SqlblobCacheOps::new(
+                        Arc::new(
+                            MemcacheOps::new("sqlblob.data", repo_id.id())
+                                .expect("failed to create MemcacheOps"),
+                        ),
+                        DataCacheTranslator::new(repo_id),
+                    ),
+                    chunk_cache: SqlblobCacheOps::new(
+                        Arc::new(
+                            MemcacheOps::new("sqlblob.chunk", repo_id.id())
+                                .expect("failed to create MemcacheOps"),
+                        ),
+                        ChunkCacheTranslator::new(repo_id),
+                    ),
+                }
+            })
+            .boxify()
     }
 
     pub fn with_sqlite_in_memory(repo_id: RepositoryId) -> Result<Self> {

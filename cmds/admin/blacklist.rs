@@ -12,14 +12,13 @@ use crate::common::resolve_hg_rev;
 use censoredblob::SqlCensoredContentStore;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{format_err, Error};
+use failure_ext::{format_err, Error, FutureFailureErrorExt};
 use futures::future;
 use futures::future::{join_all, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgFileNodeId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use slog::{debug, Logger};
-use std::sync::Arc;
 
 pub fn subcommand_blacklist(
     logger: Logger,
@@ -49,15 +48,16 @@ pub fn subcommand_blacklist(
     let ctx = CoreContext::test_mock();
     args::init_cachelib(&matches);
 
-    let censored_store: Arc<_> = Arc::new(
-        args::open_sql::<SqlCensoredContentStore>(&matches)
-            .expect("Failed to open the db with censored contents"),
-    );
+    let censored_blobs = args::open_sql::<SqlCensoredContentStore>(&matches)
+        .context("While opening SqlCensoredContentStore")
+        .from_err();
 
     let blobrepo = args::open_repo(&logger, &matches);
+
     blobrepo
+        .join(censored_blobs)
         .and_then({
-            move |blobrepo| {
+            move |(blobrepo, censored_blobs)| {
                 get_file_nodes(ctx.clone(), logger.clone(), &blobrepo, &rev, paths).and_then({
                     move |hg_node_ids| {
                         let content_ids = hg_node_ids.into_iter().map(move |hg_node_id| {
@@ -71,7 +71,7 @@ pub fn subcommand_blacklist(
                                 .map(|content_id| content_id.blobstore_key())
                                 .collect();
                             let timestamp = Timestamp::now();
-                            censored_store.insert_censored_blobs(&blobstore_keys, &task, &timestamp)
+                            censored_blobs.insert_censored_blobs(&blobstore_keys, &task, &timestamp)
                         })
                     }
                 })

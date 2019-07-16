@@ -10,7 +10,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use failure_ext::{err_msg, Error};
+use failure_ext::{err_msg, Error, FutureFailureErrorExt};
 use futures::future::{self, ok};
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -18,7 +18,6 @@ use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
-use std::sync::Arc;
 
 use crate::cmdargs::{
     HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
@@ -33,14 +32,14 @@ pub fn subcommand_process_hg_sync(
     let repo_id = try_boxfuture!(args::get_repo_id(&matches));
 
     let ctx = CoreContext::test_mock();
-    let mutable_counters: Arc<_> = Arc::new(
-        args::open_sql::<SqlMutableCounters>(&matches)
-            .expect("Failed to open the db with mutable_counters"),
-    );
 
-    let bookmarks: Arc<_> = Arc::new(
-        args::open_sql::<SqlBookmarks>(&matches).expect("Failed to open the db with bookmarks"),
-    );
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(&matches)
+        .context("While opening SqlMutableCounters")
+        .from_err();
+
+    let bookmarks = args::open_sql::<SqlBookmarks>(&matches)
+        .context("While opening SqlBookmarks")
+        .from_err();
 
     match sub_m.subcommand() {
         (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => match (
@@ -58,99 +57,112 @@ pub fn subcommand_process_hg_sync(
             (Some(new_value), false, false) => {
                 let new_value = i64::from_str_radix(new_value, 10).unwrap();
                 mutable_counters
-                    .set_counter(
-                        ctx.clone(),
-                        repo_id,
-                        LATEST_REPLAYED_REQUEST_KEY,
-                        new_value,
-                        None,
-                    )
-                    .map({
-                        cloned!(repo_id, logger);
-                        move |_| {
-                            info!(logger, "Counter for {:?} set to {}", repo_id, new_value);
-                            ()
-                        }
-                    })
-                    .map_err({
-                        cloned!(repo_id, logger);
-                        move |e| {
-                            info!(
-                                logger,
-                                "Failed to set counter for {:?} set to {}", repo_id, new_value
-                            );
-                            e
-                        }
+                    .and_then(move |mutable_counters| {
+                        mutable_counters
+                            .set_counter(
+                                ctx.clone(),
+                                repo_id,
+                                LATEST_REPLAYED_REQUEST_KEY,
+                                new_value,
+                                None,
+                            )
+                            .map({
+                                cloned!(repo_id, logger);
+                                move |_| {
+                                    info!(logger, "Counter for {:?} set to {}", repo_id, new_value);
+                                    ()
+                                }
+                            })
+                            .map_err({
+                                cloned!(repo_id, logger);
+                                move |e| {
+                                    info!(
+                                        logger,
+                                        "Failed to set counter for {:?} set to {}",
+                                        repo_id,
+                                        new_value
+                                    );
+                                    e
+                                }
+                            })
                     })
                     .boxify()
             }
             (None, skip, dry_run) => mutable_counters
-                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-                .and_then(move |maybe_counter| {
-                    match maybe_counter {
-                        None => info!(logger, "No counter found for {:?}", repo_id), //println!("No counter found for {:?}", repo_id),
-                        Some(counter) => {
-                            info!(logger, "Counter for {:?} has value {}", repo_id, counter)
-                        }
-                    };
+                .join(bookmarks)
+                .and_then(move |(mutable_counters, bookmarks)| {
+                    mutable_counters
+                        .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                        .and_then(move |maybe_counter| {
+                            match maybe_counter {
+                                None => info!(logger, "No counter found for {:?}", repo_id), //println!("No counter found for {:?}", repo_id),
+                                Some(counter) => {
+                                    info!(logger, "Counter for {:?} has value {}", repo_id, counter)
+                                }
+                            };
 
-                    match (skip, maybe_counter) {
-                        (false, ..) => {
-                            // We just want to log the current counter: we're done.
-                            ok(()).boxify()
-                        }
-                        (true, None) => {
-                            // We'd like to skip, but we didn't find the current counter!
-                            future::err(err_msg("cannot proceed without a counter")).boxify()
-                        }
-                        (true, Some(counter)) => bookmarks
-                            .skip_over_bookmark_log_entries_with_reason(
-                                ctx.clone(),
-                                counter as u64,
-                                repo_id,
-                                BookmarkUpdateReason::Blobimport,
-                            )
-                            .and_then({
-                                cloned!(ctx, repo_id);
-                                move |maybe_new_counter| match (maybe_new_counter, dry_run) {
-                                    (Some(new_counter), true) => {
-                                        info!(
-                                            logger,
-                                            "Counter for {:?} would be updated to {}",
-                                            repo_id,
-                                            new_counter
-                                        );
-                                        future::ok(()).boxify()
-                                    }
-                                    (Some(new_counter), false) => mutable_counters
-                                        .set_counter(
-                                            ctx.clone(),
-                                            repo_id,
-                                            LATEST_REPLAYED_REQUEST_KEY,
-                                            new_counter as i64,
-                                            Some(counter),
-                                        )
-                                        .and_then(move |success| match success {
-                                            true => {
+                            match (skip, maybe_counter) {
+                                (false, ..) => {
+                                    // We just want to log the current counter: we're done.
+                                    ok(()).boxify()
+                                }
+                                (true, None) => {
+                                    // We'd like to skip, but we didn't find the current counter!
+                                    future::err(err_msg("cannot proceed without a counter"))
+                                        .boxify()
+                                }
+                                (true, Some(counter)) => bookmarks
+                                    .skip_over_bookmark_log_entries_with_reason(
+                                        ctx.clone(),
+                                        counter as u64,
+                                        repo_id,
+                                        BookmarkUpdateReason::Blobimport,
+                                    )
+                                    .and_then({
+                                        cloned!(ctx, repo_id);
+                                        move |maybe_new_counter| match (maybe_new_counter, dry_run)
+                                        {
+                                            (Some(new_counter), true) => {
                                                 info!(
                                                     logger,
-                                                    "Counter for {:?} was updated to {}",
+                                                    "Counter for {:?} would be updated to {}",
                                                     repo_id,
                                                     new_counter
                                                 );
-                                                future::ok(())
+                                                future::ok(()).boxify()
                                             }
-                                            false => future::err(err_msg("update conflicted")),
-                                        })
-                                        .boxify(),
-                                    (None, ..) => future::err(err_msg(
-                                        "no valid counter position to skip ahead to",
-                                    ))
+                                            (Some(new_counter), false) => mutable_counters
+                                                .set_counter(
+                                                    ctx.clone(),
+                                                    repo_id,
+                                                    LATEST_REPLAYED_REQUEST_KEY,
+                                                    new_counter as i64,
+                                                    Some(counter),
+                                                )
+                                                .and_then(move |success| match success {
+                                                    true => {
+                                                        info!(
+                                                            logger,
+                                                            "Counter for {:?} was updated to {}",
+                                                            repo_id,
+                                                            new_counter
+                                                        );
+                                                        future::ok(())
+                                                    }
+                                                    false => {
+                                                        future::err(err_msg("update conflicted"))
+                                                    }
+                                                })
+                                                .boxify(),
+                                            (None, ..) => future::err(err_msg(
+                                                "no valid counter position to skip ahead to",
+                                            ))
+                                            .boxify(),
+                                        }
+                                    })
                                     .boxify(),
-                                }
-                            })
-                            .boxify(),
-                    }
+                            }
+                        })
                 })
                 .boxify(),
         },
@@ -158,80 +170,85 @@ pub fn subcommand_process_hg_sync(
             let quiet = sub_m.is_present("quiet");
             let without_blobimport = sub_m.is_present("without-blobimport");
             mutable_counters
-                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-                .map(|maybe_counter| {
-                    // yes, technically if the sync hasn't started yet
-                    // and there exists a counter #0, we want return the
-                    // correct value, but it's ok, since (a) there won't
-                    // be a counter #0 and (b) this is just an advisory data
-                    maybe_counter.unwrap_or(0)
-                })
-                .and_then({
-                    cloned!(ctx, repo_id, without_blobimport);
-                    move |counter| {
-                        let counter = counter as u64;
+                .join(bookmarks)
+                .and_then(move |(mutable_counters, bookmarks)| {
+                    mutable_counters
+                        .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                        .map(|maybe_counter| {
+                            // yes, technically if the sync hasn't started yet
+                            // and there exists a counter #0, we want return the
+                            // correct value, but it's ok, since (a) there won't
+                            // be a counter #0 and (b) this is just an advisory data
+                            maybe_counter.unwrap_or(0)
+                        })
+                        .and_then({
+                            cloned!(ctx, repo_id, without_blobimport);
+                            move |counter| {
+                                let counter = counter as u64;
 
-                        let exclude_reason = match without_blobimport {
-                            true => Some(BookmarkUpdateReason::Blobimport),
-                            false => None,
-                        };
+                                let exclude_reason = match without_blobimport {
+                                    true => Some(BookmarkUpdateReason::Blobimport),
+                                    false => None,
+                                };
 
-                        bookmarks.count_further_bookmark_log_entries(
-                            ctx,
-                            counter,
-                            repo_id,
-                            exclude_reason,
-                        )
-                    }
-                })
-                .map({
-                    cloned!(logger, repo_id);
-                    move |remaining| {
-                        if quiet {
-                            println!("{}", remaining);
-                        } else {
-                            let name = match without_blobimport {
-                                true => "non-blobimport bundles",
-                                false => "bundles",
-                            };
+                                bookmarks.count_further_bookmark_log_entries(
+                                    ctx,
+                                    counter,
+                                    repo_id,
+                                    exclude_reason,
+                                )
+                            }
+                        })
+                        .map({
+                            cloned!(logger, repo_id);
+                            move |remaining| {
+                                if quiet {
+                                    println!("{}", remaining);
+                                } else {
+                                    let name = match without_blobimport {
+                                        true => "non-blobimport bundles",
+                                        false => "bundles",
+                                    };
 
-                            info!(
-                                logger,
-                                "Remaining {} to replay in {:?}: {}", name, repo_id, remaining
-                            );
-                        }
-                    }
-                })
-                .map_err({
-                    cloned!(logger, repo_id);
-                    move |e| {
-                        info!(
-                            logger,
-                            "Failed to fetch remaining bundles to replay for {:?}", repo_id
-                        );
-                        e
-                    }
+                                    info!(
+                                        logger,
+                                        "Remaining {} to replay in {:?}: {}",
+                                        name,
+                                        repo_id,
+                                        remaining
+                                    );
+                                }
+                            }
+                        })
+                        .map_err({
+                            cloned!(logger, repo_id);
+                            move |e| {
+                                info!(
+                                    logger,
+                                    "Failed to fetch remaining bundles to replay for {:?}", repo_id
+                                );
+                                e
+                            }
+                        })
                 })
                 .boxify()
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
             let limit = args::get_u64(sub_m, "limit", 10);
             args::init_cachelib(&matches);
-            let repo_fut = args::open_repo(&logger, &matches);
+            let repo = args::open_repo(&logger, &matches);
 
-            let current_counter = mutable_counters
-                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-                .map(|maybe_counter| {
-                    // yes, technically if the sync hasn't started yet
-                    // and there exists a counter #0, we want return the
-                    // correct value, but it's ok, since (a) there won't
-                    // be a counter #0 and (b) this is just an advisory data
-                    maybe_counter.unwrap_or(0)
-                });
-
-            repo_fut
-                .and_then(move |repo| {
-                    current_counter
+            repo.join3(mutable_counters, bookmarks)
+                .and_then(move |(repo, mutable_counters, bookmarks)| {
+                    mutable_counters
+                        .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                        .map(|maybe_counter| {
+                            // yes, technically if the sync hasn't started yet
+                            // and there exists a counter #0, we want return the
+                            // correct value, but it's ok, since (a) there won't
+                            // be a counter #0 and (b) this is just an advisory data
+                            maybe_counter.unwrap_or(0)
+                        })
                         .map({
                             cloned!(ctx);
                             move |id| {
@@ -290,39 +307,50 @@ pub fn subcommand_process_hg_sync(
                 .map(std::path::PathBuf::from));
 
             bookmarks
-                .read_next_bookmark_log_entries(ctx.clone(), id - 1, repo_id, 1)
-                .into_future()
-                .map(|(entry, _)| entry)
-                .map_err(|(err, _)| err)
-                .and_then(move |maybe_log_entry| {
-                    let log_entry =
-                        try_boxfuture!(maybe_log_entry.ok_or(err_msg("no log entries found")));
-                    if log_entry.id != id as i64 {
-                        return future::err(err_msg("no entry with specified id found")).boxify();
-                    }
-                    let bundle_replay_data = try_boxfuture!(log_entry
-                        .reason
-                        .get_bundle_replay_data()
-                        .ok_or(err_msg("no bundle found")));
-                    let bundle_handle = bundle_replay_data.bundle_handle.clone();
+                .and_then(move |bookmarks| {
+                    bookmarks
+                        .read_next_bookmark_log_entries(ctx.clone(), id - 1, repo_id, 1)
+                        .into_future()
+                        .map(|(entry, _)| entry)
+                        .map_err(|(err, _)| err)
+                        .and_then(move |maybe_log_entry| {
+                            let log_entry = try_boxfuture!(
+                                maybe_log_entry.ok_or(err_msg("no log entries found"))
+                            );
+                            if log_entry.id != id as i64 {
+                                return future::err(err_msg("no entry with specified id found"))
+                                    .boxify();
+                            }
+                            let bundle_replay_data = try_boxfuture!(log_entry
+                                .reason
+                                .get_bundle_replay_data()
+                                .ok_or(err_msg("no bundle found")));
+                            let bundle_handle = bundle_replay_data.bundle_handle.clone();
 
-                    repo_fut
-                        .and_then(move |repo| {
-                            save_bundle_to_file(
-                                ctx,
-                                repo.get_blobstore(),
-                                &bundle_handle,
-                                output_file,
-                                true, /* create */
-                            )
+                            repo_fut
+                                .and_then(move |repo| {
+                                    save_bundle_to_file(
+                                        ctx,
+                                        repo.get_blobstore(),
+                                        &bundle_handle,
+                                        output_file,
+                                        true, /* create */
+                                    )
+                                })
+                                .boxify()
                         })
-                        .boxify()
                 })
                 .boxify()
         }
-        (HG_SYNC_VERIFY, Some(..)) => {
-            process_hg_sync_verify(ctx, repo_id, mutable_counters, bookmarks, logger)
-        }
+        (HG_SYNC_VERIFY, Some(..)) => mutable_counters
+            .join(bookmarks)
+            .and_then({
+                cloned!(repo_id);
+                move |(mutable_counters, bookmarks)| {
+                    process_hg_sync_verify(ctx, repo_id, mutable_counters, bookmarks, logger)
+                }
+            })
+            .boxify(),
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
@@ -333,10 +361,10 @@ pub fn subcommand_process_hg_sync(
 fn process_hg_sync_verify(
     ctx: CoreContext,
     repo_id: RepositoryId,
-    mutable_counters: Arc<SqlMutableCounters>,
-    bookmarks: Arc<SqlBookmarks>,
+    mutable_counters: SqlMutableCounters,
+    bookmarks: SqlBookmarks,
     logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     mutable_counters
         .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
         .map(|maybe_counter| maybe_counter.unwrap_or(0)) // See rationale under HG_SYNC_REMAINS
@@ -408,5 +436,4 @@ fn process_hg_sync_verify(
                 ()
             }
         })
-        .boxify()
 }

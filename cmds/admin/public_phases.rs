@@ -6,7 +6,7 @@
 
 use clap::ArgMatches;
 use cloned::cloned;
-use failure_ext::Error;
+use failure_ext::{Error, FutureFailureErrorExt};
 use futures::{stream, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use std::{
@@ -87,9 +87,15 @@ pub fn subcommand_add_public_phases(
         .unwrap_or(16384);
     let ctx = CoreContext::test_mock();
     args::init_cachelib(&matches);
-    let phases: Arc<_> =
-        Arc::new(args::open_sql::<SqlPhases>(&matches).expect("Failed to open the db with phases"));
+
+    let phases = args::open_sql::<SqlPhases>(&matches)
+        .context("While opening SqlPhases")
+        .from_err();
+
     args::open_repo(&logger, &matches)
-        .and_then(move |repo| add_public_phases(ctx, repo, phases, logger, path, chunk_size))
+        .join(phases)
+        .and_then(move |(repo, phases)| {
+            add_public_phases(ctx, repo, Arc::new(phases), logger, path, chunk_size)
+        })
         .boxify()
 }

@@ -84,13 +84,10 @@ fn maybe_schedule_healer_for_storage(
                     shard_map,
                     shard_num,
                 } => {
-                    let blobstore: Arc<dyn Blobstore> = Arc::new(Sqlblob::with_myrouter(
-                        repo_id,
-                        shard_map,
-                        myrouter_port,
-                        shard_num,
-                    )?);
-                    blobstores.insert(id, ok(blobstore).boxify());
+                    let blobstore =
+                        Sqlblob::with_myrouter(repo_id, &shard_map, myrouter_port, shard_num)
+                            .map(|blobstore| -> Arc<dyn Blobstore> { Arc::new(blobstore) });
+                    blobstores.insert(id, blobstore.boxify());
                 }
                 unsupported => bail_msg!("Unsupported blobstore type {:?}", unsupported),
             }
@@ -162,7 +159,7 @@ fn maybe_schedule_healer_for_storage(
             schedule_everlasting_healing(logger, repo_healer, replication_lag_db_conns)
         }
     });
-    Ok(myrouter::wait_for_myrouter(myrouter_port, db_address)
+    Ok(myrouter::wait_for_myrouter(myrouter_port, &db_address)
         .and_then(|_| heal)
         .boxify())
 }

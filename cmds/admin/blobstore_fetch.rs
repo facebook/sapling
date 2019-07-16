@@ -5,12 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use std::fmt;
+use std::sync::Arc;
 
 use clap::ArgMatches;
 use failure_ext::{format_err, Error, Result};
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use std::sync::Arc;
 
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, SqliteFactory, XdbFactory};
@@ -102,19 +102,15 @@ pub fn subcommand_blobstore_fetch(
     let no_prefix = sub_m.is_present("no-prefix");
 
     let maybe_censored_blobs_fut = match censoring {
-        Censoring::Enabled => {
-            let censored_blobs_store: Arc<_> = Arc::new(
-                args::open_sql::<SqlCensoredContentStore>(&matches)
-                    .expect("Failed to open the db with censored_blobs_store"),
-            );
-
-            censored_blobs_store
-                .get_all_censored_blobs()
-                .map_err(Error::from)
-                .map(HashMap::from_iter)
-                .map(Some)
-                .left_future()
-        }
+        Censoring::Enabled => args::open_sql::<SqlCensoredContentStore>(&matches)
+            .and_then(|censored_blobs| {
+                censored_blobs
+                    .get_all_censored_blobs()
+                    .map_err(Error::from)
+                    .map(HashMap::from_iter)
+                    .map(Some)
+            })
+            .left_future(),
         Censoring::Disabled => future::ok(None).right_future(),
     };
 

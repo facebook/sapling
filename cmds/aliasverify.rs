@@ -309,7 +309,7 @@ fn main() -> Result<()> {
     let logger = args::get_logger(&matches);
 
     args::init_cachelib(&matches);
-    let sqlchangesets = Arc::new(args::open_sql::<SqlChangesets>(&matches)?);
+    let sqlchangesets = args::open_sql::<SqlChangesets>(&matches);
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
         "verify" => Mode::Verify,
@@ -330,14 +330,13 @@ fn main() -> Result<()> {
     let repoid = args::get_repo_id(&matches).expect("Need repo id");
 
     let blobrepo = args::open_repo(&logger, &matches);
-    let aliasimport = blobrepo.and_then(move |blobrepo| {
-        let blobrepo = Arc::new(blobrepo);
-        AliasVerification::new(logger, blobrepo, repoid, sqlchangesets, mode).verify_all(
-            ctx,
-            step,
-            min_cs_db_id,
-        )
-    });
+    let aliasimport = blobrepo
+        .join(sqlchangesets)
+        .and_then(move |(blobrepo, sqlchangesets)| {
+            let blobrepo = Arc::new(blobrepo);
+            AliasVerification::new(logger, blobrepo, repoid, Arc::new(sqlchangesets), mode)
+                .verify_all(ctx, step, min_cs_db_id)
+        });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(aliasimport);

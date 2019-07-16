@@ -8,8 +8,8 @@ extern crate failure_ext as failure;
 extern crate sql;
 
 use failure::{Error, Result};
-use futures::{future::ok, Future};
-use futures_ext::FutureExt;
+use futures::{future::ok, Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 use std::path::Path;
 
 use sql::{myrouter, raw, rusqlite::Connection as SqliteConnection, Connection};
@@ -48,10 +48,10 @@ impl PoolSizeConfig {
 }
 
 pub fn create_myrouter_connections(
-    tier: impl ToString,
+    tier: &str,
     port: u16,
     pool_size_config: PoolSizeConfig,
-    label: impl ToString,
+    label: &str,
 ) -> SqlConnections {
     let mut builder = Connection::myrouter_builder();
     builder.tier(tier).port(port);
@@ -80,39 +80,34 @@ pub fn create_myrouter_connections(
     }
 }
 
-pub fn create_raw_xdb_connections(tier: impl ToString) -> Result<SqlConnections> {
+pub fn create_raw_xdb_connections(tier: &str) -> impl Future<Item = SqlConnections, Error = Error> {
     let tier = tier.to_string();
 
-    let write_connection = Connection::Raw(raw::RawConnection::new_from_tier(
-        &tier,
-        raw::InstanceRequirement::Master,
-        None,
-        None,
-    )?);
+    let write_connection =
+        raw::RawConnection::new_from_tier(&tier, raw::InstanceRequirement::Master, None, None);
 
-    let read_connection = Connection::Raw(raw::RawConnection::new_from_tier(
+    let read_connection = raw::RawConnection::new_from_tier(
         &tier,
         raw::InstanceRequirement::ReplicaFirst,
         None,
         None,
-    )?);
+    );
 
-    let read_master_connection = Connection::Raw(raw::RawConnection::new_from_tier(
-        &tier,
-        raw::InstanceRequirement::Master,
-        None,
-        None,
-    )?);
+    let read_master_connection =
+        raw::RawConnection::new_from_tier(&tier, raw::InstanceRequirement::Master, None, None);
 
-    Ok(SqlConnections {
-        write_connection,
-        read_connection,
-        read_master_connection,
-    })
+    write_connection
+        .into_future()
+        .join3(read_connection, read_master_connection)
+        .map(|(wr, rd, rm)| SqlConnections {
+            write_connection: Connection::Raw(wr),
+            read_connection: Connection::Raw(rd),
+            read_master_connection: Connection::Raw(rm),
+        })
 }
 
 /// Set of useful constructors for Mononoke's sql based data access objects
-pub trait SqlConstructors: Sized {
+pub trait SqlConstructors: Sized + Send + Sync + 'static {
     /// Label used for stats accounting, and also for the local DB name
     const LABEL: &'static str;
 
@@ -124,7 +119,7 @@ pub trait SqlConstructors: Sized {
 
     fn get_up_query() -> &'static str;
 
-    fn with_myrouter(tier: impl ToString, port: u16) -> Self {
+    fn with_myrouter(tier: &str, port: u16) -> Self {
         let SqlConnections {
             write_connection,
             read_connection,
@@ -139,23 +134,23 @@ pub trait SqlConstructors: Sized {
         Self::from_connections(write_connection, read_connection, read_master_connection)
     }
 
-    fn with_raw_xdb_tier(tier: impl ToString) -> Result<Self> {
-        let SqlConnections {
-            write_connection,
-            read_connection,
-            read_master_connection,
-        } = create_raw_xdb_connections(tier)?;
+    fn with_raw_xdb_tier(tier: &str) -> BoxFuture<Self, Error> {
+        create_raw_xdb_connections(tier)
+            .map(|r| {
+                let SqlConnections {
+                    write_connection,
+                    read_connection,
+                    read_master_connection,
+                } = r;
 
-        Ok(Self::from_connections(
-            write_connection,
-            read_connection,
-            read_master_connection,
-        ))
+                Self::from_connections(write_connection, read_connection, read_master_connection)
+            })
+            .boxify()
     }
 
-    fn with_xdb(tier: impl ToString, port: Option<u16>) -> Result<Self> {
+    fn with_xdb(tier: &str, port: Option<u16>) -> BoxFuture<Self, Error> {
         match port {
-            Some(myrouter_port) => Ok(Self::with_myrouter(tier, myrouter_port)),
+            Some(myrouter_port) => ok(Self::with_myrouter(tier, myrouter_port)).boxify(),
             None => Self::with_raw_xdb_tier(tier),
         }
     }
