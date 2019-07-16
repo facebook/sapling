@@ -99,6 +99,7 @@ macro_rules! impl_typed_hash {
                 }
             }
 
+            #[cfg(test)]
             pub(crate) fn from_byte_array(arr: [u8; 32]) -> Self {
                 $typed(Blake2::from_byte_array(arr))
             }
