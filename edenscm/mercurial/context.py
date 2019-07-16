@@ -1334,7 +1334,7 @@ class filectx(basefilectx):
             # Linkrev may point to any revision in the repository.  When the
             # repository is filtered this may lead to `filectx` trying to build
             # `changectx` for filtered revision. In such case we fallback to
-            # creating `changectx` on the unfiltered version of the reposition.
+            # creating `changectx` on the unfiltered version of the repository.
             # This fallback should not be an issue because `changectx` from
             # `filectx` are not used in complex operations that care about
             # filtering.
