@@ -401,3 +401,32 @@ class HttpsCommitCloudService(baseservice.BaseService):
             )
         except Exception as e:
             raise ccerror.UnexpectedError(self.ui, e)
+
+    @perftrace.tracefunc("Get list of historical versions")
+    def gethistoricalversions(self, reponame, workspace):
+        self.ui.debug(
+            "sending 'get_historical_versions' request\n", component="commitcloud"
+        )
+        path = "/commit_cloud/get_historical_versions"
+        data = {"repo_name": reponame, "workspace": workspace}
+        start = util.timer()
+        response = self._send(path, data)
+        elapsed = util.timer() - start
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
+
+        if "error" in response:
+            raise ccerror.ServiceError(self.ui, response["error"])
+
+        versions = response["versions"]["versions"]
+
+        self.ui.debug(
+            "'get_historical_versions' returns %d entries\n" % len(versions),
+            component="commitcloud",
+        )
+
+        try:
+            return versions
+        except Exception as e:
+            raise ccerror.UnexpectedError(self.ui, e)

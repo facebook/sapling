@@ -32,6 +32,7 @@ from . import (
     backupstate,
     dependencies,
     error as ccerror,
+    interactivehistory,
     service,
     subscription,
     sync,
@@ -252,6 +253,12 @@ def cloudauth(ui, repo, **opts):
             "show the specified version of the smartlog",
             _("NUM"),
         ),
+        (
+            "H",
+            "history",
+            None,
+            "show interactive view for historical versions of smartlog",
+        ),
     ]
     + workspace.workspaceopts,
 )
@@ -261,6 +268,11 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     If the requested template is not defined in the config
     the command provides a simple view as a list of draft commits.
     """
+
+    if opts.get("history"):
+        interactivehistory.showhistory(ui, repo, **opts)
+        return
+
     reponame = ccutil.getreponame(repo)
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
