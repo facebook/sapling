@@ -72,11 +72,16 @@ impl Span {
     }
 
     fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
-        use Bound::{Excluded, Included, Unbounded};
+        use Bound::{Excluded, Included};
         #[cfg(debug_assertions)]
-        match (bounds.start_bound(), bounds.end_bound()) {
-            (Excluded(_), _) | (Unbounded, _) | (_, Unbounded) => panic!("unsupported bound type"),
-            _ => (),
+        {
+            use Bound::Unbounded;
+            match (bounds.start_bound(), bounds.end_bound()) {
+                (Excluded(_), _) | (Unbounded, _) | (_, Unbounded) => {
+                    panic!("unsupported bound type")
+                }
+                _ => (),
+            }
         }
         match (bounds.start_bound(), bounds.end_bound()) {
             (Included(&low), Included(&high)) if low <= high => Some(Span { low, high }),
