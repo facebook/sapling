@@ -1,7 +1,7 @@
 #require test-repo normal-layout
 
   $ . "$TESTDIR/helpers-testrepo.sh"
-
+  $ enable undo
   $ cat <<'EOF' > scanhelptopics.py
   > from __future__ import absolute_import, print_function
   > import re

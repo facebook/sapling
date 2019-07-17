@@ -736,49 +736,51 @@ def oldworkingparenttemplate(context, mapping, args):
         ("i", "interactive", False, _("use interactive ui for undo")),
         ("k", "keep", False, _("keep working copy changes")),
         ("n", "step", 1, _("how many steps to undo back")),
-        ("p", "preview", False, _("see smartlog like preview of future undo " "state")),
+        ("p", "preview", False, _("see smartlog-like preview of future undo " "state")),
     ],
 )
 def undo(ui, repo, *args, **opts):
     """undo the last local command
 
-    Undoes an undoable command.  An undoable command is one that changed at
-    least one of the following three: bookmarks, working copy parent or
-    changesets. Note that this specifically does not include commands like log.
-    It will include update if update changes the working copy parent (you update
-    to a changeset that isn't the current one).  Note that commands that edit
-    public repos can't be undone (specifically push).
+    Reverse the effects of the last local command. A local command is one that
+    changed the currently checked out commit, that modified the contents of
+    local commits, or that changed local bookmarks. Examples of local commands
+    include :hg:`checkout`, :hg:`commit`, :hg:`amend`, and :hg:`rebase`.
 
-    Undo does not preserve the working copy changes.
+    You cannot use :hg:`undo` to undo uncommited changes in the working copy,
+    or changes to remote bookmarks.
 
-    Use hg undo --preview for interactive preview.  Use your left and right
-    arrow keys to explore possible states, hit enter to go to a state or q to
-    quit out of preview.
+    You can run :hg:`undo` multiple times to undo a series of local commands.
+    Alternatively, you can explicitly specify the number of local commands to
+    undo using --step. This number can also be specified as a positional
+    argument.
+
+    To undo the effects of :hg:`undo`, run :hg:`redo`. Run :hg:`help redo` for
+    more information.
+
+    Include --keep to preserve the state of the working copy. For example,
+    specify --keep when running :hg:`undo` to reverse the effects of an
+    :hg:`commit` or :hg:`amend` operation while still preserving changes
+    in the working copy. These changes will appear as pending changes.
+
+    Specify --preview to see a graphical display that shows what your smartlog
+    will look like after you run the command. Specify --interactive for an
+    interactive version of this preview in which you can step backwards and
+    forwards in the undo history.
+
+    .. note::
+
+       :hg:`undo` cannot be used with non-local commands, or with commands
+       that are read-only. :hg:`undo` will skip over these commands in the
+       undo history.
+
+       For hybrid commands that result in both local and remote changes,
+       :hg:`undo` will undo the local changes, but not the remote changes.
+       For example, `hg pull --rebase` might move remote/master and also
+       rebase local commits. In this situation, :hg:`undo` will revert the
+       rebase, but not the change to remote/master.
 
     .. container:: verbose
-
-        Without the --absolute flag, your undos will be relative.  This means
-        they will behave how you expect them to.  If you run hg undo twice,
-        you will move back two repo states from where you ran your first hg
-        undo. You can use this in conjunction with `hg undo -n -1` to move up
-        and down repo states.  Note that as soon as you execute a different
-        undoable command, which isn't hg undo or hg redo, any new undos or redos
-        will be relative to the state after this command.
-
-        If the undo extension was turned off and on again, you might loose the
-        ability to undo to certain repo states.  Undoing to repo states before
-        the missing ones can be forced, but isn't advised unless its known how
-        the before and after states are connected.
-
-        Use keep to maintain working copy changes.  With keep, undo mimics hg
-        unamend and hg uncommit.  Specifically, files that exist currently that
-        don't exist at the repo state we are undoing to will remain in your
-        working copy but not in your changeset.  Maintaining your working copy
-        has primarily two downsides: firstly your new working copy won't be
-        clean so you can't simply redo without cleaning your working copy.
-        Secondly, the operation may be slow if your working copy is large.  If
-        unsure, its generally easier try undo without --keep first and redo if
-        you want to change this.
 
         Branch limits the scope of an undo to a group of local (draft)
         changectxs, identified by any one member of this group.
